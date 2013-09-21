@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 
 /**
  * A decoding context that is created by a reader's encoder, and is shared
@@ -32,13 +32,8 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 public interface HFileBlockDecodingContext {
 
   /**
-   * @return the compression algorithm used by this decoding context
-   */
-  Compression.Algorithm getCompression();
-
-  /**
    * Perform all actions that need to be done before the encoder's real decoding process.
-   * Decompression needs to be done if {@link #getCompression()} returns a valid compression
+   * Decompression needs to be done if {@link HFileContext#getCompression()} returns a valid compression
    * algorithm.
    *
    * @param onDiskSizeWithoutHeader numBytes after block and encoding headers
@@ -57,4 +52,8 @@ public interface HFileBlockDecodingContext {
     int offset
   ) throws IOException;
 
+  /**
+   * @return HFile meta information
+   */
+  HFileContext getHFileContext();
 }

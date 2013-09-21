@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode.column;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
+import org.apache.hadoop.hbase.codec.prefixtree.encode.other.ColumnNodeType;
 
 /**
  * Position one of these appropriately in the data block and you can call its methods to retrieve
@@ -35,17 +36,17 @@ public class ColumnReader {
   protected byte[] columnBuffer;
   protected int columnOffset;
   protected int columnLength;
-  protected boolean familyVsQualifier;
+  protected ColumnNodeType nodeType;  
 
   protected ColumnNodeReader columnNodeReader;
 
 
   /******************** construct *******************/
 
-  public ColumnReader(byte[] columnBuffer, boolean familyVsQualifier) {
+  public ColumnReader(byte[] columnBuffer, ColumnNodeType nodeType) {
     this.columnBuffer = columnBuffer;
-    this.familyVsQualifier = familyVsQualifier;
-    this.columnNodeReader = new ColumnNodeReader(columnBuffer, familyVsQualifier);
+    this.nodeType = nodeType;
+    this.columnNodeReader = new ColumnNodeReader(columnBuffer, nodeType);
   }
 
   public void initOnBlock(PrefixTreeBlockMeta blockMeta, byte[] block) {
@@ -61,11 +62,13 @@ public class ColumnReader {
     clearColumnBuffer();
     int nextRelativeOffset = offsetIntoColumnData;
     while (true) {
-      int absoluteOffset;
-      if (familyVsQualifier) {
+      int absoluteOffset = 0;
+      if (nodeType == ColumnNodeType.FAMILY) {
         absoluteOffset = blockMeta.getAbsoluteFamilyOffset() + nextRelativeOffset;
-      } else {
+      } else if (nodeType == ColumnNodeType.QUALIFIER) {
         absoluteOffset = blockMeta.getAbsoluteQualifierOffset() + nextRelativeOffset;
+      } else {
+        absoluteOffset = blockMeta.getAbsoluteTagsOffset() + nextRelativeOffset;
       }
       columnNodeReader.positionAt(absoluteOffset);
       columnOffset -= columnNodeReader.getTokenLength();

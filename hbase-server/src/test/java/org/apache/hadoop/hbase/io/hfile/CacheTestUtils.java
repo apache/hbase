@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.util.ChecksumType;
 
@@ -339,13 +341,18 @@ public class CacheTestUtils {
       cachedBuffer.putInt(uncompressedSizeWithoutHeader);
       cachedBuffer.putLong(prevBlockOffset);
       cachedBuffer.rewind();
-
+      HFileContext meta = new HFileContext();
+      meta.setUsesHBaseChecksum(false);
+      meta.setIncludesMvcc(includesMemstoreTS);
+      meta.setIncludesTags(false);
+      meta.setCompressAlgo(Compression.Algorithm.NONE);
+      meta.setBytesPerChecksum(0);
+      meta.setChecksumType(ChecksumType.NULL);
       HFileBlock generated = new HFileBlock(BlockType.DATA,
           onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
           prevBlockOffset, cachedBuffer, HFileBlock.DONT_FILL_HEADER,
-          blockSize, includesMemstoreTS, HFileBlock.MINOR_VERSION_NO_CHECKSUM,
-          0, ChecksumType.NULL.getCode(),
-          onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE);
+          blockSize,
+          onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE, meta);
 
       String strKey;
       /* No conflicting keys */

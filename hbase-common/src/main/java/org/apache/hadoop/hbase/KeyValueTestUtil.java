@@ -93,12 +93,12 @@ public class KeyValueTestUtil {
   }
   
   public static List<KeyValue> rewindThenToList(final ByteBuffer bb,
-      final boolean includesMemstoreTS) {
+      final boolean includesMemstoreTS, final boolean useTags) {
     bb.rewind();
     List<KeyValue> kvs = Lists.newArrayList();
     KeyValue kv = null;
     while (true) {
-      kv = KeyValueUtil.nextShallowCopy(bb, includesMemstoreTS);
+      kv = KeyValueUtil.nextShallowCopy(bb, includesMemstoreTS, useTags);
       if (kv == null) {
         break;
       }

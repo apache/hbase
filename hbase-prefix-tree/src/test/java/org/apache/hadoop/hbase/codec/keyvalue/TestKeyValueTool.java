@@ -25,6 +25,8 @@ import java.util.List;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.codec.prefixtree.row.TestRowData;
+import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataRandomKeyValuesWithTags;
+import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataTrivialWithTags;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -47,9 +49,12 @@ public class TestKeyValueTool {
 
   @Test
   public void testRoundTripToBytes() {
+    if(rows instanceof TestRowDataTrivialWithTags || rows instanceof TestRowDataRandomKeyValuesWithTags) {
+      return;
+    }
     List<KeyValue> kvs = rows.getInputs();
     ByteBuffer bb = KeyValueTestUtil.toByteBufferAndRewind(kvs, false);
-    List<KeyValue> roundTrippedKvs = KeyValueTestUtil.rewindThenToList(bb, false);
+    List<KeyValue> roundTrippedKvs = KeyValueTestUtil.rewindThenToList(bb, false, false);
     Assert.assertArrayEquals(kvs.toArray(), roundTrippedKvs.toArray());
   }
 }

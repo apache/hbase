@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.BloomFilter;
@@ -275,6 +276,12 @@ public class HFilePrettyPrinter {
         System.out.print("K: " + kv);
         if (printValue) {
           System.out.print(" V: " + Bytes.toStringBinary(kv.getValue()));
+          int i = 0;
+          List<Tag> tags = kv.getTags();
+          for (Tag tag : tags) {
+            System.out
+                .print(String.format(" T[%d]: %s", i++, Bytes.toStringBinary(tag.getValue())));
+          }
         }
         System.out.println();
       }

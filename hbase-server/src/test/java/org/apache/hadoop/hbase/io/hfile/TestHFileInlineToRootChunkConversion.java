@@ -52,9 +52,11 @@ public class TestHFileInlineToRootChunkConversion {
     FileSystem fs = FileSystem.get(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize); 
+    HFileContext context = new HFileContext();
+    context.setBlocksize(16);
     HFileWriterV2 hfw =
         (HFileWriterV2) new HFileWriterV2.WriterFactoryV2(conf, cacheConf)
-            .withBlockSize(16)
+            .withFileContext(context)
             .withPath(fs, hfPath).create();
     List<byte[]> keys = new ArrayList<byte[]>();
     StringBuilder sb = new StringBuilder();

@@ -54,11 +54,6 @@ import com.google.common.io.NullOutputStream;
 @InterfaceAudience.Private
 public class FixedFileTrailer {
 
-  private static final Log LOG = LogFactory.getLog(FixedFileTrailer.class);
-
-  /** HFile minor version that introduced pbuf filetrailer */
-  private static final int PBUF_TRAILER_MINOR_VERSION = 2;
-
   /**
    * We store the comparator class name as a fixed-length field in the trailer.
    */
@@ -131,18 +126,13 @@ public class FixedFileTrailer {
 
   private static int[] computeTrailerSizeByVersion() {
     int versionToSize[] = new int[HFile.MAX_FORMAT_VERSION + 1];
-    for (int version = HFile.MIN_FORMAT_VERSION;
-         version <= HFile.MAX_FORMAT_VERSION;
-         ++version) {
-      FixedFileTrailer fft = new FixedFileTrailer(version, HFileBlock.MINOR_VERSION_NO_CHECKSUM);
-      DataOutputStream dos = new DataOutputStream(new NullOutputStream());
-      try {
-        fft.serialize(dos);
-      } catch (IOException ex) {
-        // The above has no reason to fail.
-        throw new RuntimeException(ex);
-      }
-      versionToSize[version] = dos.size();
+    // We support only 2 major versions now. ie. V2, V3
+    versionToSize[2] = 212;
+    for (int version = 3; version <= HFile.MAX_FORMAT_VERSION; version++) {
+      // Max FFT size for V3 and above is taken as 1KB for future enhancements
+      // if any.
+      // Unless the trailer size exceeds 1024 this can continue
+      versionToSize[version] = 1024;
     }
     return versionToSize;
   }
@@ -184,11 +174,7 @@ public class FixedFileTrailer {
     DataOutputStream baosDos = new DataOutputStream(baos);
 
     BlockType.TRAILER.write(baosDos);
-    if (majorVersion > 2 || (majorVersion == 2 && minorVersion >= PBUF_TRAILER_MINOR_VERSION)) {
-      serializeAsPB(baosDos);
-    } else {
-      serializeAsWritable(baosDos);
-    }
+    serializeAsPB(baosDos);
 
     // The last 4 bytes of the file encode the major and minor version universally
     baosDos.writeInt(materializeVersion(majorVersion, minorVersion));
@@ -234,29 +220,6 @@ public class FixedFileTrailer {
   }
 
   /**
-   * Write trailer data as writable
-   * @param outputStream
-   * @throws IOException
-   */
-  void serializeAsWritable(DataOutputStream output) throws IOException {
-    output.writeLong(fileInfoOffset);
-    output.writeLong(loadOnOpenDataOffset);
-    output.writeInt(dataIndexCount);
-
-    output.writeLong(uncompressedDataIndexSize);
-
-    output.writeInt(metaIndexCount);
-    output.writeLong(totalUncompressedBytes);
-    output.writeLong(entryCount);
-    output.writeInt(compressionCodec.ordinal());
-
-    output.writeInt(numDataIndexLevels);
-    output.writeLong(firstDataBlockOffset);
-    output.writeLong(lastDataBlockOffset);
-    Bytes.writeStringFixedSize(output, comparatorClassName, MAX_COMPARATOR_NAME_LENGTH);
-  }
-
-  /**
    * Deserialize the fixed file trailer from the given stream. The version needs
    * to already be specified. Make sure this is consistent with
    * {@link #serialize(DataOutputStream)}.
@@ -269,7 +232,8 @@ public class FixedFileTrailer {
 
     BlockType.TRAILER.readAndCheck(inputStream);
 
-    if (majorVersion > 2 || (majorVersion == 2 && minorVersion >= PBUF_TRAILER_MINOR_VERSION)) {
+    if (majorVersion > 2
+        || (majorVersion == 2 && minorVersion >= HFileReaderV2.PBUF_TRAILER_MINOR_VERSION)) {
       deserializeFromPB(inputStream);
     } else {
       deserializeFromWritable(inputStream);
@@ -655,7 +619,7 @@ public class FixedFileTrailer {
    * Create a 4 byte serialized version number by combining the
    * minor and major version numbers.
    */
-  private static int materializeVersion(int majorVersion, int minorVersion) {
+  static int materializeVersion(int majorVersion, int minorVersion) {
     return ((majorVersion & 0x00ffffff) | (minorVersion << 24));
   }
 }

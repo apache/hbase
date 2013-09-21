@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode.row;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
-import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.vint.UFIntTool;
 import org.apache.hadoop.hbase.util.vint.UVIntTool;
 
@@ -52,13 +52,14 @@ public class RowNodeReader {
   protected int operationTypesOffset;
   protected int valueOffsetsOffset;
   protected int valueLengthsOffset;
+  protected int tagOffsetsOffset;
   protected int nextNodeOffsetsOffset;
 
 
   /******************* construct **************************/
 
   public void initOnBlock(PrefixTreeBlockMeta blockMeta, byte[] block, int offset) {
-     this.block = block;
+    this.block = block;
 
     this.offset = offset;
     resetFanIndex();
@@ -73,8 +74,15 @@ public class RowNodeReader {
 
     this.familyOffsetsOffset = fanOffset + fanOut + UVIntTool.numBytes(numCells);
     this.qualifierOffsetsOffset = familyOffsetsOffset + numCells * blockMeta.getFamilyOffsetWidth();
-    this.timestampIndexesOffset = qualifierOffsetsOffset + numCells
-        * blockMeta.getQualifierOffsetWidth();
+    this.tagOffsetsOffset = this.qualifierOffsetsOffset + numCells * blockMeta.getQualifierOffsetWidth();
+    // TODO : This code may not be needed now..As we always consider tags to be present
+    if(blockMeta.getTagsOffsetWidth() == 0) {
+      // Make both of them same so that we know that there are no tags
+      this.tagOffsetsOffset = this.qualifierOffsetsOffset;
+      this.timestampIndexesOffset = qualifierOffsetsOffset + numCells * blockMeta.getQualifierOffsetWidth();
+    } else {
+      this.timestampIndexesOffset = tagOffsetsOffset + numCells * blockMeta.getTagsOffsetWidth();
+    }
     this.mvccVersionIndexesOffset = timestampIndexesOffset + numCells
         * blockMeta.getTimestampIndexWidth();
     this.operationTypesOffset = mvccVersionIndexesOffset + numCells
@@ -131,6 +139,12 @@ public class RowNodeReader {
   public int getColumnOffset(int index, PrefixTreeBlockMeta blockMeta) {
     int fIntWidth = blockMeta.getQualifierOffsetWidth();
     int startIndex = qualifierOffsetsOffset + fIntWidth * index;
+    return (int) UFIntTool.fromBytes(block, startIndex, fIntWidth);
+  }
+
+  public int getTagOffset(int index, PrefixTreeBlockMeta blockMeta) {
+    int fIntWidth = blockMeta.getTagsOffsetWidth();
+    int startIndex = tagOffsetsOffset + fIntWidth * index;
     return (int) UFIntTool.fromBytes(block, startIndex, fIntWidth);
   }
 

@@ -21,13 +21,12 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
-import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -156,8 +155,8 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
         return block;
       }
       // Encode the unencoded block with the in-cache encoding.
-      return encodeDataBlock(block, inCache, block.doesIncludeMemstoreTS(),
-          createInCacheEncodingContext());
+      return encodeDataBlock(block, inCache,
+          createInCacheEncodingContext(block.getHFileContext()));
     }
 
     if (block.getBlockType() == BlockType.ENCODED_DATA) {
@@ -183,7 +182,6 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
    */
   @Override
   public void beforeWriteToDisk(ByteBuffer in,
-      boolean includesMemstoreTS,
       HFileBlockEncodingContext encodeCtx,
       BlockType blockType) throws IOException {
     if (onDisk == DataBlockEncoding.NONE) {
@@ -192,8 +190,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
           in.array(), blockType);
       return;
     }
-    encodeBufferToHFileBlockBuffer(in, onDisk,
-        includesMemstoreTS, encodeCtx);
+    encodeBufferToHFileBlockBuffer(in, onDisk, encodeCtx);
   }
 
   @Override
@@ -209,15 +206,13 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
    *
    * @param in input data to encode
    * @param algo encoding algorithm
-   * @param includesMemstoreTS includes memstore timestamp or not
    * @param encodeCtx where will the output data be stored
    */
-  private void encodeBufferToHFileBlockBuffer(ByteBuffer in,
-      DataBlockEncoding algo, boolean includesMemstoreTS,
+  private void encodeBufferToHFileBlockBuffer(ByteBuffer in, DataBlockEncoding algo,
       HFileBlockEncodingContext encodeCtx) {
     DataBlockEncoder encoder = algo.getEncoder();
     try {
-      encoder.encodeKeyValues(in, includesMemstoreTS, encodeCtx);
+      encoder.encodeKeyValues(in, encodeCtx);
     } catch (IOException e) {
       throw new RuntimeException(String.format(
           "Bug in data block encoder "
@@ -227,12 +222,11 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
     }
   }
 
-  private HFileBlock encodeDataBlock(HFileBlock block,
-      DataBlockEncoding algo, boolean includesMemstoreTS,
+  private HFileBlock encodeDataBlock(HFileBlock block, DataBlockEncoding algo,
       HFileBlockEncodingContext encodingCtx) {
     encodingCtx.setDummyHeader(block.getDummyHeaderForVersion());
     encodeBufferToHFileBlockBuffer(
-      block.getBufferWithoutHeader(), algo, includesMemstoreTS, encodingCtx);
+      block.getBufferWithoutHeader(), algo, encodingCtx);
     byte[] encodedUncompressedBytes =
       encodingCtx.getUncompressedBytesWithHeader();
     ByteBuffer bufferWrapper = ByteBuffer.wrap(encodedUncompressedBytes);
@@ -241,9 +235,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
         block.getOnDiskSizeWithoutHeader(),
         sizeWithoutHeader, block.getPrevBlockOffset(),
         bufferWrapper, HFileBlock.FILL_HEADER, block.getOffset(),
-        includesMemstoreTS, block.getMinorVersion(),
-        block.getBytesPerChecksum(), block.getChecksumType(),
-        block.getOnDiskDataSizeWithHeader());
+        block.getOnDiskDataSizeWithHeader(), encodingCtx.getHFileContext());
     return encodedBlock;
   }
 
@@ -253,14 +245,14 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
    * See HBASE-8732
    * @return a new in cache encoding context
    */
-  private HFileBlockEncodingContext createInCacheEncodingContext() {
+  private HFileBlockEncodingContext createInCacheEncodingContext(HFileContext meta) {
+    HFileContext newMeta = meta.clone();
     return (inCache != DataBlockEncoding.NONE) ?
-        this.inCache.getEncoder().newDataBlockEncodingContext(
-            Algorithm.NONE, this.inCache, dummyHeader)
-        :
-        // create a default encoding context
-        new HFileBlockDefaultEncodingContext(Algorithm.NONE,
-            this.inCache, dummyHeader);
+                this.inCache.getEncoder().newDataBlockEncodingContext(
+                    this.inCache, dummyHeader, newMeta)
+                :
+                // create a default encoding context
+                new HFileBlockDefaultEncodingContext(this.inCache, dummyHeader, newMeta);
   }
 
   @Override
@@ -271,29 +263,25 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
 
   @Override
   public HFileBlockEncodingContext newOnDiskDataBlockEncodingContext(
-      Algorithm compressionAlgorithm,  byte[] dummyHeader) {
+      byte[] dummyHeader, HFileContext fileContext) {
     if (onDisk != null) {
       DataBlockEncoder encoder = onDisk.getEncoder();
       if (encoder != null) {
-        return encoder.newDataBlockEncodingContext(
-            compressionAlgorithm, onDisk, dummyHeader);
+        return encoder.newDataBlockEncodingContext(onDisk, dummyHeader, fileContext);
       }
     }
-    return new HFileBlockDefaultEncodingContext(compressionAlgorithm,
-        null, dummyHeader);
+    return new HFileBlockDefaultEncodingContext(null, dummyHeader, fileContext);
   }
 
   @Override
-  public HFileBlockDecodingContext newOnDiskDataBlockDecodingContext(
-      Algorithm compressionAlgorithm) {
+  public HFileBlockDecodingContext newOnDiskDataBlockDecodingContext(HFileContext fileContext) {
     if (onDisk != null) {
       DataBlockEncoder encoder = onDisk.getEncoder();
       if (encoder != null) {
-        return encoder.newDataBlockDecodingContext(
-            compressionAlgorithm);
+        return encoder.newDataBlockDecodingContext(fileContext);
       }
     }
-    return new HFileBlockDefaultDecodingContext(compressionAlgorithm);
+    return new HFileBlockDefaultDecodingContext(fileContext);
   }
 
 }

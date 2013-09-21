@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
+import org.apache.hadoop.hbase.codec.prefixtree.encode.other.ColumnNodeType;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.Tokenizer;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.TokenizerNode;
 import org.apache.hadoop.hbase.util.CollectionUtils;
@@ -60,7 +61,7 @@ public class ColumnSectionWriter {
 
   private PrefixTreeBlockMeta blockMeta;
 
-  private boolean familyVsQualifier;
+  private ColumnNodeType nodeType;
   private Tokenizer tokenizer;
   private int numBytes = 0;
   private ArrayList<TokenizerNode> nonLeaves;
@@ -79,16 +80,16 @@ public class ColumnSectionWriter {
   }
 
   public ColumnSectionWriter(PrefixTreeBlockMeta blockMeta, Tokenizer builder,
-      boolean familyVsQualifier) {
+      ColumnNodeType nodeType) {
     this();// init collections
-    reconstruct(blockMeta, builder, familyVsQualifier);
+    reconstruct(blockMeta, builder, nodeType);
   }
 
   public void reconstruct(PrefixTreeBlockMeta blockMeta, Tokenizer builder,
-      boolean familyVsQualifier) {
+      ColumnNodeType nodeType) {
     this.blockMeta = blockMeta;
     this.tokenizer = builder;
-    this.familyVsQualifier = familyVsQualifier;
+    this.nodeType = nodeType;
   }
 
   public void reset() {
@@ -102,14 +103,19 @@ public class ColumnSectionWriter {
 	/****************** methods *******************************/
 
   public ColumnSectionWriter compile() {
-    if (familyVsQualifier) {
+    if (this.nodeType == ColumnNodeType.FAMILY) {
       // do nothing. max family length fixed at Byte.MAX_VALUE
-    } else {
+    } else if (this.nodeType == ColumnNodeType.QUALIFIER) {
       blockMeta.setMaxQualifierLength(tokenizer.getMaxElementLength());
+    } else {
+      blockMeta.setMaxTagsLength(tokenizer.getMaxElementLength());
     }
+    compilerInternals();
+    return this;
+  }
 
+  protected void compilerInternals() {
     tokenizer.setNodeFirstInsertionIndexes();
-
     tokenizer.appendNodes(nonLeaves, true, false);
 
     tokenizer.appendNodes(leaves, false, true);
@@ -121,7 +127,7 @@ public class ColumnSectionWriter {
     columnNodeWriters = Lists.newArrayListWithCapacity(CollectionUtils.nullSafeSize(allNodes));
     for (int i = 0; i < allNodes.size(); ++i) {
       TokenizerNode node = allNodes.get(i);
-      columnNodeWriters.add(new ColumnNodeWriter(blockMeta, node, familyVsQualifier));
+      columnNodeWriters.add(new ColumnNodeWriter(blockMeta, node, this.nodeType));
     }
 
     // leaf widths are known at this point, so add them up
@@ -142,10 +148,12 @@ public class ColumnSectionWriter {
         break;
       }// it fits
     }
-    if (familyVsQualifier) {
+    if (this.nodeType == ColumnNodeType.FAMILY) {
       blockMeta.setFamilyOffsetWidth(parentOffsetWidth);
-    } else {
+    } else if (this.nodeType == ColumnNodeType.QUALIFIER) {
       blockMeta.setQualifierOffsetWidth(parentOffsetWidth);
+    } else {
+      blockMeta.setTagsOffsetWidth(parentOffsetWidth);
     }
 
     int forwardIndex = 0;
@@ -165,8 +173,6 @@ public class ColumnSectionWriter {
     }
 
     tokenizer.appendOutputArrayOffsets(outputArrayOffsets);
-
-    return this;
   }
 
   public void writeBytes(OutputStream os) throws IOException {

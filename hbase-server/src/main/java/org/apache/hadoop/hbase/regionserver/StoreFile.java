@@ -43,11 +43,11 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
-import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.base.Function;
@@ -524,28 +523,19 @@ public class StoreFile {
     private final Configuration conf;
     private final CacheConfig cacheConf;
     private final FileSystem fs;
-    private final int blockSize;
 
-    private Compression.Algorithm compressAlgo =
-        HFile.DEFAULT_COMPRESSION_ALGORITHM;
-    private HFileDataBlockEncoder dataBlockEncoder =
-        NoOpDataBlockEncoder.INSTANCE;
     private KeyValue.KVComparator comparator = KeyValue.COMPARATOR;
     private BloomType bloomType = BloomType.NONE;
     private long maxKeyCount = 0;
     private Path dir;
     private Path filePath;
     private InetSocketAddress[] favoredNodes;
-    private ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
-    private int bytesPerChecksum = HFile.DEFAULT_BYTES_PER_CHECKSUM;
-    private boolean includeMVCCReadpoint = true;
-
+    private HFileContext fileContext;
     public WriterBuilder(Configuration conf, CacheConfig cacheConf,
-        FileSystem fs, int blockSize) {
+        FileSystem fs) {
       this.conf = conf;
       this.cacheConf = cacheConf;
       this.fs = fs;
-      this.blockSize = blockSize;
     }
 
     /**
@@ -572,24 +562,12 @@ public class StoreFile {
       return this;
     }
 
-    public WriterBuilder withCompression(Compression.Algorithm compressAlgo) {
-      Preconditions.checkNotNull(compressAlgo);
-      this.compressAlgo = compressAlgo;
-      return this;
-    }
-
     /**
      * @param favoredNodes an array of favored nodes or possibly null
      * @return this (for chained invocation)
      */
     public WriterBuilder withFavoredNodes(InetSocketAddress[] favoredNodes) {
       this.favoredNodes = favoredNodes;
-      return this;
-    }
-
-    public WriterBuilder withDataBlockEncoder(HFileDataBlockEncoder encoder) {
-      Preconditions.checkNotNull(encoder);
-      this.dataBlockEncoder = encoder;
       return this;
     }
 
@@ -614,33 +592,10 @@ public class StoreFile {
       return this;
     }
 
-    /**
-     * @param checksumType the type of checksum
-     * @return this (for chained invocation)
-     */
-    public WriterBuilder withChecksumType(ChecksumType checksumType) {
-      this.checksumType = checksumType;
+    public WriterBuilder withFileContext(HFileContext fileContext) {
+      this.fileContext = fileContext;
       return this;
     }
-
-    /**
-     * @param bytesPerChecksum the number of bytes per checksum chunk
-     * @return this (for chained invocation)
-     */
-    public WriterBuilder withBytesPerChecksum(int bytesPerChecksum) {
-      this.bytesPerChecksum = bytesPerChecksum;
-      return this;
-    }
-
-    /**
-     * @param includeMVCCReadpoint whether to write the mvcc readpoint to the file for each KV
-     * @return this (for chained invocation)
-     */
-    public WriterBuilder includeMVCCReadpoint(boolean includeMVCCReadpoint) {
-      this.includeMVCCReadpoint = includeMVCCReadpoint;
-      return this;
-    }
-
     /**
      * Create a store file writer. Client is responsible for closing file when
      * done. If metadata, add BEFORE closing using
@@ -667,15 +622,11 @@ public class StoreFile {
         }
       }
 
-      if (compressAlgo == null) {
-        compressAlgo = HFile.DEFAULT_COMPRESSION_ALGORITHM;
-      }
       if (comparator == null) {
         comparator = KeyValue.COMPARATOR;
       }
-      return new Writer(fs, filePath, blockSize, compressAlgo, dataBlockEncoder,
-          conf, cacheConf, comparator, bloomType, maxKeyCount, checksumType,
-          bytesPerChecksum, includeMVCCReadpoint, favoredNodes);
+      return new Writer(fs, filePath, 
+          conf, cacheConf, comparator, bloomType, maxKeyCount, favoredNodes, fileContext);
     }
   }
 
@@ -747,7 +698,6 @@ public class StoreFile {
     private KeyValue lastDeleteFamilyKV = null;
     private long deleteFamilyCnt = 0;
 
-    protected HFileDataBlockEncoder dataBlockEncoder;
 
     /** Checksum type */
     protected ChecksumType checksumType;
@@ -770,39 +720,26 @@ public class StoreFile {
      * Creates an HFile.Writer that also write helpful meta data.
      * @param fs file system to write to
      * @param path file name to create
-     * @param blocksize HDFS block size
-     * @param compress HDFS block compression
      * @param conf user configuration
      * @param comparator key comparator
      * @param bloomType bloom filter setting
      * @param maxKeys the expected maximum number of keys to be added. Was used
      *        for Bloom filter size in {@link HFile} format version 1.
-     * @param checksumType the checksum type
-     * @param bytesPerChecksum the number of bytes per checksum value
-     * @param includeMVCCReadpoint whether to write the mvcc readpoint to the file for each KV
      * @param favoredNodes
+     * @param fileContext - The HFile context
      * @throws IOException problem writing to FS
      */
-    private Writer(FileSystem fs, Path path, int blocksize,
-        Compression.Algorithm compress,
-        HFileDataBlockEncoder dataBlockEncoder, final Configuration conf,
+    private Writer(FileSystem fs, Path path,
+        final Configuration conf,
         CacheConfig cacheConf,
         final KVComparator comparator, BloomType bloomType, long maxKeys,
-        final ChecksumType checksumType, final int bytesPerChecksum,
-        final boolean includeMVCCReadpoint, InetSocketAddress[] favoredNodes) 
+        InetSocketAddress[] favoredNodes, HFileContext fileContext) 
             throws IOException {
-      this.dataBlockEncoder = dataBlockEncoder != null ?
-          dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
       writer = HFile.getWriterFactory(conf, cacheConf)
           .withPath(fs, path)
-          .withBlockSize(blocksize)
-          .withCompression(compress)
-          .withDataBlockEncoder(this.dataBlockEncoder)
           .withComparator(comparator)
-          .withChecksumType(checksumType)
-          .withBytesPerChecksum(bytesPerChecksum)
           .withFavoredNodes(favoredNodes)
-          .includeMVCCReadpoint(includeMVCCReadpoint)
+          .withFileContext(fileContext)
           .create();
 
       this.kvComparator = comparator;
@@ -833,8 +770,6 @@ public class StoreFile {
         if (LOG.isTraceEnabled()) LOG.trace("Delete Family Bloom filter type for " + path + ": "
             + deleteFamilyBloomFilterWriter.getClass().getSimpleName());
       }
-      this.checksumType = checksumType;
-      this.bytesPerChecksum = bytesPerChecksum;
     }
 
     /**

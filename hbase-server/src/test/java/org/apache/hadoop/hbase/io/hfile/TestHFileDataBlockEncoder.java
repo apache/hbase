@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
@@ -80,7 +81,12 @@ public class TestHFileDataBlockEncoder {
    */
   @Test
   public void testEncodingWithCache() {
-    HFileBlock block = getSampleHFileBlock();
+    testEncodingWithCacheInternals(false);
+    testEncodingWithCacheInternals(true);
+  }
+
+  private void testEncodingWithCacheInternals(boolean useTag) {
+    HFileBlock block = getSampleHFileBlock(useTag);
     LruBlockCache blockCache =
         new LruBlockCache(8 * 1024 * 1024, 32 * 1024);
     HFileBlock cacheBlock = blockEncoder.diskToCacheFormat(block, false);
@@ -107,36 +113,47 @@ public class TestHFileDataBlockEncoder {
   /** Test for HBASE-5746. */
   @Test
   public void testHeaderSizeInCacheWithoutChecksum() throws Exception {
+    testHeaderSizeInCacheWithoutChecksumInternals(false);
+    testHeaderSizeInCacheWithoutChecksumInternals(true);
+  }
+
+  private void testHeaderSizeInCacheWithoutChecksumInternals(boolean useTags) throws IOException {
     int headerSize = HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM;
     // Create some KVs and create the block with old-style header.
     ByteBuffer keyValues = RedundantKVGenerator.convertKvToByteBuffer(
-        generator.generateTestKeyValues(60), includesMemstoreTS);
+        generator.generateTestKeyValues(60, useTags), includesMemstoreTS);
     int size = keyValues.limit();
     ByteBuffer buf = ByteBuffer.allocate(size + headerSize);
     buf.position(headerSize);
     keyValues.rewind();
     buf.put(keyValues);
+    HFileContext meta = new HFileContext();
+    meta.setUsesHBaseChecksum(false);
+    meta.setIncludesMvcc(includesMemstoreTS);
+    meta.setIncludesTags(useTags);
+    meta.setCompressAlgo(Compression.Algorithm.NONE);
+    meta.setBlocksize(0);
+    meta.setChecksumType(ChecksumType.NULL);
     HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, 0, includesMemstoreTS,
-        HFileBlock.MINOR_VERSION_NO_CHECKSUM, 0, ChecksumType.NULL.getCode(), 0);
-    HFileBlock cacheBlock = blockEncoder.diskToCacheFormat(createBlockOnDisk(block), false);
+        HFileBlock.FILL_HEADER, 0,
+        0, meta);
+    HFileBlock cacheBlock = blockEncoder
+        .diskToCacheFormat(createBlockOnDisk(block, useTags), false);
     assertEquals(headerSize, cacheBlock.getDummyHeaderForVersion().length);
   }
 
-  private HFileBlock createBlockOnDisk(HFileBlock block) throws IOException {
+  private HFileBlock createBlockOnDisk(HFileBlock block, boolean useTags) throws IOException {
     int size;
     HFileBlockEncodingContext context = new HFileBlockDefaultEncodingContext(
-        Compression.Algorithm.NONE, blockEncoder.getEncodingOnDisk(),
-        HConstants.HFILEBLOCK_DUMMY_HEADER);
+        blockEncoder.getEncodingOnDisk(),
+        HConstants.HFILEBLOCK_DUMMY_HEADER, block.getHFileContext());
     context.setDummyHeader(block.getDummyHeaderForVersion());
-    blockEncoder.beforeWriteToDisk(block.getBufferWithoutHeader(),
-            includesMemstoreTS, context, block.getBlockType());
+    blockEncoder.beforeWriteToDisk(block.getBufferWithoutHeader(), context, block.getBlockType());
     byte[] encodedBytes = context.getUncompressedBytesWithHeader();
     size = encodedBytes.length - block.getDummyHeaderForVersion().length;
     return new HFileBlock(context.getBlockType(), size, size, -1,
-            ByteBuffer.wrap(encodedBytes), HFileBlock.FILL_HEADER, 0, includesMemstoreTS,
-            block.getMinorVersion(), block.getBytesPerChecksum(), block.getChecksumType(),
-            block.getOnDiskDataSizeWithHeader());
+            ByteBuffer.wrap(encodedBytes), HFileBlock.FILL_HEADER, 0,
+            block.getOnDiskDataSizeWithHeader(), block.getHFileContext());
   }
 
   /**
@@ -145,9 +162,14 @@ public class TestHFileDataBlockEncoder {
    */
   @Test
   public void testEncodingWritePath() throws IOException {
+    testEncodingWritePathInternals(false);
+    testEncodingWritePathInternals(true);
+  }
+
+  private void testEncodingWritePathInternals(boolean useTag) throws IOException {
     // usually we have just block without headers, but don't complicate that
-    HFileBlock block = getSampleHFileBlock();
-    HFileBlock blockOnDisk = createBlockOnDisk(block);
+    HFileBlock block = getSampleHFileBlock(useTag);
+    HFileBlock blockOnDisk = createBlockOnDisk(block, useTag);
 
     if (blockEncoder.getEncodingOnDisk() !=
         DataBlockEncoding.NONE) {
@@ -164,21 +186,33 @@ public class TestHFileDataBlockEncoder {
    */
   @Test
   public void testEncodingReadPath() {
-    HFileBlock origBlock = getSampleHFileBlock();
+    testEncodingReadPathInternals(false);
+    testEncodingReadPathInternals(true);
+  }
+
+  private void testEncodingReadPathInternals(boolean useTag) {
+    HFileBlock origBlock = getSampleHFileBlock(useTag);
     blockEncoder.diskToCacheFormat(origBlock, false);
   }
 
-  private HFileBlock getSampleHFileBlock() {
+  private HFileBlock getSampleHFileBlock(boolean useTag) {
     ByteBuffer keyValues = RedundantKVGenerator.convertKvToByteBuffer(
-        generator.generateTestKeyValues(60), includesMemstoreTS);
+        generator.generateTestKeyValues(60, useTag), includesMemstoreTS);
     int size = keyValues.limit();
     ByteBuffer buf = ByteBuffer.allocate(size + HConstants.HFILEBLOCK_HEADER_SIZE);
     buf.position(HConstants.HFILEBLOCK_HEADER_SIZE);
     keyValues.rewind();
     buf.put(keyValues);
+    HFileContext meta = new HFileContext();
+    meta.setIncludesMvcc(includesMemstoreTS);
+    meta.setIncludesTags(useTag);
+    meta.setUsesHBaseChecksum(true);
+    meta.setCompressAlgo(Algorithm.NONE);
+    meta.setBlocksize(0);
+    meta.setChecksumType(ChecksumType.NULL);
     HFileBlock b = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, 0, includesMemstoreTS, 
-        HFileReaderV2.MAX_MINOR_VERSION, 0, ChecksumType.NULL.getCode(), 0);
+        HFileBlock.FILL_HEADER, 0, 
+         0, meta);
     return b;
   }
 

@@ -201,6 +201,16 @@ public final class CellProtos {
      * <code>optional bytes value = 6;</code>
      */
     com.google.protobuf.ByteString getValue();
+
+    // optional bytes tags = 7;
+    /**
+     * <code>optional bytes tags = 7;</code>
+     */
+    boolean hasTags();
+    /**
+     * <code>optional bytes tags = 7;</code>
+     */
+    com.google.protobuf.ByteString getTags();
   }
   /**
    * Protobuf type {@code Cell}
@@ -292,6 +302,11 @@ public final class CellProtos {
             case 50: {
               bitField0_ |= 0x00000020;
               value_ = input.readBytes();
+              break;
+            }
+            case 58: {
+              bitField0_ |= 0x00000040;
+              tags_ = input.readBytes();
               break;
             }
           }
@@ -430,6 +445,22 @@ public final class CellProtos {
       return value_;
     }
 
+    // optional bytes tags = 7;
+    public static final int TAGS_FIELD_NUMBER = 7;
+    private com.google.protobuf.ByteString tags_;
+    /**
+     * <code>optional bytes tags = 7;</code>
+     */
+    public boolean hasTags() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>optional bytes tags = 7;</code>
+     */
+    public com.google.protobuf.ByteString getTags() {
+      return tags_;
+    }
+
     private void initFields() {
       row_ = com.google.protobuf.ByteString.EMPTY;
       family_ = com.google.protobuf.ByteString.EMPTY;
@@ -437,6 +468,7 @@ public final class CellProtos {
       timestamp_ = 0L;
       cellType_ = org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellType.MINIMUM;
       value_ = com.google.protobuf.ByteString.EMPTY;
+      tags_ = com.google.protobuf.ByteString.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -467,6 +499,9 @@ public final class CellProtos {
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeBytes(6, value_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeBytes(7, tags_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -500,6 +535,10 @@ public final class CellProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(6, value_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(7, tags_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -554,6 +593,11 @@ public final class CellProtos {
         result = result && getValue()
             .equals(other.getValue());
       }
+      result = result && (hasTags() == other.hasTags());
+      if (hasTags()) {
+        result = result && getTags()
+            .equals(other.getTags());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -590,6 +634,10 @@ public final class CellProtos {
       if (hasValue()) {
         hash = (37 * hash) + VALUE_FIELD_NUMBER;
         hash = (53 * hash) + getValue().hashCode();
+      }
+      if (hasTags()) {
+        hash = (37 * hash) + TAGS_FIELD_NUMBER;
+        hash = (53 * hash) + getTags().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -717,6 +765,8 @@ public final class CellProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         value_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000020);
+        tags_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -769,6 +819,10 @@ public final class CellProtos {
           to_bitField0_ |= 0x00000020;
         }
         result.value_ = value_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.tags_ = tags_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -802,6 +856,9 @@ public final class CellProtos {
         }
         if (other.hasValue()) {
           setValue(other.getValue());
+        }
+        if (other.hasTags()) {
+          setTags(other.getTags());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1043,6 +1100,42 @@ public final class CellProtos {
         return this;
       }
 
+      // optional bytes tags = 7;
+      private com.google.protobuf.ByteString tags_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes tags = 7;</code>
+       */
+      public boolean hasTags() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional bytes tags = 7;</code>
+       */
+      public com.google.protobuf.ByteString getTags() {
+        return tags_;
+      }
+      /**
+       * <code>optional bytes tags = 7;</code>
+       */
+      public Builder setTags(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000040;
+        tags_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes tags = 7;</code>
+       */
+      public Builder clearTags() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        tags_ = getDefaultInstance().getTags();
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:Cell)
     }
 
@@ -1116,6 +1209,16 @@ public final class CellProtos {
      * <code>optional bytes value = 6;</code>
      */
     com.google.protobuf.ByteString getValue();
+
+    // optional bytes tags = 7;
+    /**
+     * <code>optional bytes tags = 7;</code>
+     */
+    boolean hasTags();
+    /**
+     * <code>optional bytes tags = 7;</code>
+     */
+    com.google.protobuf.ByteString getTags();
   }
   /**
    * Protobuf type {@code KeyValue}
@@ -1208,6 +1311,11 @@ public final class CellProtos {
             case 50: {
               bitField0_ |= 0x00000020;
               value_ = input.readBytes();
+              break;
+            }
+            case 58: {
+              bitField0_ |= 0x00000040;
+              tags_ = input.readBytes();
               break;
             }
           }
@@ -1346,6 +1454,22 @@ public final class CellProtos {
       return value_;
     }
 
+    // optional bytes tags = 7;
+    public static final int TAGS_FIELD_NUMBER = 7;
+    private com.google.protobuf.ByteString tags_;
+    /**
+     * <code>optional bytes tags = 7;</code>
+     */
+    public boolean hasTags() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>optional bytes tags = 7;</code>
+     */
+    public com.google.protobuf.ByteString getTags() {
+      return tags_;
+    }
+
     private void initFields() {
       row_ = com.google.protobuf.ByteString.EMPTY;
       family_ = com.google.protobuf.ByteString.EMPTY;
@@ -1353,6 +1477,7 @@ public final class CellProtos {
       timestamp_ = 0L;
       keyType_ = org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellType.MINIMUM;
       value_ = com.google.protobuf.ByteString.EMPTY;
+      tags_ = com.google.protobuf.ByteString.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1396,6 +1521,9 @@ public final class CellProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeBytes(6, value_);
       }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeBytes(7, tags_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -1428,6 +1556,10 @@ public final class CellProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(6, value_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(7, tags_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1482,6 +1614,11 @@ public final class CellProtos {
         result = result && getValue()
             .equals(other.getValue());
       }
+      result = result && (hasTags() == other.hasTags());
+      if (hasTags()) {
+        result = result && getTags()
+            .equals(other.getTags());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -1518,6 +1655,10 @@ public final class CellProtos {
       if (hasValue()) {
         hash = (37 * hash) + VALUE_FIELD_NUMBER;
         hash = (53 * hash) + getValue().hashCode();
+      }
+      if (hasTags()) {
+        hash = (37 * hash) + TAGS_FIELD_NUMBER;
+        hash = (53 * hash) + getTags().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -1646,6 +1787,8 @@ public final class CellProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         value_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000020);
+        tags_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -1698,6 +1841,10 @@ public final class CellProtos {
           to_bitField0_ |= 0x00000020;
         }
         result.value_ = value_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.tags_ = tags_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1731,6 +1878,9 @@ public final class CellProtos {
         }
         if (other.hasValue()) {
           setValue(other.getValue());
+        }
+        if (other.hasTags()) {
+          setTags(other.getTags());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1984,6 +2134,42 @@ public final class CellProtos {
         return this;
       }
 
+      // optional bytes tags = 7;
+      private com.google.protobuf.ByteString tags_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes tags = 7;</code>
+       */
+      public boolean hasTags() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional bytes tags = 7;</code>
+       */
+      public com.google.protobuf.ByteString getTags() {
+        return tags_;
+      }
+      /**
+       * <code>optional bytes tags = 7;</code>
+       */
+      public Builder setTags(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000040;
+        tags_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes tags = 7;</code>
+       */
+      public Builder clearTags() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        tags_ = getDefaultInstance().getTags();
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:KeyValue)
     }
 
@@ -2014,17 +2200,18 @@ public final class CellProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\nCell.proto\"v\n\004Cell\022\013\n\003row\030\001 \001(\014\022\016\n\006fam" +
-      "ily\030\002 \001(\014\022\021\n\tqualifier\030\003 \001(\014\022\021\n\ttimestam" +
-      "p\030\004 \001(\004\022\034\n\tcell_type\030\005 \001(\0162\t.CellType\022\r\n" +
-      "\005value\030\006 \001(\014\"y\n\010KeyValue\022\013\n\003row\030\001 \002(\014\022\016\n" +
-      "\006family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022\021\n\ttime" +
-      "stamp\030\004 \001(\004\022\033\n\010key_type\030\005 \001(\0162\t.CellType" +
-      "\022\r\n\005value\030\006 \001(\014*`\n\010CellType\022\013\n\007MINIMUM\020\000" +
-      "\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\rDELETE_COLUMN\020\014" +
-      "\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MAXIMUM\020\377\001B=\n*org" +
-      ".apache.hadoop.hbase.protobuf.generatedB",
-      "\nCellProtosH\001\240\001\001"
+      "\n\nCell.proto\"\204\001\n\004Cell\022\013\n\003row\030\001 \001(\014\022\016\n\006fa" +
+      "mily\030\002 \001(\014\022\021\n\tqualifier\030\003 \001(\014\022\021\n\ttimesta" +
+      "mp\030\004 \001(\004\022\034\n\tcell_type\030\005 \001(\0162\t.CellType\022\r" +
+      "\n\005value\030\006 \001(\014\022\014\n\004tags\030\007 \001(\014\"\207\001\n\010KeyValue" +
+      "\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n\tqualifi" +
+      "er\030\003 \002(\014\022\021\n\ttimestamp\030\004 \001(\004\022\033\n\010key_type\030" +
+      "\005 \001(\0162\t.CellType\022\r\n\005value\030\006 \001(\014\022\014\n\004tags\030" +
+      "\007 \001(\014*`\n\010CellType\022\013\n\007MINIMUM\020\000\022\007\n\003PUT\020\004\022" +
+      "\n\n\006DELETE\020\010\022\021\n\rDELETE_COLUMN\020\014\022\021\n\rDELETE" +
+      "_FAMILY\020\016\022\014\n\007MAXIMUM\020\377\001B=\n*org.apache.ha",
+      "doop.hbase.protobuf.generatedB\nCellProto" +
+      "sH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -2036,13 +2223,13 @@ public final class CellProtos {
           internal_static_Cell_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Cell_descriptor,
-              new java.lang.String[] { "Row", "Family", "Qualifier", "Timestamp", "CellType", "Value", });
+              new java.lang.String[] { "Row", "Family", "Qualifier", "Timestamp", "CellType", "Value", "Tags", });
           internal_static_KeyValue_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_KeyValue_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_KeyValue_descriptor,
-              new java.lang.String[] { "Row", "Family", "Qualifier", "Timestamp", "KeyType", "Value", });
+              new java.lang.String[] { "Row", "Family", "Qualifier", "Timestamp", "KeyType", "Value", "Tags", });
           return null;
         }
       };

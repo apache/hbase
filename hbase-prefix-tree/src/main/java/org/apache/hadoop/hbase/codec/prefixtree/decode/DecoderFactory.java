@@ -59,13 +59,13 @@ public class DecoderFactory {
 
 
   /**************************** helper ******************************/
-
   public static PrefixTreeArraySearcher ensureArraySearcherValid(ByteBuffer buffer,
       PrefixTreeArraySearcher searcher, boolean includeMvccVersion) {
     if (searcher == null) {
       PrefixTreeBlockMeta blockMeta = new PrefixTreeBlockMeta(buffer);
       searcher = new PrefixTreeArraySearcher(blockMeta, blockMeta.getRowTreeDepth(),
-          blockMeta.getMaxRowLength(), blockMeta.getMaxQualifierLength());
+          blockMeta.getMaxRowLength(), blockMeta.getMaxQualifierLength(),
+          blockMeta.getMaxTagsLength());
       searcher.initOnBlock(blockMeta, buffer.array(), includeMvccVersion);
       return searcher;
     }
@@ -78,8 +78,9 @@ public class DecoderFactory {
       int rowBufferLength = Math.max(blockMeta.getMaxRowLength(), searcher.getRowBufferLength());
       int qualifierBufferLength = Math.max(blockMeta.getMaxQualifierLength(),
         searcher.getQualifierBufferLength());
+      int tagBufferLength = Math.max(blockMeta.getMaxTagsLength(), searcher.getTagBufferLength());
       searcher = new PrefixTreeArraySearcher(blockMeta, maxRowTreeStackNodes, rowBufferLength,
-          qualifierBufferLength);
+          qualifierBufferLength, tagBufferLength);
     }
     //this is where we parse the BlockMeta
     searcher.initOnBlock(blockMeta, buffer.array(), includeMvccVersion);

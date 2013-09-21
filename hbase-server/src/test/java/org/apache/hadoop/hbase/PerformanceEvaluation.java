@@ -22,26 +22,27 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.File;
+import java.lang.reflect.Constructor;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
-import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.lang.reflect.Constructor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -51,21 +52,19 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.filter.PageFilter;
-import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
+import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.PageFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.MurmurHash;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -79,9 +78,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
+import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.util.LineReader;
 
 
 /**
@@ -104,9 +103,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
   protected static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
 
   private static final int DEFAULT_ROW_PREFIX_LENGTH = 16;
-  private static final int VALUE_LENGTH = 1000;
+  public static final int VALUE_LENGTH = 1000;
   private static final int ONE_GB = 1024 * 1024 * 1000;
   private static final int ROWS_PER_GB = ONE_GB / VALUE_LENGTH;
+  // TODO : should we make this configurable
+  private static final int TAG_LENGTH = 256;
 
   public static final byte[] COMPRESSION = Bytes.toBytes("NONE");
   public static final TableName TABLE_NAME =
@@ -129,6 +130,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private boolean writeToWAL = true;
   private boolean inMemoryCF = false;
   private int presplitRegions = 0;
+  private boolean useTags = false;
+  private int noOfTags = 1;
   private HConnection connection;
 
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
@@ -217,6 +220,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private int clients = 0;
     private boolean flushCommits = false;
     private boolean writeToWAL = true;
+    private boolean useTags = false;
+    private int noOfTags = 0;
 
     public PeInputSplit() {
       this.startRow = 0;
@@ -225,16 +230,20 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.clients = 0;
       this.flushCommits = false;
       this.writeToWAL = true;
+      this.useTags = false;
+      this.noOfTags = 0;
     }
 
     public PeInputSplit(int startRow, int rows, int totalRows, int clients,
-        boolean flushCommits, boolean writeToWAL) {
+        boolean flushCommits, boolean writeToWAL, boolean useTags, int noOfTags) {
       this.startRow = startRow;
       this.rows = rows;
       this.totalRows = totalRows;
       this.clients = clients;
       this.flushCommits = flushCommits;
       this.writeToWAL = writeToWAL;
+      this.useTags = useTags;
+      this.noOfTags = noOfTags;
     }
 
     @Override
@@ -245,6 +254,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.clients = in.readInt();
       this.flushCommits = in.readBoolean();
       this.writeToWAL = in.readBoolean();
+      this.useTags = in.readBoolean();
+      this.noOfTags = in.readInt();
     }
 
     @Override
@@ -255,6 +266,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       out.writeInt(clients);
       out.writeBoolean(flushCommits);
       out.writeBoolean(writeToWAL);
+      out.writeBoolean(useTags);
+      out.writeInt(noOfTags);
     }
 
     @Override
@@ -289,6 +302,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public boolean isWriteToWAL() {
       return writeToWAL;
+    }
+
+    public boolean isUseTags() {
+      return useTags;
+    }
+
+    public int getNoOfTags() {
+      return noOfTags;
     }
   }
 
@@ -326,6 +347,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
             int clients = Integer.parseInt(m.group(4));
             boolean flushCommits = Boolean.parseBoolean(m.group(5));
             boolean writeToWAL = Boolean.parseBoolean(m.group(6));
+            boolean useTags = Boolean.parseBoolean(m.group(7));
+            int noOfTags = Integer.parseInt(m.group(8));
 
             LOG.debug("split["+ splitList.size() + "] " +
                      " startRow=" + startRow +
@@ -333,11 +356,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
                      " totalRows=" + totalRows +
                      " clients=" + clients +
                      " flushCommits=" + flushCommits +
-                     " writeToWAL=" + writeToWAL);
+                     " writeToWAL=" + writeToWAL +
+                     " useTags=" + useTags +
+                     " noOfTags=" +noOfTags);
 
             PeInputSplit newSplit =
               new PeInputSplit(startRow, rows, totalRows, clients,
-                flushCommits, writeToWAL);
+                flushCommits, writeToWAL, useTags, noOfTags);
             splitList.add(newSplit);
           }
         }
@@ -457,9 +482,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
       // Evaluation task
       long elapsedTime = this.pe.runOneClient(this.cmd, value.getStartRow(),
-                                  value.getRows(), value.getTotalRows(),
-                                  value.isFlushCommits(), value.isWriteToWAL(),
-                                  HConnectionManager.createConnection(context.getConfiguration()), status);
+          value.getRows(), value.getTotalRows(),
+          value.isFlushCommits(), value.isWriteToWAL(),
+          value.isUseTags(), value.getNoOfTags(),
+          HConnectionManager.createConnection(context.getConfiguration()), status);
       // Collect how much time the thing took. Report as map output and
       // to the ELAPSED_TIME counter.
       context.getCounter(Counter.ELAPSED_TIME).increment(elapsedTime);
@@ -566,6 +592,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     final Compression.Algorithm compression = this.compression;
     final boolean writeToWal = this.writeToWAL;
     final int preSplitRegions = this.presplitRegions;
+    final boolean useTags = this.useTags;
+    final int numTags = this.noOfTags;
     final HConnection connection = HConnectionManager.createConnection(getConf());
     for (int i = 0; i < this.N; i++) {
       final int index = i;
@@ -582,14 +610,16 @@ public class PerformanceEvaluation extends Configured implements Tool {
           pe.presplitRegions = preSplitRegions;
           pe.N = N;
           pe.connection = connection;
+          pe.useTags = useTags;
+          pe.noOfTags = numTags;
           try {
             long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
-               perClientRows, R,
-                flushCommits, writeToWAL, connection, new Status() {
-                  public void setStatus(final String msg) throws IOException {
-                    LOG.info("client-" + getName() + " " + msg);
-                  }
-                });
+                perClientRows, R,
+                 flushCommits, writeToWAL, useTags, noOfTags, connection, new Status() {
+                   public void setStatus(final String msg) throws IOException {
+                     LOG.info("client-" + getName() + " " + msg);
+                   }
+                 });
             timings[index] = elapsedTime;
             LOG.info("Finished " + getName() + " in " + elapsedTime +
               "ms writing " + perClientRows + " rows");
@@ -748,14 +778,16 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private TableName tableName;
     private boolean flushCommits;
     private boolean writeToWAL = true;
+    private boolean useTags = false;
+    private int noOfTags = 0;
     private HConnection connection;
 
     TestOptions() {
     }
 
-    TestOptions(int startRow, int perClientRunRows, int totalRows,
-                int numClientThreads, TableName tableName,
-                boolean flushCommits, boolean writeToWAL, HConnection connection) {
+    TestOptions(int startRow, int perClientRunRows, int totalRows, int numClientThreads,
+        TableName tableName, boolean flushCommits, boolean writeToWAL, boolean useTags,
+        int noOfTags, HConnection connection) {
       this.startRow = startRow;
       this.perClientRunRows = perClientRunRows;
       this.totalRows = totalRows;
@@ -763,6 +795,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.tableName = tableName;
       this.flushCommits = flushCommits;
       this.writeToWAL = writeToWAL;
+      this.useTags = useTags;
+      this.noOfTags = noOfTags;
       this.connection = connection;
     }
 
@@ -797,6 +831,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public HConnection getConnection() {
       return connection;
     }
+    
+    public boolean isUseTags() {
+      return this.useTags;
+    }
+    public int getNumTags() {
+      return this.noOfTags;
+    }
   }
 
   /*
@@ -822,6 +863,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected volatile Configuration conf;
     protected boolean flushCommits;
     protected boolean writeToWAL;
+    protected boolean useTags;
+    protected int noOfTags;
     protected HConnection connection;
 
     /**
@@ -839,6 +882,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.conf = conf;
       this.flushCommits = options.isFlushCommits();
       this.writeToWAL = options.isWriteToWAL();
+      this.useTags = options.isUseTags();
+      this.noOfTags = options.getNumTags();
       this.connection = options.getConnection();
     }
 
@@ -1041,10 +1086,20 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(final int i) throws IOException {
-      byte [] row = getRandomRow(this.rand, this.totalRows);
+      byte[] row = getRandomRow(this.rand, this.totalRows);
       Put put = new Put(row);
-      byte[] value = generateValue(this.rand);
-      put.add(FAMILY_NAME, QUALIFIER_NAME, value);
+      byte[] value = generateData(this.rand, VALUE_LENGTH);
+      if (useTags) {
+        byte[] tag = generateData(this.rand, TAG_LENGTH);
+        Tag[] tags = new Tag[noOfTags];
+        for (int n = 0; n < noOfTags; n++) {
+          Tag t = new Tag((byte) n, tag);
+          tags[n] = t;
+        }
+        put.add(FAMILY_NAME, QUALIFIER_NAME, value, tags);
+      } else {
+        put.add(FAMILY_NAME, QUALIFIER_NAME, value);
+      }
       put.setDurability(writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
       table.put(put);
     }
@@ -1102,8 +1157,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testRow(final int i) throws IOException {
       Put put = new Put(format(i));
-      byte[] value = generateValue(this.rand);
-      put.add(FAMILY_NAME, QUALIFIER_NAME, value);
+      byte[] value = generateData(this.rand, VALUE_LENGTH);
+      if (useTags) {
+        byte[] tag = generateData(this.rand, TAG_LENGTH);
+        Tag[] tags = new Tag[noOfTags];
+        for (int n = 0; n < noOfTags; n++) {
+          Tag t = new Tag((byte) n, tag);
+          tags[n] = t;
+        }
+        put.add(FAMILY_NAME, QUALIFIER_NAME, value, tags);
+      } else {
+        put.add(FAMILY_NAME, QUALIFIER_NAME, value);
+      }
       put.setDurability(writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
       table.put(put);
     }
@@ -1119,7 +1184,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(int i) throws IOException {
-      byte[] value = generateValue(this.rand);
+      byte[] value = generateData(this.rand, VALUE_LENGTH);
       Scan scan = constructScan(value);
       ResultScanner scanner = null;
       try {
@@ -1165,11 +1230,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * consumes about 30% of CPU time.
    * @return Generated random value to insert into a table cell.
    */
-  public static byte[] generateValue(final Random r) {
-    byte [] b = new byte [VALUE_LENGTH];
+  public static byte[] generateData(final Random r, int length) {
+    byte [] b = new byte [length];
     int i = 0;
 
-    for(i = 0; i < (VALUE_LENGTH-8); i += 8) {
+    for(i = 0; i < (length-8); i += 8) {
       b[i] = (byte) (65 + r.nextInt(26));
       b[i+1] = b[i];
       b[i+2] = b[i];
@@ -1181,7 +1246,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     byte a = (byte) (65 + r.nextInt(26));
-    for(; i < VALUE_LENGTH; i++) {
+    for(; i < length; i++) {
       b[i] = a;
     }
     return b;
@@ -1192,16 +1257,16 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   long runOneClient(final Class<? extends Test> cmd, final int startRow,
-                    final int perClientRunRows, final int totalRows,
-                    boolean flushCommits, boolean writeToWAL, HConnection connection,
-                    final Status status)
+      final int perClientRunRows, final int totalRows,
+      boolean flushCommits, boolean writeToWAL, boolean useTags, int noOfTags, 
+      HConnection connection, final Status status)
   throws IOException {
     status.setStatus("Start " + cmd + " at offset " + startRow + " for " +
       perClientRunRows + " rows");
     long totalElapsedTime = 0;
 
     TestOptions options = new TestOptions(startRow, perClientRunRows,
-        totalRows, N, tableName, flushCommits, writeToWAL, connection);
+        totalRows, N, tableName, flushCommits, writeToWAL, useTags, noOfTags, connection);
     final Test t;
     try {
       Constructor<? extends Test> constructor = cmd.getDeclaredConstructor(
@@ -1233,8 +1298,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     try {
       admin = new HBaseAdmin(getConf());
       checkTable(admin);
-      runOneClient(cmd, 0, this.R, this.R, this.flushCommits, this.writeToWAL, this.connection,
-        status);
+      runOneClient(cmd, 0, this.R, this.R, this.flushCommits, this.writeToWAL, 
+        this.useTags, this.noOfTags, this.connection, status);
     } catch (Exception e) {
       LOG.error("Failed", e);
     }
@@ -1276,6 +1341,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err
         .println(" inmemory        Tries to keep the HFiles of the CF inmemory as far as possible.  Not " +
         		"guaranteed that reads are always served from inmemory.  Default: false");
+    System.err.println(" usetags         Writes tags along with KVs.  Use with HFile V3.  Default : false");
+    System.err
+        .println(" numoftags        Specify the no of tags that would be needed.  This works only if usetags is true.");
     System.err.println();
     System.err.println(" Note: -D properties will be applied to the conf used. ");
     System.err.println("  For example: ");
@@ -1382,6 +1450,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
         }
 
         this.connection = HConnectionManager.createConnection(getConf());
+        
+        final String useTags = "--usetags=";
+        if (cmd.startsWith(useTags)) {
+          this.useTags = Boolean.parseBoolean(cmd.substring(useTags.length()));
+          continue;
+        }
+        
+        final String noOfTags = "--nooftags=";
+        if (cmd.startsWith(noOfTags)) {
+          this.noOfTags = Integer.parseInt(cmd.substring(noOfTags.length()));
+          continue;
+        }
         
         Class<? extends Test> cmdClass = determineCommandClass(cmd);
         if (cmdClass != null) {

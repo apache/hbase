@@ -23,10 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.zip.Checksum;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ChecksumFactory;
 import org.apache.hadoop.hbase.util.ChecksumType;
 
 /**
@@ -107,7 +104,7 @@ public class ChecksumUtil {
     // when the minorVersion is 0, thus this is a defensive check for a
     // cannot-happen case. Since this is a cannot-happen case, it is
     // better to return false to indicate a checksum validation failure.
-    if (block.getMinorVersion() < HFileBlock.MINOR_VERSION_WITH_CHECKSUM) {
+    if (!block.getHFileContext().shouldUseHBaseChecksum()) {
       return false;
     }
 

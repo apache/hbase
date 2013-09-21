@@ -34,24 +34,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   @Override
   public void internalEncodeKeyValues(DataOutputStream out,
-      ByteBuffer in, boolean includesMemstoreTS) throws IOException {
+      ByteBuffer in, HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
     in.rewind();
     ByteBufferUtils.putInt(out, in.limit());
     ByteBufferUtils.moveBufferToStream(out, in, in.limit());
   }
 
-  @Override
-  public ByteBuffer decodeKeyValues(DataInputStream source,
-      int preserveHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
-      throws IOException {
-    int decompressedSize = source.readInt();
-    ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +
-        preserveHeaderLength);
-    buffer.position(preserveHeaderLength);
-    ByteBufferUtils.copyFromStreamToBuffer(buffer, source, decompressedSize);
-
-    return buffer;
-  }
 
   @Override
   public ByteBuffer getFirstKeyInBlock(ByteBuffer block) {
@@ -68,8 +56,8 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
 
   @Override
   public EncodedSeeker createSeeker(KVComparator comparator,
-      final boolean includesMemstoreTS) {
-    return new BufferedEncodedSeeker<SeekerState>(comparator) {
+      final HFileBlockDecodingContext decodingCtx) {
+    return new BufferedEncodedSeeker<SeekerState>(comparator, decodingCtx) {
       @Override
       protected void decodeNext() {
         current.keyLength = currentBuffer.getInt();
@@ -78,7 +66,11 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
         currentBuffer.get(current.keyBuffer, 0, current.keyLength);
         current.valueOffset = currentBuffer.position();
         ByteBufferUtils.skip(currentBuffer, current.valueLength);
-        if (includesMemstoreTS) {
+        if (includesTags()) {
+          current.tagLength = currentBuffer.getShort();
+          ByteBufferUtils.skip(currentBuffer, current.tagLength);
+        }
+        if (includesMvcc()) {
           current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
         } else {
           current.memstoreTS = 0;
@@ -93,6 +85,18 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
         decodeNext();
       }
     };
+  }
+
+  @Override
+  public ByteBuffer internalDecodeKeyValues(DataInputStream source, int allocateHeaderLength,
+      int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
+    int decompressedSize = source.readInt();
+    ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +
+        allocateHeaderLength);
+    buffer.position(allocateHeaderLength);
+    ByteBufferUtils.copyFromStreamToBuffer(buffer, source, decompressedSize);
+
+    return buffer;
   }
 
 }

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -72,9 +73,12 @@ public class TestFSErrorsExposed {
     FaultyFileSystem faultyfs = new FaultyFileSystem(hfs.getBackingFs());
     FileSystem fs = new HFileSystem(faultyfs);
     CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
+    HFileContext meta = new HFileContext();
+    meta.setBlocksize(2*1024);
     StoreFile.Writer writer = new StoreFile.WriterBuilder(
-        util.getConfiguration(), cacheConf, hfs, 2*1024)
+        util.getConfiguration(), cacheConf, hfs)
             .withOutputDir(hfilePath)
+            .withFileContext(meta)
             .build();
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
@@ -121,9 +125,12 @@ public class TestFSErrorsExposed {
     FaultyFileSystem faultyfs = new FaultyFileSystem(hfs.getBackingFs());
     HFileSystem fs = new HFileSystem(faultyfs);
     CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
+    HFileContext meta = new HFileContext();
+    meta.setBlocksize(2 * 1024);
     StoreFile.Writer writer = new StoreFile.WriterBuilder(
-        util.getConfiguration(), cacheConf, hfs, 2 * 1024)
+        util.getConfiguration(), cacheConf, hfs)
             .withOutputDir(hfilePath)
+            .withFileContext(meta)
             .build();
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));

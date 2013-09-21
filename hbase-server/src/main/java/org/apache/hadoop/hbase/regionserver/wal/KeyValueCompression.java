@@ -50,7 +50,8 @@ class KeyValueCompression {
       throws IOException {
     int keylength = WritableUtils.readVInt(in);
     int vlength = WritableUtils.readVInt(in);
-    int length = KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + keylength + vlength;
+    int tagsLength = WritableUtils.readVInt(in);
+    int length = (int) KeyValue.getKeyValueDataStructureSize(keylength, vlength, tagsLength);
 
     byte[] backingArray = new byte[length];
     int pos = 0;
@@ -79,7 +80,7 @@ class KeyValueCompression {
     // the rest
     in.readFully(backingArray, pos, length - pos);
 
-    return new KeyValue(backingArray);
+    return new KeyValue(backingArray, 0, length);
   }
 
   private static void checkLength(int len, int max) throws IOException {
@@ -105,6 +106,7 @@ class KeyValueCompression {
     // we first write the KeyValue infrastructure as VInts.
     WritableUtils.writeVInt(out, keyVal.getKeyLength());
     WritableUtils.writeVInt(out, keyVal.getValueLength());
+    WritableUtils.writeVInt(out, keyVal.getTagsLength());
 
     // now we write the row key, as the row key is likely to be repeated
     // We save space only if we attempt to compress elements with duplicates

@@ -76,8 +76,8 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public void internalEncodeKeyValues(DataOutputStream writeHere,
-      ByteBuffer in, boolean includesMemstoreTS) throws IOException {
+  public void internalEncodeKeyValues(DataOutputStream writeHere, ByteBuffer in,
+      HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
     in.rewind();
     ByteBufferUtils.putInt(writeHere, in.limit());
     int prevOffset = -1;
@@ -86,24 +86,23 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     while (in.hasRemaining()) {
       offset = in.position();
       keyLength = addKV(prevOffset, writeHere, in, keyLength);
-      afterEncodingKeyValue(in, writeHere, includesMemstoreTS);
+      afterEncodingKeyValue(in, writeHere, encodingCtx);
       prevOffset = offset;
     }
   }
 
   @Override
-  public ByteBuffer decodeKeyValues(DataInputStream source,
-      int allocHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
-          throws IOException {
+  public ByteBuffer internalDecodeKeyValues(DataInputStream source, int allocateHeaderLength,
+      int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
     int decompressedSize = source.readInt();
     ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +
-        allocHeaderLength);
-    buffer.position(allocHeaderLength);
+        allocateHeaderLength);
+    buffer.position(allocateHeaderLength);
     int prevKeyOffset = 0;
 
     while (source.available() > skipLastBytes) {
       prevKeyOffset = decodeKeyValue(source, buffer, prevKeyOffset);
-      afterDecodingKeyValue(source, buffer, includesMemstoreTS);
+      afterDecodingKeyValue(source, buffer, decodingCtx);
     }
 
     if (source.available() != skipLastBytes) {
@@ -166,8 +165,8 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
   @Override
   public EncodedSeeker createSeeker(KVComparator comparator,
-      final boolean includesMemstoreTS) {
-    return new BufferedEncodedSeeker<SeekerState>(comparator) {
+      final HFileBlockDecodingContext decodingCtx) {
+    return new BufferedEncodedSeeker<SeekerState>(comparator, decodingCtx) {
       @Override
       protected void decodeNext() {
         current.keyLength = ByteBufferUtils.readCompressedInt(currentBuffer);
@@ -180,7 +179,10 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
             current.keyLength - current.lastCommonPrefix);
         current.valueOffset = currentBuffer.position();
         ByteBufferUtils.skip(currentBuffer, current.valueLength);
-        if (includesMemstoreTS) {
+        if (includesTags()) {
+          decodeTags();
+        }
+        if (includesMvcc()) {
           current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
         } else {
           current.memstoreTS = 0;

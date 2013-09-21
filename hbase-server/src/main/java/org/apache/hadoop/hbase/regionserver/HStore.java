@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -776,11 +777,13 @@ public class HStore implements Store {
    * @param maxKeyCount
    * @param compression Compression algorithm to use
    * @param isCompaction whether we are creating a new file in a compaction
+   * @param includesMVCCReadPoint - whether to include MVCC or not
+   * @param includesTag - includesTag or not
    * @return Writer for a new StoreFile in the tmp dir.
    */
   @Override
-  public StoreFile.Writer createWriterInTmp(long maxKeyCount,
-    Compression.Algorithm compression, boolean isCompaction, boolean includeMVCCReadpoint)
+  public StoreFile.Writer createWriterInTmp(long maxKeyCount, Compression.Algorithm compression,
+      boolean isCompaction, boolean includeMVCCReadpoint, boolean includesTag)
   throws IOException {
     final CacheConfig writerCacheConf;
     if (isCompaction) {
@@ -795,21 +798,36 @@ public class HStore implements Store {
       favoredNodes = region.getRegionServerServices().getFavoredNodesForRegion(
           region.getRegionInfo().getEncodedName());
     }
+    HFileContext hFileContext = createFileContext(compression, includeMVCCReadpoint, includesTag);
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, writerCacheConf,
-        this.getFileSystem(), blocksize)
+        this.getFileSystem())
             .withFilePath(fs.createTempName())
-            .withDataBlockEncoder(dataBlockEncoder)
             .withComparator(comparator)
             .withBloomType(family.getBloomFilterType())
             .withMaxKeyCount(maxKeyCount)
-            .withChecksumType(checksumType)
-            .withBytesPerChecksum(bytesPerChecksum)
-            .withCompression(compression)
             .withFavoredNodes(favoredNodes)
-            .includeMVCCReadpoint(includeMVCCReadpoint)
+            .withFileContext(hFileContext)
             .build();
     return w;
   }
+  
+  private HFileContext createFileContext(Compression.Algorithm compression,
+      boolean includeMVCCReadpoint, boolean includesTag) {
+    HFileContext hFileContext = new HFileContext();
+    hFileContext.setIncludesMvcc(includeMVCCReadpoint);
+    hFileContext.setIncludesTags(includesTag);
+    if (compression == null) {
+      compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
+    }
+    hFileContext.setCompressAlgo(compression);
+    hFileContext.setChecksumType(checksumType);
+    hFileContext.setBytesPerChecksum(bytesPerChecksum);
+    hFileContext.setBlocksize(blocksize);
+    hFileContext.setEncodingInCache(family.getDataBlockEncoding());
+    hFileContext.setEncodingOnDisk(family.getDataBlockEncodingOnDisk());
+    return hFileContext;
+  }
+
 
   /*
    * Change storeFiles adding into place the Reader produced by this new flush.

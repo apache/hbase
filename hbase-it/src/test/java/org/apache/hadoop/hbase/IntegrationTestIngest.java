@@ -47,7 +47,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   protected static final Log LOG = LogFactory.getLog(IntegrationTestIngest.class);
   protected IntegrationTestingUtility util;
   protected HBaseCluster cluster;
-  private LoadTestTool loadTool;
+  protected LoadTestTool loadTool;
 
   protected void setUp(int numSlavesBase) throws Exception {
     util = getTestingUtil(null);
@@ -84,7 +84,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
 
   @Test
   public void internalRunIngestTest() throws Exception {
-    runIngestTest(DEFAULT_RUN_TIME, 2500, 10, 1024, 10);
+    runIngestTest(DEFAULT_RUN_TIME, 2500, 10, 1024, 10, false, 10);
   }
 
   @Override
@@ -104,7 +104,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   }
 
   protected void runIngestTest(long defaultRunTime, int keysPerServerPerIter,
-      int colsPerKey, int recordSize, int writeThreads) throws Exception {
+      int colsPerKey, int recordSize, int writeThreads, boolean useTags, int maxTagsPerKey) throws Exception {
     LOG.info("Running ingest");
     LOG.info("Cluster size:" + util.getHBaseClusterInterface().getClusterStatus().getServersSize());
 
@@ -118,39 +118,46 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       LOG.info("Intended run time: " + (runtime/60000) + " min, left:" +
           ((runtime - (System.currentTimeMillis() - start))/60000) + " min");
 
-      int ret = loadTool.run(new String[] {
-          "-tn", getTablename(),
-          "-write", String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads),
-          "-start_key", String.valueOf(startKey),
-          "-num_keys", String.valueOf(numKeys),
-          "-skip_init"
-      });
+      int ret = -1;
+      if (useTags) {
+        ret = loadTool.run(new String[] { "-tn", getTablename(), "-write",
+            String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads), "-start_key",
+            String.valueOf(startKey), "-num_keys", String.valueOf(numKeys), "-skip_init",
+            "-usetags", "-num_tags", String.format("1:%d", maxTagsPerKey) });
+      } else {
+        ret = loadTool.run(new String[] { "-tn", getTablename(), "-write",
+            String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads), "-start_key",
+            String.valueOf(startKey), "-num_keys", String.valueOf(numKeys), "-skip_init" });
+      }
       if (0 != ret) {
         String errorMsg = "Load failed with error code " + ret;
         LOG.error(errorMsg);
         Assert.fail(errorMsg);
       }
 
-      ret = loadTool.run(new String[] {
-          "-tn", getTablename(),
-          "-update", String.format("60:%d", writeThreads),
-          "-start_key", String.valueOf(startKey),
-          "-num_keys", String.valueOf(numKeys),
-          "-skip_init"
-      });
+      if (useTags) {
+        ret = loadTool.run(new String[] { "-tn", getTablename(), "-update",
+            String.format("60:%d", writeThreads), "-start_key", String.valueOf(startKey),
+            "-num_keys", String.valueOf(numKeys), "-skip_init", "-usetags", "-num_tags",
+            String.format("1:%d", maxTagsPerKey) });
+      } else {
+        ret = loadTool.run(new String[] { "-tn", getTablename(), "-update",
+            String.format("60:%d", writeThreads), "-start_key", String.valueOf(startKey),
+            "-num_keys", String.valueOf(numKeys), "-skip_init" });
+      }
       if (0 != ret) {
         String errorMsg = "Update failed with error code " + ret;
         LOG.error(errorMsg);
         Assert.fail(errorMsg);
       }
-
-      ret = loadTool.run(new String[] {
-          "-tn", getTablename(),
-          "-read", "100:20",
-          "-start_key", String.valueOf(startKey),
-          "-num_keys", String.valueOf(numKeys),
-          "-skip_init"
-      });
+      if (useTags) {
+        ret = loadTool.run(new String[] { "-tn", getTablename(), "-read", "100:20", "-start_key",
+            String.valueOf(startKey), "-num_keys", String.valueOf(numKeys), "-skip_init",
+            "-usetags", "-num_tags", String.format("1:%d", maxTagsPerKey) });
+      } else {
+        ret = loadTool.run(new String[] { "-tn", getTablename(), "-read", "100:20", "-start_key",
+            String.valueOf(startKey), "-num_keys", String.valueOf(numKeys), "-skip_init" });
+      }
       if (0 != ret) {
         String errorMsg = "Verification failed with error code " + ret;
         LOG.error(errorMsg);

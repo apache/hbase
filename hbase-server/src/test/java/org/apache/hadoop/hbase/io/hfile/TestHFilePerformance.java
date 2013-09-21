@@ -161,11 +161,13 @@ public class TestHFilePerformance extends TestCase {
     FSDataOutputStream fout =  createFSOutput(path);
 
     if ("HFile".equals(fileType)){
+        HFileContext meta = new HFileContext();
+        meta.setCompressAlgo(AbstractHFileWriter.compressionByName(codecName));
+        meta.setBlocksize(minBlockSize);
         System.out.println("HFile write method: ");
         HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
             .withOutputStream(fout)
-            .withBlockSize(minBlockSize)
-            .withCompression(codecName)
+            .withFileContext(meta)
             .withComparator(new KeyValue.RawBytesComparator())
             .create();
 

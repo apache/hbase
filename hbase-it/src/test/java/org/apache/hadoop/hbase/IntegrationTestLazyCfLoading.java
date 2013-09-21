@@ -230,7 +230,8 @@ public class IntegrationTestLazyCfLoading {
     writer.setMultiPut(true);
 
     LOG.info("Starting writer; the number of keys to write is " + keysToWrite);
-    writer.start(1, keysToWrite, WRITER_THREADS);
+    // TODO : Need to see if tag support has to be given here in the integration test suite
+    writer.start(1, keysToWrite, WRITER_THREADS, false, 0, 0);
 
     // Now, do scans.
     long now = EnvironmentEdgeManager.currentTimeMillis();

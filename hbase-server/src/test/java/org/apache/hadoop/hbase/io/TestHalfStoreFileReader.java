@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -82,10 +83,11 @@ public class TestHalfStoreFileReader {
     Configuration conf = TEST_UTIL.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
-
+    HFileContext meta = new HFileContext();
+    meta.setBlocksize(1024);
     HFile.Writer w = HFile.getWriterFactory(conf, cacheConf)
         .withPath(fs, p)
-        .withBlockSize(1024)
+        .withFileContext(meta)
         .create();
 
     // write some things.
@@ -147,10 +149,11 @@ public class TestHalfStoreFileReader {
       Configuration conf = TEST_UTIL.getConfiguration();
       FileSystem fs = FileSystem.get(conf);
       CacheConfig cacheConf = new CacheConfig(conf);
-
+      HFileContext meta = new HFileContext();
+      meta.setBlocksize(1024);
       HFile.Writer w = HFile.getWriterFactory(conf, cacheConf)
               .withPath(fs, p)
-              .withBlockSize(1024)
+              .withFileContext(meta)
               .create();
 
       // write some things.

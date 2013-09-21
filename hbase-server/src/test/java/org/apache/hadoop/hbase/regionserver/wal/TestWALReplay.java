@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
@@ -326,8 +327,10 @@ public class TestWALReplay {
     HLog wal = createWAL(this.conf);
     HRegion region = HRegion.openHRegion(hri, htd, wal, this.conf);
     Path f =  new Path(basedir, "hfile");
+    HFileContext context = new HFileContext();
     HFile.Writer writer =
-      HFile.getWriterFactoryNoCache(conf).withPath(fs, f).create();
+    HFile.getWriterFactoryNoCache(conf).withPath(fs, f)
+        .withFileContext(context).create();
     byte [] family = htd.getFamilies().iterator().next().getName();
     byte [] row = tableName.getName();
     writer.append(new KeyValue(row, family, family, row));

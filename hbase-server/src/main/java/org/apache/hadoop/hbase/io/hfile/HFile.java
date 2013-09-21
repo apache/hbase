@@ -50,23 +50,21 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
-import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
 import com.google.common.base.Preconditions;
@@ -156,7 +154,7 @@ public class HFile {
 
   /** Maximum supported HFile format version
    */
-  public static final int MAX_FORMAT_VERSION = 2;
+  public static final int MAX_FORMAT_VERSION = 3;
 
   /** Default compression name: none. */
   public final static String DEFAULT_COMPRESSION =
@@ -292,6 +290,8 @@ public class HFile {
 
     void append(byte[] key, byte[] value) throws IOException;
 
+    void append (byte[] key, byte[] value, byte[] tag) throws IOException;
+
     /** @return the path to this {@link HFile} */
     Path getPath();
 
@@ -332,15 +332,9 @@ public class HFile {
     protected FileSystem fs;
     protected Path path;
     protected FSDataOutputStream ostream;
-    protected int blockSize = HColumnDescriptor.DEFAULT_BLOCKSIZE;
-    protected Compression.Algorithm compression =
-        HFile.DEFAULT_COMPRESSION_ALGORITHM;
-    protected HFileDataBlockEncoder encoder = NoOpDataBlockEncoder.INSTANCE;
     protected KVComparator comparator = KeyValue.COMPARATOR;
     protected InetSocketAddress[] favoredNodes;
-    protected ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
-    protected int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
-    protected boolean includeMVCCReadpoint = true;
+    private HFileContext fileContext;
 
     WriterFactory(Configuration conf, CacheConfig cacheConf) {
       this.conf = conf;
@@ -361,29 +355,6 @@ public class HFile {
       return this;
     }
 
-    public WriterFactory withBlockSize(int blockSize) {
-      this.blockSize = blockSize;
-      return this;
-    }
-
-    public WriterFactory withCompression(Compression.Algorithm compression) {
-      Preconditions.checkNotNull(compression);
-      this.compression = compression;
-      return this;
-    }
-
-    public WriterFactory withCompression(String compressAlgo) {
-      Preconditions.checkNotNull(compression);
-      this.compression = AbstractHFileWriter.compressionByName(compressAlgo);
-      return this;
-    }
-
-    public WriterFactory withDataBlockEncoder(HFileDataBlockEncoder encoder) {
-      Preconditions.checkNotNull(encoder);
-      this.encoder = encoder;
-      return this;
-    }
-
     public WriterFactory withComparator(KVComparator comparator) {
       Preconditions.checkNotNull(comparator);
       this.comparator = comparator;
@@ -396,23 +367,8 @@ public class HFile {
       return this;
     }
 
-    public WriterFactory withChecksumType(ChecksumType checksumType) {
-      Preconditions.checkNotNull(checksumType);
-      this.checksumType = checksumType;
-      return this;
-    }
-
-    public WriterFactory withBytesPerChecksum(int bytesPerChecksum) {
-      this.bytesPerChecksum = bytesPerChecksum;
-      return this;
-    }
-
-    /**
-     * @param includeMVCCReadpoint whether to write the mvcc readpoint to the file for each KV
-     * @return this (for chained invocation)
-     */
-    public WriterFactory includeMVCCReadpoint(boolean includeMVCCReadpoint) {
-      this.includeMVCCReadpoint = includeMVCCReadpoint;
+    public WriterFactory withFileContext(HFileContext fileContext) {
+      this.fileContext = fileContext;
       return this;
     }
 
@@ -424,16 +380,12 @@ public class HFile {
       if (path != null) {
         ostream = AbstractHFileWriter.createOutputStream(conf, fs, path, favoredNodes);
       }
-      return createWriter(fs, path, ostream, blockSize,
-          compression, encoder, comparator, checksumType, bytesPerChecksum, includeMVCCReadpoint);
+      return createWriter(fs, path, ostream, 
+                   comparator, fileContext);
     }
 
-    protected abstract Writer createWriter(FileSystem fs, Path path,
-        FSDataOutputStream ostream, int blockSize,
-        Compression.Algorithm compress,
-        HFileDataBlockEncoder dataBlockEncoder,
-        KVComparator comparator, ChecksumType checksumType,
-        int bytesPerChecksum, boolean includeMVCCReadpoint) throws IOException;
+    protected abstract Writer createWriter(FileSystem fs, Path path, FSDataOutputStream ostream,
+        KVComparator comparator, HFileContext fileContext) throws IOException;
   }
 
   /** The configuration key for HFile version to use for new files */
@@ -466,6 +418,8 @@ public class HFile {
     switch (version) {
     case 2:
       return new HFileWriterV2.WriterFactoryV2(conf, cacheConf);
+    case 3:
+      return new HFileWriterV3.WriterFactoryV3(conf, cacheConf);
     default:
       throw new IllegalArgumentException("Cannot create writer for HFile " +
           "format version " + version);
@@ -573,6 +527,9 @@ public class HFile {
     case 2:
       return new HFileReaderV2(
           path, trailer, fsdis, size, cacheConf, preferredEncodingInCache, hfs);
+    case 3 :
+      return new HFileReaderV3(
+          path, trailer, fsdis, size, cacheConf, preferredEncodingInCache, hfs);
     default:
       throw new CorruptHFileException("Invalid HFile version " + trailer.getMajorVersion());
     }
@@ -589,7 +546,6 @@ public class HFile {
   public static Reader createReaderWithEncoding(
       FileSystem fs, Path path, CacheConfig cacheConf,
       DataBlockEncoding preferredEncodingInCache) throws IOException {
-    final boolean closeIStream = true;
     FSDataInputStreamWrapper stream = new FSDataInputStreamWrapper(fs, path);
     return pickReaderVersion(path, stream, fs.getFileStatus(path).getLen(),
         cacheConf, preferredEncodingInCache, stream.getHfs());
@@ -648,15 +604,16 @@ public class HFile {
   }
 
   /**
-   * Metadata for this file.  Conjured by the writer.  Read in by the reader.
+   * Metadata for this file. Conjured by the writer. Read in by the reader.
    */
-  static class FileInfo implements SortedMap<byte [], byte []> {
+  public static class FileInfo implements SortedMap<byte[], byte[]> {
     static final String RESERVED_PREFIX = "hfile.";
     static final byte[] RESERVED_PREFIX_BYTES = Bytes.toBytes(RESERVED_PREFIX);
     static final byte [] LASTKEY = Bytes.toBytes(RESERVED_PREFIX + "LASTKEY");
     static final byte [] AVG_KEY_LEN = Bytes.toBytes(RESERVED_PREFIX + "AVG_KEY_LEN");
     static final byte [] AVG_VALUE_LEN = Bytes.toBytes(RESERVED_PREFIX + "AVG_VALUE_LEN");
     static final byte [] COMPARATOR = Bytes.toBytes(RESERVED_PREFIX + "COMPARATOR");
+    public static final byte [] MAX_TAGS_LEN = Bytes.toBytes(RESERVED_PREFIX + "MAX_TAGS_LEN");
     private final SortedMap<byte [], byte []> map = new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
 
     public FileInfo() {

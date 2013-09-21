@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -577,8 +578,10 @@ public class TestRegionObserverInterface {
       Configuration conf,
       FileSystem fs, Path path,
       byte[] family, byte[] qualifier) throws IOException {
+    HFileContext context = new HFileContext();
     HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf))
         .withPath(fs, path)
+        .withFileContext(context)
         .create();
     long now = System.currentTimeMillis();
     try {

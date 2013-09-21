@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.io.compress.Compressor;
 
 /**
@@ -112,9 +114,11 @@ public class CompressionTest {
   public static void doSmokeTest(FileSystem fs, Path path, String codec)
   throws Exception {
     Configuration conf = HBaseConfiguration.create();
+    HFileContext context = new HFileContext();
+    context.setCompressAlgo(AbstractHFileWriter.compressionByName(codec));
     HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
         .withPath(fs, path)
-        .withCompression(codec)
+        .withFileContext(context)
         .create();
     writer.append(Bytes.toBytes("testkey"), Bytes.toBytes("testval"));
     writer.appendFileInfo(Bytes.toBytes("infokey"), Bytes.toBytes("infoval"));

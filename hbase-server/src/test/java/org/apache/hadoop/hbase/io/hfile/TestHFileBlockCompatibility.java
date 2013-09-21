@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -84,14 +85,16 @@ public class TestHFileBlockCompatibility {
   private int uncompressedSizeV1;
 
   private final boolean includesMemstoreTS;
+  private final boolean includesTag;
 
-  public TestHFileBlockCompatibility(boolean includesMemstoreTS) {
+  public TestHFileBlockCompatibility(boolean includesMemstoreTS, boolean includesTag) {
     this.includesMemstoreTS = includesMemstoreTS;
+    this.includesTag = includesTag;
   }
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    return HBaseTestingUtility.BOOLEAN_PARAMETERIZED;
+    return HBaseTestingUtility.MEMSTORETS_TAGS_PARAMETRIZED;
   }
 
   @Before
@@ -117,7 +120,7 @@ public class TestHFileBlockCompatibility {
       throws IOException {
     final BlockType blockType = BlockType.DATA;
     Writer hbw = new Writer(algo, null,
-        includesMemstoreTS);
+        includesMemstoreTS, includesTag);
     DataOutputStream dos = hbw.startWriting(blockType);
     TestHFileBlock.writeTestBlockContents(dos);
     // make sure the block is ready by calling hbw.getHeaderAndData()
@@ -144,7 +147,7 @@ public class TestHFileBlockCompatibility {
   @Test
   public void testNoCompression() throws IOException {
     assertEquals(4000, createTestV2Block(NONE).getBlockForCaching().
-                       getUncompressedSizeWithoutHeader());
+        getUncompressedSizeWithoutHeader());
   }
 
   @Test
@@ -172,6 +175,9 @@ public class TestHFileBlockCompatibility {
 
   @Test
   public void testReaderV2() throws IOException {
+    if(includesTag) {
+      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    }
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
           LOG.info("testReaderV2: Compression algorithm: " + algo +
@@ -180,7 +186,7 @@ public class TestHFileBlockCompatibility {
             + algo);
         FSDataOutputStream os = fs.create(path);
         Writer hbw = new Writer(algo, null,
-            includesMemstoreTS);
+            includesMemstoreTS, includesTag);
         long totalSize = 0;
         for (int blockId = 0; blockId < 2; ++blockId) {
           DataOutputStream dos = hbw.startWriting(BlockType.DATA);
@@ -192,8 +198,13 @@ public class TestHFileBlockCompatibility {
         os.close();
 
         FSDataInputStream is = fs.open(path);
+        HFileContext meta = new HFileContext();
+        meta.setUsesHBaseChecksum(false);
+        meta.setIncludesMvcc(includesMemstoreTS);
+        meta.setIncludesTags(includesTag);
+        meta.setCompressAlgo(algo);
         HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
-            algo, totalSize, MINOR_VERSION, fs, path);
+            totalSize, fs, path, meta);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
         is.close();
 
@@ -205,8 +216,8 @@ public class TestHFileBlockCompatibility {
 
         if (algo == GZ) {
           is = fs.open(path);
-          hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
-              algo, totalSize, MINOR_VERSION, fs, path);
+          hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is), totalSize, fs, path,
+              meta);
           b = hbr.readBlockData(0, 2173 + HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM +
                                 b.totalChecksumBytes(), -1, pread);
           assertEquals(blockStr, b.toString());
@@ -235,6 +246,9 @@ public class TestHFileBlockCompatibility {
    */
   @Test
   public void testDataBlockEncoding() throws IOException {
+    if(includesTag) {
+      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    }
     final int numBlocks = 5;
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
@@ -250,7 +264,7 @@ public class TestHFileBlockCompatibility {
                   TestHFileBlockCompatibility.Writer.DUMMY_HEADER);
           TestHFileBlockCompatibility.Writer hbw =
               new TestHFileBlockCompatibility.Writer(algo,
-                  dataBlockEncoder, includesMemstoreTS);
+                  dataBlockEncoder, includesMemstoreTS, includesTag);
           long totalSize = 0;
           final List<Integer> encodedSizes = new ArrayList<Integer>();
           final List<ByteBuffer> encodedBlocks = new ArrayList<ByteBuffer>();
@@ -258,7 +272,7 @@ public class TestHFileBlockCompatibility {
             DataOutputStream dos = hbw.startWriting(BlockType.DATA);
             TestHFileBlock.writeEncodedBlock(algo, encoding, dos, encodedSizes,
                 encodedBlocks, blockId, includesMemstoreTS,
-                TestHFileBlockCompatibility.Writer.DUMMY_HEADER);
+                TestHFileBlockCompatibility.Writer.DUMMY_HEADER, includesTag);
 
             hbw.writeHeaderAndData(os);
             totalSize += hbw.getOnDiskSizeWithHeader();
@@ -266,8 +280,13 @@ public class TestHFileBlockCompatibility {
           os.close();
 
           FSDataInputStream is = fs.open(path);
+          HFileContext meta = new HFileContext();
+          meta.setUsesHBaseChecksum(false);
+          meta.setIncludesMvcc(includesMemstoreTS);
+          meta.setIncludesTags(includesTag);
+          meta.setCompressAlgo(algo);
           HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
-              algo, totalSize, MINOR_VERSION, fs, path);
+              totalSize, fs, path, meta);
           hbr.setDataBlockEncoder(dataBlockEncoder);
           hbr.setIncludesMemstoreTS(includesMemstoreTS);
 
@@ -301,9 +320,6 @@ public class TestHFileBlockCompatibility {
       }
     }
   }
-
-
-
   /**
    * This is the version of the HFileBlock.Writer that is used to
    * create V2 blocks with minor version 0. These blocks do not
@@ -392,33 +408,34 @@ public class TestHFileBlockCompatibility {
     /** The offset of the previous block of the same type */
     private long prevOffset;
 
-    /** Whether we are including memstore timestamp after every key/value */
-    private boolean includesMemstoreTS;
+    private HFileContext meta;
 
     /**
      * @param compressionAlgorithm compression algorithm to use
      * @param dataBlockEncoderAlgo data block encoding algorithm to use
      */
     public Writer(Compression.Algorithm compressionAlgorithm,
-          HFileDataBlockEncoder dataBlockEncoder, boolean includesMemstoreTS) {
+          HFileDataBlockEncoder dataBlockEncoder, boolean includesMemstoreTS, boolean includesTag) {
       compressAlgo = compressionAlgorithm == null ? NONE : compressionAlgorithm;
       this.dataBlockEncoder = dataBlockEncoder != null
           ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
 
-      defaultBlockEncodingCtx =
-          new HFileBlockDefaultEncodingContext(compressionAlgorithm,
-              null, DUMMY_HEADER);
+      meta = new HFileContext();
+      meta.setUsesHBaseChecksum(false);
+      meta.setIncludesMvcc(includesMemstoreTS);
+      meta.setIncludesTags(includesTag);
+      meta.setCompressAlgo(compressionAlgorithm);
+      
+      defaultBlockEncodingCtx = new HFileBlockDefaultEncodingContext(null, DUMMY_HEADER, meta);
       dataBlockEncodingCtx =
-        this.dataBlockEncoder.newOnDiskDataBlockEncodingContext(
-            compressionAlgorithm, DUMMY_HEADER);
-
+          this.dataBlockEncoder.newOnDiskDataBlockEncodingContext(
+              DUMMY_HEADER, meta);
       baosInMemory = new ByteArrayOutputStream();
 
       prevOffsetByType = new long[BlockType.values().length];
       for (int i = 0; i < prevOffsetByType.length; ++i)
         prevOffsetByType[i] = -1;
 
-      this.includesMemstoreTS = includesMemstoreTS;
     }
 
     /**
@@ -521,8 +538,7 @@ public class TestHFileBlockCompatibility {
               uncompressedBytesWithHeader.length - HEADER_SIZE).slice();
 
       //do the encoding
-      dataBlockEncoder.beforeWriteToDisk(rawKeyValues,
-              includesMemstoreTS, dataBlockEncodingCtx, blockType);
+      dataBlockEncoder.beforeWriteToDisk(rawKeyValues, dataBlockEncodingCtx, blockType);
 
       uncompressedBytesWithHeader =
           dataBlockEncodingCtx.getUncompressedBytesWithHeader();
@@ -714,11 +730,13 @@ public class TestHFileBlockCompatibility {
      * Creates a new HFileBlock.
      */
     public HFileBlock getBlockForCaching() {
+      meta.setUsesHBaseChecksum(false);
+      meta.setChecksumType(ChecksumType.NULL);
+      meta.setBytesPerChecksum(0);
       return new HFileBlock(blockType, getOnDiskSizeWithoutHeader(),
           getUncompressedSizeWithoutHeader(), prevOffset,
-          getUncompressedBufferWithHeader(), DONT_FILL_HEADER, startOffset,
-          includesMemstoreTS, MINOR_VERSION, 0, ChecksumType.NULL.getCode(),
-          getOnDiskSizeWithoutHeader());
+          getUncompressedBufferWithHeader(), DONT_FILL_HEADER, startOffset, 
+          getOnDiskSizeWithoutHeader(), meta);
     }
   }
 

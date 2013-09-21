@@ -53,6 +53,8 @@ public class CellCodec implements Codec {
       this.out.write(cell.getTypeByte());
       // Value
       write(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+      // Write tags
+      write(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
       // MvccVersion
       this.out.write(Bytes.toBytes(cell.getMvccVersion()));
     }
@@ -85,11 +87,12 @@ public class CellCodec implements Codec {
       long timestamp = Bytes.toLong(longArray);
       byte type = (byte) this.in.read();
       byte [] value = readByteArray(in);
+      byte[] tags = readByteArray(in);
       // Read memstore version
       byte[] memstoreTSArray = new byte[Bytes.SIZEOF_LONG];
       IOUtils.readFully(this.in, memstoreTSArray);
       long memstoreTS = Bytes.toLong(memstoreTSArray);
-      return CellUtil.createCell(row, family, qualifier, timestamp, type, value, memstoreTS);
+      return CellUtil.createCell(row, family, qualifier, timestamp, type, value, tags, memstoreTS);
     }
 
     /**

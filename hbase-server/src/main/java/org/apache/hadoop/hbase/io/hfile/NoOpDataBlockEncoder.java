@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 
 /**
  * Does not perform any kind of encoding/decoding.
@@ -50,7 +51,6 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
 
   @Override
   public void beforeWriteToDisk(ByteBuffer in,
-      boolean includesMemstoreTS,
       HFileBlockEncodingContext encodeCtx, BlockType blockType)
       throws IOException {
     if (!(encodeCtx.getClass().getName().equals(
@@ -95,15 +95,13 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
 
   @Override
   public HFileBlockEncodingContext newOnDiskDataBlockEncodingContext(
-      Algorithm compressionAlgorithm, byte[] dummyHeader) {
-    return new HFileBlockDefaultEncodingContext(compressionAlgorithm,
-        null, dummyHeader);
+      byte[] dummyHeader, HFileContext meta) {
+    return new HFileBlockDefaultEncodingContext(null, dummyHeader, meta);
   }
 
   @Override
-  public HFileBlockDecodingContext newOnDiskDataBlockDecodingContext(
-      Algorithm compressionAlgorithm) {
-    return new HFileBlockDefaultDecodingContext(compressionAlgorithm);
+  public HFileBlockDecodingContext newOnDiskDataBlockDecodingContext(HFileContext meta) {
+    return new HFileBlockDefaultDecodingContext(meta);
   }
 
 }

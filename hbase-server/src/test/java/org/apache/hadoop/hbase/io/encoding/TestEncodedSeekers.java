@@ -29,10 +29,12 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -68,6 +70,7 @@ public class TestEncodedSeekers {
   private final HBaseTestingUtility testUtil = HBaseTestingUtility.createLocalHTU();
   private final DataBlockEncoding encoding;
   private final boolean encodeOnDisk;
+  private final boolean includeTags;
 
   /** Enable when debugging */
   private static final boolean VERBOSE = false;
@@ -76,21 +79,27 @@ public class TestEncodedSeekers {
   public static Collection<Object[]> parameters() {
     List<Object[]> paramList = new ArrayList<Object[]>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      for (boolean encodeOnDisk : new boolean[]{false, true}) {
-        paramList.add(new Object[] { encoding, encodeOnDisk });
+      for (boolean includeTags : new boolean[] { false, true }) {
+        for (boolean encodeOnDisk : new boolean[] { false, true }) {
+          paramList.add(new Object[] { encoding, encodeOnDisk, includeTags });
+        }
       }
     }
     return paramList;
   }
 
-  public TestEncodedSeekers(DataBlockEncoding encoding, boolean encodeOnDisk) {
+  public TestEncodedSeekers(DataBlockEncoding encoding, boolean encodeOnDisk, boolean includeTags) {
     this.encoding = encoding;
     this.encodeOnDisk = encodeOnDisk;
+    this.includeTags = includeTags;
   }
 
   @Test
   public void testEncodedSeeker() throws IOException {
     System.err.println("Testing encoded seekers for encoding " + encoding);
+    if(includeTags) {
+      testUtil.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 3);
+    }
     LruBlockCache cache =
       (LruBlockCache)new CacheConfig(testUtil.getConfiguration()).getBlockCache();
     cache.clearCache();
@@ -134,6 +143,11 @@ public class TestEncodedSeekers {
         byte[] col = Bytes.toBytes(String.valueOf(j));
         byte[] value = dataGenerator.generateRandomSizeValue(key, col);
         put.add(CF_BYTES, col, value);
+        if(includeTags) {
+          Tag[] tag = new Tag[1];
+          tag[0] = new Tag((byte)1, "Visibility");
+          put.add(CF_BYTES, col, value, tag);
+        }
         if(VERBOSE){
           KeyValue kvPut = new KeyValue(key, CF_BYTES, col, value);
           System.err.println(Strings.padFront(i+"", ' ', 4)+" "+kvPut);

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,15 +26,16 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
-import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.io.WritableUtils;
@@ -50,21 +50,28 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
   private static final Log LOG = LogFactory.getLog(HFileReaderV2.class);
 
+  /** Minor versions in HFile V2 starting with this number have hbase checksums */
+  public static final int MINOR_VERSION_WITH_CHECKSUM = 1;
+  /** In HFile V2 minor version that does not support checksums */
+  public static final int MINOR_VERSION_NO_CHECKSUM = 0;
+
+  /** HFile minor version that introduced pbuf filetrailer */
+  public static final int PBUF_TRAILER_MINOR_VERSION = 2;
+
   /**
    * The size of a (key length, value length) tuple that prefixes each entry in
    * a data block.
    */
-  private static int KEY_VALUE_LEN_SIZE = 2 * Bytes.SIZEOF_INT;
+  public final static int KEY_VALUE_LEN_SIZE = 2 * Bytes.SIZEOF_INT;
 
-  private boolean includesMemstoreTS = false;
-  private boolean decodeMemstoreTS = false;
-
-  private boolean shouldIncludeMemstoreTS() {
+  protected boolean includesMemstoreTS = false;
+  protected boolean decodeMemstoreTS = false;
+  protected boolean shouldIncludeMemstoreTS() {
     return includesMemstoreTS;
   }
 
   /** Filesystem-level block reader. */
-  private HFileBlock.FSReader fsBlockReader;
+  protected HFileBlock.FSReader fsBlockReader;
 
   /**
    * A "sparse lock" implementation allowing to lock on a particular block
@@ -90,6 +97,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
   /** Minor versions starting with this number have faked index key */
   static final int MINOR_VERSION_WITH_FAKED_KEY = 3;
+  protected HFileContext hfileContext;
 
   /**
    * Opens a HFile. You must load the index before you can use it by calling
@@ -103,16 +111,19 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * @param preferredEncodingInCache the encoding to use in cache in case we
    *          have a choice. If the file is already encoded on disk, we will
    *          still use its on-disk encoding in cache.
+   * @param hfs
    */
   public HFileReaderV2(Path path, FixedFileTrailer trailer,
       final FSDataInputStreamWrapper fsdis, final long size, final CacheConfig cacheConf,
       DataBlockEncoding preferredEncodingInCache, final HFileSystem hfs)
       throws IOException {
     super(path, trailer, size, cacheConf, hfs);
-    trailer.expectMajorVersion(2);
+    trailer.expectMajorVersion(getMajorVersion());
     validateMinorVersion(path, trailer.getMinorVersion());
-    HFileBlock.FSReaderV2 fsBlockReaderV2 = new HFileBlock.FSReaderV2(fsdis,
-        compressAlgo, fileSize, trailer.getMinorVersion(), hfs, path);
+    this.hfileContext = createHFileContext(trailer);
+    // Should we set the preferredEncodinginCache here for the context
+    HFileBlock.FSReaderV2 fsBlockReaderV2 = new HFileBlock.FSReaderV2(fsdis, fileSize, hfs, path,
+        hfileContext);
     this.fsBlockReader = fsBlockReaderV2; // upcast
 
     // Comparator class name is stored in the trailer in version 2.
@@ -167,6 +178,15 @@ public class HFileReaderV2 extends AbstractHFileReader {
     }
   }
 
+  protected HFileContext createHFileContext(FixedFileTrailer trailer) {
+    HFileContext meta = new HFileContext();
+    meta.setIncludesMvcc(this.includesMemstoreTS);
+    meta.setUsesHBaseChecksum(
+        trailer.getMinorVersion() >= MINOR_VERSION_WITH_CHECKSUM);
+    meta.setCompressAlgo(this.compressAlgo);
+    return meta;
+  }
+
   /**
    * Create a Scanner on this file. No seeks or reads are done on creation. Call
    * {@link HFileScanner#seekTo(byte[])} to position an start the read. There is
@@ -185,7 +205,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
     // check if we want to use data block encoding in memory
     if (dataBlockEncoder.useEncodedScanner(isCompaction)) {
       return new EncodedScannerV2(this, cacheBlocks, pread, isCompaction,
-          includesMemstoreTS);
+          hfileContext);
     }
 
     return new ScannerV2(this, cacheBlocks, pread, isCompaction);
@@ -338,7 +358,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         long startTimeNs = System.nanoTime();
         HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, -1,
             pread);
-        hfileBlock = dataBlockEncoder.diskToCacheFormat(hfileBlock, isCompaction);
+        hfileBlock = diskToCacheFormat(hfileBlock, isCompaction);
         validateBlockType(hfileBlock, expectedBlockType);
 
         final long delta = System.nanoTime() - startTimeNs;
@@ -361,6 +381,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
         offsetLock.releaseLockEntry(lockEntry);
       }
     }
+  }
+
+  protected HFileBlock diskToCacheFormat( HFileBlock hfileBlock, final boolean isCompaction) {
+    return dataBlockEncoder.diskToCacheFormat(hfileBlock, isCompaction);
   }
 
   /**
@@ -612,14 +636,16 @@ public class HFileReaderV2 extends AbstractHFileReader {
       if (!isSeeked())
         return null;
 
-      KeyValue ret = new KeyValue(blockBuffer.array(),
-          blockBuffer.arrayOffset() + blockBuffer.position(),
-          KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen,
-          currKeyLen);
+      KeyValue ret = new KeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
+          + blockBuffer.position(), getKvBufSize(), currKeyLen);
       if (this.reader.shouldIncludeMemstoreTS()) {
         ret.setMvccVersion(currMemstoreTS);
       }
       return ret;
+    }
+
+    protected int getKvBufSize() {
+      return KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen;
     }
 
     @Override
@@ -640,7 +666,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
               + KEY_VALUE_LEN_SIZE + currKeyLen, currValueLen).slice();
     }
 
-    private void setNonSeekedState() {
+    protected void setNonSeekedState() {
       block = null;
       blockBuffer = null;
       currKeyLen = 0;
@@ -661,8 +687,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       assertSeeked();
 
       try {
-        blockBuffer.position(blockBuffer.position() + KEY_VALUE_LEN_SIZE
-            + currKeyLen + currValueLen + currMemstoreTSLen);
+        blockBuffer.position(getNextKVStartPosition());
       } catch (IllegalArgumentException e) {
         LOG.error("Current pos = " + blockBuffer.position()
             + "; currKeyLen = " + currKeyLen + "; currValLen = "
@@ -695,6 +720,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
       // We are still in the same block.
       readKeyValueLen();
       return true;
+    }
+
+    protected int getNextKVStartPosition() {
+      return blockBuffer.position() + KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen
+          + currMemstoreTSLen;
     }
 
     /**
@@ -753,7 +783,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
      *
      * @param newBlock the block to make current
      */
-    private void updateCurrBlock(HFileBlock newBlock) {
+    protected void updateCurrBlock(HFileBlock newBlock) {
       block = newBlock;
 
       // sanity check
@@ -773,19 +803,29 @@ public class HFileReaderV2 extends AbstractHFileReader {
       this.nextIndexedKey = null;
     }
 
-    private final void readKeyValueLen() {
+    protected void readKeyValueLen() {
       blockBuffer.mark();
       currKeyLen = blockBuffer.getInt();
       currValueLen = blockBuffer.getInt();
+      ByteBufferUtils.skip(blockBuffer, currKeyLen + currValueLen);
+      readMvccVersion();
+      if (currKeyLen < 0 || currValueLen < 0
+          || currKeyLen > blockBuffer.limit()
+          || currValueLen > blockBuffer.limit()) {
+        throw new IllegalStateException("Invalid currKeyLen " + currKeyLen
+            + " or currValueLen " + currValueLen + ". Block offset: "
+            + block.getOffset() + ", block length: " + blockBuffer.limit()
+            + ", position: " + blockBuffer.position() + " (without header).");
+      }
       blockBuffer.reset();
+    }
+
+    protected void readMvccVersion() {
       if (this.reader.shouldIncludeMemstoreTS()) {
         if (this.reader.decodeMemstoreTS) {
           try {
-            int memstoreTSOffset = blockBuffer.arrayOffset()
-                + blockBuffer.position() + KEY_VALUE_LEN_SIZE + currKeyLen
-                + currValueLen;
-            currMemstoreTS = Bytes.readVLong(blockBuffer.array(),
-                memstoreTSOffset);
+            currMemstoreTS = Bytes.readVLong(blockBuffer.array(), blockBuffer.arrayOffset()
+                + blockBuffer.position());
             currMemstoreTSLen = WritableUtils.getVIntSize(currMemstoreTS);
           } catch (Exception e) {
             throw new RuntimeException("Error reading memstore timestamp", e);
@@ -794,15 +834,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
           currMemstoreTS = 0;
           currMemstoreTSLen = 1;
         }
-      }
-
-      if (currKeyLen < 0 || currValueLen < 0
-          || currKeyLen > blockBuffer.limit()
-          || currValueLen > blockBuffer.limit()) {
-        throw new IllegalStateException("Invalid currKeyLen " + currKeyLen
-            + " or currValueLen " + currValueLen + ". Block offset: "
-            + block.getOffset() + ", block length: " + blockBuffer.limit()
-            + ", position: " + blockBuffer.position() + " (without header).");
       }
     }
 
@@ -821,7 +852,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
      *         -2 in case of an inexact match and furthermore, the input key less
      *         than the first key of current block(e.g. using a faked index key)
      */
-    private int blockSeek(byte[] key, int offset, int length,
+    protected int blockSeek(byte[] key, int offset, int length,
         boolean seekBefore) {
       int klen, vlen;
       long memstoreTS = 0;
@@ -931,34 +962,34 @@ public class HFileReaderV2 extends AbstractHFileReader {
    */
   protected static class EncodedScannerV2 extends AbstractScannerV2 {
     private DataBlockEncoder.EncodedSeeker seeker = null;
-    private DataBlockEncoder dataBlockEncoder = null;
-    private final boolean includesMemstoreTS;
-
+    protected DataBlockEncoder dataBlockEncoder = null;
+    protected final HFileContext meta;
+    protected HFileBlockDecodingContext decodingCtx;
     public EncodedScannerV2(HFileReaderV2 reader, boolean cacheBlocks,
-        boolean pread, boolean isCompaction, boolean includesMemstoreTS) {
+        boolean pread, boolean isCompaction, HFileContext meta) {
       super(reader, cacheBlocks, pread, isCompaction);
-      this.includesMemstoreTS = includesMemstoreTS;
+      this.meta = meta;
     }
 
-    private void setDataBlockEncoder(DataBlockEncoder dataBlockEncoder) {
+    protected void setDataBlockEncoder(DataBlockEncoder dataBlockEncoder) {
       this.dataBlockEncoder = dataBlockEncoder;
-      seeker = dataBlockEncoder.createSeeker(reader.getComparator(),
-          includesMemstoreTS);
+      decodingCtx = this.dataBlockEncoder.newDataBlockDecodingContext(
+          this.meta);
+      seeker = dataBlockEncoder.createSeeker(reader.getComparator(), decodingCtx);
     }
-
     /**
      * Updates the current block to be the given {@link HFileBlock}. Seeks to
      * the the first key/value pair.
      *
      * @param newBlock the block to make current
      */
-    private void updateCurrentBlock(HFileBlock newBlock) {
+    protected void updateCurrentBlock(HFileBlock newBlock) {
       block = newBlock;
 
       // sanity checks
       if (block.getBlockType() != BlockType.ENCODED_DATA) {
         throw new IllegalStateException(
-            "EncodedScannerV2 works only on encoded data blocks");
+            "EncodedScanner works only on encoded data blocks");
       }
 
       short dataBlockEncoderId = block.getDataBlockEncodingId();
@@ -1130,5 +1161,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
       LOG.error(msg);
       throw new RuntimeException(msg);
     }
+  }
+
+  @Override
+  public int getMajorVersion() {
+    return 2;
   }
 }

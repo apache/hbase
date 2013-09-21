@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -61,9 +62,6 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   /** A "file info" block: a key-value map of file-wide metadata. */
   protected FileInfo fileInfo = new HFile.FileInfo();
 
-  /** Number of uncompressed bytes we allow per block. */
-  protected final int blockSize;
-
   /** Total # of key/value entries, i.e. how many times add() was called. */
   protected long entryCount = 0;
 
@@ -85,15 +83,6 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   /** {@link Writable}s representing meta block data. */
   protected List<Writable> metaData = new ArrayList<Writable>();
 
-  /** The compression algorithm used. NONE if no compression. */
-  protected final Compression.Algorithm compressAlgo;
-  
-  /**
-   * The data block encoding which will be used.
-   * {@link NoOpDataBlockEncoder#INSTANCE} if there is no encoding.
-   */
-  protected final HFileDataBlockEncoder blockEncoder;
-
   /** First key in a block. */
   protected byte[] firstKeyInBlock = null;
 
@@ -110,19 +99,28 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
    */
   protected final String name;
 
+  /**
+   * The data block encoding which will be used.
+   * {@link NoOpDataBlockEncoder#INSTANCE} if there is no encoding.
+   */
+  protected final HFileDataBlockEncoder blockEncoder;
+  
+  protected final HFileContext hFileContext;
+
   public AbstractHFileWriter(CacheConfig cacheConf,
-      FSDataOutputStream outputStream, Path path, int blockSize,
-      Compression.Algorithm compressAlgo,
-      HFileDataBlockEncoder dataBlockEncoder,
-      KVComparator comparator) {
+      FSDataOutputStream outputStream, Path path, 
+      KVComparator comparator, HFileContext fileContext) {
     this.outputStream = outputStream;
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();
-    this.blockSize = blockSize;
-    this.compressAlgo = compressAlgo == null
-        ? HFile.DEFAULT_COMPRESSION_ALGORITHM : compressAlgo;
-    this.blockEncoder = dataBlockEncoder != null
-        ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
+    this.hFileContext = fileContext;
+    if (hFileContext.getEncodingOnDisk() != DataBlockEncoding.NONE
+        || hFileContext.getEncodingInCache() != DataBlockEncoding.NONE) {
+      this.blockEncoder = new HFileDataBlockEncoderImpl(hFileContext.getEncodingOnDisk(),
+          hFileContext.getEncodingInCache());
+    } else {
+      this.blockEncoder = NoOpDataBlockEncoder.INSTANCE;
+    }
     this.comparator = comparator != null ? comparator
         : KeyValue.COMPARATOR;
 
@@ -234,7 +232,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   @Override
   public String toString() {
     return "writer=" + (path != null ? path.toString() : null) + ", name="
-        + name + ", compression=" + compressAlgo.getName();
+        + name + ", compression=" + hFileContext.getCompression().getName();
   }
 
   /**
@@ -245,7 +243,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
     trailer.setMetaIndexCount(metaNames.size());
     trailer.setTotalUncompressedBytes(totalUncompressedBytes+ trailer.getTrailerSize());
     trailer.setEntryCount(entryCount);
-    trailer.setCompressionCodec(compressAlgo);
+    trailer.setCompressionCodec(hFileContext.getCompression());
 
     trailer.serialize(outputStream);
 

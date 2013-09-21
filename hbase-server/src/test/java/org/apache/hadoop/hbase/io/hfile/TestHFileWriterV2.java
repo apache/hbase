@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
@@ -93,11 +94,13 @@ public class TestHFileWriterV2 {
   private void writeDataAndReadFromHFile(Path hfilePath,
       Algorithm compressAlgo, int entryCount, boolean findMidKey) throws IOException {
 
+    HFileContext context = new HFileContext();
+    context.setBlocksize(4096);
+    context.setCompressAlgo(compressAlgo);
     HFileWriterV2 writer = (HFileWriterV2)
         new HFileWriterV2.WriterFactoryV2(conf, new CacheConfig(conf))
             .withPath(fs, hfilePath)
-            .withBlockSize(4096)
-            .withCompression(compressAlgo)
+            .withFileContext(context)
             .create();
 
     Random rand = new Random(9713312); // Just a fixed seed.
@@ -134,8 +137,13 @@ public class TestHFileWriterV2 {
     assertEquals(2, trailer.getMajorVersion());
     assertEquals(entryCount, trailer.getEntryCount());
 
-    HFileBlock.FSReader blockReader =
-        new HFileBlock.FSReaderV2(fsdis, compressAlgo, fileSize);
+    HFileContext meta = new HFileContext();
+    meta.setUsesHBaseChecksum(true);
+    meta.setIncludesMvcc(false);
+    meta.setIncludesTags(false);
+    meta.setCompressAlgo(compressAlgo);
+    
+    HFileBlock.FSReader blockReader = new HFileBlock.FSReaderV2(fsdis, fileSize, meta);
     // Comparator class name is stored in the trailer in version 2.
     KVComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =

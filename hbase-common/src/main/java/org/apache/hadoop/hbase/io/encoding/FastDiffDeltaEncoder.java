@@ -343,8 +343,8 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public void internalEncodeKeyValues(DataOutputStream out,
-      ByteBuffer in, boolean includesMemstoreTS) throws IOException {
+  public void internalEncodeKeyValues(DataOutputStream out, ByteBuffer in,
+      HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
     in.rewind();
     ByteBufferUtils.putInt(out, in.limit());
     FastDiffCompressionState previousState = new FastDiffCompressionState();
@@ -352,7 +352,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
     while (in.hasRemaining()) {
       compressSingleKeyValue(previousState, currentState,
           out, in);
-      afterEncodingKeyValue(in, out, includesMemstoreTS);
+      afterEncodingKeyValue(in, out, encodingCtx);
 
       // swap previousState <-> currentState
       FastDiffCompressionState tmp = previousState;
@@ -362,17 +362,16 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public ByteBuffer decodeKeyValues(DataInputStream source,
-      int allocHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
-          throws IOException {
+  public ByteBuffer internalDecodeKeyValues(DataInputStream source, int allocateHeaderLength,
+      int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
     int decompressedSize = source.readInt();
     ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +
-        allocHeaderLength);
-    buffer.position(allocHeaderLength);
+        allocateHeaderLength);
+    buffer.position(allocateHeaderLength);
     FastDiffCompressionState state = new FastDiffCompressionState();
     while (source.available() > skipLastBytes) {
       uncompressSingleKeyValue(source, buffer, state);
-      afterDecodingKeyValue(source, buffer, includesMemstoreTS);
+      afterDecodingKeyValue(source, buffer, decodingCtx);
     }
 
     if (source.available() != skipLastBytes) {
@@ -419,8 +418,8 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
   @Override
   public EncodedSeeker createSeeker(KVComparator comparator,
-      final boolean includesMemstoreTS) {
-    return new BufferedEncodedSeeker<FastDiffSeekerState>(comparator) {
+      final HFileBlockDecodingContext decodingCtx) {
+    return new BufferedEncodedSeeker<FastDiffSeekerState>(comparator, decodingCtx) {
       private void decode(boolean isFirst) {
         byte flag = currentBuffer.get();
         if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
@@ -520,7 +519,10 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
           ByteBufferUtils.skip(currentBuffer, current.valueLength);
         }
 
-        if (includesMemstoreTS) {
+        if (includesTags()) {
+          decodeTags();
+        }
+        if (includesMvcc()) {
           current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
         } else {
           current.memstoreTS = 0;

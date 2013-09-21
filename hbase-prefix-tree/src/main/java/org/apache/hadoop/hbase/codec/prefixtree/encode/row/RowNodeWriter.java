@@ -105,6 +105,7 @@ public class RowNodeWriter{
     if(tokenizerNode.hasOccurrences()){
       int fixedBytesPerCell = blockMeta.getFamilyOffsetWidth()
         + blockMeta.getQualifierOffsetWidth()
+        + blockMeta.getTagsOffsetWidth()
         + blockMeta.getTimestampIndexWidth()
         + blockMeta.getMvccVersionIndexWidth()
         + blockMeta.getKeyValueTypeWidth()
@@ -132,12 +133,12 @@ public class RowNodeWriter{
     //UFInt indexes and offsets for each cell in the row (if nub or leaf)
     writeFamilyNodeOffsets(os);
     writeQualifierNodeOffsets(os);
+    writeTagNodeOffsets(os);
     writeTimestampIndexes(os);
     writeMvccVersionIndexes(os);
     writeCellTypes(os);
     writeValueOffsets(os);
     writeValueLengths(os);
-
     //offsets to the children of this row trie node (if branch or nub)
     writeNextRowTrieNodeOffsets(os);
   }
@@ -220,6 +221,20 @@ public class RowNodeWriter{
     }
   }
 
+  protected void writeTagNodeOffsets(OutputStream os) throws IOException {
+    if (blockMeta.getTagsOffsetWidth() <= 0) {
+      return;
+    }
+    for (int i = 0; i < numCells; ++i) {
+      int cellInsertionIndex = tokenizerNode.getFirstInsertionIndex() + i;
+      int sortedIndex = prefixTreeEncoder.getTagSorter().getSortedIndexForInsertionId(
+        cellInsertionIndex);
+      int indexedTagOffset = prefixTreeEncoder.getTagWriter().getOutputArrayOffset(
+        sortedIndex);
+      UFIntTool.writeBytes(blockMeta.getTagsOffsetWidth(), indexedTagOffset, os);
+    }
+  }
+
   protected void writeTimestampIndexes(OutputStream os) throws IOException {
     if (blockMeta.getTimestampIndexWidth() <= 0) {
       return;
@@ -269,7 +284,6 @@ public class RowNodeWriter{
       UFIntTool.writeBytes(blockMeta.getValueLengthWidth(), valueLength, os);
     }
   }
-
 
   /**
    * If a branch or a nub, the last thing we append are the UFInt offsets to the child row nodes.

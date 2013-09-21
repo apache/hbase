@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.codec.prefixtree.decode.column.ColumnReader;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.row.RowNodeReader;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.timestamp.MvccVersionDecoder;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.timestamp.TimestampDecoder;
+import org.apache.hadoop.hbase.codec.prefixtree.encode.other.ColumnNodeType;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Extends PtCell and manipulates its protected fields.  Could alternatively contain a PtCell and
@@ -53,6 +55,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
   protected RowNodeReader currentRowNode;
   protected ColumnReader familyReader;
   protected ColumnReader qualifierReader;
+  protected ColumnReader tagsReader;
   protected TimestampDecoder timestampDecoder;
   protected MvccVersionDecoder mvccVersionDecoder;
 
@@ -63,17 +66,19 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
   /*********************** construct ******************************/
 
   // pass in blockMeta so we can initialize buffers big enough for all cells in the block
-  public PrefixTreeArrayScanner(PrefixTreeBlockMeta blockMeta, int rowTreeDepth, 
-      int rowBufferLength, int qualifierBufferLength) {
+  public PrefixTreeArrayScanner(PrefixTreeBlockMeta blockMeta, int rowTreeDepth,
+      int rowBufferLength, int qualifierBufferLength, int tagsBufferLength) {
     this.rowNodes = new RowNodeReader[rowTreeDepth];
     for (int i = 0; i < rowNodes.length; ++i) {
       rowNodes[i] = new RowNodeReader();
     }
     this.rowBuffer = new byte[rowBufferLength];
     this.familyBuffer = new byte[PrefixTreeBlockMeta.MAX_FAMILY_LENGTH];
-    this.familyReader = new ColumnReader(familyBuffer, true);
+    this.familyReader = new ColumnReader(familyBuffer, ColumnNodeType.FAMILY);
     this.qualifierBuffer = new byte[qualifierBufferLength];
-    this.qualifierReader = new ColumnReader(qualifierBuffer, false);
+    this.tagsBuffer = new byte[tagsBufferLength];
+    this.qualifierReader = new ColumnReader(qualifierBuffer, ColumnNodeType.QUALIFIER);
+    this.tagsReader = new ColumnReader(tagsBuffer, ColumnNodeType.TAGS);
     this.timestampDecoder = new TimestampDecoder();
     this.mvccVersionDecoder = new MvccVersionDecoder();
   }
@@ -95,6 +100,9 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
     if (qualifierBuffer.length < blockMeta.getMaxQualifierLength()) {
       return false;
     }
+    if(tagsBuffer.length < blockMeta.getMaxTagsLength()) {
+      return false;
+    }
     return true;
   }
 
@@ -106,6 +114,8 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
     this.familyReader.initOnBlock(blockMeta, block);
     this.qualifierOffset = qualifierBuffer.length;
     this.qualifierReader.initOnBlock(blockMeta, block);
+    this.tagsOffset = tagsBuffer.length;
+    this.tagsReader.initOnBlock(blockMeta, block);
     this.timestampDecoder.initOnBlock(blockMeta, block);
     this.mvccVersionDecoder.initOnBlock(blockMeta, block);
     this.includeMvccVersion = includeMvccVersion;
@@ -129,6 +139,8 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
     type = DEFAULT_TYPE;
     absoluteValueOffset = 0;//use 0 vs -1 so the cell is valid when value hasn't been initialized
     valueLength = 0;// had it at -1, but that causes null Cell to add up to the wrong length
+    tagsOffset = blockMeta.getMaxTagsLength();
+    tagsLength = 0;
   }
 
   /**
@@ -427,6 +439,10 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
     currentCellIndex = cellIndex;
     populateFamily();
     populateQualifier();
+    // Read tags only if there are tags in the meta
+    if(blockMeta.getNumTagsBytes() != 0) {
+      populateTag();
+    }
     populateTimestamp();
     populateMvccVersion();
     populateType();
@@ -443,6 +459,12 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
     int qualifierTreeIndex = currentRowNode.getColumnOffset(currentCellIndex, blockMeta);
     qualifierOffset = qualifierReader.populateBuffer(qualifierTreeIndex).getColumnOffset();
     qualifierLength = qualifierReader.getColumnLength();
+  }
+
+  protected void populateTag() {
+    int tagTreeIndex = currentRowNode.getTagOffset(currentCellIndex, blockMeta);
+    tagsOffset = tagsReader.populateBuffer(tagTreeIndex).getColumnOffset();
+    tagsLength = (short)tagsReader.getColumnLength();
   }
 
   protected void populateTimestamp() {
@@ -480,7 +502,6 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
     valueLength = currentRowNode.getValueLength(currentCellIndex, blockMeta);
   }
 
-
   /**************** getters ***************************/
 
   public byte[] getTreeBytes() {
@@ -501,6 +522,10 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
 
   public int getQualifierBufferLength() {
     return qualifierBuffer.length;
+  }
+
+  public int getTagBufferLength() {
+    return tagsBuffer.length;
   }
 
 }

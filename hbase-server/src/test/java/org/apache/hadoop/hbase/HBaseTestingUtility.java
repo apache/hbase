@@ -178,13 +178,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       { Compression.Algorithm.GZ }
     });
 
-  /** This is for unit tests parameterized with a single boolean. */
+  /** This is for unit tests parameterized with a two booleans. */
   public static final List<Object[]> BOOLEAN_PARAMETERIZED =
       Arrays.asList(new Object[][] {
           { new Boolean(false) },
           { new Boolean(true) }
       });
-
+  
+  /** This is for unit tests parameterized with a single boolean. */
+  public static final List<Object[]> MEMSTORETS_TAGS_PARAMETRIZED = memStoreTSAndTagsCombination()  ;
   /** Compression algorithms to use in testing */
   public static final Compression.Algorithm[] COMPRESSION_ALGORITHMS ={
       Compression.Algorithm.NONE, Compression.Algorithm.GZ
@@ -202,6 +204,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         configurations.add(new Object[] { comprAlgo, bloomType });
       }
     }
+    return Collections.unmodifiableList(configurations);
+  }
+
+  /**
+   * Create combination of memstoreTS and tags
+   */
+  private static List<Object[]> memStoreTSAndTagsCombination() {
+    List<Object[]> configurations = new ArrayList<Object[]>();
+    configurations.add(new Object[] { false, false });
+    configurations.add(new Object[] { false, true });
+    configurations.add(new Object[] { true, false });
+    configurations.add(new Object[] { true, true });
     return Collections.unmodifiableList(configurations);
   }
 

@@ -23,6 +23,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
+import org.apache.hadoop.hbase.codec.prefixtree.encode.other.ColumnNodeType;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.TokenizerNode;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,20 +49,19 @@ public class ColumnNodeWriter{
   protected TokenizerNode builderNode;
   protected PrefixTreeBlockMeta blockMeta;
 
-  protected boolean familyVsQualifier;
-
   protected int tokenLength;
   protected byte[] token;
   protected int parentStartPosition;
+  protected ColumnNodeType nodeType;
 
 
   /*************** construct **************************/
 
   public ColumnNodeWriter(PrefixTreeBlockMeta blockMeta, TokenizerNode builderNode,
-      boolean familyVsQualifier) {
+      ColumnNodeType nodeType) {
     this.blockMeta = blockMeta;
     this.builderNode = builderNode;
-    this.familyVsQualifier = familyVsQualifier;
+    this.nodeType = nodeType;
     calculateTokenLength();
   }
 
@@ -93,10 +93,12 @@ public class ColumnNodeWriter{
 
   public void writeBytes(OutputStream os) throws IOException {
     int parentOffsetWidth;
-    if (familyVsQualifier) {
+    if (this.nodeType == ColumnNodeType.FAMILY) {
       parentOffsetWidth = blockMeta.getFamilyOffsetWidth();
-    } else {
+    } else if (this.nodeType == ColumnNodeType.QUALIFIER) {
       parentOffsetWidth = blockMeta.getQualifierOffsetWidth();
+    } else {
+      parentOffsetWidth = blockMeta.getTagsOffsetWidth();
     }
     UVIntTool.writeBytes(tokenLength, os);
     os.write(token);

@@ -25,8 +25,10 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -58,8 +60,8 @@ public class TestLoadIncrementalHFiles {
   };
 
   public static int BLOCKSIZE = 64*1024;
-  public static String COMPRESSION =
-    Compression.Algorithm.NONE.getName();
+  public static Algorithm COMPRESSION =
+    Compression.Algorithm.NONE;
 
   static HBaseTestingUtility util = new HBaseTestingUtility();
   //used by secure subclass
@@ -260,10 +262,12 @@ public class TestLoadIncrementalHFiles {
       byte[] family, byte[] qualifier,
       byte[] startKey, byte[] endKey, int numRows) throws IOException
   {
+    HFileContext meta = new HFileContext();
+    meta.setBlocksize(BLOCKSIZE);
+    meta.setCompressAlgo(COMPRESSION);
     HFile.Writer writer = HFile.getWriterFactory(configuration, new CacheConfig(configuration))
         .withPath(fs, path)
-        .withBlockSize(BLOCKSIZE)
-        .withCompression(COMPRESSION)
+        .withFileContext(meta)
         .create();
     long now = System.currentTimeMillis();
     try {

@@ -20,10 +20,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -47,6 +46,7 @@ public interface HFileDataBlockEncoder {
    * </ul>
    * @param block a block in an on-disk format (read from HFile or freshly
    *          generated).
+   * @param isCompaction
    * @return non null block which is coded according to the settings.
    */
   HFileBlock diskToCacheFormat(
@@ -63,7 +63,6 @@ public interface HFileDataBlockEncoder {
    */
   void beforeWriteToDisk(
     ByteBuffer in,
-    boolean includesMemstoreTS,
     HFileBlockEncodingContext encodingResult,
     BlockType blockType
   ) throws IOException;
@@ -100,24 +99,21 @@ public interface HFileDataBlockEncoder {
    * encoding context should also perform compression if compressionAlgorithm is
    * valid.
    *
-   * @param compressionAlgorithm compression algorithm
    * @param headerBytes header bytes
+   * @param fileContext HFile meta data
    * @return a new {@link HFileBlockEncodingContext} object
    */
-  HFileBlockEncodingContext newOnDiskDataBlockEncodingContext(
-    Algorithm compressionAlgorithm, byte[] headerBytes
-  );
+  HFileBlockEncodingContext newOnDiskDataBlockEncodingContext(byte[] headerBytes,
+      HFileContext fileContext);
 
   /**
    * create a encoder specific decoding context for reading. And the
    * decoding context should also do decompression if compressionAlgorithm
    * is valid.
    *
-   * @param compressionAlgorithm
+   * @param fileContext - HFile meta data
    * @return a new {@link HFileBlockDecodingContext} object
    */
-  HFileBlockDecodingContext newOnDiskDataBlockDecodingContext(
-    Algorithm compressionAlgorithm
-  );
+  HFileBlockDecodingContext newOnDiskDataBlockDecodingContext(HFileContext fileContext);
 
 }

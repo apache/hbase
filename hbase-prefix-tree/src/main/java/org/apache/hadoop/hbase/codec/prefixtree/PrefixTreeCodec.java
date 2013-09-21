@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.EncoderFactory;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.PrefixTreeEncoder;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
@@ -42,8 +41,8 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
-import org.apache.hadoop.io.RawComparator;
 
 /**
  * This class is created via reflection in DataBlockEncoding enum. Update the enum if class name or
@@ -69,7 +68,7 @@ public class PrefixTreeCodec implements DataBlockEncoder{
    * enough with the concept of the HFileBlockEncodingContext.
    */
   @Override
-  public void encodeKeyValues(ByteBuffer in, boolean includesMvccVersion,
+  public void encodeKeyValues(ByteBuffer in,
       HFileBlockEncodingContext blkEncodingCtx) throws IOException {
     if (blkEncodingCtx.getClass() != HFileBlockDefaultEncodingContext.class) {
       throw new IOException(this.getClass().getName() + " only accepts "
@@ -80,7 +79,8 @@ public class PrefixTreeCodec implements DataBlockEncoder{
         = (HFileBlockDefaultEncodingContext) blkEncodingCtx;
     encodingCtx.prepareEncoding();
     DataOutputStream dataOut = encodingCtx.getOutputStreamForEncoder();
-    internalEncodeKeyValues(dataOut, in, includesMvccVersion);
+    internalEncodeKeyValues(dataOut, in, encodingCtx.getHFileContext().shouldIncludeMvcc(),
+        encodingCtx.getHFileContext().shouldIncludeTags());
 
     //do i need to check this, or will it always be DataBlockEncoding.PREFIX_TREE?
     if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
@@ -91,26 +91,26 @@ public class PrefixTreeCodec implements DataBlockEncoder{
   }
 
   private void internalEncodeKeyValues(DataOutputStream encodedOutputStream,
-      ByteBuffer rawKeyValues, boolean includesMvccVersion) throws IOException {
+      ByteBuffer rawKeyValues, boolean includesMvccVersion, boolean includesTag) throws IOException {
     rawKeyValues.rewind();
     PrefixTreeEncoder builder = EncoderFactory.checkOut(encodedOutputStream, includesMvccVersion);
 
-    try{
+    try {
       KeyValue kv;
-      while ((kv = KeyValueUtil.nextShallowCopy(rawKeyValues, includesMvccVersion)) != null) {
+      while ((kv = KeyValueUtil.nextShallowCopy(rawKeyValues, includesMvccVersion, includesTag)) != null) {
         builder.write(kv);
       }
       builder.flush();
-    }finally{
+    } finally {
       EncoderFactory.checkIn(builder);
     }
   }
 
 
   @Override
-  public ByteBuffer decodeKeyValues(DataInputStream source, boolean includesMvccVersion)
+  public ByteBuffer decodeKeyValues(DataInputStream source, HFileBlockDecodingContext decodingCtx)
       throws IOException {
-    return decodeKeyValues(source, 0, 0, includesMvccVersion);
+    return decodeKeyValues(source, 0, 0, decodingCtx);
   }
 
 
@@ -118,9 +118,8 @@ public class PrefixTreeCodec implements DataBlockEncoder{
    * I don't think this method is called during normal HBase operation, so efficiency is not
    * important.
    */
-  @Override
   public ByteBuffer decodeKeyValues(DataInputStream source, int allocateHeaderLength,
-      int skipLastBytes, boolean includesMvccVersion) throws IOException {
+      int skipLastBytes, HFileBlockDecodingContext decodingCtx) throws IOException {
     ByteBuffer sourceAsBuffer = ByteBufferUtils.drainInputStreamToBuffer(source);// waste
     sourceAsBuffer.mark();
     PrefixTreeBlockMeta blockMeta = new PrefixTreeBlockMeta(sourceAsBuffer);
@@ -131,17 +130,19 @@ public class PrefixTreeCodec implements DataBlockEncoder{
     result.rewind();
     CellSearcher searcher = null;
     try {
-      searcher = DecoderFactory.checkOut(sourceAsBuffer, includesMvccVersion);
+      boolean includesMvcc = decodingCtx.getHFileContext().shouldIncludeMvcc();
+      searcher = DecoderFactory.checkOut(sourceAsBuffer, includesMvcc);
       while (searcher.advance()) {
         KeyValue currentCell = KeyValueUtil.copyToNewKeyValue(searcher.current());
         // needs to be modified for DirectByteBuffers. no existing methods to
         // write VLongs to byte[]
         int offset = result.arrayOffset() + result.position();
-        KeyValueUtil.appendToByteArray(currentCell, result.array(), offset);
+        System.arraycopy(currentCell.getBuffer(), currentCell.getOffset(), result.array(), offset,
+            currentCell.getLength());
         int keyValueLength = KeyValueUtil.length(currentCell);
         ByteBufferUtils.skip(result, keyValueLength);
         offset += keyValueLength;
-        if (includesMvccVersion) {
+        if (includesMvcc) {
           ByteBufferUtils.writeVLong(result, currentCell.getMvccVersion());
         }
       }
@@ -158,7 +159,7 @@ public class PrefixTreeCodec implements DataBlockEncoder{
     block.rewind();
     PrefixTreeArraySearcher searcher = null;
     try {
-      //should i includeMemstoreTS (second argument)?  i think PrefixKeyDeltaEncoder is, so i will
+      // should i includeMemstoreTS (second argument)?  i think PrefixKeyDeltaEncoder is, so i will
       searcher = DecoderFactory.checkOut(block, true);
       if (!searcher.positionAtFirstCell()) {
         return null;
@@ -170,19 +171,19 @@ public class PrefixTreeCodec implements DataBlockEncoder{
   }
 
   @Override
-  public HFileBlockEncodingContext newDataBlockEncodingContext(Algorithm compressionAlgorithm,
-      DataBlockEncoding encoding, byte[] header) {
+  public HFileBlockEncodingContext newDataBlockEncodingContext(
+      DataBlockEncoding encoding, byte[] header, HFileContext meta) {
     if(DataBlockEncoding.PREFIX_TREE != encoding){
       //i'm not sure why encoding is in the interface.  Each encoder implementation should probably
       //know it's encoding type
       throw new IllegalArgumentException("only DataBlockEncoding.PREFIX_TREE supported");
     }
-    return new HFileBlockDefaultEncodingContext(compressionAlgorithm, encoding, header);
+    return new HFileBlockDefaultEncodingContext(encoding, header, meta);
   }
 
   @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(Algorithm compressionAlgorithm) {
-    return new HFileBlockDefaultDecodingContext(compressionAlgorithm);
+  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta) {
+    return new HFileBlockDefaultDecodingContext(meta);
   }
 
   /**
@@ -190,7 +191,7 @@ public class PrefixTreeCodec implements DataBlockEncoder{
    * the way to this point.
    */
   @Override
-  public EncodedSeeker createSeeker(KVComparator comparator, boolean includesMvccVersion) {
+  public EncodedSeeker createSeeker(KVComparator comparator, HFileBlockDecodingContext decodingCtx) {
     if (comparator instanceof RawBytesComparator){
       throw new IllegalArgumentException("comparator must be KeyValue.KeyComparator");
     } else if (comparator instanceof MetaComparator){
@@ -198,7 +199,7 @@ public class PrefixTreeCodec implements DataBlockEncoder{
           +"table");
     }
 
-    return new PrefixTreeSeeker(includesMvccVersion);
+    return new PrefixTreeSeeker(decodingCtx.getHFileContext().shouldIncludeMvcc());
   }
 
 }

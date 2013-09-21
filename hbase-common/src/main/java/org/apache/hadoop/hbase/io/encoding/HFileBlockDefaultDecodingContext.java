@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 
 /**
  * A default implementation of {@link HFileBlockDecodingContext}. It assumes the
@@ -37,11 +37,10 @@ import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 public class HFileBlockDefaultDecodingContext implements
     HFileBlockDecodingContext {
 
-  private final Compression.Algorithm compressAlgo;
-
-  public HFileBlockDefaultDecodingContext(
-      Compression.Algorithm compressAlgo) {
-    this.compressAlgo = compressAlgo;
+  private final HFileContext fileContext;
+  
+  public HFileBlockDefaultDecodingContext(HFileContext fileContext) {
+    this.fileContext = fileContext;
   }
 
   @Override
@@ -52,12 +51,11 @@ public class HFileBlockDefaultDecodingContext implements
 
     Compression.decompress(blockBufferWithoutHeader.array(),
       blockBufferWithoutHeader.arrayOffset(), (InputStream) dis, onDiskSizeWithoutHeader,
-      uncompressedSizeWithoutHeader, compressAlgo);
+      uncompressedSizeWithoutHeader, this.fileContext.getCompression());
   }
 
   @Override
-  public Algorithm getCompression() {
-    return compressAlgo;
+  public HFileContext getHFileContext() {
+    return this.fileContext;
   }
-
 }

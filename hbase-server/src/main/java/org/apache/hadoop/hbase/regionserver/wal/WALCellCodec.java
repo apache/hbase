@@ -156,8 +156,8 @@ public class WALCellCodec implements Codec {
       // We first write the KeyValue infrastructure as VInts.
       StreamUtils.writeRawVInt32(out, kv.getKeyLength());
       StreamUtils.writeRawVInt32(out, kv.getValueLength());
-      // To support tags. This will be replaced with kv.getTagsLength
-      StreamUtils.writeRawVInt32(out, (short)0);
+      // To support tags
+      StreamUtils.writeRawVInt32(out, kv.getTagsLength());
 
       // Write row, qualifier, and family; use dictionary
       // compression as they're likely to have duplicates.
@@ -199,10 +199,13 @@ public class WALCellCodec implements Codec {
       int keylength = StreamUtils.readRawVarint32(in);
       int vlength = StreamUtils.readRawVarint32(in);
       
-      // To support Tags..Tags length will be 0.
-      // For now ignore the read value. This will be the tagslength
-      StreamUtils.readRawVarint32(in);
-      int length = KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + keylength + vlength;
+      int tagsLength = StreamUtils.readRawVarint32(in);
+      int length = 0;
+      if(tagsLength == 0) {
+        length = KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + keylength + vlength;
+      } else {
+        length = KeyValue.KEYVALUE_WITH_TAGS_INFRASTRUCTURE_SIZE + keylength + vlength + tagsLength;
+      }
 
       byte[] backingArray = new byte[length];
       int pos = 0;

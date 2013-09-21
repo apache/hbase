@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -66,7 +67,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       new ArrayList<InlineBlockWriter>();
 
   /** Unified version 2 block writer */
-  private HFileBlock.Writer fsBlockWriter;
+  protected HFileBlock.Writer fsBlockWriter;
 
   private HFileBlockIndex.BlockIndexWriter dataBlockIndexWriter;
   private HFileBlockIndex.BlockIndexWriter metaBlockIndexWriter;
@@ -75,7 +76,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   private long firstDataBlockOffset = -1;
 
   /** The offset of the last data block or 0 if the file is empty. */
-  private long lastDataBlockOffset;
+  protected long lastDataBlockOffset;
 
   /** The last(stop) Key of the previous data block. */
   private byte[] lastKeyOfPreviousBlock = null;
@@ -84,12 +85,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   private List<BlockWritable> additionalLoadOnOpenData =
     new ArrayList<BlockWritable>();
 
-  /** Checksum related settings */
-  private ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
-  private int bytesPerChecksum = HFile.DEFAULT_BYTES_PER_CHECKSUM;
-
-  private final boolean includeMemstoreTS;
-  private long maxMemstoreTS = 0;
+  protected long maxMemstoreTS = 0;
 
   static class WriterFactoryV2 extends HFile.WriterFactory {
     WriterFactoryV2(Configuration conf, CacheConfig cacheConf) {
@@ -97,39 +93,30 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     }
 
     @Override
-    public Writer createWriter(FileSystem fs, Path path,
-        FSDataOutputStream ostream, int blockSize,
-        Compression.Algorithm compress, HFileDataBlockEncoder blockEncoder,
-        final KVComparator comparator, final ChecksumType checksumType,
-        final int bytesPerChecksum, boolean includeMVCCReadpoint) throws IOException {
-      return new HFileWriterV2(conf, cacheConf, fs, path, ostream, blockSize, compress,
-          blockEncoder, comparator, checksumType, bytesPerChecksum, includeMVCCReadpoint);
+    public Writer createWriter(FileSystem fs, Path path, 
+        FSDataOutputStream ostream,
+        KVComparator comparator, HFileContext context) throws IOException {
+      return new HFileWriterV2(conf, cacheConf, fs, path, ostream, 
+          comparator, context);
+      }
     }
-  }
 
   /** Constructor that takes a path, creates and closes the output stream. */
   public HFileWriterV2(Configuration conf, CacheConfig cacheConf,
-      FileSystem fs, Path path, FSDataOutputStream ostream, int blockSize,
-      Compression.Algorithm compressAlgo, HFileDataBlockEncoder blockEncoder,
-      final KVComparator comparator, final ChecksumType checksumType,
-      final int bytesPerChecksum, final boolean includeMVCCReadpoint) throws IOException {
+      FileSystem fs, Path path, FSDataOutputStream ostream, 
+      final KVComparator comparator, final HFileContext context) throws IOException {
     super(cacheConf,
         ostream == null ? createOutputStream(conf, fs, path, null) : ostream,
-        path, blockSize, compressAlgo, blockEncoder, comparator);
-    this.checksumType = checksumType;
-    this.bytesPerChecksum = bytesPerChecksum;
-    this.includeMemstoreTS = includeMVCCReadpoint;
+        path, comparator, context);
     finishInit(conf);
   }
 
   /** Additional initialization steps */
-  private void finishInit(final Configuration conf) {
+  protected void finishInit(final Configuration conf) {
     if (fsBlockWriter != null)
       throw new IllegalStateException("finishInit called twice");
 
-    // HFile filesystem-level (non-caching) block writer
-    fsBlockWriter = new HFileBlock.Writer(compressAlgo, blockEncoder,
-        includeMemstoreTS, checksumType, bytesPerChecksum);
+    fsBlockWriter = createBlockWriter();
 
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
@@ -145,13 +132,21 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     if (LOG.isTraceEnabled()) LOG.trace("Initialized with " + cacheConf);
   }
 
+  protected HFileBlock.Writer createBlockWriter() {
+    // HFile filesystem-level (non-caching) block writer
+    hFileContext.setIncludesTags(false);
+    // This can be set while the write is created itself because
+    // in both cases useHBaseChecksum is going to be true
+    hFileContext.setUsesHBaseChecksum(true);
+    return new HFileBlock.Writer(blockEncoder, hFileContext);
+  }
   /**
    * At a block boundary, write all the inline blocks and opens new block.
    *
    * @throws IOException
    */
-  private void checkBlockBoundary() throws IOException {
-    if (fsBlockWriter.blockSizeWritten() < blockSize)
+  protected void checkBlockBoundary() throws IOException {
+    if (fsBlockWriter.blockSizeWritten() < hFileContext.getBlocksize())
       return;
 
     finishBlock();
@@ -224,7 +219,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    *
    * @throws IOException
    */
-  private void newBlock() throws IOException {
+  protected void newBlock() throws IOException {
     // This is where the next block begins.
     fsBlockWriter.startWriting(BlockType.DATA);
     firstKeyInBlock = null;
@@ -303,8 +298,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    * @param vlength
    * @throws IOException
    */
-  private void append(final long memstoreTS, final byte[] key, final int koffset, final int klength,
-      final byte[] value, final int voffset, final int vlength)
+  protected void append(final long memstoreTS, final byte[] key, final int koffset,
+      final int klength, final byte[] value, final int voffset, final int vlength)
       throws IOException {
     boolean dupKey = checkKey(key, koffset, klength);
     checkValue(value, voffset, vlength);
@@ -325,7 +320,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       totalValueLength += vlength;
       out.write(key, koffset, klength);
       out.write(value, voffset, vlength);
-      if (this.includeMemstoreTS) {
+      if (this.hFileContext.shouldIncludeMvcc()) {
         WritableUtils.writeVLong(out, memstoreTS);
       }
     }
@@ -356,8 +351,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     finishBlock();
     writeInlineBlocks(true);
 
-    FixedFileTrailer trailer = new FixedFileTrailer(2, 
-                                 HFileReaderV2.MAX_MINOR_VERSION);
+    FixedFileTrailer trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
 
     // Write out the metadata blocks if any.
     if (!metaNames.isEmpty()) {
@@ -395,7 +389,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     fsBlockWriter.writeHeaderAndData(outputStream);
     totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
 
-    if (this.includeMemstoreTS) {
+    if (this.hFileContext.shouldIncludeMvcc()) {
       appendFileInfo(MAX_MEMSTORE_TS_KEY, Bytes.toBytes(maxMemstoreTS));
       appendFileInfo(KEY_VALUE_VERSION, Bytes.toBytes(KEY_VALUE_VER_WITH_MEMSTORE));
     }
@@ -465,5 +459,18 @@ public class HFileWriterV2 extends AbstractHFileWriter {
           dataWriter.write(out);
       }
     });
+  }
+
+  @Override
+  public void append(byte[] key, byte[] value, byte[] tag) throws IOException {
+    throw new UnsupportedOperationException("KV tags are supported only from HFile V3");
+  }
+
+  protected int getMajorVersion() {
+    return 2;
+  }
+
+  protected int getMinorVersion() {
+    return HFileReaderV2.MAX_MINOR_VERSION;
   }
 }

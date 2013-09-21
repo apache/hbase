@@ -40,13 +40,14 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -183,6 +184,7 @@ public class TestCacheOnWrite {
   @Before
   public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
+    this.conf.set("dfs.datanode.data.dir.perm", "700");
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, INDEX_BLOCK_SIZE);
     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
@@ -207,13 +209,24 @@ public class TestCacheOnWrite {
 
   @Test
   public void testStoreFileCacheOnWrite() throws IOException {
-    writeStoreFile();
-    readStoreFile();
+    testStoreFileCacheOnWriteInternals(false);
+    testStoreFileCacheOnWriteInternals(true);
   }
 
-  private void readStoreFile() throws IOException {
-    HFileReaderV2 reader = (HFileReaderV2) HFile.createReaderWithEncoding(fs,
-        storeFilePath, cacheConf, encoder.getEncodingInCache());
+  protected void testStoreFileCacheOnWriteInternals(boolean useTags) throws IOException {
+    writeStoreFile(useTags);
+    readStoreFile(useTags);
+  }
+
+  private void readStoreFile(boolean useTags) throws IOException {
+    AbstractHFileReader reader;
+    if (useTags) {
+      reader = (HFileReaderV3) HFile.createReaderWithEncoding(fs, storeFilePath, cacheConf,
+          encoder.getEncodingInCache());
+    } else {
+      reader = (HFileReaderV2) HFile.createReaderWithEncoding(fs, storeFilePath, cacheConf,
+          encoder.getEncodingInCache());
+    }
     LOG.info("HFile information: " + reader);
     final boolean cacheBlocks = false;
     final boolean pread = false;
@@ -260,10 +273,13 @@ public class TestCacheOnWrite {
     String countByType = blockCountByType.toString();
     BlockType cachedDataBlockType =
         encoderType.encodeInCache ? BlockType.ENCODED_DATA : BlockType.DATA;
-    assertEquals("{" + cachedDataBlockType
-        + "=1379, LEAF_INDEX=154, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=18}",
-        countByType);
-
+    if (useTags) {
+      assertEquals("{" + cachedDataBlockType
+          + "=1550, LEAF_INDEX=173, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=20}", countByType);
+    } else {
+      assertEquals("{" + cachedDataBlockType
+          + "=1379, LEAF_INDEX=154, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=18}", countByType);
+    }
     reader.close();
   }
 
@@ -283,33 +299,54 @@ public class TestCacheOnWrite {
     }
   }
 
-  public void writeStoreFile() throws IOException {
+  public void writeStoreFile(boolean useTags) throws IOException {
+    if(useTags) {
+      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    } else {
+      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 2);
+    }
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(),
         "test_cache_on_write");
-    StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf, cacheConf, fs,
-        DATA_BLOCK_SIZE)
-            .withOutputDir(storeFileParentDir)
-            .withCompression(compress)
-            .withDataBlockEncoder(encoder)
-            .withComparator(KeyValue.COMPARATOR)
-            .withBloomType(BLOOM_TYPE)
-            .withMaxKeyCount(NUM_KV)
-            .withChecksumType(CKTYPE)
-            .withBytesPerChecksum(CKBYTES)
-            .build();
+    HFileContext meta = new HFileContext();
+    meta.setCompressAlgo(compress);
+    meta.setChecksumType(CKTYPE);
+    meta.setBytesPerChecksum(CKBYTES);
+    meta.setBlocksize(DATA_BLOCK_SIZE);
+    meta.setEncodingInCache(encoder.getEncodingInCache());
+    meta.setEncodingOnDisk(encoder.getEncodingOnDisk());
+    StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf, cacheConf, fs)
+        .withOutputDir(storeFileParentDir).withComparator(KeyValue.COMPARATOR)
+        .withFileContext(meta)
+        .withBloomType(BLOOM_TYPE).withMaxKeyCount(NUM_KV).build();
 
     final int rowLen = 32;
     for (int i = 0; i < NUM_KV; ++i) {
       byte[] k = TestHFileWriterV2.randomOrderedKey(rand, i);
       byte[] v = TestHFileWriterV2.randomValue(rand);
       int cfLen = rand.nextInt(k.length - rowLen + 1);
-      KeyValue kv = new KeyValue(
+      KeyValue kv;
+      if(useTags) {
+        Tag t = new Tag((byte) 1, "visibility");
+        List<Tag> tagList = new ArrayList<Tag>();
+        tagList.add(t);
+        Tag[] tags = new Tag[1];
+        tags[0] = t;
+        kv = new KeyValue(
+            k, 0, rowLen,
+            k, rowLen, cfLen,
+            k, rowLen + cfLen, k.length - rowLen - cfLen,
+            rand.nextLong(),
+            generateKeyType(rand),
+            v, 0, v.length, tagList);
+      } else {
+        kv = new KeyValue(
           k, 0, rowLen,
           k, rowLen, cfLen,
           k, rowLen + cfLen, k.length - rowLen - cfLen,
           rand.nextLong(),
           generateKeyType(rand),
           v, 0, v.length);
+      }
       sfw.append(kv);
     }
 
@@ -319,6 +356,16 @@ public class TestCacheOnWrite {
 
   @Test
   public void testNotCachingDataBlocksDuringCompaction() throws IOException {
+    testNotCachingDataBlocksDuringCompactionInternals(false);
+    testNotCachingDataBlocksDuringCompactionInternals(true);
+  }
+
+  protected void testNotCachingDataBlocksDuringCompactionInternals(boolean useTags) throws IOException {
+    if (useTags) {
+      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    } else {
+      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 2);
+    }
     // TODO: need to change this test if we add a cache size threshold for
     // compactions, or if we implement some other kind of intelligent logic for
     // deciding what blocks to cache-on-write on compaction.
@@ -347,8 +394,14 @@ public class TestCacheOnWrite {
           String qualStr = "col" + iCol;
           String valueStr = "value_" + rowStr + "_" + qualStr;
           for (int iTS = 0; iTS < 5; ++iTS) {
-            p.add(cfBytes, Bytes.toBytes(qualStr), ts++,
-                Bytes.toBytes(valueStr));
+            if (useTags) {
+              Tag t = new Tag((byte) 1, "visibility");
+              Tag[] tags = new Tag[1];
+              tags[0] = t;
+              p.add(cfBytes, Bytes.toBytes(qualStr), ts++, Bytes.toBytes(valueStr), tags);
+            } else {
+              p.add(cfBytes, Bytes.toBytes(qualStr), ts++, Bytes.toBytes(valueStr));
+            }
           }
         }
         region.put(p);
@@ -369,6 +422,5 @@ public class TestCacheOnWrite {
     region.close();
     blockCache.shutdown();
   }
-
 }
 

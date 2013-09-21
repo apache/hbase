@@ -129,11 +129,11 @@ public class TestMiniClusterLoadSequential {
   }
 
   protected void runLoadTestOnExistingTable() throws IOException {
-    writerThreads.start(0, numKeys, NUM_THREADS);
+    writerThreads.start(0, numKeys, NUM_THREADS, false, 0, 0);
     writerThreads.waitForFinish();
     assertEquals(0, writerThreads.getNumWriteFailures());
 
-    readerThreads.start(0, numKeys, NUM_THREADS);
+    readerThreads.start(0, numKeys, NUM_THREADS, false, 0, 0);
     readerThreads.waitForFinish();
     assertEquals(0, readerThreads.getNumReadFailures());
     assertEquals(0, readerThreads.getNumReadErrors());

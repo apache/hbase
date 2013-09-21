@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -842,8 +843,10 @@ public class TestAccessController extends SecureTestUtil {
       HFile.Writer writer = null;
       long now = System.currentTimeMillis();
       try {
+        HFileContext context = new HFileContext();
         writer = HFile.getWriterFactory(conf, new CacheConfig(conf))
             .withPath(fs, path)
+            .withFileContext(context)
             .create();
         // subtract 2 since numRows doesn't include boundary keys
         for (byte[] key : Bytes.iterateOnSplits(startKey, endKey, true, numRows-2)) {

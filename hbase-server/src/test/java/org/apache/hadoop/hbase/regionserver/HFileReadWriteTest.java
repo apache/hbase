@@ -350,7 +350,7 @@ public class HFileReadWriteTest {
     HRegion region = new HRegion(outputDir, null, fs, conf, regionInfo, htd, null);
     HStore store = new HStore(region, columnDescriptor, conf);
 
-    StoreFile.Writer writer = store.createWriterInTmp(maxKeyCount, compression, false, true);
+    StoreFile.Writer writer = store.createWriterInTmp(maxKeyCount, compression, false, true, false);
 
     StatisticsPrinter statsPrinter = new StatisticsPrinter();
     statsPrinter.startThread();

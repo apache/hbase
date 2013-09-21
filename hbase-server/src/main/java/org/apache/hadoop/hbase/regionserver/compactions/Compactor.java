@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.CellOutputStream;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -118,6 +119,8 @@ public abstract class Compactor {
     public long maxSeqId = 0;
     /** Latest memstore read point found in any of the involved files */
     public long maxMVCCReadpoint = 0;
+    /** Max tags length**/
+    public int maxTagsLength = 0;
   }
 
   protected FileDetails getFileDetails(
@@ -142,6 +145,10 @@ public abstract class Compactor {
       byte tmp[] = fileInfo.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
       if (tmp != null) {
         fd.maxMVCCReadpoint = Math.max(fd.maxMVCCReadpoint, Bytes.toLong(tmp));
+      }
+      tmp = fileInfo.get(FileInfo.MAX_TAGS_LEN);
+      if (tmp != null) {
+        fd.maxTagsLength = Math.max(fd.maxTagsLength, Bytes.toInt(tmp));
       }
       // If required, calculate the earliest put timestamp of all involved storefiles.
       // This is used to remove family delete marker during compaction.

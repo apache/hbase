@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -118,9 +119,27 @@ public class TestHFileBlockIndex {
 
   @Test
   public void testBlockIndex() throws IOException {
-    path = new Path(TEST_UTIL.getDataTestDir(), "block_index_" + compr);
-    writeWholeIndex();
-    readIndex();
+    testBlockIndexInternals(false);
+    clear();
+    testBlockIndexInternals(true);
+  }
+
+  private void clear() throws IOException {
+    keys.clear();
+    rand = new Random(2389757);
+    firstKeyInFile = null;
+    conf = TEST_UTIL.getConfiguration();
+
+    // This test requires at least HFile format version 2.
+    conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
+
+    fs = HFileSystem.get(conf);
+  }
+
+  protected void testBlockIndexInternals(boolean useTags) throws IOException {
+    path = new Path(TEST_UTIL.getDataTestDir(), "block_index_" + compr + useTags);
+    writeWholeIndex(useTags);
+    readIndex(useTags);
   }
 
   /**
@@ -164,13 +183,18 @@ public class TestHFileBlockIndex {
     }
   }
 
-  public void readIndex() throws IOException {
+  public void readIndex(boolean useTags) throws IOException {
     long fileSize = fs.getFileStatus(path).getLen();
     LOG.info("Size of " + path + ": " + fileSize);
 
     FSDataInputStream istream = fs.open(path);
-    HFileBlock.FSReader blockReader = new HFileBlock.FSReaderV2(istream,
-        compr, fs.getFileStatus(path).getLen());
+    HFileContext meta = new HFileContext();
+    meta.setUsesHBaseChecksum(true);
+    meta.setIncludesMvcc(includesMemstoreTS);
+    meta.setIncludesTags(useTags);
+    meta.setCompressAlgo(compr);
+    HFileBlock.FSReader blockReader = new HFileBlock.FSReaderV2(istream, fs.getFileStatus(path)
+        .getLen(), meta);
 
     BlockReaderWrapper brw = new BlockReaderWrapper(blockReader);
     HFileBlockIndex.BlockIndexReader indexReader =
@@ -215,11 +239,17 @@ public class TestHFileBlockIndex {
     istream.close();
   }
 
-  private void writeWholeIndex() throws IOException {
+  private void writeWholeIndex(boolean useTags) throws IOException {
     assertEquals(0, keys.size());
-    HFileBlock.Writer hbw = new HFileBlock.Writer(compr, null,
-        includesMemstoreTS, HFile.DEFAULT_CHECKSUM_TYPE,
-        HFile.DEFAULT_BYTES_PER_CHECKSUM);
+    HFileContext meta = new HFileContext();
+    meta.setUsesHBaseChecksum(true);
+    meta.setIncludesMvcc(includesMemstoreTS);
+    meta.setIncludesTags(useTags);
+    meta.setCompressAlgo(compr);
+    meta.setChecksumType(HFile.DEFAULT_CHECKSUM_TYPE);
+    meta.setBytesPerChecksum(HFile.DEFAULT_BYTES_PER_CHECKSUM);
+    HFileBlock.Writer hbw = new HFileBlock.Writer(null,
+        meta);
     FSDataOutputStream outputStream = fs.create(path);
     HFileBlockIndex.BlockIndexWriter biw =
         new HFileBlockIndex.BlockIndexWriter(hbw, null, null);
@@ -486,11 +516,13 @@ public class TestHFileBlockIndex {
 
       // Write the HFile
       {
+        HFileContext meta = new HFileContext();
+        meta.setBlocksize(SMALL_BLOCK_SIZE);
+        meta.setCompressAlgo(compr);
         HFile.Writer writer =
             HFile.getWriterFactory(conf, cacheConf)
                 .withPath(fs, hfilePath)
-                .withBlockSize(SMALL_BLOCK_SIZE)
-                .withCompression(compr)
+                .withFileContext(meta)
                 .create();
         Random rand = new Random(19231737);
 
@@ -502,7 +534,7 @@ public class TestHFileBlockIndex {
               row, 0, 0).getKey();
 
           byte[] v = TestHFileWriterV2.randomValue(rand);
-          writer.append(k, v);
+          writer.append(k, v, HConstants.EMPTY_BYTE_ARRAY);
           keys[i] = k;
           values[i] = v;
           keyStrSet.add(Bytes.toStringBinary(k));

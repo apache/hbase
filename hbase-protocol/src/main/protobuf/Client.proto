@@ -187,6 +187,7 @@ message MutationProto {
       optional bytes value = 2;
       optional uint64 timestamp = 3;
       optional DeleteType delete_type = 4;
+      optional bytes tags = 5;
     }
   }
 }

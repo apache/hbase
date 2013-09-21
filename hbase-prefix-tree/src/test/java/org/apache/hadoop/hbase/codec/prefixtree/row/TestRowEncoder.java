@@ -75,6 +75,7 @@ public class TestRowEncoder {
 
 	@Before
   public void compile() throws IOException {
+    // Always run with tags. But should also ensure that KVs without tags work fine
     os = new ByteArrayOutputStream(1 << 20);
     encoder = new PrefixTreeEncoder(os, includeMemstoreTS);
 
@@ -92,7 +93,8 @@ public class TestRowEncoder {
     blockMetaReader = new PrefixTreeBlockMeta(buffer);
 
     searcher = new PrefixTreeArraySearcher(blockMetaReader, blockMetaReader.getRowTreeDepth(),
-        blockMetaReader.getMaxRowLength(), blockMetaReader.getMaxQualifierLength());
+        blockMetaReader.getMaxRowLength(), blockMetaReader.getMaxQualifierLength(),
+        blockMetaReader.getMaxTagsLength());
     searcher.initOnBlock(blockMetaReader, outputBytes, includeMemstoreTS);
   }
 

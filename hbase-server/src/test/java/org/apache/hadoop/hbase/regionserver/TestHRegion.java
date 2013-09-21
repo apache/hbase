@@ -2359,21 +2359,6 @@ public class TestHRegion extends HBaseTestCase {
   private void assertICV(byte [] row,
                          byte [] familiy,
                          byte[] qualifier,
-                         long amount) throws IOException {
-    // run a get and see?
-    Get get = new Get(row);
-    get.addColumn(familiy, qualifier);
-    Result result = region.get(get);
-    assertEquals(1, result.size());
-
-    Cell kv = result.rawCells()[0];
-    long r = Bytes.toLong(CellUtil.cloneValue(kv));
-    assertEquals(amount, r);
-  }
-
-  private void assertICV(byte [] row,
-                         byte [] familiy,
-                         byte[] qualifier,
                          int amount) throws IOException {
     // run a get and see?
     Get get = new Get(row);

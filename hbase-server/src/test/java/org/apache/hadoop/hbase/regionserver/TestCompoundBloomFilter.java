@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.TestHFileWriterV2;
@@ -291,13 +292,12 @@ public class TestCompoundBloomFilter {
         BLOOM_BLOCK_SIZES[t]);
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
     cacheConf = new CacheConfig(conf);
-
-    StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConf, fs,
-        BLOCK_SIZES[t])
+    HFileContext meta = new HFileContext();
+    meta.setBlocksize(BLOCK_SIZES[t]);
+    StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConf, fs)
             .withOutputDir(TEST_UTIL.getDataTestDir())
             .withBloomType(bt)
-            .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
-            .withBytesPerChecksum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
+            .withFileContext(meta)
             .build();
 
     assertTrue(w.hasGeneralBloom());

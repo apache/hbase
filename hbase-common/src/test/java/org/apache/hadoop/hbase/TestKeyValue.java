@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -525,5 +527,64 @@ public class TestKeyValue extends TestCase {
     expectedArray = Bytes.toBytes("101");
     Bytes.equals(newKey, KeyValue.ROW_LENGTH_SIZE, newRowLength, expectedArray, 0,
       expectedArray.length);
+  }
+
+  public void testKVsWithTags() {
+    byte[] row = Bytes.toBytes("myRow");
+    byte[] cf = Bytes.toBytes("myCF");
+    byte[] q = Bytes.toBytes("myQualifier");
+    byte[] value = Bytes.toBytes("myValue");
+    byte[] metaValue1 = Bytes.toBytes("metaValue1");
+    byte[] metaValue2 = Bytes.toBytes("metaValue2");
+    KeyValue kv = new KeyValue(row, cf, q, HConstants.LATEST_TIMESTAMP, value, new Tag[] {
+        new Tag((byte) 1, metaValue1), new Tag((byte) 2, metaValue2) });
+    assertTrue(kv.getTagsLength() > 0);
+    assertTrue(Bytes.equals(kv.getRow(), row));
+    assertTrue(Bytes.equals(kv.getFamily(), cf));
+    assertTrue(Bytes.equals(kv.getQualifier(), q));
+    assertTrue(Bytes.equals(kv.getValue(), value));
+    List<Tag> tags = kv.getTags();
+    assertNotNull(tags);
+    assertEquals(2, tags.size());
+    boolean meta1Ok = false, meta2Ok = false;
+    for (Tag tag : tags) {
+      if (tag.getType() == (byte) 1) {
+        if (Bytes.equals(tag.getValue(), metaValue1)) {
+          meta1Ok = true;
+        }
+      } else {
+        if (Bytes.equals(tag.getValue(), metaValue2)) {
+          meta2Ok = true;
+        }
+      }
+    }
+    assertTrue(meta1Ok);
+    assertTrue(meta2Ok);
+
+    Iterator<Tag> tagItr = kv.tagsIterator();
+    assertTrue(tagItr.hasNext());
+    Tag next = tagItr.next();
+    assertEquals(10, next.getTagLength());
+    assertEquals((byte) 1, next.getType());
+    Bytes.equals(next.getValue(), metaValue1);
+    assertTrue(tagItr.hasNext());
+    next = tagItr.next();
+    assertEquals(10, next.getTagLength());
+    assertEquals((byte) 2, next.getType());
+    Bytes.equals(next.getValue(), metaValue2);
+    assertFalse(tagItr.hasNext());
+
+    tagItr = kv.tagsIterator();
+    assertTrue(tagItr.hasNext());
+    next = tagItr.next();
+    assertEquals(10, next.getTagLength());
+    assertEquals((byte) 1, next.getType());
+    Bytes.equals(next.getValue(), metaValue1);
+    assertTrue(tagItr.hasNext());
+    next = tagItr.next();
+    assertEquals(10, next.getTagLength());
+    assertEquals((byte) 2, next.getType());
+    Bytes.equals(next.getValue(), metaValue2);
+    assertFalse(tagItr.hasNext());
   }
 }

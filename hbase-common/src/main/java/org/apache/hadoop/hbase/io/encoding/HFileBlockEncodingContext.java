@@ -20,8 +20,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 
 /**
  * An encoding context that is created by a writer's encoder, and is shared
@@ -56,11 +56,6 @@ public interface HFileBlockEncodingContext {
   BlockType getBlockType();
 
   /**
-   * @return the compression algorithm used by this encoding context
-   */
-  Compression.Algorithm getCompression();
-
-  /**
    * sets the dummy header bytes
    */
   void setDummyHeader(byte[] headerBytes);
@@ -72,8 +67,7 @@ public interface HFileBlockEncodingContext {
 
   /**
    * Do any action that needs to be performed after the encoding.
-   * Compression is also included if {@link #getCompression()} returns non-null
-   * compression algorithm
+   * Compression is also included if a non-null compression algorithm is used
    *
    * @param blockType
    * @throws IOException
@@ -85,4 +79,8 @@ public interface HFileBlockEncodingContext {
    */
   void close();
 
+  /**
+   * @return HFile context information
+   */
+  HFileContext getHFileContext();
 }

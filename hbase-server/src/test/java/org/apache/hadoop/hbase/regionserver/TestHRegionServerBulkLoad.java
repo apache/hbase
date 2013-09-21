@@ -40,8 +40,10 @@ import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -65,7 +67,7 @@ public class TestHRegionServerBulkLoad {
   private final static byte[] QUAL = Bytes.toBytes("qual");
   private final static int NUM_CFS = 10;
   public static int BLOCKSIZE = 64 * 1024;
-  public static String COMPRESSION = Compression.Algorithm.NONE.getName();
+  public static Algorithm COMPRESSION = Compression.Algorithm.NONE;
 
   private final static byte[][] families = new byte[NUM_CFS][];
   static {
@@ -87,11 +89,13 @@ public class TestHRegionServerBulkLoad {
    */
   public static void createHFile(FileSystem fs, Path path, byte[] family,
       byte[] qualifier, byte[] value, int numRows) throws IOException {
+    HFileContext context = new HFileContext();
+    context.setBlocksize(BLOCKSIZE);
+    context.setCompressAlgo(COMPRESSION);
     HFile.Writer writer = HFile
         .getWriterFactory(conf, new CacheConfig(conf))
         .withPath(fs, path)
-        .withBlockSize(BLOCKSIZE)
-        .withCompression(COMPRESSION)
+        .withFileContext(context)
         .create();
     long now = System.currentTimeMillis();
     try {

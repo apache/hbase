@@ -26,6 +26,7 @@ import java.util.Random;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -200,6 +201,14 @@ public class RedundantKVGenerator {
    * @return sorted list of key values
    */
   public List<KeyValue> generateTestKeyValues(int howMany) {
+    return generateTestKeyValues(howMany, false);
+  }
+  /**
+   * Generate test data useful to test encoders.
+   * @param howMany How many Key values should be generated.
+   * @return sorted list of key values
+   */
+  public List<KeyValue> generateTestKeyValues(int howMany, boolean useTags) {
     List<KeyValue> result = new ArrayList<KeyValue>();
 
     List<byte[]> rows = generateRows();
@@ -267,7 +276,12 @@ public class RedundantKVGenerator {
         randomizer.nextBytes(value);
       }
 
-      result.add(new KeyValue(row, family, qualifier, timestamp, value));
+      if (useTags) {
+        result.add(new KeyValue(row, family, qualifier, timestamp, value, new Tag[] { new Tag(
+            (byte) 1, "value1") }));
+      } else {
+        result.add(new KeyValue(row, family, qualifier, timestamp, value));
+      }
     }
 
     Collections.sort(result, KeyValue.COMPARATOR);
@@ -297,7 +311,6 @@ public class RedundantKVGenerator {
         ByteBufferUtils.writeVLong(result, kv.getMvccVersion());
       }
     }
-
     return result;
   }
   

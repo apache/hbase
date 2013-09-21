@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode.column;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
+import org.apache.hadoop.hbase.codec.prefixtree.encode.other.ColumnNodeType;
 import org.apache.hadoop.hbase.util.vint.UFIntTool;
 import org.apache.hadoop.hbase.util.vint.UVIntTool;
 
@@ -30,9 +31,8 @@ public class ColumnNodeReader {
 
   protected PrefixTreeBlockMeta blockMeta;
   protected byte[] block;
-
+  protected ColumnNodeType nodeType;
   protected byte[] columnBuffer;
-  protected boolean familyVsQualifier;
 
   protected int offsetIntoBlock;
 
@@ -43,9 +43,9 @@ public class ColumnNodeReader {
 
   /************** construct *************************/
 
-  public ColumnNodeReader(byte[] columnBuffer, boolean familyVsQualifier) {
+  public ColumnNodeReader(byte[] columnBuffer, ColumnNodeType nodeType) {
     this.columnBuffer = columnBuffer;
-    this.familyVsQualifier = familyVsQualifier;
+    this.nodeType = nodeType;
   }
 
   public void initOnBlock(PrefixTreeBlockMeta blockMeta, byte[] block) {
@@ -62,10 +62,12 @@ public class ColumnNodeReader {
     tokenOffsetIntoBlock = offsetIntoBlock + UVIntTool.numBytes(tokenLength);
     int parentStartPositionIndex = tokenOffsetIntoBlock + tokenLength;
     int offsetWidth;
-    if (familyVsQualifier) {
+    if(nodeType == ColumnNodeType.FAMILY) {
       offsetWidth = blockMeta.getFamilyOffsetWidth();
-    } else {
+    } else if(nodeType == ColumnNodeType.QUALIFIER) {
       offsetWidth = blockMeta.getQualifierOffsetWidth();
+    } else {
+      offsetWidth = blockMeta.getTagsOffsetWidth();
     }
     parentStartPosition = (int) UFIntTool.fromBytes(block, parentStartPositionIndex, offsetWidth);
   }
@@ -75,10 +77,12 @@ public class ColumnNodeReader {
   }
 
   public boolean isRoot() {
-    if (familyVsQualifier) {
+    if (nodeType == ColumnNodeType.FAMILY) {
       return offsetIntoBlock == blockMeta.getAbsoluteFamilyOffset();
-    } else {
+    } else if (nodeType == ColumnNodeType.QUALIFIER) {
       return offsetIntoBlock == blockMeta.getAbsoluteQualifierOffset();
+    } else {
+      return offsetIntoBlock == blockMeta.getAbsoluteTagsOffset();
     }
   }
 

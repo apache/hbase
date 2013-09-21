@@ -91,9 +91,9 @@ public class MultiThreadedReader extends MultiThreadedAction
   }
 
   @Override
-  public void start(long startKey, long endKey, int numThreads)
-      throws IOException {
-    super.start(startKey, endKey, numThreads);
+  public void start(long startKey, long endKey, int numThreads, boolean useTags,
+    int minNumTags, int maxNumTags) throws IOException {
+    super.start(startKey, endKey, numThreads, useTags, minNumTags, maxNumTags);
     if (verbose) {
       LOG.debug("Reading keys [" + startKey + ", " + endKey + ")");
     }

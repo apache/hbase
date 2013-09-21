@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.column.ColumnReader;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.column.ColumnSectionWriter;
+import org.apache.hadoop.hbase.codec.prefixtree.encode.other.ColumnNodeType;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.Tokenizer;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.TokenizerNode;
 import org.apache.hadoop.hbase.util.ByteRange;
@@ -92,12 +93,12 @@ public class TestColumnBuilder {
     }
     Assert.assertEquals(sortedUniqueColumns.size(), builderOutputArrays.size());
 
-    writer = new ColumnSectionWriter(blockMeta, builder, false);
+    writer = new ColumnSectionWriter(blockMeta, builder, ColumnNodeType.QUALIFIER);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     writer.compile().writeBytes(baos);
     bytes = baos.toByteArray();
     buffer = new byte[blockMeta.getMaxQualifierLength()];
-    reader = new ColumnReader(buffer, false);
+    reader = new ColumnReader(buffer, ColumnNodeType.QUALIFIER);
     reader.initOnBlock(blockMeta, bytes);
 
     List<TokenizerNode> builderNodes = Lists.newArrayList();

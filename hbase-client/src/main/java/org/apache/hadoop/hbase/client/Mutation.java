@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -96,12 +97,26 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /*
-   * Create a nnnnnnnn with this objects row key and the Put identifier.
+   * Create a KeyValue with this objects row key and the Put identifier.
    *
    * @return a KeyValue with this objects row key and the Put identifier.
    */
   KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts, byte[] value) {
     return new KeyValue(this.row, family, qualifier, ts, KeyValue.Type.Put, value);
+  }
+
+  /**
+   * Create a KeyValue with this objects row key and the Put identifier.
+   * @param family
+   * @param qualifier
+   * @param ts
+   * @param value
+   * @param tags - Specify the Tags as an Array {@link KeyValue.Tag}
+   * @return a KeyValue with this objects row key and the Put identifier.
+   */
+  KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tags) {
+    KeyValue kvWithTag = new KeyValue(this.row, family, qualifier, ts, value, tags);
+    return kvWithTag;
   }
 
   /**

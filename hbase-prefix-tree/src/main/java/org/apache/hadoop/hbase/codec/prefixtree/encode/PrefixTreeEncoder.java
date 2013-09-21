@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.column.ColumnSectionWriter;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.other.CellTypeEncoder;
+import org.apache.hadoop.hbase.codec.prefixtree.encode.other.ColumnNodeType;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.other.LongEncoder;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.row.RowSectionWriter;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.Tokenizer;
@@ -42,7 +43,6 @@ import org.apache.hadoop.hbase.util.byterange.impl.ByteRangeHashSet;
 import org.apache.hadoop.hbase.util.byterange.impl.ByteRangeTreeSet;
 import org.apache.hadoop.hbase.util.vint.UFIntTool;
 import org.apache.hadoop.io.WritableUtils;
-
 /**
  * This is the primary class for converting a CellOutputStream into an encoded byte[]. As Cells are
  * added they are completely copied into the various encoding structures. This is important because
@@ -86,6 +86,7 @@ public class PrefixTreeEncoder implements CellOutputStream {
   protected ByteRange rowRange;
   protected ByteRange familyRange;
   protected ByteRange qualifierRange;
+  protected ByteRange tagsRange;
 
   /*
    * incoming Cell fields are copied into these arrays
@@ -94,7 +95,9 @@ public class PrefixTreeEncoder implements CellOutputStream {
   protected long[] mvccVersions;
   protected byte[] typeBytes;
   protected int[] valueOffsets;
+  protected int[] tagsOffsets;
   protected byte[] values;
+  protected byte[] tags;
 
   protected PrefixTreeBlockMeta blockMeta;
 
@@ -114,7 +117,7 @@ public class PrefixTreeEncoder implements CellOutputStream {
    */
   protected ByteRangeSet familyDeduplicator;
   protected ByteRangeSet qualifierDeduplicator;
-
+  protected ByteRangeSet tagsDeduplicator;
   /*
    * Feed sorted byte[]s into these tokenizers which will convert the byte[]s to an in-memory
    * trie structure with nodes connected by memory pointers (not serializable yet).
@@ -122,6 +125,7 @@ public class PrefixTreeEncoder implements CellOutputStream {
   protected Tokenizer rowTokenizer;
   protected Tokenizer familyTokenizer;
   protected Tokenizer qualifierTokenizer;
+  protected Tokenizer tagsTokenizer;
 
   /*
    * Writers take an in-memory trie, sort the nodes, calculate offsets and lengths, and write
@@ -130,6 +134,7 @@ public class PrefixTreeEncoder implements CellOutputStream {
   protected RowSectionWriter rowWriter;
   protected ColumnSectionWriter familyWriter;
   protected ColumnSectionWriter qualifierWriter;
+  protected ColumnSectionWriter tagsWriter;
 
   /*
    * Integers used for counting cells and bytes.  We keep track of the size of the Cells as if they
@@ -138,7 +143,9 @@ public class PrefixTreeEncoder implements CellOutputStream {
   protected int totalCells = 0;
   protected int totalUnencodedBytes = 0;//numBytes if the cells were KeyValues
   protected int totalValueBytes = 0;
+  protected int totalTagBytes = 0;
   protected int maxValueLength = 0;
+  protected int maxTagLength = 0;
   protected int totalBytes = 0;//
 
 
@@ -170,6 +177,7 @@ public class PrefixTreeEncoder implements CellOutputStream {
     this.rowWriter = new RowSectionWriter();
     this.familyWriter = new ColumnSectionWriter();
     this.qualifierWriter = new ColumnSectionWriter();
+    initializeTagHelpers();
 
     reset(outputStream, includeMvccVersion);
   }
@@ -179,9 +187,11 @@ public class PrefixTreeEncoder implements CellOutputStream {
     this.includeMvccVersion = includeMvccVersion;
     this.outputStream = outputStream;
     valueOffsets[0] = 0;
-
     familyDeduplicator.reset();
     qualifierDeduplicator.reset();
+    tagsDeduplicator.reset();
+    tagsWriter.reset();
+    tagsTokenizer.reset();
     rowTokenizer.reset();
     timestampEncoder.reset();
     mvccVersionEncoder.reset();
@@ -197,6 +207,14 @@ public class PrefixTreeEncoder implements CellOutputStream {
     totalValueBytes = 0;
     maxValueLength = 0;
     totalBytes = 0;
+  }
+
+  protected void initializeTagHelpers() {
+    this.tagsRange = new SimpleByteRange();
+    this.tagsDeduplicator = USE_HASH_COLUMN_SORTER ? new ByteRangeHashSet()
+    : new ByteRangeTreeSet();
+    this.tagsTokenizer = new Tokenizer();
+    this.tagsWriter = new ColumnSectionWriter();
   }
 
   /**
@@ -259,9 +277,15 @@ public class PrefixTreeEncoder implements CellOutputStream {
     rowTokenizer.addSorted(CellUtil.fillRowRange(cell, rowRange));
     addFamilyPart(cell);
     addQualifierPart(cell);
+    addTagPart(cell);
     addAfterRowFamilyQualifier(cell);
   }
 
+
+  private void addTagPart(Cell cell) {
+    CellUtil.fillTagRange(cell, tagsRange);
+    tagsDeduplicator.add(tagsRange);
+  }
 
   /***************** internal add methods ************************/
 
@@ -333,6 +357,7 @@ public class PrefixTreeEncoder implements CellOutputStream {
     rowWriter.writeBytes(outputStream);
     familyWriter.writeBytes(outputStream);
     qualifierWriter.writeBytes(outputStream);
+    tagsWriter.writeBytes(outputStream);
     timestampEncoder.writeBytes(outputStream);
     mvccVersionEncoder.writeBytes(outputStream);
     //CellType bytes are in the row nodes.  there is no additional type section
@@ -349,12 +374,13 @@ public class PrefixTreeEncoder implements CellOutputStream {
     blockMeta.setValueOffsetWidth(UFIntTool.numBytes(lastValueOffset));
     blockMeta.setValueLengthWidth(UFIntTool.numBytes(maxValueLength));
     blockMeta.setNumValueBytes(totalValueBytes);
-    totalBytes += totalValueBytes;
+    totalBytes += totalTagBytes + totalValueBytes;
 
     //these compile methods will add to totalBytes
     compileTypes();
     compileMvccVersions();
     compileTimestamps();
+    compileTags();
     compileQualifiers();
     compileFamilies();
     compileRows();
@@ -397,7 +423,7 @@ public class PrefixTreeEncoder implements CellOutputStream {
     blockMeta.setNumUniqueQualifiers(qualifierDeduplicator.size());
     qualifierDeduplicator.compile();
     qualifierTokenizer.addAll(qualifierDeduplicator.getSortedRanges());
-    qualifierWriter.reconstruct(blockMeta, qualifierTokenizer, false);
+    qualifierWriter.reconstruct(blockMeta, qualifierTokenizer, ColumnNodeType.QUALIFIER);
     qualifierWriter.compile();
     int numQualifierBytes = qualifierWriter.getNumBytes();
     blockMeta.setNumQualifierBytes(numQualifierBytes);
@@ -408,11 +434,22 @@ public class PrefixTreeEncoder implements CellOutputStream {
     blockMeta.setNumUniqueFamilies(familyDeduplicator.size());
     familyDeduplicator.compile();
     familyTokenizer.addAll(familyDeduplicator.getSortedRanges());
-    familyWriter.reconstruct(blockMeta, familyTokenizer, true);
+    familyWriter.reconstruct(blockMeta, familyTokenizer, ColumnNodeType.FAMILY);
     familyWriter.compile();
     int numFamilyBytes = familyWriter.getNumBytes();
     blockMeta.setNumFamilyBytes(numFamilyBytes);
     totalBytes += numFamilyBytes;
+  }
+
+  protected void compileTags() {
+    blockMeta.setNumUniqueTags(tagsDeduplicator.size());
+    tagsDeduplicator.compile();
+    tagsTokenizer.addAll(tagsDeduplicator.getSortedRanges());
+    tagsWriter.reconstruct(blockMeta, tagsTokenizer, ColumnNodeType.TAGS);
+    tagsWriter.compile();
+    int numTagBytes = tagsWriter.getNumBytes();
+    blockMeta.setNumTagsBytes(numTagBytes);
+    totalBytes += numTagBytes;
   }
 
   protected void compileRows() {
@@ -476,12 +513,20 @@ public class PrefixTreeEncoder implements CellOutputStream {
     return qualifierDeduplicator;
   }
 
+  public ByteRangeSet getTagSorter() {
+    return tagsDeduplicator;
+  }
+
   public ColumnSectionWriter getFamilyWriter() {
     return familyWriter;
   }
 
   public ColumnSectionWriter getQualifierWriter() {
     return qualifierWriter;
+  }
+
+  public ColumnSectionWriter getTagWriter() {
+    return tagsWriter;
   }
 
   public RowSectionWriter getRowWriter() {

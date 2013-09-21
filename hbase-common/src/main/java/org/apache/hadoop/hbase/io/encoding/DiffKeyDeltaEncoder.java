@@ -318,7 +318,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
   @Override
   public void internalEncodeKeyValues(DataOutputStream out,
-      ByteBuffer in, boolean includesMemstoreTS) throws IOException {
+      ByteBuffer in, HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
     in.rewind();
     ByteBufferUtils.putInt(out, in.limit());
     DiffCompressionState previousState = new DiffCompressionState();
@@ -326,7 +326,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     while (in.hasRemaining()) {
       compressSingleKeyValue(previousState, currentState,
           out, in);
-      afterEncodingKeyValue(in, out, includesMemstoreTS);
+      afterEncodingKeyValue(in, out, encodingCtx);
 
       // swap previousState <-> currentState
       DiffCompressionState tmp = previousState;
@@ -335,26 +335,6 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     }
   }
 
-  @Override
-  public ByteBuffer decodeKeyValues(DataInputStream source,
-      int allocHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
-      throws IOException {
-    int decompressedSize = source.readInt();
-    ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +
-        allocHeaderLength);
-    buffer.position(allocHeaderLength);
-    DiffCompressionState state = new DiffCompressionState();
-    while (source.available() > skipLastBytes) {
-      uncompressSingleKeyValue(source, buffer, state);
-      afterDecodingKeyValue(source, buffer, includesMemstoreTS);
-    }
-
-    if (source.available() != skipLastBytes) {
-      throw new IllegalStateException("Read too much bytes.");
-    }
-
-    return buffer;
-  }
 
   @Override
   public ByteBuffer getFirstKeyInBlock(ByteBuffer block) {
@@ -424,8 +404,8 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
   @Override
   public EncodedSeeker createSeeker(KVComparator comparator,
-      final boolean includesMemstoreTS) {
-    return new BufferedEncodedSeeker<DiffSeekerState>(comparator) {
+      HFileBlockDecodingContext decodingCtx) {
+    return new BufferedEncodedSeeker<DiffSeekerState>(comparator, decodingCtx) {
       private byte[] familyNameWithSize;
       private static final int TIMESTAMP_WITH_TYPE_LENGTH =
           Bytes.SIZEOF_LONG + Bytes.SIZEOF_BYTE;
@@ -517,7 +497,10 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
         current.valueOffset = currentBuffer.position();
         ByteBufferUtils.skip(currentBuffer, current.valueLength);
 
-        if (includesMemstoreTS) {
+        if (includesTags()) {
+          decodeTags();
+        }
+        if (includesMvcc()) {
           current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
         } else {
           current.memstoreTS = 0;
@@ -548,5 +531,25 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
         return new DiffSeekerState();
       }
     };
+  }
+
+  @Override
+  public ByteBuffer internalDecodeKeyValues(DataInputStream source, int allocateHeaderLength,
+      int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
+    int decompressedSize = source.readInt();
+    ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +
+        allocateHeaderLength);
+    buffer.position(allocateHeaderLength);
+    DiffCompressionState state = new DiffCompressionState();
+    while (source.available() > skipLastBytes) {
+      uncompressSingleKeyValue(source, buffer, state);
+      afterDecodingKeyValue(source, buffer, decodingCtx);
+    }
+
+    if (source.available() != skipLastBytes) {
+      throw new IllegalStateException("Read too much bytes.");
+    }
+
+    return buffer;
   }
 }

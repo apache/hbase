@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
@@ -106,20 +107,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     final Map<byte[], String> bloomTypeMap = createFamilyBloomMap(conf);
     final Map<byte[], String> blockSizeMap = createFamilyBlockSizeMap(conf);
 
-    String dataBlockEncodingStr = conf.get(DATABLOCK_ENCODING_CONF_KEY);
-    final HFileDataBlockEncoder encoder;
-    if (dataBlockEncodingStr == null) {
-      encoder = NoOpDataBlockEncoder.INSTANCE;
-    } else {
-      try {
-        encoder = new HFileDataBlockEncoderImpl(DataBlockEncoding
-            .valueOf(dataBlockEncodingStr));
-      } catch (IllegalArgumentException ex) {
-        throw new RuntimeException(
-            "Invalid data block encoding type configured for the param "
-                + DATABLOCK_ENCODING_CONF_KEY + " : " + dataBlockEncodingStr);
-      }
-    }
+    final String dataBlockEncodingStr = conf.get(DATABLOCK_ENCODING_CONF_KEY);
 
     return new RecordWriter<ImmutableBytesWritable, KeyValue>() {
       // Map of families to writers and how much has been output on the writer.
@@ -206,14 +194,18 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
             : Integer.parseInt(blockSizeString);
         Configuration tempConf = new Configuration(conf);
         tempConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
-        wl.writer = new StoreFile.WriterBuilder(conf, new CacheConfig(tempConf), fs, blockSize)
-            .withOutputDir(familydir)
-            .withCompression(AbstractHFileWriter.compressionByName(compression))
-            .withBloomType(bloomType)
-            .withComparator(KeyValue.COMPARATOR)
-            .withDataBlockEncoder(encoder)
-            .withChecksumType(HStore.getChecksumType(conf))
-            .withBytesPerChecksum(HStore.getBytesPerChecksum(conf))
+        HFileContext meta = new HFileContext();
+        meta.setCompressAlgo(AbstractHFileWriter.compressionByName(compression));
+        meta.setChecksumType(HStore.getChecksumType(conf));
+        meta.setBytesPerChecksum(HStore.getBytesPerChecksum(conf));
+        meta.setBlocksize(blockSize);
+        if (dataBlockEncodingStr != null) {
+          meta.setEncodingInCache(DataBlockEncoding.valueOf(dataBlockEncodingStr));
+          meta.setEncodingOnDisk(DataBlockEncoding.valueOf(dataBlockEncodingStr));
+        }
+        wl.writer = new StoreFile.WriterBuilder(conf, new CacheConfig(tempConf), fs)
+            .withOutputDir(familydir).withBloomType(bloomType).withComparator(KeyValue.COMPARATOR)
+            .withFileContext(meta)
             .build();
 
         this.writers.put(family, wl);

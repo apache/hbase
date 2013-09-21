@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -112,6 +113,10 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     return add(family, qualifier, this.ts, value);
   }
 
+  public Put add(byte[] family, byte [] qualifier, byte [] value, Tag[] tag) {
+    return add(family, qualifier, this.ts, value, tag);
+  }
+
   /**
    * Add the specified column and value, with the specified timestamp as
    * its version to this Put operation.
@@ -129,6 +134,18 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
     list.add(kv);
     familyMap.put(CellUtil.cloneFamily(kv), list);
+    return this;
+  }
+
+  /**
+   * Forms a keyvalue with tags
+   */
+  @SuppressWarnings("unchecked")
+  public Put add(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag) {
+    List<Cell> list = getCellList(family);
+    KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
+    list.add(kv);
+    familyMap.put(kv.getFamily(), list);
     return this;
   }
 

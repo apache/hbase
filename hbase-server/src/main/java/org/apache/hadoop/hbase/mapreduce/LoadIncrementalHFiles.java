@@ -51,12 +51,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -70,8 +70,7 @@ import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -646,9 +645,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     CacheConfig cacheConf = new CacheConfig(conf);
     HalfStoreFileReader halfReader = null;
     StoreFile.Writer halfWriter = null;
-    HFileDataBlockEncoder dataBlockEncoder = new HFileDataBlockEncoderImpl(
-        familyDescriptor.getDataBlockEncodingOnDisk(),
-        familyDescriptor.getDataBlockEncoding());
     try {
       halfReader = new HalfStoreFileReader(fs, inFile, cacheConf,
           reference, DataBlockEncoding.NONE);
@@ -658,14 +654,18 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       Algorithm compression = familyDescriptor.getCompression();
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
 
+      HFileContext meta = new HFileContext();
+      meta.setCompressAlgo(compression);
+      meta.setChecksumType(HStore.getChecksumType(conf));
+      meta.setBytesPerChecksum(HStore.getBytesPerChecksum(conf));
+      meta.setBlocksize(blocksize);
+      meta.setEncodingInCache(familyDescriptor.getDataBlockEncoding());
+      meta.setEncodingOnDisk(familyDescriptor.getDataBlockEncodingOnDisk());
       halfWriter = new StoreFile.WriterBuilder(conf, cacheConf,
-          fs, blocksize)
+          fs)
               .withFilePath(outFile)
-              .withCompression(compression)
-              .withDataBlockEncoder(dataBlockEncoder)
               .withBloomType(bloomFilterType)
-              .withChecksumType(HStore.getChecksumType(conf))
-              .withBytesPerChecksum(HStore.getBytesPerChecksum(conf))
+              .withFileContext(meta)
               .build();
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();

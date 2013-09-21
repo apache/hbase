@@ -24,8 +24,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 
@@ -56,26 +56,25 @@ public class HFileBlockDefaultEncodingContext implements
   /** Underlying stream to write compressed bytes to */
   private ByteArrayOutputStream compressedByteStream;
 
-  /** Compression algorithm for all blocks this instance writes. */
-  private final Compression.Algorithm compressionAlgorithm;
-
   private ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
   private DataOutputStream dataOut = new DataOutputStream(encodedStream);
 
   private byte[] dummyHeader;
 
+  private HFileContext fileContext;
+
   /**
-   * @param compressionAlgorithm compression algorithm used
    * @param encoding encoding used
    * @param headerBytes dummy header bytes
+   * @param fileContext HFile meta data
    */
-  public HFileBlockDefaultEncodingContext(
-      Compression.Algorithm compressionAlgorithm,
-      DataBlockEncoding encoding, byte[] headerBytes) {
+  public HFileBlockDefaultEncodingContext(DataBlockEncoding encoding, byte[] headerBytes,
+      HFileContext fileContext) {
     this.encodingAlgo = encoding;
-    this.compressionAlgorithm =
-        compressionAlgorithm == null ? NONE : compressionAlgorithm;
-    if (this.compressionAlgorithm != NONE) {
+    Compression.Algorithm compressionAlgorithm =
+        fileContext.getCompression() == null ? NONE : fileContext.getCompression();
+    this.fileContext = fileContext;
+    if (compressionAlgorithm != NONE) {
       compressor = compressionAlgorithm.getCompressor();
       compressedByteStream = new ByteArrayOutputStream();
       try {
@@ -137,7 +136,7 @@ public class HFileBlockDefaultEncodingContext implements
   protected void compressAfterEncoding(byte[] uncompressedBytesWithHeader,
       BlockType blockType, byte[] headerBytes) throws IOException {
     this.uncompressedBytesWithHeader = uncompressedBytesWithHeader;
-    if (compressionAlgorithm != NONE) {
+    if (this.fileContext.getCompression() != NONE) {
       compressedByteStream.reset();
       compressedByteStream.write(headerBytes);
       compressionStream.resetState();
@@ -176,14 +175,9 @@ public class HFileBlockDefaultEncodingContext implements
   @Override
   public void close() {
     if (compressor != null) {
-      compressionAlgorithm.returnCompressor(compressor);
+      this.fileContext.getCompression().returnCompressor(compressor);
       compressor = null;
     }
-  }
-
-  @Override
-  public Algorithm getCompression() {
-    return this.compressionAlgorithm;
   }
 
   public DataOutputStream getOutputStreamForEncoder() {
@@ -193,5 +187,10 @@ public class HFileBlockDefaultEncodingContext implements
   @Override
   public DataBlockEncoding getDataBlockEncoding() {
     return this.encodingAlgo;
+  }
+
+  @Override
+  public HFileContext getHFileContext() {
+    return this.fileContext;
   }
 }

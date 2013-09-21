@@ -23,8 +23,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
-import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 
 /**
  * Encoding of KeyValue. It aims to be fast and efficient using assumptions:
@@ -38,7 +37,7 @@ import org.apache.hadoop.io.RawComparator;
  *
  * After encoding, it also optionally compresses the encoded data if a
  * compression algorithm is specified in HFileBlockEncodingContext argument of
- * {@link #encodeKeyValues(ByteBuffer, boolean, HFileBlockEncodingContext)}.
+ * {@link #encodeKeyValues(ByteBuffer, HFileBlockEncodingContext)}.
  */
 @InterfaceAudience.Private
 public interface DataBlockEncoder {
@@ -49,44 +48,23 @@ public interface DataBlockEncoder {
    *
    * @param in
    *          Source of KeyValue for compression.
-   * @param includesMemstoreTS
-   *          true if including memstore timestamp after every key-value pair
-   * @param encodingContext
+   * @param encodingCtx
    *          the encoding context which will contain encoded uncompressed bytes
    *          as well as compressed encoded bytes if compression is enabled, and
    *          also it will reuse resources across multiple calls.
    * @throws IOException
    *           If there is an error writing to output stream.
    */
-  void encodeKeyValues(
-    ByteBuffer in, boolean includesMemstoreTS, HFileBlockEncodingContext encodingContext
-  ) throws IOException;
+  void encodeKeyValues(ByteBuffer in, HFileBlockEncodingContext encodingCtx) throws IOException;
 
   /**
    * Decode.
    * @param source Compressed stream of KeyValues.
-   * @param includesMemstoreTS true if including memstore timestamp after every
-   *          key-value pair
+   * @param decodingCtx
    * @return Uncompressed block of KeyValues.
    * @throws IOException If there is an error in source.
    */
-  ByteBuffer decodeKeyValues(
-    DataInputStream source, boolean includesMemstoreTS
-  ) throws IOException;
-
-  /**
-   * Uncompress.
-   * @param source encoded stream of KeyValues.
-   * @param allocateHeaderLength allocate this many bytes for the header.
-   * @param skipLastBytes Do not copy n last bytes.
-   * @param includesMemstoreTS true if including memstore timestamp after every
-   *          key-value pair
-   * @return Uncompressed block of KeyValues.
-   * @throws IOException If there is an error in source.
-   */
-  ByteBuffer decodeKeyValues(
-    DataInputStream source, int allocateHeaderLength, int skipLastBytes, boolean includesMemstoreTS
-  )
+  ByteBuffer decodeKeyValues(DataInputStream source, HFileBlockDecodingContext decodingCtx)
       throws IOException;
 
   /**
@@ -102,42 +80,36 @@ public interface DataBlockEncoder {
   /**
    * Create a HFileBlock seeker which find KeyValues within a block.
    * @param comparator what kind of comparison should be used
-   * @param includesMemstoreTS true if including memstore timestamp after every
-   *          key-value pair
+   * @param decodingCtx
    * @return A newly created seeker.
    */
-  EncodedSeeker createSeeker(
-    KVComparator comparator, boolean includesMemstoreTS
-  );
+  EncodedSeeker createSeeker(KVComparator comparator, 
+      HFileBlockDecodingContext decodingCtx);
 
   /**
    * Creates a encoder specific encoding context
    *
-   * @param compressionAlgorithm
-   *          compression algorithm used if the final data needs to be
-   *          compressed
    * @param encoding
    *          encoding strategy used
    * @param headerBytes
    *          header bytes to be written, put a dummy header here if the header
    *          is unknown
+   * @param meta
+   *          HFile meta data
    * @return a newly created encoding context
    */
   HFileBlockEncodingContext newDataBlockEncodingContext(
-    Algorithm compressionAlgorithm, DataBlockEncoding encoding, byte[] headerBytes
-  );
+      DataBlockEncoding encoding, byte[] headerBytes, HFileContext meta);
 
   /**
    * Creates an encoder specific decoding context, which will prepare the data
    * before actual decoding
    *
-   * @param compressionAlgorithm
-   *          compression algorithm used if the data needs to be decompressed
+   * @param meta
+   *          HFile meta data        
    * @return a newly created decoding context
    */
-  HFileBlockDecodingContext newDataBlockDecodingContext(
-    Algorithm compressionAlgorithm
-  );
+  HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta);
 
   /**
    * An interface which enable to seek while underlying data is encoded.

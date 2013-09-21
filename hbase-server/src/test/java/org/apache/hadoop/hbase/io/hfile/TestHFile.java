@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
@@ -82,8 +83,10 @@ public class TestHFile extends HBaseTestCase {
   public void testEmptyHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, getName());
+    HFileContext context = new HFileContext();
+    context.setIncludesTags(false);
     Writer w =
-        HFile.getWriterFactory(conf, cacheConf).withPath(fs, f).create();
+        HFile.getWriterFactory(conf, cacheConf).withPath(fs, f).withFileContext(context).create();
     w.close();
     Reader r = HFile.createReader(fs, f, cacheConf);
     r.loadFileInfo();
@@ -130,8 +133,10 @@ public class TestHFile extends HBaseTestCase {
   public void testCorruptTruncatedHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, getName());
-    Writer w = HFile.getWriterFactory(conf, cacheConf).withPath(this.fs, f).create();
-    writeSomeRecords(w, 0, 100);
+    HFileContext  context = new HFileContext();
+    Writer w = HFile.getWriterFactory(conf, cacheConf).withPath(this.fs, f)
+        .withFileContext(context).create();
+    writeSomeRecords(w, 0, 100, false);
     w.close();
 
     Path trunc = new Path(f.getParent(), "trucated");
@@ -148,12 +153,17 @@ public class TestHFile extends HBaseTestCase {
 
   // write some records into the tfile
   // write them twice
-  private int writeSomeRecords(Writer writer, int start, int n)
+  private int writeSomeRecords(Writer writer, int start, int n, boolean useTags)
       throws IOException {
     String value = "value";
     for (int i = start; i < (start + n); i++) {
       String key = String.format(localFormatter, Integer.valueOf(i));
-      writer.append(Bytes.toBytes(key), Bytes.toBytes(value + key));
+      if (useTags) {
+        Tag t = new Tag((byte) 1, "myTag1");
+        writer.append(Bytes.toBytes(key), Bytes.toBytes(value + key), t.getBuffer());
+      } else {
+        writer.append(Bytes.toBytes(key), Bytes.toBytes(value + key));
+      }
     }
     return (start + n);
   }
@@ -192,8 +202,8 @@ public class TestHFile extends HBaseTestCase {
     return String.format(localFormatter, Integer.valueOf(rowId)).getBytes();
   }
 
-  private void writeRecords(Writer writer) throws IOException {
-    writeSomeRecords(writer, 0, 100);
+  private void writeRecords(Writer writer, boolean useTags) throws IOException {
+    writeSomeRecords(writer, 0, 100, useTags);
     writer.close();
   }
 
@@ -205,20 +215,26 @@ public class TestHFile extends HBaseTestCase {
 
   /**
    * test none codecs
+   * @param useTags 
    */
-  void basicWithSomeCodec(String codec) throws IOException {
+  void basicWithSomeCodec(String codec, boolean useTags) throws IOException {
+    if (useTags) {
+      conf.setInt("hfile.format.version", 3);
+    }
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
-    Path ncTFile = new Path(ROOT_DIR, "basic.hfile." + codec.toString());
+    Path ncTFile = new Path(ROOT_DIR, "basic.hfile." + codec.toString() + useTags);
     FSDataOutputStream fout = createFSOutput(ncTFile);
+    HFileContext meta = new HFileContext();
+    meta.setBlocksize(minBlockSize);
+    meta.setCompressAlgo(AbstractHFileWriter.compressionByName(codec));
     Writer writer = HFile.getWriterFactory(conf, cacheConf)
         .withOutputStream(fout)
-        .withBlockSize(minBlockSize)
-        .withCompression(codec)
+        .withFileContext(meta)
         // NOTE: This test is dependent on this deprecated nonstandard comparator
         .withComparator(new KeyValue.RawBytesComparator())
         .create();
     LOG.info(writer);
-    writeRecords(writer);
+    writeRecords(writer, useTags);
     fout.close();
     FSDataInputStream fin = fs.open(ncTFile);
     Reader reader = HFile.createReaderFromStream(ncTFile, fs.open(ncTFile),
@@ -250,8 +266,13 @@ public class TestHFile extends HBaseTestCase {
   }
 
   public void testTFileFeatures() throws IOException {
-    basicWithSomeCodec("none");
-    basicWithSomeCodec("gz");
+    testTFilefeaturesInternals(false);
+    testTFilefeaturesInternals(true);
+  }
+
+  protected void testTFilefeaturesInternals(boolean useTags) throws IOException {
+    basicWithSomeCodec("none", useTags);
+    basicWithSomeCodec("gz", useTags);
   }
 
   private void writeNumMetablocks(Writer writer, int n) {
@@ -292,10 +313,12 @@ public class TestHFile extends HBaseTestCase {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path mFile = new Path(ROOT_DIR, "meta.hfile");
     FSDataOutputStream fout = createFSOutput(mFile);
+    HFileContext meta = new HFileContext();
+    meta.setCompressAlgo(AbstractHFileWriter.compressionByName(compress));
+    meta.setBlocksize(minBlockSize);
     Writer writer = HFile.getWriterFactory(conf, cacheConf)
         .withOutputStream(fout)
-        .withBlockSize(minBlockSize)
-        .withCompression(compress)
+        .withFileContext(meta)
         .create();
     someTestingWithMetaBlock(writer);
     writer.close();
@@ -324,10 +347,12 @@ public class TestHFile extends HBaseTestCase {
         HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
       Path mFile = new Path(ROOT_DIR, "nometa_" + compressAlgo + ".hfile");
       FSDataOutputStream fout = createFSOutput(mFile);
+      HFileContext meta = new HFileContext();
+      meta.setCompressAlgo((compressAlgo));
+      meta.setBlocksize(minBlockSize);
       Writer writer = HFile.getWriterFactory(conf, cacheConf)
           .withOutputStream(fout)
-          .withBlockSize(minBlockSize)
-          .withCompression(compressAlgo)
+          .withFileContext(meta)
           .create();
       writer.append("foo".getBytes(), "value".getBytes());
       writer.close();

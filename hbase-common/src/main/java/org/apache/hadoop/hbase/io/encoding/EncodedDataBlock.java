@@ -29,8 +29,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.Compressor;
 
@@ -48,25 +49,26 @@ public class EncodedDataBlock {
   private DataBlockEncoder dataBlockEncoder;
 
   private byte[] cachedEncodedData;
-  private boolean includesMemstoreTS;
 
   private final HFileBlockEncodingContext encodingCtx;
+  private HFileContext meta;
 
   /**
    * Create a buffer which will be encoded using dataBlockEncoder.
    * @param dataBlockEncoder Algorithm used for compression.
    * @param encoding encoding type used
    * @param rawKVs
+   * @param meta
    */
-  public EncodedDataBlock(DataBlockEncoder dataBlockEncoder,
-      boolean includesMemstoreTS, DataBlockEncoding encoding, byte[] rawKVs) {
+  public EncodedDataBlock(DataBlockEncoder dataBlockEncoder, DataBlockEncoding encoding,
+      byte[] rawKVs, HFileContext meta) {
     Preconditions.checkNotNull(encoding,
         "Cannot create encoded data block with null encoder");
     this.dataBlockEncoder = dataBlockEncoder;
-    encodingCtx =
-        dataBlockEncoder.newDataBlockEncodingContext(Compression.Algorithm.NONE,
-            encoding, HConstants.HFILEBLOCK_DUMMY_HEADER);
+    encodingCtx = dataBlockEncoder.newDataBlockEncodingContext(encoding,
+        HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
     this.rawKVs = rawKVs;
+    this.meta = meta;
   }
 
   /**
@@ -97,19 +99,30 @@ public class EncodedDataBlock {
       public Cell next() {
         if (decompressedData == null) {
           try {
-            decompressedData = dataBlockEncoder.decodeKeyValues(
-                dis, includesMemstoreTS);
+            decompressedData = dataBlockEncoder.decodeKeyValues(dis, dataBlockEncoder
+                .newDataBlockDecodingContext(meta));
           } catch (IOException e) {
             throw new RuntimeException("Problem with data block encoder, " +
                 "most likely it requested more bytes than are available.", e);
           }
           decompressedData.rewind();
         }
-
         int offset = decompressedData.position();
-        KeyValue kv = new KeyValue(decompressedData.array(), offset);
-        decompressedData.position(offset + kv.getLength());
-
+        int klen = decompressedData.getInt();
+        int vlen = decompressedData.getInt();
+        short tagsLen = 0;
+        ByteBufferUtils.skip(decompressedData, klen + vlen);
+        // Read the tag length in case when steam contain tags
+        if (meta.shouldIncludeTags()) {
+          tagsLen = decompressedData.getShort();
+          ByteBufferUtils.skip(decompressedData, tagsLen);
+        }
+        KeyValue kv = new KeyValue(decompressedData.array(), offset,
+            (int) KeyValue.getKeyValueDataStructureSize(klen, vlen, tagsLen));
+        if (meta.shouldIncludeMvcc()) {
+          long mvccVersion = ByteBufferUtils.readVLong(decompressedData);
+          kv.setMvccVersion(mvccVersion);
+        }
         return kv;
       }
 
@@ -199,7 +212,7 @@ public class EncodedDataBlock {
   public byte[] encodeData() {
     try {
       this.dataBlockEncoder.encodeKeyValues(
-          getUncompressedBuffer(), includesMemstoreTS, encodingCtx);
+          getUncompressedBuffer(), encodingCtx);
     } catch (IOException e) {
       throw new RuntimeException(String.format(
           "Bug in encoding part of algorithm %s. " +

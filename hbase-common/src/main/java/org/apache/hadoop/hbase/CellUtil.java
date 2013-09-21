@@ -53,6 +53,9 @@ public final class CellUtil {
       cell.getQualifierLength());
   }
 
+  public static ByteRange fillTagRange(Cell cell, ByteRange range) {
+    return range.set(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+  }
 
   /***************** get individual arrays for tests ************/
 
@@ -79,6 +82,12 @@ public final class CellUtil {
     copyValueTo(cell, output, 0);
     return output;
   }
+  
+  public static byte[] getTagArray(Cell cell){
+    byte[] output = new byte[cell.getTagsLength()];
+    copyTagTo(cell, output, 0);
+    return output;
+  }
 
 
   /******************** copyTo **********************************/
@@ -103,10 +112,22 @@ public final class CellUtil {
 
   public static int copyValueTo(Cell cell, byte[] destination, int destinationOffset) {
     System.arraycopy(cell.getValueArray(), cell.getValueOffset(), destination, destinationOffset,
-      cell.getValueLength());
+        cell.getValueLength());
     return destinationOffset + cell.getValueLength();
   }
 
+  /**
+   * Copies the tags info into the tag portion of the cell
+   * @param cell
+   * @param destination
+   * @param destinationOffset
+   * @return position after tags
+   */
+  public static int copyTagTo(Cell cell, byte[] destination, int destinationOffset) {
+    System.arraycopy(cell.getTagsArray(), cell.getTagsOffset(), destination, destinationOffset,
+        cell.getTagsLength());
+    return destinationOffset + cell.getTagsLength();
+  }
 
   /********************* misc *************************************/
 
@@ -134,14 +155,19 @@ public final class CellUtil {
     return new KeyValue(row, family, qualifier, timestamp,
       KeyValue.Type.codeToType(type), value);
   }
-  
+
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
       final long timestamp, final byte type, final byte[] value, final long memstoreTS) {
-    // I need a Cell Factory here. Using KeyValue for now. TODO.
-    // TODO: Make a new Cell implementation that just carries these
-    // byte arrays.
     KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp,
         KeyValue.Type.codeToType(type), value);
+    keyValue.setMvccVersion(memstoreTS);
+    return keyValue;
+  }
+
+  public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
+      final long timestamp, final byte type, final byte[] value, byte[] tags, final long memstoreTS) {
+    KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp,
+        KeyValue.Type.codeToType(type), value, tags);
     keyValue.setMvccVersion(memstoreTS);
     return keyValue;
   }

@@ -19,10 +19,13 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.junit.Test;
@@ -77,5 +80,34 @@ public class TestKeyValueCompression {
       KeyValue readBack = KeyValueCompression.readKV(in, ctx);
       assertEquals(kv, readBack);
     }
+  }
+
+  @Test
+  public void testKVWithTags() throws Exception {
+    CompressionContext ctx = new CompressionContext(LRUDictionary.class, false);
+    DataOutputBuffer buf = new DataOutputBuffer(BUF_SIZE);
+    KeyValueCompression.writeKV(buf, createKV(1), ctx);
+    KeyValueCompression.writeKV(buf, createKV(0), ctx);
+    KeyValueCompression.writeKV(buf, createKV(2), ctx);
+    
+    ctx.clear();
+    DataInputStream in = new DataInputStream(new ByteArrayInputStream(
+        buf.getData(), 0, buf.getLength()));
+    
+    KeyValue readBack = KeyValueCompression.readKV(in, ctx);
+    List<Tag> tags = readBack.getTags();
+    assertEquals(1, tags.size());
+  }
+  
+  private KeyValue createKV(int noOfTags) {
+    byte[] row = Bytes.toBytes("myRow");
+    byte[] cf = Bytes.toBytes("myCF");
+    byte[] q = Bytes.toBytes("myQualifier");
+    byte[] value = Bytes.toBytes("myValue");
+    List<Tag> tags = new ArrayList<Tag>(noOfTags);
+    for (int i = 1; i <= noOfTags; i++) {
+      tags.add(new Tag((byte) i, Bytes.toBytes("tagValue" + i)));
+    }
+    return new KeyValue(row, cf, q, HConstants.LATEST_TIMESTAMP, value, tags);
   }
 }

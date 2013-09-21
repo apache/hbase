@@ -9288,6 +9288,16 @@ public final class ClientProtos {
          * <code>optional .MutationProto.DeleteType delete_type = 4;</code>
          */
         org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType getDeleteType();
+
+        // optional bytes tags = 5;
+        /**
+         * <code>optional bytes tags = 5;</code>
+         */
+        boolean hasTags();
+        /**
+         * <code>optional bytes tags = 5;</code>
+         */
+        com.google.protobuf.ByteString getTags();
       }
       /**
        * Protobuf type {@code MutationProto.ColumnValue.QualifierValue}
@@ -9364,6 +9374,11 @@ public final class ClientProtos {
                     bitField0_ |= 0x00000008;
                     deleteType_ = value;
                   }
+                  break;
+                }
+                case 42: {
+                  bitField0_ |= 0x00000010;
+                  tags_ = input.readBytes();
                   break;
                 }
               }
@@ -9470,11 +9485,28 @@ public final class ClientProtos {
           return deleteType_;
         }
 
+        // optional bytes tags = 5;
+        public static final int TAGS_FIELD_NUMBER = 5;
+        private com.google.protobuf.ByteString tags_;
+        /**
+         * <code>optional bytes tags = 5;</code>
+         */
+        public boolean hasTags() {
+          return ((bitField0_ & 0x00000010) == 0x00000010);
+        }
+        /**
+         * <code>optional bytes tags = 5;</code>
+         */
+        public com.google.protobuf.ByteString getTags() {
+          return tags_;
+        }
+
         private void initFields() {
           qualifier_ = com.google.protobuf.ByteString.EMPTY;
           value_ = com.google.protobuf.ByteString.EMPTY;
           timestamp_ = 0L;
           deleteType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType.DELETE_ONE_VERSION;
+          tags_ = com.google.protobuf.ByteString.EMPTY;
         }
         private byte memoizedIsInitialized = -1;
         public final boolean isInitialized() {
@@ -9500,6 +9532,9 @@ public final class ClientProtos {
           if (((bitField0_ & 0x00000008) == 0x00000008)) {
             output.writeEnum(4, deleteType_.getNumber());
           }
+          if (((bitField0_ & 0x00000010) == 0x00000010)) {
+            output.writeBytes(5, tags_);
+          }
           getUnknownFields().writeTo(output);
         }
 
@@ -9524,6 +9559,10 @@ public final class ClientProtos {
           if (((bitField0_ & 0x00000008) == 0x00000008)) {
             size += com.google.protobuf.CodedOutputStream
               .computeEnumSize(4, deleteType_.getNumber());
+          }
+          if (((bitField0_ & 0x00000010) == 0x00000010)) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeBytesSize(5, tags_);
           }
           size += getUnknownFields().getSerializedSize();
           memoizedSerializedSize = size;
@@ -9568,6 +9607,11 @@ public final class ClientProtos {
             result = result &&
                 (getDeleteType() == other.getDeleteType());
           }
+          result = result && (hasTags() == other.hasTags());
+          if (hasTags()) {
+            result = result && getTags()
+                .equals(other.getTags());
+          }
           result = result &&
               getUnknownFields().equals(other.getUnknownFields());
           return result;
@@ -9596,6 +9640,10 @@ public final class ClientProtos {
           if (hasDeleteType()) {
             hash = (37 * hash) + DELETE_TYPE_FIELD_NUMBER;
             hash = (53 * hash) + hashEnum(getDeleteType());
+          }
+          if (hasTags()) {
+            hash = (37 * hash) + TAGS_FIELD_NUMBER;
+            hash = (53 * hash) + getTags().hashCode();
           }
           hash = (29 * hash) + getUnknownFields().hashCode();
           memoizedHashCode = hash;
@@ -9714,6 +9762,8 @@ public final class ClientProtos {
             bitField0_ = (bitField0_ & ~0x00000004);
             deleteType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType.DELETE_ONE_VERSION;
             bitField0_ = (bitField0_ & ~0x00000008);
+            tags_ = com.google.protobuf.ByteString.EMPTY;
+            bitField0_ = (bitField0_ & ~0x00000010);
             return this;
           }
 
@@ -9758,6 +9808,10 @@ public final class ClientProtos {
               to_bitField0_ |= 0x00000008;
             }
             result.deleteType_ = deleteType_;
+            if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+              to_bitField0_ |= 0x00000010;
+            }
+            result.tags_ = tags_;
             result.bitField0_ = to_bitField0_;
             onBuilt();
             return result;
@@ -9785,6 +9839,9 @@ public final class ClientProtos {
             }
             if (other.hasDeleteType()) {
               setDeleteType(other.getDeleteType());
+            }
+            if (other.hasTags()) {
+              setTags(other.getTags());
             }
             this.mergeUnknownFields(other.getUnknownFields());
             return this;
@@ -9950,6 +10007,42 @@ public final class ClientProtos {
           public Builder clearDeleteType() {
             bitField0_ = (bitField0_ & ~0x00000008);
             deleteType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType.DELETE_ONE_VERSION;
+            onChanged();
+            return this;
+          }
+
+          // optional bytes tags = 5;
+          private com.google.protobuf.ByteString tags_ = com.google.protobuf.ByteString.EMPTY;
+          /**
+           * <code>optional bytes tags = 5;</code>
+           */
+          public boolean hasTags() {
+            return ((bitField0_ & 0x00000010) == 0x00000010);
+          }
+          /**
+           * <code>optional bytes tags = 5;</code>
+           */
+          public com.google.protobuf.ByteString getTags() {
+            return tags_;
+          }
+          /**
+           * <code>optional bytes tags = 5;</code>
+           */
+          public Builder setTags(com.google.protobuf.ByteString value) {
+            if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+            tags_ = value;
+            onChanged();
+            return this;
+          }
+          /**
+           * <code>optional bytes tags = 5;</code>
+           */
+          public Builder clearTags() {
+            bitField0_ = (bitField0_ & ~0x00000010);
+            tags_ = getDefaultInstance().getTags();
             onChanged();
             return this;
           }
@@ -27723,7 +27816,7 @@ public final class ClientProtos {
       "exists\030\002 \003(\010\"\200\001\n\tCondition\022\013\n\003row\030\001 \002(\014\022",
       "\016\n\006family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022\"\n\014co" +
       "mpare_type\030\004 \002(\0162\014.CompareType\022\037\n\ncompar" +
-      "ator\030\005 \002(\0132\013.Comparator\"\227\006\n\rMutationProt" +
+      "ator\030\005 \002(\0132\013.Comparator\"\246\006\n\rMutationProt" +
       "o\022\013\n\003row\030\001 \001(\014\0220\n\013mutate_type\030\002 \001(\0162\033.Mu" +
       "tationProto.MutationType\0220\n\014column_value" +
       "\030\003 \003(\0132\032.MutationProto.ColumnValue\022\021\n\tti" +
@@ -27731,70 +27824,71 @@ public final class ClientProtos {
       "ytesPair\022:\n\ndurability\030\006 \001(\0162\031.MutationP" +
       "roto.Durability:\013USE_DEFAULT\022\036\n\ntime_ran" +
       "ge\030\007 \001(\0132\n.TimeRange\022\035\n\025associated_cell_",
-      "count\030\010 \001(\005\032\330\001\n\013ColumnValue\022\016\n\006family\030\001 " +
+      "count\030\010 \001(\005\032\347\001\n\013ColumnValue\022\016\n\006family\030\001 " +
       "\002(\014\022B\n\017qualifier_value\030\002 \003(\0132).MutationP" +
-      "roto.ColumnValue.QualifierValue\032u\n\016Quali" +
-      "fierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 " +
-      "\001(\014\022\021\n\ttimestamp\030\003 \001(\004\022.\n\013delete_type\030\004 " +
-      "\001(\0162\031.MutationProto.DeleteType\"W\n\nDurabi" +
-      "lity\022\017\n\013USE_DEFAULT\020\000\022\014\n\010SKIP_WAL\020\001\022\r\n\tA" +
-      "SYNC_WAL\020\002\022\014\n\010SYNC_WAL\020\003\022\r\n\tFSYNC_WAL\020\004\"" +
-      ">\n\014MutationType\022\n\n\006APPEND\020\000\022\r\n\tINCREMENT" +
-      "\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE\020\003\"p\n\nDeleteType\022\026\n",
-      "\022DELETE_ONE_VERSION\020\000\022\034\n\030DELETE_MULTIPLE" +
-      "_VERSIONS\020\001\022\021\n\rDELETE_FAMILY\020\002\022\031\n\025DELETE" +
-      "_FAMILY_VERSION\020\003\"r\n\rMutateRequest\022 \n\006re" +
-      "gion\030\001 \002(\0132\020.RegionSpecifier\022 \n\010mutation" +
-      "\030\002 \002(\0132\016.MutationProto\022\035\n\tcondition\030\003 \001(" +
-      "\0132\n.Condition\"<\n\016MutateResponse\022\027\n\006resul" +
-      "t\030\001 \001(\0132\007.Result\022\021\n\tprocessed\030\002 \001(\010\"\344\002\n\004" +
-      "Scan\022\027\n\006column\030\001 \003(\0132\007.Column\022!\n\tattribu" +
-      "te\030\002 \003(\0132\016.NameBytesPair\022\021\n\tstart_row\030\003 " +
-      "\001(\014\022\020\n\010stop_row\030\004 \001(\014\022\027\n\006filter\030\005 \001(\0132\007.",
-      "Filter\022\036\n\ntime_range\030\006 \001(\0132\n.TimeRange\022\027" +
-      "\n\014max_versions\030\007 \001(\r:\0011\022\032\n\014cache_blocks\030" +
-      "\010 \001(\010:\004true\022\022\n\nbatch_size\030\t \001(\r\022\027\n\017max_r" +
-      "esult_size\030\n \001(\004\022\023\n\013store_limit\030\013 \001(\r\022\024\n" +
-      "\014store_offset\030\014 \001(\r\022&\n\036load_column_famil" +
-      "ies_on_demand\030\r \001(\010\022\r\n\005small\030\016 \001(\010\"\236\001\n\013S" +
-      "canRequest\022 \n\006region\030\001 \001(\0132\020.RegionSpeci" +
-      "fier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\022\n\nscanner_id\030" +
-      "\003 \001(\004\022\026\n\016number_of_rows\030\004 \001(\r\022\025\n\rclose_s" +
-      "canner\030\005 \001(\010\022\025\n\rnext_call_seq\030\006 \001(\004\"y\n\014S",
-      "canResponse\022\030\n\020cells_per_result\030\001 \003(\r\022\022\n" +
-      "\nscanner_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(\010\022" +
-      "\013\n\003ttl\030\004 \001(\r\022\030\n\007results\030\005 \003(\0132\007.Result\"\263" +
-      "\001\n\024BulkLoadHFileRequest\022 \n\006region\030\001 \002(\0132" +
-      "\020.RegionSpecifier\0225\n\013family_path\030\002 \003(\0132 " +
-      ".BulkLoadHFileRequest.FamilyPath\022\026\n\016assi" +
-      "gn_seq_num\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006family" +
-      "\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFileRes" +
-      "ponse\022\016\n\006loaded\030\001 \002(\010\"a\n\026CoprocessorServ" +
-      "iceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014service_name\030\002 \002",
-      "(\t\022\023\n\013method_name\030\003 \002(\t\022\017\n\007request\030\004 \002(\014" +
-      "\"d\n\031CoprocessorServiceRequest\022 \n\006region\030" +
-      "\001 \002(\0132\020.RegionSpecifier\022%\n\004call\030\002 \002(\0132\027." +
-      "CoprocessorServiceCall\"]\n\032CoprocessorSer" +
-      "viceResponse\022 \n\006region\030\001 \002(\0132\020.RegionSpe" +
-      "cifier\022\035\n\005value\030\002 \002(\0132\016.NameBytesPair\"B\n" +
-      "\013MultiAction\022 \n\010mutation\030\001 \001(\0132\016.Mutatio" +
-      "nProto\022\021\n\003get\030\002 \001(\0132\004.Get\"I\n\014ActionResul" +
-      "t\022\026\n\005value\030\001 \001(\0132\007.Result\022!\n\texception\030\002" +
-      " \001(\0132\016.NameBytesPair\"^\n\014MultiRequest\022 \n\006",
-      "region\030\001 \002(\0132\020.RegionSpecifier\022\034\n\006action" +
-      "\030\002 \003(\0132\014.MultiAction\022\016\n\006atomic\030\003 \001(\010\".\n\r" +
-      "MultiResponse\022\035\n\006result\030\001 \003(\0132\r.ActionRe" +
-      "sult2\342\002\n\rClientService\022 \n\003Get\022\013.GetReque" +
-      "st\032\014.GetResponse\022/\n\010MultiGet\022\020.MultiGetR" +
-      "equest\032\021.MultiGetResponse\022)\n\006Mutate\022\016.Mu" +
-      "tateRequest\032\017.MutateResponse\022#\n\004Scan\022\014.S" +
-      "canRequest\032\r.ScanResponse\022>\n\rBulkLoadHFi" +
-      "le\022\025.BulkLoadHFileRequest\032\026.BulkLoadHFil" +
-      "eResponse\022F\n\013ExecService\022\032.CoprocessorSe",
-      "rviceRequest\032\033.CoprocessorServiceRespons" +
-      "e\022&\n\005Multi\022\r.MultiRequest\032\016.MultiRespons" +
-      "eBB\n*org.apache.hadoop.hbase.protobuf.ge" +
-      "neratedB\014ClientProtosH\001\210\001\001\240\001\001"
+      "roto.ColumnValue.QualifierValue\032\203\001\n\016Qual" +
+      "ifierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002" +
+      " \001(\014\022\021\n\ttimestamp\030\003 \001(\004\022.\n\013delete_type\030\004" +
+      " \001(\0162\031.MutationProto.DeleteType\022\014\n\004tags\030" +
+      "\005 \001(\014\"W\n\nDurability\022\017\n\013USE_DEFAULT\020\000\022\014\n\010" +
+      "SKIP_WAL\020\001\022\r\n\tASYNC_WAL\020\002\022\014\n\010SYNC_WAL\020\003\022" +
+      "\r\n\tFSYNC_WAL\020\004\">\n\014MutationType\022\n\n\006APPEND" +
+      "\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE\020\003\"p",
+      "\n\nDeleteType\022\026\n\022DELETE_ONE_VERSION\020\000\022\034\n\030" +
+      "DELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rDELETE_FAM" +
+      "ILY\020\002\022\031\n\025DELETE_FAMILY_VERSION\020\003\"r\n\rMuta" +
+      "teRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecif" +
+      "ier\022 \n\010mutation\030\002 \002(\0132\016.MutationProto\022\035\n" +
+      "\tcondition\030\003 \001(\0132\n.Condition\"<\n\016MutateRe" +
+      "sponse\022\027\n\006result\030\001 \001(\0132\007.Result\022\021\n\tproce" +
+      "ssed\030\002 \001(\010\"\344\002\n\004Scan\022\027\n\006column\030\001 \003(\0132\007.Co" +
+      "lumn\022!\n\tattribute\030\002 \003(\0132\016.NameBytesPair\022" +
+      "\021\n\tstart_row\030\003 \001(\014\022\020\n\010stop_row\030\004 \001(\014\022\027\n\006",
+      "filter\030\005 \001(\0132\007.Filter\022\036\n\ntime_range\030\006 \001(" +
+      "\0132\n.TimeRange\022\027\n\014max_versions\030\007 \001(\r:\0011\022\032" +
+      "\n\014cache_blocks\030\010 \001(\010:\004true\022\022\n\nbatch_size" +
+      "\030\t \001(\r\022\027\n\017max_result_size\030\n \001(\004\022\023\n\013store" +
+      "_limit\030\013 \001(\r\022\024\n\014store_offset\030\014 \001(\r\022&\n\036lo" +
+      "ad_column_families_on_demand\030\r \001(\010\022\r\n\005sm" +
+      "all\030\016 \001(\010\"\236\001\n\013ScanRequest\022 \n\006region\030\001 \001(" +
+      "\0132\020.RegionSpecifier\022\023\n\004scan\030\002 \001(\0132\005.Scan" +
+      "\022\022\n\nscanner_id\030\003 \001(\004\022\026\n\016number_of_rows\030\004" +
+      " \001(\r\022\025\n\rclose_scanner\030\005 \001(\010\022\025\n\rnext_call",
+      "_seq\030\006 \001(\004\"y\n\014ScanResponse\022\030\n\020cells_per_" +
+      "result\030\001 \003(\r\022\022\n\nscanner_id\030\002 \001(\004\022\024\n\014more" +
+      "_results\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\022\030\n\007results\030\005" +
+      " \003(\0132\007.Result\"\263\001\n\024BulkLoadHFileRequest\022 " +
+      "\n\006region\030\001 \002(\0132\020.RegionSpecifier\0225\n\013fami" +
+      "ly_path\030\002 \003(\0132 .BulkLoadHFileRequest.Fam" +
+      "ilyPath\022\026\n\016assign_seq_num\030\003 \001(\010\032*\n\nFamil" +
+      "yPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025B" +
+      "ulkLoadHFileResponse\022\016\n\006loaded\030\001 \002(\010\"a\n\026" +
+      "CoprocessorServiceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014s",
+      "ervice_name\030\002 \002(\t\022\023\n\013method_name\030\003 \002(\t\022\017" +
+      "\n\007request\030\004 \002(\014\"d\n\031CoprocessorServiceReq" +
+      "uest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022%" +
+      "\n\004call\030\002 \002(\0132\027.CoprocessorServiceCall\"]\n" +
+      "\032CoprocessorServiceResponse\022 \n\006region\030\001 " +
+      "\002(\0132\020.RegionSpecifier\022\035\n\005value\030\002 \002(\0132\016.N" +
+      "ameBytesPair\"B\n\013MultiAction\022 \n\010mutation\030" +
+      "\001 \001(\0132\016.MutationProto\022\021\n\003get\030\002 \001(\0132\004.Get" +
+      "\"I\n\014ActionResult\022\026\n\005value\030\001 \001(\0132\007.Result" +
+      "\022!\n\texception\030\002 \001(\0132\016.NameBytesPair\"^\n\014M",
+      "ultiRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpec" +
+      "ifier\022\034\n\006action\030\002 \003(\0132\014.MultiAction\022\016\n\006a" +
+      "tomic\030\003 \001(\010\".\n\rMultiResponse\022\035\n\006result\030\001" +
+      " \003(\0132\r.ActionResult2\342\002\n\rClientService\022 \n" +
+      "\003Get\022\013.GetRequest\032\014.GetResponse\022/\n\010Multi" +
+      "Get\022\020.MultiGetRequest\032\021.MultiGetResponse" +
+      "\022)\n\006Mutate\022\016.MutateRequest\032\017.MutateRespo" +
+      "nse\022#\n\004Scan\022\014.ScanRequest\032\r.ScanResponse" +
+      "\022>\n\rBulkLoadHFile\022\025.BulkLoadHFileRequest" +
+      "\032\026.BulkLoadHFileResponse\022F\n\013ExecService\022",
+      "\032.CoprocessorServiceRequest\032\033.Coprocesso" +
+      "rServiceResponse\022&\n\005Multi\022\r.MultiRequest" +
+      "\032\016.MultiResponseBB\n*org.apache.hadoop.hb" +
+      "ase.protobuf.generatedB\014ClientProtosH\001\210\001" +
+      "\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -27866,7 +27960,7 @@ public final class ClientProtos {
           internal_static_MutationProto_ColumnValue_QualifierValue_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MutationProto_ColumnValue_QualifierValue_descriptor,
-              new java.lang.String[] { "Qualifier", "Value", "Timestamp", "DeleteType", });
+              new java.lang.String[] { "Qualifier", "Value", "Timestamp", "DeleteType", "Tags", });
           internal_static_MutateRequest_descriptor =
             getDescriptor().getMessageTypes().get(9);
           internal_static_MutateRequest_fieldAccessorTable = new

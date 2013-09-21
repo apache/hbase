@@ -27,9 +27,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -66,7 +69,14 @@ import com.google.common.primitives.Longs;
  * The <code>rowlength</code> maximum is <code>Short.MAX_SIZE</code>, column family length maximum
  * is <code>Byte.MAX_SIZE</code>, and column qualifier + key length must be <
  * <code>Integer.MAX_SIZE</code>. The column does not contain the family/qualifier delimiter,
- * {@link #COLUMN_FAMILY_DELIMITER}
+ * {@link #COLUMN_FAMILY_DELIMITER}<br>
+ * KeyValue can optionally contain Tags. When it contains tags, it is added in the byte array after
+ * the value part. The format for this part is: <code>&lt;tagslength>&lt;tagsbytes></code>.
+ * <code>tagslength</code> maximum is <code>Short.MAX_SIZE</code>. The <code>tagsbytes</code>
+ * contain one or more tags where as each tag is of the form
+ * <code>&lt;taglength>&lt;tagtype>&lt;tagbytes></code>.  <code>tagtype</code> is one byte and
+ * <code>taglength</code> maximum is <code>Short.MAX_SIZE</code> and it includes 1 byte type length
+ * and actual tag bytes length.
  */
 @InterfaceAudience.Private
 public class KeyValue implements Cell, HeapSize, Cloneable {
@@ -127,6 +137,11 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   // Size of the length ints in a KeyValue datastructure.
   public static final int KEYVALUE_INFRASTRUCTURE_SIZE = ROW_OFFSET;
 
+  /** Size of the tags length field in bytes */
+  public static final int TAGS_LENGTH_SIZE = Bytes.SIZEOF_SHORT;
+
+  public static final int KEYVALUE_WITH_TAGS_INFRASTRUCTURE_SIZE = ROW_OFFSET + TAGS_LENGTH_SIZE;
+
   /**
    * Computes the number of bytes that a <code>KeyValue</code> instance with the provided
    * characteristics would take up for its underlying data structure.
@@ -140,8 +155,46 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   public static long getKeyValueDataStructureSize(int rlength,
       int flength, int qlength, int vlength) {
-    return KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE +
-            getKeyDataStructureSize(rlength, flength, qlength) + vlength;
+    return KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE
+        + getKeyDataStructureSize(rlength, flength, qlength) + vlength;
+  }
+
+  /**
+   * Computes the number of bytes that a <code>KeyValue</code> instance with the provided
+   * characteristics would take up for its underlying data structure.
+   *
+   * @param rlength row length
+   * @param flength family length
+   * @param qlength qualifier length
+   * @param vlength value length
+   * @param tagsLength total length of the tags
+   *
+   * @return the <code>KeyValue</code> data structure length
+   */
+  public static long getKeyValueDataStructureSize(int rlength, int flength, int qlength,
+      int vlength, int tagsLength) {
+    if (tagsLength == 0) {
+      return getKeyValueDataStructureSize(rlength, flength, qlength, vlength);
+    }
+    return KeyValue.KEYVALUE_WITH_TAGS_INFRASTRUCTURE_SIZE
+        + getKeyDataStructureSize(rlength, flength, qlength) + vlength + tagsLength;
+  }
+
+  /**
+   * Computes the number of bytes that a <code>KeyValue</code> instance with the provided
+   * characteristics would take up for its underlying data structure.
+   *
+   * @param klength key length
+   * @param vlength value length
+   * @param tagsLength total length of the tags
+   *
+   * @return the <code>KeyValue</code> data structure length
+   */
+  public static long getKeyValueDataStructureSize(int klength, int vlength, int tagsLength) {
+    if (tagsLength == 0) {
+      return KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + klength + vlength;
+    }
+    return KeyValue.KEYVALUE_WITH_TAGS_INFRASTRUCTURE_SIZE + klength + vlength + tagsLength;
   }
 
   /**
@@ -199,6 +252,38 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       }
       throw new RuntimeException("Unknown code " + b);
     }
+  }
+
+  /**
+   * @return an iterator over the tags in this KeyValue.
+   */
+  public Iterator<Tag> tagsIterator() {
+    // Subtract -1 to point to the end of the complete tag byte[]
+    final int endOffset = this.offset + this.length - 1;
+    return new Iterator<Tag>() {
+      private int pos = getTagsOffset();
+
+      @Override
+      public boolean hasNext() {
+        return this.pos < endOffset;
+      }
+
+      @Override
+      public Tag next() {
+        if (hasNext()) {
+          short curTagLen = Bytes.toShort(bytes, this.pos);
+          Tag tag = new Tag(bytes, pos, (short) (curTagLen + Bytes.SIZEOF_SHORT));
+          this.pos += Bytes.SIZEOF_SHORT + curTagLen;
+          return tag;
+        }
+        return null;
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    };
   }
 
   /**
@@ -371,6 +456,42 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @param family family name
    * @param qualifier column qualifier
    * @param timestamp version timestamp
+   * @param value column value
+   * @param tags tags
+   * @throws IllegalArgumentException
+   */
+  public KeyValue(final byte[] row, final byte[] family,
+      final byte[] qualifier, final long timestamp, final byte[] value,
+      final Tag[] tags) {
+    this(row, family, qualifier, timestamp, value, Arrays.asList(tags));
+  }
+
+  /**
+   * Constructs KeyValue structure filled with specified values.
+   * @param row row key
+   * @param family family name
+   * @param qualifier column qualifier
+   * @param timestamp version timestamp
+   * @param value column value
+   * @param tags tags non-empty list of tags or null
+   * @throws IllegalArgumentException
+   */
+  public KeyValue(final byte[] row, final byte[] family,
+      final byte[] qualifier, final long timestamp, final byte[] value,
+      final List<Tag> tags) {
+    this(row, 0, row==null ? 0 : row.length,
+      family, 0, family==null ? 0 : family.length,
+      qualifier, 0, qualifier==null ? 0 : qualifier.length,
+      timestamp, Type.Put,
+      value, 0, value==null ? 0 : value.length, tags);
+  }
+
+  /**
+   * Constructs KeyValue structure filled with specified values.
+   * @param row row key
+   * @param family family name
+   * @param qualifier column qualifier
+   * @param timestamp version timestamp
    * @param type key type
    * @param value column value
    * @throws IllegalArgumentException
@@ -381,6 +502,144 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     this(row, 0, len(row),   family, 0, len(family),   qualifier, 0, len(qualifier),
         timestamp, type,   value, 0, len(value));
   }
+
+  /**
+   * Constructs KeyValue structure filled with specified values.
+   * <p>
+   * Column is split into two fields, family and qualifier.
+   * @param row row key
+   * @param family family name
+   * @param qualifier column qualifier
+   * @param timestamp version timestamp
+   * @param type key type
+   * @param value column value
+   * @throws IllegalArgumentException
+   */
+  public KeyValue(final byte[] row, final byte[] family,
+      final byte[] qualifier, final long timestamp, Type type,
+      final byte[] value, final List<Tag> tags) {
+    this(row, family, qualifier, 0, qualifier==null ? 0 : qualifier.length,
+        timestamp, type, value, 0, value==null ? 0 : value.length, tags);
+  }
+
+  /**
+   * Constructs KeyValue structure filled with specified values.
+   * @param row row key
+   * @param family family name
+   * @param qualifier column qualifier
+   * @param timestamp version timestamp
+   * @param type key type
+   * @param value column value
+   * @throws IllegalArgumentException
+   */
+  public KeyValue(final byte[] row, final byte[] family,
+      final byte[] qualifier, final long timestamp, Type type,
+      final byte[] value, final byte[] tags) {
+    this(row, family, qualifier, 0, qualifier==null ? 0 : qualifier.length,
+        timestamp, type, value, 0, value==null ? 0 : value.length, tags);
+  }
+
+  /**
+   * Constructs KeyValue structure filled with specified values.
+   * @param row row key
+   * @param family family name
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   * @param timestamp version timestamp
+   * @param type key type
+   * @param value column value
+   * @param voffset value offset
+   * @param vlength value length
+   * @throws IllegalArgumentException
+   */
+  public KeyValue(byte [] row, byte [] family,
+      byte [] qualifier, int qoffset, int qlength, long timestamp, Type type,
+      byte [] value, int voffset, int vlength, List<Tag> tags) {
+    this(row, 0, row==null ? 0 : row.length,
+        family, 0, family==null ? 0 : family.length,
+        qualifier, qoffset, qlength, timestamp, type,
+        value, voffset, vlength, tags);
+  }
+
+  /**
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param qoffset
+   * @param qlength
+   * @param timestamp
+   * @param type
+   * @param value
+   * @param voffset
+   * @param vlength
+   * @param tags
+   */
+  public KeyValue(byte [] row, byte [] family,
+      byte [] qualifier, int qoffset, int qlength, long timestamp, Type type,
+      byte [] value, int voffset, int vlength, byte[] tags) {
+    this(row, 0, row==null ? 0 : row.length,
+        family, 0, family==null ? 0 : family.length,
+        qualifier, qoffset, qlength, timestamp, type,
+        value, voffset, vlength, tags, 0, tags==null ? 0 : tags.length);
+  }
+
+  /**
+   * Constructs KeyValue structure filled with specified values.
+   * <p>
+   * Column is split into two fields, family and qualifier.
+   * @param row row key
+   * @throws IllegalArgumentException
+   */
+  public KeyValue(final byte [] row, final int roffset, final int rlength,
+      final byte [] family, final int foffset, final int flength,
+      final byte [] qualifier, final int qoffset, final int qlength,
+      final long timestamp, final Type type,
+      final byte [] value, final int voffset, final int vlength) {
+    this(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
+      qlength, timestamp, type, value, voffset, vlength, null);
+  }
+  
+  /**
+   * Constructs KeyValue structure filled with specified values. Uses the provided buffer as the
+   * data buffer.
+   * <p>
+   * Column is split into two fields, family and qualifier.
+   *
+   * @param buffer the bytes buffer to use
+   * @param boffset buffer offset
+   * @param row row key
+   * @param roffset row offset
+   * @param rlength row length
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   * @param timestamp version timestamp
+   * @param type key type
+   * @param value column value
+   * @param voffset value offset
+   * @param vlength value length
+   * @param tags non-empty list of tags or null
+   * @throws IllegalArgumentException an illegal value was passed or there is insufficient space
+   * remaining in the buffer
+   */
+  public KeyValue(byte [] buffer, final int boffset,
+      final byte [] row, final int roffset, final int rlength,
+      final byte [] family, final int foffset, final int flength,
+      final byte [] qualifier, final int qoffset, final int qlength,
+      final long timestamp, final Type type,
+      final byte [] value, final int voffset, final int vlength,
+      final Tag[] tags) {
+     this.bytes  = buffer;
+     this.length = writeByteArray(buffer, boffset,
+         row, roffset, rlength,
+         family, foffset, flength, qualifier, qoffset, qlength,
+        timestamp, type, value, voffset, vlength, tags);
+     this.offset = boffset;
+   }
 
   /**
    * Constructs KeyValue structure filled with specified values.
@@ -400,16 +659,48 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @param value column value
    * @param voffset value offset
    * @param vlength value length
+   * @param tags tags
    * @throws IllegalArgumentException
    */
   public KeyValue(final byte [] row, final int roffset, final int rlength,
       final byte [] family, final int foffset, final int flength,
       final byte [] qualifier, final int qoffset, final int qlength,
       final long timestamp, final Type type,
-      final byte [] value, final int voffset, final int vlength) {
+      final byte [] value, final int voffset, final int vlength,
+      final List<Tag> tags) {
     this.bytes = createByteArray(row, roffset, rlength,
         family, foffset, flength, qualifier, qoffset, qlength,
-        timestamp, type, value, voffset, vlength);
+        timestamp, type, value, voffset, vlength, tags);
+    this.length = bytes.length;
+    this.offset = 0;
+  }
+
+  /**
+   * @param row
+   * @param roffset
+   * @param rlength
+   * @param family
+   * @param foffset
+   * @param flength
+   * @param qualifier
+   * @param qoffset
+   * @param qlength
+   * @param timestamp
+   * @param type
+   * @param value
+   * @param voffset
+   * @param vlength
+   * @param tags
+   */
+  public KeyValue(final byte [] row, final int roffset, final int rlength,
+      final byte [] family, final int foffset, final int flength,
+      final byte [] qualifier, final int qoffset, final int qlength,
+      final long timestamp, final Type type,
+      final byte [] value, final int voffset, final int vlength,
+      final byte[] tags, final int tagsOffset, final int tagsLength) {
+    this.bytes = createByteArray(row, roffset, rlength,
+        family, foffset, flength, qualifier, qoffset, qlength,
+        timestamp, type, value, voffset, vlength, tags, tagsOffset, tagsLength);
     this.length = bytes.length;
     this.offset = 0;
   }
@@ -432,9 +723,30 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       final int qlength,
       final long timestamp, final Type type,
       final int vlength) {
-    this.bytes = createEmptyByteArray(rlength,
-        flength, qlength,
-        timestamp, type, vlength);
+    this(rlength, flength, qlength, timestamp, type, vlength, 0);
+  }
+
+  /**
+   * Constructs an empty KeyValue structure, with specified sizes.
+   * This can be used to partially fill up KeyValues.
+   * <p>
+   * Column is split into two fields, family and qualifier.
+   * @param rlength row length
+   * @param flength family length
+   * @param qlength qualifier length
+   * @param timestamp version timestamp
+   * @param type key type
+   * @param vlength value length
+   * @param tagsLength
+   * @throws IllegalArgumentException
+   */
+  public KeyValue(final int rlength,
+      final int flength,
+      final int qlength,
+      final long timestamp, final Type type,
+      final int vlength, final int tagsLength) {
+    this.bytes = createEmptyByteArray(rlength, flength, qlength, timestamp, type, vlength,
+        tagsLength);
     this.length = bytes.length;
     this.offset = 0;
   }
@@ -459,7 +771,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @return The newly created byte array.
    */
   private static byte[] createEmptyByteArray(final int rlength, int flength,
-      int qlength, final long timestamp, final Type type, int vlength) {
+      int qlength, final long timestamp, final Type type, int vlength, int tagsLength) {
     if (rlength > Short.MAX_VALUE) {
       throw new IllegalArgumentException("Row > " + Short.MAX_VALUE);
     }
@@ -470,6 +782,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     if (qlength > Integer.MAX_VALUE - rlength - flength) {
       throw new IllegalArgumentException("Qualifier > " + Integer.MAX_VALUE);
     }
+    checkForTagsLength(tagsLength);
     // Key length
     long longkeylength = getKeyDataStructureSize(rlength, flength, qlength);
     if (longkeylength > Integer.MAX_VALUE) {
@@ -484,8 +797,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     }
 
     // Allocate right-sized byte array.
-    byte [] bytes =
-        new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength)];
+    byte[] bytes= new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength,
+        tagsLength)];
     // Write the correct size markers
     int pos = 0;
     pos = Bytes.putInt(bytes, pos, keylength);
@@ -496,6 +809,10 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     pos += flength + qlength;
     pos = Bytes.putLong(bytes, pos, timestamp);
     pos = Bytes.putByte(bytes, pos, type.getCode());
+    pos += keylength + vlength;
+    if (tagsLength > 0) {
+      pos = Bytes.putShort(bytes, pos, (short)(tagsLength & 0x0000ffff));
+    }
     return bytes;
   }
 
@@ -518,7 +835,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       final byte [] qualifier, int qlength,
       final byte [] value, int vlength)
           throws IllegalArgumentException {
-
     if (rlength > Short.MAX_VALUE) {
       throw new IllegalArgumentException("Row > " + Short.MAX_VALUE);
     }
@@ -579,12 +895,21 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       final byte [] family, final int foffset, int flength,
       final byte [] qualifier, final int qoffset, int qlength,
       final long timestamp, final Type type,
-      final byte [] value, final int voffset, int vlength) {
+      final byte [] value, final int voffset, int vlength, Tag[] tags) {
 
     checkParameters(row, rlength, family, flength, qualifier, qlength, value, vlength);
 
+    // Calculate length of tags area
+    int tagsLength = 0;
+    if (tags != null && tags.length > 0) {
+      for (Tag t: tags) {
+        tagsLength += t.getLength();
+      }
+    }
+    checkForTagsLength(tagsLength);
     int keyLength = (int) getKeyDataStructureSize(rlength, flength, qlength);
-    int keyValueLength = (int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength);
+    int keyValueLength = (int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength,
+        tagsLength);
     if (keyValueLength > buffer.length - boffset) {
       throw new IllegalArgumentException("Buffer size " + (buffer.length - boffset) + " < " +
           keyValueLength);
@@ -608,13 +933,24 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     if (value != null && value.length > 0) {
       pos = Bytes.putBytes(buffer, pos, value, voffset, vlength);
     }
-
+    // Write the number of tags. If it is 0 then it means there are no tags.
+    if (tagsLength > 0) {
+      pos = Bytes.putShort(buffer, pos, (short) tagsLength);
+      for (Tag t : tags) {
+        pos = Bytes.putBytes(buffer, pos, t.getBuffer(), t.getOffset(), t.getLength());
+      }
+    }
     return keyValueLength;
+  }
+
+  private static void checkForTagsLength(int tagsLength) {
+    if (tagsLength > Short.MAX_VALUE) {
+      throw new IllegalArgumentException("tagslength "+ tagsLength + " > " + Short.MAX_VALUE);
+    }
   }
 
   /**
    * Write KeyValue format into a byte array.
-   *
    * @param row row key
    * @param roffset row offset
    * @param rlength row length
@@ -635,14 +971,15 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       final int rlength, final byte [] family, final int foffset, int flength,
       final byte [] qualifier, final int qoffset, int qlength,
       final long timestamp, final Type type,
-      final byte [] value, final int voffset, int vlength) {
+      final byte [] value, final int voffset, 
+      int vlength, byte[] tags, int tagsOffset, int tagsLength) {
 
     checkParameters(row, rlength, family, flength, qualifier, qlength, value, vlength);
-
+    checkForTagsLength(tagsLength);
     // Allocate right-sized byte array.
     int keyLength = (int) getKeyDataStructureSize(rlength, flength, qlength);
     byte [] bytes =
-        new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength)];
+        new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength, tagsLength)];
     // Write key, value and key row length.
     int pos = 0;
     pos = Bytes.putInt(bytes, pos, keyLength);
@@ -661,8 +998,64 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     if (value != null && value.length > 0) {
       pos = Bytes.putBytes(bytes, pos, value, voffset, vlength);
     }
+    // Add the tags after the value part
+    if (tagsLength > 0) {
+      pos = Bytes.putShort(bytes, pos, (short) (tagsLength));
+      pos = Bytes.putBytes(bytes, pos, tags, tagsOffset, tagsLength);
+    }
     return bytes;
   }
+  
+  private static byte [] createByteArray(final byte [] row, final int roffset,
+      final int rlength, final byte [] family, final int foffset, int flength,
+      final byte [] qualifier, final int qoffset, int qlength,
+      final long timestamp, final Type type,
+      final byte [] value, final int voffset, int vlength, List<Tag> tags) {
+
+    checkParameters(row, rlength, family, flength, qualifier, qlength, value, vlength);
+
+    // Calculate length of tags area
+    int tagsLength = 0;
+    if (tags != null && !tags.isEmpty()) {
+      for (Tag t : tags) {
+        tagsLength += t.getLength();
+      }
+    }
+    checkForTagsLength(tagsLength);
+    // Allocate right-sized byte array.
+    int keyLength = (int) getKeyDataStructureSize(rlength, flength, qlength);
+    byte[] bytes = new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength,
+        tagsLength)];
+
+    // Write key, value and key row length.
+    int pos = 0;
+    pos = Bytes.putInt(bytes, pos, keyLength);
+
+    pos = Bytes.putInt(bytes, pos, vlength);
+    pos = Bytes.putShort(bytes, pos, (short)(rlength & 0x0000ffff));
+    pos = Bytes.putBytes(bytes, pos, row, roffset, rlength);
+    pos = Bytes.putByte(bytes, pos, (byte)(flength & 0x0000ff));
+    if(flength != 0) {
+      pos = Bytes.putBytes(bytes, pos, family, foffset, flength);
+    }
+    if(qlength != 0) {
+      pos = Bytes.putBytes(bytes, pos, qualifier, qoffset, qlength);
+    }
+    pos = Bytes.putLong(bytes, pos, timestamp);
+    pos = Bytes.putByte(bytes, pos, type.getCode());
+    if (value != null && value.length > 0) {
+      pos = Bytes.putBytes(bytes, pos, value, voffset, vlength);
+    }
+    // Add the tags after the value part
+    if (tagsLength > 0) {
+      pos = Bytes.putShort(bytes, pos, (short) (tagsLength));
+      for (Tag t : tags) {
+        pos = Bytes.putBytes(bytes, pos, t.getBuffer(), t.getOffset(), t.getLength());
+      }
+    }
+    return bytes;
+  }
+
 
   /**
    * Needed doing 'contains' on List.  Only compares the key portion, not the value.
@@ -744,13 +1137,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   }
 
   /**
-   * Use for logging.
-   * @param b Key portion of a KeyValue.
-   * @param o Offset to start of key
-   * @param l Length of key.
-   * @return Key as a String.
-   */
-  /**
    * Produces a string map for this key/value pair. Useful for programmatic use
    * and manipulation of the data stored in an HLogKey, for example, printing
    * as JSON. Values are left out due to their tendency to be large. If needed,
@@ -765,9 +1151,24 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     stringMap.put("qualifier", Bytes.toStringBinary(getQualifier()));
     stringMap.put("timestamp", getTimestamp());
     stringMap.put("vlen", getValueLength());
+    List<Tag> tags = getTags();
+    if (tags != null) {
+      List<String> tagsString = new ArrayList<String>();
+      for (Tag t : tags) {
+        tagsString.add((t.getType()) + ":" +Bytes.toStringBinary(t.getValue()));
+      }
+      stringMap.put("tag", tagsString);
+    }
     return stringMap;
   }
 
+  /**
+   * Use for logging.
+   * @param b Key portion of a KeyValue.
+   * @param o Offset to start of key
+   * @param l Length of key.
+   * @return Key as a String.
+   */
   public static String keyToString(final byte [] b, final int o, final int l) {
     if (b == null) return "";
     int rowlength = Bytes.toShort(b, o);
@@ -839,9 +1240,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @return length of entire KeyValue, in bytes
    */
   private static int getLength(byte [] bytes, int offset) {
-    return ROW_OFFSET +
-        Bytes.toInt(bytes, offset) +
-        Bytes.toInt(bytes, offset + Bytes.SIZEOF_INT);
+    int klength = ROW_OFFSET + Bytes.toInt(bytes, offset);
+    int vlength = Bytes.toInt(bytes, offset + Bytes.SIZEOF_INT);
+    return klength + vlength;
   }
 
   /**
@@ -876,11 +1277,12 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   }
 
   /**
-   * @return Value offset
+   * @return the value offset
    */
   @Override
   public int getValueOffset() {
-    return getKeyOffset() + getKeyLength();
+    int voffset = getKeyOffset() + getKeyLength();
+    return voffset;
   }
 
   /**
@@ -888,7 +1290,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   @Override
   public int getValueLength() {
-    return Bytes.toInt(this.bytes, this.offset + Bytes.SIZEOF_INT);
+    int vlength = Bytes.toInt(this.bytes, this.offset + Bytes.SIZEOF_INT);
+    return vlength;
   }
 
   /**
@@ -1183,6 +1586,55 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   @Deprecated // use CellUtil.getQualifierArray
   public byte [] getQualifier() {
     return CellUtil.cloneQualifier(this);
+  }
+
+  /**
+   * This returns the offset where the tag actually starts.
+   */
+  @Override
+  public int getTagsOffset() {
+    short tagsLen = getTagsLength();
+    if (tagsLen == 0) {
+      return this.offset + this.length;
+    }
+    return this.offset + this.length - tagsLen;
+  }
+
+  /**
+   * This returns the total length of the tag bytes
+   */
+  @Override
+  public short getTagsLength() {
+    int tagsLen = this.length - (getKeyLength() + getValueLength() + KEYVALUE_INFRASTRUCTURE_SIZE);
+    if (tagsLen > 0) {
+      // There are some Tag bytes in the byte[]. So reduce 2 bytes which is added to denote the tags
+      // length
+      tagsLen -= TAGS_LENGTH_SIZE;
+    }
+    return (short) tagsLen;
+  }
+
+  /**
+   * This method may not be right.  But we cannot use the CellUtil.getTagIterator because we don't know
+   * getKeyOffset and getKeyLength
+   * Cannnot use the getKeyOffset and getKeyLength in CellUtil as they are not part of the Cell interface.
+   * Returns any tags embedded in the KeyValue.
+   * @return The tags
+   */
+  public List<Tag> getTags() {
+    short tagsLength = getTagsLength();
+    if (tagsLength == 0) {
+      return new ArrayList<Tag>();
+    }
+    return Tag.createTags(getBuffer(), getTagsOffset(), tagsLength);
+  }
+
+  /**
+   * @return the backing array of the entire KeyValue (all KeyValue fields are in a single array)
+   */
+  @Override
+  public byte[] getTagsArray() {
+    return bytes;
   }
 
   //---------------------------------------------------------------------------
@@ -2169,7 +2621,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
 
     int len = writeByteArray(buffer, boffset, row, roffset, rlength, family, foffset, flength,
         qualifier, qoffset, qlength, HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum,
-        null, 0, 0);
+        null, 0, 0, null);
     return new KeyValue(buffer, boffset, len);
   }
 
@@ -2424,22 +2876,4 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     sum += Bytes.SIZEOF_LONG;// memstoreTS
     return ClassSize.align(sum);
   }
-
-  // -----
-  // KV tags stubs
-  @Override
-  public int getTagsOffset() {
-    throw new UnsupportedOperationException("Not implememnted");
-  }
-
-  @Override
-  public short getTagsLength() {
-    throw new UnsupportedOperationException("Not implememnted");
-  }
-
-  @Override
-  public byte[] getTagsArray() {
-    throw new UnsupportedOperationException("Not implememnted");
-  }
-
 }

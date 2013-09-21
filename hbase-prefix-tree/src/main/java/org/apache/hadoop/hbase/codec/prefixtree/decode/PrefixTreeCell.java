@@ -70,6 +70,9 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
   protected int absoluteValueOffset;
   protected int valueLength;
 
+  protected byte[] tagsBuffer;
+  protected int tagsOffset;
+  protected short tagsLength;
 
   /********************** Cell methods ******************/
 
@@ -217,17 +220,17 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
 
   @Override
   public int getTagsOffset() {
-    throw new UnsupportedOperationException("Not implemented");
+    return tagsOffset;
   }
 
   @Override
   public short getTagsLength() {
-    throw new UnsupportedOperationException("Not implemented");
+    return tagsLength;
   }
 
   @Override
   public byte[] getTagsArray() {
-    throw new UnsupportedOperationException("Not implemented");
+    return this.tagsBuffer;
   }
 
 }

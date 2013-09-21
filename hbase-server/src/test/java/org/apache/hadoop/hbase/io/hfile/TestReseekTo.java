@@ -20,14 +20,17 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -42,14 +45,24 @@ public class TestReseekTo {
 
   @Test
   public void testReseekTo() throws Exception {
+    testReseekToInternals(TagUsage.NO_TAG);
+    testReseekToInternals(TagUsage.ONLY_TAG);
+    testReseekToInternals(TagUsage.PARTIAL_TAG);
+  }
 
+  private void testReseekToInternals(TagUsage tagUsage) throws IOException {
     Path ncTFile = new Path(TEST_UTIL.getDataTestDir(), "basic.hfile");
     FSDataOutputStream fout = TEST_UTIL.getTestFileSystem().create(ncTFile);
+    if(tagUsage != TagUsage.NO_TAG){
+      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    }
     CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
+    HFileContext context = new HFileContext();
+    context.setBlocksize(4000);
     HFile.Writer writer = HFile.getWriterFactory(
         TEST_UTIL.getConfiguration(), cacheConf)
             .withOutputStream(fout)
-            .withBlockSize(4000)
+            .withFileContext(context)
             // NOTE: This test is dependent on this deprecated nonstandard comparator
             .withComparator(new KeyValue.RawBytesComparator())
             .create();
@@ -64,7 +77,19 @@ public class TestReseekTo {
       String value = valueString + key;
       keyList.add(key);
       valueList.add(value);
-      writer.append(Bytes.toBytes(key), Bytes.toBytes(value));
+      if(tagUsage == TagUsage.NO_TAG){
+        writer.append(Bytes.toBytes(key), Bytes.toBytes(value));
+      } else if (tagUsage == TagUsage.ONLY_TAG) {
+        Tag t = new Tag((byte) 1, "myTag1");
+        writer.append(Bytes.toBytes(key), Bytes.toBytes(value), t.getBuffer());
+      } else {
+        if (key % 4 == 0) {
+          Tag t = new Tag((byte) 1, "myTag1");
+          writer.append(Bytes.toBytes(key), Bytes.toBytes(value), t.getBuffer());
+        } else {
+          writer.append(Bytes.toBytes(key), Bytes.toBytes(value), HConstants.EMPTY_BYTE_ARRAY);
+        }
+      }
     }
     writer.close();
     fout.close();

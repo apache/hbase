@@ -290,6 +290,9 @@ public class HLogPrettyPrinter {
                 + op.get("qualifier"));
             out.println("    timestamp: "
                 + (new Date((Long) op.get("timestamp"))));
+            if(op.get("tag") != null) {
+              out.println("    tag: " + op.get("tag"));
+            }
             if (outputValues)
               out.println("    value: " + op.get("value"));
           }

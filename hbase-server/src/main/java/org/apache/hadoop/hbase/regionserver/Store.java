@@ -163,7 +163,8 @@ public interface Store extends HeapSize, StoreConfigInformation {
     long maxKeyCount,
     Compression.Algorithm compression,
     boolean isCompaction,
-    boolean includeMVCCReadpoint
+    boolean includeMVCCReadpoint,
+    boolean includesTags
   ) throws IOException;
 
   // Compaction oriented methods

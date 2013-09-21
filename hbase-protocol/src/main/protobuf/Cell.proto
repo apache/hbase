@@ -48,6 +48,7 @@ message Cell {
   optional uint64 timestamp = 4;
   optional CellType cell_type = 5;
   optional bytes value = 6;
+  optional bytes tags = 7;
 }
 
 /**
@@ -61,4 +62,5 @@ message KeyValue {
   optional uint64 timestamp = 4;
   optional CellType key_type = 5;
   optional bytes value = 6;
+  optional bytes tags = 7;
 }

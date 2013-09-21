@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
@@ -180,7 +181,7 @@ public class TestStore extends TestCase {
     init(getName(), conf, hcd);
 
     // Test createWriterInTmp()
-    StoreFile.Writer writer = store.createWriterInTmp(4, hcd.getCompression(), false, true);
+    StoreFile.Writer writer = store.createWriterInTmp(4, hcd.getCompression(), false, true, false);
     Path path = writer.getPath();
     writer.append(new KeyValue(row, family, qf1, Bytes.toBytes(1)));
     writer.append(new KeyValue(row, family, qf2, Bytes.toBytes(2)));
@@ -320,9 +321,12 @@ public class TestStore extends TestCase {
     long seqid = f.getMaxSequenceId();
     Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
+    HFileContext meta = new HFileContext();
+    meta.setBlocksize(StoreFile.DEFAULT_BLOCKSIZE_SMALL);
     StoreFile.Writer w = new StoreFile.WriterBuilder(c, new CacheConfig(c),
-        fs, StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+        fs)
             .withOutputDir(storedir)
+            .withFileContext(meta)
             .build();
     w.appendMetadata(seqid + 1, false);
     w.close();

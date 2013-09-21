@@ -24,9 +24,9 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
-import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.base.Function;
@@ -41,8 +41,9 @@ public class KeyValueUtil {
   /**************** length *********************/
 
   public static int length(final Cell cell) {
-    return (int)KeyValue.getKeyValueDataStructureSize(cell.getRowLength(), cell.getFamilyLength(),
-      cell.getQualifierLength(), cell.getValueLength());
+    return (int) (KeyValue.getKeyValueDataStructureSize(cell.getRowLength(),
+        cell.getFamilyLength(), cell.getQualifierLength(), cell.getValueLength(),
+        cell.getTagsLength()));
   }
 
   protected static int keyLength(final Cell cell) {
@@ -71,7 +72,8 @@ public class KeyValueUtil {
   /**************** copy key only *********************/
 
   public static KeyValue copyToNewKeyValue(final Cell cell) {
-    KeyValue kvCell = new KeyValue(copyToNewByteArray(cell));
+    byte[] bytes = copyToNewByteArray(cell);
+    KeyValue kvCell = new KeyValue(bytes, 0, bytes.length);
     kvCell.setMvccVersion(cell.getMvccVersion());
     return kvCell;
   }
@@ -112,8 +114,12 @@ public class KeyValueUtil {
     pos = Bytes.putInt(output, pos, keyLength(cell));
     pos = Bytes.putInt(output, pos, cell.getValueLength());
     pos = appendKeyToByteArrayWithoutValue(cell, output, pos);
-    CellUtil.copyValueTo(cell, output, pos);
-    return pos + cell.getValueLength();
+    pos = CellUtil.copyValueTo(cell, output, pos);
+    if ((cell.getTagsLength() > 0)) {
+      pos = Bytes.putShort(output, pos, cell.getTagsLength());
+      pos = CellUtil.copyTagTo(cell, output, pos);
+    }
+    return pos;
   }
 
   public static ByteBuffer copyToNewByteBuffer(final Cell cell) {
@@ -142,20 +148,30 @@ public class KeyValueUtil {
   /**
    * Creates a new KeyValue object positioned in the supplied ByteBuffer and sets the ByteBuffer's
    * position to the start of the next KeyValue. Does not allocate a new array or copy data.
+   * @param bb
+   * @param includesMvccVersion
+   * @param includesTags 
    */
-  public static KeyValue nextShallowCopy(final ByteBuffer bb, final boolean includesMvccVersion) {
+  public static KeyValue nextShallowCopy(final ByteBuffer bb, final boolean includesMvccVersion,
+      boolean includesTags) {
     if (bb.isDirect()) {
       throw new IllegalArgumentException("only supports heap buffers");
     }
     if (bb.remaining() < 1) {
       return null;
     }
+    KeyValue keyValue = null;
     int underlyingArrayOffset = bb.arrayOffset() + bb.position();
     int keyLength = bb.getInt();
     int valueLength = bb.getInt();
-    int kvLength = KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + keyLength + valueLength;
-    KeyValue keyValue = new KeyValue(bb.array(), underlyingArrayOffset, kvLength);
     ByteBufferUtils.skip(bb, keyLength + valueLength);
+    short tagsLength = 0;
+    if (includesTags) {
+      tagsLength = bb.getShort();
+      ByteBufferUtils.skip(bb, tagsLength);
+    }
+    int kvLength = (int) KeyValue.getKeyValueDataStructureSize(keyLength, valueLength, tagsLength);
+    keyValue = new KeyValue(bb.array(), underlyingArrayOffset, kvLength);
     if (includesMvccVersion) {
       long mvccVersion = ByteBufferUtils.readVLong(bb);
       keyValue.setMvccVersion(mvccVersion);

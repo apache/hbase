@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -50,6 +49,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -99,12 +100,12 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Col
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
-import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
@@ -471,7 +472,18 @@ public final class ProtobufUtil {
           if (qv.hasTimestamp()) {
             ts = qv.getTimestamp();
           }
-          put.add(family, qualifier, ts, value);
+          byte[] tags;
+          if (qv.hasTags()) {
+            tags = qv.getTags().toByteArray();
+            Object[] array = Tag.createTags(tags, 0, (short)tags.length).toArray();
+            Tag[] tagArray = new Tag[array.length];
+            for(int i = 0; i< array.length; i++) {
+              tagArray[i] = (Tag)array[i];
+            }
+            put.add(family, qualifier, ts, value, tagArray);
+          } else {
+            put.add(family, qualifier, ts, value);
+          }
         }
       }
     }
@@ -972,6 +984,9 @@ public final class ProtobufUtil {
         valueBuilder.setQualifier(ByteString.copyFrom(kv.getQualifier()));
         valueBuilder.setValue(ByteString.copyFrom(kv.getValue()));
         valueBuilder.setTimestamp(kv.getTimestamp());
+        if(cell.getTagsLength() > 0) {
+          valueBuilder.setTags(ByteString.copyFrom(CellUtil.getTagArray(kv)));
+        }
         if (type == MutationType.DELETE) {
           KeyValue.Type keyValueType = KeyValue.Type.codeToType(kv.getType());
           valueBuilder.setDeleteType(toDeleteType(keyValueType));

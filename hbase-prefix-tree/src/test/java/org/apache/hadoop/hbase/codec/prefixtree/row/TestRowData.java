@@ -32,10 +32,12 @@ import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataNub;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataNumberStrings;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataQualifierByteOrdering;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataRandomKeyValues;
+import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataRandomKeyValuesWithTags;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataSearcherRowMiss;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataSimple;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataSingleQualifier;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataTrivial;
+import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataTrivialWithTags;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataUrls;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataUrlsExample;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
@@ -65,6 +67,7 @@ public interface TestRowData {
       //simple
       all.add(new TestRowDataEmpty());
       all.add(new TestRowDataTrivial());
+      all.add(new TestRowDataTrivialWithTags());
       all.add(new TestRowDataSimple());
       all.add(new TestRowDataDeeper());
 
@@ -83,6 +86,7 @@ public interface TestRowData {
       all.add(new TestRowDataUrlsExample());
       all.add(new TestRowDataExerciseFInts());
       all.add(new TestRowDataRandomKeyValues());
+      all.add(new TestRowDataRandomKeyValuesWithTags());
       return all;
     }
 

@@ -26,8 +26,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
@@ -42,8 +42,15 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
   @Override
   public ByteBuffer decodeKeyValues(DataInputStream source,
-      boolean includesMemstoreTS) throws IOException {
-    return decodeKeyValues(source, 0, 0, includesMemstoreTS);
+      HFileBlockDecodingContext blkDecodingCtx) throws IOException {
+    if (blkDecodingCtx.getClass() != HFileBlockDefaultDecodingContext.class) {
+      throw new IOException(this.getClass().getName() + " only accepts "
+          + HFileBlockDefaultDecodingContext.class.getName() + " as the decoding context.");
+    }
+
+    HFileBlockDefaultDecodingContext decodingCtx =
+        (HFileBlockDefaultDecodingContext) blkDecodingCtx;
+    return internalDecodeKeyValues(source, 0, 0, decodingCtx);
   }
 
   protected static class SeekerState {
@@ -51,6 +58,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected int keyLength;
     protected int valueLength;
     protected int lastCommonPrefix;
+    protected int tagLength = 0;
+    protected int tagOffset = -1;
 
     /** We need to store a copy of the key. */
     protected byte[] keyBuffer = new byte[INITIAL_KEY_BUFFER_SIZE];
@@ -112,21 +121,30 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   protected abstract static class
       BufferedEncodedSeeker<STATE extends SeekerState>
       implements EncodedSeeker {
-
+    protected HFileBlockDecodingContext decodingCtx;
     protected final KVComparator comparator;
     protected final SamePrefixComparator<byte[]> samePrefixComparator;
     protected ByteBuffer currentBuffer;
     protected STATE current = createSeekerState(); // always valid
     protected STATE previous = createSeekerState(); // may not be valid
 
-    @SuppressWarnings("unchecked")
-    public BufferedEncodedSeeker(KVComparator comparator) {
+    public BufferedEncodedSeeker(KVComparator comparator,
+        HFileBlockDecodingContext decodingCtx) {
       this.comparator = comparator;
       if (comparator instanceof SamePrefixComparator) {
         this.samePrefixComparator = (SamePrefixComparator<byte[]>) comparator;
       } else {
         this.samePrefixComparator = null;
       }
+      this.decodingCtx = decodingCtx;
+    }
+    
+    protected boolean includesMvcc() {
+      return this.decodingCtx.getHFileContext().shouldIncludeMvcc();
+    }
+
+    protected boolean includesTags() {
+      return this.decodingCtx.getHFileContext().shouldIncludeTags();
     }
 
     @Override
@@ -152,21 +170,33 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public ByteBuffer getKeyValueBuffer() {
-      ByteBuffer kvBuffer = ByteBuffer.allocate(
-          2 * Bytes.SIZEOF_INT + current.keyLength + current.valueLength);
+      ByteBuffer kvBuffer = createKVBuffer();
       kvBuffer.putInt(current.keyLength);
       kvBuffer.putInt(current.valueLength);
       kvBuffer.put(current.keyBuffer, 0, current.keyLength);
       kvBuffer.put(currentBuffer.array(),
           currentBuffer.arrayOffset() + current.valueOffset,
           current.valueLength);
+      if (current.tagLength > 0) {
+        kvBuffer.putShort((short) current.tagLength);
+        kvBuffer.put(currentBuffer.array(), currentBuffer.arrayOffset() + current.tagOffset,
+            current.tagLength);
+      }
+      return kvBuffer;
+    }
+
+    protected ByteBuffer createKVBuffer() {
+      int kvBufSize = (int) KeyValue.getKeyValueDataStructureSize(current.keyLength,
+          current.valueLength, current.tagLength);
+      ByteBuffer kvBuffer = ByteBuffer.allocate(kvBufSize);
       return kvBuffer;
     }
 
     @Override
     public KeyValue getKeyValue() {
       ByteBuffer kvBuf = getKeyValueBuffer();
-      KeyValue kv = new KeyValue(kvBuf.array(), kvBuf.arrayOffset());
+      KeyValue kv = new KeyValue(kvBuf.array(), kvBuf.arrayOffset(), kvBuf.array().length
+          - kvBuf.arrayOffset());
       kv.setMvccVersion(current.memstoreTS);
       return kv;
     }
@@ -186,6 +216,12 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       decodeNext();
       previous.invalidate();
       return true;
+    }
+
+    public void decodeTags() {
+      current.tagLength = ByteBufferUtils.readCompressedInt(currentBuffer);
+      current.tagOffset = currentBuffer.position();
+      ByteBufferUtils.skip(currentBuffer, current.tagLength);
     }
 
     @Override
@@ -276,8 +312,13 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   }
 
   protected final void afterEncodingKeyValue(ByteBuffer in,
-      DataOutputStream out, boolean includesMemstoreTS) {
-    if (includesMemstoreTS) {
+      DataOutputStream out, HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
+    if (encodingCtx.getHFileContext().shouldIncludeTags()) {
+      int tagsLength = in.getShort();
+      ByteBufferUtils.putCompressedInt(out, tagsLength);
+      ByteBufferUtils.moveBufferToStream(out, in, tagsLength);
+    }
+    if (encodingCtx.getHFileContext().shouldIncludeMvcc()) {
       // Copy memstore timestamp from the byte buffer to the output stream.
       long memstoreTS = -1;
       try {
@@ -291,8 +332,13 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   }
 
   protected final void afterDecodingKeyValue(DataInputStream source,
-      ByteBuffer dest, boolean includesMemstoreTS) {
-    if (includesMemstoreTS) {
+      ByteBuffer dest, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
+    if (decodingCtx.getHFileContext().shouldIncludeTags()) {
+      int tagsLength = ByteBufferUtils.readCompressedInt(source);
+      dest.putShort((short)tagsLength);
+      ByteBufferUtils.copyFromStreamToBuffer(dest, source, tagsLength);
+    }
+    if (decodingCtx.getHFileContext().shouldIncludeMvcc()) {
       long memstoreTS = -1;
       try {
         // Copy memstore timestamp from the data input stream to the byte
@@ -307,33 +353,32 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   }
 
   @Override
-  public HFileBlockEncodingContext newDataBlockEncodingContext(
-      Algorithm compressionAlgorithm,
-      DataBlockEncoding encoding, byte[] header) {
-    return new HFileBlockDefaultEncodingContext(
-        compressionAlgorithm, encoding, header);
+  public HFileBlockEncodingContext newDataBlockEncodingContext(DataBlockEncoding encoding,
+      byte[] header, HFileContext meta) {
+    return new HFileBlockDefaultEncodingContext(encoding, header, meta);
   }
 
   @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(
-      Algorithm compressionAlgorithm) {
-    return new HFileBlockDefaultDecodingContext(compressionAlgorithm);
+  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta) {
+    return new HFileBlockDefaultDecodingContext(meta);
   }
 
   /**
    * Compress KeyValues and write them to output buffer.
    * @param out Where to write compressed data.
    * @param in Source of KeyValue for compression.
-   * @param includesMemstoreTS true if including memstore timestamp after every
-   *          key-value pair
+   * @param encodingCtx use the Encoding ctx associated with the current block
    * @throws IOException If there is an error writing to output stream.
    */
   public abstract void internalEncodeKeyValues(DataOutputStream out,
-      ByteBuffer in, boolean includesMemstoreTS) throws IOException;
+      ByteBuffer in, HFileBlockDefaultEncodingContext encodingCtx) throws IOException;
+
+  public abstract ByteBuffer internalDecodeKeyValues(DataInputStream source,
+      int allocateHeaderLength, int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx)
+      throws IOException;
 
   @Override
   public void encodeKeyValues(ByteBuffer in,
-      boolean includesMemstoreTS,
       HFileBlockEncodingContext blkEncodingCtx) throws IOException {
     if (blkEncodingCtx.getClass() != HFileBlockDefaultEncodingContext.class) {
       throw new IOException (this.getClass().getName() + " only accepts "
@@ -347,7 +392,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     DataOutputStream dataOut =
         ((HFileBlockDefaultEncodingContext) encodingCtx)
         .getOutputStreamForEncoder();
-    internalEncodeKeyValues(dataOut, in, includesMemstoreTS);
+    internalEncodeKeyValues(dataOut, in, encodingCtx);
     if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
       encodingCtx.postEncoding(BlockType.ENCODED_DATA);
     } else {

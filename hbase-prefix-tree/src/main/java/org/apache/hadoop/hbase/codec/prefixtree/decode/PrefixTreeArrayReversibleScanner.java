@@ -33,8 +33,8 @@ public class PrefixTreeArrayReversibleScanner extends PrefixTreeArrayScanner imp
   /***************** construct ******************************/
 
   public PrefixTreeArrayReversibleScanner(PrefixTreeBlockMeta blockMeta, int rowTreeDepth,
-      int rowBufferLength, int qualifierBufferLength) {
-    super(blockMeta, rowTreeDepth, rowBufferLength, qualifierBufferLength);
+      int rowBufferLength, int qualifierBufferLength, int tagsBufferLength) {
+    super(blockMeta, rowTreeDepth, rowBufferLength, qualifierBufferLength, tagsBufferLength);
   }
 
 
