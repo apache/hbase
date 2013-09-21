@@ -169,6 +169,9 @@ public class TestOldLogsCleaner {
     // We should still see 3 newer dirs and an legacy one
     assertEquals(4, fs.listStatus(oldLogDir).length);
 
+    // Verify file "123.456" still exists
+    assertEquals(1, fs.listStatus(legacyDir).length);
+
     Thread.sleep(1000);
 
     // Update TTL configuration to delete all logs
