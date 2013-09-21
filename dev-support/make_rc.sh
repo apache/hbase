@@ -75,3 +75,4 @@ echo ' for i in *.tar.gz; do echo $i; gpg --print-mds $i > $i.mds ; done'
 echo ' for i in *.tar.gz; do echo $i; gpg --armor --output $i.asc --detach-sig $i  ; done'
 echo ' rsync -av ${archivedir} people.apache.org:public_html/hbase-VERSION'
 echo "Check the content deployed to maven.  If good, close the repo and record links of temporary staging repo"
+echo "If all good tag the RC"
