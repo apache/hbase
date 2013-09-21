@@ -625,7 +625,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       long lastRequestOffset;
       long seekBacks;
       long seekBackNonData;
-      long indexBlocksRead;
+      long nonDataBlocksRead;
       long inWrongPlaceCount;
       long emptyQueue;
       long ready;
@@ -634,10 +634,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
         return "Ready = " + ready + ", Last requested offset = "
             + lastRequestOffset + ", Seek back count = " + seekBacks
             + ", Seek back for non data blocks = " + seekBackNonData
-            + ", Index blocks read = " + indexBlocksRead
+            + ", Non Data blocks read by preloader = " + nonDataBlocksRead
             + ", In a wrong place = " + inWrongPlaceCount
-            + ", Empty queue = " + emptyQueue
-            + ", Index blocks read by preloader " + indexBlocksRead;
+            + ", Empty queue = " + emptyQueue;
       }
     }
     
@@ -690,43 +689,43 @@ public class HFileReaderV2 extends AbstractHFileReader {
         public void run() {
           while (leftToPreload.get() > 0 && run) {
             lock.lock();
-            // double check in case we acquired the lock after being already stopped
-            if (!run) {
-              lock.unlock();
-              return;
-            }
-            HFileBlock block = null;
             try {
-              block =
-                  reader.readBlock(startOffset, startSize, cacheBlocks,
-                    isCompaction, ON_PRELOAD, null, preloaderKvContext);
-            } catch (Throwable e) {
-              // in case of ANY kind of error, we'll mark this block as attempted and let the IPC
-              // Caller handler catch this exception
+              // double check in case we acquired the lock after being already stopped
+              if (!run) {
+                return;
+              }
+              HFileBlock block = null;
+              try {
+                block =
+                    reader.readBlock(startOffset, startSize, cacheBlocks,
+                      isCompaction, ON_PRELOAD, null, preloaderKvContext);
+              } catch (Throwable e) {
+                // in case of ANY kind of error, we'll mark this block as attempted and let the IPC
+                // Caller handler catch this exception
+                preloadAttempted.add(startOffset);
+                LOG.error("Exception occured while attempting preload", e);
+                return;
+              }
               preloadAttempted.add(startOffset);
+              if (block == null) {
+                return;
+              }
+              if (block.getBlockType().isData()
+                  && !preloaderKvContext.getObtainedFromCache()) {
+                evictQueue.add(startOffset);
+              } else if (!block.getBlockType().isData()) {
+                metrics.nonDataBlocksRead++;
+              }
+              // otherwise we preloaded this block successfully ready to move on next block
+              startOffset = block.getOffset() + block.getOnDiskSizeWithHeader();
+              startSize = block.getNextBlockOnDiskSizeWithHeader();
+              leftToPreload.decrementAndGet();
+              if (evictQueue.size() > scanPreloadBlocksKeptInCache) {
+                long offset = evictQueue.poll();
+                hfileReaderV2.evictBlock(offset, isCompaction);
+              }
+            } finally {
               lock.unlock();
-              LOG.error("Exception occured while attempting preload", e);
-              return;
-            }
-            preloadAttempted.add(startOffset);
-            if (block == null) {
-              lock.unlock();
-              return;
-            }
-            if (block.getBlockType().isData()
-                && !preloaderKvContext.getObtainedFromCache()) {
-              evictQueue.add(startOffset);
-            } else if (!block.getBlockType().isData()) {
-              metrics.indexBlocksRead++;
-            }
-            // otherwise we preloaded this block successfully ready to move on next block
-            startOffset = block.getOffset() + block.getOnDiskSizeWithHeader();
-            startSize = block.getNextBlockOnDiskSizeWithHeader();
-            leftToPreload.decrementAndGet();
-            lock.unlock();
-            if (evictQueue.size() > scanPreloadBlocksKeptInCache) {
-              long offset = evictQueue.poll();
-              hfileReaderV2.evictBlock(offset, isCompaction);
             }
           }
           run = false;
@@ -764,13 +763,18 @@ public class HFileReaderV2 extends AbstractHFileReader {
           block =
               reader.readBlock(offset, size, cacheBlocks, isCompaction, false,
                 blocktype, kvContext);
+          metrics.lastRequestOffset = offset;
+          return block;
         } else {
           // wait for preloader to finish the current block being read
           lock.lock();
-          // This will make sure that this preloader will never run.
-          lastTask.run = false;
-          // Unlock the lock for future tasks
-          lock.unlock();
+          try {
+            // This will make sure that this preloader will never run.
+            lastTask.run = false;
+          } finally {
+            // Unlock the lock for future tasks
+            lock.unlock();
+          }
           // see if we already preloaded
           read = preloadAttempted.peek();
           if (read != null && read.equals(offset)) {
@@ -799,16 +803,16 @@ public class HFileReaderV2 extends AbstractHFileReader {
             expectedType = blocktype;
             leftToPreload.set(scanPreloadBlocksCount);
             startNewPreloader();
+            if (offset < metrics.lastRequestOffset) {
+              metrics.seekBacks++;
+              if (block != null && !block.getBlockType().isData()) {
+                metrics.seekBackNonData++;
+              }
+            }
           }
+          metrics.lastRequestOffset = offset;
+          return block;
         }
-        if (offset < metrics.lastRequestOffset) {
-          metrics.seekBacks++;
-          if (block != null && !block.getBlockType().isData()) {
-            metrics.seekBackNonData++;
-          }
-        }
-        metrics.lastRequestOffset = offset;
-        return block;
       }
 
       public boolean startNewPreloader() {
@@ -821,8 +825,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       public void close() {
         lock.lock();
-        lastTask.run = false;
-        lock.unlock();
+        try {
+          lastTask.run = false;
+        } finally {
+          lock.unlock();
+        }
         while (!evictQueue.isEmpty()) {
           hfileReaderV2.evictBlock(evictQueue.poll(), isCompaction);
         }
