@@ -389,19 +389,19 @@ public class RestoreSnapshotHelper {
           }
         }
 
-        // Restore Missing files
-        for (String hfileName: hfilesToAdd) {
-          LOG.trace("Adding HFileLink " + hfileName +
-            " to region=" + regionInfo.getEncodedName() + " table=" + tableName);
-          restoreStoreFile(familyDir, regionInfo, hfileName);
-        }
-
         // Remove hfiles not present in the snapshot
         for (String hfileName: familyFiles) {
           Path hfile = new Path(familyDir, hfileName);
           LOG.trace("Removing hfile=" + hfile +
             " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
           HFileArchiver.archiveStoreFile(conf, fs, regionInfo, tableDir, family, hfile);
+        }
+
+        // Restore Missing files
+        for (String hfileName: hfilesToAdd) {
+          LOG.trace("Adding HFileLink " + hfileName +
+            " to region=" + regionInfo.getEncodedName() + " table=" + tableName);
+          restoreStoreFile(familyDir, regionInfo, hfileName);
         }
       } else {
         // Family doesn't exists in the snapshot
