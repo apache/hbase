@@ -160,9 +160,16 @@ public class TestThriftServer {
    * Tests if the metrics for thrift handler work correctly
    */
   public void doTestThriftMetrics() throws Exception {
+    LOG.info("START doTestThriftMetrics");
     Configuration conf = UTIL.getConfiguration();
     ThriftMetrics metrics = getMetrics(conf);
     Hbase.Iface handler = getHandlerForMetricsTest(metrics, conf);
+    try {
+      metricsHelper.assertCounter("createTable_num_ops", 2, metrics.getSource());
+    } catch (AssertionError e) {
+      // DEBUGGING
+      LOG.info("Got expected assertion error");
+    }
     createTestTables(handler);
     dropTestTables(handler);
     metricsHelper.assertCounter("createTable_num_ops", 2, metrics.getSource());
