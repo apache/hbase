@@ -220,7 +220,7 @@ public class TestRestoreSnapshotFromClient {
   }
 
   @Test
-  public void testRestoreSnapshotOfCloned() throws IOException, InterruptedException {
+  public void testCloneSnapshotOfCloned() throws IOException, InterruptedException {
     byte[] clonedTableName = Bytes.toBytes("clonedtb-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
@@ -232,6 +232,21 @@ public class TestRestoreSnapshotFromClient {
     admin.cloneSnapshot(snapshotName2, clonedTableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
     TEST_UTIL.deleteTable(clonedTableName);
+  }
+
+  @Test
+  public void testCloneAndRestoreSnapshot() throws IOException, InterruptedException {
+    TEST_UTIL.deleteTable(tableName);
+    waitCleanerRun();
+
+    admin.cloneSnapshot(snapshotName0, tableName);
+    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
+    waitCleanerRun();
+
+    admin.disableTable(tableName);
+    admin.restoreSnapshot(snapshotName0);
+    admin.enableTable(tableName);
+    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
   }
 
   // ==========================================================================
