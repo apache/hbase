@@ -163,8 +163,12 @@ public class MetaScanner {
           HConstants.ZEROES, false);
       }
       final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
-      int rows = Math.min(rowLimit, configuration.getInt(HConstants.HBASE_META_SCANNER_CACHING,
-        HConstants.DEFAULT_HBASE_META_SCANNER_CACHING));
+      int scannerCaching = configuration.getInt(HConstants.HBASE_META_SCANNER_CACHING,
+        HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
+      if (rowUpperLimit <= scannerCaching) {
+          scan.setSmall(true);
+      }
+      int rows = Math.min(rowLimit, scannerCaching);
       scan.setCaching(rows);
       if (LOG.isTraceEnabled()) {
         LOG.trace("Scanning " + metaTableName.getNameAsString() + " starting at row=" +

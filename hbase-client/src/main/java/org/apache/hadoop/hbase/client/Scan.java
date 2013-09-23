@@ -738,9 +738,11 @@ public class Scan extends OperationWithAttributes {
    * considered as a small scan.
    * 
    * @param small
+   * @return this instance
    */
-  public void setSmall(boolean small) {
+  public Scan setSmall(boolean small) {
     this.small = small;
+    return this;
   }
 
   /**
