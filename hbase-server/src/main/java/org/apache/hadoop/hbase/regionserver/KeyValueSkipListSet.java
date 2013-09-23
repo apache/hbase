@@ -44,7 +44,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
  * get and set and won't throw ConcurrentModificationException when iterating.
  */
 @InterfaceAudience.Private
-class KeyValueSkipListSet implements NavigableSet<KeyValue> {
+public class KeyValueSkipListSet implements NavigableSet<KeyValue> {
   private final ConcurrentNavigableMap<KeyValue, KeyValue> delegatee;
 
   KeyValueSkipListSet(final KeyValue.KVComparator c) {

@@ -47,7 +47,10 @@ import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.KeyValueSkipListSet;
 import org.apache.hadoop.hbase.regionserver.MemStore;
+import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
+import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -225,7 +228,23 @@ public class TestHeapSize  {
       assertEquals(expected, actual);
     }
 
+    // TimeRangeTracker
+    cl = TimeRangeTracker.class;
+    expected = ClassSize.estimateBase(cl, false);
+    actual = ClassSize.TIMERANGE_TRACKER;
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      assertEquals(expected, actual);
+    }
 
+    // KeyValueSkipListSet
+    cl = KeyValueSkipListSet.class;
+    expected = ClassSize.estimateBase(cl, false);
+    actual = ClassSize.KEYVALUE_SKIPLIST_SET;
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      assertEquals(expected, actual);
+    }
   }
 
   /**
@@ -288,17 +307,19 @@ public class TestHeapSize  {
     expected = ClassSize.estimateBase(cl, false);
     expected += ClassSize.estimateBase(ReentrantReadWriteLock.class, false);
     expected += ClassSize.estimateBase(AtomicLong.class, false);
-    expected += ClassSize.estimateBase(ConcurrentSkipListMap.class, false);
-    expected += ClassSize.estimateBase(ConcurrentSkipListMap.class, false);
-    expected += ClassSize.estimateBase(CopyOnWriteArraySet.class, false);
-    expected += ClassSize.estimateBase(CopyOnWriteArrayList.class, false);
+    expected += (2 * ClassSize.estimateBase(KeyValueSkipListSet.class, false));
+    expected += (2 * ClassSize.estimateBase(ConcurrentSkipListMap.class, false));
+    expected += (2 * ClassSize.estimateBase(TimeRangeTracker.class, false));
     if(expected != actual) {
       ClassSize.estimateBase(cl, true);
       ClassSize.estimateBase(ReentrantReadWriteLock.class, true);
       ClassSize.estimateBase(AtomicLong.class, true);
+      ClassSize.estimateBase(KeyValueSkipListSet.class, true);
+      ClassSize.estimateBase(KeyValueSkipListSet.class, true);
       ClassSize.estimateBase(ConcurrentSkipListMap.class, true);
-      ClassSize.estimateBase(CopyOnWriteArraySet.class, true);
-      ClassSize.estimateBase(CopyOnWriteArrayList.class, true);
+      ClassSize.estimateBase(ConcurrentSkipListMap.class, true);
+      ClassSize.estimateBase(TimeRangeTracker.class, true);
+      ClassSize.estimateBase(TimeRangeTracker.class, true);
       assertEquals(expected, actual);
     }
 
