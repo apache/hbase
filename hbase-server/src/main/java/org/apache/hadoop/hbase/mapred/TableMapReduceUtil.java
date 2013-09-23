@@ -262,8 +262,6 @@ public class TableMapReduceUtil {
     org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addDependencyJars(
       job,
       org.apache.zookeeper.ZooKeeper.class,
-      // This is ugly.  Our zk3.4.5 depends on the org.jboss.netty, not hadoops io.netty
-      // so need to load it up explicitly while on 3.4.5 zk
       org.jboss.netty.channel.ChannelFactory.class,
       com.google.common.base.Function.class,
       com.google.protobuf.Message.class,

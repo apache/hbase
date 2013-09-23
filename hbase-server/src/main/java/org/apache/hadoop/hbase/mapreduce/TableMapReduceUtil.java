@@ -526,8 +526,6 @@ public class TableMapReduceUtil {
           org.apache.hadoop.hbase.CompatibilityFactory.class,            // hbase-hadoop-compat
           // pull necessary dependencies
           org.apache.zookeeper.ZooKeeper.class,
-          // This is ugly.  Our zk3.4.5 depends on the org.jboss.netty, not hadoops io.netty
-          // so need to load it up explicitly while on 3.4.5 zk
           org.jboss.netty.channel.ChannelFactory.class,
           com.google.protobuf.Message.class,
           com.google.common.collect.Lists.class,
