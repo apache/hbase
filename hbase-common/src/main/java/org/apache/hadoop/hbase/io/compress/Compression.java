@@ -231,7 +231,6 @@ public final class Compression {
               lz4Codec = buildCodec(conf);
             }
           }
-          buildCodec(conf);
         }
         return lz4Codec;
       }
