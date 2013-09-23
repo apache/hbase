@@ -305,7 +305,7 @@ goto :eof
   if EXIST %HBASE_HOME%\lib\ruby (
     set HBASE_OPTS=%HBASE_OPTS% -Dhbase.ruby.sources=%HBASE_HOME%\lib\ruby
   ) else (
-    set HBASE_OPTS=%HBASE_OPTS% -Dhbase.ruby.sources=%HBASE_HOME%\hbase-server\src\main\ruby
+    set HBASE_OPTS=%HBASE_OPTS% -Dhbase.ruby.sources=%HBASE_HOME%\hbase-shell\src\main\ruby
   )
 
   set CLASS=org.jruby.Main -X+O %JRUBY_OPTS% %HBASE_HOME%\bin\hirb.rb

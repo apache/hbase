@@ -51,6 +51,7 @@
   <modules>
     <module>hbase-server</module>
     <module>hbase-thrift</module>
+    <module>hbase-shell</module>
     <module>hbase-protocol</module>
     <module>hbase-client</module>
     <module>hbase-hadoop-compat</module>
@@ -974,6 +975,18 @@
       </dependency>
       <dependency>
         <artifactId>hbase-server</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-shell</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-shell</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
         <type>test-jar</type>
