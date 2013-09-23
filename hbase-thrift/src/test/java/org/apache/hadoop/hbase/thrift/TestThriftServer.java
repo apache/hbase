@@ -166,6 +166,7 @@ public class TestThriftServer {
     Hbase.Iface handler = getHandlerForMetricsTest(metrics, conf);
     try {
       metricsHelper.assertCounter("createTable_num_ops", 2, metrics.getSource());
+      LOG.info("SHOULD NOT BE HERE");
     } catch (AssertionError e) {
       // DEBUGGING
       LOG.info("Got expected assertion error");
@@ -682,6 +683,4 @@ public class TestThriftServer {
     handler.scannerGet(scannerId);
     handler.scannerClose(scannerId);
   }
-
 }
-
