@@ -174,11 +174,11 @@ public class TestAsyncProcess {
     List<Put> puts = new ArrayList<Put>();
     puts.add(createPut(true, true));
 
-    ap.incTaskCounters(hri1.getEncodedName());
+    ap.incTaskCounters(Arrays.asList(hri1.getRegionName()));
     ap.submit(puts, false);
     Assert.assertEquals(puts.size(), 1);
 
-    ap.decTaskCounters(hri1.getEncodedName());
+    ap.decTaskCounters(Arrays.asList(hri1.getRegionName()));
     ap.submit(puts, false);
     Assert.assertTrue(puts.isEmpty());
   }
@@ -349,7 +349,7 @@ public class TestAsyncProcess {
     final AsyncProcess ap = new MyAsyncProcess<Object>(hc, null, conf);
 
     for (int i = 0; i < 1000; i++) {
-      ap.incTaskCounters("dummy");
+      ap.incTaskCounters(Arrays.asList("dummy".getBytes()));
     }
 
     final Thread myThread = Thread.currentThread();
@@ -378,7 +378,7 @@ public class TestAsyncProcess {
       public void run() {
         Threads.sleep(sleepTime);
         while (ap.tasksDone.get() > 0) {
-          ap.decTaskCounters("dummy");
+          ap.decTaskCounters(Arrays.asList("dummy".getBytes()));
         }
       }
     };
