@@ -199,6 +199,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
+import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Strings;
@@ -370,6 +371,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   // is name of the webapp and the attribute name used stuffing this instance
   // into web context.
   InfoServer infoServer;
+  private JvmPauseMonitor pauseMonitor;
 
   /** region server process name */
   public static final String REGIONSERVER = "regionserver";
@@ -761,6 +763,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // Setup RPC client for master communication
     rpcClient = new RpcClient(conf, clusterId, new InetSocketAddress(
         this.isa.getAddress(), 0));
+    this.pauseMonitor = new JvmPauseMonitor(conf);
+    pauseMonitor.start();
   }
 
   /**
@@ -926,6 +930,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
     this.rpcClient.stop();
     this.leases.close();
+    if (this.pauseMonitor != null) {
+      this.pauseMonitor.stop();
+    }
 
     if (!killed) {
       join();
