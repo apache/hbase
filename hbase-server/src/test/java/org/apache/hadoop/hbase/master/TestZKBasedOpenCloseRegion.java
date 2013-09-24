@@ -80,6 +80,7 @@ public class TestZKBasedOpenCloseRegion {
     waitUntilAllRegionsAssigned();
     addToEachStartKey(countOfRegions);
     t.close();
+    TEST_UTIL.getHBaseCluster().getMaster().assignmentManager.initializeHandlerTrackers();
   }
 
   @AfterClass public static void afterAllTests() throws Exception {

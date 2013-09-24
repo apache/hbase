@@ -53,6 +53,7 @@ public class TestMaster {
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(2);
     admin = TEST_UTIL.getHBaseAdmin();
+    TEST_UTIL.getHBaseCluster().getMaster().assignmentManager.initializeHandlerTrackers();
   }
 
   @AfterClass
