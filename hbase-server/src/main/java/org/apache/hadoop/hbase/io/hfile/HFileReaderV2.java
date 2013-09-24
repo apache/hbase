@@ -992,17 +992,18 @@ public class HFileReaderV2 extends AbstractHFileReader {
             "EncodedScanner works only on encoded data blocks");
       }
 
-      short dataBlockEncoderId = block.getDataBlockEncodingId();
-      if (dataBlockEncoder == null ||
-          !DataBlockEncoding.isCorrectEncoder(dataBlockEncoder,
-              dataBlockEncoderId)) {
-        DataBlockEncoder encoder =
-            DataBlockEncoding.getDataBlockEncoderById(dataBlockEncoderId);
-        setDataBlockEncoder(encoder);
-      }
-
+      updateDataBlockEncoder(block);
       seeker.setCurrentBuffer(getEncodedBuffer(newBlock));
       blockFetches++;
+    }
+
+    private void updateDataBlockEncoder(HFileBlock curBlock) {
+      short dataBlockEncoderId = curBlock.getDataBlockEncodingId();
+      if (dataBlockEncoder == null ||
+          !DataBlockEncoding.isCorrectEncoder(dataBlockEncoder, dataBlockEncoderId)) {
+        DataBlockEncoder encoder = DataBlockEncoding.getDataBlockEncoderById(dataBlockEncoderId);
+        setDataBlockEncoder(encoder);
+      }
     }
 
     private ByteBuffer getEncodedBuffer(HFileBlock newBlock) {
@@ -1097,6 +1098,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
     @Override
     protected ByteBuffer getFirstKeyInBlock(HFileBlock curBlock) {
+      updateDataBlockEncoder(curBlock);
       return dataBlockEncoder.getFirstKeyInBlock(getEncodedBuffer(curBlock));
     }
 
