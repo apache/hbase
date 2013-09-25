@@ -32,6 +32,12 @@ public interface MetricsRegionWrapper {
   String getTableName();
 
   /**
+   * Get the name of the namespace this table is in.
+   * @return String version of the namespace.  Can't be empty.
+   */
+  String getNamespace();
+
+  /**
    * Get the name of the region.
    *
    * @return The encoded name of the region.

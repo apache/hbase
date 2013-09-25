@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.thrift;
 
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.lib.MetricMutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MetricMutableHistogram;
 import org.apache.hadoop.metrics2.lib.MetricMutableStat;
 
 /**
@@ -31,12 +32,12 @@ public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
     MetricsThriftServerSource {
 
 
-  private MetricMutableStat batchGetStat;
-  private MetricMutableStat batchMutateStat;
-  private MetricMutableStat queueTimeStat;
+  private MetricMutableHistogram batchGetStat;
+  private MetricMutableHistogram batchMutateStat;
+  private MetricMutableHistogram queueTimeStat;
 
-  private MetricMutableStat thriftCallStat;
-  private MetricMutableStat thriftSlowCallStat;
+  private MetricMutableHistogram thriftCallStat;
+  private MetricMutableHistogram thriftSlowCallStat;
 
   private MetricMutableGaugeLong callQueueLenGauge;
 
@@ -51,11 +52,11 @@ public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
   @Override
   public void init() {
     super.init();
-    batchGetStat = getMetricsRegistry().newStat(BATCH_GET_KEY, "", "Keys", "Ops");
-    batchMutateStat = getMetricsRegistry().newStat(BATCH_MUTATE_KEY, "", "Keys", "Ops");
-    queueTimeStat = getMetricsRegistry().newStat(TIME_IN_QUEUE_KEY);
-    thriftCallStat = getMetricsRegistry().newStat(THRIFT_CALL_KEY);
-    thriftSlowCallStat = getMetricsRegistry().newStat(SLOW_THRIFT_CALL_KEY);
+    batchGetStat = getMetricsRegistry().newHistogram(BATCH_GET_KEY);
+    batchMutateStat = getMetricsRegistry().newHistogram(BATCH_MUTATE_KEY);
+    queueTimeStat = getMetricsRegistry().newHistogram(TIME_IN_QUEUE_KEY);
+    thriftCallStat = getMetricsRegistry().newHistogram(THRIFT_CALL_KEY);
+    thriftSlowCallStat = getMetricsRegistry().newHistogram(SLOW_THRIFT_CALL_KEY);
     callQueueLenGauge = getMetricsRegistry().getLongGauge(CALL_QUEUE_LEN_KEY, 0);
   }
 
@@ -81,7 +82,7 @@ public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
 
   @Override
   public void incMethodTime(String name, long time) {
-    MetricMutableStat s = getMetricsRegistry().newStat(name);
+    MetricMutableHistogram s = getMetricsRegistry().getHistogram(name);
     s.add(time);
   }
 

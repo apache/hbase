@@ -60,7 +60,12 @@ public class TestMetricsRegionSourceImpl {
 
     @Override
     public String getTableName() {
-      return null;  //To change body of implemented methods use File | Settings | File Templates.
+      return null;
+    }
+
+    @Override
+    public String getNamespace() {
+      return null;
     }
 
     @Override
@@ -70,32 +75,32 @@ public class TestMetricsRegionSourceImpl {
 
     @Override
     public long getNumStores() {
-      return 0;  //To change body of implemented methods use File | Settings | File Templates.
+      return 0;
     }
 
     @Override
     public long getNumStoreFiles() {
-      return 0;  //To change body of implemented methods use File | Settings | File Templates.
+      return 0;
     }
 
     @Override
     public long getMemstoreSize() {
-      return 0;  //To change body of implemented methods use File | Settings | File Templates.
+      return 0;
     }
 
     @Override
     public long getStoreFileSize() {
-      return 0;  //To change body of implemented methods use File | Settings | File Templates.
+      return 0;
     }
 
     @Override
     public long getReadRequestCount() {
-      return 0;  //To change body of implemented methods use File | Settings | File Templates.
+      return 0;
     }
 
     @Override
     public long getWriteRequestCount() {
-      return 0;  //To change body of implemented methods use File | Settings | File Templates.
+      return 0;
     }
   }
 }

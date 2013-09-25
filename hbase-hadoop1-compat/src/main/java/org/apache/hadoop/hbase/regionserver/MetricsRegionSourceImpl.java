@@ -24,7 +24,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
-import org.apache.hadoop.metrics2.lib.MetricMutableStat;
+import org.apache.hadoop.metrics2.lib.MetricMutableHistogram;
 
 public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
@@ -46,8 +46,8 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private MetricMutableCounterLong regionIncrement;
   private MetricMutableCounterLong regionAppend;
 
-  private MetricMutableStat regionGet;
-  private MetricMutableStat regionScanNext;
+  private MetricMutableHistogram regionGet;
+  private MetricMutableHistogram regionScanNext;
 
   public MetricsRegionSourceImpl(MetricsRegionWrapper regionWrapper,
                                  MetricsRegionAggregateSourceImpl aggregate) {
@@ -56,14 +56,14 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     agg.register(this);
 
     LOG.debug("Creating new MetricsRegionSourceImpl for table " +
-        regionWrapper.getTableName() +
-        " " +
-        regionWrapper.getRegionName());
+        regionWrapper.getTableName() + " " + regionWrapper.getRegionName());
 
     registry = agg.getMetricsRegistry();
 
-    regionNamePrefix = "table." + regionWrapper.getTableName() + "."
-        + "region." + regionWrapper.getRegionName() + ".";
+    regionNamePrefix = "namespace_" + regionWrapper.getNamespace() +
+        "_table_" + regionWrapper.getTableName() +
+        "_region_" + regionWrapper.getRegionName()  +
+        "_metric_";
 
     String suffix = "Count";
 
@@ -81,10 +81,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     regionAppend = registry.getLongCounter(regionAppendKey, 0l);
 
     regionGetKey = regionNamePrefix + MetricsRegionServerSource.GET_KEY;
-    regionGet = registry.newStat(regionGetKey, "", OPS_SAMPLE_NAME, SIZE_VALUE_NAME);
+    regionGet = registry.newHistogram(regionGetKey);
 
     regionScanNextKey = regionNamePrefix + MetricsRegionServerSource.SCAN_NEXT_KEY;
-    regionScanNext = registry.newStat(regionScanNextKey, "", OPS_SAMPLE_NAME, SIZE_VALUE_NAME);
+    regionScanNext = registry.newHistogram(regionScanNextKey);
   }
 
   @Override
