@@ -1462,8 +1462,10 @@ public class HStore implements Store {
         StoreFile sf = sfIterator.next();
         sfIterator.remove(); // Remove sf from iterator.
         boolean haveNewCandidate = rowAtOrBeforeFromStoreFile(sf, state);
+        KeyValue keyv = state.getCandidate();
+        // we have an optimization here which stops the search if we find exact match.
+        if (keyv != null && keyv.matchingRow(row)) return state.getCandidate();
         if (haveNewCandidate) {
-          // TODO: we may have an optimization here which stops the search if we find exact match.
           sfIterator = this.storeEngine.getStoreFileManager().updateCandidateFilesForRowKeyBefore(
               sfIterator, state.getTargetKey(), state.getCandidate());
         }
