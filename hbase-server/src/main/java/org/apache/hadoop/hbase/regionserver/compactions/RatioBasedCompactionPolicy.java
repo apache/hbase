@@ -392,6 +392,6 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
   public boolean needsCompaction(final Collection<StoreFile> storeFiles,
       final List<StoreFile> filesCompacting) {
     int numCandidates = storeFiles.size() - filesCompacting.size();
-    return numCandidates > comConf.getMinFilesToCompact();
+    return numCandidates >= comConf.getMinFilesToCompact();
   }
 }
