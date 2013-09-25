@@ -973,6 +973,7 @@ public class HStore implements Store {
     try {
       // Commence the compaction.
       List<Path> newFiles = compaction.compact();
+
       // TODO: get rid of this!
       if (!this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
         LOG.warn("hbase.hstore.compaction.complete is set to false");
@@ -1321,7 +1322,7 @@ public class HStore implements Store {
   }
 
   private void finishCompactionRequest(CompactionRequest cr) {
-    this.region.reportCompactionRequestEnd(cr.isMajor());
+    this.region.reportCompactionRequestEnd(cr.isMajor(), cr.getFiles().size(), cr.getSize());
     if (cr.isOffPeak()) {
       offPeakCompactionTracker.set(false);
       cr.setOffPeak(false);

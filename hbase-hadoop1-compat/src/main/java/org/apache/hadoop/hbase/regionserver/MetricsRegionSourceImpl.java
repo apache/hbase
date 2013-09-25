@@ -179,6 +179,16 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     mrb.addCounter(regionNamePrefix + MetricsRegionServerSource.WRITE_REQUEST_COUNT,
         MetricsRegionServerSource.WRITE_REQUEST_COUNT_DESC,
         this.regionWrapper.getWriteRequestCount());
+    mrb.addCounter(regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
+        MetricsRegionSource.COMPACTIONS_COMPLETED_DESC,
+        this.regionWrapper.getNumCompactionsCompleted());
+    mrb.addCounter(regionNamePrefix + MetricsRegionSource.NUM_BYTES_COMPACTED_COUNT,
+        MetricsRegionSource.NUM_BYTES_COMPACTED_DESC,
+        this.regionWrapper.getNumBytesCompacted());
+    mrb.addCounter(regionNamePrefix + MetricsRegionSource.NUM_FILES_COMPACTED_COUNT,
+        MetricsRegionSource.NUM_FILES_COMPACTED_DESC,
+        this.regionWrapper.getNumFilesCompacted());
+
 
   }
 }

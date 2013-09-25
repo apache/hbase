@@ -102,5 +102,20 @@ public class TestMetricsRegionSourceImpl {
     public long getWriteRequestCount() {
       return 0;
     }
+
+    @Override
+    public long getNumFilesCompacted() {
+      return 0;
+    }
+
+    @Override
+    public long getNumBytesCompacted() {
+      return 0;
+    }
+
+    @Override
+    public long getNumCompactionsCompleted() {
+      return 0;
+    }
   }
 }
