@@ -157,6 +157,27 @@ public class TestThriftServer {
   }
 
   /**
+   * TODO: These counts are supposed to be zero but sometimes they are not, they are equal to the
+   * passed in maybe.  Investigate why.  My guess is they are set by the test that runs just
+   * previous to this one.  Sometimes they are cleared.  Sometimes not.
+   * @param name
+   * @param maybe
+   * @param metrics
+   * @return
+   */
+  private int getCurrentCount(final String name, final int maybe, final ThriftMetrics metrics) {
+    int currentCount = 0;
+    try {
+      metricsHelper.assertCounter(name, maybe, metrics.getSource());
+      LOG.info("Shouldn't this be null? name=" + name + ", equals=" + maybe);
+      currentCount = maybe;
+    } catch (AssertionError e) {
+      // Ignore
+    }
+    return currentCount;
+  }
+
+  /**
    * Tests if the metrics for thrift handler work correctly
    */
   public void doTestThriftMetrics() throws Exception {
@@ -164,18 +185,17 @@ public class TestThriftServer {
     Configuration conf = UTIL.getConfiguration();
     ThriftMetrics metrics = getMetrics(conf);
     Hbase.Iface handler = getHandlerForMetricsTest(metrics, conf);
-    try {
-      metricsHelper.assertCounter("createTable_num_ops", 2, metrics.getSource());
-      LOG.info("SHOULD NOT BE HERE");
-    } catch (AssertionError e) {
-      // DEBUGGING
-      LOG.info("Got expected assertion error");
-    }
+    int currentCountCreateTable = getCurrentCount("createTable_num_ops", 2, metrics);
+    int currentCountDeleteTable = getCurrentCount("deleteTable_num_ops", 2, metrics);
+    int currentCountDisableTable = getCurrentCount("disableTable_num_ops", 2, metrics);
     createTestTables(handler);
-    dropTestTables(handler);
-    metricsHelper.assertCounter("createTable_num_ops", 2, metrics.getSource());
-    metricsHelper.assertCounter("deleteTable_num_ops", 2, metrics.getSource());
-    metricsHelper.assertCounter("disableTable_num_ops", 2, metrics.getSource());
+    dropTestTables(handler);;
+    metricsHelper.assertCounter("createTable_num_ops", currentCountCreateTable + 2,
+      metrics.getSource());
+    metricsHelper.assertCounter("deleteTable_num_ops", currentCountDeleteTable + 2,
+      metrics.getSource());
+    metricsHelper.assertCounter("disableTable_num_ops", currentCountDisableTable + 2,
+      metrics.getSource());
     handler.getTableNames(); // This will have an artificial delay.
 
     // 3 to 6 seconds (to account for potential slowness), measured in nanoseconds
