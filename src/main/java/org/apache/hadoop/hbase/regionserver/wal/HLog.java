@@ -1391,7 +1391,7 @@ public class HLog implements Syncable {
    * @return
    */
   public long startCacheFlush(final byte[] regionName) {
-    return startCacheFlush(regionName, -1L, -1L);
+    return startCacheFlush(regionName, Long.MAX_VALUE, Long.MAX_VALUE);
   }
 
   /**
