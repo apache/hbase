@@ -907,7 +907,7 @@ public class SplitLogManager extends ZooKeeperListener {
     volatile long last_update;
     volatile int last_version;
     volatile String cur_worker_name;
-    TaskBatch batch;
+    volatile TaskBatch batch;
     volatile TerminationStatus status;
     volatile int incarnation;
     volatile int unforcedResubmits;
@@ -1196,7 +1196,7 @@ public class SplitLogManager extends ZooKeeperListener {
           }
           return;
         } else {
-        LOG.debug(path +
+        LOG.info(path +
             " does not exist. Either was created but deleted behind our" +
             " back by another pending delete OR was deleted" +
             " in earlier retry rounds. zkretries = " + (Long) ctx);
