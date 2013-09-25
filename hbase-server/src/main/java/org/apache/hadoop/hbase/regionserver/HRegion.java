@@ -250,8 +250,11 @@ public class HRegion implements HeapSize { // , Writable{
   final Counter readRequestsCount = new Counter();
   final Counter writeRequestsCount = new Counter();
 
-  //How long operations were blocked by a memstore over highwater.
-  final Counter updatesBlockedMs = new Counter();
+  // Compaction counters
+  final AtomicLong compactionsFinished = new AtomicLong(0L);
+  final AtomicLong compactionNumFilesCompacted = new AtomicLong(0L);
+  final AtomicLong compactionNumBytesCompacted = new AtomicLong(0L);
+
 
   private final HLog log;
   private final HRegionFileSystem fs;
@@ -4927,7 +4930,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      38 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      40 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (11 * Bytes.SIZEOF_LONG) +
       4 * Bytes.SIZEOF_BOOLEAN);
 
@@ -5496,8 +5499,14 @@ public class HRegion implements HeapSize { // , Writable{
     (isMajor ? majorInProgress : minorInProgress).incrementAndGet();
   }
 
-  public void reportCompactionRequestEnd(boolean isMajor){
+  public void reportCompactionRequestEnd(boolean isMajor, int numFiles, long filesSizeCompacted){
     int newValue = (isMajor ? majorInProgress : minorInProgress).decrementAndGet();
+
+    // metrics
+    compactionsFinished.incrementAndGet();
+    compactionNumFilesCompacted.addAndGet(numFiles);
+    compactionNumBytesCompacted.addAndGet(filesSizeCompacted);
+
     assert newValue >= 0;
   }
 

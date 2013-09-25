@@ -180,5 +180,15 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
         MetricsRegionServerSource.STOREFILE_SIZE_DESC),
         this.regionWrapper.getStoreFileSize());
+    mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
+        MetricsRegionSource.COMPACTIONS_COMPLETED_DESC),
+        this.regionWrapper.getNumCompactionsCompleted());
+    mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.NUM_BYTES_COMPACTED_COUNT,
+        MetricsRegionSource.NUM_BYTES_COMPACTED_DESC),
+        this.regionWrapper.getNumBytesCompacted());
+    mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.NUM_FILES_COMPACTED_COUNT,
+        MetricsRegionSource.NUM_FILES_COMPACTED_DESC),
+        this.regionWrapper.getNumFilesCompacted());
+
   }
 }

@@ -74,4 +74,9 @@ public interface MetricsRegionWrapper {
    */
   long getWriteRequestCount();
 
+  long getNumFilesCompacted();
+
+  long getNumBytesCompacted();
+
+  long getNumCompactionsCompleted();
 }

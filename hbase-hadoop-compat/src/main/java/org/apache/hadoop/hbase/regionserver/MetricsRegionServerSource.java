@@ -155,6 +155,8 @@ public interface MetricsRegionServerSource extends BaseSource {
   String PERCENT_FILES_LOCAL_DESC =
       "The percent of HFiles that are stored on the local hdfs data node.";
   String COMPACTION_QUEUE_LENGTH = "compactionQueueLength";
+  String LARGE_COMPACTION_QUEUE_LENGTH = "largeCompactionQueueLength";
+  String SMALL_COMPACTION_QUEUE_LENGTH = "smallCompactionQueueLength";
   String COMPACTION_QUEUE_LENGTH_DESC = "Length of the queue for compactions.";
   String FLUSH_QUEUE_LENGTH = "flushQueueLength";
   String FLUSH_QUEUE_LENGTH_DESC = "Length of the queue for region flushes";

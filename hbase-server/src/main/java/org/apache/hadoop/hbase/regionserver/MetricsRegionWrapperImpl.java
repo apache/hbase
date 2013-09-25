@@ -114,6 +114,21 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     return this.region.getWriteRequestsCount();
   }
 
+  @Override
+  public long getNumFilesCompacted() {
+    return this.region.compactionNumFilesCompacted.get();
+  }
+
+  @Override
+  public long getNumBytesCompacted() {
+    return this.region.compactionNumBytesCompacted.get();
+  }
+
+  @Override
+  public long getNumCompactionsCompleted() {
+    return this.region.compactionsFinished.get();
+  }
+
   public class HRegionMetricsWrapperRunnable implements Runnable {
 
     @Override

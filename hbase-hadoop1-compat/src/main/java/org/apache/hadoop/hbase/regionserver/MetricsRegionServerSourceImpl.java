@@ -174,6 +174,12 @@ public class MetricsRegionServerSourceImpl
           .addGauge(COMPACTION_QUEUE_LENGTH,
               COMPACTION_QUEUE_LENGTH_DESC,
               rsWrap.getCompactionQueueSize())
+          .addGauge(LARGE_COMPACTION_QUEUE_LENGTH,
+              COMPACTION_QUEUE_LENGTH_DESC,
+              rsWrap.getLargeCompactionQueueSize())
+          .addGauge(SMALL_COMPACTION_QUEUE_LENGTH,
+              COMPACTION_QUEUE_LENGTH_DESC,
+              rsWrap.getSmallCompactionQueueSize())
           .addGauge(FLUSH_QUEUE_LENGTH, FLUSH_QUEUE_LENGTH_DESC, rsWrap.getFlushQueueSize())
           .addGauge(BLOCK_CACHE_FREE_SIZE, BLOCK_CACHE_FREE_DESC, rsWrap.getBlockCacheFreeSize())
           .addGauge(BLOCK_CACHE_COUNT, BLOCK_CACHE_COUNT_DESC, rsWrap.getBlockCacheCount())

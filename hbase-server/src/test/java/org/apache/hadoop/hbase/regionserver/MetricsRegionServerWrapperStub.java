@@ -136,6 +136,16 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public int getSmallCompactionQueueSize() {
+    return 0;
+  }
+
+  @Override
+  public int getLargeCompactionQueueSize() {
+    return 0;
+  }
+
+  @Override
   public int getFlushQueueSize() {
     return 412;
   }

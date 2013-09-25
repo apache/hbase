@@ -156,6 +156,24 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public int getSmallCompactionQueueSize() {
+    //The thread could be zero.  if so assume there is no queue.
+    if (this.regionServer.compactSplitThread == null) {
+      return 0;
+    }
+    return this.regionServer.compactSplitThread.getSmallCompactionQueueSize();
+  }
+
+  @Override
+  public int getLargeCompactionQueueSize() {
+    //The thread could be zero.  if so assume there is no queue.
+    if (this.regionServer.compactSplitThread == null) {
+      return 0;
+    }
+    return this.regionServer.compactSplitThread.getLargeCompactionQueueSize();
+  }
+
+  @Override
   public int getFlushQueueSize() {
     //If there is no flusher there should be no queue.
     if (this.regionServer.cacheFlusher == null) {
