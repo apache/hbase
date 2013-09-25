@@ -343,7 +343,11 @@ public class HFilePrettyPrinter {
       }
     }
 
-    System.out.println("Mid-key: " + Bytes.toStringBinary(reader.midkey()));
+    try {
+      System.out.println("Mid-key: " + Bytes.toStringBinary(reader.midkey()));
+    } catch (Exception e) {
+      System.out.println ("Unable to retrieve the midkey");
+    }
 
     // Printing general bloom information
     DataInput bloomMeta = reader.getGeneralBloomFilterMetadata();

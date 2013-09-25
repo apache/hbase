@@ -852,9 +852,12 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
 
   /**
    * @param k Key portion of a KeyValue.
-   * @return Key as a String.
+   * @return Key as a String, empty string if k is null. 
    */
   public static String keyToString(final byte [] k) {
+    if (k == null) { 
+      return "";
+    }
     return keyToString(k, 0, k.length);
   }
 
