@@ -141,9 +141,12 @@ public class TestRegionServerMetrics {
           .getMetrics()
           .getSource()
           .getAggregateSource();
-      String prefix = "table."+tableNameString + ".region." + i.getEncodedName();
-      metricsHelper.assertCounter(prefix + ".getNumOps", 10, agg);
-      metricsHelper.assertCounter(prefix + ".mutateCount", 30, agg);
+      String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+          "_table_"+tableNameString +
+          "_region_" + i.getEncodedName()+
+          "_metric";
+      metricsHelper.assertCounter(prefix + "_getNumOps", 10, agg);
+      metricsHelper.assertCounter(prefix + "_mutateCount", 30, agg);
     }
 
 
@@ -347,8 +350,11 @@ public class TestRegionServerMetrics {
           .getMetrics()
           .getSource()
           .getAggregateSource();
-      String prefix = "table."+tableNameString + ".region." + i.getEncodedName();
-      metricsHelper.assertCounter(prefix + ".scanNextNumOps", 30, agg);
+      String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+          "_table_"+tableNameString +
+          "_region_" + i.getEncodedName()+
+          "_metric";
+      metricsHelper.assertCounter(prefix + "_scanNextNumOps", 30, agg);
     }
   }
 }

@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.thrift;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
-import org.apache.hadoop.metrics2.lib.MutableStat;
+import org.apache.hadoop.metrics2.lib.MutableHistogram;
 
 /**
  * Hadoop 2 version of MetricsThriftServerSource{@link org.apache.hadoop.hbase.thrift.MetricsThriftServerSource}
@@ -32,12 +32,12 @@ import org.apache.hadoop.metrics2.lib.MutableStat;
 public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
     MetricsThriftServerSource {
 
-  private MutableStat batchGetStat;
-  private MutableStat batchMutateStat;
-  private MutableStat queueTimeStat;
+  private MutableHistogram batchGetStat;
+  private MutableHistogram batchMutateStat;
+  private MutableHistogram queueTimeStat;
 
-  private MutableStat thriftCallStat;
-  private MutableStat thriftSlowCallStat;
+  private MutableHistogram thriftCallStat;
+  private MutableHistogram thriftSlowCallStat;
 
   private MutableGaugeLong callQueueLenGauge;
 
@@ -51,13 +51,11 @@ public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
   @Override
   public void init() {
     super.init();
-    batchGetStat = getMetricsRegistry().newStat(BATCH_GET_KEY, "", "Keys", "Ops");
-    batchMutateStat = getMetricsRegistry().newStat(BATCH_MUTATE_KEY, "", "Keys", "Ops");
-    queueTimeStat = getMetricsRegistry().newRate(TIME_IN_QUEUE_KEY);
-
-    thriftCallStat = getMetricsRegistry().newRate(THRIFT_CALL_KEY);
-    thriftSlowCallStat = getMetricsRegistry().newRate(SLOW_THRIFT_CALL_KEY);
-
+    batchGetStat = getMetricsRegistry().newHistogram(BATCH_GET_KEY);
+    batchMutateStat = getMetricsRegistry().newHistogram(BATCH_MUTATE_KEY);
+    queueTimeStat = getMetricsRegistry().newHistogram(TIME_IN_QUEUE_KEY);
+    thriftCallStat = getMetricsRegistry().newHistogram(THRIFT_CALL_KEY);
+    thriftSlowCallStat = getMetricsRegistry().newHistogram(SLOW_THRIFT_CALL_KEY);
     callQueueLenGauge = getMetricsRegistry().getLongGauge(CALL_QUEUE_LEN_KEY, 0);
 
   }
@@ -84,7 +82,7 @@ public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
 
   @Override
   public void incMethodTime(String name, long time) {
-    MutableStat s = getMetricsRegistry().newRate(name);
+    MutableHistogram s = getMetricsRegistry().getHistogram(name);
     s.add(time);
   }
 

@@ -26,6 +26,11 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
+  public String getNamespace() {
+    return "TestNS";
+  }
+
+  @Override
   public String getRegionName() {
     return "DEADBEEF001";
   }
