@@ -542,6 +542,39 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
+  @Test
+  public void testPreWALRestoreSkip() throws Exception {
+    LOG.info(TestRegionObserverInterface.class.getName() + ".testPreWALRestoreSkip");
+    TableName tableName = TableName.valueOf(SimpleRegionObserver.TABLE_SKIPPED);
+    HTable table = util.createTable(tableName, new byte[][] { A, B, C });
+
+    JVMClusterUtil.RegionServerThread rs1 = cluster.startRegionServer();
+    ServerName sn2 = rs1.getRegionServer().getServerName();
+    String regEN = table.getRegionLocations().firstEntry().getKey().getEncodedName();
+
+    util.getHBaseAdmin().move(regEN.getBytes(), sn2.getServerName().getBytes());
+    while (!sn2.equals(table.getRegionLocations().firstEntry().getValue())) {
+      Thread.sleep(100);
+    }
+
+    Put put = new Put(ROW);
+    put.add(A, A, A);
+    put.add(B, B, B);
+    put.add(C, C, C);
+    table.put(put);
+    table.flushCommits();
+
+    cluster.killRegionServer(rs1.getRegionServer().getServerName());
+    Threads.sleep(20000); // just to be sure that the kill has fully started.
+    util.waitUntilAllRegionsAssigned(tableName);
+
+    verifyMethodResult(SimpleRegionObserver.class, new String[] { "getCtPreWALRestore",
+        "getCtPostWALRestore" }, tableName, new Integer[] { 0, 0 });
+
+    util.deleteTable(tableName);
+    table.close();
+  }
+
   // check each region whether the coprocessor upcalls are called or not.
   private void verifyMethodResult(Class<?> c, String methodName[], TableName tableName,
                                   Object value[]) throws IOException {

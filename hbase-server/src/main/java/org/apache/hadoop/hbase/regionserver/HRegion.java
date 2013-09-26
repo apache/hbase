@@ -66,6 +66,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
@@ -113,10 +114,15 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -2226,8 +2232,7 @@ public class HRegion implements HeapSize { // , Writable{
       Mutation mutation = batchOp.operations[firstIndex];
       if (walEdit.size() > 0) {
         txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
-              walEdit, mutation.getClusterIds(), now, this.htableDescriptor,
-              this.getCoprocessorHost());
+              walEdit, mutation.getClusterIds(), now, this.htableDescriptor);
       }
 
       // -------------------------------
@@ -4512,8 +4517,7 @@ public class HRegion implements HeapSize { // , Writable{
           // 7. Append no sync
           if (!walEdit.isEmpty()) {
             txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
-                  walEdit, processor.getClusterIds(), now, this.htableDescriptor,
-                  this.getCoprocessorHost());
+                  walEdit, processor.getClusterIds(), now, this.htableDescriptor);
           }
           // 8. Release region lock
           if (locked) {
@@ -4741,7 +4745,7 @@ public class HRegion implements HeapSize { // , Writable{
             // as a Put.
             txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
               walEdits, new ArrayList<UUID>(), EnvironmentEdgeManager.currentTimeMillis(),
-              this.htableDescriptor, this.getCoprocessorHost());
+                  this.htableDescriptor);
           } else {
             recordMutationWithoutWal(append.getFamilyCellMap());
           }
@@ -4890,7 +4894,7 @@ public class HRegion implements HeapSize { // , Writable{
             // as a Put.
             txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
                 walEdits, new ArrayList<UUID>(), EnvironmentEdgeManager.currentTimeMillis(),
-                this.htableDescriptor, this.getCoprocessorHost());
+                  this.htableDescriptor);
           } else {
             recordMutationWithoutWal(increment.getFamilyCellMap());
           }
@@ -5630,5 +5634,84 @@ public class HRegion implements HeapSize { // , Writable{
         released = true;
       }
     }
+  }
+
+  /**
+   * This function is used to construct replay mutations from WALEdits
+   * @param entries
+   * @param cells
+   * @param clusterId
+   * @param logEntries List of Pair<HLogKey, WALEdit> contructed from its PB version - WALEntry
+   *          instances
+   * @return list of Pair<MutationType, Mutation> to be replayed
+   * @throws IOException
+   */
+  List<Pair<MutationType, Mutation>> getReplayMutations(List<WALEntry> entries,
+      CellScanner cells, UUID clusterId, List<Pair<HLogKey, WALEdit>> logEntries)
+      throws IOException {
+
+    List<Pair<MutationType, Mutation>> mutations = new ArrayList<Pair<MutationType, Mutation>>();
+    List<Pair<MutationType, Mutation>> tmpEditMutations =
+        new ArrayList<Pair<MutationType, Mutation>>();
+
+    for (WALEntry entry : entries) {
+      HLogKey logKey = null;
+      WALEdit val = null;
+      Cell previousCell = null;
+      Mutation m = null;
+      tmpEditMutations.clear();
+
+      int count = entry.getAssociatedCellCount();
+      if (coprocessorHost != null) {
+        val = new WALEdit();
+      }
+
+      for (int i = 0; i < count; i++) {
+        // Throw index out of bounds if our cell count is off
+        if (!cells.advance()) {
+          throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
+        }
+        Cell cell = cells.current();
+        if (val != null) val.add(KeyValueUtil.ensureKeyValue(cell));
+
+        boolean isNewRowOrType =
+            previousCell == null || previousCell.getTypeByte() != cell.getTypeByte()
+                || !CellUtil.matchingRow(previousCell, cell);
+        if (isNewRowOrType) {
+          // Create new mutation
+          if (CellUtil.isDelete(cell)) {
+            m = new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+            tmpEditMutations.add(new Pair<MutationType, Mutation>(MutationType.DELETE, m));
+          } else {
+            m = new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+            tmpEditMutations.add(new Pair<MutationType, Mutation>(MutationType.PUT, m));
+          }
+        }
+        if (CellUtil.isDelete(cell)) {
+          ((Delete) m).addDeleteMarker(KeyValueUtil.ensureKeyValue(cell));
+        } else {
+          ((Put) m).add(KeyValueUtil.ensureKeyValue(cell));
+        }
+        previousCell = cell;
+      }
+
+      // Start coprocessor replay here. The coprocessor is for each WALEdit
+      // instead of a KeyValue.
+      if (coprocessorHost != null) {
+        WALKey walKey = entry.getKey();
+        logKey =
+            new HLogKey(walKey.getEncodedRegionName().toByteArray(), TableName.valueOf(walKey
+                .getTableName().toByteArray()), walKey.getLogSequenceNumber(),
+                walKey.getWriteTime(), clusterId);
+        if (coprocessorHost.preWALRestore(this.getRegionInfo(), logKey, val)) {
+          // if bypass this log entry, ignore it ...
+          continue;
+        }
+        logEntries.add(new Pair<HLogKey, WALEdit>(logKey, val));
+      }
+      mutations.addAll(tmpEditMutations);
+    }
+
+    return mutations;
   }
 }

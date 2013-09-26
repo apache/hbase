@@ -545,7 +545,8 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public MultiResponse replay(RpcController controller, MultiRequest request)
+  public ReplicateWALEntryResponse
+      replay(RpcController controller, ReplicateWALEntryRequest request)
       throws ServiceException {
     // TODO Auto-generated method stub
     return null;
