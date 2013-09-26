@@ -67,8 +67,8 @@
     </fileSet>
     <!--Include dev tools-->
     <fileSet>
-      <directory>${project.basedir}/../dev-tools</directory>
-      <outputDirectory>dev-tools</outputDirectory>
+      <directory>${project.basedir}/../dev-support</directory>
+      <outputDirectory>dev-support</outputDirectory>
       <fileMode>0644</fileMode>
       <directoryMode>0755</directoryMode>
     </fileSet>
