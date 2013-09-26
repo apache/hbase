@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.mttr;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
@@ -26,7 +28,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Objects;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,7 +37,12 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
+import org.apache.hadoop.hbase.NamespaceExistException;
+import org.apache.hadoop.hbase.NamespaceNotFoundException;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.chaos.actions.MoveRegionsOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
@@ -48,10 +54,13 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
+import org.apache.hadoop.hbase.ipc.FatalConnectionException;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
-import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
 import org.cloudera.htrace.TraceScope;
@@ -61,7 +70,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static junit.framework.Assert.assertEquals;
+import com.google.common.base.Objects;
 
 /**
  * Integration test that should benchmark how fast HBase can recover from failures. This test starts
@@ -354,28 +363,67 @@ public class IntegrationTestMTTR {
    * Base class for actions that need to record the time needed to recover from a failure.
    */
   public abstract class TimingCallable implements Callable<TimingResult> {
-    protected final Future future;
+    protected final Future<?> future;
 
-    public TimingCallable(Future f) {
+    public TimingCallable(Future<?> f) {
       future = f;
     }
 
     @Override
     public TimingResult call() throws Exception {
       TimingResult result = new TimingResult();
+      final int maxIterations = 10;
       int numAfterDone = 0;
+      int resetCount = 0;
       // Keep trying until the rs is back up and we've gotten a put through
-      while (numAfterDone < 10) {
+      while (numAfterDone < maxIterations) {
         long start = System.nanoTime();
         TraceScope scope = null;
         try {
           scope = Trace.startSpan(getSpanName(), AlwaysSampler.INSTANCE);
           boolean actionResult = doAction();
           if (actionResult && future.isDone()) {
-            numAfterDone ++;
+            numAfterDone++;
           }
+
+        // the following Exceptions derive from DoNotRetryIOException. They are considered
+        // fatal for the purpose of this test. If we see one of these, it means something is
+        // broken and needs investigation. This is not the case for all children of DNRIOE.
+        // Unfortunately, this is an explicit enumeration and will need periodically refreshed.
+        // See HBASE-9655 for further discussion.
+        } catch (AccessDeniedException e) {
+          throw e;
+        } catch (CoprocessorException e) {
+          throw e;
+        } catch (FatalConnectionException e) {
+          throw e;
+        } catch (InvalidFamilyOperationException e) {
+          throw e;
+        } catch (NamespaceExistException e) {
+          throw e;
+        } catch (NamespaceNotFoundException e) {
+          throw e;
+        } catch (NoSuchColumnFamilyException e) {
+          throw e;
+        } catch (TableExistsException e) {
+          throw e;
+        } catch (TableNotFoundException e) {
+          throw e;
+
+        // Everything else is potentially recoverable on the application side. For instance, a CM
+        // action kills the RS that hosted a scanner the client was using. Continued use of that
+        // scanner should be terminated, but a new scanner can be created and the read attempted
+        // again.
         } catch (Exception e) {
-          numAfterDone = 0;
+          resetCount++;
+          if (resetCount < maxIterations) {
+            LOG.info("Non-fatal exception while running " + this.toString()
+              + ". Resetting loop counter", e);
+            numAfterDone = 0;
+          } else {
+            LOG.info("Too many unexpected Exceptions. Aborting.", e);
+            throw e;
+          }
         } finally {
           if (scope != null) {
             scope.close();
@@ -391,6 +439,11 @@ public class IntegrationTestMTTR {
     protected String getSpanName() {
       return this.getClass().getSimpleName();
     }
+
+    @Override
+    public String toString() {
+      return this.getSpanName();
+    }
   }
 
   /**
@@ -401,7 +454,7 @@ public class IntegrationTestMTTR {
 
     private final HTable table;
 
-    public PutCallable(Future f) throws IOException {
+    public PutCallable(Future<?> f) throws IOException {
       super(f);
       this.table = new HTable(util.getConfiguration(), tableName);
     }
@@ -428,7 +481,7 @@ public class IntegrationTestMTTR {
   public class ScanCallable extends TimingCallable {
     private final HTable table;
 
-    public ScanCallable(Future f) throws IOException {
+    public ScanCallable(Future<?> f) throws IOException {
       super(f);
       this.table = new HTable(util.getConfiguration(), tableName);
     }
@@ -437,15 +490,15 @@ public class IntegrationTestMTTR {
     protected boolean doAction() throws Exception {
       ResultScanner rs = null;
       try {
-      Scan s = new Scan();
-      s.setBatch(2);
-      s.addFamily(FAMILY);
-      s.setFilter(new KeyOnlyFilter());
-      s.setMaxVersions(1);
+        Scan s = new Scan();
+        s.setBatch(2);
+        s.addFamily(FAMILY);
+        s.setFilter(new KeyOnlyFilter());
+        s.setMaxVersions(1);
 
-      rs = table.getScanner(s);
-      Result result = rs.next();
-      return result != null && result.size() > 0;
+        rs = table.getScanner(s);
+        Result result = rs.next();
+        return result != null && result.size() > 0;
       } finally {
         if (rs != null) {
           rs.close();
@@ -463,15 +516,22 @@ public class IntegrationTestMTTR {
    */
   public class AdminCallable extends TimingCallable {
 
-    public AdminCallable(Future f) throws IOException {
+    public AdminCallable(Future<?> f) throws IOException {
       super(f);
     }
 
     @Override
     protected boolean doAction() throws Exception {
-      HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
-      ClusterStatus status = admin.getClusterStatus();
-      return status != null;
+      HBaseAdmin admin = null;
+      try {
+        admin = new HBaseAdmin(util.getConfiguration());
+        ClusterStatus status = admin.getClusterStatus();
+        return status != null;
+      } finally {
+        if (admin != null) {
+          admin.close();
+        }
+      }
     }
 
     @Override
@@ -501,9 +561,9 @@ public class IntegrationTestMTTR {
    */
   public class LoadCallable implements Callable<Boolean> {
 
-    private final Future future;
+    private final Future<?> future;
 
-    public LoadCallable(Future f) {
+    public LoadCallable(Future<?> f) {
       future = f;
     }
 
