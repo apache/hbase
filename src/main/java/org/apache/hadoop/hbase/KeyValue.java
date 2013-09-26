@@ -713,6 +713,9 @@ public class KeyValue implements Writable, HeapSize {
    * @return Key as a String.
    */
   public static String keyToString(final byte [] k) {
+    if (k == null) {
+      return "";
+    }
     return keyToString(k, 0, k.length);
   }
 
