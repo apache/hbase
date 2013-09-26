@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -280,11 +281,19 @@ public class TestSnapshotFromMaster {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
+
+    // recreate test table with disabled compactions; otherwise compaction may happen before
+    // snapshot, the call after snapshot will be a no-op and checks will fail
+    UTIL.deleteTable(TABLE_NAME);
+    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
+    htd.setCompactionEnabled(false);
+    UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
     // load the table (creates 4 hfiles)
     UTIL.loadTable(new HTable(UTIL.getConfiguration(), TABLE_NAME), TEST_FAM);
 
     // disable the table so we can take a snapshot
     admin.disableTable(TABLE_NAME);
+    htd.setCompactionEnabled(true);
 
     // take a snapshot of the table
     String snapshotName = "snapshot";
@@ -297,6 +306,9 @@ public class TestSnapshotFromMaster {
 
     // ensure we only have one snapshot
     SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshotNameBytes, TABLE_NAME);
+
+    // enable compactions now
+    admin.modifyTable(TABLE_NAME, htd);
 
     // renable the table so we can compact the regions
     admin.enableTable(TABLE_NAME);

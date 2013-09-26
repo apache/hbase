@@ -55,9 +55,7 @@ import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -249,14 +247,8 @@ public class TestRegionObserverScannerOpenHook {
     admin.flush(region.getRegionName());
 
     // run a compaction, which normally would should get rid of the data
-    Store s = region.getStores().get(A);
-    CountDownLatch latch = new CountDownLatch(1);
-    WaitableCompactionRequest request = new WaitableCompactionRequest(s.getStorefiles(), latch);
-    rs.compactSplitThread.requestCompaction(region, s,
-      "compact for testRegionObserverCompactionTimeStacking", Store.PRIORITY_USER, request);
-    // wait for the compaction to complete
-    latch.await();
-
+    // wait for the compaction checker to complete
+    Thread.sleep(1000);
     // check both rows to ensure that they aren't there
     Get get = new Get(ROW);
     Result r = table.get(get);
@@ -272,27 +264,5 @@ public class TestRegionObserverScannerOpenHook {
 
     table.close();
     UTIL.shutdownMiniCluster();
-  }
-
-  /**
-   * A simple compaction on which you can wait for the passed in latch until the compaction finishes
-   * (either successfully or if it failed).
-   */
-  public static class WaitableCompactionRequest extends CompactionRequest {
-    private CountDownLatch done;
-
-    /**
-     * Constructor for a custom compaction. Uses the setXXX methods to update the state of the
-     * compaction before being used.
-     */
-    public WaitableCompactionRequest(Collection<StoreFile> files, CountDownLatch finished) {
-      super(files);
-      this.done = finished;
-    }
-
-    @Override
-    public void afterExecute() {
-      this.done.countDown();
-    }
   }
 }

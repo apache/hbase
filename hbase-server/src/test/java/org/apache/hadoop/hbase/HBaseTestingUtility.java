@@ -1153,6 +1153,30 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
+   * @param htd
+   * @param families
+   * @param c Configuration to use
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(HTableDescriptor htd, byte[][] families, Configuration c)
+  throws IOException {
+    for(byte[] family : families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      // Disable blooms (they are on by default as of 0.95) but we disable them here because
+      // tests have hard coded counts of what to expect in block cache, etc., and blooms being
+      // on is interfering.
+      hcd.setBloomFilterType(BloomType.NONE);
+      htd.addFamily(hcd);
+    }
+    getHBaseAdmin().createTable(htd);
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
+    waitUntilAllRegionsAssigned(htd.getTableName());
+    return new HTable(c, htd.getTableName());
+  }
+
+  /**
+   * Create a table.
    * @param tableName
    * @param families
    * @param c Configuration to use
@@ -1162,19 +1186,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public HTable createTable(TableName tableName, byte[][] families,
       final Configuration c)
   throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    for(byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      // Disable blooms (they are on by default as of 0.95) but we disable them here because
-      // tests have hard coded counts of what to expect in block cache, etc., and blooms being
-      // on is interfering.
-      hcd.setBloomFilterType(BloomType.NONE);
-      desc.addFamily(hcd);
-    }
-    getHBaseAdmin().createTable(desc);
-    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
-    waitUntilAllRegionsAssigned(tableName);
-    return new HTable(c, tableName);
+    return createTable(new HTableDescriptor(tableName), families, c);
   }
 
   /**
