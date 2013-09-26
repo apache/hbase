@@ -19,7 +19,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -310,10 +311,10 @@ public class TestTimestampsFilter {
                   Bytes.toString(kv.getQualifier()));
 
     assertEquals("Timestamp mismatch while checking: " + ctx,
-                 ts, kv.getTimestamp());
+        ts, kv.getTimestamp());
 
     assertEquals("Value mismatch while checking: " + ctx,
-                 "value-version-" + ts, Bytes.toString(kv.getValue()));
+        "value-version-" + ts, Bytes.toString(kv.getValue()));
   }
 
   /**
@@ -383,5 +384,80 @@ public class TestTimestampsFilter {
     Delete del = new Delete(row);
     del.deleteColumn(cf, column, version);
     ht.delete(del);
+  }
+
+  /**
+   * Perform simple scan of htable without using a filter
+   * @param ht
+   * @return
+   * @throws IOException
+   */
+  private List<Result> scan(HTable ht, Scan sc) throws IOException {
+    List<Result> result = new ArrayList<Result>();
+    Scan scan = sc == null ? new Scan() : sc;
+    scan.setMaxVersions();
+    ResultScanner scanner = ht.getScanner(scan);
+    do {
+      Result res = scanner.next();
+      if (res == null)
+        break;
+      result.add(res);
+    } while (true);
+    return result;
+  }
+
+  /**
+   * Test if we don't get result when passing timestamps that have been deleted
+   * @throws Exception
+   */
+  @Test
+  public void testDeletedTimestamp() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testDeletedTimestamp");
+    byte[] FAMILY = Bytes.toBytes("fam");
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, Integer.MAX_VALUE);
+    byte[] ROW = Bytes.toBytes("row");
+
+    // Do 3 puts
+    for (int i = 0; i < 3; i++) {
+      Put put = new Put(ROW);
+      put.add(FAMILY, null, Bytes.toBytes("val" + i));
+      ht.put(put);
+    }
+    // Scan should return 3 KeyValues
+    List<Result> results = scan(ht, null);
+    assertEquals(3, results.get(0).raw().length);
+
+    // Take a snapshot for using TimestampsFilter later
+    KeyValue[] snapshot = results.get(0).raw();
+
+    // Delete the row
+    Delete delete = new Delete(ROW);
+    delete.deleteFamily(FAMILY);
+    ht.delete(delete);
+    results = scan(ht, null);
+    assertTrue(results.isEmpty());
+
+    // Do a new put
+    Put put = new Put(ROW);
+    put.add(FAMILY, null, Bytes.toBytes("val4"));
+    ht.put(put);
+    // A scan should only return the latest KeyValue (Previous 3 were deleted)
+    results = scan(ht, null);
+    assertEquals(1, results.get(0).raw().length);
+    assertTrue(Bytes.equals(results.get(0).raw()[0].getValue(), Bytes.toBytes("val4")));
+
+    // Scan with TimestampsFilter to get 3 deleted KeyValues
+    Scan scan = new Scan();
+    scan.addFamily(FAMILY);
+    List<Long> timestamps = new ArrayList<Long>();
+    for (int i = 0; i < 3; i++) {
+      timestamps.add(snapshot[i].getTimestamp());
+    }
+    TimestampsFilter filter = new TimestampsFilter(timestamps);
+    scan.setFilter(filter);
+    results = scan(ht, scan);
+
+    // Result should be empty
+    assertTrue(results.isEmpty());
   }
 }

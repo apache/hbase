@@ -73,7 +73,10 @@ public class TimestampsFilter extends FilterBase {
       // to be lesser than all of the other values.
       return ReturnCode.NEXT_COL;
     }
-    return ReturnCode.SEEK_NEXT_USING_HINT;
+    // Skip current KeyValue. Cannot use ReturnCode.SEEK_NEXT_USING_HINT
+    // until the problem of missing delete marker in getNextKeyHint(KeyValue)
+    // is resolved.
+    return ReturnCode.SKIP;
   }
 
   public TreeSet<Long> getTimestamps() {
