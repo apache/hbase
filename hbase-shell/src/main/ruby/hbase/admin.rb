@@ -43,7 +43,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns a list of tables in hbase
     def list(regex = ".*")
-      Arrays.asList(@admin.getTableNames(regex))
+      @admin.getTableNames(regex).to_a
     end
 
     #----------------------------------------------------------------------------------------------
