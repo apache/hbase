@@ -144,7 +144,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
         "totalRows=(\\d+),\\s+" +
         "clients=(\\d+),\\s+" +
         "flushCommits=(\\w+),\\s+" +
-        "writeToWAL=(\\w+)");
+        "writeToWAL=(\\w+),\\s+" +
+        "useTags=(\\w+),\\s+" +
+        "noOfTags=(\\d+)");
 
   /**
    * Enum for map metrics.  Keep it out here rather than inside in the Map
@@ -358,7 +360,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
                      " flushCommits=" + flushCommits +
                      " writeToWAL=" + writeToWAL +
                      " useTags=" + useTags +
-                     " noOfTags=" +noOfTags);
+                     " noOfTags=" + noOfTags);
 
             PeInputSplit newSplit =
               new PeInputSplit(startRow, rows, totalRows, clients,
@@ -725,7 +727,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
           ", totalRows=" + this.R +
           ", clients=" + this.N +
           ", flushCommits=" + this.flushCommits +
-          ", writeToWAL=" + this.writeToWAL;
+          ", writeToWAL=" + this.writeToWAL +
+          ", useTags=" + this.useTags +
+          ", noOfTags=" + this.noOfTags;
           int hash = h.hash(Bytes.toBytes(s));
           m.put(hash, s);
         }
