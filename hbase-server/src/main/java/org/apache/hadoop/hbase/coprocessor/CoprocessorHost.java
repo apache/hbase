@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -97,7 +98,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   protected Configuration conf;
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;
-  protected volatile int loadSequence;
+  protected AtomicInteger loadSequence = new AtomicInteger();
 
   public CoprocessorHost() {
     pathPrefix = UUID.randomUUID().toString();
@@ -253,7 +254,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       throw new IOException(e);
     }
     // create the environment
-    E env = createEnvironment(implClass, impl, priority, ++loadSequence, conf);
+    E env = createEnvironment(implClass, impl, priority, loadSequence.incrementAndGet(), conf);
     if (env instanceof Environment) {
       ((Environment)env).startup();
     }
