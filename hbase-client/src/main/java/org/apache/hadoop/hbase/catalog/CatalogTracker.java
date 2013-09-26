@@ -307,7 +307,7 @@ public class CatalogTracker {
         if (waitForMeta(100) != null) break;
       } catch (NotAllMetaRegionsOnlineException e) {
         if (LOG.isTraceEnabled()) {
-          LOG.info("hbase:meta still not available, sleeping and retrying." +
+          LOG.trace("hbase:meta still not available, sleeping and retrying." +
           " Reason: " + e.getMessage());
         }
       }
