@@ -301,8 +301,7 @@ public interface HLog {
    * @throws IOException
    */
   public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
-        List<UUID> clusterIds, final long now, HTableDescriptor htd,
-        RegionCoprocessorHost regionCoproHost) throws IOException;
+      List<UUID> clusterIds, final long now, HTableDescriptor htd) throws IOException;
 
   // TODO: Do we need all these versions of sync?
   void hsync() throws IOException;

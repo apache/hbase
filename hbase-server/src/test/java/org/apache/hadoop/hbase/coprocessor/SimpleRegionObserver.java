@@ -119,8 +119,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   final AtomicInteger ctPreSplitAfterPONR = new AtomicInteger(0);
   final AtomicInteger ctPreStoreFileReaderOpen = new AtomicInteger(0);
   final AtomicInteger ctPostStoreFileReaderOpen = new AtomicInteger(0);
-
   final AtomicBoolean throwOnPostFlush = new AtomicBoolean(false);
+  static final String TABLE_SKIPPED = "SKIPPED_BY_PREWALRESTORE";
 
   public void setThrowOnPostFlush(Boolean val){
     throwOnPostFlush.set(val);
@@ -543,6 +543,12 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   @Override
   public void preWALRestore(ObserverContext<RegionCoprocessorEnvironment> env, HRegionInfo info,
                             HLogKey logKey, WALEdit logEdit) throws IOException {
+    String tableName = logKey.getTablename().getNameAsString();
+    if (tableName.equals(TABLE_SKIPPED)) {
+      // skip recovery of TABLE_SKIPPED for testing purpose
+      env.bypass();
+      return;
+    }
     ctPreWALRestore.incrementAndGet();
   }
 

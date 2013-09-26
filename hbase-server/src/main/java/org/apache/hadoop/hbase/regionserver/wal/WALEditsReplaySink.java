@@ -23,12 +23,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,8 +44,14 @@ import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
@@ -50,6 +60,7 @@ import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 
+import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -62,7 +73,7 @@ import com.google.protobuf.ServiceException;
 public class WALEditsReplaySink {
 
   private static final Log LOG = LogFactory.getLog(WALEditsReplaySink.class);
-  private static final int MAX_BATCH_SIZE = 3000;
+  private static final int MAX_BATCH_SIZE = 1024;
 
   private final Configuration conf;
   private final HConnection conn;
@@ -93,41 +104,38 @@ public class WALEditsReplaySink {
 
   /**
    * Replay an array of actions of the same region directly into the newly assigned Region Server
-   * @param actions
+   * @param entries
    * @throws IOException
    */
-  public void replayEntries(List<Pair<HRegionLocation, Row>> actions) throws IOException {
-    if (actions.size() == 0) {
+  public void replayEntries(List<Pair<HRegionLocation, HLog.Entry>> entries) throws IOException {
+    if (entries.size() == 0) {
       return;
     }
 
-    int batchSize = actions.size();
-    int dataSize = 0;
-    Map<HRegionInfo, List<Action<Row>>> actionsByRegion = 
-        new HashMap<HRegionInfo, List<Action<Row>>>();
+    int batchSize = entries.size();
+    Map<HRegionInfo, List<HLog.Entry>> entriesByRegion =
+        new HashMap<HRegionInfo, List<HLog.Entry>>();
     HRegionLocation loc = null;
-    Row row = null;
-    List<Action<Row>> regionActions = null;
+    HLog.Entry entry = null;
+    List<HLog.Entry> regionEntries = null;
     // Build the action list. 
     for (int i = 0; i < batchSize; i++) {
-      loc = actions.get(i).getFirst();
-      row = actions.get(i).getSecond();
-      if (actionsByRegion.containsKey(loc.getRegionInfo())) {
-        regionActions = actionsByRegion.get(loc.getRegionInfo());
+      loc = entries.get(i).getFirst();
+      entry = entries.get(i).getSecond();
+      if (entriesByRegion.containsKey(loc.getRegionInfo())) {
+        regionEntries = entriesByRegion.get(loc.getRegionInfo());
       } else {
-        regionActions = new ArrayList<Action<Row>>();
-        actionsByRegion.put(loc.getRegionInfo(), regionActions);
+        regionEntries = new ArrayList<HLog.Entry>();
+        entriesByRegion.put(loc.getRegionInfo(), regionEntries);
       }
-      Action<Row> action = new Action<Row>(row, i);
-      regionActions.add(action);
-      dataSize += row.getRow().length;
+      regionEntries.add(entry);
     }
     
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
     // replaying edits by region
-    for (HRegionInfo curRegion : actionsByRegion.keySet()) {
-      List<Action<Row>> allActions = actionsByRegion.get(curRegion);
+    for (HRegionInfo curRegion : entriesByRegion.keySet()) {
+      List<HLog.Entry> allActions = entriesByRegion.get(curRegion);
       // send edits in chunks
       int totalActions = allActions.size();
       int replayedActions = 0;
@@ -142,12 +150,11 @@ public class WALEditsReplaySink {
     }
 
     long endTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
-    LOG.debug("number of rows:" + actions.size() + " are sent by batch! spent " + endTime
+    LOG.debug("number of rows:" + entries.size() + " are sent by batch! spent " + endTime
         + "(ms)!");
 
     metrics.updateReplayTime(endTime);
     metrics.updateReplayBatchSize(batchSize);
-    metrics.updateReplayDataSize(dataSize);
 
     this.totalReplayedEdits.addAndGet(batchSize);
   }
@@ -162,12 +169,13 @@ public class WALEditsReplaySink {
   }
 
   private void replayEdits(final HRegionLocation regionLoc, final HRegionInfo regionInfo,
-      final List<Action<Row>> actions) throws IOException {
+      final List<HLog.Entry> entries) throws IOException {
     try {
       RpcRetryingCallerFactory factory = RpcRetryingCallerFactory.instantiate(conf);
-      ReplayServerCallable<MultiResponse> callable = new ReplayServerCallable<MultiResponse>(
-          this.conn, this.tableName, regionLoc, regionInfo, actions);
-      factory.<MultiResponse> newCaller().callWithRetries(callable, this.replayTimeout);
+      ReplayServerCallable<ReplicateWALEntryResponse> callable =
+          new ReplayServerCallable<ReplicateWALEntryResponse>(this.conn, this.tableName, regionLoc,
+              regionInfo, entries);
+      factory.<ReplicateWALEntryResponse> newCaller().callWithRetries(callable, this.replayTimeout);
     } catch (IOException ie) {
       if (skipErrors) {
         LOG.warn(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS
@@ -182,52 +190,44 @@ public class WALEditsReplaySink {
    * Callable that handles the <code>replay</code> method call going against a single regionserver
    * @param <R>
    */
-  class ReplayServerCallable<R> extends RegionServerCallable<MultiResponse> {
+  class ReplayServerCallable<R> extends RegionServerCallable<ReplicateWALEntryResponse> {
     private HRegionInfo regionInfo;
-    private List<Action<Row>> actions;
+    private List<HLog.Entry> entries;
 
     ReplayServerCallable(final HConnection connection, final TableName tableName,
         final HRegionLocation regionLoc, final HRegionInfo regionInfo,
-        final List<Action<Row>> actions) {
+        final List<HLog.Entry> entries) {
       super(connection, tableName, null);
-      this.actions = actions;
+      this.entries = entries;
       this.regionInfo = regionInfo;
       setLocation(regionLoc);
     }
     
     @Override
-    public MultiResponse call() throws IOException {
+    public ReplicateWALEntryResponse call() throws IOException {
       try {
-        replayToServer(this.regionInfo, this.actions);
+        replayToServer(this.regionInfo, this.entries);
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
       }
       return null;
     }
 
-    private void replayToServer(HRegionInfo regionInfo, List<Action<Row>> actions)
+    private void replayToServer(HRegionInfo regionInfo, List<HLog.Entry> entries)
         throws IOException, ServiceException {
+      if (entries.isEmpty()) return;
+
+      HLog.Entry[] entriesArray = new HLog.Entry[entries.size()];
+      entriesArray = entries.toArray(entriesArray);
       AdminService.BlockingInterface remoteSvr = conn.getAdmin(getLocation().getServerName());
-      MultiRequest request = RequestConverter.buildMultiRequest(regionInfo.getRegionName(),
-        actions);
-      MultiResponse protoResults = remoteSvr.replay(null, request);
-      // check if it's a partial success
-      List<ActionResult> resultList = protoResults.getResultList();
-      for (int i = 0, n = resultList.size(); i < n; i++) {
-        ActionResult result = resultList.get(i);
-        if (result.hasException()) {
-          Throwable t = ProtobufUtil.toException(result.getException());
-          if (!skipErrors) {
-            IOException ie = new IOException();
-            ie.initCause(t);
-            // retry
-            throw ie;
-          } else {
-            LOG.warn(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS
-                + "=true so continuing replayToServer with error:" + t.getMessage());
-            return;
-          }
-        }
+
+      Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
+          ReplicationProtbufUtil.buildReplicateWALEntryRequest(entriesArray);
+      try {
+        PayloadCarryingRpcController controller = new PayloadCarryingRpcController(p.getSecond());
+        remoteSvr.replay(controller, p.getFirst());
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
       }
     }
 
@@ -237,10 +237,20 @@ public class WALEditsReplaySink {
       // relocate regions in case we have a new dead server or network hiccup
       // if not due to connection issue, the following code should run fast because it uses
       // cached location
-      for (Action<Row> action : actions) {
-        // use first row to relocate region because all actions are for one region
-        setLocation(conn.locateRegion(tableName, action.getAction().getRow()));
-        break;
+      boolean skip = false;
+      for (HLog.Entry entry : this.entries) {
+        WALEdit edit = entry.getEdit();
+        List<KeyValue> kvs = edit.getKeyValues();
+        for (KeyValue kv : kvs) {
+          // filtering HLog meta entries
+          if (kv.matchingFamily(WALEdit.METAFAMILY)) continue;
+
+          setLocation(conn.locateRegion(tableName, kv.getRow()));
+          skip = true;
+          break;
+        }
+        // use first log entry to relocate region because all entries are for one region
+        if (skip) break;
       }
     }
   }

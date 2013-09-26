@@ -105,8 +105,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
           HRegionInfo hri = region.getRegionInfo();
           if (this.noSync) {
-            hlog.appendNoSync(hri, hri.getTable(), walEdit,
-                              new ArrayList<UUID>(), now, htd, null);
+            hlog.appendNoSync(hri, hri.getTable(), walEdit, new ArrayList<UUID>(), now, htd);
           } else {
             hlog.append(hri, hri.getTable(), walEdit, now, htd);
           }
@@ -200,7 +199,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
             LOG.info("Rolling after " + appends + " edits");
             rollWriter();
           }
-          super.doWrite(info, logKey, logEdit, htd, null);
+          super.doWrite(info, logKey, logEdit, htd);
         };
       };
       hlog.rollWriter();

@@ -19599,12 +19599,12 @@ public final class AdminProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse> done);
 
       /**
-       * <code>rpc Replay(.MultiRequest) returns (.MultiResponse);</code>
+       * <code>rpc Replay(.ReplicateWALEntryRequest) returns (.ReplicateWALEntryResponse);</code>
        */
       public abstract void replay(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse> done);
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse> done);
 
       /**
        * <code>rpc RollWALWriter(.RollWALWriterRequest) returns (.RollWALWriterResponse);</code>
@@ -19726,8 +19726,8 @@ public final class AdminProtos {
         @java.lang.Override
         public  void replay(
             com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request,
-            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse> done) {
+            org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse> done) {
           impl.replay(controller, request, done);
         }
 
@@ -19806,7 +19806,7 @@ public final class AdminProtos {
             case 9:
               return impl.replicateWALEntry(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest)request);
             case 10:
-              return impl.replay(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest)request);
+              return impl.replay(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest)request);
             case 11:
               return impl.rollWALWriter(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest)request);
             case 12:
@@ -19850,7 +19850,7 @@ public final class AdminProtos {
             case 9:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest.getDefaultInstance();
             case 10:
-              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest.getDefaultInstance();
             case 11:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest.getDefaultInstance();
             case 12:
@@ -19894,7 +19894,7 @@ public final class AdminProtos {
             case 9:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance();
             case 10:
-              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance();
             case 11:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse.getDefaultInstance();
             case 12:
@@ -19992,12 +19992,12 @@ public final class AdminProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse> done);
 
     /**
-     * <code>rpc Replay(.MultiRequest) returns (.MultiResponse);</code>
+     * <code>rpc Replay(.ReplicateWALEntryRequest) returns (.ReplicateWALEntryResponse);</code>
      */
     public abstract void replay(
         com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request,
-        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse> done);
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse> done);
 
     /**
      * <code>rpc RollWALWriter(.RollWALWriterRequest) returns (.RollWALWriterResponse);</code>
@@ -20104,8 +20104,8 @@ public final class AdminProtos {
               done));
           return;
         case 10:
-          this.replay(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest)request,
-            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse>specializeCallback(
+          this.replay(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse>specializeCallback(
               done));
           return;
         case 11:
@@ -20163,7 +20163,7 @@ public final class AdminProtos {
         case 9:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest.getDefaultInstance();
         case 10:
-          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest.getDefaultInstance();
         case 11:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest.getDefaultInstance();
         case 12:
@@ -20207,7 +20207,7 @@ public final class AdminProtos {
         case 9:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance();
         case 10:
-          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance();
         case 11:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse.getDefaultInstance();
         case 12:
@@ -20389,17 +20389,17 @@ public final class AdminProtos {
 
       public  void replay(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse> done) {
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse> done) {
         channel.callMethod(
           getDescriptor().getMethods().get(10),
           controller,
           request,
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance(),
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance(),
           com.google.protobuf.RpcUtil.generalizeCallback(
             done,
-            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.class,
-            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance()));
+            org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance()));
       }
 
       public  void rollWALWriter(
@@ -20519,9 +20519,9 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request)
           throws com.google.protobuf.ServiceException;
 
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse replay(
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse replay(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request)
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request)
           throws com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse rollWALWriter(
@@ -20672,15 +20672,15 @@ public final class AdminProtos {
       }
 
 
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse replay(
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse replay(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request)
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request)
           throws com.google.protobuf.ServiceException {
-        return (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse) channel.callBlockingMethod(
+        return (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse) channel.callBlockingMethod(
           getDescriptor().getMethods().get(10),
           controller,
           request,
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance());
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance());
       }
 
 
@@ -20962,7 +20962,7 @@ public final class AdminProtos {
       "ServerInfoRequest\"B\n\nServerInfo\022 \n\013serve" +
       "r_name\030\001 \002(\0132\013.ServerName\022\022\n\nwebui_port\030" +
       "\002 \001(\r\"9\n\025GetServerInfoResponse\022 \n\013server" +
-      "_info\030\001 \002(\0132\013.ServerInfo2\256\007\n\014AdminServic" +
+      "_info\030\001 \002(\0132\013.ServerInfo2\306\007\n\014AdminServic" +
       "e\022>\n\rGetRegionInfo\022\025.GetRegionInfoReques" +
       "t\032\026.GetRegionInfoResponse\022;\n\014GetStoreFil",
       "e\022\024.GetStoreFileRequest\032\025.GetStoreFileRe" +
@@ -20978,16 +20978,17 @@ public final class AdminProtos {
       "nResponse\022;\n\014MergeRegions\022\024.MergeRegions" +
       "Request\032\025.MergeRegionsResponse\022J\n\021Replic" +
       "ateWALEntry\022\031.ReplicateWALEntryRequest\032\032" +
-      ".ReplicateWALEntryResponse\022\'\n\006Replay\022\r.M" +
-      "ultiRequest\032\016.MultiResponse\022>\n\rRollWALWr" +
-      "iter\022\025.RollWALWriterRequest\032\026.RollWALWri" +
-      "terResponse\022>\n\rGetServerInfo\022\025.GetServer" +
-      "InfoRequest\032\026.GetServerInfoResponse\0225\n\nS" +
-      "topServer\022\022.StopServerRequest\032\023.StopServ" +
-      "erResponse\022M\n\022UpdateFavoredNodes\022\032.Updat",
-      "eFavoredNodesRequest\032\033.UpdateFavoredNode" +
-      "sResponseBA\n*org.apache.hadoop.hbase.pro" +
-      "tobuf.generatedB\013AdminProtosH\001\210\001\001\240\001\001"
+      ".ReplicateWALEntryResponse\022?\n\006Replay\022\031.R" +
+      "eplicateWALEntryRequest\032\032.ReplicateWALEn" +
+      "tryResponse\022>\n\rRollWALWriter\022\025.RollWALWr" +
+      "iterRequest\032\026.RollWALWriterResponse\022>\n\rG" +
+      "etServerInfo\022\025.GetServerInfoRequest\032\026.Ge" +
+      "tServerInfoResponse\0225\n\nStopServer\022\022.Stop" +
+      "ServerRequest\032\023.StopServerResponse\022M\n\022Up",
+      "dateFavoredNodes\022\032.UpdateFavoredNodesReq" +
+      "uest\032\033.UpdateFavoredNodesResponseBA\n*org" +
+      ".apache.hadoop.hbase.protobuf.generatedB" +
+      "\013AdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

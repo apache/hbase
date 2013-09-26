@@ -38,6 +38,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
@@ -89,6 +90,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -118,6 +120,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -135,6 +138,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileRespon
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.MergeRegionsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.MergeRegionsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState;
@@ -181,6 +185,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
@@ -191,8 +196,10 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -3861,45 +3868,45 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * Replay the given changes when distributedLogReplay WAL edits from a failed RS. The guarantee is
    * that the given mutations will be durable on the receiving RS if this method returns without any
    * exception.
-   * @param rpcc the RPC controller
+   * @param controller the RPC controller
    * @param request the request
    * @throws ServiceException
    */
   @Override
   @QosPriority(priority = HConstants.REPLAY_QOS)
-  public MultiResponse replay(final RpcController rpcc, final MultiRequest request)
-      throws ServiceException {
+  public ReplicateWALEntryResponse replay(final RpcController controller,
+      final ReplicateWALEntryRequest request) throws ServiceException {
     long before = EnvironmentEdgeManager.currentTimeMillis();
-    PayloadCarryingRpcController controller = (PayloadCarryingRpcController) rpcc;
-    CellScanner cellScanner = controller != null ? controller.cellScanner() : null;
-    // Clear scanner so we are not holding on to reference across call.
-    if (controller != null) controller.setCellScanner(null);
+    CellScanner cells = ((PayloadCarryingRpcController) controller).cellScanner();
     try {
       checkOpen();
-      HRegion region = getRegion(request.getRegion());
-      MultiResponse.Builder builder = MultiResponse.newBuilder();
-      List<MutationProto> mutates = new ArrayList<MutationProto>();
-      for (ClientProtos.MultiAction actionUnion : request.getActionList()) {
-        if (actionUnion.hasMutation()) {
-          MutationProto mutate = actionUnion.getMutation();
-          MutationType type = mutate.getMutateType();
-          switch (type) {
-          case PUT:
-          case DELETE:
-            mutates.add(mutate);
-            break;
-          default:
-            throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
+      List<WALEntry> entries = request.getEntryList();
+      if(entries == null || entries.isEmpty()) {
+        // empty input
+        return ReplicateWALEntryResponse.newBuilder().build();
+      }
+      
+      HRegion region = this.getRegionByEncodedName(
+        entries.get(0).getKey().getEncodedRegionName().toStringUtf8());
+      List<Pair<HLogKey, WALEdit>> walEntries = new ArrayList<Pair<HLogKey, WALEdit>>();
+      List<Pair<MutationType, Mutation>> mutations = region.getReplayMutations(
+        request.getEntryList(), cells, UUID.fromString(this.clusterId), walEntries);
+      if (!mutations.isEmpty()) {
+        OperationStatus[] result = doBatchOp(region, mutations, true);
+        // check if it's a partial success
+        for (int i = 0; result != null && i < result.length; i++) {
+          if (result[i] != OperationStatus.SUCCESS) {
+            throw new IOException(result[i].getExceptionMsg());
           }
-        } else {
-          LOG.warn("Error: invalid action: " + actionUnion + ". " + "it must be a Mutation.");
-          throw new DoNotRetryIOException("Invalid action, " + "it must be a Mutation.");
         }
       }
-      if (!mutates.isEmpty()) {
-        doBatchOp(builder, region, mutates, cellScanner, true);
+      if (region.getCoprocessorHost() != null) {
+        for (Pair<HLogKey, WALEdit> wal : walEntries) {
+          region.getCoprocessorHost().postWALRestore(region.getRegionInfo(), wal.getFirst(),
+            wal.getSecond());
+        }
       }
-      return builder.build();
+      return ReplicateWALEntryResponse.newBuilder().build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
     } finally {
@@ -4036,21 +4043,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
   /**
    * Execute a list of Put/Delete mutations.
-   */
-  protected void doBatchOp(final MultiResponse.Builder builder,
-      final HRegion region, final List<MutationProto> mutates, final CellScanner cells) {
-    doBatchOp(builder, region, mutates, cells, false);
-  }
-
-  /**
-   * Execute a list of Put/Delete mutations.
    *
    * @param builder
    * @param region
    * @param mutations
    */
   protected void doBatchOp(final MultiResponse.Builder builder, final HRegion region,
-      final List<MutationProto> mutations, final CellScanner cells, boolean isReplay) {
+      final List<MutationProto> mutations, final CellScanner cells) {
     Mutation[] mArray = new Mutation[mutations.size()];
     long before = EnvironmentEdgeManager.currentTimeMillis();
     boolean batchContainsPuts = false, batchContainsDelete = false;
@@ -4077,7 +4076,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         cacheFlusher.reclaimMemStoreMemory();
       }
 
-      OperationStatus codes[] = region.batchMutate(mArray, isReplay);
+      OperationStatus codes[] = region.batchMutate(mArray, false);
       for (i = 0; i < codes.length; i++) {
         switch (codes[i].getOperationStatusCode()) {
           case BAD_FAMILY:
@@ -4101,21 +4100,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           case SUCCESS:
             break;
         }
-        if (isReplay && codes[i].getOperationStatusCode() != OperationStatusCode.SUCCESS) {
-          // in replay mode, we only need to catpure the first error because we will retry the whole
-          // batch when an error happens
-          break;
-        }
       }
     } catch (IOException ie) {
       ActionResult result = ResponseConverter.buildActionResult(ie);
       for (int i = 0; i < mutations.size(); i++) {
         builder.setResult(i, result);
-        if (isReplay) {
-          // in replay mode, we only need to catpure the first error because we will retry the whole
-          // batch when an error happens
-          break;
-        }
       }
     }
     long after = EnvironmentEdgeManager.currentTimeMillis();
@@ -4124,6 +4113,46 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
     if (batchContainsDelete) {
       metricsRegionServer.updateDelete(after - before);
+    }
+  }
+
+  /**
+   * Execute a list of Put/Delete mutations.
+   * @param region
+   * @param mutations
+   * @param isReplay
+   * @return an array of OperationStatus which internally contains the
+   *         OperationStatusCode and the exceptionMessage if any
+   * @throws IOException
+   */
+  protected OperationStatus[] doBatchOp(final HRegion region,
+      final List<Pair<MutationType, Mutation>> mutations, boolean isReplay) throws IOException {
+    Mutation[] mArray = new Mutation[mutations.size()];
+    long before = EnvironmentEdgeManager.currentTimeMillis();
+    boolean batchContainsPuts = false, batchContainsDelete = false;
+    try {
+      int i = 0;
+      for (Pair<MutationType, Mutation> m : mutations) {
+        if (m.getFirst() == MutationType.PUT) {
+          batchContainsPuts = true;
+        } else {
+          batchContainsDelete = true;
+        }
+        mArray[i++] = m.getSecond();
+      }
+      requestCount.add(mutations.size());
+      if (!region.getRegionInfo().isMetaTable()) {
+        cacheFlusher.reclaimMemStoreMemory();
+      }
+      return region.batchMutate(mArray, isReplay);
+    } finally {
+      long after = EnvironmentEdgeManager.currentTimeMillis();
+      if (batchContainsPuts) {
+        metricsRegionServer.updatePut(after - before);
+      }
+      if (batchContainsDelete) {
+        metricsRegionServer.updateDelete(after - before);
+      }
     }
   }
 

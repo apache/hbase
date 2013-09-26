@@ -261,7 +261,6 @@ public class TestDistributedLogSplitting {
     // they will consume recovered.edits
     master.balanceSwitch(false);
 
-    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
     HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
@@ -286,7 +285,6 @@ public class TestDistributedLogSplitting {
     // they will consume recovered.edits
     master.balanceSwitch(false);
 
-    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
     HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
