@@ -330,19 +330,19 @@ public class TestSnapshotFromMaster {
 
     // get the snapshot files for the table
     Path snapshotTable = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    FileStatus[] snapshotHFiles = SnapshotTestingUtils.listHFiles(fs, snapshotTable);
+    Path[] snapshotHFiles = SnapshotTestingUtils.listHFiles(fs, snapshotTable);
     // check that the files in the archive contain the ones that we need for the snapshot
     LOG.debug("Have snapshot hfiles:");
-    for (FileStatus file : snapshotHFiles) {
-      LOG.debug(file.getPath());
+    for (Path file : snapshotHFiles) {
+      LOG.debug(file);
     }
     // get the archived files for the table
     Collection<String> files = getArchivedHFiles(archiveDir, rootDir, fs, TABLE_NAME);
 
     // and make sure that there is a proper subset
-    for (FileStatus file : snapshotHFiles) {
-      assertTrue("Archived hfiles " + files + " is missing snapshot file:" + file.getPath(),
-        files.contains(file.getPath().getName()));
+    for (Path file : snapshotHFiles) {
+      assertTrue("Archived hfiles " + files + " is missing snapshot file:" + file,
+        files.contains(file.getName()));
     }
 
     // delete the existing snapshot
@@ -376,12 +376,12 @@ public class TestSnapshotFromMaster {
   private final Collection<String> getArchivedHFiles(Path archiveDir, Path rootDir,
       FileSystem fs, TableName tableName) throws IOException {
     Path tableArchive = FSUtils.getTableDir(archiveDir, tableName);
-    FileStatus[] archivedHFiles = SnapshotTestingUtils.listHFiles(fs, tableArchive);
+    Path[] archivedHFiles = SnapshotTestingUtils.listHFiles(fs, tableArchive);
     List<String> files = new ArrayList<String>(archivedHFiles.length);
     LOG.debug("Have archived hfiles: " + tableArchive);
-    for (FileStatus file : archivedHFiles) {
-      LOG.debug(file.getPath());
-      files.add(file.getPath().getName());
+    for (Path file : archivedHFiles) {
+      LOG.debug(file);
+      files.add(file.getName());
     }
     // sort the archived files
 

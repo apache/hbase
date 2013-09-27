@@ -24,6 +24,8 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -50,6 +53,8 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestSnapshotMetadata {
+  private static final Log LOG = LogFactory.getLog(TestSnapshotMetadata.class);
+
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final int NUM_RS = 2;
   private static final String STRING_TABLE_NAME = "TestSnapshotMetadata";
@@ -92,6 +97,15 @@ public class TestSnapshotMetadata {
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
   }
 
+  @AfterClass
+  public static void cleanupTest() throws Exception {
+    try {
+      UTIL.shutdownMiniCluster();
+    } catch (Exception e) {
+      LOG.warn("failure shutting down cluster", e);
+    }
+  }
+
   private static void setupConf(Configuration conf) {
     // enable snapshot support
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
@@ -114,21 +128,19 @@ public class TestSnapshotMetadata {
 
   @Before
   public void setup() throws Exception {
+    admin = UTIL.getHBaseAdmin();
     createTableWithNonDefaultProperties();
   }
 
   @After
   public void tearDown() throws Exception {
-    admin.close();
+    SnapshotTestingUtils.deleteAllSnapshots(admin);
   }
 
   /*
    *  Create a table that has non-default properties so we can see if they hold
    */
   private void createTableWithNonDefaultProperties() throws Exception {
-    // create a table
-    admin = new HBaseAdmin(UTIL.getConfiguration());
-
     final long startTime = System.currentTimeMillis();
     final String sourceTableNameAsString = STRING_TABLE_NAME + startTime;
     originalTableName = TableName.valueOf(sourceTableNameAsString);
@@ -181,7 +193,7 @@ public class TestSnapshotMetadata {
 
     // Create a snapshot in which all families are empty
     SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName, null,
-      familiesList, snapshotNameAsString, rootDir, fs);
+      familiesList, snapshotNameAsString, rootDir, fs, /* onlineSnapshot= */ false);
 
     admin.cloneSnapshot(snapshotName, clonedTableName);
     HTable clonedTable = new HTable(UTIL.getConfiguration(), clonedTableName);
@@ -254,13 +266,14 @@ public class TestSnapshotMetadata {
       }
     }
 
-    // take a snapshot
+    // take a "disabled" snapshot
     final String snapshotNameAsString = "snapshot" + originalTableName
         + System.currentTimeMillis();
     final byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
 
     SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName,
-      familiesWithDataList, emptyFamiliesList, snapshotNameAsString, rootDir, fs);
+      familiesWithDataList, emptyFamiliesList, snapshotNameAsString, rootDir, fs,
+      /* onlineSnapshot= */ false);
 
     admin.enableTable(originalTableName);
 

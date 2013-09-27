@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
@@ -57,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Assert;
 
@@ -139,29 +142,6 @@ public class SnapshotTestingUtils {
   }
 
   /**
-   * Multi-family version of the confirmSnapshotValid function
-   */
-  public static void confirmSnapshotValid(
-      SnapshotDescription snapshotDescriptor, TableName tableName,
-      List<byte[]> nonEmptyTestFamilies, List<byte[]> emptyTestFamilies,
-      Path rootDir, HBaseAdmin admin, FileSystem fs, boolean requireLogs,
-      Path logsDir, Set<String> snapshotServers) throws IOException {
-    if (nonEmptyTestFamilies != null) {
-      for (byte[] testFamily : nonEmptyTestFamilies) {
-        confirmSnapshotValid(snapshotDescriptor, tableName, testFamily,
-            rootDir, admin, fs, requireLogs, logsDir, false, null);
-      }
-    }
-
-    if (emptyTestFamilies != null) {
-      for (byte[] testFamily : emptyTestFamilies) {
-        confirmSnapshotValid(snapshotDescriptor, tableName, testFamily,
-            rootDir, admin, fs, requireLogs, logsDir, true, null);
-      }
-    }
-  }
-
-  /**
    * Confirm that the snapshot contains references to all the files that should
    * be in the snapshot.
    */
@@ -170,54 +150,104 @@ public class SnapshotTestingUtils {
       byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs,
       boolean requireLogs, Path logsDir, Set<String> snapshotServers)
       throws IOException {
-    confirmSnapshotValid(snapshotDescriptor, tableName, testFamily, rootDir,
-        admin, fs, requireLogs, logsDir, false, snapshotServers);
+    ArrayList nonEmptyTestFamilies = new ArrayList(1);
+    nonEmptyTestFamilies.add(testFamily);
+    confirmSnapshotValid(snapshotDescriptor, tableName,
+      nonEmptyTestFamilies, null, rootDir, admin, fs, requireLogs,
+      logsDir, snapshotServers);
+  }
+
+  /**
+   * Confirm that the snapshot has no references files but only metadata.
+   */
+  public static void confirmEmptySnapshotValid(
+      SnapshotDescription snapshotDescriptor, TableName tableName,
+      byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs,
+      boolean requireLogs, Path logsDir, Set<String> snapshotServers)
+      throws IOException {
+    ArrayList emptyTestFamilies = new ArrayList(1);
+    emptyTestFamilies.add(testFamily);
+    confirmSnapshotValid(snapshotDescriptor, tableName,
+      null, emptyTestFamilies, rootDir, admin, fs, requireLogs,
+      logsDir, snapshotServers);
   }
 
   /**
    * Confirm that the snapshot contains references to all the files that should
-   * be in the snapshot.
+   * be in the snapshot. This method also perform some redundant check like
+   * the existence of the snapshotinfo or the regioninfo which are done always
+   * by the MasterSnapshotVerifier, at the end of the snapshot operation.
    */
   public static void confirmSnapshotValid(
       SnapshotDescription snapshotDescriptor, TableName tableName,
-      byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs,
-      boolean requireLogs, Path logsDir, boolean familyEmpty,
-      Set<String> snapshotServers) throws IOException {
+      List<byte[]> nonEmptyTestFamilies, List<byte[]> emptyTestFamilies,
+      Path rootDir, HBaseAdmin admin, FileSystem fs, boolean requireLogs,
+      Path logsDir, Set<String> snapshotServers) throws IOException {
+    // check snapshot dir
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
         snapshotDescriptor, rootDir);
     assertTrue(fs.exists(snapshotDir));
-    Path snapshotinfo = new Path(snapshotDir,
-        SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
+
+    // check snapshot info
+    Path snapshotinfo = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
     assertTrue(fs.exists(snapshotinfo));
+
     // check the logs dir
     if (requireLogs) {
       TakeSnapshotUtils.verifyAllLogsGotReferenced(fs, logsDir,
           snapshotServers, snapshotDescriptor, new Path(snapshotDir,
               HConstants.HREGION_LOGDIR_NAME));
     }
+
     // check the table info
-    HTableDescriptor desc = FSTableDescriptors.getTableDescriptorFromFs(fs, rootDir,
-        tableName);
-    HTableDescriptor snapshotDesc = FSTableDescriptors.getTableDescriptorFromFs(fs,
-        snapshotDir);
+    HTableDescriptor desc = FSTableDescriptors.getTableDescriptorFromFs(fs, rootDir, tableName);
+    HTableDescriptor snapshotDesc = FSTableDescriptors.getTableDescriptorFromFs(fs, snapshotDir);
     assertEquals(desc, snapshotDesc);
+
+    // Extract regions and families with store files
+    final Set<String> snapshotRegions = new HashSet<String>();
+    final Set<byte[]> snapshotFamilies = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    FSVisitor.visitTableStoreFiles(fs, snapshotDir, new FSVisitor.StoreFileVisitor() {
+      public void storeFile(final String region, final String family, final String hfileName)
+          throws IOException {
+        snapshotRegions.add(region);
+        snapshotFamilies.add(Bytes.toBytes(family));
+      }
+    });
+
+    // Verify that there are store files in the specified families
+    if (nonEmptyTestFamilies != null) {
+      for (final byte[] familyName: nonEmptyTestFamilies) {
+        assertTrue(snapshotFamilies.contains(familyName));
+      }
+    }
+
+    // Verify that there are no store files in the specified families
+    if (emptyTestFamilies != null) {
+      for (final byte[] familyName: emptyTestFamilies) {
+        assertFalse(snapshotFamilies.contains(familyName));
+      }
+    }
+
+    // Avoid checking regions if the request is for an empty snapshot
+    if ((nonEmptyTestFamilies == null || nonEmptyTestFamilies.size() == 0) &&
+        (emptyTestFamilies != null && emptyTestFamilies.size() > 0)) {
+      assertEquals(0, snapshotRegions.size());
+      return;
+    }
 
     // check the region snapshot for all the regions
     List<HRegionInfo> regions = admin.getTableRegions(tableName);
+    assertEquals(regions.size(), snapshotRegions.size());
+
+    // Verify Regions
     for (HRegionInfo info : regions) {
       String regionName = info.getEncodedName();
+      assertTrue(snapshotRegions.contains(regionName));
+
       Path regionDir = new Path(snapshotDir, regionName);
       HRegionInfo snapshotRegionInfo = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
       assertEquals(info, snapshotRegionInfo);
-
-      // check to make sure we have the family
-      if (!familyEmpty) {
-        Path familyDir = new Path(regionDir, Bytes.toString(testFamily));
-        assertTrue("Expected to find: " + familyDir + ", but it doesn't exist",
-            fs.exists(familyDir));
-        // make sure we have some files references
-        assertTrue(fs.listStatus(familyDir).length > 0);
-      }
     }
   }
 
@@ -291,157 +321,60 @@ public class SnapshotTestingUtils {
    * @return array of the current HFiles in the table (could be a zero-length array)
    * @throws IOException on unexecpted error reading the FS
    */
-  public static FileStatus[] listHFiles(final FileSystem fs, Path tableDir)
+  public static Path[] listHFiles(final FileSystem fs, final Path tableDir)
       throws IOException {
-    // setup the filters we will need based on the filesystem
-    PathFilter regionFilter = new FSUtils.RegionDirFilter(fs);
-    PathFilter familyFilter = new FSUtils.FamilyDirFilter(fs);
-    final PathFilter fileFilter = new PathFilter() {
-      @Override
-      public boolean accept(Path file) {
-        try {
-          return fs.isFile(file);
-        } catch (IOException e) {
-          return false;
-        }
+    final ArrayList<Path> hfiles = new ArrayList<Path>();
+    FSVisitor.visitTableStoreFiles(fs, tableDir, new FSVisitor.StoreFileVisitor() {
+      public void storeFile(final String region, final String family, final String hfileName)
+          throws IOException {
+        hfiles.add(new Path(tableDir, new Path(region, new Path(family, hfileName))));
       }
-    };
-
-    FileStatus[] regionDirs = FSUtils.listStatus(fs, tableDir, regionFilter);
-    // if no regions, then we are done
-    if (regionDirs == null || regionDirs.length == 0)
-      return new FileStatus[0];
-
-    // go through each of the regions, and add al the hfiles under each family
-    List<FileStatus> regionFiles = new ArrayList<FileStatus>(regionDirs.length);
-    for (FileStatus regionDir : regionDirs) {
-      FileStatus[] fams = FSUtils.listStatus(fs, regionDir.getPath(),
-          familyFilter);
-      // if no families, then we are done again
-      if (fams == null || fams.length == 0)
-        continue;
-      // add all the hfiles under the family
-      regionFiles.addAll(SnapshotTestingUtils.getHFilesInRegion(fams, fs,
-          fileFilter));
-    }
-    FileStatus[] files = new FileStatus[regionFiles.size()];
-    regionFiles.toArray(files);
-    return files;
+    });
+    return hfiles.toArray(new Path[hfiles.size()]);
   }
 
   /**
-   * Get all the hfiles in the region, under the passed set of families
-   *
-   * @param families: all the family directories under the region
-   * @param fs: filesystem where the families live
-   * @param fileFilter: filter to only include files
-   * @return collection of all the hfiles under all the passed in families (non-null)
-   * @throws IOException on unexecpted error reading the FS
-   */
-  public static Collection<FileStatus> getHFilesInRegion(FileStatus[] families,
-      FileSystem fs, PathFilter fileFilter) throws IOException {
-    Set<FileStatus> files = new TreeSet<FileStatus>();
-    for (FileStatus family : families) {
-      // get all the hfiles in the family
-      FileStatus[] hfiles = FSUtils
-          .listStatus(fs, family.getPath(), fileFilter);
-      // if no hfiles, then we are done with this family
-      if (hfiles == null || hfiles.length == 0)
-        continue;
-      files.addAll(Arrays.asList(hfiles));
-    }
-    return files;
-  }
-
-  /**
-   * Take an offline snapshot of the specified table and verify if the given
-   * family is empty. Note that this will leave the table disabled
-   * in the case of an offline snapshot.
-   */
-  public static void createOfflineSnapshotAndValidate(HBaseAdmin admin,
-      TableName tableName, String familyName, String snapshotNameString,
-      Path rootDir, FileSystem fs, boolean familyEmpty) throws Exception {
-
-    createSnapshotAndValidate(admin, tableName, familyName,
-        snapshotNameString, rootDir, fs, familyEmpty, false);
-  }
-
-  /**
-   * Take a snapshot of the specified table and verify if the given family is
-   * empty. Note that this will leave the table disabled
+   * Take a snapshot of the specified table and verify that the given family is
+   * not empty. Note that this will leave the table disabled
    * in the case of an offline snapshot.
    */
   public static void createSnapshotAndValidate(HBaseAdmin admin,
       TableName tableName, String familyName, String snapshotNameString,
-      Path rootDir, FileSystem fs, boolean familyEmpty, boolean onlineSnapshot)
+      Path rootDir, FileSystem fs, boolean onlineSnapshot)
       throws Exception {
+    ArrayList<byte[]> nonEmptyFamilyNames = new ArrayList<byte[]>(1);
+    nonEmptyFamilyNames.add(Bytes.toBytes(familyName));
+    createSnapshotAndValidate(admin, tableName, nonEmptyFamilyNames, /* emptyFamilyNames= */ null,
+                              snapshotNameString, rootDir, fs, onlineSnapshot);
+  }
 
+  /**
+   * Take a snapshot of the specified table and verify the given families.
+   * Note that this will leave the table disabled in the case of an offline snapshot.
+   */
+  public static void createSnapshotAndValidate(HBaseAdmin admin,
+      TableName tableName, List<byte[]> nonEmptyFamilyNames, List<byte[]> emptyFamilyNames,
+      String snapshotNameString, Path rootDir, FileSystem fs, boolean onlineSnapshot)
+        throws Exception {
     if (!onlineSnapshot) {
       try {
         admin.disableTable(tableName);
       } catch (TableNotEnabledException tne) {
-        LOG.info("In attempting to disable " + tableName
-            + " it turns out that this table is already disabled.");
+        LOG.info("In attempting to disable " + tableName + " it turns out that the this table is " +
+            "already disabled.");
       }
-    }
-
-    admin.snapshot(snapshotNameString, tableName);
-
-    List<SnapshotDescription> snapshots = SnapshotTestingUtils
-        .assertExistsMatchingSnapshot(admin, snapshotNameString,
-            tableName);
-
-    if (snapshots == null || snapshots.size() != 1) {
-      Assert.fail("Incorrect number of snapshots for table "
-          + tableName);
-    }
-
-    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), tableName,
-        Bytes.toBytes(familyName), rootDir, admin, fs, false, new Path(rootDir,
-            HConstants.HREGION_LOGDIR_NAME), familyEmpty, null);
-  }
-  public static void createSnapshotAndValidate(HBaseAdmin admin,
-      TableName tableName, String familyName, String snapshotNameString,
-      Path rootDir, FileSystem fs) throws Exception {
-    createSnapshotAndValidate(admin, tableName, familyName,
-        snapshotNameString, rootDir, fs, false, false);
-  }
-
-  /**
-   * This will create a snapshot. Note that this has the side effect
-   * of leaving the input table disabled if the offline snapshot
-   * option is chosen.
-   *
-   */
-  public static void createSnapshotAndValidate(HBaseAdmin admin,
-      TableName tableName, String familyName, String snapshotNameString,
-      Path rootDir, FileSystem fs, boolean online) throws Exception {
-    createSnapshotAndValidate(admin, tableName, familyName,
-        snapshotNameString, rootDir, fs, false, online);
-  }
-
-  public static void createSnapshotAndValidate(HBaseAdmin admin,
-      TableName tableName, List<byte[]> nonEmptyFamilyNames, List<byte[]> emptyFamilyNames,
-      String snapshotNameString, Path rootDir, FileSystem fs) throws Exception {
-
-    try {
-      admin.disableTable(tableName);
-    } catch (TableNotEnabledException tne) {
-      LOG.info("In attempting to disable " + tableName + " it turns out that the this table is " +
-          "already disabled.");
     }
     admin.snapshot(snapshotNameString, tableName);
 
     List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertExistsMatchingSnapshot(admin,
       snapshotNameString, tableName);
-
-    // Create test-timestamp-clone
     if (snapshots == null || snapshots.size() != 1) {
       Assert.fail("Incorrect number of snapshots for table " + tableName);
     }
 
-    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), tableName, nonEmptyFamilyNames, emptyFamilyNames,
-      rootDir, admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), null);
+    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), tableName, nonEmptyFamilyNames,
+      emptyFamilyNames, rootDir, admin, fs, false,
+      new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), null);
   }
 
   // ==========================================================================
