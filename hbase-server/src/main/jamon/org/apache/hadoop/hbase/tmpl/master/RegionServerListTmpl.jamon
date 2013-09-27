@@ -108,7 +108,7 @@ Arrays.sort(serverNames);
 <tr>
     <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
     <td><% new Date(startcode) %></td>
-    <td><% requestsPerSecond %></td>
+    <td><% String.format("%.0f", requestsPerSecond) %></td>
     <td><% numRegionsOnline %></td>
 </tr>
 <%java>
@@ -178,7 +178,7 @@ if (sl != null) {
 </%java>
 <tr>
 <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
-<td><% sl.getRequestsPerSecond() %></td>
+<td><% String.format("%.0f", sl.getRequestsPerSecond()) %></td>
 <td><% sl.getReadRequestsCount() %></td>
 <td><% sl.getWriteRequestsCount() %></td>
 </tr>
