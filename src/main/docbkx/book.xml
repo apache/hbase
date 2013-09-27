@@ -3267,7 +3267,18 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
             </entry>
          </row></tbody></tgroup>
    </informaltable>
-   <para/></section></section></appendix>
+   <para/></section>
+   <section><title>getShortMidpointKey(an optimization for data index block)</title>
+     <para>Note: this optimization was introduced in HBase 0.95+</para>
+       <para>HFiles contain many blocks that contain a range of sorted Cells. Each cell has a key. To save IO when reading Cells, the HFile also has an index that maps a Cell's start key to the offset of the beginning of a particular block. Prior to this optimization, HBase would use the key of the first cell in each data block as the index key.</para>
+     <para>In HBASE-7845, we generate a new key that is lexicographically larger than the last key of the previous block and lexicographically equal or smaller than the start key of the current block. While actual keys can potentially be very long, this "fake key" or "virtual key" can be much shorter. For example, if the stop key of previous block is "the quick brown fox", the start key of current block is "the who", we could use "the r" as our virtual key in our hfile index.</para>
+     <para>There are two benefits to this:</para>
+     <itemizedlist>
+     <listitem><section>having shorter keys reduces the hfile index size, (allowing us to keep more indexes in memory), and</section></listitem>
+     <listitem><section>using something closer to the end key of the previous block allows us to avoid a potential extra IO when the target key lives in between the "virtual key" and the key of the first element in the target block.</section></listitem>
+     </itemizedlist>
+     <para>This optimization (implemented by the getShortMidpointKey method) is inspired by LevelDB's ByteWiseComparatorImpl::FindShortestSeparator() and FindShortSuccessor().</para>
+   </section></section></appendix>
 
   <appendix xml:id="other.info">
       <title>Other Information About HBase</title>
