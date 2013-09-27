@@ -881,7 +881,11 @@ public final class HConstants {
   public static final String STATUS_MULTICAST_PORT = "hbase.status.multicast.port";
   public static final int DEFAULT_STATUS_MULTICAST_PORT = 60100;
 
-
+  /**
+   * The period (in milliseconds) between computing region server point in time metrics
+   */
+  public static final String REGIONSERVER_METRICS_PERIOD = "hbase.regionserver.metrics.period";
+  public static final long DEFAULT_REGIONSERVER_METRICS_PERIOD = 5000;
 
   private HConstants() {
     // Can't be instantiated with this ctor.
