@@ -848,7 +848,11 @@ public final class HConstants {
 
   /** Temporary directory used for table creation and deletion */
   public static final String HBASE_TEMP_DIRECTORY = ".tmp";
-
+  /**
+   * The period (in milliseconds) between computing region server point in time metrics
+   */
+  public static final String REGIONSERVER_METRICS_PERIOD = "hbase.regionserver.metrics.period";
+  public static final long DEFAULT_REGIONSERVER_METRICS_PERIOD = 5000;
   /** Directories that are not HBase table directories */
   public static final List<String> HBASE_NON_TABLE_DIRS =
     Collections.unmodifiableList(Arrays.asList(new String[] { HREGION_LOGDIR_NAME,
