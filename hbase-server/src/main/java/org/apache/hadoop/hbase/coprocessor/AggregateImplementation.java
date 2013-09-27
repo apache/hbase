@@ -237,8 +237,10 @@ extends AggregateService implements CoprocessorService, Coprocessor {
     InternalScanner scanner = null;
     try {
       Scan scan = ProtobufUtil.toScan(request.getScan());
-      byte[] colFamily = scan.getFamilies()[0];
-      NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+      byte[][] colFamilies = scan.getFamilies();
+      byte[] colFamily = colFamilies != null ? colFamilies[0] : null;
+      NavigableSet<byte[]> qualifiers = colFamilies != null ?
+          scan.getFamilyMap().get(colFamily) : null;
       byte[] qualifier = null;
       if (qualifiers != null && !qualifiers.isEmpty()) {
         qualifier = qualifiers.pollFirst();

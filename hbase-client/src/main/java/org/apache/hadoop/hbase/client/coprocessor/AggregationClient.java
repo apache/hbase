@@ -127,7 +127,7 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message> 
   R max(final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class MaxCallBack implements Batch.Callback<R> {
       R max = null;
 
@@ -164,7 +164,11 @@ public class AggregationClient {
     return aMaxCallBack.getMax();
   }
 
-  private void validateParameters(Scan scan) throws IOException {
+  /*
+   * @param scan
+   * @param canFamilyBeAbsent whether column family can be absent in familyMap of scan
+   */
+  private void validateParameters(Scan scan, boolean canFamilyBeAbsent) throws IOException {
     if (scan == null
         || (Bytes.equals(scan.getStartRow(), scan.getStopRow()) && !Bytes
             .equals(scan.getStartRow(), HConstants.EMPTY_START_ROW))
@@ -172,8 +176,10 @@ public class AggregationClient {
         	!Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW))) {
       throw new IOException(
           "Agg client Exception: Startrow should be smaller than Stoprow");
-    } else if (scan.getFamilyMap().size() != 1) {
-      throw new IOException("There must be only one family.");
+    } else if (!canFamilyBeAbsent) {
+      if (scan.getFamilyMap().size() != 1) {
+        throw new IOException("There must be only one family.");
+      }
     }
   }
 
@@ -214,7 +220,7 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message> 
   R min(final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class MinCallBack implements Batch.Callback<R> {
 
       private R min = null;
@@ -297,7 +303,7 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message> 
   long rowCount(final HTable table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, true);
     class RowNumCallback implements Batch.Callback<Long> {
       private final AtomicLong rowCountL = new AtomicLong(0);
 
@@ -367,7 +373,7 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message> 
   S sum(final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     
     class SumCallBack implements Batch.Callback<S> {
       S sumVal = null;
@@ -439,7 +445,7 @@ public class AggregationClient {
   private <R, S, P extends Message, Q extends Message, T extends Message>
   Pair<S, Long> getAvgArgs(final HTable table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class AvgCallBack implements Batch.Callback<Pair<S, Long>> {
       S sum = null;
       Long rowCount = 0l;
@@ -536,7 +542,7 @@ public class AggregationClient {
   private <R, S, P extends Message, Q extends Message, T extends Message>
   Pair<List<S>, Long> getStdArgs(final HTable table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class StdCallback implements Batch.Callback<Pair<List<S>, Long>> {
       long rowCountVal = 0l;
       S sumVal = null, sumSqVal = null;
@@ -658,7 +664,7 @@ public class AggregationClient {
   Pair<NavigableMap<byte[], List<S>>, List<S>>
   getMedianArgs(final HTable table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     final NavigableMap<byte[], List<S>> map =
       new TreeMap<byte[], List<S>>(Bytes.BYTES_COMPARATOR);
     class StdCallback implements Batch.Callback<List<S>> {
@@ -814,9 +820,9 @@ public class AggregationClient {
   }
 
   <R, S, P extends Message, Q extends Message, T extends Message> AggregateRequest 
-  validateArgAndGetPB(Scan scan, ColumnInterpreter<R,S,P,Q,T> ci)
+  validateArgAndGetPB(Scan scan, ColumnInterpreter<R,S,P,Q,T> ci, boolean canFamilyBeAbsent)
       throws IOException {
-    validateParameters(scan);
+    validateParameters(scan, canFamilyBeAbsent);
     final AggregateRequest.Builder requestBuilder = 
         AggregateRequest.newBuilder();
     requestBuilder.setInterpreterClassName(ci.getClass().getCanonicalName());
