@@ -79,7 +79,7 @@ java.lang.management.ManagementFactory;
         <th>Slow HLog Append Count</th>
     </tr>
     <tr>
-        <td><% mWrap.getRequestsPerSecond() %></td>
+        <td><% String.format("%.0f", mWrap.getRequestsPerSecond()) %></td>
         <td><% mWrap.getNumOnlineRegions() %></td>
         <td><% mWrap.getPercentFileLocal() %></td>
         <td><% 0 %></td>
@@ -146,7 +146,7 @@ MetricsRegionServerWrapper mWrap;
     <th>Write Request Count</th>
 </tr>
 <tr>
-    <td><% mWrap.getRequestsPerSecond() %></td>
+    <td><% String.format("%.0f", mWrap.getRequestsPerSecond()) %></td>
     <td><% mWrap.getReadRequestsCount() %></td>
     <td><% mWrap.getWriteRequestsCount() %></td>
 </tr>
