@@ -329,7 +329,7 @@ public class TestHLog  {
   // 2. HDFS-988 (SafeMode should freeze file operations
   //              [FSNamesystem.nextGenerationStampForBlock])
   // 3. HDFS-142 (on restart, maintain pendingCreates)
-  //@Test
+  @Test
   public void testAppendClose() throws Exception {
     byte [] tableName = Bytes.toBytes(getName());
     HRegionInfo regioninfo = new HRegionInfo(new HTableDescriptor(tableName),
@@ -370,7 +370,7 @@ public class TestHLog  {
         Thread.sleep(1000);
       }
       LOG.info("Waiting a few seconds before re-starting HDFS");
-      Thread.sleep(5000);
+      Thread.sleep(10000);
       cluster = TEST_UTIL.startMiniDFSClusterForTestHLog(namenodePort);
       cluster.waitActive();
       fs = cluster.getFileSystem();
