@@ -97,7 +97,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   public static final String OPT_ENCODE_IN_CACHE_ONLY_USAGE =
       "If this is specified, data blocks will only be encoded in block " +
       "cache but not on disk";
-  
+
   public static final String OPT_INMEMORY = "in_memory";
   public static final String OPT_USAGE_IN_MEMORY = "Tries to keep the HFiles of the CF " +
   		"inmemory as far as possible.  Not guaranteed that reads are always served from inmemory";
@@ -152,7 +152,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   private int keyWindow = MultiThreadedReader.DEFAULT_KEY_WINDOW;
   private int maxReadErrors = MultiThreadedReader.DEFAULT_MAX_ERRORS;
   private int verifyPercent;
- 
+
   private int numTables = 1;
 
   // TODO: refactor LoadTestToolImpl somewhere to make the usage from tests less bad,
@@ -248,7 +248,7 @@ public class LoadTestTool extends AbstractHBaseTool {
         DEFAULT_START_KEY + ".");
     addOptNoArg(OPT_SKIP_INIT, "Skip the initialization; assume test table "
         + "already exists");
-    
+
     addOptWithArg(NUM_TABLES,
       "A positive integer number. When a number n is speicfied, load test "
           + "tool  will load n table parallely. -tn parameter value becomes "
@@ -354,7 +354,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       System.out.println("Percent of keys to verify: " + verifyPercent);
       System.out.println("Reader threads: " + numReaderThreads);
     }
-    
+
     numTables = 1;
     if(cmd.hasOption(NUM_TABLES)) {
       numTables = parseInt(cmd.getOptionValue(NUM_TABLES), 1, Short.MAX_VALUE);
@@ -377,7 +377,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     String bloomStr = cmd.getOptionValue(OPT_BLOOM);
     bloomType = bloomStr == null ? null :
         BloomType.valueOf(bloomStr);
-    
+
     inMemoryCF = cmd.hasOption(OPT_INMEMORY);
     
   }
@@ -489,14 +489,14 @@ public class LoadTestTool extends AbstractHBaseTool {
   }
 
   /**
-   * When NUM_TABLES is specified, the function starts multiple worker threads 
-   * which individually start a LoadTestTool instance to load a table. Each 
+   * When NUM_TABLES is specified, the function starts multiple worker threads
+   * which individually start a LoadTestTool instance to load a table. Each
    * table name is in format <tn>_<index>. For example, "-tn test -num_tables 2"
    * , table names will be "test_1", "test_2"
-   * 
+   *
    * @throws IOException
    */
-  private int parallelLoadTables() 
+  private int parallelLoadTables()
       throws IOException {
     // create new command args
     String tableName = cmd.getOptionValue(OPT_TABLE_NAME, DEFAULT_TABLE_NAME);
@@ -504,6 +504,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     if (!cmd.hasOption(LoadTestTool.OPT_TABLE_NAME)) {
       newArgs = new String[cmdLineArgs.length + 2];
       newArgs[0] = "-" + LoadTestTool.OPT_TABLE_NAME;
+      newArgs[1] = LoadTestTool.DEFAULT_TABLE_NAME;
       for (int i = 0; i < cmdLineArgs.length; i++) {
         newArgs[i + 2] = cmdLineArgs[i];
       }
@@ -517,7 +518,7 @@ public class LoadTestTool extends AbstractHBaseTool {
         tableNameValueIndex = j + 1;
       } else if (newArgs[j].endsWith(NUM_TABLES)) {
         // change NUM_TABLES to 1 so that each worker loads one table
-        newArgs[j + 1] = "1"; 
+        newArgs[j + 1] = "1";
       }
     }
 
@@ -544,7 +545,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       }
       checkForErrors();
     }
-    
+
     return EXIT_SUCCESS;
   }
 
@@ -577,6 +578,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       workerArgs = args;
     }
 
+    @Override
     public void run() {
       try {
         int ret = ToolRunner.run(HBaseConfiguration.create(), new LoadTestTool(), workerArgs);
