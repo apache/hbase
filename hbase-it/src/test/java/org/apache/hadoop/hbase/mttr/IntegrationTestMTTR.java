@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
@@ -408,6 +409,8 @@ public class IntegrationTestMTTR {
         } catch (TableExistsException e) {
           throw e;
         } catch (TableNotFoundException e) {
+          throw e;
+        } catch (RetriesExhaustedException e){
           throw e;
 
         // Everything else is potentially recoverable on the application side. For instance, a CM
