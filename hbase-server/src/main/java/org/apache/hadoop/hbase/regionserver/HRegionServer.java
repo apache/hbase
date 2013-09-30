@@ -195,6 +195,7 @@ import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -3867,9 +3868,27 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       
       HRegion region = this.getRegionByEncodedName(
         entries.get(0).getKey().getEncodedRegionName().toStringUtf8());
+      RegionCoprocessorHost coprocessorHost = region.getCoprocessorHost();
       List<Pair<HLogKey, WALEdit>> walEntries = new ArrayList<Pair<HLogKey, WALEdit>>();
-      List<Pair<MutationType, Mutation>> mutations = region.getReplayMutations(
-        request.getEntryList(), cells, UUID.fromString(this.clusterId), walEntries);
+      List<Pair<MutationType, Mutation>> mutations = new ArrayList<Pair<MutationType, Mutation>>();
+      for (WALEntry entry : entries) {
+        Pair<HLogKey, WALEdit> walEntry = (coprocessorHost == null) ? null : 
+          new Pair<HLogKey, WALEdit>();
+        List<Pair<MutationType, Mutation>> edits = HLogSplitter.getMutationsFromWALEntry(entry, 
+          cells, walEntry);
+        if (coprocessorHost != null) {
+          // Start coprocessor replay here. The coprocessor is for each WALEdit instead of a
+          // KeyValue.
+          if (coprocessorHost.preWALRestore(region.getRegionInfo(), walEntry.getFirst(),
+            walEntry.getSecond())) {
+            // if bypass this log entry, ignore it ...
+            continue;
+          }
+          walEntries.add(walEntry);
+        }
+        mutations.addAll(edits);
+      }
+
       if (!mutations.isEmpty()) {
         OperationStatus[] result = doBatchOp(region, mutations, true);
         // check if it's a partial success
@@ -3879,9 +3898,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           }
         }
       }
-      if (region.getCoprocessorHost() != null) {
+      if (coprocessorHost != null) {
         for (Pair<HLogKey, WALEdit> wal : walEntries) {
-          region.getCoprocessorHost().postWALRestore(region.getRegionInfo(), wal.getFirst(),
+          coprocessorHost.postWALRestore(region.getRegionInfo(), wal.getFirst(),
             wal.getSecond());
         }
       }
@@ -4096,12 +4115,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   }
 
   /**
-   * Execute a list of Put/Delete mutations.
+   * Execute a list of Put/Delete mutations. The function returns OperationStatus instead of
+   * constructing MultiResponse to save a possible loop if caller doesn't need MultiResponse.
    * @param region
    * @param mutations
    * @param isReplay
-   * @return an array of OperationStatus which internally contains the
-   *         OperationStatusCode and the exceptionMessage if any
+   * @return an array of OperationStatus which internally contains the OperationStatusCode and the
+   *         exceptionMessage if any
    * @throws IOException
    */
   protected OperationStatus[] doBatchOp(final HRegion region,
