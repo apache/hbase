@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.security.User;
 import org.junit.Test;
@@ -57,8 +57,8 @@ public class TestHMasterRPCException {
         try {
           BlockingRpcChannel channel =
             rpcClient.createBlockingRpcChannel(sm, User.getCurrent(), 0);
-          MasterMonitorProtos.MasterMonitorService.BlockingInterface stub =
-            MasterMonitorProtos.MasterMonitorService.newBlockingStub(channel);
+          MasterProtos.MasterService.BlockingInterface stub =
+            MasterProtos.MasterService.newBlockingStub(channel);
           stub.isMasterRunning(null, IsMasterRunningRequest.getDefaultInstance());
           fail();
         } catch (ServiceException ex) {

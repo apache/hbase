@@ -20,20 +20,21 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.Closeable;
-
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 
 /**
  * A KeepAlive connection is not physically closed immediately after the close,
- *  but rather kept alive for a few minutes. It makes sense only if it's shared.
+ *  but rather kept alive for a few minutes. It makes sense only if it is shared.
  *
- * This interface is used by a dynamic proxy. It allows to have a #close
- *  function in a master client.
+ * <p>This interface is implemented on a stub. It allows to have a #close function in a master
+ * client.
  *
- * This class is intended to be used internally by HBase classes that need to
- * speak the MasterMonitorProtocol; but not by final user code. Hence it's
- * package protected.
+ * <p>This class is intended to be used internally by HBase classes that need to make invocations
+ * against the master on the MasterProtos.MasterService.BlockingInterface; but not by
+ * final user code. Hence it's package protected.
  */
-interface MasterMonitorKeepAliveConnection
-extends MasterMonitorProtos.MasterMonitorService.BlockingInterface, Closeable {}
+interface MasterKeepAliveConnection
+extends MasterProtos.MasterService.BlockingInterface {
+  // Do this instead of implement Closeable because closeable returning IOE is PITA.
+  void close();
+}

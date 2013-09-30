@@ -108,9 +108,9 @@ import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -1312,7 +1312,7 @@ public final class ProtobufUtil {
   }
 
   public static CoprocessorServiceResponse execService(
-    final MasterAdminService.BlockingInterface client, final CoprocessorServiceCall call)
+    final MasterService.BlockingInterface client, final CoprocessorServiceCall call)
   throws IOException {
     CoprocessorServiceRequest request = CoprocessorServiceRequest.newBuilder()
         .setCall(call).setRegion(

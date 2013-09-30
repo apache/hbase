@@ -89,37 +89,43 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.GetCompletedSnapshotsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -585,11 +591,11 @@ public class HBaseAdmin implements Abortable, Closeable {
       }
     }
 
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
         CreateTableRequest request = RequestConverter.buildCreateTableRequest(desc, splitKeys);
-        masterAdmin.createTable(null, request);
+        master.createTable(null, request);
         return null;
       }
     });
@@ -614,11 +620,11 @@ public class HBaseAdmin implements Abortable, Closeable {
     HRegionLocation firstMetaServer = getFirstMetaServerForTable(tableName);
     boolean tableExists = true;
 
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
         DeleteTableRequest req = RequestConverter.buildDeleteTableRequest(tableName);
-        masterAdmin.deleteTable(null,req);
+        master.deleteTable(null,req);
         return null;
       }
     });
@@ -649,7 +655,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         if (values == null || values.length == 0) {
           tableExists = false;
           GetTableDescriptorsResponse htds;
-          MasterMonitorKeepAliveConnection master = connection.getKeepAliveMasterMonitorService();
+          MasterKeepAliveConnection master = connection.getKeepAliveMasterService();
           try {
             GetTableDescriptorsRequest req =
               RequestConverter.buildGetTableDescriptorsRequest(tableName);
@@ -819,12 +825,12 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void enableTableAsync(final TableName tableName)
   throws IOException {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
         LOG.info("Started enable of " + tableName);
         EnableTableRequest req = RequestConverter.buildEnableTableRequest(tableName);
-        masterAdmin.enableTable(null,req);
+        master.enableTable(null,req);
         return null;
       }
     });
@@ -896,12 +902,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void disableTableAsync(final TableName tableName) throws IOException {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
         LOG.info("Started disable of " + tableName);
         DisableTableRequest req = RequestConverter.buildDisableTableRequest(tableName);
-        masterAdmin.disableTable(null,req);
+        master.disableTable(null,req);
         return null;
       }
     });
@@ -1115,12 +1121,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public Pair<Integer, Integer> getAlterStatus(final TableName tableName)
   throws IOException {
-    return executeCallable(new MasterMonitorCallable<Pair<Integer, Integer>>(getConnection()) {
+    return executeCallable(new MasterCallable<Pair<Integer, Integer>>(getConnection()) {
       @Override
       public Pair<Integer, Integer> call() throws ServiceException {
         GetSchemaAlterStatusRequest req = RequestConverter
             .buildGetSchemaAlterStatusRequest(tableName);
-        GetSchemaAlterStatusResponse ret = masterMonitor.getSchemaAlterStatus(null, req);
+        GetSchemaAlterStatusResponse ret = master.getSchemaAlterStatus(null, req);
         Pair<Integer, Integer> pair = new Pair<Integer, Integer>(Integer.valueOf(ret
             .getYetToUpdateRegions()), Integer.valueOf(ret.getTotalRegions()));
         return pair;
@@ -1182,11 +1188,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void addColumn(final TableName tableName, final HColumnDescriptor column)
   throws IOException {
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
         AddColumnRequest req = RequestConverter.buildAddColumnRequest(tableName, column);
-        masterAdmin.addColumn(null,req);
+        master.addColumn(null,req);
         return null;
       }
     });
@@ -1228,11 +1234,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void deleteColumn(final TableName tableName, final byte [] columnName)
   throws IOException {
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
         DeleteColumnRequest req = RequestConverter.buildDeleteColumnRequest(tableName, columnName);
-        masterAdmin.deleteColumn(null,req);
+        master.deleteColumn(null,req);
         return null;
       }
     });
@@ -1276,11 +1282,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void modifyColumn(final TableName tableName, final HColumnDescriptor descriptor)
   throws IOException {
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
         ModifyColumnRequest req = RequestConverter.buildModifyColumnRequest(tableName, descriptor);
-        masterAdmin.modifyColumn(null,req);
+        master.modifyColumn(null,req);
         return null;
       }
     });
@@ -1658,7 +1664,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void move(final byte [] encodedRegionName, final byte [] destServerName)
   throws HBaseIOException, MasterNotRunningException, ZooKeeperConnectionException {
-    MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();
+    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       MoveRegionRequest request =
         RequestConverter.buildMoveRegionRequest(encodedRegionName, destServerName);
@@ -1686,12 +1692,12 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void assign(final byte[] regionName) throws MasterNotRunningException,
       ZooKeeperConnectionException, IOException {
     final byte[] toBeAssigned = getRegionName(regionName);
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
         AssignRegionRequest request =
           RequestConverter.buildAssignRegionRequest(toBeAssigned);
-        masterAdmin.assignRegion(null,request);
+        master.assignRegion(null,request);
         return null;
       }
     });
@@ -1714,12 +1720,12 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void unassign(final byte [] regionName, final boolean force)
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     final byte[] toBeUnassigned = getRegionName(regionName);
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
         UnassignRegionRequest request =
           RequestConverter.buildUnassignRegionRequest(toBeUnassigned, force);
-        masterAdmin.unassignRegion(null,request);
+        master.unassignRegion(null,request);
         return null;
       }
     });
@@ -1730,7 +1736,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void offline(final byte [] regionName)
   throws IOException {
-    MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdminService();
+    MasterKeepAliveConnection master = connection.getKeepAliveMasterService();
     try {
       master.offlineRegion(null,RequestConverter.buildOfflineRegionRequest(regionName));
     } catch (ServiceException se) {
@@ -1748,7 +1754,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean setBalancerRunning(final boolean on, final boolean synchronous)
   throws MasterNotRunningException, ZooKeeperConnectionException {
-    MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();
+    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       SetBalancerRunningRequest req =
         RequestConverter.buildSetBalancerRunningRequest(on, synchronous);
@@ -1778,7 +1784,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean balancer()
   throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException {
-    MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();
+    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.balance(null,RequestConverter.buildBalanceRequest()).getBalancerRan();
     } finally {
@@ -1795,7 +1801,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean enableCatalogJanitor(boolean enable)
       throws ServiceException, MasterNotRunningException {
-    MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();
+    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.enableCatalogJanitor(null,
           RequestConverter.buildEnableCatalogJanitorRequest(enable)).getPrevValue();
@@ -1811,7 +1817,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws MasterNotRunningException
    */
   public int runCatalogScan() throws ServiceException, MasterNotRunningException {
-    MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();
+    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.runCatalogScan(null,
           RequestConverter.buildCatalogScanRequest()).getScanResult();
@@ -1826,7 +1832,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws org.apache.hadoop.hbase.MasterNotRunningException
    */
   public boolean isCatalogJanitorEnabled() throws ServiceException, MasterNotRunningException {
-    MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();
+    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.isCatalogJanitorEnabled(null,
           RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue();
@@ -1846,8 +1852,8 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void mergeRegions(final byte[] encodedNameOfRegionA,
       final byte[] encodedNameOfRegionB, final boolean forcible)
       throws IOException {
-    MasterAdminKeepAliveConnection master = connection
-        .getKeepAliveMasterAdminService();
+    MasterKeepAliveConnection master = connection
+        .getKeepAliveMasterService();
     try {
       DispatchMergingRegionsRequest request = RequestConverter
           .buildDispatchMergingRegionsRequest(encodedNameOfRegionA,
@@ -1971,11 +1977,11 @@ public class HBaseAdmin implements Abortable, Closeable {
         "' doesn't match with the HTD one: " + htd.getTableName());
     }
 
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
         ModifyTableRequest request = RequestConverter.buildModifyTableRequest(tableName, htd);
-        masterAdmin.modifyTable(null, request);
+        master.modifyTable(null, request);
         return null;
       }
     });
@@ -2084,10 +2090,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public synchronized void shutdown() throws IOException {
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
-        masterAdmin.shutdown(null,ShutdownRequest.newBuilder().build());
+        master.shutdown(null,ShutdownRequest.newBuilder().build());
         return null;
       }
     });
@@ -2100,10 +2106,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public synchronized void stopMaster() throws IOException {
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
-        masterAdmin.stopMaster(null,StopMasterRequest.newBuilder().build());
+        master.stopMaster(null,StopMasterRequest.newBuilder().build());
         return null;
       }
     });
@@ -2136,11 +2142,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public ClusterStatus getClusterStatus() throws IOException {
-    return executeCallable(new MasterMonitorCallable<ClusterStatus>(getConnection()) {
+    return executeCallable(new MasterCallable<ClusterStatus>(getConnection()) {
       @Override
       public ClusterStatus call() throws ServiceException {
         GetClusterStatusRequest req = RequestConverter.buildGetClusterStatusRequest();
-        return ClusterStatus.convert(masterMonitor.getClusterStatus(null,req).getClusterStatus());
+        return ClusterStatus.convert(master.getClusterStatus(null,req).getClusterStatus());
       }
     });
   }
@@ -2164,11 +2170,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException
    */
   public void createNamespace(final NamespaceDescriptor descriptor) throws IOException {
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws Exception {
-        masterAdmin.createNamespace(null,
-            MasterAdminProtos.CreateNamespaceRequest.newBuilder()
+        master.createNamespace(null,
+          CreateNamespaceRequest.newBuilder()
                 .setNamespaceDescriptor(ProtobufUtil
                     .toProtoNamespaceDescriptor(descriptor)).build());
         return null;
@@ -2182,13 +2188,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException
    */
   public void modifyNamespace(final NamespaceDescriptor descriptor) throws IOException {
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws Exception {
-        masterAdmin.modifyNamespace(null,
-            MasterAdminProtos.ModifyNamespaceRequest.newBuilder()
-                .setNamespaceDescriptor(ProtobufUtil
-                    .toProtoNamespaceDescriptor(descriptor)).build());
+        master.modifyNamespace(null, ModifyNamespaceRequest.newBuilder().
+          setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(descriptor)).build());
         return null;
       }
     });
@@ -2200,12 +2204,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException
    */
   public void deleteNamespace(final String name) throws IOException {
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws Exception {
-        masterAdmin.deleteNamespace(null,
-            MasterAdminProtos.DeleteNamespaceRequest.newBuilder()
-                .setNamespaceName(name).build());
+        master.deleteNamespace(null, DeleteNamespaceRequest.newBuilder().
+          setNamespaceName(name).build());
         return null;
       }
     });
@@ -2219,13 +2222,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public NamespaceDescriptor getNamespaceDescriptor(final String name) throws IOException {
     return
-        executeCallable(new MasterAdminCallable<NamespaceDescriptor>(getConnection()) {
+        executeCallable(new MasterCallable<NamespaceDescriptor>(getConnection()) {
           @Override
           public NamespaceDescriptor call() throws Exception {
             return ProtobufUtil.toNamespaceDescriptor(
-              masterAdmin.getNamespaceDescriptor(null,
-                  MasterAdminProtos.GetNamespaceDescriptorRequest.newBuilder()
-                    .setNamespaceName(name).build()).getNamespaceDescriptor());
+              master.getNamespaceDescriptor(null, GetNamespaceDescriptorRequest.newBuilder().
+                setNamespaceName(name).build()).getNamespaceDescriptor());
           }
         });
   }
@@ -2237,13 +2239,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public NamespaceDescriptor[] listNamespaceDescriptors() throws IOException {
     return
-        executeCallable(new MasterAdminCallable<NamespaceDescriptor[]>(getConnection()) {
+        executeCallable(new MasterCallable<NamespaceDescriptor[]>(getConnection()) {
           @Override
           public NamespaceDescriptor[] call() throws Exception {
             List<HBaseProtos.NamespaceDescriptor> list =
-                masterAdmin.listNamespaceDescriptors(null,
-                    MasterAdminProtos.ListNamespaceDescriptorsRequest.newBuilder().build())
-                    .getNamespaceDescriptorList();
+              master.listNamespaceDescriptors(null, ListNamespaceDescriptorsRequest.newBuilder().
+                build()).getNamespaceDescriptorList();
             NamespaceDescriptor[] res = new NamespaceDescriptor[list.size()];
             for(int i = 0; i < list.size(); i++) {
               res[i] = ProtobufUtil.toNamespaceDescriptor(list.get(i));
@@ -2261,14 +2262,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public HTableDescriptor[] listTableDescriptorsByNamespace(final String name) throws IOException {
     return
-        executeCallable(new MasterAdminCallable<HTableDescriptor[]>(getConnection()) {
+        executeCallable(new MasterCallable<HTableDescriptor[]>(getConnection()) {
           @Override
           public HTableDescriptor[] call() throws Exception {
             List<TableSchema> list =
-                masterAdmin.listTableDescriptorsByNamespace(null,
-                    MasterAdminProtos.ListTableDescriptorsByNamespaceRequest.newBuilder()
-                        .setNamespaceName(name).build())
-                            .getTableSchemaList();
+              master.listTableDescriptorsByNamespace(null, ListTableDescriptorsByNamespaceRequest.
+                newBuilder().setNamespaceName(name).build()).getTableSchemaList();
             HTableDescriptor[] res = new HTableDescriptor[list.size()];
             for(int i=0; i < list.size(); i++) {
 
@@ -2287,13 +2286,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public TableName[] listTableNamesByNamespace(final String name) throws IOException {
     return
-        executeCallable(new MasterAdminCallable<TableName[]>(getConnection()) {
+        executeCallable(new MasterCallable<TableName[]>(getConnection()) {
           @Override
           public TableName[] call() throws Exception {
             List<HBaseProtos.TableName> tableNames =
-                masterAdmin.listTableNamesByNamespace(null,
-                    MasterAdminProtos.ListTableNamesByNamespaceRequest.newBuilder()
-                        .setNamespaceName(name).build())
+              master.listTableNamesByNamespace(null, ListTableNamesByNamespaceRequest.
+                newBuilder().setNamespaceName(name).build())
                 .getTableNameList();
             TableName[] result = new TableName[tableNames.size()];
             for (int i = 0; i < tableNames.size(); i++) {
@@ -2704,10 +2702,10 @@ public class HBaseAdmin implements Abortable, Closeable {
         Thread.currentThread().interrupt();
       }
       LOG.debug("Getting current status of snapshot from master...");
-      done = executeCallable(new MasterAdminCallable<IsSnapshotDoneResponse>(getConnection()) {
+      done = executeCallable(new MasterCallable<IsSnapshotDoneResponse>(getConnection()) {
         @Override
         public IsSnapshotDoneResponse call() throws ServiceException {
-          return masterAdmin.isSnapshotDone(null, request);
+          return master.isSnapshotDone(null, request);
         }
       });
     };
@@ -2733,10 +2731,10 @@ public class HBaseAdmin implements Abortable, Closeable {
     final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshot)
         .build();
     // run the snapshot on the master
-    return executeCallable(new MasterAdminCallable<SnapshotResponse>(getConnection()) {
+    return executeCallable(new MasterCallable<SnapshotResponse>(getConnection()) {
       @Override
       public SnapshotResponse call() throws ServiceException {
-        return masterAdmin.snapshot(null, request);
+        return master.snapshot(null, request);
       }
     });
   }
@@ -2764,10 +2762,10 @@ public class HBaseAdmin implements Abortable, Closeable {
   public boolean isSnapshotFinished(final SnapshotDescription snapshot)
       throws IOException, HBaseSnapshotException, UnknownSnapshotException {
 
-    return executeCallable(new MasterAdminCallable<IsSnapshotDoneResponse>(getConnection()) {
+    return executeCallable(new MasterCallable<IsSnapshotDoneResponse>(getConnection()) {
       @Override
       public IsSnapshotDoneResponse call() throws ServiceException {
-        return masterAdmin.isSnapshotDone(null,
+        return master.isSnapshotDone(null,
           IsSnapshotDoneRequest.newBuilder().setSnapshot(snapshot).build());
       }
     }).getDone();
@@ -2940,11 +2938,11 @@ public class HBaseAdmin implements Abortable, Closeable {
         Thread.currentThread().interrupt();
       }
       LOG.debug("Getting current status of snapshot restore from master...");
-      done = executeCallable(new MasterAdminCallable<IsRestoreSnapshotDoneResponse>(
+      done = executeCallable(new MasterCallable<IsRestoreSnapshotDoneResponse>(
           getConnection()) {
         @Override
         public IsRestoreSnapshotDoneResponse call() throws ServiceException {
-          return masterAdmin.isRestoreSnapshotDone(null, request);
+          return master.isRestoreSnapshotDone(null, request);
         }
       });
     }
@@ -2971,10 +2969,10 @@ public class HBaseAdmin implements Abortable, Closeable {
         .build();
 
     // run the snapshot restore on the master
-    return executeCallable(new MasterAdminCallable<RestoreSnapshotResponse>(getConnection()) {
+    return executeCallable(new MasterCallable<RestoreSnapshotResponse>(getConnection()) {
       @Override
       public RestoreSnapshotResponse call() throws ServiceException {
-        return masterAdmin.restoreSnapshot(null, request);
+        return master.restoreSnapshot(null, request);
       }
     });
   }
@@ -2985,10 +2983,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a network error occurs
    */
   public List<SnapshotDescription> listSnapshots() throws IOException {
-    return executeCallable(new MasterAdminCallable<List<SnapshotDescription>>(getConnection()) {
+    return executeCallable(new MasterCallable<List<SnapshotDescription>>(getConnection()) {
       @Override
       public List<SnapshotDescription> call() throws ServiceException {
-        return masterAdmin.getCompletedSnapshots(null, GetCompletedSnapshotsRequest.newBuilder().build())
+        return master.getCompletedSnapshots(null, GetCompletedSnapshotsRequest.newBuilder().build())
             .getSnapshotsList();
       }
     });
@@ -3041,10 +3039,10 @@ public class HBaseAdmin implements Abortable, Closeable {
     // make sure the snapshot is possibly valid
     TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(snapshotName));
     // do the delete
-    executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
-        masterAdmin.deleteSnapshot(null,
+        master.deleteSnapshot(null,
           DeleteSnapshotRequest.newBuilder().
             setSnapshot(SnapshotDescription.newBuilder().setName(snapshotName).build()).build());
         return null;
@@ -3070,10 +3068,10 @@ public class HBaseAdmin implements Abortable, Closeable {
     List<SnapshotDescription> snapshots = listSnapshots(pattern);
     for (final SnapshotDescription snapshot : snapshots) {
       // do the delete
-      executeCallable(new MasterAdminCallable<Void>(getConnection()) {
+      executeCallable(new MasterCallable<Void>(getConnection()) {
         @Override
         public Void call() throws ServiceException {
-          this.masterAdmin.deleteSnapshot(null,
+          this.master.deleteSnapshot(null,
             DeleteSnapshotRequest.newBuilder().setSnapshot(snapshot).build());
           return null;
         }
@@ -3082,59 +3080,27 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
-   * @see {@link #executeCallable(org.apache.hadoop.hbase.client.HBaseAdmin.MasterCallable)}
-   */
-  abstract static class MasterAdminCallable<V> extends MasterCallable<V> {
-    protected MasterAdminKeepAliveConnection masterAdmin;
-
-    public MasterAdminCallable(final HConnection connection) {
-      super(connection);
-    }
-
-    @Override
-    public void prepare(boolean reload) throws IOException {
-      this.masterAdmin = this.connection.getKeepAliveMasterAdminService();
-    }
-
-    @Override
-    public void close() throws IOException {
-      // The above prepare could fail but this would still be called though masterAdmin is null
-      if (this.masterAdmin != null) this.masterAdmin.close();
-    }
-  }
-
-  /**
-   * @see {@link #executeCallable(org.apache.hadoop.hbase.client.HBaseAdmin.MasterCallable)}
-   */
-  abstract static class MasterMonitorCallable<V> extends MasterCallable<V> {
-    protected MasterMonitorKeepAliveConnection masterMonitor;
-
-    public MasterMonitorCallable(final HConnection connection) {
-      super(connection);
-    }
-
-    @Override
-    public void prepare(boolean reload) throws IOException {
-      this.masterMonitor = this.connection.getKeepAliveMasterMonitorService();
-    }
-
-    @Override
-    public void close() throws IOException {
-      // The above prepare could fail but this would still be called though masterMonitor is null
-      if (this.masterMonitor != null) this.masterMonitor.close();
-    }
-  }
-
-  /**
-   * Parent of {@link MasterMonitorCallable} and {@link MasterAdminCallable}.
+   * Parent of {@link MasterCallable} and {@link MasterCallable}.
    * Has common methods.
    * @param <V>
    */
   abstract static class MasterCallable<V> implements RetryingCallable<V>, Closeable {
     protected HConnection connection;
+    protected MasterKeepAliveConnection master;
 
     public MasterCallable(final HConnection connection) {
       this.connection = connection;
+    }
+
+    @Override
+    public void prepare(boolean reload) throws IOException {
+      this.master = this.connection.getKeepAliveMasterService();
+    }
+
+    @Override
+    public void close() throws IOException {
+      // The above prepare could fail but this would still be called though masterAdmin is null
+      if (this.master != null) this.master.close();
     }
 
     @Override

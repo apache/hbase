@@ -17,16 +17,14 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Maps RPC protocol interfaces to required configuration
@@ -40,9 +38,7 @@ public class SecurityInfo {
         new SecurityInfo("hbase.regionserver.kerberos.principal", Kind.HBASE_AUTH_TOKEN));
     infos.put(ClientProtos.ClientService.getDescriptor().getName(),
         new SecurityInfo("hbase.regionserver.kerberos.principal", Kind.HBASE_AUTH_TOKEN));
-    infos.put(MasterAdminProtos.MasterAdminService.getDescriptor().getName(),
-        new SecurityInfo("hbase.master.kerberos.principal", Kind.HBASE_AUTH_TOKEN));
-    infos.put(MasterMonitorProtos.MasterMonitorService.getDescriptor().getName(),
+    infos.put(MasterService.getDescriptor().getName(),
         new SecurityInfo("hbase.master.kerberos.principal", Kind.HBASE_AUTH_TOKEN));
     infos.put(RegionServerStatusProtos.RegionServerStatusService.getDescriptor().getName(),
         new SecurityInfo("hbase.master.kerberos.principal", Kind.HBASE_AUTH_TOKEN));

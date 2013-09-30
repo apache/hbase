@@ -37,15 +37,14 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.MasterMonitorService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 
 /**
  * A cluster connection.  Knows how to find the master, locate regions out on the cluster,
- * keeps a cache of locations and then knows how to recalibrate after they move.
+ * keeps a cache of locations and then knows how to re-calibrate after they move.
  * {@link HConnectionManager} manages instances of this class.   This is NOT a connection to a
- * particular server but to all servers in the cluster.  An implementation takes care of individual
- * connections at a lower level.
+ * particular server but to all servers in the cluster.  Individual connections are managed at a
+ * lower level.
  *
  * <p>HConnections are used by {@link HTable} mostly but also by
  * {@link HBaseAdmin}, and {@link CatalogTracker}.  HConnection instances can be shared.  Sharing
@@ -350,14 +349,10 @@ public interface HConnection extends Abortable, Closeable {
       final boolean offlined) throws IOException;
 
   /**
-   * Returns a {@link MasterAdminKeepAliveConnection} to the active master
+   * Returns a {@link MasterKeepAliveConnection} to the active master
    */
-  MasterAdminService.BlockingInterface getMasterAdmin() throws IOException;
+  MasterService.BlockingInterface getMaster() throws IOException;
 
-  /**
-   * Returns an {@link MasterMonitorKeepAliveConnection} to the active master
-   */
-  MasterMonitorService.BlockingInterface getMasterMonitor() throws IOException;
 
   /**
    * Establishes a connection to the region server at the specified address.
@@ -502,23 +497,16 @@ public interface HConnection extends Abortable, Closeable {
   void clearCaches(final ServerName sn);
 
   /**
-   * This function allows HBaseAdmin and potentially others to get a shared MasterMonitor
+   * This function allows HBaseAdmin and potentially others to get a shared MasterService
    * connection.
    * @return The shared instance. Never returns null.
    * @throws MasterNotRunningException
+   * @deprecated Since 0.96.0
    */
   // TODO: Why is this in the public interface when the returned type is shutdown package access?
-  MasterMonitorKeepAliveConnection getKeepAliveMasterMonitorService()
+  @Deprecated
+  MasterKeepAliveConnection getKeepAliveMasterService()
   throws MasterNotRunningException;
-
-  /**
-   * This function allows HBaseAdmin and potentially others to get a shared MasterAdminProtocol
-   * connection.
-   * @return The shared instance. Never returns null.
-   * @throws MasterNotRunningException
-   */
-  // TODO: Why is this in the public interface when the returned type is shutdown package access?
-  MasterAdminKeepAliveConnection getKeepAliveMasterAdminService() throws MasterNotRunningException;
 
   /**
    * @param serverName

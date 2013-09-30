@@ -27,8 +27,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.MasterMonitorService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.util.Threads;
 
 /**
@@ -98,13 +97,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   /**
    * Returns an {@link MasterAdminService.BlockingInterface} to the active master
    */
-  public abstract MasterAdminService.BlockingInterface getMasterAdmin()
-      throws IOException;
-
-  /**
-   * Returns an {@link MasterMonitorService.BlockingInterface} to the active master
-   */
-  public abstract MasterMonitorService.BlockingInterface getMasterMonitor()
+  public abstract MasterService.BlockingInterface getMaster()
   throws IOException;
 
   /**

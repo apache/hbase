@@ -33,8 +33,6 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.MasterMonitorService;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -375,16 +373,6 @@ public class MiniHBaseCluster extends HBaseCluster {
       throw new IOException("Interrupted adding master to cluster", ie);
     }
     return t;
-  }
-
-  @Override
-  public MasterAdminService.BlockingInterface getMasterAdmin() {
-    return this.hbaseCluster.getActiveMaster();
-  }
-
-  @Override
-  public MasterMonitorService.BlockingInterface getMasterMonitor() {
-    return this.hbaseCluster.getActiveMaster();
   }
 
   /**
