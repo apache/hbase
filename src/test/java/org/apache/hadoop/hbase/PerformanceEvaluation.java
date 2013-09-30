@@ -564,12 +564,24 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private void doMultipleClients(final Class<? extends Test> cmd) throws IOException {
     final List<Thread> threads = new ArrayList<Thread>(this.N);
     final int perClientRows = R/N;
+    final byte[] tableName = this.tableName;
+    final DataBlockEncoding encoding = this.blockEncoding;
+    final boolean flushCommits = this.flushCommits;
+    final Compression.Algorithm compression = this.compression;
+    final boolean writeToWal = this.writeToWAL;
+    final int preSplitRegions = this.presplitRegions;
     for (int i = 0; i < this.N; i++) {
       Thread t = new Thread (Integer.toString(i)) {
         @Override
         public void run() {
           super.run();
           PerformanceEvaluation pe = new PerformanceEvaluation(getConf());
+          pe.tableName = tableName;
+          pe.blockEncoding = encoding;
+          pe.flushCommits = flushCommits;
+          pe.compression = compression;
+          pe.writeToWAL = writeToWal;
+          pe.presplitRegions = preSplitRegions;
           int index = Integer.parseInt(getName());
           try {
             long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
@@ -600,6 +612,30 @@ public class PerformanceEvaluation extends Configured implements Tool {
         }
       }
     }
+  }
+
+  protected void setPresplitRegions(int preSplitRegions) {
+    this.presplitRegions = preSplitRegions;
+  }
+
+  protected void setWriteToWAL(boolean writeToWAL) {
+    this.writeToWAL = writeToWAL;
+  }
+
+  protected void setCompression(Compression.Algorithm compression) {
+    this.compression = compression;
+  }
+
+  protected void setFlushCommits(boolean flushCommits) {
+    this.flushCommits = flushCommits;
+  }
+
+  protected void setBlockEncoding(DataBlockEncoding blockEncoding) {
+    this.blockEncoding = blockEncoding;
+  }
+
+  protected void setTableName(byte[] tableName) {
+    this.tableName = tableName;
   }
 
   /*
