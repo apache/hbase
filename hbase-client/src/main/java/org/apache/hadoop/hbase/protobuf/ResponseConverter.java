@@ -38,10 +38,9 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionMutationResult;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
@@ -74,20 +73,20 @@ public final class ResponseConverter {
    * @return the results that were in the MultiResponse (a Result or an Exception).
    * @throws IOException
    */
-  public static List<Object> getResults(final MultiResponse proto,
+  public static List<Object> getResults(final ClientProtos.MultiResponse proto,
       final CellScanner cells)
   throws IOException {
     List<Object> results = new ArrayList<Object>();
-    for (RegionMutationResult result: proto.getRegionMutationResultList()) {
-      for (ResultOrException resultOrException: result.getResultOrExceptionList()) {
-        if (resultOrException.hasException()) {
-          results.add(ProtobufUtil.toException(resultOrException.getException()));
-        } else if (resultOrException.hasResult()) {
-          results.add(ProtobufUtil.toResult(resultOrException.getResult(), cells));
-        } else {
-          // Just a placeholder
-          results.add(new Result());
-        }
+    List<ActionResult> resultList = proto.getResultList();
+    for (int i = 0, n = resultList.size(); i < n; i++) {
+      ActionResult result = resultList.get(i);
+      if (result.hasException()) {
+        results.add(ProtobufUtil.toException(result.getException()));
+      } else if (result.hasValue()) {
+        ClientProtos.Result value = result.getValue();
+        results.add(ProtobufUtil.toResult(value, cells));
+      } else {
+        results.add(new Result());
       }
     }
     return results;
@@ -99,22 +98,14 @@ public final class ResponseConverter {
    * @param t
    * @return an action result
    */
-  public static ResultOrException buildActionResult(final Throwable t) {
-    ResultOrException.Builder builder = ResultOrException.newBuilder();
-    builder.setException(buildException(t));
-    return builder.build();
-  }
-
-  /**
-   * @param t
-   * @return NameValuePair of the exception name to stringified version os exception.
-   */
-  public static NameBytesPair buildException(final Throwable t) {
+  public static ActionResult buildActionResult(final Throwable t) {
+    ActionResult.Builder builder = ActionResult.newBuilder();
     NameBytesPair.Builder parameterBuilder = NameBytesPair.newBuilder();
     parameterBuilder.setName(t.getClass().getName());
     parameterBuilder.setValue(
       ByteString.copyFromUtf8(StringUtils.stringifyException(t)));
-    return parameterBuilder.build();
+    builder.setException(parameterBuilder.build());
+    return builder.build();
   }
 
   /**

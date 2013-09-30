@@ -83,7 +83,8 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
       CompactRegionRequest.class,
       GetRequest.class,
       MutateRequest.class,
-      ScanRequest.class
+      ScanRequest.class,
+      MultiRequest.class
   };
 
   // Some caches for helping performance
@@ -100,7 +101,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
       if (p != null) {
         // Since we protobuf'd, and then subsequently, when we went with pb style, method names
         // are capitalized.  This meant that this brittle compare of method names gotten by
-        // reflection no longer matched the method names coming in over pb.  TODO: Get rid of this
+        // reflection no longer matched the method names comeing in over pb.  TODO: Get rid of this
         // check.  For now, workaround is to capitalize the names we got from reflection so they
         // have chance of matching the pb ones.
         String capitalizedMethodName = capitalize(m.getName());
@@ -108,6 +109,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
       }
     }
     this.annotatedQos = qosMap;
+
     if (methodMap.get("getRegion") == null) {
       methodMap.put("hasRegion", new HashMap<Class<? extends Message>, Method>());
       methodMap.put("getRegion", new HashMap<Class<? extends Message>, Method>());
@@ -146,13 +148,9 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
     if (priorityByAnnotation != null) {
       return priorityByAnnotation;
     }
+
     if (param == null) {
       return HConstants.NORMAL_QOS;
-    }
-    if (methodName.equalsIgnoreCase("multi") && param instanceof MultiRequest) {
-      // The multi call has its priority set in the header.  All calls should work this way but
-      // only this one has been converted so far.  No priority == NORMAL_QOS.
-      return header.hasPriority()? header.getPriority(): HConstants.NORMAL_QOS;
     }
     String cls = param.getClass().getName();
     Class<? extends Message> rpcArgClass = argumentToClassMap.get(cls);

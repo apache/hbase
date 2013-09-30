@@ -23,8 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
+
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -37,15 +36,6 @@ import com.google.protobuf.RpcController;
  */
 @InterfaceAudience.Private
 public class PayloadCarryingRpcController implements RpcController, CellScannable {
-  /**
-   * Priority to set on this request.  Set it here in controller so available composing the
-   * request.  This is the ordained way of setting priorities going forward.  We will be
-   * undoing the old annotation-based mechanism.
-   */
-  // Currently only multi call makes use of this.  Eventually this should be only way to set
-  // priority.
-  private int priority = 0;
-
   // TODO: Fill out the rest of this class methods rather than return UnsupportedOperationException
 
   /**
@@ -112,27 +102,5 @@ public class PayloadCarryingRpcController implements RpcController, CellScannabl
   @Override
   public void startCancel() {
     throw new UnsupportedOperationException();
-  }
-
-  /**
-   * @param priority Priority for this request; should fall roughly in the range
-   * {@link HConstants#NORMAL_QOS} to {@link HConstants#HIGH_QOS}
-   */
-  public void setPriority(int priority) {
-    this.priority = priority;
-  }
-
-  /**
-   * @param tn Set priority based off the table we are going against.
-   */
-  public void setPriority(final TableName tn) {
-    this.priority = tn != null && tn.isSystemTable()? HConstants.HIGH_QOS: HConstants.NORMAL_QOS;
-  }
-
-  /**
-   * @return The priority of this request
-   */
-  public int getPriority() {
-    return priority;
   }
 }

@@ -1002,10 +1002,9 @@ public class RpcClient {
      * Note: this is not called from the Connection thread, but by other
      * threads.
      * @param call
-     * @param priority
      * @see #readResponse()
      */
-    protected void writeRequest(Call call, final int priority) {
+    protected void writeRequest(Call call) {
       if (shouldCloseConnection.get()) return;
       try {
         RequestHeader.Builder builder = RequestHeader.newBuilder();
@@ -1023,8 +1022,6 @@ public class RpcClient {
           cellBlockBuilder.setLength(cellBlock.limit());
           builder.setCellBlockMeta(cellBlockBuilder.build());
         }
-        // Only pass priority if there one.  Let zero be same as no priority.
-        if (priority != 0) builder.setPriority(priority);
         //noinspection SynchronizeOnNonFinalField
         RequestHeader header = builder.build();
         synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
@@ -1383,12 +1380,6 @@ public class RpcClient {
     }
   }
 
-  Pair<Message, CellScanner> call(MethodDescriptor md, Message param, CellScanner cells,
-      Message returnType, User ticket, InetSocketAddress addr, int rpcTimeout)
-  throws InterruptedException, IOException {
-    return call(md, param, cells, returnType, ticket, addr, rpcTimeout, HConstants.NORMAL_QOS);
-  }
-
   /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code> which is servicing the <code>protocol</code> protocol,
    * with the <code>ticket</code> credentials, returning the value.
@@ -1409,12 +1400,12 @@ public class RpcClient {
    */
   Pair<Message, CellScanner> call(MethodDescriptor md, Message param, CellScanner cells,
       Message returnType, User ticket, InetSocketAddress addr,
-      int rpcTimeout, int priority)
+      int rpcTimeout)
   throws InterruptedException, IOException {
     Call call = new Call(md, param, cells, returnType);
     Connection connection =
       getConnection(ticket, call, addr, rpcTimeout, this.codec, this.compressor);
-    connection.writeRequest(call, priority);                 // send the parameter
+    connection.writeRequest(call);                 // send the parameter
     boolean interrupted = false;
     //noinspection SynchronizationOnLocalVariableOrMethodParameter
     synchronized (call) {
@@ -1641,8 +1632,7 @@ public class RpcClient {
     }
     Pair<Message, CellScanner> val = null;
     try {
-      val = call(md, param, cells, returnType, ticket, isa, rpcTimeout,
-        pcrc != null? pcrc.getPriority(): HConstants.NORMAL_QOS);
+      val = call(md, param, cells, returnType, ticket, isa, rpcTimeout);
       if (pcrc != null) {
         // Shove the results into controller so can be carried across the proxy/pb service void.
         if (val.getSecond() != null) pcrc.setCellScanner(val.getSecond());
