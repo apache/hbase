@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HLogLink;
 import org.apache.hadoop.hbase.mapreduce.JobUtil;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -529,6 +529,7 @@ public final class ExportSnapshot extends Configured implements Tool {
     Job job = new Job(conf);
     job.setJobName("ExportSnapshot");
     job.setJarByClass(ExportSnapshot.class);
+    TableMapReduceUtil.addDependencyJars(job);
     job.setMapperClass(ExportMapper.class);
     job.setInputFormatClass(SequenceFileInputFormat.class);
     job.setOutputFormatClass(NullOutputFormat.class);
