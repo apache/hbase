@@ -568,7 +568,7 @@ public final class HConstants {
   /**
    * Default value of {@link #HBASE_CLIENT_PAUSE}.
    */
-  public static long DEFAULT_HBASE_CLIENT_PAUSE = 1000;
+  public static long DEFAULT_HBASE_CLIENT_PAUSE = 100;
 
   /**
    * Parameter name for server pause value, used mostly as value to wait before
