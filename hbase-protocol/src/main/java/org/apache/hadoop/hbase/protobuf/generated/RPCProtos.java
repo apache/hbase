@@ -3662,26 +3662,6 @@ public final class RPCProtos {
      * </pre>
      */
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMetaOrBuilder getCellBlockMetaOrBuilder();
-
-    // optional uint32 priority = 6;
-    /**
-     * <code>optional uint32 priority = 6;</code>
-     *
-     * <pre>
-     * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
-     * See HConstants.
-     * </pre>
-     */
-    boolean hasPriority();
-    /**
-     * <code>optional uint32 priority = 6;</code>
-     *
-     * <pre>
-     * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
-     * See HConstants.
-     * </pre>
-     */
-    int getPriority();
   }
   /**
    * Protobuf type {@code RequestHeader}
@@ -3777,11 +3757,6 @@ public final class RPCProtos {
                 cellBlockMeta_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000010;
-              break;
-            }
-            case 48: {
-              bitField0_ |= 0x00000020;
-              priority_ = input.readUInt32();
               break;
             }
           }
@@ -3971,39 +3946,12 @@ public final class RPCProtos {
       return cellBlockMeta_;
     }
 
-    // optional uint32 priority = 6;
-    public static final int PRIORITY_FIELD_NUMBER = 6;
-    private int priority_;
-    /**
-     * <code>optional uint32 priority = 6;</code>
-     *
-     * <pre>
-     * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
-     * See HConstants.
-     * </pre>
-     */
-    public boolean hasPriority() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
-    }
-    /**
-     * <code>optional uint32 priority = 6;</code>
-     *
-     * <pre>
-     * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
-     * See HConstants.
-     * </pre>
-     */
-    public int getPriority() {
-      return priority_;
-    }
-
     private void initFields() {
       callId_ = 0;
       traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.getDefaultInstance();
       methodName_ = "";
       requestParam_ = false;
       cellBlockMeta_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.getDefaultInstance();
-      priority_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4031,9 +3979,6 @@ public final class RPCProtos {
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeMessage(5, cellBlockMeta_);
-      }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeUInt32(6, priority_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -4063,10 +4008,6 @@ public final class RPCProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(5, cellBlockMeta_);
-      }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(6, priority_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4116,11 +4057,6 @@ public final class RPCProtos {
         result = result && getCellBlockMeta()
             .equals(other.getCellBlockMeta());
       }
-      result = result && (hasPriority() == other.hasPriority());
-      if (hasPriority()) {
-        result = result && (getPriority()
-            == other.getPriority());
-      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4153,10 +4089,6 @@ public final class RPCProtos {
       if (hasCellBlockMeta()) {
         hash = (37 * hash) + CELL_BLOCK_META_FIELD_NUMBER;
         hash = (53 * hash) + getCellBlockMeta().hashCode();
-      }
-      if (hasPriority()) {
-        hash = (37 * hash) + PRIORITY_FIELD_NUMBER;
-        hash = (53 * hash) + getPriority();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -4291,8 +4223,6 @@ public final class RPCProtos {
           cellBlockMetaBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000010);
-        priority_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
 
@@ -4349,10 +4279,6 @@ public final class RPCProtos {
         } else {
           result.cellBlockMeta_ = cellBlockMetaBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
-          to_bitField0_ |= 0x00000020;
-        }
-        result.priority_ = priority_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4385,9 +4311,6 @@ public final class RPCProtos {
         }
         if (other.hasCellBlockMeta()) {
           mergeCellBlockMeta(other.getCellBlockMeta());
-        }
-        if (other.hasPriority()) {
-          setPriority(other.getPriority());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -4856,59 +4779,6 @@ public final class RPCProtos {
           cellBlockMeta_ = null;
         }
         return cellBlockMetaBuilder_;
-      }
-
-      // optional uint32 priority = 6;
-      private int priority_ ;
-      /**
-       * <code>optional uint32 priority = 6;</code>
-       *
-       * <pre>
-       * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
-       * See HConstants.
-       * </pre>
-       */
-      public boolean hasPriority() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
-      }
-      /**
-       * <code>optional uint32 priority = 6;</code>
-       *
-       * <pre>
-       * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
-       * See HConstants.
-       * </pre>
-       */
-      public int getPriority() {
-        return priority_;
-      }
-      /**
-       * <code>optional uint32 priority = 6;</code>
-       *
-       * <pre>
-       * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
-       * See HConstants.
-       * </pre>
-       */
-      public Builder setPriority(int value) {
-        bitField0_ |= 0x00000020;
-        priority_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional uint32 priority = 6;</code>
-       *
-       * <pre>
-       * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
-       * See HConstants.
-       * </pre>
-       */
-      public Builder clearPriority() {
-        bitField0_ = (bitField0_ & ~0x00000020);
-        priority_ = 0;
-        onChanged();
-        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:RequestHeader)
@@ -5927,15 +5797,15 @@ public final class RPCProtos {
       "\001(\r\"|\n\021ExceptionResponse\022\034\n\024exception_cl" +
       "ass_name\030\001 \001(\t\022\023\n\013stack_trace\030\002 \001(\t\022\020\n\010h" +
       "ostname\030\003 \001(\t\022\014\n\004port\030\004 \001(\005\022\024\n\014do_not_re",
-      "try\030\005 \001(\010\"\246\001\n\rRequestHeader\022\017\n\007call_id\030\001" +
+      "try\030\005 \001(\010\"\224\001\n\rRequestHeader\022\017\n\007call_id\030\001" +
       " \001(\r\022\035\n\ntrace_info\030\002 \001(\0132\t.RPCTInfo\022\023\n\013m" +
       "ethod_name\030\003 \001(\t\022\025\n\rrequest_param\030\004 \001(\010\022" +
       "\'\n\017cell_block_meta\030\005 \001(\0132\016.CellBlockMeta" +
-      "\022\020\n\010priority\030\006 \001(\r\"q\n\016ResponseHeader\022\017\n\007" +
-      "call_id\030\001 \001(\r\022%\n\texception\030\002 \001(\0132\022.Excep" +
-      "tionResponse\022\'\n\017cell_block_meta\030\003 \001(\0132\016." +
-      "CellBlockMetaB<\n*org.apache.hadoop.hbase" +
-      ".protobuf.generatedB\tRPCProtosH\001\240\001\001"
+      "\"q\n\016ResponseHeader\022\017\n\007call_id\030\001 \001(\r\022%\n\te" +
+      "xception\030\002 \001(\0132\022.ExceptionResponse\022\'\n\017ce" +
+      "ll_block_meta\030\003 \001(\0132\016.CellBlockMetaB<\n*o" +
+      "rg.apache.hadoop.hbase.protobuf.generate" +
+      "dB\tRPCProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -5971,7 +5841,7 @@ public final class RPCProtos {
           internal_static_RequestHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RequestHeader_descriptor,
-              new java.lang.String[] { "CallId", "TraceInfo", "MethodName", "RequestParam", "CellBlockMeta", "Priority", });
+              new java.lang.String[] { "CallId", "TraceInfo", "MethodName", "RequestParam", "CellBlockMeta", });
           internal_static_ResponseHeader_descriptor =
             getDescriptor().getMessageTypes().get(5);
           internal_static_ResponseHeader_fieldAccessorTable = new

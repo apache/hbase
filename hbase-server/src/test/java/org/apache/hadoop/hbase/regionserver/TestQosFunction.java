@@ -20,9 +20,8 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -44,20 +43,13 @@ public class TestQosFunction {
     checkMethod("ReplicateWALEntry", HConstants.REPLICATION_QOS, qosFunction);
     // Set method name in pb style with the method name capitalized.
     checkMethod("OpenRegion", HConstants.HIGH_QOS, qosFunction);
-    // Check multi works.
-    checkMethod("Multi", HConstants.NORMAL_QOS, qosFunction, MultiRequest.getDefaultInstance());
   }
 
   private void checkMethod(final String methodName, final int expected, final QosFunction qosf) {
-    checkMethod(methodName, expected, qosf, null);
-  }
-
-  private void checkMethod(final String methodName, final int expected,
-      final QosFunction qosf, final Message param) {
     RequestHeader.Builder builder = RequestHeader.newBuilder();
     builder.setMethodName(methodName);
     Pair<RequestHeader, Message> headerAndParam =
-      new Pair<RequestHeader, Message>(builder.build(), param);
+      new Pair<RequestHeader, Message>(builder.build(), null);
     assertEquals(methodName, expected, qosf.apply(headerAndParam).intValue());
   }
 }

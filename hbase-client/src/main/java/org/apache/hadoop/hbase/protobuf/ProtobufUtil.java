@@ -2242,11 +2242,11 @@ public final class ProtobufUtil {
           ", row=" + getStringForByteString(r.getGet().getRow());
     } else if (m instanceof ClientProtos.MultiRequest) {
       ClientProtos.MultiRequest r = (ClientProtos.MultiRequest) m;
-      ClientProtos.RegionMutation rm = r.getRegionMutationList().get(0);
-      return "region= " + getStringForByteString(rm.getRegion().getValue()) +
-          ", for " + r.getRegionMutationCount() +
-          " actions and 1st row key=" + getStringForByteString(rm.getMutationCount() > 0?
-          rm.getMutation(0).getRow(): ByteString.EMPTY);
+      ClientProtos.MultiAction action = r.getActionList().get(0);
+      return "region= " + getStringForByteString(r.getRegion().getValue()) +
+          ", for " + r.getActionCount() +
+          " actions and 1st row key=" + getStringForByteString(action.hasMutation() ?
+          action.getMutation().getRow() : action.getGet().getRow());
     } else if (m instanceof ClientProtos.MutateRequest) {
       ClientProtos.MutateRequest r = (ClientProtos.MutateRequest) m;
       return "region= " + getStringForByteString(r.getRegion().getValue()) +

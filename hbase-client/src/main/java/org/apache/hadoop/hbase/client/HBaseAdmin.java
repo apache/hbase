@@ -643,7 +643,6 @@ public class HBaseAdmin implements Abortable, Closeable {
             .getServerName());
         PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
         try {
-          controller.setPriority(tableName);
           ScanResponse response = server.scan(controller, request);
           values = ResponseConverter.getResults(controller.cellScanner(), response);
         } catch (ServiceException se) {

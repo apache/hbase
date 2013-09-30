@@ -24,8 +24,8 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -84,11 +84,8 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
               multiRequest = RequestConverter.buildMultiRequest(regionName, rms);
             }
             // Carry the cells if any over the proxy/pb Service interface using the payload
-            // carrying rpc controller.  Also set priority on this controller so available down
-            // in RpcClient when we go to craft the request header.
-            PayloadCarryingRpcController pcrc = new PayloadCarryingRpcController(cells);
-            pcrc.setPriority(getTableName());
-            getStub().multi(pcrc, multiRequest);
+            // carrying rpc controller.
+            getStub().multi(new PayloadCarryingRpcController(cells), multiRequest);
             // This multi call does not return results.
             response.add(regionName, action.getOriginalIndex(), Result.EMPTY_RESULT);
           } catch (ServiceException se) {
@@ -116,7 +113,6 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
           // Controller optionally carries cell data over the proxy/service boundary and also
           // optionally ferries cell response data back out again.
           PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cells);
-          controller.setPriority(getTableName());
           ClientProtos.MultiResponse responseProto = getStub().multi(controller, multiRequest);
           results = ResponseConverter.getResults(responseProto, controller.cellScanner());
         } catch (ServiceException se) {

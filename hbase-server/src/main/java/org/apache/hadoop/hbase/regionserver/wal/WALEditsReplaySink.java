@@ -33,14 +33,16 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.RpcRetryingCaller;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -51,10 +53,10 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryR
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionMutationResult;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -116,7 +118,7 @@ public class WALEditsReplaySink {
     HRegionLocation loc = null;
     HLog.Entry entry = null;
     List<HLog.Entry> regionEntries = null;
-    // Build the action list.
+    // Build the action list. 
     for (int i = 0; i < batchSize; i++) {
       loc = entries.get(i).getFirst();
       entry = entries.get(i).getSecond();
@@ -128,7 +130,7 @@ public class WALEditsReplaySink {
       }
       regionEntries.add(entry);
     }
-
+    
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
     // replaying edits by region
@@ -141,7 +143,7 @@ public class WALEditsReplaySink {
       for (; replayedActions < totalActions;) {
         curBatchSize = (totalActions > (MAX_BATCH_SIZE + replayedActions)) ? MAX_BATCH_SIZE
                 : (totalActions - replayedActions);
-        replayEdits(loc, curRegion, allActions.subList(replayedActions,
+        replayEdits(loc, curRegion, allActions.subList(replayedActions, 
           replayedActions + curBatchSize));
         replayedActions += curBatchSize;
       }
@@ -183,7 +185,7 @@ public class WALEditsReplaySink {
       }
     }
   }
-
+  
   /**
    * Callable that handles the <code>replay</code> method call going against a single regionserver
    * @param <R>
@@ -200,7 +202,7 @@ public class WALEditsReplaySink {
       this.regionInfo = regionInfo;
       setLocation(regionLoc);
     }
-
+    
     @Override
     public ReplicateWALEntryResponse call() throws IOException {
       try {

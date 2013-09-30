@@ -318,41 +318,42 @@ message CoprocessorServiceResponse {
 }
 
 /**
- * Mutations to run against a Region.
+ * An action that is part of MultiRequest.
+ * This is a union type - exactly one of the fields will be set.
  */
-message RegionMutation {
-  required RegionSpecifier region = 1;
-  // When set, run mutations as atomic unit.
-  optional bool atomic = 2;
-  repeated MutationProto mutation = 3;
+message MultiAction {
+  optional MutationProto mutation = 1;
+  optional Get get = 2;
 }
 
 /**
- * Either a Result or an Exception NameBytesPair (keyed by
- * exception name whose value is the exception stringified)
- * or maybe empty if no result and no exception.
+ * An individual action result. The result will in the
+ * same order as the action in the request. If an action
+ * returns a value, it is set in value field. If it doesn't
+ * return anything, the result will be empty. If an action
+ * fails to execute due to any exception, the exception
+ * is returned as a stringified parameter.
  */
-message ResultOrException {
-  optional Result result = 1;
+message ActionResult {
+  optional Result value = 1;
   optional NameBytesPair exception = 2;
 }
 
 /**
- * The result of a RegionMutation.
- */
-message RegionMutationResult {
-  repeated ResultOrException resultOrException = 1;
-}
-
-/**
- * Execute a list of actions on a given region in order.
+ * You can execute a list of actions on a given region in order.
+ *
+ * If it is a list of mutate actions, atomic can be set
+ * to make sure they can be processed atomically, just like
+ * RowMutations.
  */
 message MultiRequest {
-  repeated RegionMutation regionMutation = 1;
+  required RegionSpecifier region = 1;
+  repeated MultiAction action = 2;
+  optional bool atomic = 3;
 }
 
 message MultiResponse {
-  repeated RegionMutationResult regionMutationResult = 1;
+  repeated ActionResult result = 1;
 }
 
 
