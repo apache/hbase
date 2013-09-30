@@ -136,7 +136,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * Regex to parse lines in input file passed to mapreduce task.
    */
   public static final Pattern LINE_PATTERN =
-    Pattern.compile("startRow=(\\d+),\\s+" +
+    Pattern.compile("tableName=(\\w+),\\s+" +
+        "startRow=(\\d+),\\s+" +
         "perClientRunRows=(\\d+),\\s+" +
         "totalRows=(\\d+),\\s+" +
         "clients=(\\d+),\\s+" +
@@ -211,6 +212,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
    *  the record value is the PeInputSplit itself.
    */
   public static class PeInputSplit extends InputSplit implements Writable {
+    private TableName tableName = TABLE_NAME;
     private int startRow = 0;
     private int rows = 0;
     private int totalRows = 0;
@@ -227,8 +229,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.writeToWAL = true;
     }
 
-    public PeInputSplit(int startRow, int rows, int totalRows, int clients,
+    public PeInputSplit(TableName tableName, int startRow, int rows, int totalRows, int clients,
         boolean flushCommits, boolean writeToWAL) {
+      this.tableName = tableName;
       this.startRow = startRow;
       this.rows = rows;
       this.totalRows = totalRows;
@@ -239,6 +242,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     public void readFields(DataInput in) throws IOException {
+      int tableNameLen = in.readInt();
+      byte[] name = new byte[tableNameLen];
+      in.readFully(name);
+      this.tableName = TableName.valueOf(name);
+
       this.startRow = in.readInt();
       this.rows = in.readInt();
       this.totalRows = in.readInt();
@@ -249,6 +257,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     public void write(DataOutput out) throws IOException {
+      byte[] name = this.tableName.toBytes();
+      out.writeInt(name.length);
+      out.write(name);
       out.writeInt(startRow);
       out.writeInt(rows);
       out.writeInt(totalRows);
@@ -265,6 +276,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     public String[] getLocations() throws IOException, InterruptedException {
       return new String[0];
+    }
+
+    public TableName getTableName() {
+      return tableName;
     }
 
     public int getStartRow() {
@@ -320,23 +335,25 @@ public class PerformanceEvaluation extends Configured implements Tool {
           }
           Matcher m = LINE_PATTERN.matcher(lineText.toString());
           if((m != null) && m.matches()) {
-            int startRow = Integer.parseInt(m.group(1));
-            int rows = Integer.parseInt(m.group(2));
-            int totalRows = Integer.parseInt(m.group(3));
-            int clients = Integer.parseInt(m.group(4));
-            boolean flushCommits = Boolean.parseBoolean(m.group(5));
-            boolean writeToWAL = Boolean.parseBoolean(m.group(6));
+            TableName tableName = TableName.valueOf(m.group(1));
+            int startRow = Integer.parseInt(m.group(2));
+            int rows = Integer.parseInt(m.group(3));
+            int totalRows = Integer.parseInt(m.group(4));
+            int clients = Integer.parseInt(m.group(5));
+            boolean flushCommits = Boolean.parseBoolean(m.group(6));
+            boolean writeToWAL = Boolean.parseBoolean(m.group(7));
 
-            LOG.debug("split["+ splitList.size() + "] " +
-                     " startRow=" + startRow +
-                     " rows=" + rows +
-                     " totalRows=" + totalRows +
-                     " clients=" + clients +
-                     " flushCommits=" + flushCommits +
-                     " writeToWAL=" + writeToWAL);
+            LOG.debug("tableName=" + tableName +
+                      " split["+ splitList.size() + "] " +
+                      " startRow=" + startRow +
+                      " rows=" + rows +
+                      " totalRows=" + totalRows +
+                      " clients=" + clients +
+                      " flushCommits=" + flushCommits +
+                      " writeToWAL=" + writeToWAL);
 
             PeInputSplit newSplit =
-              new PeInputSplit(startRow, rows, totalRows, clients,
+              new PeInputSplit(tableName, startRow, rows, totalRows, clients,
                 flushCommits, writeToWAL);
             splitList.add(newSplit);
           }
@@ -456,6 +473,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       };
 
       // Evaluation task
+      pe.tableName = value.getTableName();
       long elapsedTime = this.pe.runOneClient(this.cmd, value.getStartRow(),
                                   value.getRows(), value.getTotalRows(),
                                   value.isFlushCommits(), value.isWriteToWAL(),
@@ -690,7 +708,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     try {
       for (int i = 0; i < 10; i++) {
         for (int j = 0; j < N; j++) {
-          String s = "startRow=" + ((j * perClientRows) + (i * (perClientRows/10))) +
+          String s = "tableName=" + this.tableName +
+          ", startRow=" + ((j * perClientRows) + (i * (perClientRows/10))) +
           ", perClientRunRows=" + (perClientRows / 10) +
           ", totalRows=" + this.R +
           ", clients=" + this.N +
@@ -1319,6 +1338,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     try {
+      // MR-NOTE: if you are adding a property that is used to control an operation
+      // like put(), get(), scan(), ... you must also add it as part of the MR
+      // input, take a look at writeInputFile().
+      // Then you must adapt the LINE_PATTERN input regex,
+      // and parse the argument, take a look at PEInputFormat.getSplits().
+
       for (int i = 0; i < args.length; i++) {
         String cmd = args[i];
         if (cmd.equals("-h") || cmd.startsWith("--h")) {
