@@ -961,6 +961,8 @@ public class HTable implements HTableInterface {
         try {
           MultiRequest request = RequestConverter.buildMultiRequest(
             getLocation().getRegionInfo().getRegionName(), rm);
+          PayloadCarryingRpcController pcrc = new PayloadCarryingRpcController();
+          pcrc.setPriority(tableName);
           getStub().multi(null, request);
         } catch (ServiceException se) {
           throw ProtobufUtil.getRemoteException(se);
@@ -987,6 +989,7 @@ public class HTable implements HTableInterface {
             MutateRequest request = RequestConverter.buildMutateRequest(
               getLocation().getRegionInfo().getRegionName(), append);
             PayloadCarryingRpcController rpcController = new PayloadCarryingRpcController();
+            rpcController.setPriority(getTableName());
             MutateResponse response = getStub().mutate(rpcController, request);
             if (!response.hasResult()) return null;
             return ProtobufUtil.toResult(response.getResult(), rpcController.cellScanner());
@@ -1013,9 +1016,10 @@ public class HTable implements HTableInterface {
         try {
           MutateRequest request = RequestConverter.buildMutateRequest(
             getLocation().getRegionInfo().getRegionName(), increment);
-            PayloadCarryingRpcController rpcContoller = new PayloadCarryingRpcController();
-            MutateResponse response = getStub().mutate(rpcContoller, request);
-            return ProtobufUtil.toResult(response.getResult(), rpcContoller.cellScanner());
+            PayloadCarryingRpcController rpcController = new PayloadCarryingRpcController();
+            rpcController.setPriority(getTableName());
+            MutateResponse response = getStub().mutate(rpcController, request);
+            return ProtobufUtil.toResult(response.getResult(), rpcController.cellScanner());
           } catch (ServiceException se) {
             throw ProtobufUtil.getRemoteException(se);
           }
@@ -1074,6 +1078,7 @@ public class HTable implements HTableInterface {
               getLocation().getRegionInfo().getRegionName(), row, family,
               qualifier, amount, durability);
             PayloadCarryingRpcController rpcController = new PayloadCarryingRpcController();
+            rpcController.setPriority(getTableName());
             MutateResponse response = getStub().mutate(rpcController, request);
             Result result =
               ProtobufUtil.toResult(response.getResult(), rpcController.cellScanner());

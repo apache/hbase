@@ -25,7 +25,6 @@ terminal and hit return -- the protoc compiler runs fast):
   do
     protoc -I$PROTO_DIR --java_out=$JAVA_DIR $PROTO_FILE
   done
-  ll $JAVA_DIR/org/apache/hadoop/hbase/protobuf/generated
 
 After you've done the above, check it in and then check it in (or post a patch
 on a JIRA with your definition file changes and the generated files).
