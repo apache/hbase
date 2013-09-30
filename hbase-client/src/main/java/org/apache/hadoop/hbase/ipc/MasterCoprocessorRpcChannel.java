@@ -64,7 +64,7 @@ public class MasterCoprocessorRpcChannel extends CoprocessorRpcChannel{
             .setServiceName(method.getService().getFullName())
             .setMethodName(method.getName())
             .setRequest(request.toByteString()).build();
-    CoprocessorServiceResponse result = ProtobufUtil.execService(connection.getMasterAdmin(), call);
+    CoprocessorServiceResponse result = ProtobufUtil.execService(connection.getMaster(), call);
     Message response = null;
     if (result.getValue().hasValue()) {
       response = responsePrototype.newBuilderForType()

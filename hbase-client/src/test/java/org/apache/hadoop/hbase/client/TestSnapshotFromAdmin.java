@@ -22,21 +22,18 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
-import com.google.protobuf.ByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -81,9 +78,9 @@ public class TestSnapshotFromAdmin {
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, numRetries);
     conf.setLong("hbase.client.pause", pauseTime);
     // mock the master admin to our mock
-    MasterAdminKeepAliveConnection mockMaster = Mockito.mock(MasterAdminKeepAliveConnection.class);
+    MasterKeepAliveConnection mockMaster = Mockito.mock(MasterKeepAliveConnection.class);
     Mockito.when(mockConnection.getConfiguration()).thenReturn(conf);
-    Mockito.when(mockConnection.getKeepAliveMasterAdminService()).thenReturn(mockMaster);
+    Mockito.when(mockConnection.getKeepAliveMasterService()).thenReturn(mockMaster);
     // set the max wait time for the snapshot to complete
     SnapshotResponse response = SnapshotResponse.newBuilder()
         .setExpectedTimeout(maxWaitTime)
@@ -140,8 +137,8 @@ public class TestSnapshotFromAdmin {
     failSnapshotStart(admin, builder.setName("snapshot").setTable("tab%le").build());
 
     // mock the master connection
-    MasterAdminKeepAliveConnection master = Mockito.mock(MasterAdminKeepAliveConnection.class);
-    Mockito.when(mockConnection.getKeepAliveMasterAdminService()).thenReturn(master);
+    MasterKeepAliveConnection master = Mockito.mock(MasterKeepAliveConnection.class);
+    Mockito.when(mockConnection.getKeepAliveMasterService()).thenReturn(master);
     SnapshotResponse response = SnapshotResponse.newBuilder().setExpectedTimeout(0).build();
     Mockito.when(
       master.snapshot((RpcController) Mockito.isNull(), Mockito.any(SnapshotRequest.class)))

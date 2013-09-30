@@ -72,85 +72,43 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RunCatalogScanRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RunCatalogScanResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateNamespaceRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateNamespaceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteNamespaceRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteNamespaceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.GetNamespaceDescriptorRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.GetNamespaceDescriptorResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListNamespaceDescriptorsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListNamespaceDescriptorsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.GetCompletedSnapshotsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.GetCompletedSnapshotsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListTableDescriptorsByNamespaceRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListTableDescriptorsByNamespaceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListTableNamesByNamespaceRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListTableNamesByNamespaceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyNamespaceRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyNamespaceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableNamesRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableNamesResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.MasterMonitorService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.*;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -170,16 +128,18 @@ import com.google.protobuf.ServiceException;
 /**
  * A non-instantiable class that manages creation of {@link HConnection}s.
  * <p>The simplest way to use this class is by using {@link #createConnection(Configuration)}.
- * This creates a new {@link HConnection} that is managed by the caller.
+ * This creates a new {@link HConnection} to the cluster that is managed by the caller.
  * From this {@link HConnection} {@link HTableInterface} implementations are retrieved
  * with {@link HConnection#getTable(byte[])}. Example:
  * <pre>
  * {@code
  * HConnection connection = HConnectionManager.createConnection(config);
  * HTableInterface table = connection.getTable("table1");
- * // use the table as needed, for a single operation and a single thread
- * table.close();
- * connection.close();
+ * try {
+ *   // Use the table as needed, for a single operation and a single thread
+ * } finally {
+ *   table.close();
+ *   connection.close();
  * }
  * </pre>
  * <p>The following logic and API will be removed in the future:
@@ -276,7 +236,6 @@ public class HConnectionManager {
    * @throws ZooKeeperConnectionException
    */
   @Deprecated
-  @SuppressWarnings("resource")
   public static HConnection getConnection(final Configuration conf)
   throws IOException {
     HConnectionKey connectionKey = new HConnectionKey(conf);
@@ -875,12 +834,8 @@ public class HConnectionManager {
       // When getting the master connection, we check it's running,
       // so if there is no exception, it means we've been able to get a
       // connection on a running master
-      MasterMonitorKeepAliveConnection m = getKeepAliveMasterMonitorService();
-      try {
-        m.close();
-      } catch (IOException e) {
-        throw new MasterNotRunningException("Failed close", e);
-      }
+      MasterKeepAliveConnection m = getKeepAliveMasterService();
+      m.close();
       return true;
     }
 
@@ -1500,10 +1455,11 @@ public class HConnectionManager {
       new ConcurrentHashMap<String, String>();
 
     /**
-     * Maintains current state of MasterService instance.
+     * State of the MasterService connection/setup.
      */
-    static abstract class MasterServiceState {
+    static class MasterServiceState {
       HConnection connection;
+      MasterService.BlockingInterface stub;
       int userCount;
       long keepAliveUntil = Long.MAX_VALUE;
 
@@ -1512,70 +1468,21 @@ public class HConnectionManager {
         this.connection = connection;
       }
 
-      abstract Object getStub();
-      abstract void clearStub();
-      abstract boolean isMasterRunning() throws ServiceException;
-    }
-
-    /**
-     * State of the MasterAdminService connection/setup.
-     */
-    static class MasterAdminServiceState extends MasterServiceState {
-      MasterAdminService.BlockingInterface stub;
-      MasterAdminServiceState(final HConnection connection) {
-        super(connection);
-      }
-
       @Override
       public String toString() {
-        return "MasterAdminService";
+        return "MasterService";
       }
 
-      @Override
       Object getStub() {
         return this.stub;
       }
 
-      @Override
       void clearStub() {
         this.stub = null;
       }
 
-      @Override
       boolean isMasterRunning() throws ServiceException {
-        MasterProtos.IsMasterRunningResponse response =
-          this.stub.isMasterRunning(null, RequestConverter.buildIsMasterRunningRequest());
-        return response != null? response.getIsMasterRunning(): false;
-      }
-    }
-
-    /**
-     * State of the MasterMonitorService connection/setup.
-     */
-    static class MasterMonitorServiceState extends MasterServiceState {
-      MasterMonitorService.BlockingInterface stub;
-      MasterMonitorServiceState(final HConnection connection) {
-        super(connection);
-      }
-
-      @Override
-      public String toString() {
-        return "MasterMonitorService";
-      }
-
-      @Override
-      Object getStub() {
-        return this.stub;
-      }
-
-      @Override
-      void clearStub() {
-        this.stub = null;
-      }
-
-      @Override
-      boolean isMasterRunning() throws ServiceException {
-        MasterProtos.IsMasterRunningResponse response =
+        IsMasterRunningResponse response =
           this.stub.isMasterRunning(null, RequestConverter.buildIsMasterRunningRequest());
         return response != null? response.getIsMasterRunning(): false;
       }
@@ -1709,24 +1616,24 @@ public class HConnectionManager {
     }
 
     /**
-     * Class to make a MasterMonitorService stub.
+     * Class to make a MasterServiceStubMaker stub.
      */
-    class MasterMonitorServiceStubMaker extends StubMaker {
-      private MasterMonitorService.BlockingInterface stub;
+    class MasterServiceStubMaker extends StubMaker {
+      private MasterService.BlockingInterface stub;
       @Override
       protected String getServiceName() {
-        return MasterMonitorService.getDescriptor().getName();
+        return MasterService.getDescriptor().getName();
       }
 
       @Override
       @edu.umd.cs.findbugs.annotations.SuppressWarnings("SWL_SLEEP_WITH_LOCK_HELD")
-      MasterMonitorService.BlockingInterface makeStub() throws MasterNotRunningException {
-        return (MasterMonitorService.BlockingInterface)super.makeStub();
+      MasterService.BlockingInterface makeStub() throws MasterNotRunningException {
+        return (MasterService.BlockingInterface)super.makeStub();
       }
 
       @Override
       protected Object makeStub(BlockingRpcChannel channel) {
-        this.stub = MasterMonitorService.newBlockingStub(channel);
+        this.stub = MasterService.newBlockingStub(channel);
         return this.stub;
       }
 
@@ -1735,35 +1642,6 @@ public class HConnectionManager {
         this.stub.isMasterRunning(null, RequestConverter.buildIsMasterRunningRequest());
       }
     }
-
-    /**
-     * Class to make a MasterAdminService stub.
-     */
-    class MasterAdminServiceStubMaker extends StubMaker {
-      private MasterAdminService.BlockingInterface stub;
-
-      @Override
-      protected String getServiceName() {
-        return MasterAdminService.getDescriptor().getName();
-      }
-
-      @Override
-      @edu.umd.cs.findbugs.annotations.SuppressWarnings("SWL_SLEEP_WITH_LOCK_HELD")
-      MasterAdminService.BlockingInterface makeStub() throws MasterNotRunningException {
-        return (MasterAdminService.BlockingInterface)super.makeStub();
-      }
-
-      @Override
-      protected Object makeStub(BlockingRpcChannel channel) {
-        this.stub = MasterAdminService.newBlockingStub(channel);
-        return this.stub;
-      }
-
-      @Override
-      protected void isMasterRunning() throws ServiceException {
-        this.stub.isMasterRunning(null, RequestConverter.buildIsMasterRunningRequest());
-      }
-    };
 
     @Override
     public AdminService.BlockingInterface getAdmin(final ServerName serverName)
@@ -1911,8 +1789,8 @@ public class HConnectionManager {
               hci.keepZooKeeperWatcherAliveUntil = Long.MAX_VALUE;
             }
           }
-          closeMasterProtocol(hci.adminMasterServiceState);
-          closeMasterProtocol(hci.monitorMasterServiceState);
+          closeMasterProtocol(hci.masterServiceState);
+          closeMasterProtocol(hci.masterServiceState);
         }
       }
 
@@ -1940,19 +1818,11 @@ public class HConnectionManager {
       }
     }
 
-    final MasterAdminServiceState adminMasterServiceState = new MasterAdminServiceState(this);
-    final MasterMonitorServiceState monitorMasterServiceState =
-      new MasterMonitorServiceState(this);
+    final MasterServiceState masterServiceState = new MasterServiceState(this);
 
     @Override
-    public MasterAdminService.BlockingInterface getMasterAdmin() throws MasterNotRunningException {
-      return getKeepAliveMasterAdminService();
-    }
-
-    @Override
-    public MasterMonitorService.BlockingInterface getMasterMonitor()
-    throws MasterNotRunningException {
-      return getKeepAliveMasterMonitorService();
+    public MasterService.BlockingInterface getMaster() throws MasterNotRunningException {
+      return getKeepAliveMasterService();
     }
 
     private void resetMasterServiceState(final MasterServiceState mss) {
@@ -1961,34 +1831,36 @@ public class HConnectionManager {
     }
 
     @Override
-    public MasterAdminKeepAliveConnection getKeepAliveMasterAdminService()
+    public MasterKeepAliveConnection getKeepAliveMasterService()
     throws MasterNotRunningException {
       synchronized (masterAndZKLock) {
-        if (!isKeepAliveMasterConnectedAndRunning(this.adminMasterServiceState)) {
-          MasterAdminServiceStubMaker stubMaker = new MasterAdminServiceStubMaker();
-          this.adminMasterServiceState.stub = stubMaker.makeStub();
+        if (!isKeepAliveMasterConnectedAndRunning(this.masterServiceState)) {
+          MasterServiceStubMaker stubMaker = new MasterServiceStubMaker();
+          this.masterServiceState.stub = stubMaker.makeStub();
         }
-        resetMasterServiceState(this.adminMasterServiceState);
+        resetMasterServiceState(this.masterServiceState);
       }
       // Ugly delegation just so we can add in a Close method.
-      final MasterAdminService.BlockingInterface stub = this.adminMasterServiceState.stub;
-      return new MasterAdminKeepAliveConnection() {
-        MasterAdminServiceState mss = adminMasterServiceState;
+      final MasterService.BlockingInterface stub = this.masterServiceState.stub;
+      return new MasterKeepAliveConnection() {
+        MasterServiceState mss = masterServiceState;
         @Override
-        public AddColumnResponse addColumn(RpcController controller,
-            AddColumnRequest request) throws ServiceException {
+        public AddColumnResponse addColumn(RpcController controller, AddColumnRequest request)
+        throws ServiceException {
           return stub.addColumn(controller, request);
         }
 
         @Override
         public DeleteColumnResponse deleteColumn(RpcController controller,
-            DeleteColumnRequest request) throws ServiceException {
+            DeleteColumnRequest request)
+        throws ServiceException {
           return stub.deleteColumn(controller, request);
         }
 
         @Override
         public ModifyColumnResponse modifyColumn(RpcController controller,
-            ModifyColumnRequest request) throws ServiceException {
+            ModifyColumnRequest request)
+        throws ServiceException {
           return stub.modifyColumn(controller, request);
         }
 
@@ -2152,7 +2024,9 @@ public class HConnectionManager {
         }
 
         @Override
-        public ModifyNamespaceResponse modifyNamespace(RpcController controller, ModifyNamespaceRequest request) throws ServiceException {
+        public ModifyNamespaceResponse modifyNamespace(RpcController controller,
+            ModifyNamespaceRequest request)
+        throws ServiceException {
           return stub.modifyNamespace(controller, request);
         }
 
@@ -2191,29 +2065,7 @@ public class HConnectionManager {
         public void close() {
           release(this.mss);
         }
-      };
-    }
 
-    private static void release(MasterServiceState mss) {
-      if (mss != null && mss.connection != null) {
-        ((HConnectionImplementation)mss.connection).releaseMaster(mss);
-      }
-    }
-
-    @Override
-    public MasterMonitorKeepAliveConnection getKeepAliveMasterMonitorService()
-    throws MasterNotRunningException {
-      synchronized (masterAndZKLock) {
-        if (!isKeepAliveMasterConnectedAndRunning(this.monitorMasterServiceState)) {
-          MasterMonitorServiceStubMaker stubMaker = new MasterMonitorServiceStubMaker();
-          this.monitorMasterServiceState.stub = stubMaker.makeStub();
-        }
-        resetMasterServiceState(this.monitorMasterServiceState);
-      }
-      // Ugly delegation just so can implement close
-      final MasterMonitorService.BlockingInterface stub = this.monitorMasterServiceState.stub;
-      return new MasterMonitorKeepAliveConnection() {
-        final MasterMonitorServiceState mss = monitorMasterServiceState;
         @Override
         public GetSchemaAlterStatusResponse getSchemaAlterStatus(
             RpcController controller, GetSchemaAlterStatusRequest request)
@@ -2241,19 +2093,14 @@ public class HConnectionManager {
             throws ServiceException {
           return stub.getClusterStatus(controller, request);
         }
-
-        @Override
-        public IsMasterRunningResponse isMasterRunning(
-            RpcController controller, IsMasterRunningRequest request)
-            throws ServiceException {
-          return stub.isMasterRunning(controller, request);
-        }
-
-        @Override
-        public void close() throws IOException {
-          release(this.mss);
-        }
       };
+    }
+ 
+
+    private static void release(MasterServiceState mss) {
+      if (mss != null && mss.connection != null) {
+        ((HConnectionImplementation)mss.connection).releaseMaster(mss);
+      }
     }
 
     private boolean isKeepAliveMasterConnectedAndRunning(MasterServiceState mss) {
@@ -2297,8 +2144,7 @@ public class HConnectionManager {
      */
     private void closeMaster() {
       synchronized (masterAndZKLock) {
-        closeMasterService(adminMasterServiceState);
-        closeMasterService(monitorMasterServiceState);
+        closeMasterService(masterServiceState);
       }
     }
 
@@ -2683,7 +2529,7 @@ public class HConnectionManager {
 
     @Override
     public HTableDescriptor[] listTables() throws IOException {
-      MasterMonitorKeepAliveConnection master = getKeepAliveMasterMonitorService();
+      MasterKeepAliveConnection master = getKeepAliveMasterService();
       try {
         GetTableDescriptorsRequest req =
           RequestConverter.buildGetTableDescriptorsRequest((List<TableName>)null);
@@ -2707,7 +2553,7 @@ public class HConnectionManager {
 
     @Override
     public TableName[] listTableNames() throws IOException {
-      MasterMonitorKeepAliveConnection master = getKeepAliveMasterMonitorService();
+      MasterKeepAliveConnection master = getKeepAliveMasterService();
       try {
         return ProtobufUtil.getTableNameArray(master.getTableNames(null,
             GetTableNamesRequest.newBuilder().build())
@@ -2723,7 +2569,7 @@ public class HConnectionManager {
     public HTableDescriptor[] getHTableDescriptorsByTableName(
         List<TableName> tableNames) throws IOException {
       if (tableNames == null || tableNames.isEmpty()) return new HTableDescriptor[0];
-      MasterMonitorKeepAliveConnection master = getKeepAliveMasterMonitorService();
+      MasterKeepAliveConnection master = getKeepAliveMasterService();
       try {
         GetTableDescriptorsRequest req =
           RequestConverter.buildGetTableDescriptorsRequest(tableNames);
@@ -2760,7 +2606,7 @@ public class HConnectionManager {
       if (tableName.equals(TableName.META_TABLE_NAME)) {
         return HTableDescriptor.META_TABLEDESC;
       }
-      MasterMonitorKeepAliveConnection master = getKeepAliveMasterMonitorService();
+      MasterKeepAliveConnection master = getKeepAliveMasterService();
       GetTableDescriptorsResponse htds;
       try {
         GetTableDescriptorsRequest req =

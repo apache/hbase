@@ -20,8 +20,7 @@ package org.apache.hadoop.hbase.security;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.MasterMonitorService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
@@ -36,8 +35,7 @@ public class HBasePolicyProvider extends PolicyProvider {
   protected final static Service[] services = {
       new Service("security.client.protocol.acl", ClientService.BlockingInterface.class),
       new Service("security.client.protocol.acl", AdminService.BlockingInterface.class),
-      new Service("security.admin.protocol.acl", MasterMonitorService.BlockingInterface.class),
-      new Service("security.admin.protocol.acl", MasterAdminService.BlockingInterface.class),
+      new Service("security.admin.protocol.acl", MasterService.BlockingInterface.class),
       new Service("security.masterregion.protocol.acl", RegionServerStatusService.BlockingInterface.class)
   };
 

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.HashMap;
 
 import com.google.common.collect.Sets;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterManager.ServiceType;
@@ -31,8 +32,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 
@@ -134,17 +134,10 @@ public class DistributedHBaseCluster extends HBaseCluster {
   }
 
   @Override
-  public MasterAdminProtos.MasterAdminService.BlockingInterface getMasterAdmin()
+  public MasterService.BlockingInterface getMaster()
   throws IOException {
     HConnection conn = HConnectionManager.getConnection(conf);
-    return conn.getMasterAdmin();
-  }
-
-  @Override
-  public MasterMonitorProtos.MasterMonitorService.BlockingInterface getMasterMonitor()
-  throws IOException {
-    HConnection conn = HConnectionManager.getConnection(conf);
-    return conn.getMasterMonitor();
+    return conn.getMaster();
   }
 
   @Override
@@ -175,7 +168,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
     long start = System.currentTimeMillis();
     while (System.currentTimeMillis() - start < timeout) {
       try {
-        getMasterAdmin();
+        getMaster();
         return true;
       } catch (MasterNotRunningException m) {
         LOG.warn("Master not started yet " + m);

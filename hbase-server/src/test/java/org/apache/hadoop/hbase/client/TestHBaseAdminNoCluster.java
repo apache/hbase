@@ -31,11 +31,12 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mortbay.log.Log;
+import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -63,12 +64,12 @@ public class TestHBaseAdminNoCluster {
     HConnection connection = HConnectionTestingUtility.getMockedConnection(configuration);
     // Mock so we get back the master interface.  Make it so when createTable is called, we throw
     // the PleaseHoldException.
-    MasterAdminKeepAliveConnection masterAdmin =
-      Mockito.mock(MasterAdminKeepAliveConnection.class);
+    MasterKeepAliveConnection masterAdmin =
+      Mockito.mock(MasterKeepAliveConnection.class);
     Mockito.when(masterAdmin.createTable((RpcController)Mockito.any(),
-        (MasterAdminProtos.CreateTableRequest)Mockito.any())).
-      thenThrow(new ServiceException("Test fail").initCause(new PleaseHoldException("test")));
-    Mockito.when(connection.getKeepAliveMasterAdminService()).thenReturn(masterAdmin);
+      (CreateTableRequest)Mockito.any())).
+        thenThrow(new ServiceException("Test fail").initCause(new PleaseHoldException("test")));
+    Mockito.when(connection.getKeepAliveMasterService()).thenReturn(masterAdmin);
     // Mock up our admin Interfaces
     HBaseAdmin admin = new HBaseAdmin(configuration);
     try {
@@ -83,7 +84,7 @@ public class TestHBaseAdminNoCluster {
       }
       // Assert we were called 'count' times.
       Mockito.verify(masterAdmin, Mockito.atLeast(count)).createTable((RpcController)Mockito.any(),
-        (MasterAdminProtos.CreateTableRequest)Mockito.any());
+        (CreateTableRequest)Mockito.any());
     } finally {
       admin.close();
       if (connection != null)HConnectionManager.deleteConnection(configuration);

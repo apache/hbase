@@ -95,7 +95,7 @@ public class TestHTraceHooks {
     int createTableCount = 0;
 
     for (Span s : spansByParentIdMap.get(createTableRoot.getSpanId())) {
-      if (s.getDescription().startsWith("MasterAdminService.CreateTable")) {
+      if (s.getDescription().startsWith("MasterService.CreateTable")) {
         createTableCount++;
       }
     }

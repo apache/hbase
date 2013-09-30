@@ -34,8 +34,6 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.MasterAdminKeepAliveConnection;
-import org.apache.hadoop.hbase.client.MasterMonitorKeepAliveConnection;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -43,7 +41,6 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService.BlockingInterface;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -283,14 +280,9 @@ public class CoprocessorHConnection implements HConnection {
     return delegate.locateRegions(tableName, useCache, offlined);
   }
 
-  public BlockingInterface getMasterAdmin() throws IOException {
-    return delegate.getMasterAdmin();
-  }
-
-  public
-      org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.MasterMonitorService.BlockingInterface
-      getMasterMonitor() throws IOException {
-    return delegate.getMasterMonitor();
+  public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService.BlockingInterface getMaster()
+  throws IOException {
+    return delegate.getMaster();
   }
 
   public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface
@@ -380,14 +372,9 @@ public class CoprocessorHConnection implements HConnection {
     delegate.deleteCachedRegionLocation(location);
   }
 
-  public MasterMonitorKeepAliveConnection getKeepAliveMasterMonitorService()
+  public MasterKeepAliveConnection getKeepAliveMasterService()
       throws MasterNotRunningException {
-    return delegate.getKeepAliveMasterMonitorService();
-  }
-
-  public MasterAdminKeepAliveConnection getKeepAliveMasterAdminService()
-      throws MasterNotRunningException {
-    return delegate.getKeepAliveMasterAdminService();
+    return delegate.getKeepAliveMasterService();
   }
 
   public boolean isDeadServer(ServerName serverName) {
