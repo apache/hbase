@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,6 +53,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -64,6 +69,7 @@ import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -73,9 +79,13 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -1826,5 +1836,77 @@ public class HLogSplitter {
     CorruptedLogFileException(String s) {
       super(s);
     }
+  }
+
+  /**
+   * This function is used to construct mutations from a WALEntry. It also reconstructs HLogKey &
+   * WALEdit from the passed in WALEntry
+   * @param entry
+   * @param cells
+   * @param logEntry pair of HLogKey and WALEdit instance stores HLogKey and WALEdit instances
+   *          extracted from the passed in WALEntry.
+   * @return list of Pair<MutationType, Mutation> to be replayed
+   * @throws IOException
+   */
+  public static List<Pair<MutationType, Mutation>> getMutationsFromWALEntry(WALEntry entry,
+      CellScanner cells, Pair<HLogKey, WALEdit> logEntry) throws IOException {
+
+    if (entry == null) {
+      // return an empty array
+      return new ArrayList<Pair<MutationType, Mutation>>();
+    }
+
+    int count = entry.getAssociatedCellCount();
+    List<Pair<MutationType, Mutation>> mutations = new ArrayList<Pair<MutationType, Mutation>>();
+    Cell previousCell = null;
+    Mutation m = null;
+    HLogKey key = null;
+    WALEdit val = null;
+    if (logEntry != null) val = new WALEdit();
+
+    for (int i = 0; i < count; i++) {
+      // Throw index out of bounds if our cell count is off
+      if (!cells.advance()) {
+        throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
+      }
+      Cell cell = cells.current();
+      if (val != null) val.add(KeyValueUtil.ensureKeyValue(cell));
+
+      boolean isNewRowOrType =
+          previousCell == null || previousCell.getTypeByte() != cell.getTypeByte()
+              || !CellUtil.matchingRow(previousCell, cell);
+      if (isNewRowOrType) {
+        // Create new mutation
+        if (CellUtil.isDelete(cell)) {
+          m = new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+          mutations.add(new Pair<MutationType, Mutation>(MutationType.DELETE, m));
+        } else {
+          m = new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+          mutations.add(new Pair<MutationType, Mutation>(MutationType.PUT, m));
+        }
+      }
+      if (CellUtil.isDelete(cell)) {
+        ((Delete) m).addDeleteMarker(KeyValueUtil.ensureKeyValue(cell));
+      } else {
+        ((Put) m).add(KeyValueUtil.ensureKeyValue(cell));
+      }
+      previousCell = cell;
+    }
+
+    // reconstruct HLogKey
+    if (logEntry != null) {
+      WALKey walKey = entry.getKey();
+      List<UUID> clusterIds = new ArrayList<UUID>(walKey.getClusterIdsCount());
+      for (HBaseProtos.UUID uuid : entry.getKey().getClusterIdsList()) {
+        clusterIds.add(new UUID(uuid.getMostSigBits(), uuid.getLeastSigBits()));
+      }
+      key = new HLogKey(walKey.getEncodedRegionName().toByteArray(), TableName.valueOf(walKey
+              .getTableName().toByteArray()), walKey.getLogSequenceNumber(), walKey.getWriteTime(),
+              clusterIds);
+      logEntry.setFirst(key);
+      logEntry.setSecond(val);
+    }
+
+    return mutations;
   }
 }
