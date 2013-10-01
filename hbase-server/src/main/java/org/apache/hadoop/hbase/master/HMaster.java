@@ -2517,8 +2517,7 @@ MasterServices, Server {
       LOG.debug(getClientIdAuditPrefix() + " unassign " + hri.getRegionNameAsString()
           + " in current location if it is online and reassign.force=" + force);
       this.assignmentManager.unassign(hri, force);
-      if (!this.assignmentManager.getRegionStates().isRegionInTransition(hri)
-          && !this.assignmentManager.getRegionStates().isRegionAssigned(hri)) {
+      if (this.assignmentManager.getRegionStates().isRegionOffline(hri)) {
         LOG.debug("Region " + hri.getRegionNameAsString()
             + " is not online on any region server, reassigning it.");
         assignRegion(hri);

@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.RegionState.State;
 
 /**
  * Run bulk assign.  Does one RCP per regionserver passing a
@@ -129,9 +130,8 @@ public class GeneralBulkAssigner extends BulkAssigner {
       Iterator<HRegionInfo> regionInfoIterator = regionSet.iterator();
       while (regionInfoIterator.hasNext()) {
         HRegionInfo hri = regionInfoIterator.next();
-        RegionState state = regionStates.getRegionState(hri);
-        if ((!regionStates.isRegionInTransition(hri) && regionStates.isRegionAssigned(hri))
-            || state.isSplitting() || state.isMerging()) {
+        if (regionStates.isRegionOnline(hri) || regionStates.isRegionInState(hri,
+            State.SPLITTING, State.SPLIT, State.MERGING, State.MERGED)) {
           regionInfoIterator.remove();
         }
       }
@@ -195,8 +195,11 @@ public class GeneralBulkAssigner extends BulkAssigner {
           + " regions to server " + e.getKey() + ", reassigning them");
       reassigningRegions.addAll(failedPlans.remove(e.getKey()));
     }
+    RegionStates regionStates = assignmentManager.getRegionStates();
     for (HRegionInfo region : reassigningRegions) {
-      assignmentManager.invokeAssign(region);
+      if (!regionStates.isRegionOnline(region)) {
+        assignmentManager.invokeAssign(region);
+      }
     }
     return reassigningRegions.size();
   }

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -75,15 +77,15 @@ public class TestAssignmentManagerOnCluster {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    // Using the mock load balancer to control region plans
+    // Using the our load balancer to control region plans
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-      MockLoadBalancer.class, LoadBalancer.class);
+      MyLoadBalancer.class, LoadBalancer.class);
     conf.setClass(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      MockRegionObserver.class, RegionObserver.class);
+      MyRegionObserver.class, RegionObserver.class);
     // Reduce the maximum attempts to speed up the test
     conf.setInt("hbase.assignment.maximum.attempts", 3);
 
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster(1, 4, null, MyMaster.class, null);
     admin = TEST_UTIL.getHBaseAdmin();
   }
 
@@ -306,12 +308,12 @@ public class TestAssignmentManagerOnCluster {
       AssignmentManager am = master.getAssignmentManager();
       assertTrue(am.waitForAssignment(hri));
 
-      MockRegionObserver.preCloseEnabled.set(true);
+      MyRegionObserver.preCloseEnabled.set(true);
       am.unassign(hri);
       RegionState state = am.getRegionStates().getRegionState(hri);
       assertEquals(RegionState.State.FAILED_CLOSE, state.getState());
 
-      MockRegionObserver.preCloseEnabled.set(false);
+      MyRegionObserver.preCloseEnabled.set(false);
       am.unassign(hri, true);
 
       // region is closing now, will be re-assigned automatically.
@@ -327,7 +329,7 @@ public class TestAssignmentManagerOnCluster {
         getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 200);
     } finally {
-      MockRegionObserver.preCloseEnabled.set(false);
+      MyRegionObserver.preCloseEnabled.set(false);
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
@@ -353,12 +355,12 @@ public class TestAssignmentManagerOnCluster {
       AssignmentManager am = master.getAssignmentManager();
       assertTrue(am.waitForAssignment(hri));
 
-      MockRegionObserver.preCloseEnabled.set(true);
+      MyRegionObserver.preCloseEnabled.set(true);
       am.unassign(hri);
       RegionState state = am.getRegionStates().getRegionState(hri);
       assertEquals(RegionState.State.FAILED_CLOSE, state.getState());
 
-      MockRegionObserver.preCloseEnabled.set(false);
+      MyRegionObserver.preCloseEnabled.set(false);
       am.unassign(hri, true);
 
       // region may still be assigned now since it's closing,
@@ -371,7 +373,7 @@ public class TestAssignmentManagerOnCluster {
         getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
     } finally {
-      MockRegionObserver.preCloseEnabled.set(false);
+      MyRegionObserver.preCloseEnabled.set(false);
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
@@ -392,7 +394,7 @@ public class TestAssignmentManagerOnCluster {
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaEditor.addRegionToMeta(meta, hri);
 
-      MockLoadBalancer.controledRegion = hri.getEncodedName();
+      MyLoadBalancer.controledRegion = hri.getEncodedName();
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       master.assignRegion(hri);
@@ -404,7 +406,7 @@ public class TestAssignmentManagerOnCluster {
       // Failed to open since no plan, so it's on no server
       assertNull(state.getServerName());
 
-      MockLoadBalancer.controledRegion = null;
+      MyLoadBalancer.controledRegion = null;
       master.assignRegion(hri);
       assertTrue(am.waitForAssignment(hri));
 
@@ -412,7 +414,7 @@ public class TestAssignmentManagerOnCluster {
         getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
     } finally {
-      MockLoadBalancer.controledRegion = null;
+      MyLoadBalancer.controledRegion = null;
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
@@ -535,7 +537,7 @@ public class TestAssignmentManagerOnCluster {
       AssignmentManager am = master.getAssignmentManager();
       assertTrue(am.waitForAssignment(hri));
 
-      MockRegionObserver.postCloseEnabled.set(true);
+      MyRegionObserver.postCloseEnabled.set(true);
       am.unassign(hri);
       // Now region should pending_close or closing
       // Unassign it again forcefully so that we can trigger already
@@ -547,7 +549,7 @@ public class TestAssignmentManagerOnCluster {
 
       // Let region closing move ahead. The region should be closed
       // properly and re-assigned automatically
-      MockRegionObserver.postCloseEnabled.set(false);
+      MyRegionObserver.postCloseEnabled.set(false);
 
       // region may still be assigned now since it's closing,
       // let's check if it's assigned after it's out of transition
@@ -559,7 +561,7 @@ public class TestAssignmentManagerOnCluster {
         getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
     } finally {
-      MockRegionObserver.postCloseEnabled.set(false);
+      MyRegionObserver.postCloseEnabled.set(false);
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
@@ -580,14 +582,14 @@ public class TestAssignmentManagerOnCluster {
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaEditor.addRegionToMeta(meta, hri);
 
-      MockRegionObserver.postOpenEnabled.set(true);
-      MockRegionObserver.postOpenCalled = false;
+      MyRegionObserver.postOpenEnabled.set(true);
+      MyRegionObserver.postOpenCalled = false;
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       // Region will be opened, but it won't complete
       master.assignRegion(hri);
       long end = EnvironmentEdgeManager.currentTimeMillis() + 20000;
       // Wait till postOpen is called
-      while (!MockRegionObserver.postOpenCalled ) {
+      while (!MyRegionObserver.postOpenCalled ) {
         assertFalse("Timed out waiting for postOpen to be called",
           EnvironmentEdgeManager.currentTimeMillis() > end);
         Thread.sleep(300);
@@ -604,7 +606,7 @@ public class TestAssignmentManagerOnCluster {
       // Let's forcefully re-assign it to trigger closing/opening
       // racing. This test is to make sure this scenario
       // is handled properly.
-      MockRegionObserver.postOpenEnabled.set(false);
+      MyRegionObserver.postOpenEnabled.set(false);
       am.assign(hri, true, true);
 
       // let's check if it's assigned after it's out of transition
@@ -617,12 +619,124 @@ public class TestAssignmentManagerOnCluster {
       assertFalse("Region should assigned on a new region server",
         oldServerName.equals(serverName));
     } finally {
-      MockRegionObserver.postOpenEnabled.set(false);
+      MyRegionObserver.postOpenEnabled.set(false);
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
 
-  static class MockLoadBalancer extends StochasticLoadBalancer {
+  /**
+   * Test force unassign/assign a region hosted on a dead server
+   */
+  @Test (timeout=60000)
+  public void testAssignRacingWithSSH() throws Exception {
+    String table = "testAssignRacingWithSSH";
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    MyMaster master = null;
+    try {
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      HRegionInfo hri = new HRegionInfo(
+        desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+      MetaEditor.addRegionToMeta(meta, hri);
+
+      // Assign the region
+      master = (MyMaster)cluster.getMaster();
+      master.assignRegion(hri);
+
+      // Hold SSH before killing the hosting server
+      master.enableSSH(false);
+
+      // Kill the hosting server
+      AssignmentManager am = master.getAssignmentManager();
+      RegionStates regionStates = am.getRegionStates();
+      assertTrue(am.waitForAssignment(hri));
+      RegionState state = regionStates.getRegionState(hri);
+      ServerName oldServerName = state.getServerName();
+      cluster.killRegionServer(oldServerName);
+      cluster.waitForRegionServerToStop(oldServerName, -1);
+
+      // You can't assign a dead region before SSH
+      am.assign(hri, true, true);
+      state = regionStates.getRegionState(hri);
+      assertTrue(state.isFailedClose());
+
+      // You can't unassign a dead region before SSH either
+      am.unassign(hri, true);
+      state = regionStates.getRegionState(hri);
+      assertTrue(state.isFailedClose());
+
+      synchronized (regionStates) {
+        // Enable SSH so that log can be split
+        master.enableSSH(true);
+
+        // We hold regionStates now, so logSplit
+        // won't be known to AM yet.
+        am.unassign(hri, true);
+        state = regionStates.getRegionState(hri);
+        assertTrue(state.isOffline());
+      }
+
+      // let's check if it's assigned after it's out of transition.
+      // no need to assign it manually, SSH should do it
+      am.waitOnRegionToClearRegionsInTransition(hri);
+      assertTrue(am.waitForAssignment(hri));
+
+      ServerName serverName = master.getAssignmentManager().
+        getRegionStates().getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 200);
+    } finally {
+      if (master != null) {
+        master.enableSSH(true);
+      }
+      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+    }
+  }
+
+  /**
+   * Test force unassign/assign a region of a disabled table
+   */
+  @Test (timeout=60000)
+  public void testAssignDisabledRegion() throws Exception {
+    String table = "testAssignDisabledRegion";
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    MyMaster master = null;
+    try {
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      HRegionInfo hri = new HRegionInfo(
+        desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+      MetaEditor.addRegionToMeta(meta, hri);
+
+      // Assign the region
+      master = (MyMaster)cluster.getMaster();
+      master.assignRegion(hri);
+      AssignmentManager am = master.getAssignmentManager();
+      RegionStates regionStates = am.getRegionStates();
+      assertTrue(am.waitForAssignment(hri));
+
+      // Disable the table
+      admin.disableTable(table);
+      assertTrue(regionStates.isRegionOffline(hri));
+
+      // You can't assign a disabled region
+      am.assign(hri, true, true);
+      assertTrue(regionStates.isRegionOffline(hri));
+
+      // You can't unassign a disabled region either
+      am.unassign(hri, true);
+      assertTrue(regionStates.isRegionOffline(hri));
+    } finally {
+      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+    }
+  }
+
+  static class MyLoadBalancer extends StochasticLoadBalancer {
     // For this region, if specified, always assign to nowhere
     static volatile String controledRegion = null;
 
@@ -636,7 +750,28 @@ public class TestAssignmentManagerOnCluster {
     }
   }
 
-  public static class MockRegionObserver extends BaseRegionObserver {
+  public static class MyMaster extends HMaster {
+    AtomicBoolean enabled = new AtomicBoolean(true);
+
+    public MyMaster(Configuration conf) throws IOException, KeeperException,
+        InterruptedException {
+      super(conf);
+    }
+
+    @Override
+    public boolean isServerShutdownHandlerEnabled() {
+      return enabled.get() && super.isServerShutdownHandlerEnabled();
+    }
+
+    public void enableSSH(boolean enabled) {
+      this.enabled.set(enabled);
+      if (enabled) {
+        serverManager.processQueuedDeadServers();
+      }
+    }
+  }
+
+  public static class MyRegionObserver extends BaseRegionObserver {
     // If enabled, fail all preClose calls
     static AtomicBoolean preCloseEnabled = new AtomicBoolean(false);
 

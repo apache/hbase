@@ -53,13 +53,18 @@ public class CompactRandomRegionOfTableAction extends Action {
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
     HBaseAdmin admin = util.getHBaseAdmin();
-    List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
     boolean major = RandomUtils.nextInt(100) < majorRatio;
 
     LOG.info("Performing action: Compact random region of table "
       + tableName + ", major=" + major);
+    List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+    if (regions == null || regions.isEmpty()) {
+      LOG.info("Table " + tableName + " doesn't have regions to compact");
+      return;
+    }
+
     HRegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-        regions.toArray(new HRegionInfo[regions.size()]));
+      regions.toArray(new HRegionInfo[regions.size()]));
 
     if (major) {
       LOG.debug("Major compacting region " + region.getRegionNameAsString());

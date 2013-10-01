@@ -272,11 +272,39 @@ public class ClusterStatus extends VersionedWritable {
     return balancerOn != null && balancerOn;
   }
 
-  public Boolean getBalancerOn(){
+  public Boolean getBalancerOn() {
     return balancerOn;
   }
 
-   /**
+  public String toString() {
+    StringBuilder sb = new StringBuilder(1024);
+    sb.append("Master: " + master);
+    sb.append("\nNumber of backup masters: " + backupMasters.size());
+    for (ServerName serverName: backupMasters) {
+      sb.append("\n  " + serverName);
+    }
+
+    sb.append("\nNumber of live region servers: " + liveServers.size());
+    for (ServerName serverName: liveServers.keySet()) {
+      sb.append("\n  " + serverName.getServerName());
+    }
+
+    sb.append("\nNumber of dead region servers: " + deadServers.size());
+    for (ServerName serverName: deadServers) {
+      sb.append("\n  " + serverName);
+    }
+
+    sb.append("\nAverage load: " + getAverageLoad());
+    sb.append("\nNumber of requests: " + getRequestsCount());
+    sb.append("\nNumber of regions: " + getRegionsCount());
+    sb.append("\nNumber of regions in transition: " + intransition.size());
+    for (RegionState state: intransition.values()) {
+      sb.append("\n  " + state.toDescriptiveString());
+    }
+    return sb.toString();
+  }
+
+  /**
     * Convert a ClusterStatus to a protobuf ClusterStatus
     *
     * @return the protobuf ClusterStatus

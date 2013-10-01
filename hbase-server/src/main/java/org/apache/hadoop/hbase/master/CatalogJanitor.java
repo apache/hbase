@@ -328,14 +328,6 @@ public class CatalogJanitor extends Chore {
     if (hasNoReferences(a) && hasNoReferences(b)) {
       LOG.debug("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
-
-      // This latter regionOffline should not be necessary but is done for now
-      // until we let go of regionserver to master heartbeats.  See HBASE-3368.
-      if (this.services.getAssignmentManager() != null) {
-        // The mock used in testing catalogjanitor returns null for getAssignmnetManager.
-        // Allow for null result out of getAssignmentManager.
-        this.services.getAssignmentManager().regionOffline(parent);
-      }
       FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
       if (LOG.isTraceEnabled()) LOG.trace("Archiving parent region: " + parent);
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, parent);
@@ -380,7 +372,8 @@ public class CatalogJanitor extends Chore {
       regionFs = HRegionFileSystem.openRegionFromFileSystem(
           this.services.getConfiguration(), fs, tabledir, daughter, true);
     } catch (IOException e) {
-      LOG.warn("Daughter region does not exist: " + daughter.getEncodedName());
+      LOG.warn("Daughter region does not exist: " + daughter.getEncodedName()
+        + ", parent is: " + parent.getEncodedName());
       return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
     }
 

@@ -52,12 +52,16 @@ public class MoveRegionsOfTableAction extends Action {
     }
 
     HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
-
-    List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
     Collection<ServerName> serversList = admin.getClusterStatus().getServers();
     ServerName[] servers = serversList.toArray(new ServerName[serversList.size()]);
 
     LOG.info("Performing action: Move regions of table " + tableName);
+    List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+    if (regions == null || regions.isEmpty()) {
+      LOG.info("Table " + tableName + " doesn't have regions to move");
+      return;
+    }
+
     for (HRegionInfo regionInfo:regions) {
       try {
         String destServerName =

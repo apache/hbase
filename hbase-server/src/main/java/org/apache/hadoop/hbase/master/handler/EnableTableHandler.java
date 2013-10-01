@@ -222,7 +222,7 @@ public class EnableTableHandler extends EventHandler {
     for (Pair<HRegionInfo, ServerName> regionLocation : regionsInMeta) {
       HRegionInfo hri = regionLocation.getFirst();
       ServerName sn = regionLocation.getSecond();
-      if (!regionStates.isRegionInTransition(hri) && !regionStates.isRegionAssigned(hri)) {
+      if (regionStates.isRegionOffline(hri)) {
         if (this.retainAssignment && sn != null && serverManager.isServerOnline(sn)) {
           this.assignmentManager.addPlan(hri.getEncodedName(), new RegionPlan(hri, null, sn));
         }

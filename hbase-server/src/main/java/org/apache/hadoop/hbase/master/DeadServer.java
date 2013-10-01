@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -39,6 +41,8 @@ import java.util.Set;
  */
 @InterfaceAudience.Private
 public class DeadServer {
+  private static final Log LOG = LogFactory.getLog(DeadServer.class);
+
   /**
    * Set of known dead servers.  On znode expiration, servers are added here.
    * This is needed in case of a network partitioning where the server's lease
@@ -110,8 +114,8 @@ public class DeadServer {
     }
   }
 
-  @SuppressWarnings("UnusedParameters")
-  public synchronized void finish(ServerName ignored) {
+  public synchronized void finish(ServerName sn) {
+    LOG.debug("Finished processing " + sn);
     this.numProcessing--;
   }
 

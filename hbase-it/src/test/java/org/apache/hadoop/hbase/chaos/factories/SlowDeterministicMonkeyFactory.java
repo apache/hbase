@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.chaos.actions.ChangeEncodingAction;
 import org.apache.hadoop.hbase.chaos.actions.ChangeVersionsAction;
 import org.apache.hadoop.hbase.chaos.actions.CompactRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.CompactTableAction;
+import org.apache.hadoop.hbase.chaos.actions.DumpClusterStatusAction;
 import org.apache.hadoop.hbase.chaos.actions.FlushRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.FlushTableAction;
 import org.apache.hadoop.hbase.chaos.actions.MergeRandomAdjacentRegionsOfTableAction;
@@ -77,11 +78,17 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
         new RestartRsHoldingMetaAction(35000),
     };
 
+    // Action to log more info for debugging
+    Action[] actions4 = new Action[] {
+        new DumpClusterStatusAction()
+    };
+
     return new PolicyBasedChaosMonkey(util,
         new PeriodicRandomActionPolicy(60 * 1000, actions1),
         new PeriodicRandomActionPolicy(90 * 1000, actions2),
         new CompositeSequentialPolicy(
             new DoActionsOncePolicy(150 * 1000, actions3),
-            new PeriodicRandomActionPolicy(150 * 1000, actions3)));
+            new PeriodicRandomActionPolicy(150 * 1000, actions3)),
+        new PeriodicRandomActionPolicy(90 * 1000, actions4));
   }
 }

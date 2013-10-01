@@ -51,8 +51,8 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
 
     LOG.info("Performing action: Merge random adjacent regions of table " + tableName);
     List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
-    if (regions.size() < 2) {
-      LOG.info("Table " + tableName + " doesn't have enough region to merge");
+    if (regions == null || regions.size() < 2) {
+      LOG.info("Table " + tableName + " doesn't have enough regions to merge");
       return;
     }
 

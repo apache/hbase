@@ -150,7 +150,7 @@ public class TestDrainingServer {
 
     am.waitForAssignment(REGIONINFO);
 
-    assertTrue(am.getRegionStates().isRegionAssigned(REGIONINFO));
+    assertTrue(am.getRegionStates().isRegionOnline(REGIONINFO));
     assertNotEquals(am.getRegionStates().getRegionServerOfRegion(REGIONINFO), SERVERNAME_A);
   }
 
