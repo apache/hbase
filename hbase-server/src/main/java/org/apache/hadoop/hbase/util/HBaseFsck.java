@@ -3245,7 +3245,7 @@ public class HBaseFsck extends Configured implements Tool {
    * Display the full report from fsck. This displays all live and dead region
    * servers, and all known regions.
    */
-  public void setDisplayFullReport() {
+  public static void setDisplayFullReport() {
     details = true;
   }
 
