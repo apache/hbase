@@ -95,8 +95,14 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
 
   @After
   public void cleanUpMonkey() throws Exception {
-    monkey.stop("Ending test");
-    monkey.waitForStop();
+    cleanUpMonkey("Ending test");
+  }
+
+  protected void cleanUpMonkey(String why) throws Exception {
+    if (monkey != null && !monkey.isStopped()) {
+      monkey.stop(why);
+      monkey.waitForStop();
+    }
   }
 
   protected IntegrationTestingUtility getTestingUtil(Configuration conf) {

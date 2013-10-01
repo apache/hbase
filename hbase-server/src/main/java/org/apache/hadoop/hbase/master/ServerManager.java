@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
@@ -180,6 +181,7 @@ public class ServerManager {
     this(master, services, true);
   }
 
+  @SuppressWarnings("deprecation")
   ServerManager(final Server master, final MasterServices services,
       final boolean connect) throws IOException {
     this.master = master;
@@ -720,6 +722,29 @@ public class ServerManager {
           + " failed because no RPC connection found to this server");
     }
     ProtobufUtil.mergeRegions(admin, region_a, region_b, forcible);
+  }
+
+  /**
+   * Check if a region server is reachable and has the expected start code
+   */
+  public boolean isServerReachable(ServerName server) {
+    if (server == null) throw new NullPointerException("Passed server is null");
+    int maximumAttempts = Math.max(1, master.getConfiguration().getInt(
+      "hbase.master.maximum.ping.server.attempts", 10));
+    for (int i = 0; i < maximumAttempts; i++) {
+      try {
+        AdminService.BlockingInterface admin = getRsAdmin(server);
+        if (admin != null) {
+          ServerInfo info = ProtobufUtil.getServerInfo(admin);
+          return info != null && info.hasServerName()
+            && server.getStartcode() == info.getServerName().getStartCode();
+        }
+      } catch (IOException ioe) {
+        LOG.debug("Couldn't reach " + server + ", try=" + i
+          + " of " + maximumAttempts, ioe);
+      }
+    }
+    return false;
   }
 
     /**

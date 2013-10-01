@@ -167,6 +167,7 @@ public class TestSplitTransactionOnCluster {
     return hri;
   }
 
+  @SuppressWarnings("deprecation")
   @Test(timeout = 60000)
   public void testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack() throws Exception {
     final TableName tableName =
@@ -209,6 +210,8 @@ public class TestSplitTransactionOnCluster {
       SplitTransaction st = new MockedSplitTransaction(region, Bytes.toBytes("row3"));
       try {
         secondSplit = true;
+        // make region splittable
+        region.initialize();
         st.prepare();
         st.execute(regionServer, regionServer);
       } catch (IOException e) {
@@ -933,8 +936,8 @@ public class TestSplitTransactionOnCluster {
       assertTrue("not able to find a splittable region", region != null);
       SplitTransaction st = new MockedSplitTransaction(region, Bytes.toBytes("row2")) {
         @Override
-        int createNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo region, ServerName serverName)
-            throws KeeperException, IOException {
+        int createNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo region,
+            ServerName serverName) throws KeeperException, IOException {
           throw new SplittingNodeCreationFailedException ();
         }
       };

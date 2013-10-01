@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-import java.util.Random;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.hbase.HColumnDescriptor;

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,6 +30,7 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
@@ -78,14 +80,50 @@ public class RegionStates {
    */
   private final TreeMap<HRegionInfo, ServerName> regionAssignments;
 
+  /**
+   * Encoded region name to server assignment map for re-assignment
+   * purpose. Contains the server a given region is last known assigned
+   * to, which has not completed log splitting, so not assignable.
+   * If a region is currently assigned, this server info in this
+   * map should be the same as that in regionAssignments.
+   * However the info in regionAssignments is cleared when the region
+   * is offline while the info in lastAssignments is cleared when
+   * the region is closed or the server is dead and processed.
+   */
+  private final HashMap<String, ServerName> lastAssignments;
+
+  /**
+   * Map a host port pair string to the latest start code
+   * of a region server which is known to be dead. It is dead
+   * to us, but server manager may not know it yet.
+   */
+  private final HashMap<String, Long> deadServers;
+
+  /**
+   * Map a dead servers to the time when log split is done.
+   * Since log splitting is not ordered, we have to remember
+   * all processed instances. The map is cleaned up based
+   * on a configured time. By default, we assume a dead
+   * server should be done with log splitting in two hours.
+   */
+  private final HashMap<ServerName, Long> processedServers;
+  private long lastProcessedServerCleanTime;
+
   private final ServerManager serverManager;
   private final Server server;
+
+  // The maximum time to keep a log split info in region states map
+  static final String LOG_SPLIT_TIME = "hbase.master.maximum.logsplit.keeptime";
+  static final long DEFAULT_LOG_SPLIT_TIME = 7200000L; // 2 hours
 
   RegionStates(final Server master, final ServerManager serverManager) {
     regionStates = new HashMap<String, RegionState>();
     regionsInTransition = new HashMap<String, RegionState>();
     serverHoldings = new HashMap<ServerName, Set<HRegionInfo>>();
     regionAssignments = new TreeMap<HRegionInfo, ServerName>();
+    lastAssignments = new HashMap<String, ServerName>();
+    processedServers = new HashMap<ServerName, Long>();
+    deadServers = new HashMap<String, Long>();
     this.serverManager = serverManager;
     this.server = master;
   }
@@ -132,27 +170,32 @@ public class RegionStates {
   }
 
   /**
-   * @return True if specified region assigned.
+   * @return True if specified region assigned, and not in transition.
    */
-  public synchronized boolean isRegionAssigned(final HRegionInfo hri) {
-    return regionAssignments.containsKey(hri);
+  public synchronized boolean isRegionOnline(final HRegionInfo hri) {
+    return !isRegionInTransition(hri) && regionAssignments.containsKey(hri);
   }
 
   /**
-   * @return True if specified region offline.
+   * @return True if specified region offline/closed, but not in transition.
+   * If the region is not in the map, it is offline to us too.
    */
   public synchronized boolean isRegionOffline(final HRegionInfo hri) {
-    return !isRegionInTransition(hri) && isRegionInState(hri, State.OFFLINE);
+    return getRegionState(hri) == null || (!isRegionInTransition(hri)
+      && isRegionInState(hri, State.OFFLINE, State.CLOSED));
   }
 
   /**
-   * @return True if specified region is in specified state
+   * @return True if specified region is in one of the specified states.
    */
   public synchronized boolean isRegionInState(
-      final HRegionInfo hri, final State state) {
+      final HRegionInfo hri, final State... states) {
     RegionState regionState = getRegionState(hri);
     State s = regionState != null ? regionState.getState() : null;
-    return s == state;
+    for (State state: states) {
+      if (s == state) return true;
+    }
+    return false;
   }
 
   /**
@@ -252,8 +295,8 @@ public class RegionStates {
     ServerName newServerName = serverName;
     if (serverName != null &&
         (state == State.CLOSED || state == State.OFFLINE)) {
-      LOG.warn("Closed " + hri.getShortNameToLog() + " still on "
-        + serverName + "? Ignored, reset it to null");
+      LOG.info(hri.getShortNameToLog() + " is " + state
+        + ", reset server info from " + serverName + " to null");
       newServerName = null;
     }
 
@@ -274,6 +317,20 @@ public class RegionStates {
       regionsInTransition.put(regionName, regionState);
     }
 
+    // For these states, region should be properly closed.
+    // There should be no log splitting issue.
+    if ((state == State.CLOSED || state == State.MERGED
+        || state == State.SPLIT) && lastAssignments.containsKey(regionName)) {
+      ServerName oldServerName = oldState == null ? null : oldState.getServerName();
+      ServerName last = lastAssignments.get(regionName);
+      if (last.equals(oldServerName)) {
+        lastAssignments.remove(regionName);
+      } else {
+        LOG.warn(regionName + " moved to " + state + " on "
+          + oldServerName + ", expected " + last);
+      }
+    }
+
     // notify the change
     this.notifyAll();
     return regionState;
@@ -286,6 +343,16 @@ public class RegionStates {
    */
   public synchronized void regionOnline(
       final HRegionInfo hri, final ServerName serverName) {
+    if (!serverManager.isServerOnline(serverName)) {
+      // This is possible if the region server dies before master gets a
+      // chance to handle ZK event in time. At this time, if the dead server
+      // is already processed by SSH, we should ignore this event.
+      // If not processed yet, ignore and let SSH deal with it.
+      LOG.warn("Ignored, " + hri.getEncodedName()
+        + " was opened on a dead server: " + serverName);
+      return;
+    }
+
     String regionName = hri.getEncodedName();
     RegionState oldState = regionStates.get(regionName);
     if (oldState == null) {
@@ -301,6 +368,7 @@ public class RegionStates {
     updateRegionState(hri, State.OPEN, serverName);
     regionsInTransition.remove(regionName);
 
+    lastAssignments.put(regionName, serverName);
     ServerName oldServerName = regionAssignments.put(hri, serverName);
     if (!serverName.equals(oldServerName)) {
       LOG.info("Onlined " + hri.getShortNameToLog() + " on " + serverName);
@@ -312,9 +380,50 @@ public class RegionStates {
       regions.add(hri);
       if (oldServerName != null) {
         LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
-        serverHoldings.get(oldServerName).remove(hri);
+        Set<HRegionInfo> oldRegions = serverHoldings.get(oldServerName);
+        oldRegions.remove(hri);
+        if (oldRegions.isEmpty()) {
+          serverHoldings.remove(oldServerName);
+        }
       }
     }
+  }
+
+  /**
+   * A dead server's hlogs have been split so that all the regions
+   * used to be open on it can be safely assigned now. Mark them assignable.
+   */
+  public synchronized void logSplit(final ServerName serverName) {
+    for (Iterator<Map.Entry<String, ServerName>> it
+        = lastAssignments.entrySet().iterator(); it.hasNext();) {
+      Map.Entry<String, ServerName> e = it.next();
+      if (e.getValue().equals(serverName)) {
+        it.remove();
+      }
+    }
+    long now = System.currentTimeMillis();
+    processedServers.put(serverName, Long.valueOf(now));
+    Configuration conf = server.getConfiguration();
+    long obsoleteTime = conf.getLong(LOG_SPLIT_TIME, DEFAULT_LOG_SPLIT_TIME);
+    // Doesn't have to be very accurate about the clean up time
+    if (now > lastProcessedServerCleanTime + obsoleteTime) {
+      lastProcessedServerCleanTime = now;
+      long cutoff = now - obsoleteTime;
+      for (Iterator<Map.Entry<ServerName, Long>> it
+          = processedServers.entrySet().iterator(); it.hasNext();) {
+        Map.Entry<ServerName, Long> e = it.next();
+        if (e.getValue().longValue() < cutoff) {
+          it.remove();
+        }
+      }
+    }
+  }
+
+  /**
+   * Log split is done for a given region, so it is assignable now.
+   */
+  public synchronized void logSplit(final HRegionInfo region) {
+    lastAssignments.remove(region.getEncodedName());
   }
 
   /**
@@ -361,7 +470,11 @@ public class RegionStates {
     ServerName oldServerName = regionAssignments.remove(hri);
     if (oldServerName != null) {
       LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
-      serverHoldings.get(oldServerName).remove(hri);
+      Set<HRegionInfo> oldRegions = serverHoldings.get(oldServerName);
+      oldRegions.remove(hri);
+      if (oldRegions.isEmpty()) {
+        serverHoldings.remove(oldServerName);
+      }
     }
   }
 
@@ -370,19 +483,38 @@ public class RegionStates {
    */
   public synchronized List<HRegionInfo> serverOffline(
       final ZooKeeperWatcher watcher, final ServerName sn) {
-    // Clean up this server from map of servers to regions, and remove all regions
-    // of this server from online map of regions.
+    // Offline all regions on this server not already in transition.
     List<HRegionInfo> rits = new ArrayList<HRegionInfo>();
-    Set<HRegionInfo> assignedRegions = serverHoldings.remove(sn);
+    Set<HRegionInfo> assignedRegions = serverHoldings.get(sn);
     if (assignedRegions == null) {
       assignedRegions = new HashSet<HRegionInfo>();
     }
 
+    // Offline regions outside the loop to avoid ConcurrentModificationException
+    Set<HRegionInfo> regionsToOffline = new HashSet<HRegionInfo>();
     for (HRegionInfo region : assignedRegions) {
-      regionAssignments.remove(region);
+      // Offline open regions, no need to offline if SPLIT/MERGED/OFFLINE
+      if (isRegionOnline(region)) {
+        regionsToOffline.add(region);
+      } else {
+        RegionState state = getRegionState(region);
+        if (state.isSplitting() || state.isMerging()) {
+          LOG.debug("Offline splitting/merging region " + state);
+          try {
+            // Delete the ZNode if exists
+            ZKAssign.deleteNodeFailSilent(watcher, region);
+            regionsToOffline.add(region);
+          } catch (KeeperException ke) {
+            server.abort("Unexpected ZK exception deleting node " + region, ke);
+          }
+        }
+      }
     }
 
-    Set<HRegionInfo> regionsToOffline = new HashSet<HRegionInfo>();
+    for (HRegionInfo hri : regionsToOffline) {
+      regionOffline(hri);
+    }
+
     for (RegionState state : regionsInTransition.values()) {
       HRegionInfo hri = state.getRegion();
       if (assignedRegions.contains(hri)) {
@@ -390,36 +522,22 @@ public class RegionStates {
         // This region must be moving away from this server, or splitting/merging.
         // SSH will handle it, either skip assigning, or re-assign.
         LOG.info("Transitioning " + state + " will be handled by SSH for " + sn);
-        if (state.isSplitting() || state.isMerging()) {
-          LOG.info("Offline splitting/merging region " + state);
-          try {
-            // Delete the ZNode if exists
-            ZKAssign.deleteNodeFailSilent(watcher, hri);
-            // Offline regions outside the loop to avoid ConcurrentModificationException
-            regionsToOffline.add(hri);
-          } catch (KeeperException ke) {
-            server.abort("Unexpected ZK exception deleting node " + hri, ke);
-          }
-        }
       } else if (sn.equals(state.getServerName())) {
         // Region is in transition on this region server, and this
         // region is not open on this server. So the region must be
         // moving to this server from another one (i.e. opening or
-        // pending open on this server, was open on another one
-        if (state.isPendingOpen() || state.isOpening()) {
+        // pending open on this server, was open on another one.
+        // It could be in failed_close state too if tried several times
+        // to open it while the server is not reachable.
+        if (state.isPendingOpenOrOpening() || state.isFailedClose()) {
           LOG.info("Found opening region " + state + " to be reassigned by SSH for " + sn);
           rits.add(hri);
         } else {
-          LOG.warn("THIS SHOULD NOT HAPPEN: unexpected state "
-            + state + " of region in transition on server " + sn);
+          LOG.warn("THIS SHOULD NOT HAPPEN: unexpected " + state);
         }
       }
     }
-    for (HRegionInfo hri : regionsToOffline) {
-      regionOffline(hri);
-    }
 
-    assignedRegions.clear();
     this.notifyAll();
     return rits;
   }
@@ -470,24 +588,58 @@ public class RegionStates {
   }
 
   /**
-   * Waits until the specified region has completed assignment.
-   * <p>
-   * If the region is already assigned, returns immediately.  Otherwise, method
-   * blocks until the region is assigned.
+   * Checking if a region was assigned to a server which is not online now.
+   * If so, we should hold re-assign this region till SSH has split its hlogs.
+   * Once logs are split, the last assignment of this region will be reset,
+   * which means a null last assignment server is ok for re-assigning.
+   *
+   * A region server could be dead but we don't know it yet. We may
+   * think it's online falsely. Therefore if a server is online, we still
+   * need to confirm it reachable and having the expected start code.
    */
-  public synchronized void waitForAssignment(
-      final HRegionInfo hri) throws InterruptedException {
-    if (!isRegionAssigned(hri)) return;
+  synchronized boolean wasRegionOnDeadServer(final String regionName) {
+    ServerName server = lastAssignments.get(regionName);
+    return isServerDeadAndNotProcessed(server);
+  }
 
-    while(!server.isStopped() && !isRegionAssigned(hri)) {
-      RegionState rs = getRegionState(hri);
-      LOG.info("Waiting on " + rs + " to be assigned");
-      waitForUpdate(100);
+  synchronized boolean isServerDeadAndNotProcessed(ServerName server) {
+    if (server == null) return false;
+    if (serverManager.isServerOnline(server)) {
+      String hostAndPort = server.getHostAndPort();
+      long startCode = server.getStartcode();
+      Long deadCode = deadServers.get(hostAndPort);
+      if (deadCode == null || startCode > deadCode.longValue()) {
+        if (serverManager.isServerReachable(server)) {
+          return false;
+        }
+        // The size of deadServers won't grow unbounded.
+        deadServers.put(hostAndPort, Long.valueOf(startCode));
+      }
+      // Watch out! If the server is not dead, the region could
+      // remain unassigned. That's why ServerManager#isServerReachable
+      // should use some retry.
+      //
+      // We cache this info since it is very unlikely for that
+      // instance to come back up later on. We don't want to expire
+      // the server since we prefer to let it die naturally.
+      LOG.warn("Couldn't reach online server " + server);
     }
+    // Now, we know it's dead. Check if it's processed
+    return !processedServers.containsKey(server);
+  }
 
-    if (server.isStopped()) {
-      LOG.info("Giving up wait on region " +
-        "assignment because stoppable.isStopped is set");
+ /**
+   * Get the last region server a region was on for purpose of re-assignment,
+   * i.e. should the re-assignment be held back till log split is done?
+   */
+  synchronized ServerName getLastRegionServerOfRegion(final String regionName) {
+    return lastAssignments.get(regionName);
+  }
+
+  synchronized void setLastRegionServerOfRegions(
+      final ServerName serverName, final List<HRegionInfo> regionInfos) {
+    for (HRegionInfo hri: regionInfos) {
+      lastAssignments.put(hri.getEncodedName(), serverName);
     }
   }
 

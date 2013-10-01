@@ -55,8 +55,13 @@ public class MoveRandomRegionOfTableAction extends Action {
 
     LOG.info("Performing action: Move random region of table " + tableName);
     List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+    if (regions == null || regions.isEmpty()) {
+      LOG.info("Table " + tableName + " doesn't have regions to move");
+      return;
+    }
+
     HRegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-        regions.toArray(new HRegionInfo[regions.size()]));
+      regions.toArray(new HRegionInfo[regions.size()]));
     LOG.debug("Unassigning region " + region.getRegionNameAsString());
     admin.unassign(region.getRegionName(), false);
     if (sleepTime > 0) {

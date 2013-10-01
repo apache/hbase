@@ -19,9 +19,7 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -64,7 +62,8 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
           } else {
             this.services.getMasterFileSystem().splitMetaLog(serverName);
           }
-        } 
+          am.getRegionStates().logSplit(HRegionInfo.FIRST_META_REGIONINFO);
+        }
       } catch (IOException ioe) {
         this.services.getExecutorService().submit(this);
         this.deadServers.add(serverName);

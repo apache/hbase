@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -141,8 +142,9 @@ public class ServerShutdownHandler extends EventHandler {
       // If AssignmentManager hasn't finished rebuilding user regions,
       // we are not ready to assign dead regions either. So we re-queue up
       // the dead server for further processing too.
+      AssignmentManager am = services.getAssignmentManager();
       if (isCarryingMeta() // hbase:meta
-          || !services.getAssignmentManager().isFailoverCleanupDone()) {
+          || !am.isFailoverCleanupDone()) {
         this.services.getServerManager().processDeadServer(serverName, this.shouldSplitHlog);
         return;
       }
@@ -174,7 +176,7 @@ public class ServerShutdownHandler extends EventHandler {
           throw new IOException("Interrupted", e);
         } catch (IOException ioe) {
           LOG.info("Received exception accessing hbase:meta during server shutdown of " +
-              serverName + ", retrying hbase:meta read", ioe);
+            serverName + ", retrying hbase:meta read", ioe);
         }
       }
       if (this.server.isStopped()) {
@@ -192,6 +194,7 @@ public class ServerShutdownHandler extends EventHandler {
           } else {
             this.services.getMasterFileSystem().splitLog(serverName);
           }
+          am.getRegionStates().logSplit(serverName);
         } else {
           LOG.info("Skipping log splitting for " + serverName);
         }
@@ -203,7 +206,6 @@ public class ServerShutdownHandler extends EventHandler {
       // doing after log splitting.  Could do some states before -- OPENING?
       // OFFLINE? -- and then others after like CLOSING that depend on log
       // splitting.
-      AssignmentManager am = services.getAssignmentManager();
       List<HRegionInfo> regionsInTransition = am.processServerShutdown(serverName);
       LOG.info("Reassigning " + ((hris == null)? 0: hris.size()) +
         " region(s) that " + (serverName == null? "null": serverName)  +
@@ -221,52 +223,56 @@ public class ServerShutdownHandler extends EventHandler {
           if (regionsInTransition.contains(hri)) {
             continue;
           }
-          RegionState rit = regionStates.getRegionTransitionState(hri);
-          if (processDeadRegion(hri, e.getValue(), am, server.getCatalogTracker())) {
-            ServerName addressFromAM = regionStates.getRegionServerOfRegion(hri);
-            if (addressFromAM != null && !addressFromAM.equals(this.serverName)) {
-              // If this region is in transition on the dead server, it must be
-              // opening or pending_open, which should have been covered by AM#processServerShutdown
-              LOG.info("Skip assigning region " + hri.getRegionNameAsString()
-                + " because it has been opened in " + addressFromAM.getServerName());
-              continue;
-            }
-            if (rit != null) {
-              if (!rit.isOnServer(serverName)
-                  || rit.isClosed() || rit.isOpened()) {
-                // Skip regions that are in transition on other server,
-                // or in state closed/opened
-                LOG.info("Skip assigning region " + rit);
+          String encodedName = hri.getEncodedName();
+          Lock lock = am.acquireRegionLock(encodedName);
+          try {
+            RegionState rit = regionStates.getRegionTransitionState(hri);
+            if (processDeadRegion(hri, e.getValue(), am, server.getCatalogTracker())) {
+              ServerName addressFromAM = regionStates.getRegionServerOfRegion(hri);
+              if (addressFromAM != null && !addressFromAM.equals(this.serverName)) {
+                // If this region is in transition on the dead server, it must be
+                // opening or pending_open, which should have been covered by AM#processServerShutdown
+                LOG.info("Skip assigning region " + hri.getRegionNameAsString()
+                  + " because it has been opened in " + addressFromAM.getServerName());
                 continue;
               }
-              try{
-                //clean zk node
-                LOG.info("Reassigning region with rs = " + rit + " and deleting zk node if exists");
-                ZKAssign.deleteNodeFailSilent(services.getZooKeeper(), hri);
-              } catch (KeeperException ke) {
-                this.server.abort("Unexpected ZK exception deleting unassigned node " + hri, ke);
-                return;
+              if (rit != null) {
+                if (rit.getServerName() != null && !rit.isOnServer(serverName)) {
+                  // Skip regions that are in transition on other server
+                  LOG.info("Skip assigning region in transition on other server" + rit);
+                  continue;
+                }
+                try{
+                  //clean zk node
+                  LOG.info("Reassigning region with rs = " + rit + " and deleting zk node if exists");
+                  ZKAssign.deleteNodeFailSilent(services.getZooKeeper(), hri);
+                } catch (KeeperException ke) {
+                  this.server.abort("Unexpected ZK exception deleting unassigned node " + hri, ke);
+                  return;
+                }
+              }
+              toAssignRegions.add(hri);
+            } else if (rit != null) {
+              if (rit.isPendingCloseOrClosing()
+                  && am.getZKTable().isDisablingOrDisabledTable(hri.getTable())) {
+                // If the table was partially disabled and the RS went down, we should clear the RIT
+                // and remove the node for the region.
+                // The rit that we use may be stale in case the table was in DISABLING state
+                // but though we did assign we will not be clearing the znode in CLOSING state.
+                // Doing this will have no harm. See HBASE-5927
+                am.deleteClosingOrClosedNode(hri);
+                am.regionOffline(hri);
+              } else {
+                LOG.warn("THIS SHOULD NOT HAPPEN: unexpected region in transition "
+                  + rit + " not to be assigned by SSH of server " + serverName);
               }
             }
-            toAssignRegions.add(hri);
-          } else if (rit != null) {
-            if ((rit.isClosing() || rit.isPendingClose())
-                && am.getZKTable().isDisablingOrDisabledTable(hri.getTable())) {
-              // If the table was partially disabled and the RS went down, we should clear the RIT
-              // and remove the node for the region.
-              // The rit that we use may be stale in case the table was in DISABLING state
-              // but though we did assign we will not be clearing the znode in CLOSING state.
-              // Doing this will have no harm. See HBASE-5927
-              am.deleteClosingOrClosedNode(hri);
-              am.regionOffline(hri);
-            } else {
-              LOG.warn("THIS SHOULD NOT HAPPEN: unexpected region in transition "
-                + rit + " not to be assigned by SSH of server " + serverName);
-            }
+          } finally {
+            lock.unlock();
           }
         }
       }
- 
+
       try {
         am.assign(toAssignRegions);
       } catch (InterruptedException ie) {

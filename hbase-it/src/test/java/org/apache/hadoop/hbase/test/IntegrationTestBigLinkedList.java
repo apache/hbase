@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.chaos.monkies.CalmChaosMonkey;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -59,6 +60,7 @@ import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -700,6 +702,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
     private static final Log LOG = LogFactory.getLog(Loop.class);
 
+    IntegrationTestBigLinkedList it;
+
     protected void runGenerator(int numMappers, long numNodes,
         String outputDir, Integer width, Integer wrapMuplitplier) throws Exception {
       Path outputPath = new Path(outputDir);
@@ -714,7 +718,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
     }
 
-    protected void runVerify(String outputDir, int numReducers, long expectedNumNodes) throws Exception {
+    protected boolean runVerify(String outputDir,
+        int numReducers, long expectedNumNodes) throws Exception {
       Path outputPath = new Path(outputDir);
       UUID uuid = UUID.randomUUID(); //create a random UUID.
       Path iterationOutput = new Path(outputPath, uuid.toString());
@@ -726,12 +731,20 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         throw new RuntimeException("Verify.run failed with return code: " + retCode);
       }
 
-      boolean verifySuccess = verify.verify(expectedNumNodes);
-      if (!verifySuccess) {
-        throw new RuntimeException("Verify.verify failed");
+      if (!verify.verify(expectedNumNodes)) {
+        try {
+          HBaseFsck fsck = new HBaseFsck(getConf());
+          HBaseFsck.setDisplayFullReport();
+          fsck.connect();
+          fsck.onlineHbck();
+        } catch (Throwable t) {
+          LOG.error("Failed to run hbck", t);
+        }
+        return false;
       }
 
       LOG.info("Verify finished with succees. Total nodes=" + expectedNumNodes);
+      return true;
     }
 
     @Override
@@ -761,7 +774,17 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         runGenerator(numMappers, numNodes, outputDir, width, wrapMuplitplier);
         expectedNumNodes += numMappers * numNodes;
 
-        runVerify(outputDir, numReducers, expectedNumNodes);
+        if (!runVerify(outputDir, numReducers, expectedNumNodes)) {
+          if (it.monkey != null && !(it.monkey instanceof CalmChaosMonkey)) {
+            LOG.info("Verify.verify failed, let's stop CM and verify again");
+            it.cleanUpMonkey("Stop monkey before verify again after verify failed");
+            if (!runVerify(outputDir, numReducers, expectedNumNodes)) {
+              LOG.info("Verify.verify failed even without CM, verify one more");
+              runVerify(outputDir, numReducers, expectedNumNodes);
+            }
+          }
+          throw new RuntimeException("Verify.verify failed");
+        }
       }
 
       return 0;
@@ -1051,7 +1074,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     } else if (toRun.equals("Verify")) {
       tool = new Verify();
     } else if (toRun.equals("Loop")) {
-      tool = new Loop();
+      Loop loop = new Loop();
+      loop.it = this;
+      tool = loop;
     } else if (toRun.equals("Walker")) {
       tool = new Walker();
     } else if (toRun.equals("Print")) {

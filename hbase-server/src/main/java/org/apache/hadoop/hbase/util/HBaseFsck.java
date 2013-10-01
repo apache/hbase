@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -328,6 +329,18 @@ public class HBaseFsck extends Configured implements Tool {
     if (details) {
       for (ServerName name: backupMasters) {
         errors.print("  " + name);
+      }
+    }
+
+    errors.print("Average load: " + status.getAverageLoad());
+    errors.print("Number of requests: " + status.getRequestsCount());
+    errors.print("Number of regions: " + status.getRegionsCount());
+
+    Map<String, RegionState> rits = status.getRegionsInTransition();
+    errors.print("Number of regions in transition: " + rits.size());
+    if (details) {
+      for (RegionState state: rits.values()) {
+        errors.print("  " + state.toDescriptiveString());
       }
     }
 

@@ -51,8 +51,13 @@ public class FlushRandomRegionOfTableAction extends Action {
 
     LOG.info("Performing action: Flush random region of table " + tableName);
     List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+    if (regions == null || regions.isEmpty()) {
+      LOG.info("Table " + tableName + " doesn't have regions to flush");
+      return;
+    }
+
     HRegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-        regions.toArray(new HRegionInfo[regions.size()]));
+      regions.toArray(new HRegionInfo[regions.size()]));
     LOG.debug("Flushing region " + region.getRegionNameAsString());
     admin.flush(region.getRegionName());
     if (sleepTime > 0) {
