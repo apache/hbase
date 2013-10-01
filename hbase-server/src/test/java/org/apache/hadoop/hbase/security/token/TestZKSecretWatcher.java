@@ -84,7 +84,7 @@ public class TestZKSecretWatcher {
       for (int i=0; i<2; i++) {
         if (tmp[i].isMaster()) {
           KEY_MASTER = tmp[i];
-          KEY_SLAVE = tmp[ i+1 % 2 ];
+          KEY_SLAVE = tmp[ (i+1) % 2 ];
           break;
         }
       }
