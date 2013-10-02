@@ -86,18 +86,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-common</artifactId>
-      <type>test-jar</type>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-server</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
     </dependency>
     <dependency>
         <groupId>org.apache.hbase</groupId>
@@ -105,22 +94,13 @@
     </dependency>
     <dependency>
         <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-hadoop-compat</artifactId>
-        <version>${project.version}</version>
-        <type>test-jar</type>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.hbase</groupId>
         <artifactId>${compat.module}</artifactId>
         <version>${project.version}</version>
     </dependency>
     <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>${compat.module}</artifactId>
-        <version>${project.version}</version>
-        <type>test-jar</type>
-        <scope>test</scope>
+       <groupId>org.apache.hbase</groupId>
+       <artifactId>hbase-shell</artifactId>
+       <version>${project.version}</version>
     </dependency>
   </dependencies>
 </project>

@@ -60,6 +60,7 @@
     <module>hbase-examples</module>
     <module>hbase-prefix-tree</module>
     <module>hbase-assembly</module>
+    <module>hbase-testing-util</module>
   </modules>
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
@@ -1005,6 +1006,12 @@
         <type>test-jar</type>
         <scope>test</scope>
       </dependency>
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-testing-util</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-prefix-tree</artifactId>
