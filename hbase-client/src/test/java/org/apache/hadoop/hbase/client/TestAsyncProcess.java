@@ -40,7 +40,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
@@ -55,6 +54,7 @@ public class TestAsyncProcess {
       TableName.valueOf("DUMMY_TABLE");
   private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes();
   private static final byte[] DUMMY_BYTES_2 = "DUMMY_BYTES_2".getBytes();
+  private static final byte[] DUMMY_BYTES_3 = "DUMMY_BYTES_3".getBytes();
   private static final byte[] FAILS = "FAILS".getBytes();
   private static final Configuration conf = new Configuration();
 
@@ -63,8 +63,11 @@ public class TestAsyncProcess {
   private static HRegionInfo hri1 = new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_1, DUMMY_BYTES_2);
   private static HRegionInfo hri2 =
       new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_2, HConstants.EMPTY_END_ROW);
+  private static HRegionInfo hri3 =
+      new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_3, HConstants.EMPTY_END_ROW);
   private static HRegionLocation loc1 = new HRegionLocation(hri1, sn);
   private static HRegionLocation loc2 = new HRegionLocation(hri2, sn);
+  private static HRegionLocation loc3 = new HRegionLocation(hri3, sn2);
 
   private static final String success = "success";
   private static Exception failure = new Exception("failure");
@@ -180,10 +183,15 @@ public class TestAsyncProcess {
     @Override
     public HRegionLocation locateRegion(final TableName tableName,
                                         final byte[] row) {
-      Random rd = new Random(Bytes.toLong(row));
-      int pos = rd.nextInt(hrl.size());
-      usedRegions[pos] = true;
-      return hrl.get(pos);
+      int i = 0;
+      for (HRegionLocation hr:hrl){
+        if (Arrays.equals(row, hr.getRegionInfo().getStartKey())){
+          usedRegions[i] = true;
+          return hr;
+        }
+        i++;
+      }
+      return null;
     }
   }
 
@@ -193,7 +201,7 @@ public class TestAsyncProcess {
     AsyncProcess ap = new MyAsyncProcess<Object>(hc, null, conf);
 
     List<Put> puts = new ArrayList<Put>();
-    puts.add(createPut(true, true));
+    puts.add(createPut(1, true));
 
     ap.submit(puts, false);
     Assert.assertTrue(puts.isEmpty());
@@ -206,7 +214,7 @@ public class TestAsyncProcess {
     AsyncProcess ap = new MyAsyncProcess<Object>(hc, mcb, conf);
 
     List<Put> puts = new ArrayList<Put>();
-    puts.add(createPut(true, true));
+    puts.add(createPut(1, true));
 
     ap.submit(puts, false);
     Assert.assertTrue(puts.isEmpty());
@@ -223,13 +231,35 @@ public class TestAsyncProcess {
     AsyncProcess ap = new MyAsyncProcess<Object>(hc, null, conf);
 
     List<Put> puts = new ArrayList<Put>();
-    puts.add(createPut(true, true));
+    puts.add(createPut(1, true));
 
-    ap.incTaskCounters(Arrays.asList(hri1.getRegionName()));
+    ap.incTaskCounters(Arrays.asList(hri1.getRegionName()), sn);
     ap.submit(puts, false);
     Assert.assertEquals(puts.size(), 1);
 
-    ap.decTaskCounters(Arrays.asList(hri1.getRegionName()));
+    ap.decTaskCounters(Arrays.asList(hri1.getRegionName()), sn);
+    ap.submit(puts, false);
+    Assert.assertTrue(puts.isEmpty());
+  }
+
+
+  @Test
+  public void testSubmitBusyRegionServer() throws Exception {
+    HConnection hc = createHConnection();
+    AsyncProcess<Object> ap = new MyAsyncProcess<Object>(hc, null, conf);
+
+    ap.taskCounterPerServer.put(sn2, new AtomicInteger(ap.maxConcurrentTasksPerServer));
+
+    List<Put> puts = new ArrayList<Put>();
+    puts.add(createPut(1, true));
+    puts.add(createPut(3, true)); // <== this one won't be taken, the rs is busy
+    puts.add(createPut(1, true)); // <== this one will make it, the region is already in
+    puts.add(createPut(2, true)); // <== new region, but the rs is ok
+
+    ap.submit(puts, false);
+    Assert.assertEquals(1, puts.size());
+
+    ap.taskCounterPerServer.put(sn2, new AtomicInteger(ap.maxConcurrentTasksPerServer - 1));
     ap.submit(puts, false);
     Assert.assertTrue(puts.isEmpty());
   }
@@ -241,7 +271,7 @@ public class TestAsyncProcess {
     AsyncProcess ap = new MyAsyncProcess<Object>(hc, mcb, conf);
 
     List<Put> puts = new ArrayList<Put>();
-    Put p = createPut(true, false);
+    Put p = createPut(1, false);
     puts.add(p);
 
     ap.submit(puts, false);
@@ -318,7 +348,7 @@ public class TestAsyncProcess {
     };
 
     List<Put> puts = new ArrayList<Put>();
-    Put p = createPut(true, true);
+    Put p = createPut(1, true);
     puts.add(p);
 
     ap.submit(puts, false);
@@ -342,9 +372,9 @@ public class TestAsyncProcess {
     AsyncProcess ap = new MyAsyncProcess<Object>(hc, mcb, conf);
 
     List<Put> puts = new ArrayList<Put>();
-    puts.add(createPut(true, false));
-    puts.add(createPut(true, true));
-    puts.add(createPut(true, true));
+    puts.add(createPut(1, false));
+    puts.add(createPut(1, true));
+    puts.add(createPut(1, true));
 
     ap.submit(puts, false);
     Assert.assertTrue(puts.isEmpty());
@@ -359,7 +389,7 @@ public class TestAsyncProcess {
     Assert.assertEquals(1, ap.getErrors().actions.size());
 
 
-    puts.add(createPut(true, true));
+    puts.add(createPut(1, true));
     ap.submit(puts, false);
     Assert.assertTrue(puts.isEmpty());
 
@@ -380,9 +410,9 @@ public class TestAsyncProcess {
     AsyncProcess ap = new MyAsyncProcess<Object>(hc, mcb, conf);
 
     List<Put> puts = new ArrayList<Put>();
-    puts.add(createPut(true, false));
-    puts.add(createPut(true, true));
-    puts.add(createPut(true, true));
+    puts.add(createPut(1, false));
+    puts.add(createPut(1, true));
+    puts.add(createPut(1, true));
 
     ap.submit(puts, false);
     ap.waitUntilDone();
@@ -400,7 +430,7 @@ public class TestAsyncProcess {
     final AsyncProcess ap = new MyAsyncProcess<Object>(hc, null, conf);
 
     for (int i = 0; i < 1000; i++) {
-      ap.incTaskCounters(Arrays.asList("dummy".getBytes()));
+      ap.incTaskCounters(Arrays.asList("dummy".getBytes()), sn);
     }
 
     final Thread myThread = Thread.currentThread();
@@ -413,7 +443,7 @@ public class TestAsyncProcess {
     };
 
     List<Put> puts = new ArrayList<Put>();
-    puts.add(createPut(true, true));
+    puts.add(createPut(1, true));
 
     t.start();
 
@@ -429,7 +459,7 @@ public class TestAsyncProcess {
       public void run() {
         Threads.sleep(sleepTime);
         while (ap.tasksDone.get() > 0) {
-          ap.decTaskCounters(Arrays.asList("dummy".getBytes()));
+          ap.decTaskCounters(Arrays.asList("dummy".getBytes()), sn);
         }
       }
     };
@@ -484,6 +514,11 @@ public class TestAsyncProcess {
         Mockito.eq(DUMMY_BYTES_2))).thenReturn(loc2);
 
     Mockito.when(hc.getRegionLocation(Mockito.eq(DUMMY_TABLE),
+        Mockito.eq(DUMMY_BYTES_3), Mockito.anyBoolean())).thenReturn(loc2);
+    Mockito.when(hc.locateRegion(Mockito.eq(DUMMY_TABLE),
+        Mockito.eq(DUMMY_BYTES_3))).thenReturn(loc3);
+
+    Mockito.when(hc.getRegionLocation(Mockito.eq(DUMMY_TABLE),
         Mockito.eq(FAILS), Mockito.anyBoolean())).thenReturn(loc2);
     Mockito.when(hc.locateRegion(Mockito.eq(DUMMY_TABLE),
         Mockito.eq(FAILS))).thenReturn(loc2);
@@ -497,7 +532,7 @@ public class TestAsyncProcess {
     HConnection hc = createHConnection();
     ht.ap = new MyAsyncProcess<Object>(hc, null, conf);
 
-    Put put = createPut(true, true);
+    Put put = createPut(1, true);
 
     Assert.assertEquals(0, ht.getWriteBufferSize());
     ht.put(put);
@@ -516,7 +551,7 @@ public class TestAsyncProcess {
       ht.setWriteBufferSize(0L);
     }
 
-    Put put = createPut(true, false);
+    Put put = createPut(1, false);
 
     Assert.assertEquals(0L, ht.currentWriteBufferSize);
     try {
@@ -555,7 +590,7 @@ public class TestAsyncProcess {
     ht.setAutoFlush(false, true);
     ht.setWriteBufferSize(0);
 
-    Put p = createPut(true, false);
+    Put p = createPut(1, false);
     ht.put(p);
 
     ht.ap.waitUntilDone(); // Let's do all the retries.
@@ -565,7 +600,7 @@ public class TestAsyncProcess {
     // This said, it's not a very easy going behavior. For example, when we insert a list of
     //  puts, we may raise an exception in the middle of the list. It's then up to the caller to
     //  manage what was inserted, what was tried but failed, and what was not even tried.
-    p = createPut(true, true);
+    p = createPut(1, true);
     Assert.assertEquals(0, ht.writeAsyncBuffer.size());
     try {
       ht.put(p);
@@ -584,7 +619,7 @@ public class TestAsyncProcess {
     ht.ap = new MyAsyncProcess<Object>(hc, mcb, conf);
     ht.setAutoFlush(false, false);
 
-    Put p = createPut(true, false);
+    Put p = createPut(1, false);
     ht.put(p);
     Assert.assertEquals(0, ht.writeAsyncBuffer.size());
     try {
@@ -606,13 +641,13 @@ public class TestAsyncProcess {
     ht.connection = new MyConnectionImpl();
 
     List<Put> puts = new ArrayList<Put>();
-    puts.add(createPut(true, true));
-    puts.add(createPut(true, true));
-    puts.add(createPut(true, true));
-    puts.add(createPut(true, true));
-    puts.add(createPut(true, false)); // <=== the bad apple, position 4
-    puts.add(createPut(true, true));
-    puts.add(createPut(true, false)); // <=== another bad apple, position 6
+    puts.add(createPut(1, true));
+    puts.add(createPut(1, true));
+    puts.add(createPut(1, true));
+    puts.add(createPut(1, true));
+    puts.add(createPut(1, false)); // <=== the bad apple, position 4
+    puts.add(createPut(1, true));
+    puts.add(createPut(1, false)); // <=== another bad apple, position 6
 
     Object[] res = new Object[puts.size()];
     try {
@@ -650,7 +685,7 @@ public class TestAsyncProcess {
     ht.ap.serverTrackerTimeout = 1;
 
 
-    Put p = createPut(true, false);
+    Put p = createPut(1, false);
     ht.setAutoFlush(false, false);
     ht.put(p);
 
@@ -679,14 +714,14 @@ public class TestAsyncProcess {
       HRegionLocation hrl = new HRegionLocation(hri, i % 2 == 0 ? sn : sn2);
       hrls.add(hrl);
 
-      Get get = new Get(Bytes.toBytes(i * 10L + 5L));
+      Get get = new Get(Bytes.toBytes(i * 10L));
       gets.add(get);
     }
 
     HTable ht = new HTable();
     MyConnectionImpl2 con = new MyConnectionImpl2(hrls);
     ht.connection = con;
-    ht.batch((List) gets);
+    ht.batch(gets);
 
     Assert.assertEquals(con.ap.nbActions.get(), NB_REGS);
     Assert.assertEquals(con.ap.nbMultiResponse.get(), 2); // 1 multi response per server
@@ -696,23 +731,31 @@ public class TestAsyncProcess {
     for (int i =0; i<NB_REGS; i++){
       if (con.usedRegions[i]) nbReg++;
     }
-    Assert.assertTrue("nbReg=" + nbReg, nbReg > NB_REGS / 10);
+    Assert.assertEquals("nbReg=" + nbReg, nbReg, NB_REGS);
   }
 
 
   /**
-   * @param reg1    if true, creates a put on region 1, region 2 otherwise
+   * @param regCnt  the region: 1 to 3.
    * @param success if true, the put will succeed.
    * @return a put
    */
-  private Put createPut(boolean reg1, boolean success) {
+  private Put createPut(int regCnt, boolean success) {
     Put p;
     if (!success) {
       p = new Put(FAILS);
-    } else if (reg1) {
-      p = new Put(DUMMY_BYTES_1);
-    } else {
-      p = new Put(DUMMY_BYTES_2);
+    } else switch (regCnt){
+      case 1 :
+        p = new Put(DUMMY_BYTES_1);
+        break;
+      case 2:
+        p = new Put(DUMMY_BYTES_2);
+        break;
+      case 3:
+        p = new Put(DUMMY_BYTES_3);
+        break;
+      default:
+        throw new IllegalArgumentException("unknown " + regCnt);
     }
 
     p.add(DUMMY_BYTES_1, DUMMY_BYTES_1, DUMMY_BYTES_1);
