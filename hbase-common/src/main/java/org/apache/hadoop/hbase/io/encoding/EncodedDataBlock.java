@@ -32,10 +32,10 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.Compressor;
 
 import com.google.common.base.Preconditions;
-import com.google.common.io.NullOutputStream;
 
 /**
  * Encapsulates a data block compressed using a particular encoding algorithm.
@@ -148,7 +148,7 @@ public class EncodedDataBlock {
   public static int getCompressedSize(Algorithm algo, Compressor compressor,
       byte[] inputBuffer, int offset, int length) throws IOException {
     DataOutputStream compressedStream = new DataOutputStream(
-        new NullOutputStream());
+        new IOUtils.NullOutputStream());
     if (compressor != null) {
       compressor.reset();
     }

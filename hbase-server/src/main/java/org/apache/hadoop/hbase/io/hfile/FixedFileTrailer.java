@@ -28,6 +28,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.io.output.NullOutputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.KeyValue;
@@ -35,8 +36,6 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.common.io.NullOutputStream;
 
 /**
  * The {@link HFile} has a fixed trailer which contains offsets to other
@@ -135,7 +134,7 @@ public class FixedFileTrailer {
          version <= HFile.MAX_FORMAT_VERSION;
          ++version) {
       FixedFileTrailer fft = new FixedFileTrailer(version, HFileBlock.MINOR_VERSION_NO_CHECKSUM);
-      DataOutputStream dos = new DataOutputStream(new NullOutputStream());
+      DataOutputStream dos = new DataOutputStream(NullOutputStream.NULL_OUTPUT_STREAM);
       try {
         fft.serialize(dos);
       } catch (IOException ex) {
