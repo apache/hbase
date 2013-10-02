@@ -144,16 +144,32 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-common</artifactId>
-      <type>test-jar</type>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-protocol</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shell</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-hadoop-compat</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>${compat.module}</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-testing-util</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -176,46 +192,9 @@
       <artifactId>commons-lang</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-shell</artifactId>
+      <groupId>org.cloudera.htrace</groupId>
+      <artifactId>htrace-core</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-server</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-server</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-      <dependency>
-          <groupId>org.apache.hbase</groupId>
-          <artifactId>hbase-hadoop-compat</artifactId>
-      </dependency>
-      <dependency>
-          <groupId>org.apache.hbase</groupId>
-          <artifactId>hbase-hadoop-compat</artifactId>
-          <version>${project.version}</version>
-          <type>test-jar</type>
-          <scope>test</scope>
-      </dependency>
-      <dependency>
-          <groupId>org.apache.hbase</groupId>
-          <artifactId>${compat.module}</artifactId>
-          <version>${project.version}</version>
-      </dependency>
-      <dependency>
-          <groupId>org.apache.hbase</groupId>
-          <artifactId>${compat.module}</artifactId>
-          <version>${project.version}</version>
-          <type>test-jar</type>
-          <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.cloudera.htrace</groupId>
-        <artifactId>htrace-core</artifactId>
-      </dependency>
   </dependencies>
 
   <profiles>

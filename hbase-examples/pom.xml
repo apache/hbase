@@ -69,19 +69,33 @@
     </dependency>
     <dependency>
         <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-common</artifactId>
-        <type>test-jar</type>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-protocol</artifactId>
-        <scope>compile</scope>
     </dependency>
     <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-client</artifactId>
-        <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-thrift</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-testing-util</artifactId>
+        <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.thrift</groupId>
+      <artifactId>libthrift</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
@@ -90,28 +104,6 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-server</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-server</artifactId>
-        <type>test-jar</type>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-thrift</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.thrift</groupId>
-      <artifactId>libthrift</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
     </dependency>
  </dependencies>
  <profiles>
