@@ -4670,16 +4670,6 @@ public class HRegion implements HeapSize { // , Writable{
       // Because we compacted the source regions we should have no more than two
       // HStoreFiles per family and there will be no reference store
       List<StoreFile> srcFiles = es.getValue();
-      if (srcFiles.size() == 2) {
-        long seqA = srcFiles.get(0).getMaxSequenceId();
-        long seqB = srcFiles.get(1).getMaxSequenceId();
-        if (seqA == seqB) {
-          // Can't have same sequenceid since on open of a store, this is what
-          // distingushes the files (see the map of stores how its keyed by
-          // sequenceid).
-          throw new IOException("Files have same sequenceid: " + seqA);
-        }
-      }
       for (StoreFile hsf: srcFiles) {
         StoreFile.rename(fs, hsf.getPath(),
           StoreFile.getUniqueFile(fs, Store.getStoreHomedir(tableDir,
