@@ -135,6 +135,7 @@ public class ZKDataMigrator extends Configured implements Tool {
     List<String> tables = ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
     if (tables == null) {
       LOG.info("No table present to migrate table state to PB. returning..");
+      return;
     }
     for (String table : tables) {
       String znode = ZKUtil.joinZNode(zkw.tableZNode, table);
@@ -159,6 +160,7 @@ public class ZKDataMigrator extends Configured implements Tool {
     List<String> replicationZnodes = ZKUtil.listChildrenNoWatch(zkw, replicationPath);
     if (replicationZnodes == null) {
       LOG.info("No replication related znodes present to migrate. returning..");
+      return;
     }
     for (String child : replicationZnodes) {
       String znode = ZKUtil.joinZNode(replicationPath, child);
