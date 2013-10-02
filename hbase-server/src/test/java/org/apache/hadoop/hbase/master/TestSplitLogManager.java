@@ -255,7 +255,7 @@ public class TestSplitLogManager {
     LOG.debug("task = " + task);
     assertEquals(1L, tot_mgr_resubmit.get());
     assertEquals(1, task.incarnation);
-    assertEquals(0, task.unforcedResubmits);
+    assertEquals(0, task.unforcedResubmits.get());
     assertTrue(task.isOrphan());
     assertTrue(task.isUnassigned());
     assertTrue(ZKUtil.checkExists(zkw, tasknode) > version);

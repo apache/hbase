@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
@@ -856,7 +857,7 @@ public class SplitLogManager extends ZooKeeperListener {
             " while the timeout is " + timeout);
         return false;
       }
-      if (task.unforcedResubmits >= resubmit_threshold) {
+      if (task.unforcedResubmits.get() >= resubmit_threshold) {
         if (!task.resubmitThresholdReached) {
           task.resubmitThresholdReached = true;
           SplitLogCounters.tot_mgr_resubmit_threshold_reached.incrementAndGet();
@@ -904,7 +905,7 @@ public class SplitLogManager extends ZooKeeperListener {
     }
     // don't count forced resubmits
     if (directive != FORCE) {
-      task.unforcedResubmits++;
+      task.unforcedResubmits.incrementAndGet();
     }
     task.setUnassigned();
     createRescanNode(Long.MAX_VALUE);
@@ -1281,7 +1282,7 @@ public class SplitLogManager extends ZooKeeperListener {
     volatile TaskBatch batch;
     volatile TerminationStatus status;
     volatile int incarnation;
-    volatile int unforcedResubmits;
+    volatile AtomicInteger unforcedResubmits = new AtomicInteger();
     volatile boolean resubmitThresholdReached;
 
     @Override
@@ -1291,7 +1292,7 @@ public class SplitLogManager extends ZooKeeperListener {
           " cur_worker_name = " + cur_worker_name +
           " status = " + status +
           " incarnation = " + incarnation +
-          " resubmits = " + unforcedResubmits +
+          " resubmits = " + unforcedResubmits.get() +
           " batch = " + batch);
     }
 
