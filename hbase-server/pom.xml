@@ -442,15 +442,11 @@
       <groupId>stax</groupId>
       <artifactId>stax-api</artifactId>
     </dependency>
-    <!-- Test Dependencies -->
+    <!-- tracing Dependencies -->
     <dependency>
       <groupId>org.cloudera.htrace</groupId>
       <artifactId>htrace-core</artifactId>
    </dependency>
-    <dependency>
-      <groupId>org.cloudera.htrace</groupId>
-      <artifactId>htrace-zipkin</artifactId>
-    </dependency>
   </dependencies>
   <profiles>
     <!-- Skip the tests in this module -->

@@ -213,10 +213,6 @@
       <artifactId>htrace-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.cloudera.htrace</groupId>
-      <artifactId>htrace-zipkin</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.apache.thrift</groupId>
       <artifactId>libthrift</artifactId>
     </dependency>
