@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.metrics;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -33,9 +33,7 @@ import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.cliffc.high_scale_lib.Counter;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 
 @Deprecated
 public class ExactCounterMetric extends MetricsBase {
@@ -44,33 +42,24 @@ public class ExactCounterMetric extends MetricsBase {
 
   // only publish stats on the topN items (default to DEFAULT_TOP_N)
   private final int topN;
-  private final Map<String, Counter> counts;
+  private final ConcurrentMap<String, Counter> counts = new ConcurrentHashMap<String, Counter>();
 
   // all access to the 'counts' map should use this lock.
   // take a write lock iff you want to guarantee exclusive access
   // (the map stripes locks internally, so it's already thread safe -
   // this lock is just so you can take a consistent snapshot of data)
   private final ReadWriteLock lock;
-  
-  
-  /**
-   * Constructor to create a new counter metric
-   * @param nam         the name to publish this metric under
-   * @param registry    where the metrics object will be registered
-   * @param description metrics description
-   * @param topN        how many 'keys' to publish metrics on 
-   */
+
+    /**
+     * Constructor to create a new counter metric
+     * @param nam         the name to publish this metric under
+     * @param registry    where the metrics object will be registered
+     * @param description metrics description
+     * @param topN        how many 'keys' to publish metrics on
+     */
   public ExactCounterMetric(final String nam, final MetricsRegistry registry, 
       final String description, int topN) {
     super(nam, description);
-
-    this.counts = new MapMaker().makeComputingMap(
-        new Function<String, Counter>() {
-          @Override
-          public Counter apply(String input) {
-            return new Counter();
-          }    
-        });
 
     this.lock = new ReentrantReadWriteLock();
     this.topN = topN;
@@ -89,11 +78,22 @@ public class ExactCounterMetric extends MetricsBase {
     this(nam, registry, NO_DESCRIPTION, DEFAULT_TOP_N);
   }
 
-  
+  /**
+   * Relies on an external lock on {@link #lock} for thread safety.
+   */
+  private Counter getOrCreateCounter(String type){
+    Counter cnt = counts.get(type);
+    if (cnt == null){
+      cnt = new Counter();
+      counts.put(type, cnt);
+    }
+    return cnt;
+  }
+
   public void update(String type) {
     this.lock.readLock().lock();
     try {
-      this.counts.get(type).increment();
+      getOrCreateCounter(type).increment();
     } finally {
       this.lock.readLock().unlock();
     }
@@ -102,7 +102,7 @@ public class ExactCounterMetric extends MetricsBase {
   public void update(String type, long count) {
     this.lock.readLock().lock();
     try {
-      this.counts.get(type).add(count);
+      getOrCreateCounter(type).add(count);
     } finally {
       this.lock.readLock().unlock();
     }

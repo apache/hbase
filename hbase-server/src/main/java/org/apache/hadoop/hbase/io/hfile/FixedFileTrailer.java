@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.io.NullOutputStream;
-
 /**
  * The {@link HFile} has a fixed trailer which contains offsets to other
  * variable parts of the file. Also includes basic metadata on this file. The
