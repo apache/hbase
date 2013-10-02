@@ -778,8 +778,8 @@ public class TestStoreFile extends HBaseTestCase {
     fs.delete(f, true);
   }
 
-  public void testFlushTimeComparator() {
-    assertOrdering(StoreFile.Comparators.FLUSH_TIME,
+  public void testSeqIdComparator() {
+    assertOrdering(StoreFile.Comparators.SEQ_ID,
         mockStoreFile(true, 1000, -1, "/foo/123"),
         mockStoreFile(true, 1000, -1, "/foo/126"),
         mockStoreFile(true, 2000, -1, "/foo/126"),
@@ -810,13 +810,7 @@ public class TestStoreFile extends HBaseTestCase {
     StoreFile mock = Mockito.mock(StoreFile.class);
     Mockito.doReturn(bulkLoad).when(mock).isBulkLoadResult();
     Mockito.doReturn(bulkTimestamp).when(mock).getBulkLoadTimestamp();
-    if (bulkLoad) {
-      // Bulk load files will throw if you ask for their sequence ID
-      Mockito.doThrow(new IllegalAccessError("bulk load"))
-        .when(mock).getMaxSequenceId();
-    } else {
-      Mockito.doReturn(seqId).when(mock).getMaxSequenceId();
-    }
+    Mockito.doReturn(seqId).when(mock).getMaxSequenceId();
     Mockito.doReturn(new Path(path)).when(mock).getPath();
     String name = "mock storefile, bulkLoad=" + bulkLoad +
       " bulkTimestamp=" + bulkTimestamp +

@@ -24,6 +24,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -32,10 +33,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.*;
@@ -155,6 +158,53 @@ public class TestLoadIncrementalHFiles {
     loader.doBulkLoad(dir, table);
 
     assertEquals(expectedRows, util.countRows(table));
+  }
+
+  private void
+      verifyAssignedSequenceNumber(String testName, byte[][][] hfileRanges, boolean nonZero)
+          throws Exception {
+    Path dir = util.getDataTestDir(testName);
+    FileSystem fs = util.getTestFileSystem();
+    dir = dir.makeQualified(fs);
+    Path familyDir = new Path(dir, Bytes.toString(FAMILY));
+
+    int hfileIdx = 0;
+    for (byte[][] range : hfileRanges) {
+      byte[] from = range[0];
+      byte[] to = range[1];
+      createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_" + hfileIdx++), FAMILY,
+        QUALIFIER, from, to, 1000);
+    }
+
+    final byte[] TABLE = Bytes.toBytes("mytable_" + testName);
+
+    HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
+    HTableDescriptor htd = new HTableDescriptor(TABLE);
+    HColumnDescriptor familyDesc = new HColumnDescriptor(FAMILY);
+    htd.addFamily(familyDesc);
+    admin.createTable(htd, SPLIT_KEYS);
+
+    HTable table = new HTable(util.getConfiguration(), TABLE);
+    util.waitTableAvailable(TABLE, 30000);
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
+
+    // Do a dummy put to increase the hlog sequence number
+    Put put = new Put(Bytes.toBytes("row"));
+    put.add(FAMILY, QUALIFIER, Bytes.toBytes("value"));
+    table.put(put);
+
+    loader.doBulkLoad(dir, table);
+
+    // Get the store files
+    List<StoreFile> files =
+        util.getHBaseCluster().getRegions(TABLE).get(0).getStore(FAMILY).getStorefiles();
+    for (StoreFile file : files) {
+      // the sequenceId gets initialized during createReader
+      file.createReader();
+
+      if (nonZero) assertTrue(file.getMaxSequenceId() > 0);
+      else assertTrue(file.getMaxSequenceId() == -1);
+    }
   }
 
   /**

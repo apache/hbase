@@ -93,17 +93,17 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class LoadIncrementalHFiles extends Configured implements Tool {
 
   private static Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
-  private static final int  TABLE_CREATE_MAX_RETRIES = 20;
-  private static final long TABLE_CREATE_SLEEP = 60000;
   static AtomicLong regionCount = new AtomicLong(0);
   private HBaseAdmin hbAdmin;
   private Configuration cfg;
 
   public static String NAME = "completebulkload";
+  public static String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
 
   private boolean useSecure;
   private Token<?> userToken;
   private String bulkToken;
+  private final boolean assignSeqIds;
 
   //package private for testing
   LoadIncrementalHFiles(Configuration conf, Boolean useSecure) throws Exception {
@@ -112,6 +112,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     this.hbAdmin = new HBaseAdmin(conf);
     //added simple for testing
     this.useSecure = useSecure != null ? useSecure : User.isHBaseSecurityEnabled(conf);
+    this.assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, false);
   }
 
   public LoadIncrementalHFiles(Configuration conf) throws Exception {
@@ -290,7 +291,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         LOG.error(err);
       }
     }
-    
+
     if (queue != null && !queue.isEmpty()) {
         throw new RuntimeException("Bulk load aborted with some files not yet loaded."
           + "Please check log for more details.");
@@ -360,7 +361,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     Set<Future<List<LoadQueueItem>>> splittingFutures = new HashSet<Future<List<LoadQueueItem>>>();
     while (!queue.isEmpty()) {
       final LoadQueueItem item = queue.remove();
-      
+
       final Callable<List<LoadQueueItem>> call = new Callable<List<LoadQueueItem>>() {
         public List<LoadQueueItem> call() throws Exception {
           List<LoadQueueItem> splits = groupOrSplit(regionGroups, item, table, startEndKeys);
@@ -524,11 +525,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
               + Bytes.toStringBinary(row));
           byte[] regionName = location.getRegionInfo().getRegionName();
           if(!useSecure) {
-            success = server.bulkLoadHFiles(famPaths, regionName);
+             success = server.bulkLoadHFiles(famPaths, regionName, assignSeqIds);
           } else {
             HTable table = new HTable(conn.getConfiguration(), tableName);
             secureClient = new SecureBulkLoadClient(table, location.getRegionInfo().getStartKey());
-            success = secureClient.bulkLoadHFiles(famPaths, userToken, bulkToken);
+            success = secureClient.bulkLoadHFiles(famPaths, userToken, bulkToken, assignSeqIds);
           }
           return success;
         } finally {
@@ -653,7 +654,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private boolean doesTableExist(String tableName) throws Exception {
     return hbAdmin.tableExists(tableName);
   }
-  
+
   /*
    * Infers region boundaries for a new table.
    * Parameter:
@@ -671,16 +672,15 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     int runningValue = 0;
     byte[] currStartKey = null;
     boolean firstBoundary = true;
-    
+
     for (Map.Entry<byte[], Integer> item: bdryMap.entrySet()) {
       if (runningValue == 0) currStartKey = item.getKey();
       runningValue += item.getValue();
       if (runningValue == 0) {
         if (!firstBoundary) keysArray.add(currStartKey);
         firstBoundary = false;
-      } 
+      }
     }
-    
     return keysArray.toArray(new byte[0][0]);
   }
  
@@ -709,7 +709,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     // Build a set of keys
     byte[][] keys = null;
     TreeMap<byte[], Integer> map = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
-    
+
     for (FileStatus stat : familyDirStatuses) {
       if (!stat.isDir()) {
         LOG.warn("Skipping non-directory " + stat.getPath());
@@ -719,10 +719,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       // Skip _logs, etc
       if (familyDir.getName().startsWith("_")) continue;
       byte[] family = familyDir.getName().getBytes();
-     
+
       hcd = new HColumnDescriptor(family);
       htd.addFamily(hcd);
-      
+
       Path[] hfiles = FileUtil.stat2Paths(fs.listStatus(familyDir));
       for (Path hfile : hfiles) {
         if (hfile.getName().startsWith("_")) continue;
@@ -742,7 +742,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           LOG.info("Trying to figure out region boundaries hfile=" + hfile +
             " first=" + Bytes.toStringBinary(first) +
             " last="  + Bytes.toStringBinary(last));
-          
+
           // To eventually infer start key-end key boundaries
           Integer value = map.containsKey(first)?(Integer)map.get(first):0;
           map.put(first, value+1);
@@ -754,7 +754,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         }
       }
     }
-    
+
     keys = LoadIncrementalHFiles.inferBoundaries(map);
     this.hbAdmin.createTable(htd,keys);
 

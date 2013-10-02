@@ -145,7 +145,7 @@ public class TestHRegionServerBulkLoad {
           LOG.debug("Going to connect to server " + location + " for row "
               + Bytes.toStringBinary(row));
           byte[] regionName = location.getRegionInfo().getRegionName();
-          server.bulkLoadHFiles(famPaths, regionName);
+          server.bulkLoadHFiles(famPaths, regionName, true);
           return null;
         }
       }.withRetries();

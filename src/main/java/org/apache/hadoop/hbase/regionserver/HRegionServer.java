@@ -2919,6 +2919,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public boolean bulkLoadHFiles(List<Pair<byte[], String>> familyPaths,
       byte[] regionName) throws IOException {
+    return bulkLoadHFiles(familyPaths, regionName, false);
+  }
+
+  /**
+   * Atomically bulk load several HFiles into an open region
+   * @return true if successful, false is failed but recoverably (no action)
+   * @throws IOException if failed unrecoverably
+   */
+  @Override
+  public boolean bulkLoadHFiles(List<Pair<byte[], String>> familyPaths,
+      byte[] regionName, boolean assignSeqNum) throws IOException {
     checkOpen();
     HRegion region = getRegion(regionName);
     boolean bypass = false;
@@ -2927,7 +2938,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     boolean loaded = false;
     if (!bypass) {
-      loaded = region.bulkLoadHFiles(familyPaths);
+      loaded = region.bulkLoadHFiles(familyPaths, assignSeqNum);
     }
     if (region.getCoprocessorHost() != null) {
       loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);
