@@ -79,9 +79,8 @@ public class TableNamespaceManager {
   }
 
   public void start() throws IOException {
-    TableName tableName = TableName.NAMESPACE_TABLE_NAME;
     if (!MetaReader.tableExists(masterServices.getCatalogTracker(),
-        tableName)) {
+        TableName.NAMESPACE_TABLE_NAME)) {
       LOG.info("Namespace table not found. Creating...");
       createNamespaceTable(masterServices);
     }
@@ -92,8 +91,7 @@ public class TableNamespaceManager {
       // So that it should be initialized later on lazily.
       long startTime = EnvironmentEdgeManager.currentTimeMillis();
       int timeout = conf.getInt(NS_INIT_TIMEOUT, DEFAULT_NS_INIT_TIMEOUT);
-      while(masterServices.getAssignmentManager()
-          .getRegionStates().getRegionsOfTable(tableName).isEmpty()) {
+      while (!isTableAssigned()) {
         if (EnvironmentEdgeManager.currentTimeMillis() - startTime + 100 > timeout) {
           LOG.warn("Timedout waiting for namespace table to be assigned.");
           return;
@@ -105,47 +103,12 @@ public class TableNamespaceManager {
     }
 
     // initialize namespace table
-    getNamespaceTable();
+    isTableAvailableAndInitialized();
   }
 
-  @SuppressWarnings("deprecation")
   private synchronized HTable getNamespaceTable() throws IOException {
-    if (!initialized) {
-      try {
-        nsTable = new HTable(conf, TableName.NAMESPACE_TABLE_NAME);
-        zkNamespaceManager = new ZKNamespaceManager(masterServices.getZooKeeper());
-        zkNamespaceManager.start();
-
-        if (get(nsTable, NamespaceDescriptor.DEFAULT_NAMESPACE.getName()) == null) {
-          create(nsTable, NamespaceDescriptor.DEFAULT_NAMESPACE);
-        }
-        if (get(nsTable, NamespaceDescriptor.SYSTEM_NAMESPACE.getName()) == null) {
-          create(nsTable, NamespaceDescriptor.SYSTEM_NAMESPACE);
-        }
-
-        ResultScanner scanner = nsTable.getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
-        try {
-          for(Result result : scanner) {
-            byte[] val =  CellUtil.cloneValue(result.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
-                HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
-            NamespaceDescriptor ns =
-                ProtobufUtil.toNamespaceDescriptor(
-                    HBaseProtos.NamespaceDescriptor.parseFrom(val));
-            zkNamespaceManager.update(ns);
-          }
-        } finally {
-          scanner.close();
-        }
-        initialized = true;
-      } catch (IOException ie) {
-        LOG.warn("Caught exception in initializing namespace table manager", ie);
-        if (nsTable != null) {
-          nsTable.close();
-        }
-        throw ie;
-      }
-    } else if (nsTable.getConnection().isClosed()) {
-      nsTable = new HTable(conf, TableName.NAMESPACE_TABLE_NAME);
+    if (!isTableAvailableAndInitialized()) {
+      throw new IOException(this.getClass().getName() + " isn't ready to serve");
     }
     return nsTable;
   }
@@ -271,5 +234,69 @@ public class TableNamespaceManager {
             masterServices.getConfiguration(),
             newRegions,
             masterServices).prepare());
+  }
+
+  /**
+   * This method checks if the namespace table is assigned and then
+   * tries to create its HTable. If it was already created before, it also makes
+   * sure that the connection isn't closed.
+   * @return true if the namespace table manager is ready to serve, false
+   * otherwise
+   * @throws IOException
+   */
+  @SuppressWarnings("deprecation")
+  public synchronized boolean isTableAvailableAndInitialized() throws IOException {
+    // Did we already get a table? If so, still make sure it's available
+    if (initialized) {
+      if (nsTable.getConnection().isClosed()) {
+        nsTable = new HTable(conf, TableName.NAMESPACE_TABLE_NAME);
+      }
+      return true;
+    }
+
+    // Now check if the table is assigned, if not then fail fast
+    if (isTableAssigned()) {
+      try {
+        nsTable = new HTable(conf, TableName.NAMESPACE_TABLE_NAME);
+        zkNamespaceManager = new ZKNamespaceManager(masterServices.getZooKeeper());
+        zkNamespaceManager.start();
+
+        if (get(nsTable, NamespaceDescriptor.DEFAULT_NAMESPACE.getName()) == null) {
+          create(nsTable, NamespaceDescriptor.DEFAULT_NAMESPACE);
+        }
+        if (get(nsTable, NamespaceDescriptor.SYSTEM_NAMESPACE.getName()) == null) {
+          create(nsTable, NamespaceDescriptor.SYSTEM_NAMESPACE);
+        }
+
+        ResultScanner scanner = nsTable.getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
+        try {
+          for (Result result : scanner) {
+            byte[] val =  CellUtil.cloneValue(result.getColumnLatest(
+                HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
+                HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
+            NamespaceDescriptor ns =
+                ProtobufUtil.toNamespaceDescriptor(
+                    HBaseProtos.NamespaceDescriptor.parseFrom(val));
+            zkNamespaceManager.update(ns);
+          }
+        } finally {
+          scanner.close();
+        }
+        initialized = true;
+        return true;
+      } catch (IOException ie) {
+        LOG.warn("Caught exception in initializing namespace table manager", ie);
+        if (nsTable != null) {
+          nsTable.close();
+        }
+        throw ie;
+      }
+    }
+    return false;
+  }
+
+  private boolean isTableAssigned() {
+    return !masterServices.getAssignmentManager()
+        .getRegionStates().getRegionsOfTable(TableName.NAMESPACE_TABLE_NAME).isEmpty();
   }
 }
