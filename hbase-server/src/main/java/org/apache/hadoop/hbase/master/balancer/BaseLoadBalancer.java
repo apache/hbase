@@ -54,6 +54,7 @@ import com.google.common.collect.Sets;
  *
  */
 public abstract class BaseLoadBalancer implements LoadBalancer {
+  private static final int MIN_SERVER_BALANCE = 2;
   private volatile boolean stopped = false;
 
   /**
@@ -377,8 +378,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   protected boolean needsBalance(ClusterLoadState cs) {
-    if (cs.getNumServers() == 0) {
-      LOG.debug("numServers=0 so skipping load balancing");
+    if (cs.getNumServers() < MIN_SERVER_BALANCE) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Not running balancer because only " + cs.getNumServers()
+            + " active regionserver(s)");
+      }
       return false;
     }
     // Check if we even need to do any load balancing
