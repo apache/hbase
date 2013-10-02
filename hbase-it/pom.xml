@@ -216,12 +216,6 @@
         <groupId>org.cloudera.htrace</groupId>
         <artifactId>htrace-core</artifactId>
       </dependency>
-      <dependency>
-        <groupId>org.cloudera.htrace</groupId>
-        <artifactId>htrace-zipkin</artifactId>
-      </dependency>
-    <!-- General dependencies -->
-
   </dependencies>
 
   <profiles>

@@ -1318,11 +1318,6 @@
         <artifactId>htrace-core</artifactId>
         <version>${htrace.version}</version>
       </dependency>
-      <dependency>
-        <groupId>org.cloudera.htrace</groupId>
-        <artifactId>htrace-zipkin</artifactId>
-        <version>${htrace.version}</version>
-      </dependency>
     </dependencies>
   </dependencyManagement>
   <!-- Dependencies needed by subprojects -->
