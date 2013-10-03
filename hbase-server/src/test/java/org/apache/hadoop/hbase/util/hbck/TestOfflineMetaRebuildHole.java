@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 
@@ -97,7 +96,8 @@ public class TestOfflineMetaRebuildHole extends OfflineMetaRebuildTestCore {
     assertErrors(doFsck(conf, false), new ERROR_CODE[] {
         ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
         ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
-        ERROR_CODE.NOT_IN_META_OR_DEPLOYED});
+        ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+        ERROR_CODE.HOLE_IN_REGION_CHAIN});
   }
 
 }
