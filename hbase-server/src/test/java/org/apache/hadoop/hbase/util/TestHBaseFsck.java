@@ -50,7 +50,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -60,6 +59,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -1066,7 +1066,7 @@ public class TestHBaseFsck {
     // make sure data in regions, if in hlog only there is no data loss
     TEST_UTIL.getHBaseAdmin().flush(table.getName());
 
-    // Mess it up by leaving a giant hole in meta
+    // Mess it up by deleting hdfs dirs
     deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes(""),
         Bytes.toBytes("A"), false, false, true); // don't rm meta
     deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"),
@@ -1076,6 +1076,9 @@ public class TestHBaseFsck {
     deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("C"),
         Bytes.toBytes(""), false, false, true); // don't rm meta
 
+    // also remove the table directory in hdfs
+    deleteTableDir(table);
+
     HBaseFsck hbck = doFsck(conf, false);
     assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.NOT_IN_HDFS,
         ERROR_CODE.NOT_IN_HDFS, ERROR_CODE.NOT_IN_HDFS,
@@ -1084,12 +1087,21 @@ public class TestHBaseFsck {
     assertEquals(0, hbck.getOverlapGroups(table).size());
 
     // fix hole
-    doFsck(conf, true); // in 0.92+, meta entries auto create regiondirs
+    doFsck(conf, true); // detect dangling regions and remove those
 
     // check that hole fixed
     assertNoErrors(doFsck(conf,false));
     assertFalse("Table "+ table + " should have been deleted",
         TEST_UTIL.getHBaseAdmin().tableExists(table));
+  }
+
+  public void deleteTableDir(TableName table) throws IOException {
+    Path rootDir = FSUtils.getRootDir(conf);
+    FileSystem fs = rootDir.getFileSystem(conf);
+    Path p = FSUtils.getTableDir(rootDir, table);
+    HBaseFsck.debugLsr(conf, p);
+    boolean success = fs.delete(p, true);
+    LOG.info("Deleted " + p + " sucessfully? " + success);
   }
 
   /**
@@ -1749,9 +1761,11 @@ public class TestHBaseFsck {
     // inject a fault in the hfcc created.
     final FileSystem fs = FileSystem.get(conf);
     HBaseFsck hbck = new HBaseFsck(conf, exec) {
+      @Override
       public HFileCorruptionChecker createHFileCorruptionChecker(boolean sidelineCorruptHFiles) throws IOException {
         return new HFileCorruptionChecker(conf, executor, sidelineCorruptHFiles) {
           boolean attemptedFirstHFile = false;
+          @Override
           protected void checkHFile(Path p) throws IOException {
             if (!attemptedFirstHFile) {
               attemptedFirstHFile = true;
@@ -1778,9 +1792,11 @@ public class TestHBaseFsck {
     // inject a fault in the hfcc created.
     final FileSystem fs = FileSystem.get(conf);
     HBaseFsck hbck = new HBaseFsck(conf, exec) {
+      @Override
       public HFileCorruptionChecker createHFileCorruptionChecker(boolean sidelineCorruptHFiles) throws IOException {
         return new HFileCorruptionChecker(conf, executor, sidelineCorruptHFiles) {
           boolean attemptedFirstFamDir = false;
+          @Override
           protected void checkColFamDir(Path p) throws IOException {
             if (!attemptedFirstFamDir) {
               attemptedFirstFamDir = true;
@@ -1805,9 +1821,11 @@ public class TestHBaseFsck {
     // inject a fault in the hfcc created.
     final FileSystem fs = FileSystem.get(conf);
     HBaseFsck hbck = new HBaseFsck(conf, exec) {
+      @Override
       public HFileCorruptionChecker createHFileCorruptionChecker(boolean sidelineCorruptHFiles) throws IOException {
         return new HFileCorruptionChecker(conf, executor, sidelineCorruptHFiles) {
           boolean attemptedFirstRegionDir = false;
+          @Override
           protected void checkRegionDir(Path p) throws IOException {
             if (!attemptedFirstRegionDir) {
               attemptedFirstRegionDir = true;
@@ -1927,61 +1945,75 @@ public class TestHBaseFsck {
   static class MockErrorReporter implements ErrorReporter {
     static int calledCount = 0;
 
+    @Override
     public void clear() {
       calledCount++;
     }
 
+    @Override
     public void report(String message) {
       calledCount++;
     }
 
+    @Override
     public void reportError(String message) {
       calledCount++;
     }
 
+    @Override
     public void reportError(ERROR_CODE errorCode, String message) {
       calledCount++;
     }
 
+    @Override
     public void reportError(ERROR_CODE errorCode, String message, TableInfo table) {
       calledCount++;
     }
 
+    @Override
     public void reportError(ERROR_CODE errorCode,
         String message, TableInfo table, HbckInfo info) {
       calledCount++;
     }
 
+    @Override
     public void reportError(ERROR_CODE errorCode, String message,
         TableInfo table, HbckInfo info1, HbckInfo info2) {
       calledCount++;
     }
 
+    @Override
     public int summarize() {
       return ++calledCount;
     }
 
+    @Override
     public void detail(String details) {
       calledCount++;
     }
 
+    @Override
     public ArrayList<ERROR_CODE> getErrorList() {
       calledCount++;
       return new ArrayList<ERROR_CODE>();
     }
 
+    @Override
     public void progress() {
       calledCount++;
     }
 
+    @Override
     public void print(String message) {
       calledCount++;
     }
 
+    @Override
     public void resetErrors() {
       calledCount++;
     }
 
+    @Override
     public boolean tableHasErrors(TableInfo table) {
       calledCount++;
       return false;
@@ -2014,6 +2046,7 @@ public class TestHBaseFsck {
 
     final CountDownLatch latch = new CountDownLatch(1);
     new Thread() {
+      @Override
       public void run() {
         TableLock readLock = tableLockManager.writeLock(TableName.valueOf("foo"),
             "testCheckTableLocks");
@@ -2071,7 +2104,7 @@ public class TestHBaseFsck {
     hbck = doFsck(conf, false);
     assertNoErrors(hbck);
   }
-  
+
   private void deleteMetaRegion(Configuration conf, boolean unassign, boolean hdfs,
       boolean regionInfoOnly) throws IOException, InterruptedException {
     HConnection connection = HConnectionManager.getConnection(conf);
@@ -2106,7 +2139,41 @@ public class TestHBaseFsck {
       HBaseFsck.debugLsr(conf, p);
     }
   }
-  
+
+  @Test
+  public void testTableWithNoRegions() throws Exception {
+    // We might end up with empty regions in a table
+    // see also testNoHdfsTable()
+    TableName table =
+        TableName.valueOf(name.getMethodName());
+    try {
+      // create table with one region
+      HTableDescriptor desc = new HTableDescriptor(table);
+      HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
+      desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
+      TEST_UTIL.getHBaseAdmin().createTable(desc);
+      tbl = new HTable(TEST_UTIL.getConfiguration(), table, executorService);
+
+      // Mess it up by leaving a hole in the assignment, meta, and hdfs data
+      deleteRegion(conf, tbl.getTableDescriptor(), HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false,
+          false, true);
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.NOT_IN_HDFS });
+
+      doFsck(conf, true);
+
+      // fix hole
+      doFsck(conf, true);
+
+      // check that hole fixed
+      assertNoErrors(doFsck(conf, false));
+    } finally {
+      deleteTable(table);
+    }
+
+  }
+
   @org.junit.Rule
   public TestName name = new TestName();
 }

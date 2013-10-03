@@ -79,7 +79,7 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
     // bring up the minicluster
     TEST_UTIL.startMiniZKCluster(); // tables seem enabled by default
     TEST_UTIL.restartHBaseCluster(3);
-    
+
     ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
 
     LOG.info("Waiting for no more RIT");
@@ -93,7 +93,7 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
               .getMaster().getAssignmentManager().getRegionStates().getRegionsInTransition());
       Thread.sleep(1000);
     }
-    
+
     // Meta still messed up.
     assertEquals(1, scanMeta());
     HTableDescriptor[] htbls = TEST_UTIL.getHBaseAdmin().listTables();
@@ -107,7 +107,8 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
-            ERROR_CODE.NOT_IN_META_OR_DEPLOYED});
+            ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+            ERROR_CODE.HOLE_IN_REGION_CHAIN});
   }
 
 }
