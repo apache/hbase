@@ -17,23 +17,35 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 
 /**
@@ -41,15 +53,15 @@ import org.junit.experimental.categories.Category;
  *
  */
 @Category(MediumTests.class)
-public class TestParallelPut extends HBaseTestCase {
+public class TestParallelPut {
   static final Log LOG = LogFactory.getLog(TestParallelPut.class);
-
+  @Rule public TestName name = new TestName(); 
+  
   private static HRegion region = null;
   private static HBaseTestingUtility hbtu = new HBaseTestingUtility();
-  private static final String DIR = hbtu.getDataTestDir() + "/TestParallelPut/";
 
   // Test names
-  static final byte[] tableName = Bytes.toBytes("testtable");;
+  static byte[] tableName;
   static final byte[] qual1 = Bytes.toBytes("qual1");
   static final byte[] qual2 = Bytes.toBytes("qual2");
   static final byte[] qual3 = Bytes.toBytes("qual3");
@@ -61,15 +73,18 @@ public class TestParallelPut extends HBaseTestCase {
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
    */
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
+    tableName = Bytes.toBytes(name.getMethodName());
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    super.tearDown();
+  @After
+  public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
+  }
+  
+  public String getName() {
+    return name.getMethodName();
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -80,6 +95,7 @@ public class TestParallelPut extends HBaseTestCase {
   /**
    * Test one put command.
    */
+  @Test
   public void testPut() throws IOException {
     LOG.info("Starting testPut");
     initHRegion(tableName, getName(), fam1);
@@ -96,6 +112,7 @@ public class TestParallelPut extends HBaseTestCase {
   /**
    * Test multi-threaded Puts.
    */
+  @Test
   public void testParallelPuts() throws IOException {
 
     LOG.info("Starting testParallelPuts");
@@ -148,24 +165,12 @@ public class TestParallelPut extends HBaseTestCase {
   private void initHRegion(byte [] tableName, String callingMethod,
     byte[] ... families)
   throws IOException {
-    initHRegion(tableName, callingMethod, HBaseConfiguration.create(), families);
-  }
-
-  private void initHRegion(byte [] tableName, String callingMethod,
-    Configuration conf, byte [] ... families)
-  throws IOException{
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     for(byte [] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    Path path = new Path(DIR + callingMethod);
-    if (fs.exists(path)) {
-      if (!fs.delete(path, true)) {
-        throw new IOException("Failed delete of " + path);
-      }
-    }
-    region = HRegion.createHRegion(info, path, conf, htd);
+    region = hbtu.createLocalHRegion(info, htd);
   }
 
   /**

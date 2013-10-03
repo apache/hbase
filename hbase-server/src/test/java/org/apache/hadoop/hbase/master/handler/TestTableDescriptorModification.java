@@ -20,27 +20,29 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Set;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Verify that the HTableDescriptor is updated after
@@ -48,10 +50,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category(LargeTests.class)
 public class TestTableDescriptorModification {
-
+  
+  @Rule public TestName name = new TestName();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final TableName TABLE_NAME =
-      TableName.valueOf("table");
+  private static TableName TABLE_NAME = null;
   private static final byte[] FAMILY_0 = Bytes.toBytes("cf0");
   private static final byte[] FAMILY_1 = Bytes.toBytes("cf1");
 
@@ -65,6 +67,12 @@ public class TestTableDescriptorModification {
     TEST_UTIL.startMiniCluster(1);
   }
 
+  @Before
+  public void setup() {
+    TABLE_NAME = TableName.valueOf(name.getMethodName());
+
+  }
+  
   @AfterClass
   public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();

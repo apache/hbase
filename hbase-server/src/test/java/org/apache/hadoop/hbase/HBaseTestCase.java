@@ -254,7 +254,7 @@ public abstract class HBaseTestCase extends TestCase {
    * @throws IOException
    * @return count of what we added.
    */
-  protected static long addContent(final Incommon updater,
+  public static long addContent(final Incommon updater,
       final String columnFamily) throws IOException {
     return addContent(updater, columnFamily, START_KEY_BYTES, null);
   }
@@ -275,7 +275,7 @@ public abstract class HBaseTestCase extends TestCase {
    * @return count of what we added.
    * @throws IOException
    */
-  protected static long addContent(final Incommon updater, final String columnFamily,
+  public static long addContent(final Incommon updater, final String columnFamily,
       final byte [] startKeyBytes, final byte [] endKey)
   throws IOException {
     return addContent(updater, columnFamily, null, startKeyBytes, endKey, -1);
@@ -299,8 +299,8 @@ public abstract class HBaseTestCase extends TestCase {
    * @return count of what we added.
    * @throws IOException
    */
-  protected static long addContent(final Incommon updater,
-                                   final String columnFamily,
+  public static long addContent(final Incommon updater,
+                                   final String columnFamily, 
                                    final String column,
       final byte [] startKeyBytes, final byte [] endKey, final long ts)
   throws IOException {
@@ -572,26 +572,6 @@ public abstract class HBaseTestCase extends TestCase {
       throw new UnsupportedOperationException();
     }
   }
-
-//  protected void assertCellEquals(final HRegion region, final byte [] row,
-//    final byte [] column, final long timestamp, final String value)
-//  throws IOException {
-//    Map<byte [], Cell> result = region.getFull(row, null, timestamp, 1, null);
-//    Cell cell_value = result.get(column);
-//    if (value == null) {
-//      assertEquals(Bytes.toString(column) + " at timestamp " + timestamp, null,
-//        cell_value);
-//    } else {
-//      if (cell_value == null) {
-//        fail(Bytes.toString(column) + " at timestamp " + timestamp +
-//          "\" was expected to be \"" + value + " but was null");
-//      }
-//      if (cell_value != null) {
-//        assertEquals(Bytes.toString(column) + " at timestamp "
-//            + timestamp, value, new String(cell_value.getValue()));
-//      }
-//    }
-//  }
 
   protected void assertResultEquals(final HRegion region, final byte [] row,
       final byte [] family, final byte [] qualifier, final long timestamp,

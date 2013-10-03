@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -125,7 +126,7 @@ import org.apache.zookeeper.ZooKeeper.States;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HBaseTestingUtility extends HBaseCommonTestingUtility {
-   private Configuration conf;
+   protected Configuration conf;
    private MiniZooKeeperCluster zkCluster = null;
 
   /**
@@ -1489,9 +1490,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public static final byte[][] COLUMNS = {fam1, fam2, fam3};
   private static final int MAXVERSIONS = 3;
   
-  private static final char FIRST_CHAR = 'a';
+  public static final char FIRST_CHAR = 'a';
+  public static final char LAST_CHAR = 'z';
   public static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
-
+  public static final String START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
 
   /**
    * Create a table of name <code>name</code> with {@link COLUMNS} for
@@ -1551,7 +1553,47 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public HRegion createLocalHRegion(HRegionInfo info, HTableDescriptor desc) throws IOException {
     return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc);
   }
+
+  /**
+   * Create an HRegion that writes to the local tmp dirs with specified hlog
+   * @param info regioninfo
+   * @param desc table descriptor
+   * @param hlog hlog for this region.
+   * @return created hregion
+   * @throws IOException
+   */
+  public HRegion createLocalHRegion(HRegionInfo info, HTableDescriptor desc, HLog hlog) throws IOException {
+    return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc, hlog);
+  }
+
   
+  /**
+   * @param tableName
+   * @param startKey
+   * @param stopKey
+   * @param callingMethod
+   * @param conf
+   * @param isReadOnly
+   * @param families
+   * @throws IOException
+   * @return A region on which you must call
+   *         {@link HRegion#closeHRegion(HRegion)} when done.
+   */
+  public HRegion createLocalHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
+      String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
+      HLog hlog, byte[]... families) throws IOException {
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    htd.setReadOnly(isReadOnly);
+    for (byte[] family : families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      // Set default to be three versions.
+      hcd.setMaxVersions(Integer.MAX_VALUE);
+      htd.addFamily(hcd);
+    }
+    htd.setDurability(durability);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false);
+    return createLocalHRegion(info, htd, hlog);
+  }
   //
   // ==========================================================================
 
