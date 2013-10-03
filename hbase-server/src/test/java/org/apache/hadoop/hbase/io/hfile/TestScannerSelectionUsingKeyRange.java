@@ -53,7 +53,7 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 @Category(SmallTests.class)
 public class TestScannerSelectionUsingKeyRange {
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility().createLocalHTU();
   private static TableName TABLE = TableName.valueOf("myTable");
   private static String FAMILY = "myCF";
   private static byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);

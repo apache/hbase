@@ -23,18 +23,18 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -46,14 +46,18 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import com.google.protobuf.BlockingRpcChannel;
 
 @Category(LargeTests.class)
 public class TestAccessControlFilter {
+  @Rule public TestName name = new TestName();
   private static Log LOG = LogFactory.getLog(TestAccessControlFilter.class);
   private static HBaseTestingUtility TEST_UTIL;
 
@@ -62,12 +66,17 @@ public class TestAccessControlFilter {
   private static User LIMITED;
   private static User DENIED;
 
-  private static TableName TABLE =
-      TableName.valueOf("testtable");
+  
+  private static TableName TABLE;
   private static byte[] FAMILY = Bytes.toBytes("f1");
   private static byte[] PRIVATE_COL = Bytes.toBytes("private");
   private static byte[] PUBLIC_COL = Bytes.toBytes("public");
 
+  @Before 
+  public void setup () {
+    TABLE = TableName.valueOf(name.getMethodName());
+  }
+  
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
@@ -107,7 +116,7 @@ public class TestAccessControlFilter {
       public Object run() throws Exception {
         HTable aclmeta = new HTable(TEST_UTIL.getConfiguration(),
             AccessControlLists.ACL_TABLE_NAME);
-        byte[] table = Bytes.toBytes("testtable");
+        byte[] table = Bytes.toBytes(name.getMethodName());
         BlockingRpcChannel service = aclmeta.coprocessorService(table);
         AccessControlService.BlockingInterface protocol =
           AccessControlService.newBlockingStub(service);

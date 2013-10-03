@@ -54,8 +54,10 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -69,10 +71,11 @@ import org.junit.runners.Parameterized.Parameters;
 public class TestCacheOnWriteInSchema {
 
   private static final Log LOG = LogFactory.getLog(TestCacheOnWriteInSchema.class);
+  @Rule public TestName name = new TestName();
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestCacheOnWriteInSchema").toString();
-  private static final byte [] table = Bytes.toBytes("table");
+  private static byte [] table;
   private static byte [] family = Bytes.toBytes("family");
   private static final int NUM_KV = 25000;
   private static final Random rand = new Random(12983177L);
@@ -141,6 +144,9 @@ public class TestCacheOnWriteInSchema {
 
   @Before
   public void setUp() throws IOException {
+    // parameterized tests add [#] suffix get rid of [ and ].
+    table = Bytes.toBytes(name.getMethodName().replaceAll("[\\[\\]]", "_"));
+
     conf = TEST_UTIL.getConfiguration();
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
@@ -165,7 +171,7 @@ public class TestCacheOnWriteInSchema {
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
 
-    region = new HRegion(basedir, hlog, fs, conf, info, htd, null);
+    region = TEST_UTIL.createLocalHRegion(info, htd, hlog);
     store = new HStore(region, hcd, conf);
   }
 

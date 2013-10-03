@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -51,6 +50,7 @@ import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -79,12 +80,10 @@ public class TestAtomicOperation {
   @Rule public TestName name = new TestName();
 
   HRegion region = null;
-  private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final String DIR = TEST_UTIL.getDataTestDir("TestAtomicOperation").toString();
-
+  private HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   // Test names
-  static final byte[] tableName = Bytes.toBytes("testtable");;
+  static  byte[] tableName;
   static final byte[] qual1 = Bytes.toBytes("qual1");
   static final byte[] qual2 = Bytes.toBytes("qual2");
   static final byte[] qual3 = Bytes.toBytes("qual3");
@@ -93,6 +92,11 @@ public class TestAtomicOperation {
   static final byte [] row = Bytes.toBytes("rowA");
   static final byte [] row2 = Bytes.toBytes("rowB");
 
+  @Before 
+  public void setup() {
+    tableName = Bytes.toBytes(name.getMethodName());
+  }
+  
   //////////////////////////////////////////////////////////////////////////////
   // New tests that doesn't spin up a mini cluster but rather just test the
   // individual code pieces in the HRegion. 
@@ -196,14 +200,7 @@ public class TestAtomicOperation {
       htd.addFamily(hcd);
     }
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    Path path = new Path(DIR + callingMethod);
-    FileSystem fs = TEST_UTIL.getTestFileSystem();
-    if (fs.exists(path)) {
-      if (!fs.delete(path, true)) {
-        throw new IOException("Failed delete of " + path);
-      }
-    }
-    region = HRegion.createHRegion(info, path, HBaseConfiguration.create(), htd);
+    region = TEST_UTIL.createLocalHRegion(info, htd);
   }
 
   /**
@@ -521,10 +518,10 @@ public class TestAtomicOperation {
   public void testPutAndCheckAndPutInParallel() throws Exception {
 
     final String tableName = "testPutAndCheckAndPut";
-    Configuration conf = HBaseConfiguration.create();
+    Configuration conf = TEST_UTIL.getConfiguration();
     conf.setClass(HConstants.REGION_IMPL, MockHRegion.class, HeapSize.class);
-    final MockHRegion region = (MockHRegion) TestHRegion.initHRegion(
-        Bytes.toBytes(tableName), tableName, conf, Bytes.toBytes(family));
+    final MockHRegion region = (MockHRegion) TEST_UTIL.createLocalHRegion(Bytes.toBytes(tableName),
+        null, null, tableName, conf, false, Durability.SYNC_WAL, null, Bytes.toBytes(family));
 
     Put[] puts = new Put[1];
     Put put = new Put(Bytes.toBytes("r1"));

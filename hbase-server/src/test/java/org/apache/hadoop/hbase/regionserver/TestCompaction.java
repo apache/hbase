@@ -18,9 +18,20 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.mockito.AdditionalMatchers.aryEq;
-import static org.mockito.Matchers.*;
-import static org.mockito.Mockito.*;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY_BYTES;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,17 +54,17 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestCase.HRegionIncommon;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
@@ -67,8 +78,13 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.junit.After;
 import org.junit.Assume;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -78,10 +94,12 @@ import org.mockito.stubbing.Answer;
  * Test compactions
  */
 @Category(MediumTests.class)
-public class TestCompaction extends HBaseTestCase {
+public class TestCompaction {
+  @Rule public TestName name = new TestName();
   static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility().createLocalHTU();
+  protected Configuration conf = UTIL.getConfiguration();
+  
   private HRegion r = null;
   private HTableDescriptor htd = null;
   private Path compactionDir = null;
@@ -113,19 +131,17 @@ public class TestCompaction extends HBaseTestCase {
     col2 = Bytes.toBytes("column2");
   }
 
-  @Override
+  @Before
   public void setUp() throws Exception {
-    super.setUp();
-    this.htd = createTableDescriptor(getName());
-    this.r = createNewHRegion(htd, null, null);
+    this.htd = UTIL.createTableDescriptor(name.getMethodName());
+    this.r = UTIL.createLocalHRegion(htd, null, null);
   }
 
-  @Override
+  @After
   public void tearDown() throws Exception {
     HLog hlog = r.getLog();
     this.r.close();
     hlog.closeAndDelete();
-    super.tearDown();
   }
 
   /**
@@ -134,6 +150,7 @@ public class TestCompaction extends HBaseTestCase {
    * right answer in this case - and that it just basically works.
    * @throws IOException
    */
+  @Test
   public void testMajorCompactingToNoOutput() throws IOException {
     createStoreFile(r);
     for (int i = 0; i < compactionThreshold; i++) {
@@ -168,14 +185,17 @@ public class TestCompaction extends HBaseTestCase {
    * Assert deletes get cleaned up.
    * @throws Exception
    */
+  @Test
   public void testMajorCompaction() throws Exception {
     majorCompaction();
   }
 
+  @Test
   public void testDataBlockEncodingInCacheOnly() throws Exception {
     majorCompactionWithDataBlockEncoding(true);
   }
 
+  @Test
   public void testDataBlockEncodingEverywhere() throws Exception {
     majorCompactionWithDataBlockEncoding(false);
   }
@@ -210,7 +230,7 @@ public class TestCompaction extends HBaseTestCase {
       createStoreFile(r);
     }
     // Add more content.
-    addContent(new HRegionIncommon(r), Bytes.toString(COLUMN_FAMILY));
+    HBaseTestCase.addContent(new HRegionIncommon(r), Bytes.toString(COLUMN_FAMILY));
 
     // Now there are about 5 versions of each column.
     // Default is that there only 3 (MAXVERSIONS) versions allowed per column.
@@ -310,6 +330,7 @@ public class TestCompaction extends HBaseTestCase {
     assertEquals("Should not see anything after TTL has expired", 0, count);
   }
 
+  @Test
   public void testTimeBasedMajorCompaction() throws Exception {
     // create 2 storefiles and force a major compaction to reset the time
     int delay = 10 * 1000; // 10 sec
@@ -359,16 +380,21 @@ public class TestCompaction extends HBaseTestCase {
     }
   }
 
+  @Test
   public void testMinorCompactionWithDeleteRow() throws Exception {
     Delete deleteRow = new Delete(secondRowBytes);
     testMinorCompactionWithDelete(deleteRow);
   }
+
+  @Test
   public void testMinorCompactionWithDeleteColumn1() throws Exception {
     Delete dc = new Delete(secondRowBytes);
     /* delete all timestamps in the column */
     dc.deleteColumns(fam2, col2);
     testMinorCompactionWithDelete(dc);
   }
+
+  @Test
   public void testMinorCompactionWithDeleteColumn2() throws Exception {
     Delete dc = new Delete(secondRowBytes);
     dc.deleteColumn(fam2, col2);
@@ -381,11 +407,15 @@ public class TestCompaction extends HBaseTestCase {
     //testMinorCompactionWithDelete(dc, 2);
     testMinorCompactionWithDelete(dc, 3);
   }
+
+  @Test
   public void testMinorCompactionWithDeleteColumnFamily() throws Exception {
     Delete deleteCF = new Delete(secondRowBytes);
     deleteCF.deleteFamily(fam2);
     testMinorCompactionWithDelete(deleteCF);
   }
+
+  @Test
   public void testMinorCompactionWithDeleteVersion1() throws Exception {
     Delete deleteVersion = new Delete(secondRowBytes);
     deleteVersion.deleteColumns(fam2, col2, 2);
@@ -394,6 +424,8 @@ public class TestCompaction extends HBaseTestCase {
      */
     testMinorCompactionWithDelete(deleteVersion, 1);
   }
+
+  @Test
   public void testMinorCompactionWithDeleteVersion2() throws Exception {
     Delete deleteVersion = new Delete(secondRowBytes);
     deleteVersion.deleteColumn(fam2, col2, 1);
@@ -417,10 +449,10 @@ public class TestCompaction extends HBaseTestCase {
   private void testMinorCompactionWithDelete(Delete delete, int expectedResultsAfterDelete) throws Exception {
     HRegionIncommon loader = new HRegionIncommon(r);
     for (int i = 0; i < compactionThreshold + 1; i++) {
-      addContent(loader, Bytes.toString(fam1), Bytes.toString(col1), firstRowBytes, thirdRowBytes, i);
-      addContent(loader, Bytes.toString(fam1), Bytes.toString(col2), firstRowBytes, thirdRowBytes, i);
-      addContent(loader, Bytes.toString(fam2), Bytes.toString(col1), firstRowBytes, thirdRowBytes, i);
-      addContent(loader, Bytes.toString(fam2), Bytes.toString(col2), firstRowBytes, thirdRowBytes, i);
+      HBaseTestCase.addContent(loader, Bytes.toString(fam1), Bytes.toString(col1), firstRowBytes, thirdRowBytes, i);
+      HBaseTestCase.addContent(loader, Bytes.toString(fam1), Bytes.toString(col2), firstRowBytes, thirdRowBytes, i);
+      HBaseTestCase.addContent(loader, Bytes.toString(fam2), Bytes.toString(col1), firstRowBytes, thirdRowBytes, i);
+      HBaseTestCase.addContent(loader, Bytes.toString(fam2), Bytes.toString(col2), firstRowBytes, thirdRowBytes, i);
       r.flushcache();
     }
 
@@ -496,6 +528,7 @@ public class TestCompaction extends HBaseTestCase {
    * (used during RS shutdown)
    * @throws Exception
    */
+  @Test
   public void testInterruptCompaction() throws Exception {
     assertEquals(0, count());
 
@@ -514,7 +547,7 @@ public class TestCompaction extends HBaseTestCase {
         for (int j = 0; j < jmax; j++) {
           p.add(COLUMN_FAMILY, Bytes.toBytes(j), pad);
         }
-        addContent(loader, Bytes.toString(COLUMN_FAMILY));
+        HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
         loader.put(p);
         loader.flushcache();
       }
@@ -591,17 +624,18 @@ public class TestCompaction extends HBaseTestCase {
 
   private void createStoreFile(final HRegion region, String family) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
-    addContent(loader, family);
+    HBaseTestCase.addContent(loader, family);
     loader.flushcache();
   }
 
   private void createSmallerStoreFile(final HRegion region) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
-    addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
+    HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
     		"bbb").getBytes(), null);
     loader.flushcache();
   }
 
+  @Test
   public void testCompactionWithCorruptResult() throws Exception {
     int nfiles = 10;
     for (int i = 0; i < nfiles; i++) {
@@ -641,6 +675,7 @@ public class TestCompaction extends HBaseTestCase {
   /**
    * Test for HBASE-5920 - Test user requested major compactions always occurring
    */
+  @Test
   public void testNonUserMajorCompactionRequest() throws Exception {
     Store store = r.getStore(COLUMN_FAMILY);
     createStoreFile(r);
@@ -660,6 +695,7 @@ public class TestCompaction extends HBaseTestCase {
   /**
    * Test for HBASE-5920
    */
+  @Test
   public void testUserMajorCompactionRequest() throws IOException{
     Store store = r.getStore(COLUMN_FAMILY);
     createStoreFile(r);
@@ -679,6 +715,7 @@ public class TestCompaction extends HBaseTestCase {
    * Create a custom compaction request and be sure that we can track it through the queue, knowing
    * when the compaction is completed.
    */
+  @Test
   public void testTrackingCompactionRequest() throws Exception {
     // setup a compact/split thread on a mock server
     HRegionServer mockServer = Mockito.mock(HRegionServer.class);
@@ -707,6 +744,7 @@ public class TestCompaction extends HBaseTestCase {
    * {@link CompactSplitThread}
    * @throws Exception on failure
    */
+  @Test
   public void testMultipleCustomCompactionRequests() throws Exception {
     // setup a compact/split thread on a mock server
     HRegionServer mockServer = Mockito.mock(HRegionServer.class);
@@ -883,6 +921,7 @@ public class TestCompaction extends HBaseTestCase {
   }
 
   /** Test compaction priority management and multiple compactions per store (HBASE-8665). */
+  @Test
   public void testCompactionQueuePriorities() throws Exception {
     // Setup a compact/split thread on a mock server.
     final Configuration conf = HBaseConfiguration.create();
