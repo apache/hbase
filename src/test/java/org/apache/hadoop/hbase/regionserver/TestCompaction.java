@@ -101,8 +101,8 @@ public class TestCompaction extends HBaseClusterTestCase {
     HLog hlog = r.getLog();
     this.r.close();
     hlog.closeAndDelete();
-    if (this.cluster != null) {
-      shutdownDfs(cluster);
+    if (this.dfsCluster != null) {
+      shutdownDfs(dfsCluster);
     }
     super.tearDown();
   }
@@ -208,7 +208,7 @@ public class TestCompaction extends HBaseClusterTestCase {
 
     for (String f : allStoreFiles) {
       Path filePath = new Path(f);
-      String checkSumAlgo = ((DistributedFileSystem)this.cluster.getFileSystem()).
+      String checkSumAlgo = ((DistributedFileSystem)this.dfsCluster.getFileSystem()).
           getFileChecksum(filePath).getAlgorithmName();
       assertTrue(checkSumAlgo.contains("4096CRC32"));
     }
@@ -541,7 +541,7 @@ public class TestCompaction extends HBaseClusterTestCase {
       assertEquals(compactionThreshold, s.getStorefilesCount());
       assertTrue(s.getStorefilesSize() > 15*1000);
       // and no new store files persisted past compactStores()
-      FileStatus[] ls = cluster.getFileSystem().listStatus(r.getTmpDir());
+      FileStatus[] ls = dfsCluster.getFileSystem().listStatus(r.getTmpDir());
       assertEquals(0, ls.length);
 
     } finally {
@@ -612,7 +612,7 @@ public class TestCompaction extends HBaseClusterTestCase {
     StoreFile.Writer compactedFile = store.compactStores(storeFiles, false, maxId);
 
     // Now lets corrupt the compacted file.
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = dfsCluster.getFileSystem();
     Path origPath = compactedFile.getPath();
     Path homedir = store.getHomedir();
     Path dstPath = new Path(homedir, origPath.getName());
