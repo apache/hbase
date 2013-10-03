@@ -119,7 +119,9 @@ public class IntegrationTestMTTR {
    */
   private static final byte[] FAMILY = Bytes.toBytes("d");
   private static final Log LOG = LogFactory.getLog(IntegrationTestMTTR.class);
-  private static final long SLEEP_TIME = 60 * 1000l;
+  private static long sleepTime;
+  private static final String SLEEP_TIME_KEY = "hbase.IntegrationTestMTTR.sleeptime";
+  private static final long SLEEP_TIME_DEFAULT = 60 * 1000l;
 
   /**
    * Configurable table names.
@@ -173,19 +175,20 @@ public class IntegrationTestMTTR {
     setupTables();
 
     // Set up the actions.
+    sleepTime = util.getConfiguration().getLong(SLEEP_TIME_KEY, SLEEP_TIME_DEFAULT);
     setupActions();
   }
 
   private static void setupActions() throws IOException {
     // Set up the action that will restart a region server holding a region from our table
     // because this table should only have one region we should be good.
-    restartRSAction = new RestartRsHoldingTableAction(SLEEP_TIME, tableName.getNameAsString());
+    restartRSAction = new RestartRsHoldingTableAction(sleepTime, tableName.getNameAsString());
 
     // Set up the action that will kill the region holding meta.
-    restartMetaAction = new RestartRsHoldingMetaAction(SLEEP_TIME);
+    restartMetaAction = new RestartRsHoldingMetaAction(sleepTime);
 
     // Set up the action that will move the regions of our table.
-    moveRegionAction = new MoveRegionsOfTableAction(SLEEP_TIME, tableName.getNameAsString());
+    moveRegionAction = new MoveRegionsOfTableAction(sleepTime, tableName.getNameAsString());
 
     // Kill the master
     restartMasterAction = new RestartActiveMasterAction(1000);
