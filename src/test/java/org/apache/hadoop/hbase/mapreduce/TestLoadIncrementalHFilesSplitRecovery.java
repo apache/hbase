@@ -273,8 +273,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     Mockito.when(c.locateRegion((byte[]) Mockito.any(), (byte[]) Mockito.any())).
       thenReturn(loc);
     HRegionInterface hri = Mockito.mock(HRegionInterface.class);
-    Mockito.when(hri.bulkLoadHFiles(Mockito.anyList(), (byte [])Mockito.any())).
-      thenThrow(new IOException("injecting bulk load error"));
+    Mockito.when(hri.bulkLoadHFiles(Mockito.anyList(), (byte [])Mockito.any(),
+      Mockito.anyBoolean())).thenThrow(new IOException("injecting bulk load error"));
     Mockito.when(c.getHRegionConnection(Mockito.anyString(), Mockito.anyInt())).
       thenReturn(hri);
     return c;
