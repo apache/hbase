@@ -206,11 +206,10 @@ public class Reference {
   }
 
   /**
-   * Use this instead of {@link #toByteArray()} when writing to a stream and you want to use
-   * the pb mergeDelimitedFrom (w/o the delimiter, pb reads to EOF which may not be what ou want).
+   * Use this when writing to a stream and you want to use the pb mergeDelimitedFrom
+   * (w/o the delimiter, pb reads to EOF which may not be what you want).
    * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
    * @throws IOException
-   * @see {@link #toByteArray()}
    */
   byte [] toByteArray() throws IOException {
     return ProtobufUtil.prependPBMagic(convert().toByteArray());

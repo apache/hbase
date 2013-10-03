@@ -536,7 +536,7 @@ public class AggregationClient {
    * std.
    * @param table
    * @param scan
-   * @return
+   * @return standard deviations
    * @throws Throwable
    */
   private <R, S, P extends Message, Q extends Message, T extends Message>

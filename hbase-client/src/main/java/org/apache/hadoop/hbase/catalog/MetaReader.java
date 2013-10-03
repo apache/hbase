@@ -172,7 +172,7 @@ public class MetaReader {
   /**
    * Callers should call close on the returned {@link HTable} instance.
    * @param catalogTracker
-   * @return
+   * @return An {@link HTable} for <code>hbase:meta</code>
    * @throws IOException
    */
   static HTable getCatalogHTable(final CatalogTracker catalogTracker)

@@ -858,7 +858,7 @@ public class HBaseFsck extends Configured implements Tool {
    * To get the column family list according to the column family dirs
    * @param columns
    * @param hbi
-   * @return
+   * @return a set of column families
    * @throws IOException
    */
   private Set<String> getColumnFamilyList(Set<String> columns, HbckInfo hbi) throws IOException {

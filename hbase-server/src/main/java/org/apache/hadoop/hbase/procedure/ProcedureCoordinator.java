@@ -222,7 +222,7 @@ public class ProcedureCoordinator {
    * @param procName
    * @param procArgs
    * @param expectedMembers
-   * @return
+   * @return the newly created procedure
    */
   Procedure createProcedure(ForeignExceptionDispatcher fed, String procName, byte[] procArgs,
       List<String> expectedMembers) {

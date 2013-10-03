@@ -250,7 +250,6 @@ public class HFileV1Detector extends Configured implements Tool {
   /**
    * Ignore ROOT table as it doesn't exist in 0.96.
    * @param path
-   * @return
    */
   private boolean isRootTable(Path path) {
     if (path != null && path.toString().endsWith("-ROOT-")) return true;
@@ -385,7 +384,6 @@ public class HFileV1Detector extends Configured implements Tool {
   /**
    * Removes the prefix of defaultNamespace from the path.
    * @param originPath
-   * @return
    */
   private String removeDefaultNSPath(Path originalPath) {
     String pathStr = originalPath.toString();

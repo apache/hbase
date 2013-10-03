@@ -158,7 +158,6 @@ public class Tag {
 
   /**
    * Returns the total length of the entire tag entity
-   * @return
    */
   short getLength() {
     return this.length;
@@ -166,7 +165,6 @@ public class Tag {
 
   /**
    * Returns the offset of the entire tag entity
-   * @return
    */
   int getOffset() {
     return this.offset;
