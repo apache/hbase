@@ -244,7 +244,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * Get the IOEngine from the IO engine name
    * @param ioEngineName
    * @param capacity
-   * @return
+   * @return the IOEngine
    * @throws IOException
    */
   private IOEngine getIOEngineFromName(String ioEngineName, long capacity)

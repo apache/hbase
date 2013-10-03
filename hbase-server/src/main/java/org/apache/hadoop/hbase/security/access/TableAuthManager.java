@@ -276,7 +276,7 @@ public class TableAuthManager {
    * Authorizes a global permission
    * @param perms
    * @param action
-   * @return
+   * @return true if authorized, false otherwise
    */
   private boolean authorize(List<Permission> perms, Permission.Action action) {
     if (perms != null) {

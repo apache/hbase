@@ -433,7 +433,6 @@ public class ThriftServerRunner implements Runnable {
      * Returns a list of all the column families for a given htable.
      *
      * @param table
-     * @return
      * @throws IOException
      */
     byte[][] getAllColumns(HTable table) throws IOException {

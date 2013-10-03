@@ -135,7 +135,7 @@ public class MemStore implements HeapSize {
 
   /**
    * Creates a snapshot of the current memstore.
-   * Snapshot must be cleared by call to {@link #clearSnapshot(SortedSet<KeyValue>)}
+   * Snapshot must be cleared by call to {@link #clearSnapshot(SortedSet)}
    * To get the snapshot made by this method, use {@link #getSnapshot()}
    */
   void snapshot() {
@@ -172,8 +172,8 @@ public class MemStore implements HeapSize {
    * Called by flusher to get current snapshot made by a previous
    * call to {@link #snapshot()}
    * @return Return snapshot.
-   * @see {@link #snapshot()}
-   * @see {@link #clearSnapshot(SortedSet<KeyValue>)}
+   * @see #snapshot()
+   * @see #clearSnapshot(SortedSet)
    */
   KeyValueSkipListSet getSnapshot() {
     return this.snapshot;
@@ -183,7 +183,7 @@ public class MemStore implements HeapSize {
    * The passed snapshot was successfully persisted; it can be let go.
    * @param ss The snapshot to clean out.
    * @throws UnexpectedException
-   * @see {@link #snapshot()}
+   * @see #snapshot()
    */
   void clearSnapshot(final SortedSet<KeyValue> ss)
   throws UnexpectedException {

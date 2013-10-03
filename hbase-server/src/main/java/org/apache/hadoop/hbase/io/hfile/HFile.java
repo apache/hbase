@@ -772,7 +772,7 @@ public class HFile {
      * We write it as a protobuf.
      * @param out
      * @throws IOException
-     * @see {@link #read(DataInputStream)}
+     * @see #read(DataInputStream)
      */
     void write(final DataOutputStream out) throws IOException {
       HFileProtos.FileInfoProto.Builder builder = HFileProtos.FileInfoProto.newBuilder();
@@ -791,7 +791,7 @@ public class HFile {
      * Can deserialize protobuf of old Writables format.
      * @param in
      * @throws IOException
-     * @see {@link #write(DataOutputStream)}
+     * @see #write(DataOutputStream)
      */
     void read(final DataInputStream in) throws IOException {
       // This code is tested over in TestHFileReaderV1 where we read an old hfile w/ this new code.

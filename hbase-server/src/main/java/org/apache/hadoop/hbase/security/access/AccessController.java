@@ -202,7 +202,7 @@ public class AccessController extends BaseRegionObserver
    * @param e the coprocessor environment
    * @param families the map of column families to qualifiers present in
    * the request
-   * @return
+   * @return an authorization result
    */
   AuthResult permissionGranted(String request, User user, Permission.Action permRequest,
       RegionCoprocessorEnvironment e,

@@ -206,7 +206,6 @@ public class UpgradeTo96 extends Configured implements Tool {
    * <li> Upgrading Znodes
    * <li> Log splitting
    * </ul>
-   * @return
    * @throws Exception
    */
   private int executeUpgrade() throws Exception {
@@ -230,7 +229,6 @@ public class UpgradeTo96 extends Configured implements Tool {
 
   /**
    * Performs log splitting for all regionserver directories.
-   * @return
    * @throws Exception
    */
   private void doOfflineLogSplitting() throws Exception {

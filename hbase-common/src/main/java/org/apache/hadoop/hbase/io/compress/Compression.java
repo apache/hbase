@@ -77,7 +77,6 @@ public final class Compression {
 
   /**
    * Returns the classloader to load the Codec class from.
-   * @return
    */
   private static ClassLoader getClassLoaderForCodec() {
     ClassLoader cl = Thread.currentThread().getContextClassLoader();

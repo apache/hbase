@@ -825,7 +825,7 @@ public class OrderedBytes {
    * a value in Numeric encoding and is within the valid range of
    * {@link BigDecimal} values. {@link BigDecimal} does not support {@code NaN}
    * or {@code Infinte} values.
-   * @see #decodeNumericAsDouble(byte[], int)
+   * @see #decodeNumericAsDouble(PositionedByteRange)
    */
   private static BigDecimal decodeNumericValue(PositionedByteRange src) {
     final int e;
