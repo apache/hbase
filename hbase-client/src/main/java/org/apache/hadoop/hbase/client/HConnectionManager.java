@@ -140,8 +140,7 @@ import com.google.protobuf.ServiceException;
  * } finally {
  *   table.close();
  *   connection.close();
- * }
- * </pre>
+ * }} </pre>
  * <p>The following logic and API will be removed in the future:
  * <p>This class has a static Map of {@link HConnection} instances keyed by
  * {@link Configuration}; all invocations of {@link #getConnection(Configuration)}
