@@ -88,6 +88,7 @@ public class TestExportSnapshot {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniMapReduceCluster();
     TEST_UTIL.shutdownMiniCluster();
   }
 
