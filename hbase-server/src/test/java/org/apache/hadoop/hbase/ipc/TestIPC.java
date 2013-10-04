@@ -21,12 +21,9 @@ package org.apache.hadoop.hbase.ipc;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyObject;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
@@ -36,12 +33,9 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.SocketFactory;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -64,6 +58,7 @@ import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponsePr
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -72,11 +67,12 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
@@ -321,7 +317,7 @@ public class TestIPC {
       for (int i = 0; i < cycles; i++) {
         List<CellScannable> cells = new ArrayList<CellScannable>();
         // Message param = RequestConverter.buildMultiRequest(HConstants.EMPTY_BYTE_ARRAY, rm);
-        Message param = RequestConverter.buildNoDataMultiRequest(
+        ClientProtos.RegionAction.Builder builder = RequestConverter.buildNoDataRegionAction(
             HConstants.EMPTY_BYTE_ARRAY, rm, cells);
         CellScanner cellScanner = CellUtil.createCellScanner(cells);
         if (i % 1000 == 0) {
@@ -331,7 +327,7 @@ public class TestIPC {
           //  "Thread dump " + Thread.currentThread().getName());
         }
         Pair<Message, CellScanner> response =
-          client.call(null, param, cellScanner, null, user, address, 0);
+          client.call(null, builder.build(), cellScanner, null, user, address, 0);
         /*
         int count = 0;
         while (p.getSecond().advance()) {

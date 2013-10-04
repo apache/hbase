@@ -43,7 +43,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -51,12 +50,12 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
-import org.apache.hadoop.hbase.master.ClusterStatusPublisher;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -447,12 +446,12 @@ public class TestHCM {
     try {
       table.put(put3);
       Assert.fail("Unreachable point");
-    }catch (RetriesExhaustedWithDetailsException e){
+    } catch (RetriesExhaustedWithDetailsException e){
       LOG.info("Put done, exception caught: " + e.getClass());
       Assert.assertEquals(1, e.getNumExceptions());
       Assert.assertArrayEquals(e.getRow(0).getRow(), ROW);
     }
-    Assert.assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
+    Assert.assertNotNull("Cached connection is null", conn.getCachedLocation(TABLE_NAME, ROW));
     Assert.assertEquals(
       "Previous server was "+curServer.getServerName().getHostAndPort(),
       destServerName.getPort(), conn.getCachedLocation(TABLE_NAME, ROW).getPort());

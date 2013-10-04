@@ -39,14 +39,19 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.security.access.UserPermission;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.protobuf.ByteString;
@@ -68,27 +73,58 @@ public final class ResponseConverter {
   /**
    * Get the results from a protocol buffer MultiResponse
    *
-   * @param proto the protocol buffer MultiResponse to convert
+   * @param request the protocol buffer MultiResponse to convert
    * @param cells Cells to go with the passed in <code>proto</code>.  Can be null.
    * @return the results that were in the MultiResponse (a Result or an Exception).
    * @throws IOException
    */
-  public static List<Object> getResults(final ClientProtos.MultiResponse proto,
-      final CellScanner cells)
+  public static org.apache.hadoop.hbase.client.MultiResponse getResults(final MultiRequest request,
+      final MultiResponse response, final CellScanner cells)
   throws IOException {
-    List<Object> results = new ArrayList<Object>();
-    List<ActionResult> resultList = proto.getResultList();
-    for (int i = 0, n = resultList.size(); i < n; i++) {
-      ActionResult result = resultList.get(i);
-      if (result.hasException()) {
-        results.add(ProtobufUtil.toException(result.getException()));
-      } else if (result.hasValue()) {
-        ClientProtos.Result value = result.getValue();
-        results.add(ProtobufUtil.toResult(value, cells));
-      } else {
-        results.add(new Result());
+    int requestRegionActionCount = request.getRegionActionCount();
+    int responseRegionActionResultCount = response.getRegionActionResultCount();
+    if (requestRegionActionCount != responseRegionActionResultCount) {
+      throw new IllegalStateException("Request mutation count=" + responseRegionActionResultCount +
+          " does not match response mutation result count=" + responseRegionActionResultCount);
+    }
+
+    org.apache.hadoop.hbase.client.MultiResponse results =
+      new org.apache.hadoop.hbase.client.MultiResponse();
+
+    for (int i = 0; i < responseRegionActionResultCount; i++) {
+      RegionAction actions = request.getRegionAction(i);
+      RegionActionResult actionResult = response.getRegionActionResult(i);
+      byte[] regionName = actions.getRegion().toByteArray();
+
+      if (actionResult.hasException()){
+        Throwable regionException =  ProtobufUtil.toException(actionResult.getException());
+        for (ClientProtos.Action a : actions.getActionList()){
+          results.add(regionName, new Pair<Integer, Object>(a.getIndex(), regionException));
+        }
+        continue;
+      }
+
+      if (actions.getActionCount() != actionResult.getResultOrExceptionCount()) {
+        throw new IllegalStateException("actions.getActionCount=" + actions.getActionCount() +
+            ", actionResult.getResultOrExceptionCount=" +
+            actionResult.getResultOrExceptionCount() + " for region " + actions.getRegion());
+      }
+
+      for (ResultOrException roe : actionResult.getResultOrExceptionList()) {
+        if (roe.hasException()) {
+          results.add(regionName, new Pair<Integer, Object>(roe.getIndex(),
+              ProtobufUtil.toException(roe.getException())));
+        } else if (roe.hasResult()) {
+          results.add(regionName, new Pair<Integer, Object>(roe.getIndex(),
+              ProtobufUtil.toResult(roe.getResult(), cells)));
+        } else {
+          // no result & no exception. Unexpected.
+          throw new IllegalStateException("No result & no exception roe=" + roe +
+              " for region " + actions.getRegion());
+        }
       }
     }
+
     return results;
   }
 
@@ -96,16 +132,36 @@ public final class ResponseConverter {
    * Wrap a throwable to an action result.
    *
    * @param t
-   * @return an action result
+   * @return an action result builder
    */
-  public static ActionResult buildActionResult(final Throwable t) {
-    ActionResult.Builder builder = ActionResult.newBuilder();
+  public static ResultOrException.Builder buildActionResult(final Throwable t) {
+    ResultOrException.Builder builder = ResultOrException.newBuilder();
+    if (t != null) builder.setException(buildException(t));
+    return builder;
+  }
+
+  /**
+   * Wrap a throwable to an action result.
+   *
+   * @param r
+   * @return an action result builder
+   */
+  public static ResultOrException.Builder buildActionResult(final ClientProtos.Result r) {
+    ResultOrException.Builder builder = ResultOrException.newBuilder();
+    if (r != null) builder.setResult(r);
+    return builder;
+  }
+
+  /**
+   * @param t
+   * @return NameValuePair of the exception name to stringified version os exception.
+   */
+  public static NameBytesPair buildException(final Throwable t) {
     NameBytesPair.Builder parameterBuilder = NameBytesPair.newBuilder();
     parameterBuilder.setName(t.getClass().getName());
     parameterBuilder.setValue(
       ByteString.copyFromUtf8(StringUtils.stringifyException(t)));
-    builder.setException(parameterBuilder.build());
-    return builder.build();
+    return parameterBuilder.build();
   }
 
   /**

@@ -172,7 +172,7 @@ public class TestAsyncProcess {
    */
   static class MyConnectionImpl2 extends MyConnectionImpl {
     List<HRegionLocation> hrl;
-    boolean usedRegions[];
+    final boolean usedRegions[];
 
     protected MyConnectionImpl2(List<HRegionLocation> hrl) {
       super(c);
@@ -186,7 +186,7 @@ public class TestAsyncProcess {
       int i = 0;
       for (HRegionLocation hr:hrl){
         if (Arrays.equals(row, hr.getRegionInfo().getStartKey())){
-          usedRegions[i] = true;
+            usedRegions[i] = true;
           return hr;
         }
         i++;
@@ -475,9 +475,9 @@ public class TestAsyncProcess {
 
 
   private class MyCB implements AsyncProcess.AsyncProcessCallback<Object> {
-    private AtomicInteger successCalled = new AtomicInteger(0);
-    private AtomicInteger failureCalled = new AtomicInteger(0);
-    private AtomicInteger retriableFailure = new AtomicInteger(0);
+    private final AtomicInteger successCalled = new AtomicInteger(0);
+    private final AtomicInteger failureCalled = new AtomicInteger(0);
+    private final AtomicInteger retriableFailure = new AtomicInteger(0);
 
 
     @Override
@@ -705,7 +705,7 @@ public class TestAsyncProcess {
    */
   @Test
   public void testThreadCreation() throws Exception {
-    final int NB_REGS = 10000;
+    final int NB_REGS = 100;
     List<HRegionLocation> hrls = new ArrayList<HRegionLocation>(NB_REGS);
     List<Get> gets = new ArrayList<Get>(NB_REGS);
     for (int i = 0; i < NB_REGS; i++) {
@@ -721,11 +721,13 @@ public class TestAsyncProcess {
     HTable ht = new HTable();
     MyConnectionImpl2 con = new MyConnectionImpl2(hrls);
     ht.connection = con;
-    ht.batch(gets);
+
+      ht.batch(gets);
+
 
     Assert.assertEquals(con.ap.nbActions.get(), NB_REGS);
-    Assert.assertEquals(con.ap.nbMultiResponse.get(), 2); // 1 multi response per server
-    Assert.assertEquals(con.nbThreads.get(), 2);  // 1 thread per server
+    Assert.assertEquals("1 multi response per server", 2, con.ap.nbMultiResponse.get());
+    Assert.assertEquals("1 thread per server", 2, con.nbThreads.get());
 
     int nbReg = 0;
     for (int i =0; i<NB_REGS; i++){

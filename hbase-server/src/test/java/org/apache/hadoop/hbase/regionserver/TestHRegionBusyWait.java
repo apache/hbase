@@ -48,7 +48,7 @@ public class TestHRegionBusyWait extends TestHRegion {
   /**
    * Test RegionTooBusyException thrown when region is busy
    */
-  @Test (timeout=2000)
+  @Test (timeout=6000)
   public void testRegionTooBusy() throws IOException {
     String method = "testRegionTooBusy";
     byte[] tableName = Bytes.toBytes(method);

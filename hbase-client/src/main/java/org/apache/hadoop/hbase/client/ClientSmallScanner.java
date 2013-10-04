@@ -171,6 +171,7 @@ public class ClientSmallScanner extends ClientScanner {
         ScanResponse response = null;
         PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
         try {
+          controller.setPriority(getTableName());
           response = getStub().scan(controller, request);
           return ResponseConverter.getResults(controller.cellScanner(),
               response);

@@ -63,14 +63,12 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequ
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAction;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -101,6 +99,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLa
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
+import org.mortbay.log.Log;
 
 import com.google.protobuf.ByteString;
 
@@ -131,7 +130,6 @@ public final class RequestConverter {
     GetRequest.Builder builder = GetRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
-    builder.setClosestRowBefore(true);
     builder.setRegion(region);
 
     Column.Builder columnBuilder = Column.newBuilder();
@@ -140,59 +138,26 @@ public final class RequestConverter {
       ClientProtos.Get.newBuilder();
     getBuilder.setRow(ByteString.copyFrom(row));
     getBuilder.addColumn(columnBuilder.build());
+    getBuilder.setClosestRowBefore(true);
     builder.setGet(getBuilder.build());
     return builder.build();
   }
 
-  /**
-   * Create a protocol buffer GetRequest for a client Get
-   *
-   * @param regionName the name of the region to get
-   * @param get the client Get
-   * @return a protocol buffer GetReuqest
-   */
-  public static GetRequest buildGetRequest(final byte[] regionName,
-      final Get get) throws IOException {
-    return buildGetRequest(regionName, get, false);
-  }
 
   /**
    * Create a protocol buffer GetRequest for a client Get
    *
    * @param regionName the name of the region to get
    * @param get the client Get
-   * @param existenceOnly indicate if check row existence only
    * @return a protocol buffer GetRequest
    */
   public static GetRequest buildGetRequest(final byte[] regionName,
-      final Get get, final boolean existenceOnly) throws IOException {
+      final Get get) throws IOException {
     GetRequest.Builder builder = GetRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
-    builder.setExistenceOnly(existenceOnly);
     builder.setRegion(region);
     builder.setGet(ProtobufUtil.toGet(get));
-    return builder.build();
-  }
-
-  /**
-   * Create a protocol buffer MultiGetRequest for client Gets All gets are going to be run against
-   * the same region.
-   * @param regionName the name of the region to get from
-   * @param gets the client Gets
-   * @param existenceOnly indicate if check rows existence only
-   * @return a protocol buffer MultiGetRequest
-   */
-  public static MultiGetRequest buildMultiGetRequest(final byte[] regionName, final List<Get> gets,
-      final boolean existenceOnly, final boolean closestRowBefore) throws IOException {
-    MultiGetRequest.Builder builder = MultiGetRequest.newBuilder();
-    RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
-    builder.setExistenceOnly(existenceOnly);
-    builder.setClosestRowBefore(closestRowBefore);
-    builder.setRegion(region);
-    for (Get get : gets) {
-      builder.addGet(ProtobufUtil.toGet(get));
-    }
     return builder.build();
   }
 
@@ -358,17 +323,18 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer MultiRequest for a row mutations
-   *
+   * Create a protocol buffer MultiRequest for row mutations.
+   * Does not propagate Action absolute position.  Does not set atomic action on the created
+   * RegionAtomic.  Caller should do that if wanted.
    * @param regionName
    * @param rowMutations
-   * @return a multi request
+   * @return a data-laden RegionMutation.Builder
    * @throws IOException
    */
-  public static MultiRequest buildMultiRequest(final byte[] regionName,
+  public static RegionAction.Builder buildRegionAction(final byte [] regionName,
       final RowMutations rowMutations)
   throws IOException {
-    MultiRequest.Builder builder = getMultiRequestBuilderWithRegionAndAtomicSet(regionName, true);
+    RegionAction.Builder builder = getRegionActionBuilderWithRegion(regionName);
     for (Mutation mutation: rowMutations.getMutations()) {
       MutationType mutateType = null;
       if (mutation instanceof Put) {
@@ -380,25 +346,26 @@ public final class RequestConverter {
           mutation.getClass().getName());
       }
       MutationProto mp = ProtobufUtil.toMutation(mutateType, mutation);
-      builder.addAction(MultiAction.newBuilder().setMutation(mp).build());
+      builder.addAction(ClientProtos.Action.newBuilder().setMutation(mp).build());
     }
-    return builder.build();
+    return builder;
   }
 
   /**
    * Create a protocol buffer MultiRequest for row mutations that does not hold data.  Data/Cells
-   * are carried outside of protobuf.  Return references to the Cells in <code>cells</code> param
-   *
+   * are carried outside of protobuf.  Return references to the Cells in <code>cells</code> param.
+    * Does not propagate Action absolute position.  Does not set atomic action on the created
+   * RegionAtomic.  Caller should do that if wanted.
    * @param regionName
    * @param rowMutations
    * @param cells Return in here a list of Cells as CellIterable.
-   * @return a multi request minus data
+   * @return a region mutation minus data
    * @throws IOException
    */
-  public static MultiRequest buildNoDataMultiRequest(final byte[] regionName,
+  public static RegionAction.Builder buildNoDataRegionAction(final byte[] regionName,
       final RowMutations rowMutations, final List<CellScannable> cells)
   throws IOException {
-    MultiRequest.Builder builder = getMultiRequestBuilderWithRegionAndAtomicSet(regionName, true);
+    RegionAction.Builder builder = getRegionActionBuilderWithRegion(regionName);
     for (Mutation mutation: rowMutations.getMutations()) {
       MutationType type = null;
       if (mutation instanceof Put) {
@@ -411,17 +378,16 @@ public final class RequestConverter {
       }
       MutationProto mp = ProtobufUtil.toMutationNoData(type, mutation);
       cells.add(mutation);
-      builder.addAction(MultiAction.newBuilder().setMutation(mp).build());
+      builder.addAction(ClientProtos.Action.newBuilder().setMutation(mp).build());
     }
-    return builder.build();
+    return builder;
   }
 
-  private static MultiRequest.Builder getMultiRequestBuilderWithRegionAndAtomicSet(final byte [] regionName,
-      final boolean atomic) {
-    MultiRequest.Builder builder = MultiRequest.newBuilder();
+  private static RegionAction.Builder getRegionActionBuilderWithRegion(final byte [] regionName) {
+    RegionAction.Builder builder = RegionAction.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    return builder.setAtomic(atomic);
+    return builder;
   }
 
   /**
@@ -510,39 +476,43 @@ public final class RequestConverter {
 
   /**
    * Create a protocol buffer multi request for a list of actions.
-   * RowMutations in the list (if any) will be ignored.
+   * Propagates Actions original index.
    *
    * @param regionName
    * @param actions
    * @return a multi request
    * @throws IOException
    */
-  public static <R> MultiRequest buildMultiRequest(final byte[] regionName,
+  public static <R> RegionAction.Builder buildRegionAction(final byte[] regionName,
       final List<Action<R>> actions)
   throws IOException {
-    MultiRequest.Builder builder = getMultiRequestBuilderWithRegionAndAtomicSet(regionName, false);
+    RegionAction.Builder builder = getRegionActionBuilderWithRegion(regionName);
     for (Action<R> action: actions) {
-      MultiAction.Builder protoAction = MultiAction.newBuilder();
       Row row = action.getAction();
+      ClientProtos.Action.Builder actionBuilder =
+          ClientProtos.Action.newBuilder().setIndex(action.getOriginalIndex());
       if (row instanceof Get) {
-        protoAction.setGet(ProtobufUtil.toGet((Get)row));
+        Get g = (Get)row;
+        builder.addAction(actionBuilder.setGet(ProtobufUtil.toGet(g)));
       } else if (row instanceof Put) {
-        protoAction.setMutation(ProtobufUtil.toMutation(MutationType.PUT, (Put)row));
+        builder.addAction(actionBuilder.
+          setMutation(ProtobufUtil.toMutation(MutationType.PUT, (Put)row)));
       } else if (row instanceof Delete) {
-        protoAction.setMutation(ProtobufUtil.toMutation(MutationType.DELETE, (Delete)row));
+        builder.addAction(actionBuilder.
+          setMutation(ProtobufUtil.toMutation(MutationType.DELETE, (Delete)row)));
       } else if (row instanceof Append) {
-        protoAction.setMutation(ProtobufUtil.toMutation(MutationType.APPEND, (Append)row));
+        builder.addAction(actionBuilder.
+          setMutation(ProtobufUtil.toMutation(MutationType.APPEND, (Append)row)));
       } else if (row instanceof Increment) {
-        protoAction.setMutation(ProtobufUtil.toMutation((Increment)row));
+        builder.addAction(actionBuilder.
+          setMutation(ProtobufUtil.toMutation((Increment)row)));
       } else if (row instanceof RowMutations) {
-        continue; // ignore RowMutations
+        throw new UnsupportedOperationException("No RowMutations in multi calls; use mutateRow");
       } else {
-        throw new DoNotRetryIOException(
-          "multi doesn't support " + row.getClass().getName());
+        throw new DoNotRetryIOException("Multi doesn't support " + row.getClass().getName());
       }
-      builder.addAction(protoAction.build());
     }
-    return builder.build();
+    return builder;
   }
 
   /**
@@ -553,7 +523,7 @@ public final class RequestConverter {
    * carried by protobuf.  We return references to the data by adding them to the passed in
    * <code>data</code> param.
    *
-   * RowMutations in the list (if any) will be ignored.
+   * <p>Propagates Actions original index.
    *
    * @param regionName
    * @param actions
@@ -561,20 +531,22 @@ public final class RequestConverter {
    * @return a multi request that does not carry any data.
    * @throws IOException
    */
-  public static <R> MultiRequest buildNoDataMultiRequest(final byte[] regionName,
+  public static <R> RegionAction.Builder buildNoDataRegionAction(final byte[] regionName,
       final List<Action<R>> actions, final List<CellScannable> cells)
   throws IOException {
-    MultiRequest.Builder builder = getMultiRequestBuilderWithRegionAndAtomicSet(regionName, false);
+    RegionAction.Builder builder = getRegionActionBuilderWithRegion(regionName);
     for (Action<R> action: actions) {
-      MultiAction.Builder protoAction = MultiAction.newBuilder();
       Row row = action.getAction();
+      ClientProtos.Action.Builder actionBuilder =
+        ClientProtos.Action.newBuilder().setIndex(action.getOriginalIndex());
       if (row instanceof Get) {
-        // Gets are carried by protobufs.
-        protoAction.setGet(ProtobufUtil.toGet((Get)row));
+        Get g = (Get)row;
+        builder.addAction(actionBuilder.setGet(ProtobufUtil.toGet(g)));
       } else if (row instanceof Put) {
         Put p = (Put)row;
         cells.add(p);
-        protoAction.setMutation(ProtobufUtil.toMutationNoData(MutationType.PUT, p));
+        builder.addAction(actionBuilder.
+          setMutation(ProtobufUtil.toMutationNoData(MutationType.PUT, p)));
       } else if (row instanceof Delete) {
         Delete d = (Delete)row;
         int size = d.size();
@@ -585,26 +557,29 @@ public final class RequestConverter {
         // metadata only in the pb and then send the kv along the side in cells.
         if (size > 0) {
           cells.add(d);
-          protoAction.setMutation(ProtobufUtil.toMutationNoData(MutationType.DELETE, d));
+          builder.addAction(actionBuilder.
+            setMutation(ProtobufUtil.toMutationNoData(MutationType.DELETE, d)));
         } else {
-          protoAction.setMutation(ProtobufUtil.toMutation(MutationType.DELETE, d));
+          builder.addAction(actionBuilder.
+            setMutation(ProtobufUtil.toMutation(MutationType.DELETE, d)));
         }
       } else if (row instanceof Append) {
         Append a = (Append)row;
         cells.add(a);
-        protoAction.setMutation(ProtobufUtil.toMutationNoData(MutationType.APPEND, a));
+        builder.addAction(actionBuilder.
+          setMutation(ProtobufUtil.toMutationNoData(MutationType.APPEND, a)));
       } else if (row instanceof Increment) {
         Increment i = (Increment)row;
         cells.add(i);
-        protoAction.setMutation(ProtobufUtil.toMutationNoData(MutationType.INCREMENT, i));
+        builder.addAction(actionBuilder.
+          setMutation(ProtobufUtil.toMutationNoData(MutationType.INCREMENT, i)));
       } else if (row instanceof RowMutations) {
         continue; // ignore RowMutations
       } else {
         throw new DoNotRetryIOException("Multi doesn't support " + row.getClass().getName());
       }
-      builder.addAction(protoAction.build());
     }
-    return builder.build();
+    return builder;
   }
 
 // End utilities for Client
