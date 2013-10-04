@@ -1478,7 +1478,7 @@ public class HLogSplitter {
         }
 
         // skip the edit
-        if (needSkip) continue;
+        if (loc == null || needSkip) continue;
 
         if (!skippedKVs.isEmpty()) {
           kvs.removeAll(skippedKVs);
