@@ -226,16 +226,23 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   /**
    * Restores the cluster to it's initial state if this is a real cluster,
    * otherwise does nothing.
+   * This is a best effort restore. If the servers are not reachable, or insufficient
+   * permissions, etc. restoration might be partial.
+   * @return whether restoration is complete
    */
-  public void restoreInitialStatus() throws IOException {
-    restoreClusterStatus(getInitialClusterStatus());
+  public boolean restoreInitialStatus() throws IOException {
+    return restoreClusterStatus(getInitialClusterStatus());
   }
 
   /**
    * Restores the cluster to given state if this is a real cluster,
    * otherwise does nothing.
+   * This is a best effort restore. If the servers are not reachable, or insufficient
+   * permissions, etc. restoration might be partial.
+   * @return whether restoration is complete
    */
-  public void restoreClusterStatus(ClusterStatus desiredStatus) throws IOException {
+  public boolean restoreClusterStatus(ClusterStatus desiredStatus) throws IOException {
+    return true;
   }
 
   /**
