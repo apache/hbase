@@ -251,28 +251,63 @@ mvn clean package -DskipTests
      <section xml:id="maven.release">
          <title>Making a Release Candidate</title>
          <para>I'll explain by running through the process.  See later in this section for more detail on particular steps.
-             The script <filename>dev-support/make_rc.sh</filename> automates most of this.</para>
+         </para>
+         <para>I would advise before you go about making a release candidate, do a practise run by deploying a SNAPSHOT.
+             Also, make sure builds have been passing recently for the branch from where you are going to take your
+             release.  You should also have tried recent branch tips out on a cluster under load running for instance
+             our hbase-it integration test suite for a few hours to 'burn in' the near-candidate bits.
+         </para>
+         <para>The script <filename>dev-support/make_rc.sh</filename> automates most of this.  It does all but the close of the
+             staging repository up in apache maven, the checking of the produced artifacts to ensure they are 'good' -- e.g.
+             undoing the produced tarballs, eyeballing them to make sure they look right then starting and checking all is
+            running properly --  and then the signing and pushing of the tarballs to people.apache.org.  Familiarize yourself
+         by all that is involved by reading the below before resorting to this release candidate-making script.</para>
 
-        <para>The <link xlink:href="http://wiki.apache.org/hadoop/HowToRelease">Hadoop How To Release</link> wiki page informs much of the below and may have more detail on particular sections so it is worth review.</para>
+     <para>The <link xlink:href="http://wiki.apache.org/hadoop/HowToRelease">Hadoop How To Release</link> wiki
+         page informs much of the below and may have more detail on particular sections so it is worth review.</para>
         <para>Update CHANGES.txt with the changes since the last release.
             Make sure the URL to the JIRA points to the properly location listing fixes for this release.
-             Adjust the version in all the poms appropriately; e.g. you may need to remove <emphasis>-SNAPSHOT</emphasis> from all versions.
+            Adjust the version in all the poms appropriately.  If you are making a release candidate, you must
+            remove the <emphasis>-SNAPSHOT</emphasis> from all versions.  If you are running this receipe to
+            publish a SNAPSHOT, you must keep the <emphasis>-SNAPSHOT</emphasis> suffix on the hbase version.
              The <link xlink:href="http://mojo.codehaus.org/versions-maven-plugin/">Versions Maven Plugin</link> can be of use here.  To
-             set a version in all poms, do something like this:
+             set a version in all the many poms of the hbase multi-module project, do something like this:
              <programlisting>$ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.96.0</programlisting>
-             Checkin the <filename>CHANGES.txt</filename> and version changes.
+             Checkin the <filename>CHANGES.txt</filename> and any version changes.
+        </para>
+        <para>
+            Update the documentation under <filename>src/main/docbkx</filename>.  This usually involves copying the
+            latest from trunk making version-particular adjustments to suit this release candidate version.
         </para>
         <para>Now, build the src tarball.  This tarball is hadoop version independent.  It is just the pure src code and documentation without an hadoop1 or hadoop2 taint.
             Add the <varname>-Prelease</varname> profile when building; it checks files for licenses and will fail the build if unlicensed files present.
             <programlisting>$ MAVEN_OPTS="-Xmx2g" mvn clean install -DskipTests assembly:single -Dassembly.file=hbase-assembly/src/main/assembly/src.xml -Prelease</programlisting>
-            Undo the tarball and make sure it looks good (A good test is seeing if you can build from the undone tarball).
-            Save it off to a <emphasis>version directory</emphasis>, i.e a directory somewhere where you are collecting
+            Undo the tarball and make sure it looks good.  A good test for the src tarball being 'complete' is to see if
+            you can build new tarballs from this source bundle. For example:
+            <programlisting>$ tar xzf hbase-0.96.0-src.tar.gz
+$ cd hbase-0.96.0
+$ bash ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop1-SNAPSHOT
+$ bash ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop2-SNAPSHOT
+$ export MAVEN=/home/stack/bin/mvn/bin/mvn
+$ MAVEN_OPTS="-Xmx3g" $MAVEN -f pom.xml.hadoop1 clean install -DskipTests  javadoc:aggregate site assembly:single -Prelease
+# Check the produced bin tarball is good -- run it, eyeball it, etc.
+$ MAVEN_OPTS="-Xmx3g" $MAVEN -f pom.xml.hadoop2 clean install -DskipTests  javadoc:aggregate site assembly:single -Prelease
+# Check the produced bin tarball is good -- run it, eyeball it, etc.</programlisting>
+            If the source tarball is good, save it off to a <emphasis>version directory</emphasis>, i.e a directory somewhere where you are collecting
             all of the tarballs you will publish as part of the release candidate.  For example if we were building a
             hbase-0.96.0 release candidate, we might call the directory <filename>hbase-0.96.0RC0</filename>.  Later
             we will publish this directory as our release candidate up on people.apache.org/~you.
         </para>
-        <para>Now we are into the making of the hadoop1 and hadoop2 specific builds.  Lets do hadoop1 first.
-        First generate the hadoop1 poms.  See the <filename>generate-hadoopX-poms.sh</filename> script usage for what it expects by way of arguments.
+        <para>Now we are into the making of the hadoop1 and hadoop2 specific binary builds.  Lets do hadoop1 first.
+            First generate the hadoop1 poms.
+            <note>
+                <para>We cannot use maven to publish what is in essence two hbase artifacts both of the same version only
+                    one is for hadoop1 and the other for hadoop2.  So, we generate hadoop1 and hadoop2 particular poms
+                    from the checked-in pom using a dev-tool script and we run two builds; one for hadoop1 artifacts
+                    and one for the hadoop2 artifacts.
+                </para>
+            </note>
+            See the <filename>generate-hadoopX-poms.sh</filename> script usage for what it expects by way of arguments.
             You will find it in the <filename>dev-support</filename> subdirectory.  In the below, we generate hadoop1 poms with a version
             of <varname>0.96.0-hadoop1</varname> (the script will look for a version of <varname>0.96.0</varname> in the current <filename>pom.xml</filename>).
             <programlisting>$ ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop1</programlisting>
@@ -286,7 +321,7 @@ mvn clean package -DskipTests
             <programlisting>$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 clean install -DskipTests -Prelease
 $ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 install -DskipTests site assembly:single -Prelease</programlisting>
 Undo the generated tarball and check it out.  Look at doc. and see if it runs, etc.  Are the set of modules appropriate: e.g. do we have a hbase-hadoop2-compat in the hadoop1 tarball?
-If good, copy the tarball to your <emphasis>version directory</emphasis>.
+If good, copy the tarball to the above mentioned <emphasis>version directory</emphasis>.
 </para>
 <para>I'll tag the release at this point since its looking good.  If we find an issue later, we can delete the tag and start over.  Release needs to be tagged when we do next step.</para>
 <para>Now deploy hadoop1 hbase to mvn. Do the mvn deploy and tgz for a particular version all together in the one go else if you flip between hadoop1 and hadoop2 builds,
@@ -295,12 +330,21 @@ This time we use the <varname>apache-release</varname> profile instead of just <
 it will invoke the apache pom referenced by our poms.  It will also sign your artifacts published to mvn as long as your settings.xml in your local <filename>.m2</filename>
 repository is configured correctly (your <filename>settings.xml</filename> adds your gpg password property to the apache profile).
 <programlisting>$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 deploy -DskipTests -Papache-release</programlisting>
-The last command above copies all artifacts for hadoop1 up to mvn repo.  If no <varname>-SNAPSHOT</varname> in the version, it puts the artifacts into a staging directory.  This is what you want.
+The last command above copies all artifacts for hadoop1 up to the apache mvn repo.  If no <varname>-SNAPSHOT</varname> in the version, it puts the artifacts into a staging directory.
+Making a release candidate, this is what you want.  To make the staged artifacts, you will need to login at repository.apache.org, browse to the staging repository, select the
+artifacts that you have just published, check they look good by making sure all modules are present and perhaps check out a pom or two and if all good, 'close' the repository
+(If the published artifacts do NOT look good, delete the staging).  If all successful, you will get an email with the URL of the temporary staging repository that has been
+set up for you on close of the staged repository; give out this URL as place to download the release candidate (folks will need to add it to their poms or to their local settings.xml file
+to pull the published artifacts)</para>
+<para>If there IS a -SNAPSHOT on the hbase version, the artifacts are put into the apache snapshots repository.
+Making a SNAPSHOT, this is what you want to happen.
 <note>
     <title>hbase-downstreamer</title>
     <para>
-        See the <link xlink:href="">hbase-downstreamer</link> test for a simple example of a project that is downstream of hbase an depends on it.
+        See the <link xlink:href="https://github.com/saintstack/hbase-downstreamer">hbase-downstreamer</link> test for a simple example of a project that is downstream of hbase an depends on it.
         Check it out and run its simple test to make sure maven hbase-hadoop1 and hbase-hadoop2 are properly deployed to the maven repository.
+        Be sure to edit the pom to point at the proper staging repo.  Make sure you are pulling from the repo when tests run and that you are not
+        getting from your local repo (pass -U or delete your local repo content).
     </para>
 </note>
             </para>
