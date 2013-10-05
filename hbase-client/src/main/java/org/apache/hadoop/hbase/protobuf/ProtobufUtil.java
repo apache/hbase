@@ -406,6 +406,12 @@ public final class ProtobufUtil {
         }
       }
     }
+    if (proto.hasExistenceOnly() && proto.getExistenceOnly()){
+      get.setCheckExistenceOnly(true);
+    }
+    if (proto.hasClosestRowBefore() && proto.getClosestRowBefore()){
+      get.setClosestRowBefore(true);
+    }
     return get;
   }
 
@@ -910,6 +916,12 @@ public final class ProtobufUtil {
     if (get.getRowOffsetPerColumnFamily() > 0) {
       builder.setStoreOffset(get.getRowOffsetPerColumnFamily());
     }
+    if (get.isCheckExistenceOnly()){
+      builder.setExistenceOnly(true);
+    }
+    if (get.isClosestRowBefore()){
+      builder.setClosestRowBefore(true);
+    }
     return builder.build();
   }
 
@@ -1038,6 +1050,21 @@ public final class ProtobufUtil {
         builder.addCell(toCell(c));
       }
     }
+    if (result.getExists() != null){
+      builder.setExists(result.getExists());
+    }
+    return builder.build();
+  }
+
+  /**
+   * Convert a client Result to a protocol buffer Result
+   *
+   * @param existence the client existence to send
+   * @return the converted protocol buffer Result
+   */
+  public static ClientProtos.Result toResult(final boolean existence) {
+    ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
+    builder.setExists(existence);
     return builder.build();
   }
 
@@ -1051,6 +1078,9 @@ public final class ProtobufUtil {
   public static ClientProtos.Result toResultNoData(final Result result) {
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
     builder.setAssociatedCellCount(result.size());
+    if (result.getExists() != null){
+      builder.setExists(result.getExists());
+    }
     return builder.build();
   }
 
@@ -1061,12 +1091,16 @@ public final class ProtobufUtil {
    * @return the converted client Result
    */
   public static Result toResult(final ClientProtos.Result proto) {
+    if (proto.hasExists()) {
+      return Result.create(null, proto.getExists());
+    }
+
     List<CellProtos.Cell> values = proto.getCellList();
     List<Cell> cells = new ArrayList<Cell>(values.size());
-    for (CellProtos.Cell c: values) {
+    for (CellProtos.Cell c : values) {
       cells.add(toCell(c));
     }
-    return Result.create(cells);
+    return Result.create(cells, null);
   }
 
   /**
@@ -1079,6 +1113,10 @@ public final class ProtobufUtil {
    */
   public static Result toResult(final ClientProtos.Result proto, final CellScanner scanner)
   throws IOException {
+    if (proto.hasExists()){
+      return Result.create(null, proto.getExists());
+    }
+
     // TODO: Unit test that has some Cells in scanner and some in the proto.
     List<Cell> cells = null;
     if (proto.hasAssociatedCellCount()) {
@@ -1094,7 +1132,7 @@ public final class ProtobufUtil {
     for (CellProtos.Cell c: values) {
       cells.add(toCell(c));
     }
-    return Result.create(cells);
+    return Result.create(cells, null);
   }
 
   /**
@@ -2242,11 +2280,15 @@ public final class ProtobufUtil {
           ", row=" + getStringForByteString(r.getGet().getRow());
     } else if (m instanceof ClientProtos.MultiRequest) {
       ClientProtos.MultiRequest r = (ClientProtos.MultiRequest) m;
-      ClientProtos.MultiAction action = r.getActionList().get(0);
-      return "region= " + getStringForByteString(r.getRegion().getValue()) +
-          ", for " + r.getActionCount() +
-          " actions and 1st row key=" + getStringForByteString(action.hasMutation() ?
-          action.getMutation().getRow() : action.getGet().getRow());
+      // Get first set of Actions.
+      ClientProtos.RegionAction actions = r.getRegionActionList().get(0);
+      String row = actions.getActionCount() <= 0? "":
+        getStringForByteString(actions.getAction(0).hasGet()?
+          actions.getAction(0).getGet().getRow():
+          actions.getAction(0).getMutation().getRow());
+      return "region= " + getStringForByteString(actions.getRegion().getValue()) +
+          ", for " + r.getRegionActionCount() +
+          " actions and 1st row key=" + row;
     } else if (m instanceof ClientProtos.MutateRequest) {
       ClientProtos.MutateRequest r = (ClientProtos.MutateRequest) m;
       return "region= " + getStringForByteString(r.getRegion().getValue()) +

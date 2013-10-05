@@ -78,10 +78,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequ
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
@@ -344,20 +341,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
     return builder.build();
   }
 
-  @Override
-  public MultiGetResponse multiGet(RpcController controller, MultiGetRequest requests)
-  throws ServiceException {
-    byte[] regionName = requests.getRegion().getValue().toByteArray();
-    Map<byte [], Result> m = this.gets.get(regionName);
-    MultiGetResponse.Builder builder = MultiGetResponse.newBuilder();
-    if (m != null) {
-      for (ClientProtos.Get get: requests.getGetList()) {
-        byte[] row = get.getRow().toByteArray();
-        builder.addResult(ProtobufUtil.toResult(m.get(row)));
-      }
-    }
-    return builder.build();
-  }
+
 
 
   @Override

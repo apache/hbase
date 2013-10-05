@@ -83,8 +83,7 @@ class QosFunction implements Function<Pair<RequestHeader, Message>, Integer> {
       CompactRegionRequest.class,
       GetRequest.class,
       MutateRequest.class,
-      ScanRequest.class,
-      MultiRequest.class
+      ScanRequest.class
   };
 
   // Some caches for helping performance
@@ -101,7 +100,7 @@ class QosFunction implements Function<Pair<RequestHeader, Message>, Integer> {
       if (p != null) {
         // Since we protobuf'd, and then subsequently, when we went with pb style, method names
         // are capitalized.  This meant that this brittle compare of method names gotten by
-        // reflection no longer matched the method names comeing in over pb.  TODO: Get rid of this
+        // reflection no longer matched the method names coming in over pb.  TODO: Get rid of this
         // check.  For now, workaround is to capitalize the names we got from reflection so they
         // have chance of matching the pb ones.
         String capitalizedMethodName = capitalize(m.getName());
@@ -153,6 +152,11 @@ class QosFunction implements Function<Pair<RequestHeader, Message>, Integer> {
     Message param = headerAndParam.getSecond();
     if (param == null) {
       return HConstants.NORMAL_QOS;
+    }
+    if (methodName.equalsIgnoreCase("multi") && param instanceof MultiRequest) {
+      // The multi call has its priority set in the header.  All calls should work this way but
+      // only this one has been converted so far.  No priority == NORMAL_QOS.
+      return header.hasPriority()? header.getPriority(): HConstants.NORMAL_QOS;
     }
     String cls = param.getClass().getName();
     Class<? extends Message> rpcArgClass = argumentToClassMap.get(cls);

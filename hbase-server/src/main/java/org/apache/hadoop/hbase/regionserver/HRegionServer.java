@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -148,7 +149,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodes
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
@@ -157,14 +157,15 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServic
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
@@ -2736,7 +2737,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       Boolean existence = null;
       Result r = null;
 
-      if (request.getClosestRowBefore()) {
+      if (get.hasClosestRowBefore() && get.getClosestRowBefore()) {
         if (get.getColumnCount() != 1) {
           throw new DoNotRetryIOException(
             "get ClosestRowBefore supports one and only one family now, not "
@@ -2747,13 +2748,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         r = region.getClosestRowBefore(row, family);
       } else {
         Get clientGet = ProtobufUtil.toGet(get);
-        if (request.getExistenceOnly() && region.getCoprocessorHost() != null) {
+        if (get.getExistenceOnly() && region.getCoprocessorHost() != null) {
           existence = region.getCoprocessorHost().preExists(clientGet);
         }
         if (existence == null) {
           r = region.get(clientGet);
-          if (request.getExistenceOnly()) {
-            boolean exists = r != null && !r.isEmpty();
+          if (get.getExistenceOnly()) {
+            boolean exists = r.getExists();
             if (region.getCoprocessorHost() != null) {
               exists = region.getCoprocessorHost().postExists(clientGet, exists);
             }
@@ -2761,9 +2762,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           }
         }
       }
-      if (existence != null) {
-        builder.setExists(existence.booleanValue());
-      } else if (r != null) {
+      if (existence != null){
+        ClientProtos.Result pbr = ProtobufUtil.toResult(existence);
+        builder.setResult(pbr);
+      }else  if (r != null) {
         ClientProtos.Result pbr = ProtobufUtil.toResult(r);
         builder.setResult(pbr);
       }
@@ -2775,62 +2777,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
   }
 
-  /**
-   * Get multi data from a table.
-   *
-   * @param controller the RPC controller
-   * @param request multi-the get request
-   * @throws ServiceException
-   */
-  @Override
-  public MultiGetResponse multiGet(final RpcController controller, final MultiGetRequest request)
-      throws ServiceException {
-    long before = EnvironmentEdgeManager.currentTimeMillis();
-    try {
-      requestCount.add(request.getGetCount());
-      HRegion region = getRegion(request.getRegion());
-      MultiGetResponse.Builder builder = MultiGetResponse.newBuilder();
-      for (ClientProtos.Get get: request.getGetList()) {
-        Boolean existence = null;
-        Result r = null;
-        if (request.getClosestRowBefore()) {
-          if (get.getColumnCount() != 1) {
-            throw new DoNotRetryIOException(
-              "get ClosestRowBefore supports one and only one family now, not "
-                + get.getColumnCount() + " families");
-          }
-          byte[] row = get.getRow().toByteArray();
-          byte[] family = get.getColumn(0).getFamily().toByteArray();
-          r = region.getClosestRowBefore(row, family);
-        } else {
-          Get clientGet = ProtobufUtil.toGet(get);
-          if (request.getExistenceOnly() && region.getCoprocessorHost() != null) {
-            existence = region.getCoprocessorHost().preExists(clientGet);
-          }
-          if (existence == null) {
-            r = region.get(clientGet);
-            if (request.getExistenceOnly()) {
-              boolean exists = r != null && !r.isEmpty();
-              if (region.getCoprocessorHost() != null) {
-                exists = region.getCoprocessorHost().postExists(clientGet, exists);
-              }
-              existence = exists;
-            }
-          }
-        }
-        if (existence != null) {
-          builder.addExists(existence.booleanValue());
-        } else if (r != null) {
-          builder.addResult(ProtobufUtil.toResult(r));
-        }
-      }
-      return builder.build();
-    } catch (IOException ie) {
-      throw new ServiceException(ie);
-    } finally {
-      metricsRegionServer.updateGet(EnvironmentEdgeManager.currentTimeMillis() - before);
-    }
-  }
 
   /**
    * Mutate data in a table.
@@ -3279,106 +3225,132 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // It is also the conduit via which we pass back data.
     PayloadCarryingRpcController controller = (PayloadCarryingRpcController)rpcc;
     CellScanner cellScanner = controller != null? controller.cellScanner(): null;
-    // Clear scanner so we are not holding on to reference across call.
-    controller.setCellScanner(null);
+    if (controller != null) controller.setCellScanner(null);
     List<CellScannable> cellsToReturn = null;
-    try {
-      HRegion region = getRegion(request.getRegion());
-      MultiResponse.Builder builder = MultiResponse.newBuilder();
-      List<MutationProto> mutations = new ArrayList<MutationProto>(request.getActionCount());
-      // Do a bunch of mutations atomically.  Mutations are Puts and Deletes.  NOT Gets.
-      if (request.hasAtomic() && request.getAtomic()) {
-        // MultiAction is union type.  Has a Get or a Mutate.
-        for (ClientProtos.MultiAction actionUnion : request.getActionList()) {
-          if (actionUnion.hasMutation()) {
-            mutations.add(actionUnion.getMutation());
+     MultiResponse.Builder responseBuilder = MultiResponse.newBuilder();
+
+     for (RegionAction regionAction : request.getRegionActionList()) {
+       this.requestCount.add(regionAction.getActionCount());
+       RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
+       HRegion region;
+       try {
+         region = getRegion(regionAction.getRegion());
+       } catch (IOException e) {
+         regionActionResultBuilder.setException(ResponseConverter.buildException(e));
+         responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
+         continue;  // For this region it's a failure.
+       }
+
+       if (regionAction.hasAtomic() && regionAction.getAtomic()) {
+         // How does this call happen?  It may need some work to play well w/ the surroundings.
+         // Need to return an item per Action along w/ Action index.  TODO.
+         try {
+           mutateRows(region, regionAction.getActionList(), cellScanner);
+         } catch (IOException e) {
+           // As it's atomic, we may expect it's a global failure.
+           regionActionResultBuilder.setException(ResponseConverter.buildException(e));
+         }
+       } else {
+         // doNonAtomicRegionMutation manages the exception internally
+         cellsToReturn = doNonAtomicRegionMutation(region, regionAction, cellScanner,
+             regionActionResultBuilder, cellsToReturn);
+       }
+       responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
+     }
+     // Load the controller with the Cells to return.
+     if (cellsToReturn != null && !cellsToReturn.isEmpty() && controller != null) {
+       controller.setCellScanner(CellUtil.createCellScanner(cellsToReturn));
+     }
+     return responseBuilder.build();
+   }
+
+   /**
+    * Run through the regionMutation <code>rm</code> and per Mutation, do the work, and then when
+    * done, add an instance of a {@link ResultOrException} that corresponds to each Mutation.
+    * @param region
+    * @param actions
+    * @param cellScanner
+    * @param builder
+    * @param cellsToReturn  Could be null. May be allocated in this method.  This is what this
+    * method returns as a 'result'.
+    * @return Return the <code>cellScanner</code> passed
+    */
+   private List<CellScannable> doNonAtomicRegionMutation(final HRegion region,
+       final RegionAction actions, final CellScanner cellScanner,
+       final RegionActionResult.Builder builder, List<CellScannable> cellsToReturn) {
+     // Gather up CONTIGUOUS Puts and Deletes in this mutations List.  Idea is that rather than do
+     // one at a time, we instead pass them in batch.  Be aware that the corresponding
+     // ResultOrException instance that matches each Put or Delete is then added down in the
+     // doBatchOp call.  We should be staying aligned though the Put and Delete are deferred/batched
+     List<ClientProtos.Action> mutations = null;
+     for (ClientProtos.Action action: actions.getActionList()) {
+       ClientProtos.ResultOrException.Builder resultOrExceptionBuilder = null;
+       try {
+         Result r = null;
+         if (action.hasGet()) {
+           Get get = ProtobufUtil.toGet(action.getGet());
+           r = region.get(get);
+         } else if (action.hasMutation()) {
+           MutationType type = action.getMutation().getMutateType();
+           if (type != MutationType.PUT && type != MutationType.DELETE && mutations != null &&
+               !mutations.isEmpty()) {
+             // Flush out any Puts or Deletes already collected.
+             doBatchOp(builder, region, mutations, cellScanner);
+             mutations.clear();
+           }
+           switch (type) {
+           case APPEND:
+             r = append(region, action.getMutation(), cellScanner);
+             break;
+           case INCREMENT:
+             r = increment(region, action.getMutation(), cellScanner);
+             break;
+           case PUT:
+           case DELETE:
+             // Collect the individual mutations and apply in a batch
+             if (mutations == null) {
+               mutations = new ArrayList<ClientProtos.Action>(actions.getActionCount());
+            }
+             mutations.add(action);
+             break;
+           default:
+             throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
+          }
+        } else {
+           throw new HBaseIOException("Unexpected Action type");
+        }
+        if (r != null) {
+          ClientProtos.Result pbResult = null;
+          if (isClientCellBlockSupport()) {
+             pbResult = ProtobufUtil.toResultNoData(r);
+             //  Hard to guess the size here.  Just make a rough guess.
+             if (cellsToReturn == null) cellsToReturn = new ArrayList<CellScannable>();
+             cellsToReturn.add(r);
           } else {
-            throw new DoNotRetryIOException("Unsupported atomic action type: " + actionUnion);
+            pbResult = ProtobufUtil.toResult(r);
           }
+          resultOrExceptionBuilder =
+            ClientProtos.ResultOrException.newBuilder().setResult(pbResult);
         }
-        // TODO: We are not updating a metric here.  Should we up requestCount?
-        if (!mutations.isEmpty()) mutateRows(region, mutations, cellScanner);
-      } else {
-        // Do a bunch of Actions.
-        ActionResult.Builder resultBuilder = null;
-        cellsToReturn = new ArrayList<CellScannable>(request.getActionCount());
-        for (ClientProtos.MultiAction actionUnion : request.getActionList()) {
-          this.requestCount.increment();
-          ClientProtos.Result result = null;
-          try {
-            if (actionUnion.hasGet()) {
-              Get get = ProtobufUtil.toGet(actionUnion.getGet());
-              Result r = region.get(get);
-              if (r != null) {
-                // Get a result with no data.  The data will be carried alongside pbs, not as pbs.
-                result = ProtobufUtil.toResultNoData(r);
-                // Add the Result to controller so it gets serialized apart from pb.  Get
-                // Results could be big so good if they are not serialized as pb.
-                cellsToReturn.add(r);
-              }
-            } else if (actionUnion.hasMutation()) {
-              MutationProto mutation = actionUnion.getMutation();
-              MutationType type = mutation.getMutateType();
-              if (type != MutationType.PUT && type != MutationType.DELETE) {
-                if (!mutations.isEmpty()) {
-                  doBatchOp(builder, region, mutations, cellScanner);
-                  mutations.clear();
-                } else if (!region.getRegionInfo().isMetaTable()) {
-                  cacheFlusher.reclaimMemStoreMemory();
-                }
-              }
-              Result r = null;
-              switch (type) {
-              case APPEND:
-                r = append(region, mutation, cellScanner);
-                break;
-              case INCREMENT:
-                r = increment(region, mutation, cellScanner);
-                break;
-              case PUT:
-              case DELETE:
-                mutations.add(mutation);
-                break;
-              default:
-                throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
-              }
-              if (r != null) {
-                // Put the data into the cellsToReturn and the metadata about the result is all that
-                // we will pass back in the protobuf result.
-                result = ProtobufUtil.toResultNoData(r);
-                cellsToReturn.add(r);
-              }
-            } else {
-              LOG.warn("Error: invalid action: " + actionUnion + ". "
-                + "it must be a Get, Mutate, or Exec.");
-              throw new DoNotRetryIOException("Invalid action, "
-                + "it must be a Get, Mutate, or Exec.");
-            }
-            if (result != null) {
-              if (resultBuilder == null) {
-                resultBuilder = ActionResult.newBuilder();
-              } else {
-                resultBuilder.clear();
-              }
-              resultBuilder.setValue(result);
-              builder.addResult(resultBuilder.build());
-            }
-          } catch (IOException ie) {
-            builder.addResult(ResponseConverter.buildActionResult(ie));
-          }
-        }
-        if (!mutations.isEmpty()) {
-          doBatchOp(builder, region, mutations, cellScanner);
-        }
+        // Could get to here and there was no result and no exception.  Presumes we added
+        // a Put or Delete to the collecting Mutations List for adding later.  In this
+        // case the corresponding ResultOrException instance for the Put or Delete will be added
+        // down in the doBatchOp method call rather than up here.
+      } catch (IOException ie) {
+        resultOrExceptionBuilder = ResultOrException.newBuilder().
+          setException(ResponseConverter.buildException(ie));
       }
-      // Load the controller with the Cells to return.
-      if (cellsToReturn != null && !cellsToReturn.isEmpty()) {
-        controller.setCellScanner(CellUtil.createCellScanner(cellsToReturn));
+      if (resultOrExceptionBuilder != null) {
+        // Propagate index.
+        resultOrExceptionBuilder.setIndex(action.getIndex());
+        builder.addResultOrException(resultOrExceptionBuilder.build());
       }
-      return builder.build();
-    } catch (IOException ie) {
-      throw new ServiceException(ie);
     }
+    // Finish up any outstanding mutations
+    if (mutations != null && !mutations.isEmpty()) {
+      doBatchOp(builder, region, mutations, cellScanner);
+    }
+    return cellsToReturn;
   }
 
 // End Client methods
@@ -3856,20 +3828,19 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     try {
       checkOpen();
       List<WALEntry> entries = request.getEntryList();
-      if(entries == null || entries.isEmpty()) {
+      if (entries == null || entries.isEmpty()) {
         // empty input
         return ReplicateWALEntryResponse.newBuilder().build();
       }
-      
       HRegion region = this.getRegionByEncodedName(
         entries.get(0).getKey().getEncodedRegionName().toStringUtf8());
       RegionCoprocessorHost coprocessorHost = region.getCoprocessorHost();
       List<Pair<HLogKey, WALEdit>> walEntries = new ArrayList<Pair<HLogKey, WALEdit>>();
       List<Pair<MutationType, Mutation>> mutations = new ArrayList<Pair<MutationType, Mutation>>();
       for (WALEntry entry : entries) {
-        Pair<HLogKey, WALEdit> walEntry = (coprocessorHost == null) ? null : 
+        Pair<HLogKey, WALEdit> walEntry = (coprocessorHost == null) ? null :
           new Pair<HLogKey, WALEdit>();
-        List<Pair<MutationType, Mutation>> edits = HLogSplitter.getMutationsFromWALEntry(entry, 
+        List<Pair<MutationType, Mutation>> edits = HLogSplitter.getMutationsFromWALEntry(entry,
           cells, walEntry);
         if (coprocessorHost != null) {
           // Start coprocessor replay here. The coprocessor is for each WALEdit instead of a
@@ -4041,17 +4012,17 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * @param region
    * @param mutations
    */
-  protected void doBatchOp(final MultiResponse.Builder builder, final HRegion region,
-      final List<MutationProto> mutations, final CellScanner cells) {
+  protected void doBatchOp(final RegionActionResult.Builder builder, final HRegion region,
+      final List<ClientProtos.Action> mutations, final CellScanner cells) {
     Mutation[] mArray = new Mutation[mutations.size()];
     long before = EnvironmentEdgeManager.currentTimeMillis();
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
-      ActionResult.Builder resultBuilder = ActionResult.newBuilder();
-      resultBuilder.setValue(ClientProtos.Result.newBuilder().build());
-      ActionResult result = resultBuilder.build();
       int i = 0;
-      for (MutationProto m : mutations) {
+      for (ClientProtos.Action action: mutations) {
+        ClientProtos.ResultOrException.Builder resultOrExceptionBuilder =
+          ClientProtos.ResultOrException.newBuilder();
+        MutationProto m = action.getMutation();
         Mutation mutation;
         if (m.getMutateType() == MutationType.PUT) {
           mutation = ProtobufUtil.toPut(m, cells);
@@ -4061,7 +4032,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           batchContainsDelete = true;
         }
         mArray[i++] = mutation;
-        builder.addResult(result);
       }
 
       requestCount.add(mutations.size());
@@ -4071,33 +4041,33 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
       OperationStatus codes[] = region.batchMutate(mArray, false);
       for (i = 0; i < codes.length; i++) {
+        int index = mutations.get(i).getIndex();
+        Exception e = null;
         switch (codes[i].getOperationStatusCode()) {
           case BAD_FAMILY:
-            result = ResponseConverter.buildActionResult(
-                new NoSuchColumnFamilyException(codes[i].getExceptionMsg()));
-            builder.setResult(i, result);
+            e = new NoSuchColumnFamilyException(codes[i].getExceptionMsg());
+            builder.addResultOrException(getResultOrException(e, index));
             break;
 
           case SANITY_CHECK_FAILURE:
-            result = ResponseConverter.buildActionResult(
-                new FailedSanityCheckException(codes[i].getExceptionMsg()));
-            builder.setResult(i, result);
+            e = new FailedSanityCheckException(codes[i].getExceptionMsg());
+            builder.addResultOrException(getResultOrException(e, index));
             break;
 
           default:
-            result = ResponseConverter.buildActionResult(
-                new DoNotRetryIOException(codes[i].getExceptionMsg()));
-            builder.setResult(i, result);
+            e = new DoNotRetryIOException(codes[i].getExceptionMsg());
+            builder.addResultOrException(getResultOrException(e, index));
             break;
 
           case SUCCESS:
+            builder.addResultOrException(getResultOrException(ClientProtos.Result.getDefaultInstance(), index));
             break;
         }
       }
     } catch (IOException ie) {
-      ActionResult result = ResponseConverter.buildActionResult(ie);
+      ResultOrException resultOrException = ResponseConverter.buildActionResult(ie).build();
       for (int i = 0; i < mutations.size(); i++) {
-        builder.setResult(i, result);
+        builder.addResultOrException(resultOrException);
       }
     }
     long after = EnvironmentEdgeManager.currentTimeMillis();
@@ -4107,6 +4077,18 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     if (batchContainsDelete) {
       metricsRegionServer.updateDelete(after - before);
     }
+  }
+  private static ResultOrException getResultOrException(final ClientProtos.Result r,
+      final int index) {
+    return getResultOrException(ResponseConverter.buildActionResult(r), index);
+  }
+  private static ResultOrException getResultOrException(final Exception e, final int index) {
+    return getResultOrException(ResponseConverter.buildActionResult(e), index);
+  }
+
+  private static ResultOrException getResultOrException(final ResultOrException.Builder builder,
+      final int index) {
+    return builder.setIndex(index).build();
   }
 
   /**
@@ -4119,8 +4101,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    *         exceptionMessage if any
    * @throws IOException
    */
-  protected OperationStatus[] doBatchOp(final HRegion region,
-      final List<Pair<MutationType, Mutation>> mutations, boolean isReplay) throws IOException {
+  protected OperationStatus [] doBatchOp(final HRegion region,
+      final List<Pair<MutationType, Mutation>> mutations, boolean isReplay)
+  throws IOException {
     Mutation[] mArray = new Mutation[mutations.size()];
     long before = EnvironmentEdgeManager.currentTimeMillis();
     boolean batchContainsPuts = false, batchContainsDelete = false;
@@ -4154,32 +4137,35 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * Mutate a list of rows atomically.
    *
    * @param region
-   * @param mutations
+   * @param actions
  * @param cellScanner if non-null, the mutation data -- the Cell content.
    * @throws IOException
    */
-  protected void mutateRows(final HRegion region, final List<MutationProto> mutations,
+  protected void mutateRows(final HRegion region, final List<ClientProtos.Action> actions,
       final CellScanner cellScanner)
   throws IOException {
-    MutationProto firstMutate = mutations.get(0);
     if (!region.getRegionInfo().isMetaTable()) {
       cacheFlusher.reclaimMemStoreMemory();
     }
-    byte [] row = firstMutate.getRow().toByteArray();
-    RowMutations rm = new RowMutations(row);
-    for (MutationProto mutate: mutations) {
-      MutationType type = mutate.getMutateType();
-      switch (mutate.getMutateType()) {
+    RowMutations rm = null;
+    for (ClientProtos.Action action: actions) {
+      if (action.hasGet()) {
+        throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
+          action.getGet());
+      }
+      MutationType type = action.getMutation().getMutateType();
+      if (rm == null) {
+        rm = new RowMutations(action.getMutation().getRow().toByteArray());
+      }
+      switch (type) {
       case PUT:
-        rm.add(ProtobufUtil.toPut(mutate, cellScanner));
+        rm.add(ProtobufUtil.toPut(action.getMutation(), cellScanner));
         break;
       case DELETE:
-        rm.add(ProtobufUtil.toDelete(mutate, cellScanner));
+        rm.add(ProtobufUtil.toDelete(action.getMutation(), cellScanner));
         break;
         default:
-          throw new DoNotRetryIOException(
-            "mutate supports atomic put and/or delete, not "
-              + type.name());
+          throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
       }
     }
     region.mutateRow(rm);
@@ -4382,7 +4368,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   /**
    * Return the last failed RS name under /hbase/recovering-regions/encodedRegionName
    * @param encodedRegionName
-   * @throws IOException
    * @throws KeeperException
    */
   private String getLastFailedRSFromZK(String encodedRegionName) throws KeeperException {

@@ -255,12 +255,14 @@ class AsyncProcess<CResult> {
    * @param atLeastOne true if we should submit at least a subset.
    */
   public void submit(List<? extends Row> rows, boolean atLeastOne) throws InterruptedIOException {
-    if (rows.isEmpty()){
+    if (rows.isEmpty()) {
       return;
     }
 
+    // This looks like we are keying by region but HRegionLocation has a comparator that compares
+    // on the server portion only (hostname + port) so this Map collects regions by server.
     Map<HRegionLocation, MultiAction<Row>> actionsByServer =
-        new HashMap<HRegionLocation, MultiAction<Row>>();
+      new HashMap<HRegionLocation, MultiAction<Row>>();
     List<Action<Row>> retainedActions = new ArrayList<Action<Row>>(rows.size());
 
     do {
@@ -321,10 +323,7 @@ class AsyncProcess<CResult> {
    * @return the destination. Null if we couldn't find it.
    */
   private HRegionLocation findDestLocation(Row row, int numAttempt, int posInList) {
-    if (row == null){
-      throw new IllegalArgumentException("row cannot be null");
-    }
-
+    if (row == null) throw new IllegalArgumentException("row cannot be null");
     HRegionLocation loc = null;
     IOException locationException = null;
     try {
@@ -476,29 +475,29 @@ class AsyncProcess<CResult> {
                               final int numAttempt,
                               final HConnectionManager.ServerErrorTracker errorsByServer) {
     // Send the queries and add them to the inProgress list
+    // This iteration is by server (the HRegionLocation comparator is by server portion only).
     for (Map.Entry<HRegionLocation, MultiAction<Row>> e : actionsByServer.entrySet()) {
       final HRegionLocation loc = e.getKey();
-      final MultiAction<Row> multi = e.getValue();
-      incTaskCounters(multi.getRegions(), loc.getServerName());
-
+      final MultiAction<Row> multiAction = e.getValue();
+      incTaskCounters(multiAction.getRegions(), loc.getServerName());
       Runnable runnable = Trace.wrap("AsyncProcess.sendMultiAction", new Runnable() {
         @Override
         public void run() {
           MultiResponse res;
           try {
-            MultiServerCallable<Row> callable = createCallable(loc, multi);
+            MultiServerCallable<Row> callable = createCallable(loc, multiAction);
             try {
               res = createCaller(callable).callWithoutRetries(callable);
             } catch (IOException e) {
-              LOG.warn("The call to the region server failed, we don't know where we stand, " +
-                  loc.getServerName(), e);
-              resubmitAll(initialActions, multi, loc, numAttempt + 1, e, errorsByServer);
+              LOG.warn("Call to " + loc.getServerName() + " failed numAttempt=" + numAttempt +
+                ", resubmitting all since not sure where we are at", e);
+              resubmitAll(initialActions, multiAction, loc, numAttempt + 1, e, errorsByServer);
               return;
             }
 
-            receiveMultiAction(initialActions, multi, loc, res, numAttempt, errorsByServer);
+            receiveMultiAction(initialActions, multiAction, loc, res, numAttempt, errorsByServer);
           } finally {
-            decTaskCounters(multi.getRegions(), loc.getServerName());
+            decTaskCounters(multiAction.getRegions(), loc.getServerName());
           }
         }
       });
@@ -508,12 +507,12 @@ class AsyncProcess<CResult> {
       } catch (RejectedExecutionException ree) {
         // This should never happen. But as the pool is provided by the end user, let's secure
         //  this a little.
-        decTaskCounters(multi.getRegions(), loc.getServerName());
+        decTaskCounters(multiAction.getRegions(), loc.getServerName());
         LOG.warn("The task was rejected by the pool. This is unexpected." +
             " Server is " + loc.getServerName(), ree);
         // We're likely to fail again, but this will increment the attempt counter, so it will
         //  finish.
-        resubmitAll(initialActions, multi, loc, numAttempt + 1, ree, errorsByServer);
+        resubmitAll(initialActions, multiAction, loc, numAttempt + 1, ree, errorsByServer);
       }
     }
   }
@@ -590,12 +589,11 @@ class AsyncProcess<CResult> {
     // Do not use the exception for updating cache because it might be coming from
     // any of the regions in the MultiAction.
     hConnection.updateCachedLocations(tableName,
-        rsActions.actions.values().iterator().next().get(0).getAction().getRow(), null, location);
+      rsActions.actions.values().iterator().next().get(0).getAction().getRow(), null, location);
     errorsByServer.reportServerError(location);
-
-    List<Action<Row>> toReplay = new ArrayList<Action<Row>>();
-    for (List<Action<Row>> actions : rsActions.actions.values()) {
-      for (Action<Row> action : actions) {
+    List<Action<Row>> toReplay = new ArrayList<Action<Row>>(initialActions.size());
+    for (Map.Entry<byte[], List<Action<Row>>> e : rsActions.actions.entrySet()) {
+      for (Action<Row> action : e.getValue()) {
         if (manageError(numAttempt, action.getOriginalIndex(), action.getAction(),
             true, t, location)) {
           toReplay.add(action);
@@ -605,7 +603,7 @@ class AsyncProcess<CResult> {
 
     if (toReplay.isEmpty()) {
       LOG.warn("Attempt #" + numAttempt + "/" + numTries + " failed for all " +
-        initialActions.size() + "ops, NOT resubmitting, " + location.getServerName());
+        initialActions.size() + " ops, NOT resubmitting, " + location.getServerName());
     } else {
       submit(initialActions, toReplay, numAttempt, errorsByServer);
     }
@@ -669,11 +667,11 @@ class AsyncProcess<CResult> {
           }
         } else { // success
           if (callback != null) {
-            Action<Row> correspondingAction = initialActions.get(regionResult.getFirst());
+            int index = regionResult.getFirst();
+            Action<Row> correspondingAction = initialActions.get(index);
             Row row = correspondingAction.getAction();
             //noinspection unchecked
-            this.callback.success(correspondingAction.getOriginalIndex(),
-                resultsForRS.getKey(), row, (CResult) result);
+            this.callback.success(index, resultsForRS.getKey(), row, (CResult) result);
           }
         }
       }
@@ -694,8 +692,7 @@ class AsyncProcess<CResult> {
       try {
         Thread.sleep(backOffTime);
       } catch (InterruptedException e) {
-        LOG.warn("Not sent: " + toReplay.size() +
-            " operations, " + location, e);
+        LOG.warn("Not sent: " + toReplay.size() + " operations, " + location, e);
         Thread.interrupted();
         return;
       }
@@ -705,10 +702,11 @@ class AsyncProcess<CResult> {
       if (failureCount != 0) {
         // We have a failure but nothing to retry. We're done, it's a final failure..
         LOG.warn("Attempt #" + numAttempt + "/" + numTries + " failed for " + failureCount +
-            " ops on " + location.getServerName() + " NOT resubmitting." + location);
+            " ops on " + location.getServerName() + " NOT resubmitting. " + location);
       } else if (numAttempt > START_LOG_ERRORS_CNT + 1 && LOG.isDebugEnabled()) {
         // The operation was successful, but needed several attempts. Let's log this.
-        LOG.debug("Attempt #" + numAttempt + "/" + numTries + " is finally successful.");
+        LOG.debug("Attempt #" + numAttempt + "/" + numTries + " finally suceeded, size=" +
+          toReplay.size());
       }
     }
   }

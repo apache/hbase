@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponsePr
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -73,6 +74,8 @@ import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 /**
  * Some basic ipc tests.
@@ -284,7 +287,8 @@ public class TestIPC {
       for (int i = 0; i < cycles; i++) {
         List<CellScannable> cells = new ArrayList<CellScannable>();
         // Message param = RequestConverter.buildMultiRequest(HConstants.EMPTY_BYTE_ARRAY, rm);
-        Message param = RequestConverter.buildNoDataMultiRequest(HConstants.EMPTY_BYTE_ARRAY, rm, cells);
+        ClientProtos.RegionAction.Builder builder = RequestConverter.buildNoDataRegionAction(
+          HConstants.EMPTY_BYTE_ARRAY, rm, cells);
         CellScanner cellScanner = CellUtil.createCellScanner(cells);
         if (i % 1000 == 0) {
           LOG.info("" + i);
@@ -293,7 +297,7 @@ public class TestIPC {
           //  "Thread dump " + Thread.currentThread().getName());
         }
         Pair<Message, CellScanner> response =
-          client.call(null, param, cellScanner, null, user, address, 0);
+          client.call(null, builder.build(), cellScanner, null, user, address, 0);
         /*
         int count = 0;
         while (p.getSecond().advance()) {

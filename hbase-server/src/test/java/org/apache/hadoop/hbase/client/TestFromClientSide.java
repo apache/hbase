@@ -4356,8 +4356,7 @@ public class TestFromClientSide {
     d.deleteColumns(FAMILY, QUALIFIERS[0]);
     arm.add(d);
     // TODO: Trying mutateRow again.  The batch was failing with a one try only.
-    // t.mutateRow(arm);
-    t.batch(Arrays.asList((Row)arm));
+    t.mutateRow(arm);
     r = t.get(g);
     assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[1])));
     assertNull(r.getValue(FAMILY, QUALIFIERS[0]));

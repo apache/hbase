@@ -24,14 +24,17 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
+import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.ServiceException;
 
@@ -42,91 +45,74 @@ import com.google.protobuf.ServiceException;
  * @param <R>
  */
 class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
-  private final MultiAction<R> multi;
+  private final MultiAction<R> multiAction;
   private final boolean cellBlock;
 
   MultiServerCallable(final HConnection connection, final TableName tableName,
       final HRegionLocation location, final MultiAction<R> multi) {
     super(connection, tableName, null);
-    this.multi = multi;
+    this.multiAction = multi;
     setLocation(location);
     this.cellBlock = isCellBlock();
   }
 
   MultiAction<R> getMulti() {
-    return this.multi;
+    return this.multiAction;
   }
 
   @Override
   public MultiResponse call() throws IOException {
-    MultiResponse response = new MultiResponse();
-    // The multi object is a list of Actions by region.
-    for (Map.Entry<byte[], List<Action<R>>> e: this.multi.actions.entrySet()) {
-      byte[] regionName = e.getKey();
-      int rowMutations = 0;
-      List<Action<R>> actions = e.getValue();
-      for (Action<R> action : actions) {
-        Row row = action.getAction();
-        // Row Mutations are a set of Puts and/or Deletes all to be applied atomically
-        // on the one row.  We do these a row at a time.
-        if (row instanceof RowMutations) {
-          RowMutations rms = (RowMutations)row;
-          List<CellScannable> cells = null;
-          MultiRequest multiRequest;
-          try {
-            if (this.cellBlock) {
-              // Stick all Cells for all RowMutations in here into 'cells'.  Populated when we call
-              // buildNoDataMultiRequest in the below.
-              cells = new ArrayList<CellScannable>(rms.getMutations().size());
-              // Build a multi request absent its Cell payload (this is the 'nodata' in the below).
-              multiRequest = RequestConverter.buildNoDataMultiRequest(regionName, rms, cells);
-            } else {
-              multiRequest = RequestConverter.buildMultiRequest(regionName, rms);
-            }
-            // Carry the cells if any over the proxy/pb Service interface using the payload
-            // carrying rpc controller.
-            getStub().multi(new PayloadCarryingRpcController(cells), multiRequest);
-            // This multi call does not return results.
-            response.add(regionName, action.getOriginalIndex(), Result.EMPTY_RESULT);
-          } catch (ServiceException se) {
-            response.add(regionName, action.getOriginalIndex(),
-              ProtobufUtil.getRemoteException(se));
-          }
-          rowMutations++;
-        }
+    int countOfActions = this.multiAction.size();
+    if (countOfActions <= 0) throw new DoNotRetryIOException("No Actions");
+    MultiRequest.Builder multiRequestBuilder = MultiRequest.newBuilder();
+    List<CellScannable> cells = null;
+    // The multi object is a list of Actions by region.  Iterate by region.
+    for (Map.Entry<byte[], List<Action<R>>> e: this.multiAction.actions.entrySet()) {
+      final byte [] regionName = e.getKey();
+      final List<Action<R>> actions = e.getValue();
+      RegionAction.Builder regionActionBuilder;
+      if (this.cellBlock) {
+        // Presize.  Presume at least a KV per Action.  There are likely more.
+        if (cells == null) cells = new ArrayList<CellScannable>(countOfActions);
+        // Send data in cellblocks. The call to buildNoDataMultiRequest will skip RowMutations.
+        // They have already been handled above. Guess at count of cells
+        regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, actions, cells);
+      } else {
+        regionActionBuilder = RequestConverter.buildRegionAction(regionName, actions);
       }
-      // Are there any non-RowMutation actions to send for this region?
-      if (actions.size() > rowMutations) {
-        Exception ex = null;
-        List<Object> results = null;
-        List<CellScannable> cells = null;
-        MultiRequest multiRequest;
-        try {
-          if (isCellBlock()) {
-            // Send data in cellblocks. The call to buildNoDataMultiRequest will skip RowMutations.
-            // They have already been handled above.
-            cells = new ArrayList<CellScannable>(actions.size() - rowMutations);
-            multiRequest = RequestConverter.buildNoDataMultiRequest(regionName, actions, cells);
-          } else {
-            multiRequest = RequestConverter.buildMultiRequest(regionName, actions);
-          }
-          // Controller optionally carries cell data over the proxy/service boundary and also
-          // optionally ferries cell response data back out again.
-          PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cells);
-          ClientProtos.MultiResponse responseProto = getStub().multi(controller, multiRequest);
-          results = ResponseConverter.getResults(responseProto, controller.cellScanner());
-        } catch (ServiceException se) {
-          ex = ProtobufUtil.getRemoteException(se);
-        }
-        for (int i = 0, n = actions.size(); i < n; i++) {
-          int originalIndex = actions.get(i).getOriginalIndex();
-          response.add(regionName, originalIndex, results == null ? ex : results.get(i));
-        }
-      }
+      multiRequestBuilder.addRegionAction(regionActionBuilder.build());
     }
-    return response;
+    // Controller optionally carries cell data over the proxy/service boundary and also
+    // optionally ferries cell response data back out again.
+    PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cells);
+    controller.setPriority(getTableName());
+    ClientProtos.MultiResponse responseProto;
+    ClientProtos.MultiRequest requestProto = multiRequestBuilder.build();
+    try {
+      responseProto = getStub().multi(controller, requestProto);
+    } catch (ServiceException e) {
+      return createAllFailedResponse(requestProto, ProtobufUtil.getRemoteException(e));
+    }
+    return ResponseConverter.getResults(requestProto, responseProto, controller.cellScanner());
   }
 
+  /**
+   * @param request
+   * @param t
+   * @return Return a response that has every action in request failed w/ the passed in
+   * exception <code>t</code> -- this will get them all retried after some backoff.
+   */
+  private static MultiResponse createAllFailedResponse(final ClientProtos.MultiRequest request,
+      final Throwable t) {
+    MultiResponse massFailedResponse = new MultiResponse();
+    for (RegionAction rAction: request.getRegionActionList()) {
+      byte [] regionName = rAction.getRegion().getValue().toByteArray();
+      for (ClientProtos.Action action: rAction.getActionList()) {
+        massFailedResponse.add(regionName, new Pair<Integer, Object>(action.getIndex(), t));
+      }
+    }
+    return massFailedResponse;
+  }
 
   /**
    * @return True if we should send data in cellblocks.  This is an expensive call.  Cache the

@@ -163,6 +163,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
           ScanResponse response = null;
           PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
           try {
+            controller.setPriority(getTableName());
             response = getStub().scan(controller, request);
             // Client and RS maintain a nextCallSeq number during the scan. Every next() call
             // from client to server will increment this number in both sides. Client passes this

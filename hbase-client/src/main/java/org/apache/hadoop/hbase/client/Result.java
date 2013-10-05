@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceStability.Stable
 public class Result implements CellScannable {
   private Cell[] cells;
+  private Boolean exists; // if the query was just to check existence.
   // We're not using java serialization.  Transient here is just a marker to say
   // that this is where we cache row if we're ever asked for it.
   private transient byte [] row = null;
@@ -108,7 +109,7 @@ public class Result implements CellScannable {
   @Deprecated
   public Result(List<KeyValue> kvs) {
     // TODO: Here we presume the passed in Cells are KVs.  One day this won't always be so.
-    this(kvs.toArray(new Cell[kvs.size()]));
+    this(kvs.toArray(new Cell[kvs.size()]), null);
   }
 
   /**
@@ -117,7 +118,14 @@ public class Result implements CellScannable {
    * @param cells List of cells
    */
   public static Result create(List<Cell> cells) {
-    return new Result(cells.toArray(new Cell[cells.size()]));
+    return new Result(cells.toArray(new Cell[cells.size()]), null);
+  }
+
+  public static Result create(List<Cell> cells, Boolean exists) {
+    if (exists != null){
+      return new Result(null, exists);
+    }
+    return new Result(cells.toArray(new Cell[cells.size()]), exists);
   }
 
   /**
@@ -126,12 +134,13 @@ public class Result implements CellScannable {
    * @param cells array of cells
    */
   public static Result create(Cell[] cells) {
-    return new Result(cells);
+    return new Result(cells, null);
   }
 
   /** Private ctor. Use {@link #create(Cell[])}. */
-  private Result(Cell[] cells) {
+  private Result(Cell[] cells, Boolean exists) {
     this.cells = cells;
+    this.exists = exists;
   }
 
   /**
@@ -795,5 +804,13 @@ public class Result implements CellScannable {
   @Override
   public CellScanner cellScanner() {
     return CellUtil.createCellScanner(this.cells);
+  }
+
+  public Boolean getExists() {
+    return exists;
+  }
+
+  public void setExists(Boolean exists) {
+    this.exists = exists;
   }
 }

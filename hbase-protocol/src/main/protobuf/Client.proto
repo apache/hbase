@@ -38,7 +38,10 @@ message Column {
 }
 
 /**
- * The protocol buffer version of Get
+ * The protocol buffer version of Get.
+ * Unless existence_only is specified, return all the requested data
+ * for the row that matches exactly, or the one that immediately
+ * precedes it if closest_row_before is specified.
  */
 message Get {
   required bytes row = 1;
@@ -50,6 +53,14 @@ message Get {
   optional bool cache_blocks = 7 [default = true];
   optional uint32 store_limit = 8;
   optional uint32 store_offset = 9;
+
+  // The result isn't asked for, just check for
+  // the existence.
+  optional bool existence_only = 10 [default = false];
+
+  // If the row to get doesn't exist, return the
+  // closest row before.
+  optional bool closest_row_before = 11 [default = false];
 }
 
 message Result {
@@ -63,56 +74,22 @@ message Result {
   // ours.  NOTE: This is different from the pb managed cell_count of the
   // 'cell' field above which is non-null when the cells are pb'd.
   optional int32 associated_cell_count = 2;
+
+  // used for Get to check existence only. Not set if existence_only was not set to true
+  //  in the query.
+  optional bool exists = 3;
 }
 
 /**
  * The get request. Perform a single Get operation.
- * Unless existence_only is specified, return all the requested data
- * for the row that matches exactly, or the one that immediately
- * precedes it if closest_row_before is specified.
- *
- * If existence_only is set, only the existence will be returned.
  */
 message GetRequest {
   required RegionSpecifier region = 1;
   required Get get = 2;
-
-  // If the row to get doesn't exist, return the
-  // closest row before.
-  optional bool closest_row_before = 3;
-
-  // The result isn't asked for, just check for
-  // the existence. If closest_row_before specified,
-  // this will be ignored
-  optional bool existence_only = 4;
-}
-
-message MultiGetRequest {
-  required RegionSpecifier region = 1;
-  repeated Get get = 2;
-
-  // If the row to get doesn't exist, return the
-  // closest row before.
-  optional bool closest_row_before = 3;
-
-  // The result isn't asked for, just check for
-  // the existence. If closest_row_before specified,
-  // this will be ignored
-  optional bool existence_only = 4;
 }
 
 message GetResponse {
   optional Result result = 1;
-
-  // used for Get to check existence only
-  optional bool exists = 2;
-}
-
-message MultiGetResponse {
-  repeated Result result = 1;
-
-  // used for Get to check existence only
-  repeated bool exists = 2;
 }
 
 /**
@@ -317,52 +294,66 @@ message CoprocessorServiceResponse {
   required NameBytesPair value = 2;
 }
 
-/**
- * An action that is part of MultiRequest.
- * This is a union type - exactly one of the fields will be set.
- */
-message MultiAction {
-  optional MutationProto mutation = 1;
-  optional Get get = 2;
+// Either a Get or a Mutation
+message Action {
+  // If part of a multi action, useful aligning
+  // result with what was originally submitted.
+  optional uint32 index = 1;
+  optional MutationProto mutation = 2;
+  optional Get get = 3;
 }
 
 /**
- * An individual action result. The result will in the
- * same order as the action in the request. If an action
- * returns a value, it is set in value field. If it doesn't
- * return anything, the result will be empty. If an action
- * fails to execute due to any exception, the exception
- * is returned as a stringified parameter.
+ * Actions to run against a Region.
  */
-message ActionResult {
-  optional Result value = 1;
+message RegionAction {
+  required RegionSpecifier region = 1;
+  // When set, run mutations as atomic unit.
+  optional bool atomic = 2;
+  repeated Action action = 3;
+}
+
+/**
+ * Either a Result or an Exception NameBytesPair (keyed by
+ * exception name whose value is the exception stringified)
+ * or maybe empty if no result and no exception.
+ */
+message ResultOrException {
+  // If part of a multi call, save original index of the list of all
+  // passed so can align this response w/ original request.
+  optional uint32 index = 1;
+  optional Result result = 2;
+  optional NameBytesPair exception = 3;
+}
+
+/**
+ * The result of a RegionAction.
+ */
+message RegionActionResult {
+  repeated ResultOrException resultOrException = 1;
+  // If the operation failed globally for this region, this exception is set
   optional NameBytesPair exception = 2;
 }
 
 /**
- * You can execute a list of actions on a given region in order.
- *
- * If it is a list of mutate actions, atomic can be set
- * to make sure they can be processed atomically, just like
- * RowMutations.
+ * Execute a list of actions on a given region in order.
+ * Nothing prevents a request to contains a set of RegionAction on the same region.
+ * For this reason, the matching between the MultiRequest and the MultiResponse is not
+ *  done by the region specifier but by keeping the order of the RegionActionResult vs.
+ *  the order of the RegionAction.
  */
 message MultiRequest {
-  required RegionSpecifier region = 1;
-  repeated MultiAction action = 2;
-  optional bool atomic = 3;
+  repeated RegionAction regionAction = 1;
 }
 
 message MultiResponse {
-  repeated ActionResult result = 1;
+  repeated RegionActionResult regionActionResult = 1;
 }
 
 
 service ClientService {
   rpc Get(GetRequest)
     returns(GetResponse);
-
-  rpc MultiGet(MultiGetRequest)
-    returns(MultiGetResponse);
 
   rpc Mutate(MutateRequest)
     returns(MutateResponse);

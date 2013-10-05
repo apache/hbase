@@ -179,7 +179,6 @@ public class TestMultiParallel {
     for (Row get : gets) {
       singleRes.add(table.get((Get) get));
     }
-
     // Compare results
     Assert.assertEquals(singleRes.size(), multiRes.length);
     for (int i = 0; i < singleRes.size(); i++) {
@@ -332,16 +331,20 @@ public class TestMultiParallel {
     validateSizeAndEmpty(results, KEYS.length);
 
     if (true) {
-      int liveRScount = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
-          .size();
+      int liveRScount = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size();
       assert liveRScount > 0;
-      JVMClusterUtil.RegionServerThread liveRS = UTIL.getMiniHBaseCluster()
-          .getLiveRegionServerThreads().get(0);
-      liveRS.getRegionServer().abort("Aborting for tests",
-          new Exception("testBatchWithPut"));
-
+      JVMClusterUtil.RegionServerThread liveRS =
+        UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().get(0);
+      liveRS.getRegionServer().abort("Aborting for tests", new Exception("testBatchWithPut"));
       puts = constructPutRequests();
-      results = table.batch(puts);
+      try {
+        results = table.batch(puts);
+      } catch (RetriesExhaustedWithDetailsException ree) {
+        LOG.info(ree.getExhaustiveDescription());
+        throw ree;
+      } finally {
+        table.close();
+      }
       validateSizeAndEmpty(results, KEYS.length);
     }
 
@@ -597,6 +600,4 @@ public class TestMultiParallel {
       validateEmpty(result);
     }
   }
-
 }
-

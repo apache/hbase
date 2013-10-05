@@ -207,11 +207,13 @@ public final class CellUtil {
 
       @Override
       public Cell current() {
+        if (cells == null) return null;
         return (index < 0)? null: this.cells[index];
       }
 
       @Override
       public boolean advance() {
+        if (cells == null) return false;
         return ++index < this.cells.length;
       }
     };

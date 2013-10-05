@@ -2164,8 +2164,7 @@ public class HConnectionManager {
       boolean isStaleDelete = false;
       HRegionLocation oldLocation;
       synchronized (this.cachedRegionLocations) {
-        Map<byte[], HRegionLocation> tableLocations =
-          getTableLocations(hri.getTable());
+        Map<byte[], HRegionLocation> tableLocations = getTableLocations(hri.getTable());
         oldLocation = tableLocations.get(hri.getStartKey());
         if (oldLocation != null) {
            // Do not delete the cache entry if it's not for the same server that gave us the error.
@@ -2361,6 +2360,7 @@ public class HConnectionManager {
         return true; // we retry
       }
     }
+
 
     /*
      * Return the number of cached region for a table. It will only be called
