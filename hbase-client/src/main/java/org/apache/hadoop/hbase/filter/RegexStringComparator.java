@@ -109,12 +109,17 @@ public class RegexStringComparator extends ByteArrayComparable {
 
   @Override
   public int compareTo(byte[] value, int offset, int length) {
-    // See HBASE-9428. Make a copy of the relevant part of the byte[],
-    // or the JDK will copy the entire byte[] during String decode
-    byte[] tmp = Arrays.copyOfRange(value, offset, offset+length);
     // Use find() for subsequence match instead of matches() (full sequence
     // match) to adhere to the principle of least surprise.
-    return pattern.matcher(new String(tmp, charset)).find() ? 0 : 1;
+    String tmp;
+    if (length < value.length / 2) {
+      // See HBASE-9428. Make a copy of the relevant part of the byte[],
+      // or the JDK will copy the entire byte[] during String decode
+      tmp = new String(Arrays.copyOfRange(value, offset, offset + length), charset);
+    } else {
+      tmp = new String(value, offset, length, charset);
+    }
+    return pattern.matcher(tmp).find() ? 0 : 1;
   }
 
   /**
