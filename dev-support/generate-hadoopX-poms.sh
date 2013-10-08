@@ -61,7 +61,7 @@
 
 function usage {
   echo "Usage: $0 CURRENT_VERSION NEW_VERSION"
-  echo "For example, $0 hbase-0.95.2-SNAPSHOT hbase-0.95.2-hadoop1-SNAPSHOT"
+  echo "For example, $0 0.95.2-SNAPSHOT 0.95.2-hadoop1-SNAPSHOT"
   echo "Presumes VERSION has hadoop1 or hadoop2 in it."
   exit 1
 }
