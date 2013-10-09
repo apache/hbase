@@ -62,7 +62,9 @@ public class BlockCacheKey implements HeapSize {
       BlockCacheKey k = (BlockCacheKey) o;
       return offset == k.offset
           && (hfileName == null ? k.hfileName == null : hfileName
-              .equals(k.hfileName));
+              .equals(k.hfileName))
+          && (encoding == null ? k.encoding == null :
+              encoding.ordinal() == k.encoding.ordinal());
     } else {
       return false;
     }
