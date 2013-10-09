@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -90,7 +91,7 @@ public class ZNodeClearer {
   public static String readMyEphemeralNodeOnDisk() throws IOException {
     String fileName = getMyEphemeralNodeFileName();
     if (fileName == null){
-      throw new IOException("No filename");
+      throw new FileNotFoundException("No filename; set environment variable HBASE_ZNODE_FILE");
     }
     FileReader znodeFile = new FileReader(fileName);
     BufferedReader br = new BufferedReader(znodeFile);
@@ -141,9 +142,15 @@ public class ZNodeClearer {
     String znodeFileContent;
     try {
       znodeFileContent = ZNodeClearer.readMyEphemeralNodeOnDisk();
+    } catch (FileNotFoundException fnfe) {
+      // If no file, just keep going -- return success.
+      LOG.warn("Can't find the znode file; presume non-fatal", fnfe);
+      return true;
     } catch (IOException e) {
       LOG.warn("Can't read the content of the znode file", e);
       return false;
+    } finally {
+      zkw.close();
     }
 
     return MasterAddressTracker.deleteIfEquals(zkw, znodeFileContent);
