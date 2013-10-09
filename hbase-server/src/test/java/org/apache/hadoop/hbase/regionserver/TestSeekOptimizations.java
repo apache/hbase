@@ -140,6 +140,9 @@ public class TestSeekOptimizations {
 
   @Test
   public void testMultipleTimestampRanges() throws IOException {
+    // enable seek counting
+    StoreFileScanner.instrument();
+
     region = TEST_UTIL.createTestRegion("testMultipleTimestampRanges",
         new HColumnDescriptor(FAMILY)
             .setCompressionType(comprAlgo)
