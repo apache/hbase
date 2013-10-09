@@ -40,20 +40,21 @@ import java.net.InetAddress
 NAME = "reload_rs_config"
 
 def usage
-  puts 'Usage %s.rb [reloadAll]' % NAME
-  puts 'Use reloadAll to make all the Region Servers reload their configurations'
+  puts 'Usage: %s.rb [reloadAll | hostname]' % NAME
+  puts 'Use reloadAll to make all the Region Servers reload their configurations, or,'
+  puts 'Use a specific hostname to make a specific region server reload its configuration'
   exit!
 end
 
 reloadAll = false
 
-if ARGV.size > 1
+if ARGV.size != 1
   usage
-elsif ARGV.size == 1
+else
   if ARGV[0] == 'reloadAll'
     reloadAll = true
   else
-    usage
+    hostname = ARGV[0]
   end
 end
 
@@ -72,7 +73,6 @@ LOG = LogFactory.getLog(NAME)
 # get the admin interface
 admin = HBaseAdmin.new(c)
 
-hostname = InetAddress.getLocalHost().getHostName()
 port = c.getInt("hbase.regionserver.port", 0)
 
 if reloadAll
@@ -106,6 +106,7 @@ else
     exit
   end
 
+  puts "Updating the configuration at host " + address.getHostname()
   admin.updateConfiguration(address)
 end
 
