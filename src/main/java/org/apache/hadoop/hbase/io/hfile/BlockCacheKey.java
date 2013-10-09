@@ -52,11 +52,8 @@ public class BlockCacheKey implements HeapSize {
 
   @Override
   public int hashCode() {
-    return hfileName.hashCode() * 127 + (int) (offset ^ (offset >>> 32));
-//     + encoding.ordinal() * 17;
-    // There's no reason for encoding to be in the cache key as the encoding already exists in the
-    // block itself.
-    // Also encoding doesn't contribute in the equal(Object o) method.
+    return hfileName.hashCode() * 127 + (int) (offset ^ (offset >>> 32)
+     + encoding.ordinal() * 17);
   }
 
   @Override
