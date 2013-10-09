@@ -37,7 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -50,7 +50,9 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
@@ -192,6 +194,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue("not able to find a splittable region", region != null);
 
       new Thread() {
+        @Override
         public void run() {
           SplitTransaction st = null;
           st = new MockedSplitTransaction(region, Bytes.toBytes("row2"));
@@ -247,6 +250,65 @@ public class TestSplitTransactionOnCluster {
       callRollBack = false;
       cluster.getMaster().setCatalogJanitorEnabled(true);
       TESTING_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testRITStateForRollback() throws Exception {
+    final TableName tableName =
+        TableName.valueOf("testRITStateForRollback");
+    try {
+      // Create table then get the single region for our new table.
+      HTable t = createTableAndWait(tableName.getName(), Bytes.toBytes("cf"));
+      final List<HRegion> regions = cluster.getRegions(tableName);
+      final HRegionInfo hri = getAndCheckSingleTableRegion(regions);
+      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+      final HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+      insertData(tableName.getName(), admin, t);
+      t.close();
+
+      // Turn off balancer so it doesn't cut in and mess up our placements.
+      this.admin.setBalancerRunning(false, true);
+      // Turn off the meta scanner so it don't remove parent on us.
+      cluster.getMaster().setCatalogJanitorEnabled(false);
+
+      // find a splittable region
+      final HRegion region = findSplittableRegion(regions);
+      assertTrue("not able to find a splittable region", region != null);
+
+      // install region co-processor to fail splits
+      region.getCoprocessorHost().load(FailingSplitRegionObserver.class,
+        Coprocessor.PRIORITY_USER, region.getBaseConf());
+
+      // split async
+      this.admin.split(region.getRegionName(), new byte[] {42});
+
+      // we have to wait until the SPLITTING state is seen by the master
+      FailingSplitRegionObserver.latch.await();
+
+      LOG.info("Waiting for region to come out of RIT");
+      TESTING_UTIL.waitFor(60000, 1000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
+          Map<String, RegionState> rit = regionStates.getRegionsInTransition();
+          return !rit.containsKey(hri.getEncodedName());
+        }
+      });
+    } finally {
+      admin.setBalancerRunning(true, false);
+      cluster.getMaster().setCatalogJanitorEnabled(true);
+      TESTING_UTIL.deleteTable(tableName);
+    }
+  }
+
+  public static class FailingSplitRegionObserver extends BaseRegionObserver {
+    static volatile CountDownLatch latch = new CountDownLatch(1);
+    @Override
+    public void preSplitBeforePONR(ObserverContext<RegionCoprocessorEnvironment> ctx,
+        byte[] splitKey, List<Mutation> metaEntries) throws IOException {
+      latch.countDown();
+      throw new IOException("Causing rollback of region split");
     }
   }
 
@@ -1192,6 +1254,7 @@ public class TestSplitTransactionOnCluster {
       super(conf);
     }
 
+    @Override
     protected void startCatalogJanitorChore() {
       LOG.debug("Customised master executed.");
     }

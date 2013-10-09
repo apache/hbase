@@ -146,7 +146,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * See below in {@link #assign()} and {@link #unassign()}.
    */
   private final int maximumAttempts;
-  
+
   /**
    * The sleep time for which the assignment will wait before retrying in case of hbase:meta assignment
    * failure due to lack of availability of region plan
@@ -1324,7 +1324,15 @@ public class AssignmentManager extends ZooKeeperListener {
                   + "but this table is disabled, triggering close of region");
                 unassign(regionInfo);
               }
+            } else if (rs.isSplitting()) {
+              LOG.debug("Ephemeral node deleted.  Found in SPLITTING state. " + "Removing from RIT "
+                  + rs.getRegion());
+              // it can be either SPLIT fail, or RS dead.
+              regionStates.regionOnline(rs.getRegion(), rs.getServerName());
             }
+            // RS does not delete the znode in case SPLIT, it only means RS died which
+            // will be handled by SSH
+            // in region merge  we do not put merging regions to MERGING state
           } finally {
             lock.unlock();
           }
