@@ -52,7 +52,7 @@ public class StoreFileScanner implements KeyValueScanner {
 
   private boolean enforceMVCC = false;
 
-  private static final AtomicLong seekCount = new AtomicLong();
+  private static AtomicLong seekCount;
 
   private ScanQueryMatcher matcher;
 
@@ -133,7 +133,7 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   public boolean seek(KeyValue key) throws IOException {
-    seekCount.incrementAndGet();
+    if (seekCount != null) seekCount.incrementAndGet();
 
     try {
       try {
@@ -154,7 +154,7 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   public boolean reseek(KeyValue key) throws IOException {
-    seekCount.incrementAndGet();
+    if (seekCount != null) seekCount.incrementAndGet();
 
     try {
       try {
@@ -365,6 +365,9 @@ public class StoreFileScanner implements KeyValueScanner {
 
   static final long getSeekCount() {
     return seekCount.get();
+  }
+  static final void instrument() {
+    seekCount = new AtomicLong();
   }
 
   @Override
