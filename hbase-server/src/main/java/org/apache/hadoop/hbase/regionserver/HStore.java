@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -813,18 +814,20 @@ public class HStore implements Store {
   
   private HFileContext createFileContext(Compression.Algorithm compression,
       boolean includeMVCCReadpoint, boolean includesTag) {
-    HFileContext hFileContext = new HFileContext();
-    hFileContext.setIncludesMvcc(includeMVCCReadpoint);
-    hFileContext.setIncludesTags(includesTag);
     if (compression == null) {
       compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
     }
-    hFileContext.setCompressAlgo(compression);
-    hFileContext.setChecksumType(checksumType);
-    hFileContext.setBytesPerChecksum(bytesPerChecksum);
-    hFileContext.setBlocksize(blocksize);
-    hFileContext.setEncodingInCache(family.getDataBlockEncoding());
-    hFileContext.setEncodingOnDisk(family.getDataBlockEncodingOnDisk());
+    HFileContext hFileContext = new HFileContextBuilder()
+                                .withIncludesMvcc(includeMVCCReadpoint)
+                                .withIncludesTags(includesTag)
+                                .withCompressionAlgo(compression)
+                                .withChecksumType(checksumType)
+                                .withBytesPerCheckSum(bytesPerChecksum)
+                                .withBlockSize(blocksize)
+                                .withHBaseCheckSum(true)
+                                .withDataBlockEncodingOnDisk(family.getDataBlockEncodingOnDisk())
+                                .withDataBlockEncodingInCache(family.getDataBlockEncoding())
+                                .build();
     return hFileContext;
   }
 

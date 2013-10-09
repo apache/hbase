@@ -179,12 +179,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
   }
 
   protected HFileContext createHFileContext(FixedFileTrailer trailer) {
-    HFileContext meta = new HFileContext();
-    meta.setIncludesMvcc(this.includesMemstoreTS);
-    meta.setUsesHBaseChecksum(
-        trailer.getMinorVersion() >= MINOR_VERSION_WITH_CHECKSUM);
-    meta.setCompressAlgo(this.compressAlgo);
-    return meta;
+    HFileContext hFileContext  = new HFileContextBuilder()
+                                 .withIncludesMvcc(this.includesMemstoreTS)
+                                 .withCompressionAlgo(this.compressAlgo)
+                                 .withHBaseCheckSum(trailer.getMinorVersion() >= MINOR_VERSION_WITH_CHECKSUM)
+                                 .build();
+    return hFileContext;
   }
 
   /**

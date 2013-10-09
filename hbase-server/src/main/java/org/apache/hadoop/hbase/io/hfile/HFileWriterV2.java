@@ -34,11 +34,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
-import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -135,9 +132,6 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   protected HFileBlock.Writer createBlockWriter() {
     // HFile filesystem-level (non-caching) block writer
     hFileContext.setIncludesTags(false);
-    // This can be set while the write is created itself because
-    // in both cases useHBaseChecksum is going to be true
-    hFileContext.setUsesHBaseChecksum(true);
     return new HFileBlock.Writer(blockEncoder, hFileContext);
   }
   /**

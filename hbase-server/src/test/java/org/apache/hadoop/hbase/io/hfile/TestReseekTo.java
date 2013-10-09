@@ -57,8 +57,7 @@ public class TestReseekTo {
       TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
     }
     CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
-    HFileContext context = new HFileContext();
-    context.setBlocksize(4000);
+    HFileContext context = new HFileContextBuilder().withBlockSize(4000).build();
     HFile.Writer writer = HFile.getWriterFactory(
         TEST_UTIL.getConfiguration(), cacheConf)
             .withOutputStream(fout)

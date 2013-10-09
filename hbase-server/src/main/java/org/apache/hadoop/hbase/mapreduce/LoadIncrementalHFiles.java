@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -653,19 +654,19 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       int blocksize = familyDescriptor.getBlocksize();
       Algorithm compression = familyDescriptor.getCompression();
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
-
-      HFileContext meta = new HFileContext();
-      meta.setCompressAlgo(compression);
-      meta.setChecksumType(HStore.getChecksumType(conf));
-      meta.setBytesPerChecksum(HStore.getBytesPerChecksum(conf));
-      meta.setBlocksize(blocksize);
-      meta.setEncodingInCache(familyDescriptor.getDataBlockEncoding());
-      meta.setEncodingOnDisk(familyDescriptor.getDataBlockEncodingOnDisk());
+      HFileContext hFileContext = new HFileContextBuilder()
+                                  .withCompressionAlgo(compression)
+                                  .withChecksumType(HStore.getChecksumType(conf))
+                                  .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
+                                  .withBlockSize(blocksize)
+                                  .withDataBlockEncodingInCache(familyDescriptor.getDataBlockEncoding())
+                                  .withDataBlockEncodingOnDisk(familyDescriptor.getDataBlockEncodingOnDisk())
+                                  .build();
       halfWriter = new StoreFile.WriterBuilder(conf, cacheConf,
           fs)
               .withFilePath(outFile)
               .withBloomType(bloomFilterType)
-              .withFileContext(meta)
+              .withFileContext(hFileContext)
               .build();
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();

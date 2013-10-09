@@ -31,11 +31,12 @@ import java.util.Random;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
 import org.junit.Test;
@@ -76,11 +77,11 @@ public class TestDataBlockEncoders {
   private HFileBlockEncodingContext getEncodingContext(Compression.Algorithm algo,
       DataBlockEncoding encoding) {
     DataBlockEncoder encoder = encoding.getEncoder();
-    HFileContext meta = new HFileContext();
-    meta.setUsesHBaseChecksum(false);
-    meta.setIncludesMvcc(includesMemstoreTS);
-    meta.setIncludesTags(includesTags);
-    meta.setCompressAlgo(algo);
+    HFileContext meta = new HFileContextBuilder()
+                        .withHBaseCheckSum(false)
+                        .withIncludesMvcc(includesMemstoreTS)
+                        .withIncludesTags(includesTags)
+                        .withCompressionAlgo(algo).build();
     if (encoder != null) {
       return encoder.newDataBlockEncodingContext(encoding,
           HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
@@ -114,11 +115,11 @@ public class TestDataBlockEncoders {
     DataInputStream dis = new DataInputStream(bais);
     ByteBuffer actualDataset;
     DataBlockEncoder encoder = encoding.getEncoder();
-    HFileContext meta = new HFileContext();
-    meta.setUsesHBaseChecksum(false);
-    meta.setIncludesMvcc(includesMemstoreTS);
-    meta.setIncludesTags(includesTags);
-    meta.setCompressAlgo(Compression.Algorithm.NONE);
+    HFileContext meta = new HFileContextBuilder()
+                        .withHBaseCheckSum(false)
+                        .withIncludesMvcc(includesMemstoreTS)
+                        .withIncludesTags(includesTags)
+                        .withCompressionAlgo(Compression.Algorithm.NONE).build();
     actualDataset = encoder.decodeKeyValues(dis, encoder.newDataBlockDecodingContext(meta));
     dataset.rewind();
     actualDataset.rewind();
@@ -219,11 +220,12 @@ public class TestDataBlockEncoders {
 
       ByteBuffer encodedBuffer = ByteBuffer.wrap(encodeBytes(encoding, originalBuffer));
       DataBlockEncoder encoder = encoding.getEncoder();
-      HFileContext meta = new HFileContext();
-      meta.setUsesHBaseChecksum(false);
-      meta.setIncludesMvcc(includesMemstoreTS);
-      meta.setIncludesTags(includesTags);
-      meta.setCompressAlgo(Compression.Algorithm.NONE);
+      HFileContext meta = new HFileContextBuilder()
+                          .withHBaseCheckSum(false)
+                          .withIncludesMvcc(includesMemstoreTS)
+                          .withIncludesTags(includesTags)
+                          .withCompressionAlgo(Compression.Algorithm.NONE)
+                          .build();
       DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
       seeker.setCurrentBuffer(encodedBuffer);
@@ -274,11 +276,12 @@ public class TestDataBlockEncoders {
         throw new RuntimeException(String.format("Bug while encoding using '%s'",
             encoder.toString()), e);
       }
-      HFileContext meta = new HFileContext();
-      meta.setUsesHBaseChecksum(false);
-      meta.setIncludesMvcc(includesMemstoreTS);
-      meta.setIncludesTags(includesTags);
-      meta.setCompressAlgo(Compression.Algorithm.NONE);
+      HFileContext meta = new HFileContextBuilder()
+                          .withHBaseCheckSum(false)
+                          .withIncludesMvcc(includesMemstoreTS)
+                          .withIncludesTags(includesTags)
+                          .withCompressionAlgo(Compression.Algorithm.NONE)
+                          .build();
       DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
       seeker.setCurrentBuffer(encodedBuffer);

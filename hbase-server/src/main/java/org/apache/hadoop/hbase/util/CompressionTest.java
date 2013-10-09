@@ -18,9 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.awt.*;
 import java.io.IOException;
-import java.util.Arrays;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -32,10 +30,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.io.compress.Compressor;
 
 /**
@@ -114,8 +113,8 @@ public class CompressionTest {
   public static void doSmokeTest(FileSystem fs, Path path, String codec)
   throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    HFileContext context = new HFileContext();
-    context.setCompressAlgo(AbstractHFileWriter.compressionByName(codec));
+    HFileContext context = new HFileContextBuilder()
+                           .withCompressionAlgo(AbstractHFileWriter.compressionByName(codec)).build();
     HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
         .withPath(fs, path)
         .withFileContext(context)

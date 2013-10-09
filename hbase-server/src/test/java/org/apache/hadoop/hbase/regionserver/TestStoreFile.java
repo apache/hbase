@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -96,8 +97,7 @@ public class TestStoreFile extends HBaseTestCase {
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
       conf, fs, new Path(this.testDir, hri.getTable().getNameAsString()), hri);
 
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(2 * 1024);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(2*1024).build();
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs)
             .withFilePath(regionFs.createTempName())
             .withFileContext(meta)
@@ -148,8 +148,7 @@ public class TestStoreFile extends HBaseTestCase {
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
       conf, fs, new Path(this.testDir, hri.getTable().getNameAsString()), hri);
 
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(8 * 1024);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs)
             .withFilePath(regionFs.createTempName())
@@ -194,8 +193,7 @@ public class TestStoreFile extends HBaseTestCase {
     FSUtils.setRootDir(testConf, this.testDir);
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
       testConf, fs, FSUtils.getTableDir(this.testDir, hri.getTable()), hri);
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(8 * 1024);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
 
     // Make a store file and write data to it.
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs)
@@ -240,8 +238,7 @@ public class TestStoreFile extends HBaseTestCase {
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
       testConf, fs, FSUtils.getTableDir(this.testDir, hri.getTable()), hri);
 
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(8 * 1024);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it. <root>/<tablename>/<rgn>/<cf>/<file>
     StoreFile.Writer writer = new StoreFile.WriterBuilder(testConf, cacheConf, this.fs)
             .withFilePath(regionFs.createTempName())
@@ -503,10 +500,9 @@ public class TestStoreFile extends HBaseTestCase {
 
     // write the file
     Path f = new Path(ROOT_DIR, getName());
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(StoreFile.DEFAULT_BLOCKSIZE_SMALL);
-    meta.setChecksumType(CKTYPE);
-    meta.setBytesPerChecksum(CKBYTES);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+                        .withChecksumType(CKTYPE)
+                        .withBytesPerCheckSum(CKBYTES).build();
     // Make a store file and write data to it.
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs)
             .withFilePath(f)
@@ -526,10 +522,10 @@ public class TestStoreFile extends HBaseTestCase {
     // write the file
     Path f = new Path(ROOT_DIR, getName());
 
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(StoreFile.DEFAULT_BLOCKSIZE_SMALL);
-    meta.setChecksumType(CKTYPE);
-    meta.setBytesPerChecksum(CKBYTES);
+    HFileContext meta = new HFileContextBuilder()
+                        .withBlockSize(StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+                        .withChecksumType(CKTYPE)
+                        .withBytesPerCheckSum(CKBYTES).build();
     // Make a store file and write data to it.
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs)
             .withFilePath(f)
@@ -582,8 +578,7 @@ public class TestStoreFile extends HBaseTestCase {
   public void testReseek() throws Exception {
     // write the file
     Path f = new Path(ROOT_DIR, getName());
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(8 * 1024);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs)
             .withFilePath(f)
@@ -626,10 +621,9 @@ public class TestStoreFile extends HBaseTestCase {
     for (int x : new int[]{0,1}) {
       // write the file
       Path f = new Path(ROOT_DIR, getName() + x);
-      HFileContext meta = new HFileContext();
-      meta.setBlocksize(StoreFile.DEFAULT_BLOCKSIZE_SMALL);
-      meta.setChecksumType(CKTYPE);
-      meta.setBytesPerChecksum(CKBYTES);
+      HFileContext meta = new HFileContextBuilder().withBlockSize(StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+          .withChecksumType(CKTYPE)
+          .withBytesPerCheckSum(CKBYTES).build();
       // Make a store file and write data to it.
       StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs)
               .withFilePath(f)
@@ -782,8 +776,7 @@ public class TestStoreFile extends HBaseTestCase {
     // Make up a directory hierarchy that has a regiondir ("7e0102") and familyname.
     Path storedir = new Path(new Path(this.testDir, "7e0102"), "familyname");
     Path dir = new Path(storedir, "1234567890");
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(8 * 1024);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs)
             .withOutputDir(dir)
@@ -969,10 +962,10 @@ public class TestStoreFile extends HBaseTestCase {
       totalSize += kv.getLength() + 1;
     }
     int blockSize = totalSize / numBlocks;
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(blockSize);
-    meta.setChecksumType(CKTYPE);
-    meta.setBytesPerChecksum(CKBYTES);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(blockSize)
+                        .withChecksumType(CKTYPE)
+                        .withBytesPerCheckSum(CKBYTES)
+                        .build();
     // Make a store file and write data to it.
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs)
             .withFilePath(path)
@@ -1005,12 +998,12 @@ public class TestStoreFile extends HBaseTestCase {
             dataBlockEncoderAlgo,
             dataBlockEncoderAlgo);
     cacheConf = new CacheConfig(conf);
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(HConstants.DEFAULT_BLOCKSIZE);
-    meta.setChecksumType(CKTYPE);
-    meta.setBytesPerChecksum(CKBYTES);
-    meta.setEncodingOnDisk(dataBlockEncoderAlgo);
-    meta.setEncodingInCache(dataBlockEncoderAlgo);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+        .withChecksumType(CKTYPE)
+        .withBytesPerCheckSum(CKBYTES)
+        .withDataBlockEncodingInCache(dataBlockEncoderAlgo)
+        .withDataBlockEncodingOnDisk(dataBlockEncoderAlgo)
+        .build();
     // Make a store file and write data to it.
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs)
             .withFilePath(path)

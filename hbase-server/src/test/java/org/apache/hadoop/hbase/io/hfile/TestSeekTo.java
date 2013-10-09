@@ -22,9 +22,12 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.RawComparator;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -73,8 +76,7 @@ public class TestSeekTo extends HBaseTestCase {
     }
     FSDataOutputStream fout = this.fs.create(ncTFile);
     int blocksize = toKV("a", tagUsage).getLength() * 3;
-    HFileContext context = new HFileContext();
-    context.setBlocksize(blocksize);
+    HFileContext context = new HFileContextBuilder().withBlockSize(blocksize).build();
     HFile.Writer writer = HFile.getWriterFactoryNoCache(conf).withOutputStream(fout)
         .withFileContext(context)
         // NOTE: This test is dependent on this deprecated nonstandard

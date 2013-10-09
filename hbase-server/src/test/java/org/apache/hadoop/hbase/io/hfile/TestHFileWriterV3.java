@@ -115,9 +115,9 @@ public class TestHFileWriterV3 {
 
   private void writeDataAndReadFromHFile(Path hfilePath,
       Algorithm compressAlgo, int entryCount, boolean findMidKey, boolean useTags) throws IOException {
-    HFileContext context = new HFileContext();
-    context.setBlocksize(4096);
-    context.setCompressAlgo(compressAlgo);
+    HFileContext context = new HFileContextBuilder()
+                           .withBlockSize(4096)
+                           .withCompressionAlgo(compressAlgo).build();
     HFileWriterV3 writer = (HFileWriterV3)
         new HFileWriterV3.WriterFactoryV3(conf, new CacheConfig(conf))
             .withPath(fs, hfilePath)
@@ -168,11 +168,11 @@ public class TestHFileWriterV3 {
 
     assertEquals(3, trailer.getMajorVersion());
     assertEquals(entryCount, trailer.getEntryCount());
-    HFileContext meta = new HFileContext();
-    meta.setCompressAlgo(compressAlgo);
-    meta.setIncludesMvcc(false);
-    meta.setIncludesTags(useTags);
-    meta.setUsesHBaseChecksum(true);
+    HFileContext meta = new HFileContextBuilder()
+                        .withCompressionAlgo(compressAlgo)
+                        .withIncludesMvcc(false)
+                        .withIncludesTags(useTags)
+                        .withHBaseCheckSum(true).build();
     HFileBlock.FSReader blockReader =
         new HFileBlock.FSReaderV2(fsdis, fileSize, meta);
  // Comparator class name is stored in the trailer in version 2.

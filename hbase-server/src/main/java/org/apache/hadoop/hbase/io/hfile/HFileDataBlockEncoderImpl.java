@@ -245,14 +245,14 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
    * See HBASE-8732
    * @return a new in cache encoding context
    */
-  private HFileBlockEncodingContext createInCacheEncodingContext(HFileContext meta) {
-    HFileContext newMeta = meta.clone();
+  private HFileBlockEncodingContext createInCacheEncodingContext(HFileContext fileContext) {
+    HFileContext newContext = new HFileContext(fileContext);
     return (inCache != DataBlockEncoding.NONE) ?
                 this.inCache.getEncoder().newDataBlockEncodingContext(
-                    this.inCache, dummyHeader, newMeta)
+                    this.inCache, dummyHeader, newContext)
                 :
                 // create a default encoding context
-                new HFileBlockDefaultEncodingContext(this.inCache, dummyHeader, newMeta);
+                new HFileBlockDefaultEncodingContext(this.inCache, dummyHeader, newContext);
   }
 
   @Override

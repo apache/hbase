@@ -64,12 +64,13 @@ public class HFileReaderV3 extends HFileReaderV2 {
 
   @Override
   protected HFileContext createHFileContext(FixedFileTrailer trailer) {
-    HFileContext meta = new HFileContext();
-    meta.setIncludesMvcc(this.includesMemstoreTS);
-    meta.setUsesHBaseChecksum(true);
-    meta.setCompressAlgo(this.compressAlgo);
-    meta.setIncludesTags(true);
-    return meta;
+    HFileContext hfileContext = new HFileContextBuilder()
+                                .withIncludesMvcc(this.includesMemstoreTS)
+                                .withHBaseCheckSum(true)
+                                .withCompressionAlgo(this.compressAlgo)
+                                .withIncludesTags(true)
+                                .build();
+    return hfileContext;
   }
 
   /**

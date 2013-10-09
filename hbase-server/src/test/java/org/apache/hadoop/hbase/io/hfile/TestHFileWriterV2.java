@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
@@ -94,9 +93,10 @@ public class TestHFileWriterV2 {
   private void writeDataAndReadFromHFile(Path hfilePath,
       Algorithm compressAlgo, int entryCount, boolean findMidKey) throws IOException {
 
-    HFileContext context = new HFileContext();
-    context.setBlocksize(4096);
-    context.setCompressAlgo(compressAlgo);
+    HFileContext context = new HFileContextBuilder()
+                           .withBlockSize(4096)
+                           .withCompressionAlgo(compressAlgo)
+                           .build();
     HFileWriterV2 writer = (HFileWriterV2)
         new HFileWriterV2.WriterFactoryV2(conf, new CacheConfig(conf))
             .withPath(fs, hfilePath)
@@ -137,11 +137,12 @@ public class TestHFileWriterV2 {
     assertEquals(2, trailer.getMajorVersion());
     assertEquals(entryCount, trailer.getEntryCount());
 
-    HFileContext meta = new HFileContext();
-    meta.setUsesHBaseChecksum(true);
-    meta.setIncludesMvcc(false);
-    meta.setIncludesTags(false);
-    meta.setCompressAlgo(compressAlgo);
+    HFileContext meta = new HFileContextBuilder()
+                        .withHBaseCheckSum(true)
+                        .withIncludesMvcc(false)
+                        .withIncludesTags(false)
+                        .withCompressionAlgo(compressAlgo)
+                        .build();
     
     HFileBlock.FSReader blockReader = new HFileBlock.FSReaderV2(fsdis, fileSize, meta);
     // Comparator class name is stored in the trailer in version 2.

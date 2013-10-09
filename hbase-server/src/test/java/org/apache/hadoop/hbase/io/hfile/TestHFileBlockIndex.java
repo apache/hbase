@@ -188,11 +188,12 @@ public class TestHFileBlockIndex {
     LOG.info("Size of " + path + ": " + fileSize);
 
     FSDataInputStream istream = fs.open(path);
-    HFileContext meta = new HFileContext();
-    meta.setUsesHBaseChecksum(true);
-    meta.setIncludesMvcc(includesMemstoreTS);
-    meta.setIncludesTags(useTags);
-    meta.setCompressAlgo(compr);
+    HFileContext meta = new HFileContextBuilder()
+                        .withHBaseCheckSum(true)
+                        .withIncludesMvcc(includesMemstoreTS)
+                        .withIncludesTags(useTags)
+                        .withCompressionAlgo(compr)
+                        .build();
     HFileBlock.FSReader blockReader = new HFileBlock.FSReaderV2(istream, fs.getFileStatus(path)
         .getLen(), meta);
 
@@ -241,13 +242,14 @@ public class TestHFileBlockIndex {
 
   private void writeWholeIndex(boolean useTags) throws IOException {
     assertEquals(0, keys.size());
-    HFileContext meta = new HFileContext();
-    meta.setUsesHBaseChecksum(true);
-    meta.setIncludesMvcc(includesMemstoreTS);
-    meta.setIncludesTags(useTags);
-    meta.setCompressAlgo(compr);
-    meta.setChecksumType(HFile.DEFAULT_CHECKSUM_TYPE);
-    meta.setBytesPerChecksum(HFile.DEFAULT_BYTES_PER_CHECKSUM);
+    HFileContext meta = new HFileContextBuilder()
+                        .withHBaseCheckSum(true)
+                        .withIncludesMvcc(includesMemstoreTS)
+                        .withIncludesTags(useTags)
+                        .withCompressionAlgo(compr)
+                        .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
+                        .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
+                        .build();
     HFileBlock.Writer hbw = new HFileBlock.Writer(null,
         meta);
     FSDataOutputStream outputStream = fs.create(path);
@@ -516,9 +518,10 @@ public class TestHFileBlockIndex {
 
       // Write the HFile
       {
-        HFileContext meta = new HFileContext();
-        meta.setBlocksize(SMALL_BLOCK_SIZE);
-        meta.setCompressAlgo(compr);
+        HFileContext meta = new HFileContextBuilder()
+                            .withBlockSize(SMALL_BLOCK_SIZE)
+                            .withCompressionAlgo(compr)
+                            .build();
         HFile.Writer writer =
             HFile.getWriterFactory(conf, cacheConf)
                 .withPath(fs, hfilePath)

@@ -49,9 +49,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -194,18 +192,20 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
             : Integer.parseInt(blockSizeString);
         Configuration tempConf = new Configuration(conf);
         tempConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
-        HFileContext meta = new HFileContext();
-        meta.setCompressAlgo(AbstractHFileWriter.compressionByName(compression));
-        meta.setChecksumType(HStore.getChecksumType(conf));
-        meta.setBytesPerChecksum(HStore.getBytesPerChecksum(conf));
-        meta.setBlocksize(blockSize);
-        if (dataBlockEncodingStr != null) {
-          meta.setEncodingInCache(DataBlockEncoding.valueOf(dataBlockEncodingStr));
-          meta.setEncodingOnDisk(DataBlockEncoding.valueOf(dataBlockEncodingStr));
+        HFileContextBuilder contextBuilder = new HFileContextBuilder()
+                                    .withCompressionAlgo(AbstractHFileWriter.compressionByName(compression))
+                                    .withChecksumType(HStore.getChecksumType(conf))
+                                    .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
+                                    .withBlockSize(blockSize);
+        if(dataBlockEncodingStr !=  null) {
+          contextBuilder.withDataBlockEncodingOnDisk(DataBlockEncoding.valueOf(dataBlockEncodingStr))
+                        .withDataBlockEncodingInCache(DataBlockEncoding.valueOf(dataBlockEncodingStr));
         }
+        HFileContext hFileContext = contextBuilder.build();
+                                    
         wl.writer = new StoreFile.WriterBuilder(conf, new CacheConfig(tempConf), fs)
             .withOutputDir(familydir).withBloomType(bloomType).withComparator(KeyValue.COMPARATOR)
-            .withFileContext(meta)
+            .withFileContext(hFileContext)
             .build();
 
         this.writers.put(family, wl);

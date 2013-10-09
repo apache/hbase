@@ -239,18 +239,19 @@ public class HFileBlock implements Cacheable {
     onDiskSizeWithoutHeader = b.getInt();
     uncompressedSizeWithoutHeader = b.getInt();
     prevBlockOffset = b.getLong();
-    this.fileContext = new HFileContext();
-    this.fileContext.setUsesHBaseChecksum(usesHBaseChecksum);
+    HFileContextBuilder contextBuilder = new HFileContextBuilder();
+    contextBuilder.withHBaseCheckSum(usesHBaseChecksum);
     if (usesHBaseChecksum) {
-      this.fileContext.setChecksumType(ChecksumType.codeToType(b.get()));
-      this.fileContext.setBytesPerChecksum(b.getInt());
+      contextBuilder.withChecksumType(ChecksumType.codeToType(b.get()));
+      contextBuilder.withBytesPerCheckSum(b.getInt());
       this.onDiskDataSizeWithHeader = b.getInt();
     } else {
-      this.fileContext.setChecksumType(ChecksumType.NULL);
-      this.fileContext.setBytesPerChecksum(0);
+      contextBuilder.withChecksumType(ChecksumType.NULL);
+      contextBuilder.withBytesPerCheckSum(0);
       this.onDiskDataSizeWithHeader = onDiskSizeWithoutHeader +
                                        HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM;
     }
+    this.fileContext = contextBuilder.build();
     buf = b;
     buf.rewind();
   }
@@ -1019,9 +1020,18 @@ public class HFileBlock implements Cacheable {
      * 0 value in bytesPerChecksum.
      */
     public HFileBlock getBlockForCaching() {
-      HFileContext newContext = fileContext.clone();
-      newContext.setBytesPerChecksum(0);
-      newContext.setChecksumType(ChecksumType.NULL); // no checksums in cached data
+      HFileContext newContext = new HFileContextBuilder()
+                                .withBlockSize(fileContext.getBlocksize())
+                                .withBytesPerCheckSum(0)
+                                .withChecksumType(ChecksumType.NULL) // no checksums in cached data
+                                .withCompressionAlgo(fileContext.getCompression())
+                                .withDataBlockEncodingInCache(fileContext.getEncodingInCache())
+                                .withDataBlockEncodingOnDisk(fileContext.getEncodingOnDisk())
+                                .withHBaseCheckSum(fileContext.shouldUseHBaseChecksum())
+                                .withCompressTags(fileContext.shouldCompressTags())
+                                .withIncludesMvcc(fileContext.shouldIncludeMvcc())
+                                .withIncludesTags(fileContext.shouldIncludeTags())
+                                .build();
       return new HFileBlock(blockType, getOnDiskSizeWithoutHeader(),
           getUncompressedSizeWithoutHeader(), prevOffset, getUncompressedBufferWithHeader(),
           DONT_FILL_HEADER, startOffset,

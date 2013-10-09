@@ -83,8 +83,7 @@ public class TestHFile extends HBaseTestCase {
   public void testEmptyHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, getName());
-    HFileContext context = new HFileContext();
-    context.setIncludesTags(false);
+    HFileContext context = new HFileContextBuilder().withIncludesTags(false).build();
     Writer w =
         HFile.getWriterFactory(conf, cacheConf).withPath(fs, f).withFileContext(context).create();
     w.close();
@@ -133,7 +132,7 @@ public class TestHFile extends HBaseTestCase {
   public void testCorruptTruncatedHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, getName());
-    HFileContext  context = new HFileContext();
+    HFileContext  context = new HFileContextBuilder().build();
     Writer w = HFile.getWriterFactory(conf, cacheConf).withPath(this.fs, f)
         .withFileContext(context).create();
     writeSomeRecords(w, 0, 100, false);
@@ -224,9 +223,10 @@ public class TestHFile extends HBaseTestCase {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path ncTFile = new Path(ROOT_DIR, "basic.hfile." + codec.toString() + useTags);
     FSDataOutputStream fout = createFSOutput(ncTFile);
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(minBlockSize);
-    meta.setCompressAlgo(AbstractHFileWriter.compressionByName(codec));
+    HFileContext meta = new HFileContextBuilder()
+                        .withBlockSize(minBlockSize)
+                        .withCompressionAlgo(AbstractHFileWriter.compressionByName(codec))
+                        .build();
     Writer writer = HFile.getWriterFactory(conf, cacheConf)
         .withOutputStream(fout)
         .withFileContext(meta)
@@ -313,9 +313,9 @@ public class TestHFile extends HBaseTestCase {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path mFile = new Path(ROOT_DIR, "meta.hfile");
     FSDataOutputStream fout = createFSOutput(mFile);
-    HFileContext meta = new HFileContext();
-    meta.setCompressAlgo(AbstractHFileWriter.compressionByName(compress));
-    meta.setBlocksize(minBlockSize);
+    HFileContext meta = new HFileContextBuilder()
+                        .withCompressionAlgo(AbstractHFileWriter.compressionByName(compress))
+                        .withBlockSize(minBlockSize).build();
     Writer writer = HFile.getWriterFactory(conf, cacheConf)
         .withOutputStream(fout)
         .withFileContext(meta)
@@ -347,9 +347,8 @@ public class TestHFile extends HBaseTestCase {
         HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
       Path mFile = new Path(ROOT_DIR, "nometa_" + compressAlgo + ".hfile");
       FSDataOutputStream fout = createFSOutput(mFile);
-      HFileContext meta = new HFileContext();
-      meta.setCompressAlgo((compressAlgo));
-      meta.setBlocksize(minBlockSize);
+      HFileContext meta = new HFileContextBuilder().withCompressionAlgo(compressAlgo)
+                          .withBlockSize(minBlockSize).build();
       Writer writer = HFile.getWriterFactory(conf, cacheConf)
           .withOutputStream(fout)
           .withFileContext(meta)

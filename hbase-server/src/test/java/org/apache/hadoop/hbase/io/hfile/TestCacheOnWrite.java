@@ -307,13 +307,10 @@ public class TestCacheOnWrite {
     }
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(),
         "test_cache_on_write");
-    HFileContext meta = new HFileContext();
-    meta.setCompressAlgo(compress);
-    meta.setChecksumType(CKTYPE);
-    meta.setBytesPerChecksum(CKBYTES);
-    meta.setBlocksize(DATA_BLOCK_SIZE);
-    meta.setEncodingInCache(encoder.getEncodingInCache());
-    meta.setEncodingOnDisk(encoder.getEncodingOnDisk());
+    HFileContext meta = new HFileContextBuilder().withCompressionAlgo(compress)
+        .withBytesPerCheckSum(CKBYTES).withChecksumType(ChecksumType.NULL)
+        .withBlockSize(DATA_BLOCK_SIZE).withDataBlockEncodingInCache(encoder.getEncodingInCache())
+        .withDataBlockEncodingOnDisk(encoder.getEncodingOnDisk()).build();
     StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf, cacheConf, fs)
         .withOutputDir(storeFileParentDir).withComparator(KeyValue.COMPARATOR)
         .withFileContext(meta)

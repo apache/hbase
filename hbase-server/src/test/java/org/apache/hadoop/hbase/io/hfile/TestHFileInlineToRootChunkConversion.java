@@ -23,10 +23,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.experimental.categories.Category;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test a case when an inline index chunk is converted to a root one. This reproduces the bug in
@@ -52,8 +52,7 @@ public class TestHFileInlineToRootChunkConversion {
     FileSystem fs = FileSystem.get(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize); 
-    HFileContext context = new HFileContext();
-    context.setBlocksize(16);
+    HFileContext context = new HFileContextBuilder().withBlockSize(16).build();
     HFileWriterV2 hfw =
         (HFileWriterV2) new HFileWriterV2.WriterFactoryV2(conf, cacheConf)
             .withFileContext(context)

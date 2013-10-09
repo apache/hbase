@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeCodec;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder.EncodedSeeker;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.junit.Assert;
@@ -96,11 +97,11 @@ public class TestPrefixTreeEncoding {
     PrefixTreeCodec encoder = new PrefixTreeCodec();
     int batchId = numBatchesWritten++;
     ByteBuffer dataBuffer = generateFixedTestData(kvset, batchId, false, includesTag);
-    HFileContext meta = new HFileContext();
-    meta.setUsesHBaseChecksum(false);
-    meta.setIncludesMvcc(false);
-    meta.setIncludesTags(includesTag);
-    meta.setCompressAlgo(Algorithm.NONE);
+    HFileContext meta = new HFileContextBuilder()
+                        .withHBaseCheckSum(false)
+                        .withIncludesMvcc(false)
+                        .withIncludesTags(includesTag)
+                        .withCompressionAlgo(Algorithm.NONE).build();
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         DataBlockEncoding.PREFIX_TREE, new byte[0], meta);
     encoder.encodeKeyValues(dataBuffer, blkEncodingCtx);
@@ -137,11 +138,12 @@ public class TestPrefixTreeEncoding {
   public void testScanWithRandomData() throws Exception {
     PrefixTreeCodec encoder = new PrefixTreeCodec();
     ByteBuffer dataBuffer = generateRandomTestData(kvset, numBatchesWritten++, includesTag);
-    HFileContext meta = new HFileContext();
-    meta.setUsesHBaseChecksum(false);
-    meta.setIncludesMvcc(false);
-    meta.setIncludesTags(includesTag);
-    meta.setCompressAlgo(Algorithm.NONE);
+    HFileContext meta = new HFileContextBuilder()
+                        .withHBaseCheckSum(false)
+                        .withIncludesMvcc(false)
+                        .withIncludesTags(includesTag)
+                        .withCompressionAlgo(Algorithm.NONE)
+                        .build();
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         DataBlockEncoding.PREFIX_TREE, new byte[0], meta);
     encoder.encodeKeyValues(dataBuffer, blkEncodingCtx);
@@ -173,11 +175,12 @@ public class TestPrefixTreeEncoding {
     PrefixTreeCodec encoder = new PrefixTreeCodec();
     int batchId = numBatchesWritten++;
     ByteBuffer dataBuffer = generateRandomTestData(kvset, batchId, includesTag);
-    HFileContext meta = new HFileContext();
-    meta.setUsesHBaseChecksum(false);
-    meta.setIncludesMvcc(false);
-    meta.setIncludesTags(includesTag);
-    meta.setCompressAlgo(Algorithm.NONE);
+    HFileContext meta = new HFileContextBuilder()
+                        .withHBaseCheckSum(false)
+                        .withIncludesMvcc(false)
+                        .withIncludesTags(includesTag)
+                        .withCompressionAlgo(Algorithm.NONE)
+                        .build();
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         DataBlockEncoding.PREFIX_TREE, new byte[0], meta);
     encoder.encodeKeyValues(dataBuffer, blkEncodingCtx);
@@ -194,11 +197,12 @@ public class TestPrefixTreeEncoding {
     PrefixTreeCodec encoder = new PrefixTreeCodec();
     int batchId = numBatchesWritten++;
     ByteBuffer dataBuffer = generateFixedTestData(kvset, batchId, includesTag);
-    HFileContext meta = new HFileContext();
-    meta.setUsesHBaseChecksum(false);
-    meta.setIncludesMvcc(false);
-    meta.setIncludesTags(includesTag);
-    meta.setCompressAlgo(Algorithm.NONE);
+    HFileContext meta = new HFileContextBuilder()
+                        .withHBaseCheckSum(false)
+                        .withIncludesMvcc(false)
+                        .withIncludesTags(includesTag)
+                        .withCompressionAlgo(Algorithm.NONE)
+                        .build();
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         DataBlockEncoding.PREFIX_TREE, new byte[0], meta);
     encoder.encodeKeyValues(dataBuffer, blkEncodingCtx);

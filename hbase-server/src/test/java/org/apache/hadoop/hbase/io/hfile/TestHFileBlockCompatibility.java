@@ -42,13 +42,12 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
-import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.io.compress.Compressor;
@@ -198,11 +197,12 @@ public class TestHFileBlockCompatibility {
         os.close();
 
         FSDataInputStream is = fs.open(path);
-        HFileContext meta = new HFileContext();
-        meta.setUsesHBaseChecksum(false);
-        meta.setIncludesMvcc(includesMemstoreTS);
-        meta.setIncludesTags(includesTag);
-        meta.setCompressAlgo(algo);
+        HFileContext meta = new HFileContextBuilder()
+                           .withHBaseCheckSum(false)
+                           .withIncludesMvcc(includesMemstoreTS)
+                           .withIncludesTags(includesTag)
+                           .withCompressionAlgo(algo)
+                           .build();
         HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
             totalSize, fs, path, meta);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
@@ -280,11 +280,12 @@ public class TestHFileBlockCompatibility {
           os.close();
 
           FSDataInputStream is = fs.open(path);
-          HFileContext meta = new HFileContext();
-          meta.setUsesHBaseChecksum(false);
-          meta.setIncludesMvcc(includesMemstoreTS);
-          meta.setIncludesTags(includesTag);
-          meta.setCompressAlgo(algo);
+          HFileContext meta = new HFileContextBuilder()
+                              .withHBaseCheckSum(false)
+                              .withIncludesMvcc(includesMemstoreTS)
+                              .withIncludesTags(includesTag)
+                              .withCompressionAlgo(algo)
+                              .build();
           HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
               totalSize, fs, path, meta);
           hbr.setDataBlockEncoder(dataBlockEncoder);
@@ -420,12 +421,12 @@ public class TestHFileBlockCompatibility {
       this.dataBlockEncoder = dataBlockEncoder != null
           ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
 
-      meta = new HFileContext();
-      meta.setUsesHBaseChecksum(false);
-      meta.setIncludesMvcc(includesMemstoreTS);
-      meta.setIncludesTags(includesTag);
-      meta.setCompressAlgo(compressionAlgorithm);
-      
+      meta = new HFileContextBuilder()
+              .withHBaseCheckSum(false)
+              .withIncludesMvcc(includesMemstoreTS)
+              .withIncludesTags(includesTag)
+              .withCompressionAlgo(compressionAlgorithm)
+              .build();
       defaultBlockEncodingCtx = new HFileBlockDefaultEncodingContext(null, DUMMY_HEADER, meta);
       dataBlockEncodingCtx =
           this.dataBlockEncoder.newOnDiskDataBlockEncodingContext(
@@ -730,9 +731,11 @@ public class TestHFileBlockCompatibility {
      * Creates a new HFileBlock.
      */
     public HFileBlock getBlockForCaching() {
-      meta.setUsesHBaseChecksum(false);
-      meta.setChecksumType(ChecksumType.NULL);
-      meta.setBytesPerChecksum(0);
+      HFileContext meta = new HFileContextBuilder()
+             .withHBaseCheckSum(false)
+             .withChecksumType(ChecksumType.NULL)
+             .withBytesPerCheckSum(0)
+             .build();
       return new HFileBlock(blockType, getOnDiskSizeWithoutHeader(),
           getUncompressedSizeWithoutHeader(), prevOffset,
           getUncompressedBufferWithHeader(), DONT_FILL_HEADER, startOffset, 

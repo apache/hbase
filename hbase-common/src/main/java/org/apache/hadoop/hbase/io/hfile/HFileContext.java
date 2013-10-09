@@ -59,27 +59,52 @@ public class HFileContext implements HeapSize, Cloneable {
   //Empty constructor.  Go with setters
   public HFileContext() {
   }
+  /**
+   * Copy constructor
+   * @param context
+   */
+  public HFileContext(HFileContext context) {
+    this.usesHBaseChecksum = context.usesHBaseChecksum;
+    this.includesMvcc = context.includesMvcc;
+    this.includesTags = context.includesTags;
+    this.compressAlgo = context.compressAlgo;
+    this.compressTags = context.compressTags;
+    this.checksumType = context.checksumType;
+    this.bytesPerChecksum = context.bytesPerChecksum;
+    this.blocksize = context.blocksize;
+    this.encodingOnDisk = context.encodingOnDisk;
+    this.encodingInCache = context.encodingInCache;
+  }
+
+  public HFileContext(boolean useHBaseChecksum, boolean includesMvcc, boolean includesTags,
+      Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
+      int bytesPerChecksum, int blockSize, DataBlockEncoding encodingOnDisk,
+      DataBlockEncoding encodingInCache) {
+    this.usesHBaseChecksum = useHBaseChecksum;
+    this.includesMvcc =  includesMvcc;
+    this.includesTags = includesTags;
+    this.compressAlgo = compressAlgo;
+    this.compressTags = compressTags;
+    this.checksumType = checksumType;
+    this.bytesPerChecksum = bytesPerChecksum;
+    this.blocksize = blockSize;
+    this.encodingOnDisk = encodingOnDisk;
+    this.encodingInCache = encodingInCache;
+  }
 
   public Algorithm getCompression() {
     return compressAlgo;
-  }
-
-  public void setCompressAlgo(Algorithm compressAlgo) {
-    this.compressAlgo = compressAlgo;
   }
 
   public boolean shouldUseHBaseChecksum() {
     return usesHBaseChecksum;
   }
 
-  public void setUsesHBaseChecksum(boolean usesHBaseChecksum) {
-    this.usesHBaseChecksum = usesHBaseChecksum;
-  }
-
   public boolean shouldIncludeMvcc() {
     return includesMvcc;
   }
 
+  // TODO : This setter should be removed
   public void setIncludesMvcc(boolean includesMvcc) {
     this.includesMvcc = includesMvcc;
   }
@@ -88,6 +113,7 @@ public class HFileContext implements HeapSize, Cloneable {
     return includesTags;
   }
 
+  // TODO : This setter should be removed?
   public void setIncludesTags(boolean includesTags) {
     this.includesTags = includesTags;
   }
@@ -96,48 +122,24 @@ public class HFileContext implements HeapSize, Cloneable {
     return compressTags;
   }
 
-  public void setCompressTags(boolean compressTags) {
-    this.compressTags = compressTags;
-  }
-
   public ChecksumType getChecksumType() {
     return checksumType;
-  }
-
-  public void setChecksumType(ChecksumType checksumType) {
-    this.checksumType = checksumType;
   }
 
   public int getBytesPerChecksum() {
     return bytesPerChecksum;
   }
 
-  public void setBytesPerChecksum(int bytesPerChecksum) {
-    this.bytesPerChecksum = bytesPerChecksum;
-  }
-
   public int getBlocksize() {
     return blocksize;
-  }
-
-  public void setBlocksize(int blocksize) {
-    this.blocksize = blocksize;
   }
 
   public DataBlockEncoding getEncodingOnDisk() {
     return encodingOnDisk;
   }
 
-  public void setEncodingOnDisk(DataBlockEncoding encodingOnDisk) {
-    this.encodingOnDisk = encodingOnDisk;
-  }
-
   public DataBlockEncoding getEncodingInCache() {
     return encodingInCache;
-  }
-
-  public void setEncodingInCache(DataBlockEncoding encodingInCache) {
-    this.encodingInCache = encodingInCache;
   }
 
   /**

@@ -30,10 +30,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -189,8 +189,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void setUp() throws Exception {
-      HFileContext hFileContext = new HFileContext();
-      hFileContext.setBlocksize(RFILE_BLOCKSIZE);
+      HFileContext hFileContext = new HFileContextBuilder().withBlockSize(RFILE_BLOCKSIZE).build();
       writer =
         HFile.getWriterFactoryNoCache(conf)
             .withPath(fs, mf)

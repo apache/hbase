@@ -186,7 +186,6 @@ public class HFileWriterV3 extends HFileWriterV2 {
   protected HFileBlock.Writer createBlockWriter() {
     // HFile filesystem-level (non-caching) block writer
     hFileContext.setIncludesTags(true);
-    hFileContext.setUsesHBaseChecksum(true);
     return new HFileBlock.Writer(blockEncoder, hFileContext);
   }
 

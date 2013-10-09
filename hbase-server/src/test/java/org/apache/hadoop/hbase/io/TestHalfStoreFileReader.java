@@ -37,13 +37,13 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mortbay.log.Log;
 
 @Category(SmallTests.class)
 public class TestHalfStoreFileReader {
@@ -83,8 +83,7 @@ public class TestHalfStoreFileReader {
     Configuration conf = TEST_UTIL.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(1024);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(1024).build();
     HFile.Writer w = HFile.getWriterFactory(conf, cacheConf)
         .withPath(fs, p)
         .withFileContext(meta)
@@ -149,8 +148,7 @@ public class TestHalfStoreFileReader {
       Configuration conf = TEST_UTIL.getConfiguration();
       FileSystem fs = FileSystem.get(conf);
       CacheConfig cacheConf = new CacheConfig(conf);
-      HFileContext meta = new HFileContext();
-      meta.setBlocksize(1024);
+      HFileContext meta = new HFileContextBuilder().withBlockSize(1024).build();
       HFile.Writer w = HFile.getWriterFactory(conf, cacheConf)
               .withPath(fs, p)
               .withFileContext(meta)

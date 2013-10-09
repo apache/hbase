@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
@@ -127,13 +126,12 @@ public class TestHFileDataBlockEncoder {
     buf.position(headerSize);
     keyValues.rewind();
     buf.put(keyValues);
-    HFileContext meta = new HFileContext();
-    meta.setUsesHBaseChecksum(false);
-    meta.setIncludesMvcc(includesMemstoreTS);
-    meta.setIncludesTags(useTags);
-    meta.setCompressAlgo(Compression.Algorithm.NONE);
-    meta.setBlocksize(0);
-    meta.setChecksumType(ChecksumType.NULL);
+    HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(false)
+                        .withIncludesMvcc(includesMemstoreTS)
+                        .withIncludesTags(useTags)
+                        .withBlockSize(0)
+                        .withChecksumType(ChecksumType.NULL)
+                        .build();
     HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
         HFileBlock.FILL_HEADER, 0,
         0, meta);
@@ -203,13 +201,14 @@ public class TestHFileDataBlockEncoder {
     buf.position(HConstants.HFILEBLOCK_HEADER_SIZE);
     keyValues.rewind();
     buf.put(keyValues);
-    HFileContext meta = new HFileContext();
-    meta.setIncludesMvcc(includesMemstoreTS);
-    meta.setIncludesTags(useTag);
-    meta.setUsesHBaseChecksum(true);
-    meta.setCompressAlgo(Algorithm.NONE);
-    meta.setBlocksize(0);
-    meta.setChecksumType(ChecksumType.NULL);
+    HFileContext meta = new HFileContextBuilder()
+                        .withIncludesMvcc(includesMemstoreTS)
+                        .withIncludesTags(useTag)
+                        .withHBaseCheckSum(true)
+                        .withCompressionAlgo(Algorithm.NONE)
+                        .withBlockSize(0)
+                        .withChecksumType(ChecksumType.NULL)
+                        .build();
     HFileBlock b = new HFileBlock(BlockType.DATA, size, size, -1, buf,
         HFileBlock.FILL_HEADER, 0, 
          0, meta);

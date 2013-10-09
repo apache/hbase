@@ -19,11 +19,13 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.*;
+import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.GZ;
+import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
+import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
-import java.io.DataOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -37,14 +39,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.ChecksumType;
-
-import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.*;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -92,12 +89,13 @@ public class TestChecksum {
         Path path = new Path(TEST_UTIL.getDataTestDir(), "blocks_v2_"
             + algo);
         FSDataOutputStream os = fs.create(path);
-        HFileContext meta = new HFileContext();
-        meta.setCompressAlgo(algo);
-        meta.setIncludesMvcc(true);
-        meta.setIncludesTags(useTags);
-        meta.setChecksumType(HFile.DEFAULT_CHECKSUM_TYPE);
-        meta.setBytesPerChecksum(HFile.DEFAULT_BYTES_PER_CHECKSUM);
+        HFileContext meta = new HFileContextBuilder()
+                            .withCompressionAlgo(algo)
+                            .withIncludesMvcc(true)
+                            .withIncludesTags(useTags)
+                            .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
+                            .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
+                            .build();
         HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
         long totalSize = 0;
         for (int blockId = 0; blockId < 2; ++blockId) {
@@ -114,11 +112,12 @@ public class TestChecksum {
 
         // Do a read that purposely introduces checksum verification failures.
         FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
-        meta = new HFileContext();
-        meta.setCompressAlgo(algo);
-        meta.setIncludesMvcc(true);
-        meta.setIncludesTags(useTags);
-        meta.setUsesHBaseChecksum(true);
+        meta = new HFileContextBuilder()
+              .withCompressionAlgo(algo)
+              .withIncludesMvcc(true)
+              .withIncludesTags(useTags)
+              .withHBaseCheckSum(true)
+              .build();
         HFileBlock.FSReader hbr = new FSReaderV2Test(is, totalSize, fs, path, meta);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
         b.sanityCheck();
@@ -197,13 +196,14 @@ public class TestChecksum {
         Path path = new Path(TEST_UTIL.getDataTestDir(), "checksumChunk_" + 
                              algo + bytesPerChecksum);
         FSDataOutputStream os = fs.create(path);
-        HFileContext meta = new HFileContext();
-        meta.setCompressAlgo(algo);
-        meta.setIncludesMvcc(true);
-        meta.setIncludesTags(useTags);
-        meta.setUsesHBaseChecksum(true);
-        meta.setBytesPerChecksum(bytesPerChecksum);
-        meta.setChecksumType(HFile.DEFAULT_CHECKSUM_TYPE);
+        HFileContext meta = new HFileContextBuilder()
+                            .withCompressionAlgo(algo)
+                            .withIncludesMvcc(true)
+                            .withIncludesTags(useTags)
+                            .withHBaseCheckSum(true)
+                            .withBytesPerCheckSum(bytesPerChecksum)
+                            .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
+                            .build();
         HFileBlock.Writer hbw = new HFileBlock.Writer(null,
            meta);
 
@@ -236,12 +236,13 @@ public class TestChecksum {
         // Read data back from file.
         FSDataInputStream is = fs.open(path);
         FSDataInputStream nochecksum = hfs.getNoChecksumFs().open(path);
-        meta = new HFileContext();
-        meta.setCompressAlgo(algo);
-        meta.setIncludesMvcc(true);
-        meta.setIncludesTags(useTags);
-        meta.setUsesHBaseChecksum(true);
-        meta.setBytesPerChecksum(bytesPerChecksum);
+        meta = new HFileContextBuilder()
+               .withCompressionAlgo(algo)
+               .withIncludesMvcc(true)
+               .withIncludesTags(useTags)
+               .withHBaseCheckSum(true)
+               .withBytesPerCheckSum(bytesPerChecksum)
+               .build();
         HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(
             is, nochecksum), totalSize, hfs, path, meta);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);

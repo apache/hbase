@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
@@ -321,8 +322,7 @@ public class TestStore extends TestCase {
     long seqid = f.getMaxSequenceId();
     Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
-    HFileContext meta = new HFileContext();
-    meta.setBlocksize(StoreFile.DEFAULT_BLOCKSIZE_SMALL);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(StoreFile.DEFAULT_BLOCKSIZE_SMALL).build();
     StoreFile.Writer w = new StoreFile.WriterBuilder(c, new CacheConfig(c),
         fs)
             .withOutputDir(storedir)

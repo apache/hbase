@@ -45,9 +45,10 @@ import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.EncodedDataBlock;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderV2;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -214,10 +215,10 @@ public class DataBlockEncodingTool {
         continue;
       }
       DataBlockEncoder d = encoding.getEncoder();
-      HFileContext meta = new HFileContext();
-      meta.setCompressAlgo(Compression.Algorithm.NONE);
-      meta.setIncludesMvcc(includesMemstoreTS);
-      meta.setIncludesTags(useTag);
+      HFileContext meta = new HFileContextBuilder()
+                          .withCompressionAlgo(Compression.Algorithm.NONE)
+                          .withIncludesMvcc(includesMemstoreTS)
+                          .withIncludesTags(useTag).build();
       codecs.add(new EncodedDataBlock(d, encoding, rawKVs, meta ));
     }
   }
