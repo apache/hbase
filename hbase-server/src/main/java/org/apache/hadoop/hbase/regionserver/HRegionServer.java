@@ -4043,8 +4043,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     try {
       int i = 0;
       for (ClientProtos.Action action: mutations) {
-        ClientProtos.ResultOrException.Builder resultOrExceptionBuilder =
-          ClientProtos.ResultOrException.newBuilder();
         MutationProto m = action.getMutation();
         Mutation mutation;
         if (m.getMutateType() == MutationType.PUT) {
@@ -4088,9 +4086,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         }
       }
     } catch (IOException ie) {
-      ResultOrException resultOrException = ResponseConverter.buildActionResult(ie).build();
       for (int i = 0; i < mutations.size(); i++) {
-        builder.addResultOrException(resultOrException);
+        builder.addResultOrException(getResultOrException(ie, mutations.get(i).getIndex()));
       }
     }
     long after = EnvironmentEdgeManager.currentTimeMillis();
