@@ -109,6 +109,13 @@ public class TestAsyncProcess {
         @Override
         public MultiResponse callWithoutRetries( RetryingCallable<MultiResponse> callable)
         throws IOException, RuntimeException {
+          try {
+            // sleep one second in order for threadpool to start another thread instead of reusing
+            // existing one. 
+            Thread.sleep(1000);
+          } catch (InterruptedException e) {
+            // ignore error
+          }
           return mr;
         }
       };
@@ -382,6 +389,8 @@ public class TestAsyncProcess {
     while (!ap.hasError()) {
       Thread.sleep(1);
     }
+    ap.waitUntilDone();
+ 
     Assert.assertEquals(mcb.successCalled.get(), 2);
     Assert.assertEquals(mcb.retriableFailure.get(), 2);
     Assert.assertEquals(mcb.failureCalled.get(), 1);
