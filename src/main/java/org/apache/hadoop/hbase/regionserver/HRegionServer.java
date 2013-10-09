@@ -1605,11 +1605,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         .getCompactionQueueSize());
     this.metrics.flushQueueSize.set(cacheFlusher
         .getFlushQueueSize());
-    this.metrics.updatesBlockedSeconds.update(updatesBlockedMs > 0 ? 
-        updatesBlockedMs/1000: 0);
+    this.metrics.updatesBlockedSeconds.set(updatesBlockedMs/1000);
     final long updatesBlockedMsHigherWater = cacheFlusher.getUpdatesBlockedMsHighWater().get();
-    this.metrics.updatesBlockedSecondsHighWater.update(updatesBlockedMsHigherWater > 0 ? 
-        updatesBlockedMsHigherWater/1000: 0);
+    this.metrics.updatesBlockedSecondsHighWater.set(updatesBlockedMsHigherWater/1000);
 
     BlockCache blockCache = cacheConfig.getBlockCache();
     if (blockCache != null) {

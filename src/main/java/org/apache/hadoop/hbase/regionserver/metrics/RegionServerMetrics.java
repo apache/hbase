@@ -300,13 +300,13 @@ public class RegionServerMetrics implements Updater {
   /**
    * time blocked on lack of resources
    */
-  public final MetricsHistogram updatesBlockedSeconds = new MetricsHistogram(
+  public final MetricsLongValue updatesBlockedSeconds = new MetricsLongValue(
       "updatesBlockedSeconds", registry);
 
   /**
    * time blocked on memstoreHW
    */
-  public final MetricsHistogram updatesBlockedSecondsHighWater = new MetricsHistogram(
+  public final MetricsLongValue updatesBlockedSecondsHighWater = new MetricsLongValue(
       "updatesBlockedSecondsHighWater",registry);
 
   public RegionServerMetrics() {
