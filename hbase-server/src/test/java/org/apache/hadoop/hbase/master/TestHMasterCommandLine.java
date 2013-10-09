@@ -20,8 +20,12 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+
+@Category(SmallTests.class)
 public class TestHMasterCommandLine {
   private static final HBaseTestingUtility TESTING_UTIL = new HBaseTestingUtility();
   @Test
