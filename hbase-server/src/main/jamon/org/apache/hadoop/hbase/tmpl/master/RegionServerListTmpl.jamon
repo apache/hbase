@@ -243,6 +243,7 @@ if (sl != null) {
     <th>ServerName</th>
     <th>Num. Compacting KVs</th>
     <th>Num. Compacted KVs</th>
+    <th>Remaining KVs</th>
     <th>Compaction Progress</th>
 </tr>
 <%java>
@@ -260,6 +261,7 @@ if  (sl.getTotalCompactingKVs() > 0) {
 <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
 <td><% sl.getTotalCompactingKVs() %></td>
 <td><% sl.getCurrentCompactedKVs() %></td>
+<td><% sl.getTotalCompactingKVs() - sl.getCurrentCompactedKVs() %></td>
 <td><% percentDone %></td>
 </tr>
 <%java>
