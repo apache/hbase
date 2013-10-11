@@ -343,6 +343,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     }
 
     conf.setStrings("io.serializations", conf.get("io.serializations"),
+        MutationSerialization.class.getName(), ResultSerialization.class.getName(),
         KeyValueSerialization.class.getName());
 
     // Use table's region boundaries for TOP split points.
