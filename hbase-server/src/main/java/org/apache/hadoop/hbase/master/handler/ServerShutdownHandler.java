@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -246,10 +247,14 @@ public class ServerShutdownHandler extends EventHandler {
                   //clean zk node
                   LOG.info("Reassigning region with rs = " + rit + " and deleting zk node if exists");
                   ZKAssign.deleteNodeFailSilent(services.getZooKeeper(), hri);
+                  regionStates.updateRegionState(hri, State.OFFLINE);
                 } catch (KeeperException ke) {
                   this.server.abort("Unexpected ZK exception deleting unassigned node " + hri, ke);
                   return;
                 }
+              } else if (regionStates.isRegionInState(
+                  hri, State.SPLITTING_NEW, State.MERGING_NEW)) {
+                regionStates.regionOffline(hri);
               }
               toAssignRegions.add(hri);
             } else if (rit != null) {
@@ -260,8 +265,9 @@ public class ServerShutdownHandler extends EventHandler {
                 // The rit that we use may be stale in case the table was in DISABLING state
                 // but though we did assign we will not be clearing the znode in CLOSING state.
                 // Doing this will have no harm. See HBASE-5927
+                regionStates.updateRegionState(hri, State.OFFLINE);
                 am.deleteClosingOrClosedNode(hri);
-                am.regionOffline(hri);
+                am.offlineDisabledRegion(hri);
               } else {
                 LOG.warn("THIS SHOULD NOT HAPPEN: unexpected region in transition "
                   + rit + " not to be assigned by SSH of server " + serverName);

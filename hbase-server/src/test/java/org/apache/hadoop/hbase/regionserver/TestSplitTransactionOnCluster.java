@@ -35,7 +35,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -48,6 +47,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.MetaReader;
@@ -65,11 +65,11 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
-import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -278,7 +278,7 @@ public class TestSplitTransactionOnCluster {
       int regionCount = ProtobufUtil.getOnlineRegions(server).size();
       // Now, before we split, set special flag in master, a flag that has
       // it FAIL the processing of split.
-      SplitRegionHandler.TEST_SKIP = true;
+      AssignmentManager.TEST_SKIP_SPLIT_HANDLING = true;
       // Now try splitting and it should work.
       split(hri, server, regionCount);
       // Get daughters
@@ -286,15 +286,18 @@ public class TestSplitTransactionOnCluster {
       // Assert the ephemeral node is up in zk.
       String path = ZKAssign.getNodeName(TESTING_UTIL.getZooKeeperWatcher(),
         hri.getEncodedName());
-      Stat stats =
-        TESTING_UTIL.getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
-      LOG.info("EPHEMERAL NODE BEFORE SERVER ABORT, path=" + path + ", stats=" + stats);
-      RegionTransition rt =
-        RegionTransition.parseFrom(ZKAssign.getData(TESTING_UTIL.getZooKeeperWatcher(),
+      RegionTransition rt = null;
+      Stat stats = null;
+      // Wait till the znode moved to SPLIT
+      for (int i=0; i<100; i++) {
+        stats = TESTING_UTIL.getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
+        rt = RegionTransition.parseFrom(ZKAssign.getData(TESTING_UTIL.getZooKeeperWatcher(),
           hri.getEncodedName()));
-      // State could be SPLIT or SPLITTING.
-      assertTrue(rt.getEventType().equals(EventType.RS_ZK_REGION_SPLIT) ||
-        rt.getEventType().equals(EventType.RS_ZK_REGION_SPLITTING));
+        if (rt.getEventType().equals(EventType.RS_ZK_REGION_SPLIT)) break;
+        Thread.sleep(100);
+      }
+      LOG.info("EPHEMERAL NODE BEFORE SERVER ABORT, path=" + path + ", stats=" + stats);
+      assertTrue(rt != null && rt.getEventType().equals(EventType.RS_ZK_REGION_SPLIT));
       // Now crash the server
       cluster.abortRegionServer(tableRegionIndex);
       waitUntilRegionServerDead();
@@ -316,7 +319,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue(stats == null);
     } finally {
       // Set this flag back.
-      SplitRegionHandler.TEST_SKIP = false;
+      AssignmentManager.TEST_SKIP_SPLIT_HANDLING = false;
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
@@ -576,7 +579,7 @@ public class TestSplitTransactionOnCluster {
       printOutRegions(server, "Initial regions: ");
       // Now, before we split, set special flag in master, a flag that has
       // it FAIL the processing of split.
-      SplitRegionHandler.TEST_SKIP = true;
+      AssignmentManager.TEST_SKIP_SPLIT_HANDLING = true;
       // Now try splitting and it should work.
 
       this.admin.split(hri.getRegionNameAsString());
@@ -606,7 +609,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue(regionServerOfRegion != null);
 
       // Remove the block so that split can move ahead.
-      SplitRegionHandler.TEST_SKIP = false;
+      AssignmentManager.TEST_SKIP_SPLIT_HANDLING = false;
       String node = ZKAssign.getNodeName(zkw, hri.getEncodedName());
       Stat stat = new Stat();
       byte[] data = ZKUtil.getDataNoWatch(zkw, node, stat);
@@ -623,7 +626,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue(regionServerOfRegion == null);
     } finally {
       // Set this flag back.
-      SplitRegionHandler.TEST_SKIP = false;
+      AssignmentManager.TEST_SKIP_SPLIT_HANDLING = false;
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
@@ -696,8 +699,6 @@ public class TestSplitTransactionOnCluster {
       ServerName regionServerOfRegion = regionStates.getRegionServerOfRegion(hri);
       assertTrue(regionServerOfRegion == null);
     } finally {
-      // Set this flag back.
-      SplitRegionHandler.TEST_SKIP = false;
       this.admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
@@ -851,8 +852,8 @@ public class TestSplitTransactionOnCluster {
       assertTrue("not able to find a splittable region", region != null);
       SplitTransaction st = new MockedSplitTransaction(region, Bytes.toBytes("row2")) {
         @Override
-        int createNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo region,
-            ServerName serverName) throws KeeperException, IOException {
+        PairOfSameType<HRegion> createDaughters(final Server server,
+            final RegionServerServices services) throws IOException {
           throw new SplittingNodeCreationFailedException ();
         }
       };

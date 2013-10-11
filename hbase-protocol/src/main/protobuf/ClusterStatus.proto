@@ -45,6 +45,12 @@ message RegionState {
     FAILED_CLOSE = 10; // failed to close, and won't retry any more
     MERGING = 11;      // server started merge a region
     MERGED = 12;       // server completed merge of a region
+    SPLITTING_NEW = 13;  // new region to be created when RS splits a parent
+                       // region but hasn't be created yet, or master doesn't
+                       // know it's already created
+    MERGING_NEW = 14;  // new region to be created when RS merges two
+                       // daughter regions but hasn't be created yet, or
+                       // master doesn't know it's already created
   }
 }
 

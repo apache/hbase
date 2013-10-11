@@ -66,7 +66,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
@@ -115,12 +114,9 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -2799,6 +2795,11 @@ public class HRegion implements HeapSize { // , Writable{
 
     FileSystem fs = this.fs.getFileSystem();
     NavigableSet<Path> files = HLogUtil.getSplitEditFilesSorted(fs, regiondir);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Found " + (files == null ? 0 : files.size())
+        + " recovered edits file(s) under " + regiondir);
+    }
+
     if (files == null || files.isEmpty()) return seqid;
 
     for (Path edits: files) {
@@ -2812,10 +2813,12 @@ public class HRegion implements HeapSize { // , Writable{
       String fileName = edits.getName();
       maxSeqId = Math.abs(Long.parseLong(fileName));
       if (maxSeqId <= minSeqIdForTheRegion) {
-        String msg = "Maximum sequenceid for this log is " + maxSeqId
+        if (LOG.isDebugEnabled()) {
+          String msg = "Maximum sequenceid for this log is " + maxSeqId
             + " and minimum sequenceid for the region is " + minSeqIdForTheRegion
             + ", skipped the whole file, path=" + edits;
-        LOG.debug(msg);
+          LOG.debug(msg);
+        }
         continue;
       }
 
