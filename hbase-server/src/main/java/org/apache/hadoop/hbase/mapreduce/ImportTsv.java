@@ -303,9 +303,6 @@ public class ImportTsv extends Configured implements Tool {
     Class mapperClass = mapperClassName != null ?
         Class.forName(mapperClassName) : DEFAULT_MAPPER;
 
-    conf.setStrings("io.serializations", conf.get("io.serializations"),
-        MutationSerialization.class.getName(), ResultSerialization.class.getName());
-
     String tableName = args[0];
     Path inputDir = new Path(args[1]);
     String jobName = conf.get(JOB_NAME_CONF_KEY,NAME + "_" + tableName);
