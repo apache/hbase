@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -47,14 +46,17 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionMergeTransaction;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -148,7 +150,7 @@ public class TestMasterFailover {
    * </ul>
    * @throws Exception
    */
-  @Test (timeout=180000)
+  @Test (timeout=240000)
   public void testMasterFailoverWithMockedRIT() throws Exception {
 
     final int NUM_MASTERS = 1;
@@ -214,10 +216,30 @@ public class TestMasterFailover {
     List<HRegionInfo> disabledRegions = TEST_UTIL.createMultiRegionsInMeta(
         TEST_UTIL.getConfiguration(), htdDisabled, SPLIT_KEYS);
 
+    TableName tableWithMergingRegions = TableName.valueOf("tableWithMergingRegions");
+    TEST_UTIL.createTable(tableWithMergingRegions, FAMILY, new byte [][] {Bytes.toBytes("m")});
+
     log("Regions in hbase:meta and namespace have been created");
 
-    // at this point we only expect 3 regions to be assigned out (catalogs and namespace)
-    assertEquals(2, cluster.countServedRegions());
+    // at this point we only expect 4 regions to be assigned out
+    // (catalogs and namespace, + 2 merging regions)
+    assertEquals(4, cluster.countServedRegions());
+
+    // Move merging regions to the same region server
+    AssignmentManager am = master.getAssignmentManager();
+    RegionStates regionStates = am.getRegionStates();
+    List<HRegionInfo> mergingRegions = regionStates.getRegionsOfTable(tableWithMergingRegions);
+    assertEquals(2, mergingRegions.size());
+    HRegionInfo a = mergingRegions.get(0);
+    HRegionInfo b = mergingRegions.get(1);
+    HRegionInfo newRegion = RegionMergeTransaction.getMergedRegionInfo(a, b);
+    ServerName mergingServer = regionStates.getRegionServerOfRegion(a);
+    ServerName serverB = regionStates.getRegionServerOfRegion(b);
+    if (!serverB.equals(mergingServer)) {
+      RegionPlan plan = new RegionPlan(b, serverB, mergingServer);
+      am.balance(plan);
+      assertTrue(am.waitForAssignment(b));
+    }
 
     // Let's just assign everything to first RS
     HRegionServer hrs = cluster.getRegionServer(0);
@@ -340,6 +362,15 @@ public class TestMasterFailover {
     }
 
     /*
+     * ZK = MERGING
+     */
+
+    // Regions of table of merging regions
+    // Cause: Master was down while merging was going on
+    RegionMergeTransaction.createNodeMerging(
+      zkw, newRegion, mergingServer, a, b);
+
+    /*
      * ZK = NONE
      */
 
@@ -355,6 +386,16 @@ public class TestMasterFailover {
     log("Waiting for master to be ready");
     cluster.waitForActiveAndReadyMaster();
     log("Master is ready");
+
+    // Get new region states since master restarted
+    regionStates = master.getAssignmentManager().getRegionStates();
+    // Merging region should remain merging
+    assertTrue(regionStates.isRegionInState(a, State.MERGING));
+    assertTrue(regionStates.isRegionInState(b, State.MERGING));
+    assertTrue(regionStates.isRegionInState(newRegion, State.MERGING_NEW));
+    // Now remove the faked merging znode, merging regions should be
+    // offlined automatically, otherwise it is a bug in AM.
+    ZKAssign.deleteNodeFailSilent(zkw, newRegion);
 
     // Failover should be completed, now wait for no RIT
     log("Waiting for no more RIT");
@@ -375,6 +416,9 @@ public class TestMasterFailover {
 
     // Everything that should be offline should not be online
     for (HRegionInfo hri : regionsThatShouldBeOffline) {
+      if (onlineRegions.contains(hri)) {
+       LOG.debug(hri);
+      }
       assertFalse(onlineRegions.contains(hri));
     }
 
@@ -383,7 +427,6 @@ public class TestMasterFailover {
     // Done, shutdown the cluster
     TEST_UTIL.shutdownMiniCluster();
   }
-
 
   /**
    * Complex test of master failover that tests as many permutations of the
@@ -794,7 +837,8 @@ public class TestMasterFailover {
     long maxTime = 120000;
     boolean done = master.assignmentManager.waitUntilNoRegionsInTransition(maxTime);
     if (!done) {
-      LOG.info("rit=" + master.getAssignmentManager().getRegionStates().getRegionsInTransition());
+      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+      LOG.info("rit=" + regionStates.getRegionsInTransition());
     }
     long elapsed = System.currentTimeMillis() - now;
     assertTrue("Elapsed=" + elapsed + ", maxTime=" + maxTime + ", done=" + done,

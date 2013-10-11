@@ -58,14 +58,14 @@ public enum EventType {
   RS_ZK_REGION_OPENED       (4, ExecutorType.MASTER_OPEN_REGION),
   /**
    * RS_ZK_REGION_SPLITTING<br>
-   * 
-   * RS has started a region split.
+   *
+   * RS has started a region split after master says it's ok to move on.
    */
   RS_ZK_REGION_SPLITTING    (5, null),
   /**
    * RS_ZK_REGION_SPLIT<br>
-   * 
-   * RS split has completed.
+   *
+   * RS split has completed and is notifying the master.
    */
   RS_ZK_REGION_SPLIT        (6, ExecutorType.MASTER_SERVER_OPERATIONS),
   /**
@@ -76,16 +76,30 @@ public enum EventType {
   RS_ZK_REGION_FAILED_OPEN  (7, ExecutorType.MASTER_CLOSE_REGION),
   /**
    * RS_ZK_REGION_MERGING<br>
-   * 
-   * RS has started merging regions.
+   *
+   * RS has started merging regions after master says it's ok to move on.
    */
   RS_ZK_REGION_MERGING      (8, null),
   /**
    * RS_ZK_REGION_MERGE<br>
-   * 
-   * RS region merge has completed.
+   *
+   * RS region merge has completed and is notifying the master.
    */
   RS_ZK_REGION_MERGED       (9, ExecutorType.MASTER_SERVER_OPERATIONS),
+  /**
+   * RS_ZK_REQUEST_REGION_SPLIT<br>
+   *
+   * RS has requested to split a region. This is to notify master
+   * and check with master if the region is in a state good to split.
+   */
+  RS_ZK_REQUEST_REGION_SPLIT    (10, null),
+  /**
+   * RS_ZK_REQUEST_REGION_MERGE<br>
+   *
+   * RS has requested to merge two regions. This is to notify master
+   * and check with master if two regions is in states good to merge.
+   */
+  RS_ZK_REQUEST_REGION_MERGE    (11, null),
 
   /**
    * Messages originating from Master to RS.<br>

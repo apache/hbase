@@ -52,7 +52,13 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     FAILED_OPEN,    // failed to open, and won't retry any more
     FAILED_CLOSE,   // failed to close, and won't retry any more
     MERGING,        // server started merge a region
-    MERGED          // server completed merge a region
+    MERGED,         // server completed merge a region
+    SPLITTING_NEW,  // new region to be created when RS splits a parent
+                    // region but hasn't be created yet, or master doesn't
+                    // know it's already created
+    MERGING_NEW     // new region to be created when RS merges two
+                    // daughter regions but hasn't be created yet, or
+                    // master doesn't know it's already created
   }
 
   // Many threads can update the state at the stamp at the same time
@@ -134,6 +140,10 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     return state == State.SPLIT;
   }
 
+  public boolean isSplittingNew() {
+    return state == State.SPLITTING_NEW;
+  }
+
   public boolean isFailedOpen() {
     return state == State.FAILED_OPEN;
   }
@@ -150,8 +160,24 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     return state == State.MERGED;
   }
 
+  public boolean isMergingNew() {
+    return state == State.MERGING_NEW;
+  }
+
   public boolean isOpenOrMergingOnServer(final ServerName sn) {
     return isOnServer(sn) && (isOpened() || isMerging());
+  }
+
+  public boolean isOpenOrMergingNewOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isOpened() || isMergingNew());
+  }
+
+  public boolean isOpenOrSplittingOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isOpened() || isSplitting());
+  }
+
+  public boolean isOpenOrSplittingNewOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isOpened() || isSplittingNew());
   }
 
   public boolean isPendingOpenOrOpeningOnServer(final ServerName sn) {
@@ -174,6 +200,28 @@ public class RegionState implements org.apache.hadoop.io.Writable {
 
   public boolean isOnServer(final ServerName sn) {
     return serverName != null && serverName.equals(sn);
+  }
+
+  // Is a region in a state ready to go offline
+  public boolean isReadyToOffline() {
+    return isMerged() || isSplit() || isOffline()
+      || isSplittingNew() || isMergingNew();
+  }
+
+  // Is a region in a state ready to go online
+  public boolean isReadyToOnline() {
+    return isOpened() || isSplittingNew() || isMergingNew();
+  }
+
+  // Is a region in a state not in transition but not unassignable
+  public boolean isNotUnassignableNotInTransition() {
+    return isNotUnassignableNotInTransition(state);
+  }
+
+  // Check if a state is not in transition, but not unassignable
+  public static boolean isNotUnassignableNotInTransition(State state) {
+    return state == State.MERGED || state == State.SPLIT || state == State.OFFLINE
+      || state == State.SPLITTING_NEW || state == State.MERGING_NEW;
   }
 
   @Override
@@ -245,6 +293,12 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     case MERGED:
       rs = ClusterStatusProtos.RegionState.State.MERGED;
       break;
+    case SPLITTING_NEW:
+      rs = ClusterStatusProtos.RegionState.State.SPLITTING_NEW;
+      break;
+    case MERGING_NEW:
+      rs = ClusterStatusProtos.RegionState.State.MERGING_NEW;
+      break;
     default:
       throw new IllegalStateException("");
     }
@@ -300,6 +354,12 @@ public class RegionState implements org.apache.hadoop.io.Writable {
       break;
     case MERGED:
       state = State.MERGED;
+      break;
+    case SPLITTING_NEW:
+      state = State.SPLITTING_NEW;
+      break;
+    case MERGING_NEW:
+      state = State.MERGING_NEW;
       break;
     default:
       throw new IllegalStateException("");

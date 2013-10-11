@@ -74,7 +74,6 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -262,8 +261,6 @@ public class TestSplitTransactionOnCluster {
       HTable t = createTableAndWait(tableName.getName(), Bytes.toBytes("cf"));
       final List<HRegion> regions = cluster.getRegions(tableName);
       final HRegionInfo hri = getAndCheckSingleTableRegion(regions);
-      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
-      final HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
       insertData(tableName.getName(), admin, t);
       t.close();
 
@@ -349,7 +346,7 @@ public class TestSplitTransactionOnCluster {
       int regionCount = ProtobufUtil.getOnlineRegions(server).size();
       // Now, before we split, set special flag in master, a flag that has
       // it FAIL the processing of split.
-      SplitRegionHandler.TEST_SKIP = true;
+      AssignmentManager.TEST_SKIP_SPLIT_HANDLING = true;
       // Now try splitting and it should work.
       split(hri, server, regionCount);
       // Get daughters
@@ -357,15 +354,18 @@ public class TestSplitTransactionOnCluster {
       // Assert the ephemeral node is up in zk.
       String path = ZKAssign.getNodeName(TESTING_UTIL.getZooKeeperWatcher(),
         hri.getEncodedName());
-      Stat stats =
-        TESTING_UTIL.getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
-      LOG.info("EPHEMERAL NODE BEFORE SERVER ABORT, path=" + path + ", stats=" + stats);
-      RegionTransition rt =
-        RegionTransition.parseFrom(ZKAssign.getData(TESTING_UTIL.getZooKeeperWatcher(),
+      RegionTransition rt = null;
+      Stat stats = null;
+      // Wait till the znode moved to SPLIT
+      for (int i=0; i<100; i++) {
+        stats = TESTING_UTIL.getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
+        rt = RegionTransition.parseFrom(ZKAssign.getData(TESTING_UTIL.getZooKeeperWatcher(),
           hri.getEncodedName()));
-      // State could be SPLIT or SPLITTING.
-      assertTrue(rt.getEventType().equals(EventType.RS_ZK_REGION_SPLIT) ||
-        rt.getEventType().equals(EventType.RS_ZK_REGION_SPLITTING));
+        if (rt.getEventType().equals(EventType.RS_ZK_REGION_SPLIT)) break;
+        Thread.sleep(100);
+      }
+      LOG.info("EPHEMERAL NODE BEFORE SERVER ABORT, path=" + path + ", stats=" + stats);
+      assertTrue(rt != null && rt.getEventType().equals(EventType.RS_ZK_REGION_SPLIT));
       // Now crash the server
       cluster.abortRegionServer(tableRegionIndex);
       waitUntilRegionServerDead();
@@ -387,7 +387,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue(stats == null);
     } finally {
       // Set this flag back.
-      SplitRegionHandler.TEST_SKIP = false;
+      AssignmentManager.TEST_SKIP_SPLIT_HANDLING = false;
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
@@ -645,7 +645,7 @@ public class TestSplitTransactionOnCluster {
       printOutRegions(server, "Initial regions: ");
       // Now, before we split, set special flag in master, a flag that has
       // it FAIL the processing of split.
-      SplitRegionHandler.TEST_SKIP = true;
+      AssignmentManager.TEST_SKIP_SPLIT_HANDLING = true;
       // Now try splitting and it should work.
 
       this.admin.split(hri.getRegionNameAsString());
@@ -675,7 +675,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue(regionServerOfRegion != null);
 
       // Remove the block so that split can move ahead.
-      SplitRegionHandler.TEST_SKIP = false;
+      AssignmentManager.TEST_SKIP_SPLIT_HANDLING = false;
       String node = ZKAssign.getNodeName(zkw, hri.getEncodedName());
       Stat stat = new Stat();
       byte[] data = ZKUtil.getDataNoWatch(zkw, node, stat);
@@ -692,7 +692,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue(regionServerOfRegion == null);
     } finally {
       // Set this flag back.
-      SplitRegionHandler.TEST_SKIP = false;
+      AssignmentManager.TEST_SKIP_SPLIT_HANDLING = false;
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
@@ -765,8 +765,6 @@ public class TestSplitTransactionOnCluster {
       ServerName regionServerOfRegion = regionStates.getRegionServerOfRegion(hri);
       assertTrue(regionServerOfRegion == null);
     } finally {
-      // Set this flag back.
-      SplitRegionHandler.TEST_SKIP = false;
       this.admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
@@ -998,8 +996,8 @@ public class TestSplitTransactionOnCluster {
       assertTrue("not able to find a splittable region", region != null);
       SplitTransaction st = new MockedSplitTransaction(region, Bytes.toBytes("row2")) {
         @Override
-        int createNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo region,
-            ServerName serverName) throws KeeperException, IOException {
+        public PairOfSameType<HRegion> stepsBeforePONR(final Server server,
+            final RegionServerServices services, boolean testing) throws IOException {
           throw new SplittingNodeCreationFailedException ();
         }
       };

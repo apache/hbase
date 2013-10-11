@@ -190,7 +190,15 @@ public class RegionStates {
    */
   public synchronized boolean isRegionInState(
       final HRegionInfo hri, final State... states) {
-    RegionState regionState = getRegionState(hri);
+    return isRegionInState(hri.getEncodedName(), states);
+  }
+
+  /**
+   * @return True if specified region is in one of the specified states.
+   */
+  public synchronized boolean isRegionInState(
+      final String regionName, final State... states) {
+    RegionState regionState = getRegionState(regionName);
     State s = regionState != null ? regionState.getState() : null;
     for (State state: states) {
       if (s == state) return true;
@@ -358,11 +366,11 @@ public class RegionStates {
     if (oldState == null) {
       LOG.warn("Online region not in RegionStates: " + hri.getShortNameToLog());
     } else {
-      State state = oldState.getState();
       ServerName sn = oldState.getServerName();
-      if (state != State.OPEN || sn == null || !sn.equals(serverName)) {
-        LOG.debug("Online " + hri.getShortNameToLog() + " with current state=" + state +
-          ", expected state=OPEN" + ", assigned to server: " + sn + " expected " + serverName);
+      if (!oldState.isReadyToOnline() || sn == null || !sn.equals(serverName)) {
+        LOG.debug("Online " + hri.getShortNameToLog() + " with current state="
+          + oldState.getState() + ", expected state=OPEN/MERGING_NEW/SPLITTING_NEW"
+          + ", assigned to server: " + sn + " expected " + serverName);
       }
     }
     updateRegionState(hri, State.OPEN, serverName);
@@ -434,29 +442,28 @@ public class RegionStates {
   }
 
   /**
-   * A region is offline, won't be in transition any more.
-   * Its state should be the specified expected state, which
-   * can be Split/Merged/Offline/null(=Offline) only.
+   * A region is offline, won't be in transition any more. Its state
+   * should be the specified expected state, which can only be
+   * Split/Merged/Offline/null(=Offline)/SplittingNew/MergingNew.
    */
   public synchronized void regionOffline(
       final HRegionInfo hri, final State expectedState) {
     Preconditions.checkArgument(expectedState == null
-      || expectedState == State.OFFLINE || expectedState == State.SPLIT
-      || expectedState == State.MERGED, "Offlined region should be in state"
-        + " OFFLINE/SPLIT/MERGED instead of " + expectedState);
+      || RegionState.isNotUnassignableNotInTransition(expectedState),
+        "Offlined region should be in state OFFLINE/SPLIT/MERGED/"
+          + "SPLITTING_NEW/MERGING_NEW instead of " + expectedState);
     String regionName = hri.getEncodedName();
     RegionState oldState = regionStates.get(regionName);
     if (oldState == null) {
       LOG.warn("Offline region not in RegionStates: " + hri.getShortNameToLog());
     } else if (LOG.isDebugEnabled()) {
-      State state = oldState.getState();
       ServerName sn = oldState.getServerName();
-      if (state != State.OFFLINE
-          && state != State.SPLITTING && state != State.MERGING) {
+      if (!oldState.isReadyToOffline()) {
         LOG.debug("Offline " + hri.getShortNameToLog() + " with current state="
-          + state + ", expected state=OFFLINE/SPLITTING/MERGING");
+          + oldState.getState() + ", expected state=OFFLINE/SPLIT/"
+          + "MERGED/SPLITTING_NEW/MERGING_NEW");
       }
-      if (sn != null && state == State.OFFLINE) {
+      if (sn != null && oldState.isOffline()) {
         LOG.debug("Offline " + hri.getShortNameToLog()
           + " with current state=OFFLINE, assigned to server: "
           + sn + ", expected null");
@@ -497,9 +504,8 @@ public class RegionStates {
       if (isRegionOnline(region)) {
         regionsToOffline.add(region);
       } else {
-        RegionState state = getRegionState(region);
-        if (state.isSplitting() || state.isMerging()) {
-          LOG.debug("Offline splitting/merging region " + state);
+        if (isRegionInState(region, State.SPLITTING, State.MERGING)) {
+          LOG.debug("Offline splitting/merging region " + getRegionState(region));
           try {
             // Delete the ZNode if exists
             ZKAssign.deleteNodeFailSilent(watcher, region);
@@ -512,6 +518,7 @@ public class RegionStates {
     }
 
     for (HRegionInfo hri : regionsToOffline) {
+      updateRegionState(hri, State.OFFLINE);
       regionOffline(hri);
     }
 
