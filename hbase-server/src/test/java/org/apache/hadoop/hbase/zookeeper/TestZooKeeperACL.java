@@ -264,5 +264,25 @@ public class TestZooKeeperACL {
     assertEquals(acls.get(0).getPerms(), ZooDefs.Perms.ALL);
   }
 
+  /**
+   * Check if ZooKeeper JaasConfiguration is valid.
+   */
+  @Test
+  public void testIsZooKeeperSecure() throws Exception {
+    boolean testJaasConfig = ZKUtil.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
+    assertEquals(testJaasConfig, secureZKAvailable);
+    // Define Jaas configuration without ZooKeeper Jaas config
+    File saslConfFile = File.createTempFile("tmp", "fakeJaas.conf");
+    FileWriter fwriter = new FileWriter(saslConfFile);
+
+    fwriter.write("");
+    fwriter.close();
+    System.setProperty("java.security.auth.login.config",
+        saslConfFile.getAbsolutePath());
+
+    testJaasConfig = ZKUtil.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
+    assertEquals(testJaasConfig, false);
+    saslConfFile.delete();
+  }
 }
 
