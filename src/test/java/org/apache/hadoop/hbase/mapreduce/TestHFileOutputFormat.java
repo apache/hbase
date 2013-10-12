@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -82,6 +83,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -1263,6 +1265,59 @@ public class TestHFileOutputFormat  {
     } else {
       throw new RuntimeException(
           "usage: TestHFileOutputFormat newtable | incremental");
+    }
+  }
+
+  /**
+   * Test writing HFile and bulk uploading to HTable without integration of MapReduce
+   * @throws Exception
+   */
+  @Test
+  public void testCustomHFileWritingAndBulkUpload() throws Exception {
+    util = new HBaseTestingUtility();
+    Configuration conf = util.getConfiguration();
+    util.startMiniCluster();
+    Path outputDir = util.getTestDir("/testCustomBulkUpload/");
+
+    // Create a writer
+    TaskAttemptContext context = HFileOutputFormat.createFakeTaskAttemptContext(conf, outputDir, 123);
+    HFileOutputFormat hFileOutputFormat = new HFileOutputFormat();
+    RecordWriter<ImmutableBytesWritable, KeyValue> writer = hFileOutputFormat.getRecordWriter(context);
+
+    // Write 100 KeyValues in sorted order
+    byte[] row = Bytes.toBytes("testRow");
+    byte[] family = Bytes.toBytes("testFam");
+    byte[] qualifier = Bytes.toBytes("testQual");
+    byte[] value = Bytes.toBytes("testVal");
+
+    ImmutableBytesWritable someWritable = new ImmutableBytesWritable();
+    for (int i = 0; i < 100; i++) {
+      KeyValue kv = new KeyValue(
+          Bytes.add(row, Bytes.toBytes(i)),
+          family,
+          qualifier,
+          Bytes.add(value, Bytes.toBytes(i)));
+      writer.write(someWritable, kv);
+    }
+
+    // Close writer
+    writer.close(context);
+
+    // Bulk upload HFile to HTable
+    HTable table = util.createTable(Bytes.toBytes("testTable"), family);
+    Path workPath = new FileOutputCommitter(outputDir, context).getWorkPath();
+    new LoadIncrementalHFiles(conf).doBulkLoad(workPath, table);
+
+    // Verify data in HTable
+    Scan scan = new Scan().addColumn(family, qualifier);
+    ResultScanner scanner = table.getScanner(scan);
+    for (int i = 0; i < 100; i++) {
+      Result r = scanner.next();
+      assertNotNull(r);
+      KeyValue[] kvs = r.raw();
+      assertEquals(1, kvs.length);
+      assertTrue(Bytes.equals(Bytes.add(row, Bytes.toBytes(i)), kvs[0].getRow()));
+      assertTrue(Bytes.equals(Bytes.add(value, Bytes.toBytes(i)), kvs[0].getValue()));
     }
   }
 }

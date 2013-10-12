@@ -63,8 +63,11 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
@@ -644,5 +647,27 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     if (HFileOutputFormat.latestWriter != null) {
       latestWriter.close(context);
     }
+  }
+
+  /**
+   * Create a fake TaskAttemptContext for getting a RecordWriter.
+   * By using this, client can write HFiles and bulk upload them to HTable
+   * without integration of MapReduce.
+   * Important: KeyValues written in HFiles must have the same column family and
+   * be sorted by {@Link KeyValue.KVComparator} in advance.
+   *
+   * @param conf HBase configuration
+   * @param outputDir The root directory for writing HFiles
+   * @param identifier Unique identifier for each task if there are more than one
+   * @return Fake TaskAttemptContext to get a KeyValue writer
+   */
+  public static TaskAttemptContext createFakeTaskAttemptContext(
+      Configuration conf, Path outputDir, int identifier) {
+    JobID jobId = new JobID();
+    TaskID taskId = new TaskID(jobId, false, identifier);
+    conf.set("mapred.output.dir", outputDir.toString());
+    TaskAttemptContext context = new TaskAttemptContext(conf, new TaskAttemptID(taskId, 0));
+
+    return context;
   }
 }
