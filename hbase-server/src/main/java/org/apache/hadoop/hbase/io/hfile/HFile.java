@@ -497,6 +497,8 @@ public class HFile {
     void close(boolean evictOnClose) throws IOException;
 
     DataBlockEncoding getEncodingOnDisk();
+
+    boolean hasMVCCInfo();
   }
 
   /**

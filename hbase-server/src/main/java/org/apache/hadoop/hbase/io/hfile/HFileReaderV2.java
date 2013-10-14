@@ -387,6 +387,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
     return dataBlockEncoder.diskToCacheFormat(hfileBlock, isCompaction);
   }
 
+  @Override
+  public boolean hasMVCCInfo() {
+    return includesMemstoreTS && decodeMemstoreTS;
+  }
+
   /**
    * Compares the actual type of a block retrieved from cache or disk with its
    * expected type and throws an exception in case of a mismatch. Expected
