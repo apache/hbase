@@ -935,7 +935,7 @@ public class TestOrderedBytes {
         assertArrayEquals(
           String.format(
             "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
-            sortedVals[i], decoded, ord),
+            Arrays.toString(sortedVals[i]), Arrays.toString(decoded), ord),
           sortedVals[i], decoded);
       }
     }
@@ -1010,7 +1010,7 @@ public class TestOrderedBytes {
         assertArrayEquals(
           String.format(
             "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
-            sortedVals[i], decoded, ord),
+            Arrays.toString(sortedVals[i]), Arrays.toString(decoded), ord),
           sortedVals[i], decoded);
       }
     }
