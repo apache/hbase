@@ -53,6 +53,7 @@ public class StoreFileScanner implements KeyValueScanner {
   private KeyValue delayedSeekKV;
 
   private boolean enforceMVCC = false;
+  private boolean hasMVCCInfo = false;
 
   private static AtomicLong seekCount;
 
@@ -62,10 +63,11 @@ public class StoreFileScanner implements KeyValueScanner {
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
    * @param hfs HFile scanner
    */
-  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs, boolean useMVCC) {
+  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs, boolean useMVCC, boolean hasMVCC) {
     this.reader = reader;
     this.hfs = hfs;
     this.enforceMVCC = useMVCC;
+    this.hasMVCCInfo = hasMVCC;
   }
 
   /**
@@ -126,7 +128,8 @@ public class StoreFileScanner implements KeyValueScanner {
       if (cur != null) {
         hfs.next();
         cur = hfs.getKeyValue();
-        skipKVsNewerThanReadpoint();
+        if (hasMVCCInfo)
+          skipKVsNewerThanReadpoint();
       }
     } catch(IOException e) {
       throw new IOException("Could not iterate " + this, e);
@@ -146,7 +149,7 @@ public class StoreFileScanner implements KeyValueScanner {
 
         cur = hfs.getKeyValue();
 
-        return skipKVsNewerThanReadpoint();
+        return !hasMVCCInfo ? true : skipKVsNewerThanReadpoint();
       } finally {
         realSeekDone = true;
       }
@@ -166,7 +169,7 @@ public class StoreFileScanner implements KeyValueScanner {
         }
         cur = hfs.getKeyValue();
 
-        return skipKVsNewerThanReadpoint();
+        return !hasMVCCInfo ? true : skipKVsNewerThanReadpoint();
       } finally {
         realSeekDone = true;
       }

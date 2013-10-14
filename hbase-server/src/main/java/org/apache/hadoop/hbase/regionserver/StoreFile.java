@@ -1135,7 +1135,7 @@ public class StoreFile {
                                                boolean isCompaction) {
       return new StoreFileScanner(this,
                                  getScanner(cacheBlocks, pread,
-                                            isCompaction), !isCompaction);
+                                            isCompaction), !isCompaction, reader.hasMVCCInfo());
     }
 
     /**
