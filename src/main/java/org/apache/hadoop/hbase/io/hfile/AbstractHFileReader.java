@@ -354,4 +354,9 @@ public abstract class AbstractHFileReader extends SchemaConfigured
   public DataBlockEncoding getEncodingOnDisk() {
     return dataBlockEncoder.getEncodingOnDisk();
   }
+
+  @Override
+  public boolean hasMVCCInfo() {
+    return true;
+  }
 }

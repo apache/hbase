@@ -1424,7 +1424,7 @@ public class StoreFile extends SchemaConfigured {
                                                boolean isCompaction) {
       return new StoreFileScanner(this,
                                  getScanner(cacheBlocks, pread,
-                                            isCompaction), !isCompaction);
+                                            isCompaction), !isCompaction, reader.hasMVCCInfo());
     }
 
     /**
