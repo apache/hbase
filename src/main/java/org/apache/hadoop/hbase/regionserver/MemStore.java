@@ -716,7 +716,7 @@ public class MemStore implements HeapSize {
 
     // the pre-calculated KeyValue to be returned by peek() or next()
     private KeyValue theNext;
-		private long readPoint;
+    private long readPoint;
 
     /*
     Some notes...
