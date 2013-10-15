@@ -85,13 +85,35 @@ module Shell
 
       def translate_hbase_exceptions(*args)
         yield
-      rescue org.apache.hadoop.hbase.TableNotFoundException
-        raise "Unknown table #{args.first}!"
-      rescue org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException
-        valid_cols = table(args.first).get_all_columns.map { |c| c + '*' }
-        raise "Unknown column family! Valid column names: #{valid_cols.join(", ")}"
-      rescue org.apache.hadoop.hbase.TableExistsException => e
-        raise "Table already exists: #{args.first}!"
+      rescue => e
+        raise e unless e.respond_to?(:cause) && e.cause != nil
+
+        # Get the special java exception which will be handled
+        cause = e.cause
+        if cause.kind_of?(org.apache.hadoop.hbase.TableNotFoundException) then
+          raise "Unknown table #{args.first}!"
+        end
+        if cause.kind_of?(org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException) then
+          valid_cols = table(args.first).get_all_columns.map { |c| c + '*' }
+          raise "Unknown column family! Valid column names: #{valid_cols.join(", ")}"
+        end
+        if cause.kind_of?(org.apache.hadoop.hbase.TableExistsException) then
+          raise "Table already exists: #{args.first}!"
+        end
+        # To be safe, here only AccessDeniedException is considered. In future
+        # we might support more in more generic approach when possible.
+        if cause.kind_of?(org.apache.hadoop.hbase.security.AccessDeniedException) then
+          str = java.lang.String.new("#{cause}")
+          # Error message is merged with stack trace, reference StringUtils.stringifyException
+          # This is to parse and get the error message from the whole.
+          strs = str.split("\n")
+          if strs.size > 0 then
+            raise "#{strs[0]}"
+          end
+        end
+
+        # Throw the other exception which hasn't been handled above
+        raise e
       end
     end
   end
