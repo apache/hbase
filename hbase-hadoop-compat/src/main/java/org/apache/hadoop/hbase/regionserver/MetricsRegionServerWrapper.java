@@ -113,17 +113,17 @@ public interface MetricsRegionServerWrapper {
   long getCheckAndMutateChecksPassed();
 
   /**
-   * Get the Size of indexes in storefiles on disk.
+   * Get the Size (in bytes) of indexes in storefiles on disk.
    */
   long getStoreFileIndexSize();
 
   /**
-   * Get the size of of the static indexes including the roots.
+   * Get the size (in bytes) of of the static indexes including the roots.
    */
   long getTotalStaticIndexSize();
 
   /**
-   * Get the size of the static bloom filters.
+   * Get the size (in bytes) of the static bloom filters.
    */
   long getTotalStaticBloomSize();
 
@@ -158,7 +158,7 @@ public interface MetricsRegionServerWrapper {
   int getFlushQueueSize();
 
   /**
-   * Get the size of the block cache that is free.
+   * Get the size (in bytes) of the block cache that is free.
    */
   long getBlockCacheFreeSize();
 
@@ -168,7 +168,7 @@ public interface MetricsRegionServerWrapper {
   long getBlockCacheCount();
 
   /**
-   * Get the total size of the block cache.
+   * Get the total size (in bytes) of the block cache.
    */
   long getBlockCacheSize();
 
