@@ -41,7 +41,6 @@ public class TimeToLiveLogCleaner implements LogCleanerDelegate {
   private Configuration conf;
   // Configured time a log can be kept after it was closed
   private long ttl;
-  private boolean parseTimeFromPathName;
 
   @Override
   public boolean isLogDeletable(Path filePath) {
@@ -49,7 +48,7 @@ public class TimeToLiveLogCleaner implements LogCleanerDelegate {
     long currentTime = System.currentTimeMillis();
     try {
       // If the path name is in hourly format, skip getting modification time
-      if (HLog.shouldArchiveToHourlyDir() && OldLogsCleaner.isMatchDatePattern(filePath)) {
+      if (OldLogsCleaner.isOldLogsArchivedToHourlyDir() && OldLogsCleaner.isMatchDatePattern(filePath)) {
         time = HLog.DATE_FORMAT.parse(filePath.getName()).getTime();
       } else {
         FileStatus fStat = filePath.getFileSystem(conf).getFileStatus(filePath);

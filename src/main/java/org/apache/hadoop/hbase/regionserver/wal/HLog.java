@@ -1884,14 +1884,6 @@ public class HLog implements Syncable {
     return new Path(oldLogsSubDir, filename);
   }
 
-  public static boolean shouldArchiveToHourlyDir() {
-    return ARCHIVE_TO_HOURLY_DIR;
-  }
-
-  public static void setArchiveToHourlyDir(boolean b) {
-    ARCHIVE_TO_HOURLY_DIR = b;
-  }
-
   /**
    * Takes splitLogsMap and concurrently writes them to region directories using a thread pool
    *

@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -47,6 +47,7 @@ public class OldLogsCleaner extends Chore {
   static final Log LOG = LogFactory.getLog(OldLogsCleaner.class.getName());
 
   private final static Pattern datePattern = Pattern.compile("\\d{4}-\\d{2}-\\d{2}-\\d{2}");
+  private static boolean ARCHIVE_TO_HOURLY_DIR = false;
 
   // Max number we can delete on every chore, this is to make sure we don't
   // issue thousands of delete commands around the same time
@@ -75,6 +76,7 @@ public class OldLogsCleaner extends Chore {
       conf.set("hbase.master.logcleanerplugin.impl",
           "org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner");
     }
+    ARCHIVE_TO_HOURLY_DIR = conf.getBoolean("hbase.hlog.archive.hourlydir", false);
     this.maxDeletedLogs =
         conf.getInt("hbase.master.logcleaner.maxdeletedlogs", 20);
     this.fs = fs;
@@ -102,19 +104,14 @@ public class OldLogsCleaner extends Chore {
    * @throws IOException
    */
   private void cleanHourlyDirectories(List<FileStatus> hourly) throws IOException {
-    FileStatus[] files = this.fs.listStatus(this.oldLogDir);
-    if (files == null || files.length == 0) {
-      LOG.debug("Old log folder is empty");
-      return;
-    }
-    Arrays.sort(files);
+    Collections.sort(hourly);
     // Only delete one hourly sub-directory in one iteration. So we won't delete
     // too many directories/files in a short period of time.
     // When the system generates 10000-12000 log files per hour,
     // around 4GB data is deleted.
-    Path path = files[0].getPath();
+    Path path = hourly.get(0).getPath();
     if (logCleaner.isLogDeletable(path)) {
-      LOG.info("Removing old logs in " + path.toString());
+      LOG.info("Removing old logs directory " + path.toString());
       this.fs.delete(path, true);
     } else {
       LOG.debug("Current hourly directories are not old enough. Oldest directory: " + path.toString());
@@ -169,7 +166,7 @@ public class OldLogsCleaner extends Chore {
   @Override
   protected void chore() {
     try {
-      if (HLog.shouldArchiveToHourlyDir()) {
+      if (ARCHIVE_TO_HOURLY_DIR) {
         FileStatus[] subdirs = this.fs.listStatus(this.oldLogDir);
         List<FileStatus> hourly = new ArrayList<FileStatus>();
         List<FileStatus> legacy = new ArrayList<FileStatus>();
@@ -205,5 +202,9 @@ public class OldLogsCleaner extends Chore {
 
   public static boolean isMatchDatePattern(Path file) {
     return datePattern.matcher(file.getName()).matches();
+  }
+
+  public static boolean isOldLogsArchivedToHourlyDir() {
+    return ARCHIVE_TO_HOURLY_DIR;
   }
 }

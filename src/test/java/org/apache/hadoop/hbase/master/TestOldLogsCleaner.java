@@ -125,14 +125,13 @@ public class TestOldLogsCleaner {
     // set TTL to delete 5 hours
     c.setLong("hbase.master.logcleaner.ttl", 4 * 3600 * 1000);
     c.setBoolean("hbase.hlog.archive.hourlydir", true);
-    HLog.setArchiveToHourlyDir(true);
     Path oldLogDir = new Path(TEST_UTIL.getTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     String fakeMachineName = URLEncoder.encode("regionserver:60020", "UTF8");
 
     FileSystem fs = FileSystem.get(c);
     StoppableImpl stop = new StoppableImpl();
-    OldLogsCleaner cleaner = new OldLogsCleaner(1000, stop,c, fs, oldLogDir);
+    OldLogsCleaner cleaner = new OldLogsCleaner(1000, stop, c, fs, oldLogDir);
 
     // Create 1 invalid directory (considering legacy logs), 10 directories representing
     // recent 10 hours respectively
