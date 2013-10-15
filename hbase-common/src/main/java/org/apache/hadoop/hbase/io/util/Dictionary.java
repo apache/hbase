@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver.wal;
+package org.apache.hadoop.hbase.io.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * first bit is reserved for detecting whether something is compressed or not).
  */
 @InterfaceAudience.Private
-interface Dictionary {
+public interface Dictionary {
   byte NOT_IN_DICTIONARY = -1;
 
   void init(int initialSize);

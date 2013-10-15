@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver.wal;
+package org.apache.hadoop.hbase.io.util;
 
 import static org.junit.Assert.*;
 

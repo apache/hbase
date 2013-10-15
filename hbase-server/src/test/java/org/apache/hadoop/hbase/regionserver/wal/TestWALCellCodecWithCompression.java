@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.codec.Codec.Decoder;
 import org.apache.hadoop.hbase.codec.Codec.Encoder;
+import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -42,8 +43,19 @@ public class TestWALCellCodecWithCompression {
 
   @Test
   public void testEncodeDecodeKVsWithTags() throws Exception {
-    WALCellCodec codec = new WALCellCodec(new Configuration(false), new CompressionContext(
-        LRUDictionary.class, false));
+    doTest(false);
+  }
+
+  @Test
+  public void testEncodeDecodeKVsWithTagsWithTagsCompression() throws Exception {
+    doTest(true);
+  }
+
+  private void doTest(boolean compressTags) throws Exception {
+    Configuration conf = new Configuration(false);
+    conf.setBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, compressTags);
+    WALCellCodec codec = new WALCellCodec(conf, new CompressionContext(LRUDictionary.class, false,
+        conf));
     ByteArrayOutputStream bos = new ByteArrayOutputStream(1024);
     Encoder encoder = codec.getEncoder(bos);
     encoder.write(createKV(1));

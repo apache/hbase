@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
@@ -40,7 +41,7 @@ public abstract class WriterBase implements HLog.Writer {
     if (doCompress) {
       try {
         this.compressionContext = new CompressionContext(LRUDictionary.class,
-            FSUtils.isRecoveredEdits(path));
+            FSUtils.isRecoveredEdits(path), conf);
       } catch (Exception e) {
         throw new IOException("Failed to initiate CompressionContext", e);
       }

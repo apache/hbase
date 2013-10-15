@@ -20,21 +20,31 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.TagCompressionContext;
+import org.apache.hadoop.hbase.io.util.Dictionary;
 
 /**
  * Context that holds the various dictionaries for compression in HLog.
  */
 @InterfaceAudience.Private
 class CompressionContext {
+
+  static final String ENABLE_WAL_TAGS_COMPRESSION = 
+      "hbase.regionserver.wal.tags.enablecompression";
+
   final Dictionary regionDict;
   final Dictionary tableDict;
   final Dictionary familyDict;
   final Dictionary qualifierDict;
   final Dictionary rowDict;
+  // Context used for compressing tags
+  TagCompressionContext tagCompressionContext = null;
 
-  public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits)
-  throws SecurityException, NoSuchMethodException, InstantiationException,
+  public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits,
+      Configuration conf) throws SecurityException, NoSuchMethodException, InstantiationException,
       IllegalAccessException, InvocationTargetException {
     Constructor<? extends Dictionary> dictConstructor =
         dictType.getConstructor();
@@ -54,6 +64,9 @@ class CompressionContext {
     rowDict.init(Short.MAX_VALUE);
     familyDict.init(Byte.MAX_VALUE);
     qualifierDict.init(Byte.MAX_VALUE);
+    if (conf != null && conf.getBoolean(ENABLE_WAL_TAGS_COMPRESSION, true)) {
+      tagCompressionContext = new TagCompressionContext(dictType);
+    }
   }
 
   void clear() {
@@ -62,5 +75,8 @@ class CompressionContext {
     familyDict.clear();
     qualifierDict.clear();
     rowDict.clear();
+    if (tagCompressionContext != null) {
+      tagCompressionContext.clear();
+    }
   }
 }

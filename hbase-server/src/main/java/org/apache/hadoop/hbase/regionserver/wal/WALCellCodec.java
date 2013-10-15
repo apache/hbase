@@ -29,11 +29,12 @@ import org.apache.hadoop.hbase.codec.BaseDecoder;
 import org.apache.hadoop.hbase.codec.BaseEncoder;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
+import org.apache.hadoop.hbase.io.util.Dictionary;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.io.IOUtils;
 
-import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 
 
@@ -157,7 +158,8 @@ public class WALCellCodec implements Codec {
       StreamUtils.writeRawVInt32(out, kv.getKeyLength());
       StreamUtils.writeRawVInt32(out, kv.getValueLength());
       // To support tags
-      StreamUtils.writeRawVInt32(out, kv.getTagsLength());
+      short tagsLength = kv.getTagsLength();
+      StreamUtils.writeRawVInt32(out, tagsLength);
 
       // Write row, qualifier, and family; use dictionary
       // compression as they're likely to have duplicates.
@@ -165,11 +167,25 @@ public class WALCellCodec implements Codec {
       write(kvBuffer, kv.getFamilyOffset(), kv.getFamilyLength(), compression.familyDict);
       write(kvBuffer, kv.getQualifierOffset(), kv.getQualifierLength(), compression.qualifierDict);
 
-      // Write the rest uncompressed.
+      // Write timestamp, type and value as uncompressed.
       int pos = kv.getTimestampOffset();
-      int remainingLength = kv.getLength() + offset - pos;
-      out.write(kvBuffer, pos, remainingLength);
-
+      int tsTypeValLen = kv.getLength() + offset - pos;
+      if (tagsLength > 0) {
+        tsTypeValLen = tsTypeValLen - tagsLength - KeyValue.TAGS_LENGTH_SIZE;
+      }
+      assert tsTypeValLen > 0;
+      out.write(kvBuffer, pos, tsTypeValLen);
+      if (tagsLength > 0) {
+        if (compression.tagCompressionContext != null) {
+          // Write tags using Dictionary compression
+          compression.tagCompressionContext.compressTags(out, kvBuffer, kv.getTagsOffset(),
+              tagsLength);
+        } else {
+          // Tag compression is disabled within the WAL compression. Just write the tags bytes as
+          // it is.
+          out.write(kvBuffer, kv.getTagsOffset(), tagsLength);
+        }
+      }
     }
 
     private void write(byte[] data, int offset, int length, Dictionary dict) throws IOException {
@@ -199,7 +215,7 @@ public class WALCellCodec implements Codec {
       int keylength = StreamUtils.readRawVarint32(in);
       int vlength = StreamUtils.readRawVarint32(in);
       
-      int tagsLength = StreamUtils.readRawVarint32(in);
+      short tagsLength = (short) StreamUtils.readRawVarint32(in);
       int length = 0;
       if(tagsLength == 0) {
         length = KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + keylength + vlength;
@@ -228,8 +244,23 @@ public class WALCellCodec implements Codec {
       elemLen = readIntoArray(backingArray, pos, compression.qualifierDict);
       pos += elemLen;
 
-      // the rest
-      IOUtils.readFully(in, backingArray, pos, length - pos);
+      // timestamp, type and value
+      int tsTypeValLen = length - pos;
+      if (tagsLength > 0) {
+        tsTypeValLen = tsTypeValLen - tagsLength - KeyValue.TAGS_LENGTH_SIZE;
+      }
+      IOUtils.readFully(in, backingArray, pos, tsTypeValLen);
+      pos += tsTypeValLen;
+
+      // tags
+      if (tagsLength > 0) {
+        pos = Bytes.putShort(backingArray, pos, tagsLength);
+        if (compression.tagCompressionContext != null) {
+          compression.tagCompressionContext.uncompressTags(in, backingArray, pos, tagsLength);
+        } else {
+          IOUtils.readFully(in, backingArray, pos, tagsLength);
+        }
+      }
       return new KeyValue(backingArray, 0, length);
     }
 
@@ -293,81 +324,5 @@ public class WALCellCodec implements Codec {
   public ByteStringUncompressor getByteStringUncompressor() {
     // TODO: ideally this should also encapsulate compressionContext
     return this.statelessUncompressor;
-  }
-
-  /**
-   * It seems like as soon as somebody sets himself to the task of creating VInt encoding,
-   * his mind blanks out for a split-second and he starts the work by wrapping it in the
-   * most convoluted interface he can come up with. Custom streams that allocate memory,
-   * DataOutput that is only used to write single bytes... We operate on simple streams.
-   * Thus, we are going to have a simple implementation copy-pasted from protobuf Coded*Stream.
-   */
-  private static class StreamUtils {
-    public static int computeRawVarint32Size(final int value) {
-      if ((value & (0xffffffff <<  7)) == 0) return 1;
-      if ((value & (0xffffffff << 14)) == 0) return 2;
-      if ((value & (0xffffffff << 21)) == 0) return 3;
-      if ((value & (0xffffffff << 28)) == 0) return 4;
-      return 5;
-    }
-
-    static void writeRawVInt32(OutputStream output, int value) throws IOException {
-      assert value >= 0;
-      while (true) {
-        if ((value & ~0x7F) == 0) {
-          output.write(value);
-          return;
-        } else {
-          output.write((value & 0x7F) | 0x80);
-          value >>>= 7;
-        }
-      }
-    }
-
-    static int readRawVarint32(InputStream input) throws IOException {
-      byte tmp = (byte)input.read();
-      if (tmp >= 0) {
-        return tmp;
-      }
-      int result = tmp & 0x7f;
-      if ((tmp = (byte)input.read()) >= 0) {
-        result |= tmp << 7;
-      } else {
-        result |= (tmp & 0x7f) << 7;
-        if ((tmp = (byte)input.read()) >= 0) {
-          result |= tmp << 14;
-        } else {
-          result |= (tmp & 0x7f) << 14;
-          if ((tmp = (byte)input.read()) >= 0) {
-            result |= tmp << 21;
-          } else {
-            result |= (tmp & 0x7f) << 21;
-            result |= (tmp = (byte)input.read()) << 28;
-            if (tmp < 0) {
-              // Discard upper 32 bits.
-              for (int i = 0; i < 5; i++) {
-                if (input.read() >= 0) {
-                  return result;
-                }
-              }
-              throw new IOException("Malformed varint");
-            }
-          }
-        }
-      }
-      return result;
-    }
-
-    static short toShort(byte hi, byte lo) {
-      short s = (short) (((hi & 0xFF) << 8) | (lo & 0xFF));
-      Preconditions.checkArgument(s >= 0);
-      return s;
-    }
-
-    static void writeShort(OutputStream out, short v) throws IOException {
-      Preconditions.checkArgument(v >= 0);
-      out.write((byte)(0xff & (v >> 8)));
-      out.write((byte)(0xff & v));
-    }
   }
 }

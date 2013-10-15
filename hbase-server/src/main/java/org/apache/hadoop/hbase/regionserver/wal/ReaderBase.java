@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -73,7 +74,7 @@ public abstract class ReaderBase implements HLog.Reader {
       try {
         if (compressionContext == null) {
           compressionContext = new CompressionContext(LRUDictionary.class,
-              FSUtils.isRecoveredEdits(path));
+              FSUtils.isRecoveredEdits(path), conf);
         } else {
           compressionContext.clear();
         }

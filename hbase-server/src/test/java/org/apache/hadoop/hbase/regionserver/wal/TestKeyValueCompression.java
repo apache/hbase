@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.junit.Test;
@@ -67,7 +68,7 @@ public class TestKeyValueCompression {
   }
 
   private void runTestCycle(List<KeyValue> kvs) throws Exception {
-    CompressionContext ctx = new CompressionContext(LRUDictionary.class, false);
+    CompressionContext ctx = new CompressionContext(LRUDictionary.class, false, null);
     DataOutputBuffer buf = new DataOutputBuffer(BUF_SIZE);
     for (KeyValue kv : kvs) {
       KeyValueCompression.writeKV(buf, kv, ctx);
@@ -84,7 +85,7 @@ public class TestKeyValueCompression {
 
   @Test
   public void testKVWithTags() throws Exception {
-    CompressionContext ctx = new CompressionContext(LRUDictionary.class, false);
+    CompressionContext ctx = new CompressionContext(LRUDictionary.class, false, null);
     DataOutputBuffer buf = new DataOutputBuffer(BUF_SIZE);
     KeyValueCompression.writeKV(buf, createKV(1), ctx);
     KeyValueCompression.writeKV(buf, createKV(0), ctx);

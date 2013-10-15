@@ -1,0 +1,121 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.hbase.io;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.io.util.Dictionary;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.IOUtils;
+
+/**
+ * Context that holds the dictionary for Tag compression and doing the compress/uncompress. This
+ * will be used for compressing tags while writing into WALs.
+ */
+@InterfaceAudience.Private
+public class TagCompressionContext {
+  private final Dictionary tagDict;
+
+  public TagCompressionContext(Class<? extends Dictionary> dictType) throws SecurityException,
+      NoSuchMethodException, InstantiationException, IllegalAccessException,
+      InvocationTargetException {
+    Constructor<? extends Dictionary> dictConstructor = dictType.getConstructor();
+    tagDict = dictConstructor.newInstance();
+    tagDict.init(Short.MAX_VALUE);
+  }
+
+  public void clear() {
+    tagDict.clear();
+  }
+
+  /**
+   * Compress tags one by one and writes the OutputStream. 
+   * @param out Stream to which the compressed tags to be written
+   * @param in Source where tags are available
+   * @param offset Offset for the tags bytes
+   * @param length Length of all tag bytes
+   * @throws IOException
+   */
+  public void compressTags(OutputStream out, byte[] in, int offset, short length)
+      throws IOException {
+    int pos = offset;
+    int endOffset = pos + length;
+    assert pos < endOffset;
+    while (pos < endOffset) {
+      short tagLen = Bytes.toShort(in, pos);
+      pos += Tag.TAG_LENGTH_SIZE;
+      write(in, pos, tagLen, out);
+      pos += tagLen;
+    }
+  }
+
+  /**
+   * Uncompress tags from the InputStream and writes to the destination array.
+   * @param src Stream where the compressed tags are available
+   * @param dest Destination array where to write the uncompressed tags
+   * @param offset Offset in destination where tags to be written
+   * @param length Length of all tag bytes
+   * @throws IOException
+   */
+  public void uncompressTags(InputStream src, byte[] dest, int offset, short length)
+      throws IOException {
+    int endOffset = offset + length;
+    while (offset < endOffset) {
+      byte status = (byte) src.read();
+      if (status == Dictionary.NOT_IN_DICTIONARY) {
+        // We are writing short as tagLen. So can downcast this without any risk.
+        short tagLen = (short) StreamUtils.readRawVarint32(src);
+        offset = Bytes.putShort(dest, offset, tagLen);
+        IOUtils.readFully(src, dest, offset, tagLen);
+        tagDict.addEntry(dest, offset, tagLen);
+        offset += tagLen;
+      } else {
+        short dictIdx = StreamUtils.toShort(status, (byte) src.read());
+        byte[] entry = tagDict.getEntry(dictIdx);
+        if (entry == null) {
+          throw new IOException("Missing dictionary entry for index " + dictIdx);
+        }
+        offset = Bytes.putShort(dest, offset, (short) entry.length);
+        System.arraycopy(entry, 0, dest, offset, entry.length);
+        offset += entry.length;
+      }
+    }
+  }
+
+  private void write(byte[] data, int offset, short length, OutputStream out) throws IOException {
+    short dictIdx = Dictionary.NOT_IN_DICTIONARY;
+    if (tagDict != null) {
+      dictIdx = tagDict.findEntry(data, offset, length);
+    }
+    if (dictIdx == Dictionary.NOT_IN_DICTIONARY) {
+      out.write(Dictionary.NOT_IN_DICTIONARY);
+      StreamUtils.writeRawVInt32(out, length);
+      out.write(data, offset, length);
+    } else {
+      StreamUtils.writeShort(out, dictIdx);
+    }
+  }
+}
