@@ -120,16 +120,16 @@ MetricsRegionServerWrapper mWrap;
 
     <th>Num. Stores</th>
     <th>Num. Storefiles</th>
-    <th>Root Index Size</th>
-    <th>Index Size</th>
-    <th>Bloom Size</th>
+    <th>Root Index Size (bytes)</th>
+    <th>Index Size (bytes)</th>
+    <th>Bloom Size (bytes)</th>
 </tr>
 <tr>
-    <td><% mWrap.getNumStores() %></td>
-    <td><% mWrap.getNumStoreFiles() %></td>
-    <td><% mWrap.getStoreFileIndexSize() %></td>
-    <td><% mWrap.getTotalStaticIndexSize() %></td>
-    <td><% mWrap.getTotalStaticBloomSize() %></td>
+    <td><% StringUtils.humanReadableInt(mWrap.getNumStores()) %></td>
+    <td><% StringUtils.humanReadableInt(mWrap.getNumStoreFiles()) %></td>
+    <td><% StringUtils.humanReadableInt(mWrap.getStoreFileIndexSize()) %></td>
+    <td><% StringUtils.humanReadableInt(mWrap.getTotalStaticIndexSize()) %></td>
+    <td><% StringUtils.humanReadableInt(mWrap.getTotalStaticBloomSize()) %></td>
 </tr>
 </table>
 </%def>
@@ -159,8 +159,8 @@ MetricsRegionServerWrapper mWrap;
 </%args>
 <table class="table table-striped">
 <tr>
-    <th>Compaction queue size</th>
-    <th>Flush queue size</th>
+    <th>Compaction Queue Size</th>
+    <th>Flush Queue Size</th>
 
 </tr>
 <tr>
@@ -177,23 +177,23 @@ MetricsRegionServerWrapper mWrap;
 </%args>
 <table class="table table-striped">
 <tr>
-    <th>Cache Size</th>
-    <th>Cache Free</th>
-    <th>Cache Count</th>
-    <th>Cache Hits</th>
-    <th>Cache Misses</th>
+    <th>Cache Size (bytes)</th>
+    <th>Cache Free (bytes)</th>
+    <th>Cache Count (blocks)</th>
+    <th>Cache Hit Count</th>
+    <th>Cache Miss Count</th>
     <th>Cache Hit Ratio</th>
     <th>Cache Eviction Count</th>
 
 </tr>
 <tr>
-    <td><% mWrap.getBlockCacheSize()%></td>
-    <td><% mWrap.getBlockCacheFreeSize()%></td>
-    <td><% mWrap.getBlockCacheCount() %></td>
-    <td><% mWrap.getBlockCacheHitCount() %></td>
-    <td><% mWrap.getBlockCacheMissCount() %></td>
+    <td><% StringUtils.humanReadableInt(mWrap.getBlockCacheSize()) %></td>
+    <td><% StringUtils.humanReadableInt(mWrap.getBlockCacheFreeSize()) %></td>
+    <td><% StringUtils.humanReadableInt(mWrap.getBlockCacheCount()) %></td>
+    <td><% StringUtils.humanReadableInt(mWrap.getBlockCacheHitCount()) %></td>
+    <td><% StringUtils.humanReadableInt(mWrap.getBlockCacheMissCount()) %></td>
     <td><% mWrap.getBlockCacheHitPercent() %>%</td>
-    <td><% mWrap.getBlockCacheEvictedCount() %></td>
+    <td><% StringUtils.humanReadableInt(mWrap.getBlockCacheEvictedCount()) %></td>
 </tr>
 </table>
 </%def>
