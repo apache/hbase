@@ -678,7 +678,7 @@ public class MemStore implements HeapSize {
     this.lock.readLock().lock();
     try {
       return Collections.<KeyValueScanner>singletonList(
-          new MemStoreScanner());
+          new MemStoreScanner(MultiVersionConsistencyControl.getThreadReadPoint()));
     } finally {
       this.lock.readLock().unlock();
     }
@@ -730,6 +730,8 @@ public class MemStore implements HeapSize {
     // The allocator and snapshot allocator at the time of creating this scanner
     volatile MemStoreLAB allocatorAtCreation;
     volatile MemStoreLAB snapshotAllocatorAtCreation;
+    
+    private long readPoint;
 
     /*
     Some notes...
@@ -752,9 +754,10 @@ public class MemStore implements HeapSize {
       the adds to kvset in the MemStoreScanner.
     */
 
-    MemStoreScanner() {
+    MemStoreScanner(long readPoint) {
       super();
 
+      this.readPoint = readPoint;
       kvsetAtCreation = kvset;
       snapshotAtCreation = snapshot;
       if (allocator != null) {
@@ -768,13 +771,11 @@ public class MemStore implements HeapSize {
     }
 
     private KeyValue getNext(Iterator<KeyValue> it) {
-      long readPoint = MultiVersionConsistencyControl.getThreadReadPoint();
-
       KeyValue v = null;
       try {
         while (it.hasNext()) {
           v = it.next();
-          if (v.getMvccVersion() <= readPoint) {
+          if (v.getMvccVersion() <= this.readPoint) {
             return v;
           }
         }
