@@ -112,11 +112,21 @@ public class TestAssignmentManagerOnCluster {
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       master.assignRegion(hri);
-      master.getAssignmentManager().waitForAssignment(hri);
+      AssignmentManager am = master.getAssignmentManager();
+      am.waitForAssignment(hri);
 
-      ServerName serverName = master.getAssignmentManager().
-        getRegionStates().getRegionServerOfRegion(hri);
+      RegionStates regionStates = am.getRegionStates();
+      ServerName serverName = regionStates.getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+
+      // Region is assigned now. Let's assign it again.
+      // Master should not abort, and region should be assigned.
+      RegionState oldState = regionStates.getRegionState(hri);
+      TEST_UTIL.getHBaseAdmin().assign(hri.getRegionName());
+      master.getAssignmentManager().waitForAssignment(hri);
+      RegionState newState = regionStates.getRegionState(hri);
+      assertTrue(newState.isOpened()
+        && newState.getStamp() != oldState.getStamp());
     } finally {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
