@@ -1684,6 +1684,9 @@ public class AssignmentManager extends ZooKeeperListener {
           versionOfClosingNode, dest, transitionInZK)) {
           LOG.debug("Sent CLOSE to " + server + " for region " +
             region.getRegionNameAsString());
+          if (!transitionInZK && state != null) {
+            regionOffline(region);
+          }
           return;
         }
         // This never happens. Currently regionserver close always return true.
