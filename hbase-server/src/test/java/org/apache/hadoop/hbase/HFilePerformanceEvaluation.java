@@ -192,6 +192,7 @@ public class HFilePerformanceEvaluation {
         HFile.getWriterFactoryNoCache(conf)
             .withPath(fs, mf)
             .withBlockSize(RFILE_BLOCKSIZE)
+            .withComparator(new KeyValue.RawBytesComparator())
             .create();
     }
 
