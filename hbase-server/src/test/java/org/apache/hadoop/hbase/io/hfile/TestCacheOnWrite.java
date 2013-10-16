@@ -310,7 +310,8 @@ public class TestCacheOnWrite {
     HFileContext meta = new HFileContextBuilder().withCompressionAlgo(compress)
         .withBytesPerCheckSum(CKBYTES).withChecksumType(ChecksumType.NULL)
         .withBlockSize(DATA_BLOCK_SIZE).withDataBlockEncodingInCache(encoder.getEncodingInCache())
-        .withDataBlockEncodingOnDisk(encoder.getEncodingOnDisk()).build();
+        .withDataBlockEncodingOnDisk(encoder.getEncodingOnDisk())
+        .withIncludesTags(useTags).build();
     StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf, cacheConf, fs)
         .withOutputDir(storeFileParentDir).withComparator(KeyValue.COMPARATOR)
         .withFileContext(meta)

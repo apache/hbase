@@ -76,7 +76,8 @@ public class TestSeekTo extends HBaseTestCase {
     }
     FSDataOutputStream fout = this.fs.create(ncTFile);
     int blocksize = toKV("a", tagUsage).getLength() * 3;
-    HFileContext context = new HFileContextBuilder().withBlockSize(blocksize).build();
+    HFileContext context = new HFileContextBuilder().withBlockSize(blocksize)
+        .withIncludesTags(true).build();
     HFile.Writer writer = HFile.getWriterFactoryNoCache(conf).withOutputStream(fout)
         .withFileContext(context)
         // NOTE: This test is dependent on this deprecated nonstandard

@@ -39,7 +39,6 @@ import org.apache.hadoop.io.WritableUtils;
 @InterfaceAudience.Private
 public class HFileWriterV3 extends HFileWriterV2 {
 
-  // TODO : Use this to track maxtaglength
   private int maxTagsLength = 0;
 
   static class WriterFactoryV3 extends HFile.WriterFactory {
@@ -180,13 +179,6 @@ public class HFileWriterV3 extends HFileWriterV2 {
       // from the FileInfo
       fileInfo.append(FileInfo.MAX_TAGS_LEN, Bytes.toBytes(this.maxTagsLength), false);
     }
-  }
-
-  @Override
-  protected HFileBlock.Writer createBlockWriter() {
-    // HFile filesystem-level (non-caching) block writer
-    hFileContext.setIncludesTags(true);
-    return new HFileBlock.Writer(blockEncoder, hFileContext);
   }
 
   @Override

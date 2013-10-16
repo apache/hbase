@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
@@ -59,7 +60,11 @@ public class HFileReaderV3 extends HFileReaderV2 {
       final long size, final CacheConfig cacheConf, DataBlockEncoding preferredEncodingInCache,
       final HFileSystem hfs) throws IOException {
     super(path, trailer, fsdis, size, cacheConf, preferredEncodingInCache, hfs);
-
+    byte[] tmp = fileInfo.get(FileInfo.MAX_TAGS_LEN);
+    // max tag length is not present in the HFile means tags were not at all written to file.
+    if (tmp != null) {
+      hfileContext.setIncludesTags(true);
+    }
   }
 
   @Override
@@ -68,7 +73,6 @@ public class HFileReaderV3 extends HFileReaderV2 {
                                 .withIncludesMvcc(this.includesMemstoreTS)
                                 .withHBaseCheckSum(true)
                                 .withCompressionAlgo(this.compressAlgo)
-                                .withIncludesTags(true)
                                 .build();
     return hfileContext;
   }

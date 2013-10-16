@@ -93,6 +93,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     public Writer createWriter(FileSystem fs, Path path, 
         FSDataOutputStream ostream,
         KVComparator comparator, HFileContext context) throws IOException {
+      context.setIncludesTags(false);// HFile V2 does not deal with tags at all!
       return new HFileWriterV2(conf, cacheConf, fs, path, ostream, 
           comparator, context);
       }
@@ -113,7 +114,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     if (fsBlockWriter != null)
       throw new IllegalStateException("finishInit called twice");
 
-    fsBlockWriter = createBlockWriter();
+    fsBlockWriter = new HFileBlock.Writer(blockEncoder, hFileContext);
 
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
@@ -129,11 +130,6 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     if (LOG.isTraceEnabled()) LOG.trace("Initialized with " + cacheConf);
   }
 
-  protected HFileBlock.Writer createBlockWriter() {
-    // HFile filesystem-level (non-caching) block writer
-    hFileContext.setIncludesTags(false);
-    return new HFileBlock.Writer(blockEncoder, hFileContext);
-  }
   /**
    * At a block boundary, write all the inline blocks and opens new block.
    *

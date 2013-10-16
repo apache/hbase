@@ -117,6 +117,7 @@ public class TestHFileWriterV3 {
       Algorithm compressAlgo, int entryCount, boolean findMidKey, boolean useTags) throws IOException {
     HFileContext context = new HFileContextBuilder()
                            .withBlockSize(4096)
+                           .withIncludesTags(useTags)
                            .withCompressionAlgo(compressAlgo).build();
     HFileWriterV3 writer = (HFileWriterV3)
         new HFileWriterV3.WriterFactoryV3(conf, new CacheConfig(conf))
@@ -235,9 +236,11 @@ public class TestHFileWriterV3 {
         byte[] value = new byte[valueLen];
         buf.get(value);
         byte[] tagValue = null;
-        int tagLen = buf.getShort();
-        tagValue = new byte[tagLen];
-        buf.get(tagValue);
+        if (useTags) {
+          int tagLen = buf.getShort();
+          tagValue = new byte[tagLen];
+          buf.get(tagValue);
+        }
       
         if (includeMemstoreTS) {
           ByteArrayInputStream byte_input = new ByteArrayInputStream(buf.array(), buf.arrayOffset()
