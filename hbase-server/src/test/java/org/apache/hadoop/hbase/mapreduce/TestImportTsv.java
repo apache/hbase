@@ -222,7 +222,7 @@ public class TestImportTsv implements Configurable {
                 + "=org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper",
             "-D" + ImportTsv.COLUMNS_CONF_KEY
                 + "=HBASE_ROW_KEY,FAM:A,FAM:B",
-            "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=,",
+            "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
             "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(), table 
             };
     String data = "KEY\u001bVALUE4\u001bVALUE8\n";
