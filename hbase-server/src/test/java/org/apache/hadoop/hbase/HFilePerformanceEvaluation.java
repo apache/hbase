@@ -194,6 +194,7 @@ public class HFilePerformanceEvaluation {
         HFile.getWriterFactoryNoCache(conf)
             .withPath(fs, mf)
             .withFileContext(hFileContext)
+            .withComparator(new KeyValue.RawBytesComparator())
             .create();
     }
 
