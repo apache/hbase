@@ -2023,11 +2023,15 @@ public class Store extends SchemaConfigured implements HeapSize,
   }
 
   @Override
-  public void notifyOnChange(Configuration conf) {
+  public void notifyOnChange(Configuration confParam) {
+    // Re-create the CompoundConfiguration in the manner that it is created in
+    // the hierarchy. Add the conf first, then add the values from the table
+    // descriptor, and then the column family descriptor.
     this.conf = new CompoundConfiguration()
-            .add(conf)
+            .add(confParam)
+            .add(getHRegionInfo().getTableDesc().getValues())
             .add(family.getValues());
 
-    compactionManager.updateConfiguration(conf);
+    compactionManager.updateConfiguration(this.conf);
   }
 }

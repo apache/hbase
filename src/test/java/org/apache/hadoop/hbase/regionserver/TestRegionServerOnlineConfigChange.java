@@ -62,6 +62,9 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
   final String prop = "prop";
   final String cf2PropVal = "customVal";
   final String newGeneralPropVal = "newGeneralVal";
+  final String tableDescProp = "tableDescProp";
+  final String tableDescPropCustomVal = "tableDescPropCustomVal";
+  final String tableDescPropGeneralVal = "tableDescPropGeneralVal";
 
 
   @Override
@@ -258,6 +261,7 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
   private HTable createTableWithPerCFConfigurations() throws IOException {
     byte[] tableName = Bytes.toBytesBinary(table2Str);
     HTableDescriptor desc = new HTableDescriptor(tableName);
+
     for (byte[] family : FAMILIES) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       if (Bytes.equals(family, COLUMN_FAMILY2)) {
@@ -266,6 +270,11 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
       }
       desc.addFamily(hcd);
     }
+
+    // Also try setting a property in the Table Descriptor
+    desc.setValue(Bytes.toBytes(tableDescProp),
+                  Bytes.toBytes(tableDescPropCustomVal));
+
     (new HBaseAdmin(conf)).createTable(desc);
     return new HTable(conf, tableName);
   }
@@ -293,6 +302,10 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
 
     // Set the value of prop to some other value in the conf.
     conf.set(prop, newGeneralPropVal);
+    // Add a general value for the tableDescProp. But we shouldn't see this
+    // value in the HTable's store instances, since we are explicitly
+    // specifying this property through the Table Descriptor.
+    conf.set(tableDescProp, tableDescPropGeneralVal);
 
     // Simulate an online config change
     HRegionServer.configurationManager.notifyAllObservers(conf);
@@ -309,6 +322,11 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
     // However, the value for prop in CF2 shouldn't change since we explicitly
     // specified a value for that property in the HCD.
     assertEquals(cf2PropVal, s2.conf.get(prop));
+
+    // Here we show that the properties which are set in the table descriptor
+    // don't get overriden either.
+    assertEquals(tableDescPropCustomVal, s1.conf.get(tableDescProp));
+    assertEquals(tableDescPropCustomVal, s2.conf.get(tableDescProp));
   }
 }
 
