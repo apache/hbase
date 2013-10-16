@@ -222,6 +222,9 @@ public class Scan extends OperationWithAttributes {
     this.tr = get.getTimeRange();
     this.familyMap = get.getFamilyMap();
     this.getScan = true;
+    for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
+      setAttribute(attr.getKey(), attr.getValue());
+    }
   }
 
   public boolean isGetScan() {
