@@ -973,7 +973,7 @@ public class TestSplitTransactionOnCluster {
   private void split(final HRegionInfo hri, final HRegionServer server, final int regionCount)
       throws IOException, InterruptedException {
     this.admin.split(hri.getRegionNameAsString());
-    for (int i = 0; ProtobufUtil.getOnlineRegions(server).size() <= regionCount && i < 100; i++) {
+    for (int i = 0; ProtobufUtil.getOnlineRegions(server).size() <= regionCount && i < 300; i++) {
       LOG.debug("Waiting on region to split");
       Thread.sleep(100);
     }
