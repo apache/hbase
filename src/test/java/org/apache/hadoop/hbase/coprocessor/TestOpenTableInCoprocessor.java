@@ -21,6 +21,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -33,11 +38,12 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -48,9 +54,10 @@ import org.junit.experimental.categories.Category;
 public class TestOpenTableInCoprocessor {
 
   private static final byte[] otherTable = Bytes.toBytes("otherTable");
+  private static final byte[] primaryTable = Bytes.toBytes("primary");
   private static final byte[] family = new byte[] { 'f' };
 
-  private static boolean completed = false;
+  private static boolean [] completed = new boolean[1];
 
   /**
    * Custom coprocessor that just copies the write to another table.
@@ -65,28 +72,93 @@ public class TestOpenTableInCoprocessor {
       p.add(family, null, new byte[] { 'a' });
       table.put(put);
       table.flushCommits();
-      completed = true;
+      completed[0] = true;
       table.close();
     }
 
   }
 
+  private static boolean []  completedWithPool = new boolean [1] ;
+
+  public static class CustomThreadPoolCoprocessor extends BaseRegionObserver {
+
+    /**
+     * Get a pool that has only ever one thread. A second action added to the pool (running
+     * concurrently), will cause an exception.
+     * @return
+     */
+    private ExecutorService getPool() {
+      int maxThreads = 1;
+      long keepAliveTime = 60;
+      ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, keepAliveTime,
+          TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
+          Threads.newDaemonThreadFactory("hbase-table"));
+      pool.allowCoreThreadTimeOut(true);
+      return pool;
+    }
+
+    @Override
+    public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
+        boolean writeToWAL) throws IOException {
+      HTableInterface table = e.getEnvironment().getTable(otherTable, getPool());
+      Put p = new Put(new byte[] { 'a' });
+      p.add(family, null, new byte[] { 'a' });
+      try {
+        table.batch(Collections.singletonList(put));
+      } catch (InterruptedException e1) {
+        throw new IOException(e1);
+      }
+      completedWithPool[0] = true;
+      table.close();
+    }
+  }
+
+  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  @BeforeClass
+  public static void setupCluster() throws Exception {
+    UTIL.startMiniCluster();
+  }
+
+  @After
+  public void cleanupTestTable() throws Exception {
+    UTIL.getHBaseAdmin().disableTable(primaryTable);
+    UTIL.getHBaseAdmin().deleteTable(primaryTable);
+
+    UTIL.getHBaseAdmin().disableTable(otherTable);
+    UTIL.getHBaseAdmin().deleteTable(otherTable);
+
+  }
+
+  @AfterClass
+  public static void teardownCluster() throws Exception{
+    UTIL.shutdownMiniCluster();
+  }
+
   @Test
   public void testCoprocessorCanCreateConnectionToRemoteTable() throws Throwable {
-    HBaseTestingUtility UTIL = new HBaseTestingUtility();
-    HTableDescriptor primary = new HTableDescriptor("primary");
+    runCoprocessorConnectionToRemoteTable(SendToOtherTableCoprocessor.class, completed);
+  }
+
+  @Test
+  public void testCoprocessorCanCreateConnectionToRemoteTableWithCustomPool() throws Throwable {
+    runCoprocessorConnectionToRemoteTable(CustomThreadPoolCoprocessor.class, completedWithPool);
+  }
+
+  private void runCoprocessorConnectionToRemoteTable(Class<? extends BaseRegionObserver> clazz,
+      boolean[] completeCheck) throws Throwable {
+    HTableDescriptor primary = new HTableDescriptor(primaryTable);
     primary.addFamily(new HColumnDescriptor(family));
     // add our coprocessor
-    primary.addCoprocessor(SendToOtherTableCoprocessor.class.getName());
+    primary.addCoprocessor(clazz.getName());
 
     HTableDescriptor other = new HTableDescriptor(otherTable);
     other.addFamily(new HColumnDescriptor(family));
-    UTIL.startMiniCluster();
+
 
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     admin.createTable(primary);
     admin.createTable(other);
-    admin.close();
 
     HTable table = new HTable(UTIL.getConfiguration(), "primary");
     Put p = new Put(new byte[] { 'a' });
@@ -96,11 +168,10 @@ public class TestOpenTableInCoprocessor {
     table.close();
 
     HTable target = new HTable(UTIL.getConfiguration(), otherTable);
-    assertTrue("Didn't complete update to target table!", completed);
+    assertTrue("Didn't complete update to target table!", completeCheck[0]);
     assertEquals("Didn't find inserted row", 1, getKeyValueCount(target));
     target.close();
 
-    UTIL.shutdownMiniCluster();
   }
 
   /**
