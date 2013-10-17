@@ -340,7 +340,7 @@ goto :eof
   goto :eof
 
 :rest
-  set CLASS=org.apache.hadoop.hbase.rest.Main
+  set CLASS=org.apache.hadoop.hbase.rest.RESTServer
   if NOT "%1"=="stop" (
     set HBASE_OPTS=%HBASE_OPTS% %HBASE_REST_OPTS%
   )
