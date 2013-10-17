@@ -131,11 +131,6 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     sc.setStopRow(tSplit.getEndRow());
     trr.setScan(sc);
     trr.setHTable(table);
-    try {
-      trr.initialize(tSplit, context);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException(e.getMessage());
-    }
     return trr;
   }
 

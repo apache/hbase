@@ -92,7 +92,6 @@ public abstract class MultiTableInputFormatBase extends
     sc.setStopRow(tSplit.getEndRow());
     trr.setScan(sc);
     trr.setHTable(table);
-    trr.initialize(split, context);
     return trr;
   }
 
