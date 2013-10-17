@@ -385,26 +385,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
 
     // Only disable and drop if we succeeded to verify - otherwise it's useful
     // to leave it around for post-mortem
-    deleteTable(admin, htd);
-  }
-
-  private void deleteTable(HBaseAdmin admin, HTableDescriptor htd)
-    throws IOException, InterruptedException {
-    // Use disableTestAsync because disable can take a long time to complete
-    System.out.print("Disabling table " + htd.getTableName() +" ");
-    admin.disableTableAsync(htd.getTableName());
-
-    long start = System.currentTimeMillis();
-    // NOTE tables can be both admin.isTableEnabled=false and
-    // isTableDisabled=false, when disabling must use isTableDisabled!
-    while (!admin.isTableDisabled(htd.getTableName())) {
-      System.out.print(".");
-      Thread.sleep(1000);
-    }
-    long delta = System.currentTimeMillis() - start;
-    System.out.println(" " + delta +" ms");
-    System.out.println("Deleting table " + htd.getTableName() +" ");
-    admin.deleteTable(htd.getTableName());
+    getTestingUtil(getConf()).deleteTable(htd.getName());
   }
 
   public void usage() {
@@ -467,7 +448,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     if (doVerify) {
       doVerify(getConf(), htd);
       if (doDelete) {
-        deleteTable(admin, htd);
+        getTestingUtil(getConf()).deleteTable(htd.getName());
       }
     }
     return 0;
