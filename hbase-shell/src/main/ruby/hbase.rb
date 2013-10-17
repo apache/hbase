@@ -57,6 +57,7 @@ module HBaseConstants
   SPLITALGO = 'SPLITALGO'
   NUMREGIONS = 'NUMREGIONS'
   CONFIGURATION = org.apache.hadoop.hbase.HConstants::CONFIGURATION
+  ATTRIBUTES="ATTRIBUTES"
 
   # Load constants from hbase java API
   def self.promote_constants(constants)

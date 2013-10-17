@@ -46,7 +46,8 @@ Some examples:
     (QualifierFilter (>=, 'binary:xyz'))) AND (TimestampsFilter ( 123, 456))"}
   hbase> scan 't1', {FILTER =>
     org.apache.hadoop.hbase.filter.ColumnPaginationFilter.new(1, 0)}
-
+For setting the Operation Attributes 
+  hbase> scan 't1', { COLUMNS => ['c1', 'c2'], ATTRIBUTES => {'mykey' => 'myvalue'}}
 For experts, there is an additional option -- CACHE_BLOCKS -- which
 switches block caching for the scanner on (true) or off (false).  By
 default it is enabled.  Examples:

@@ -127,9 +127,20 @@ EOF
     # they will be much less likely to tab complete to the 'dangerous' internal method
     #----------------------------------------------------------------------------------------------
     # Put a cell 'value' at specified table/row/column
-    def _put_internal(row, column, value, timestamp = nil)
+    def _put_internal(row, column, value, timestamp = nil, args = {})
       p = org.apache.hadoop.hbase.client.Put.new(row.to_s.to_java_bytes)
       family, qualifier = parse_column_name(column)
+      if args.any?
+         attributes = args[ATTRIBUTES]
+         set_attributes(p, attributes) if attributes       
+      end
+      #Case where attributes are specified without timestamp
+      if timestamp.kind_of?(Hash)
+      	timestamp.each do |k, v|
+      	  set_attributes(p, v) if v
+        end
+        timestamp = nil
+      end  
       if timestamp
         p.add(family, qualifier, timestamp, value.to_s.to_java_bytes)
       else
@@ -219,7 +230,7 @@ EOF
       # Get maxlength parameter if passed
       maxlength = args.delete(MAXLENGTH) if args[MAXLENGTH]
       filter = args.delete(FILTER) if args[FILTER]
-
+      attributes = args[ATTRIBUTES]
       unless args.empty?
         columns = args[COLUMN] || args[COLUMNS]
         if args[VERSIONS]
@@ -251,9 +262,13 @@ EOF
           get.setTimeStamp(args[TIMESTAMP]) if args[TIMESTAMP]
           get.setTimeRange(args[TIMERANGE][0], args[TIMERANGE][1]) if args[TIMERANGE]
         else
-          # May have passed TIMESTAMP and row only; wants all columns from ts.
-          unless ts = args[TIMESTAMP] || tr = args[TIMERANGE]
-            raise ArgumentError, "Failed parse of #{args.inspect}, #{args.class}"
+          if attributes
+          	 set_attributes(get, attributes) if attributes
+          else
+          	# May have passed TIMESTAMP and row only; wants all columns from ts.
+          	unless ts = args[TIMESTAMP] || tr = args[TIMERANGE]
+            	raise ArgumentError, "Failed parse of #{args.inspect}, #{args.class}"
+          	end
           end
 
           get.setMaxVersions(vers)
@@ -261,6 +276,7 @@ EOF
           get.setTimeStamp(ts.to_i) if args[TIMESTAMP]
           get.setTimeRange(args[TIMERANGE][0], args[TIMERANGE][1]) if args[TIMERANGE]
         end
+          set_attributes(get, attributes) if attributes           
       end
 
       unless filter.class == String
@@ -333,6 +349,7 @@ EOF
         versions = args["VERSIONS"] || 1
         timerange = args[TIMERANGE]
         raw = args["RAW"] || false
+        attributes = args[ATTRIBUTES]
 
         # Normalize column names
         columns = [columns] if columns.class == String
@@ -367,6 +384,7 @@ EOF
         scan.setMaxVersions(versions) if versions > 1
         scan.setTimeRange(timerange[0], timerange[1]) if timerange
         scan.setRaw(raw)
+        set_attributes(scan, attributes) if attributes
       else
         scan = org.apache.hadoop.hbase.client.Scan.new
       end
@@ -408,6 +426,15 @@ EOF
       return ((block_given?) ? count : res)
     end
 
+     # Apply OperationAttributes to puts/scans/gets
+    def set_attributes(oprattr, attributes)
+      raise(ArgumentError, "#{"ATTRIBUTES"} must be a Hash type") unless attributes.kind_of?(Hash)
+        for k,v in attributes
+          v = v.to_s unless v.nil?
+          oprattr.setAttribute(k.to_s, v.to_java_bytes)
+        end
+    end
+    
     #----------------------------
     # Add general administration utilities to the shell
     # each of the names below adds this method name to the table

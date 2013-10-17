@@ -106,7 +106,7 @@ module Hbase
       @test_table.put("101", "x:a", "1")
       @test_table.put("101", "x:a", "2", Time.now.to_i)
       
-      @test_table.put("102", "x:a", "1",1212)
+      @test_table.put("102", "x:a", "1", 1212)
       @test_table.put("102", "x:a", "2", 1213)
       
       @test_table.put(103, "x:a", "3")
@@ -134,7 +134,10 @@ module Hbase
     define_test "put should work with integer values" do
       @test_table.put("123", "x:a", 4)
     end
-
+    
+    define_test "put should work with attributes" do
+       @test_table.put("123", "x:a", 4, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
+    end
     #-------------------------------------------------------------------------------
 
     define_test "delete should work without timestamp" do
@@ -213,6 +216,10 @@ module Hbase
 
       @test_table.put(2, "x:a", 11)
       @test_table.put(2, "x:b", 12, @test_ts)
+      
+      @test_table.put(3, "x:a", 21, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
+      @test_table.put(3, "x:b", 22, @test_ts, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
+
     end
 
     define_test "count should work w/o a block passed" do
@@ -232,6 +239,14 @@ module Hbase
 
     define_test "get should work w/o columns specification" do
       res = @test_table._get_internal('1')
+      assert_not_nil(res)
+      assert_kind_of(Hash, res)
+      assert_not_nil(res['x:a'])
+      assert_not_nil(res['x:b'])
+    end
+    
+    define_test "get should work for data written with Attributes" do
+      res = @test_table._get_internal('3')
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['x:a'])
@@ -441,7 +456,7 @@ module Hbase
       assert_not_nil(res['2']['x:a'])
       assert_not_nil(res['2']['x:b'])
     end
-
+    
     define_test "scan should support COLUMNS parameter with a single column name" do
       res = @test_table._scan_internal COLUMNS => 'x:a'
       assert_not_nil(res)
