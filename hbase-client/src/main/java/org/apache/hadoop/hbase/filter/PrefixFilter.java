@@ -38,6 +38,7 @@ import java.util.ArrayList;
 public class PrefixFilter extends FilterBase {
   protected byte [] prefix = null;
   protected boolean passedPrefix = false;
+  protected boolean filterRow = true;
 
   public PrefixFilter(final byte [] prefix) {
     this.prefix = prefix;
@@ -60,7 +61,16 @@ public class PrefixFilter extends FilterBase {
     if(cmp > 0) {
       passedPrefix = true;
     }
-    return cmp != 0;
+    filterRow = (cmp != 0);
+    return filterRow;
+  }
+
+  public boolean filterRow() {
+    return filterRow;
+  }
+
+  public void reset() {
+    filterRow = true;
   }
 
   public boolean filterAllRemaining() {
