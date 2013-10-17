@@ -18,10 +18,21 @@
  * limitations under the License.
  */
 
+/**
+ * This class is NOT thread-safe.
+ *
+ * It does support concurrent access by multiple threads only if each object
+ * is accessed by only one thread.
+ *
+ * The synchronisation is done so that the static fields of the class are
+ * consistents.
+ */
+
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,7 +53,7 @@ public class CompactSelection {
   List<StoreFile> filesToCompact = new ArrayList<StoreFile>();
   // number of off peak compactions either in the compaction queue or  
   // happening now
-  public static Integer numOutstandingOffPeakCompactions = 0;
+  private static AtomicLong numOutstandingOffPeakCompactions = new AtomicLong(0);
   // was this compaction promoted to an off-peak
   boolean isOffPeakCompaction = false;
   // Remember the set of expired storeFiles
@@ -70,13 +81,11 @@ public class CompactSelection {
    */
   public void finishRequest() {
     if (isOffPeakCompaction) {
-      synchronized(numOutstandingOffPeakCompactions) {
-        numOutstandingOffPeakCompactions--;
-        isOffPeakCompaction = false;
-      }
-      LOG.info("Compaction done, numOutstandingOffPeakCompactions is now " + 
-          numOutstandingOffPeakCompactions);
+      numOutstandingOffPeakCompactions.decrementAndGet();
+      isOffPeakCompaction = false;
     }
+    LOG.info("Compaction done, numOutstandingOffPeakCompactions is now " +
+        numOutstandingOffPeakCompactions.get());
   }
   
   public List<StoreFile> getFilesToCompact() {
@@ -90,14 +99,12 @@ public class CompactSelection {
   public void emptyFileList() {
     filesToCompact.clear();
     if (isOffPeakCompaction) {
-      synchronized(numOutstandingOffPeakCompactions) {
-        // reset the off peak count
-        numOutstandingOffPeakCompactions--;
-        isOffPeakCompaction = false;
-      }
-      LOG.info("Nothing to compact, numOutstandingOffPeakCompactions is now " + 
-          numOutstandingOffPeakCompactions);
+      // reset the off peak count
+      numOutstandingOffPeakCompactions.decrementAndGet();
+      isOffPeakCompaction = false;
     }
+    LOG.info("Nothing to compact, numOutstandingOffPeakCompactions is now " +
+        numOutstandingOffPeakCompactions.get());
   }
   
   public boolean isOffPeakCompaction() {
@@ -105,16 +112,12 @@ public class CompactSelection {
   }
 
   void setOffPeak() {
-    synchronized (numOutstandingOffPeakCompactions) {
-      numOutstandingOffPeakCompactions++;
-      isOffPeakCompaction = true;
-    }
+    numOutstandingOffPeakCompactions.incrementAndGet();
+    isOffPeakCompaction = true;
   }
 
- static int getNumOutStandingOffPeakCompactions() {
-   synchronized(numOutstandingOffPeakCompactions) {
-    return numOutstandingOffPeakCompactions;
-   }
+ static long getNumOutStandingOffPeakCompactions() {
+   return numOutstandingOffPeakCompactions.get();
  }
   
   public CompactSelection subList(int start, int end) {
