@@ -5604,8 +5604,8 @@ public class HRegion implements HeapSize { // , Writable{
     Class<? extends CoprocessorProtocol> protocol = call.getProtocol();
     if (protocol == null) {
       String protocolName = call.getProtocolName();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received dynamic protocol exec call with protocolName " + protocolName);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Received dynamic protocol exec call with protocolName " + protocolName);
       }
       // detect the actual protocol class
       protocol  = protocolHandlerNames.get(protocolName);
