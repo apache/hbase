@@ -210,7 +210,7 @@ public class HTable implements HTableInterface {
     this.finishSetup();
   }
 
-  private static ThreadPoolExecutor getDefaultExecutor(Configuration conf) {
+  public static ThreadPoolExecutor getDefaultExecutor(Configuration conf) {
     int maxThreads = conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE);
     if (maxThreads == 0) {
       maxThreads = 1; // is there a better default?

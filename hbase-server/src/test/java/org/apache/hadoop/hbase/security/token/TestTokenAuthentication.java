@@ -28,6 +28,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -213,6 +214,12 @@ public class TestTokenAuthentication {
         @Override
         public HTableInterface getTable(TableName tableName) throws IOException
           { return null; }
+
+        @Override
+        public HTableInterface getTable(TableName tableName, ExecutorService service)
+            throws IOException {
+          return null;
+        }
       });
 
       started = true;

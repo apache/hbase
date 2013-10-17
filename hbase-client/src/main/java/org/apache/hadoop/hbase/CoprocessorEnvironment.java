@@ -16,6 +16,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -50,4 +51,11 @@ public interface CoprocessorEnvironment {
    * @throws IOException
    */
   HTableInterface getTable(TableName tableName) throws IOException;
+
+  /**
+   * @return an interface for accessing the given table using the passed executor to run batch
+   *         operations
+   * @throws IOException
+   */
+  public HTableInterface getTable(TableName tableName, ExecutorService service) throws IOException;
 }

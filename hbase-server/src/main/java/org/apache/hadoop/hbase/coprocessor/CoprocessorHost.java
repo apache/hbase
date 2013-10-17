@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -375,9 +376,10 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       private HTable table;
       private HConnection connection;
 
-      public HTableWrapper(TableName tableName, HConnection connection) throws IOException {
+      public HTableWrapper(TableName tableName, HConnection connection, ExecutorService pool)
+          throws IOException {
         this.tableName = tableName;
-        this.table = new HTable(tableName, connection);
+        this.table = new HTable(tableName, connection, pool);
         this.connection = connection;
         openTables.add(this);
       }
@@ -708,7 +710,19 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
      */
     @Override
     public HTableInterface getTable(TableName tableName) throws IOException {
-      return new HTableWrapper(tableName, CoprocessorHConnection.getConnectionForEnvironment(this));
+      return this.getTable(tableName, HTable.getDefaultExecutor(getConfiguration()));
+    }
+
+    /**
+     * Open a table from within the Coprocessor environment
+     * @param tableName the table name
+     * @return an interface for manipulating the table
+     * @exception java.io.IOException Exception
+     */
+    @Override
+    public HTableInterface getTable(TableName tableName, ExecutorService pool) throws IOException {
+      return new HTableWrapper(tableName, CoprocessorHConnection.getConnectionForEnvironment(this),
+          pool);
     }
   }
 
