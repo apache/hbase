@@ -191,10 +191,7 @@ public class IntegrationTestLazyCfLoading {
   private void deleteTable() throws Exception {
     if (util.getHBaseAdmin().tableExists(TABLE_NAME)) {
       LOG.info("Deleting table");
-      if (!util.getHBaseAdmin().isTableDisabled(TABLE_NAME)) {
-        util.getHBaseAdmin().disableTable(TABLE_NAME);
-      }
-      util.getHBaseAdmin().deleteTable(TABLE_NAME);
+      util.deleteTable(TABLE_NAME);
       LOG.info("Deleted table");
     }
   }
