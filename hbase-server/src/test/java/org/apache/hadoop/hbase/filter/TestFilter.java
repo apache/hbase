@@ -1254,6 +1254,54 @@ public class TestFilter {
     verifyScanFull(s, kvs);
   }
 
+  // HBASE-9747
+  @Test
+  public void testFilterListWithPrefixFilter() throws IOException {
+    byte[] family = Bytes.toBytes("f1");
+    byte[] qualifier = Bytes.toBytes("q1");
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestFilter"));
+    htd.addFamily(new HColumnDescriptor(family));
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+    HRegion testRegion = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
+        TEST_UTIL.getConfiguration(), htd);
+
+    for(int i=0; i<5; i++) {
+      Put p = new Put(Bytes.toBytes((char)('a'+i) + "row"));
+      p.setDurability(Durability.SKIP_WAL);
+      p.add(family, qualifier, Bytes.toBytes(String.valueOf(111+i)));
+      testRegion.put(p);
+    }
+    testRegion.flushcache();
+
+    // rows starting with "b"
+    PrefixFilter pf = new PrefixFilter(new byte[] {'b'}) ;
+    // rows with value of column 'q1' set to '113'
+    SingleColumnValueFilter scvf = new SingleColumnValueFilter(
+        family, qualifier, CompareOp.EQUAL, Bytes.toBytes("113"));
+    // combine these two with OR in a FilterList
+    FilterList filterList = new FilterList(Operator.MUST_PASS_ONE, pf, scvf);
+
+    Scan s1 = new Scan();
+    s1.setFilter(filterList);
+    InternalScanner scanner = testRegion.getScanner(s1);
+    List<Cell> results = new ArrayList<Cell>();
+    int resultCount = 0;
+    while(scanner.next(results)) {
+      resultCount++;
+      byte[] row =  CellUtil.cloneRow(results.get(0));
+      LOG.debug("Found row: " + Bytes.toStringBinary(row));
+      assertTrue(Bytes.equals(row, Bytes.toBytes("brow"))
+          || Bytes.equals(row, Bytes.toBytes("crow")));
+      results.clear();
+    }
+    assertEquals(2, resultCount);
+    scanner.close();
+
+    HLog hlog = testRegion.getLog();
+    testRegion.close();
+    hlog.closeAndDelete();
+  }
+
   @Test
   public void testSingleColumnValueFilter() throws IOException {
 
