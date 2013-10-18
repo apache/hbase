@@ -265,7 +265,18 @@ class AsyncProcess<CResult> {
       new HashMap<HRegionLocation, MultiAction<Row>>();
     List<Action<Row>> retainedActions = new ArrayList<Action<Row>>(rows.size());
 
+    long currentTaskCnt = tasksDone.get();
+    boolean alreadyLooped = false;
+
     do {
+      if (alreadyLooped){
+        // if, for whatever reason, we looped, we want to be sure that something has changed.
+        waitForNextTaskDone(currentTaskCnt);
+        currentTaskCnt = tasksDone.get();
+      } else {
+        alreadyLooped = true;
+      }
+
       // Wait until there is at least one slot for a new task.
       waitForMaximumCurrentTasks(maxTotalConcurrentTasks - 1);
 
@@ -280,8 +291,9 @@ class AsyncProcess<CResult> {
         Row r = it.next();
         HRegionLocation loc = findDestLocation(r, 1, posInList);
 
-        if (loc != null && canTakeOperation(loc, regionIncluded, serverIncluded)) {
-          // loc is null if there is an error such as meta not available.
+        if (loc == null) { // loc is null if there is an error such as meta not available.
+          it.remove();
+        } else if (canTakeOperation(loc, regionIncluded, serverIncluded)) {
           Action<Row> action = new Action<Row>(r, ++posInList);
           retainedActions.add(action);
           addAction(loc, action, actionsByServer);
@@ -644,6 +656,7 @@ class AsyncProcess<CResult> {
     for (Map.Entry<byte[], List<Pair<Integer, Object>>> resultsForRS :
         responses.getResults().entrySet()) {
 
+      boolean regionFailureRegistered = false;
       for (Pair<Integer, Object> regionResult : resultsForRS.getValue()) {
         Object result = regionResult.getSecond();
 
@@ -652,8 +665,9 @@ class AsyncProcess<CResult> {
           throwable = (Throwable) result;
           Action<Row> correspondingAction = initialActions.get(regionResult.getFirst());
           Row row = correspondingAction.getAction();
-
-          if (failureCount++ == 0) { // We're doing this once per location.
+          failureCount++;
+          if (!regionFailureRegistered) { // We're doing this once per location.
+            regionFailureRegistered= true;
             hConnection.updateCachedLocations(this.tableName, row.getRow(), result, location);
             if (errorsByServer != null) {
               errorsByServer.reportServerError(location);
