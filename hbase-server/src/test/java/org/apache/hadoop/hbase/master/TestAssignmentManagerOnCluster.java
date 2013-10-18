@@ -553,6 +553,8 @@ public class TestAssignmentManagerOnCluster {
       // Unassign it again forcefully so that we can trigger already
       // in transition exception. This test is to make sure this scenario
       // is handled properly.
+      am.server.getConfiguration().setLong(
+        AssignmentManager.ALREADY_IN_TRANSITION_WAITTIME, 1000);
       am.unassign(hri, true);
       RegionState state = am.getRegionStates().getRegionState(hri);
       assertEquals(RegionState.State.FAILED_CLOSE, state.getState());
