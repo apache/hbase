@@ -1054,7 +1054,10 @@ public class StoreFile {
      */
     public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
                                                boolean pread) {
-      return getStoreFileScanner(cacheBlocks, pread, false);
+      return getStoreFileScanner(cacheBlocks, pread, false,
+        // 0 is passed as readpoint because this method is only used by test
+        // where StoreFile is directly operated upon
+        0);
     }
 
     /**
@@ -1067,10 +1070,10 @@ public class StoreFile {
      */
     public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
                                                boolean pread,
-                                               boolean isCompaction) {
+                                               boolean isCompaction, long readPt) {
       return new StoreFileScanner(this,
-                                 getScanner(cacheBlocks, pread,
-                                            isCompaction), !isCompaction, reader.hasMVCCInfo());
+                                 getScanner(cacheBlocks, pread, isCompaction),
+                                 !isCompaction, reader.hasMVCCInfo(), readPt);
     }
 
     /**

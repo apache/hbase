@@ -1861,12 +1861,10 @@ public class TestHRegion {
       scan.addFamily(fam2);
       scan.addFamily(fam4);
       is = (RegionScannerImpl) region.getScanner(scan);
-      MultiVersionConsistencyControl.resetThreadReadPoint(region.getMVCC());
       assertEquals(1, ((RegionScannerImpl) is).storeHeap.getHeap().size());
 
       scan = new Scan();
       is = (RegionScannerImpl) region.getScanner(scan);
-      MultiVersionConsistencyControl.resetThreadReadPoint(region.getMVCC());
       assertEquals(families.length - 1, ((RegionScannerImpl) is).storeHeap.getHeap().size());
     } finally {
       HRegion.closeHRegion(this.region);

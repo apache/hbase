@@ -144,7 +144,9 @@ public class TestFSErrorsExposed {
         cacheConf, BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
 
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
-        Collections.singletonList(sf), false, true, false);
+        Collections.singletonList(sf), false, true, false,
+        // 0 is passed as readpoint because this test operates on StoreFile directly
+        0);
     KeyValueScanner scanner = scanners.get(0);
 
     FaultyInputStream inStream = faultyfs.inStreams.get(0).get();

@@ -674,11 +674,11 @@ public class MemStore implements HeapSize {
   /**
    * @return scanner on memstore and snapshot in this order.
    */
-  List<KeyValueScanner> getScanners() {
+  List<KeyValueScanner> getScanners(long readPt) {
     this.lock.readLock().lock();
     try {
       return Collections.<KeyValueScanner>singletonList(
-          new MemStoreScanner(MultiVersionConsistencyControl.getThreadReadPoint()));
+          new MemStoreScanner(readPt));
     } finally {
       this.lock.readLock().unlock();
     }

@@ -880,14 +880,14 @@ public class HStore implements Store {
   @Override
   public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean isGet,
       boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
-      byte[] stopRow) throws IOException {
+      byte[] stopRow, long readPt) throws IOException {
     Collection<StoreFile> storeFilesToScan;
     List<KeyValueScanner> memStoreScanners;
     this.lock.readLock().lock();
     try {
       storeFilesToScan =
           this.storeEngine.getStoreFileManager().getFilesForScanOrGet(isGet, startRow, stopRow);
-      memStoreScanners = this.memstore.getScanners();
+      memStoreScanners = this.memstore.getScanners(readPt);
     } finally {
       this.lock.readLock().unlock();
     }
@@ -898,7 +898,8 @@ public class HStore implements Store {
     // but now we get them in ascending order, which I think is
     // actually more correct, since memstore get put at the end.
     List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(storeFilesToScan, cacheBlocks, usePread, isCompaction, matcher);
+      .getScannersForStoreFiles(storeFilesToScan, cacheBlocks, usePread, isCompaction, matcher,
+        readPt);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
     scanners.addAll(sfScanners);
@@ -1648,7 +1649,7 @@ public class HStore implements Store {
 
   @Override
   public KeyValueScanner getScanner(Scan scan,
-      final NavigableSet<byte []> targetCols) throws IOException {
+      final NavigableSet<byte []> targetCols, long readPt) throws IOException {
     lock.readLock().lock();
     try {
       KeyValueScanner scanner = null;
@@ -1656,7 +1657,7 @@ public class HStore implements Store {
         scanner = this.getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols);
       }
       if (scanner == null) {
-        scanner = new StoreScanner(this, getScanInfo(), scan, targetCols);
+        scanner = new StoreScanner(this, getScanInfo(), scan, targetCols, readPt);
       }
       return scanner;
     } finally {

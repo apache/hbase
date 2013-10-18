@@ -90,10 +90,9 @@ public class TestMemStore extends TestCase {
    */
   public void testScanAcrossSnapshot() throws IOException {
     int rowCount = addRows(this.memstore);
-    List<KeyValueScanner> memstorescanners = this.memstore.getScanners();
+    List<KeyValueScanner> memstorescanners = this.memstore.getScanners(0);
     Scan scan = new Scan();
     List<Cell> result = new ArrayList<Cell>();
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
     ScanInfo scanInfo = new ScanInfo(null, 0, 1, HConstants.LATEST_TIMESTAMP, false,
         0, this.memstore.comparator);
     ScanType scanType = ScanType.USER_SCAN;
@@ -115,8 +114,7 @@ public class TestMemStore extends TestCase {
       scanner.close();
     }
 
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-    memstorescanners = this.memstore.getScanners();
+    memstorescanners = this.memstore.getScanners(mvcc.memstoreReadPoint());
     // Now assert can count same number even if a snapshot mid-scan.
     s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     count = 0;
@@ -141,7 +139,7 @@ public class TestMemStore extends TestCase {
     for (KeyValueScanner scanner : memstorescanners) {
       scanner.close();
     }
-    memstorescanners = this.memstore.getScanners();
+    memstorescanners = this.memstore.getScanners(mvcc.memstoreReadPoint());
     // Assert that new values are seen in kvset as we scan.
     long ts = System.currentTimeMillis();
     s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
@@ -206,8 +204,7 @@ public class TestMemStore extends TestCase {
 
   private void verifyScanAcrossSnapshot2(KeyValue kv1, KeyValue kv2)
       throws IOException {
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-    List<KeyValueScanner> memstorescanners = this.memstore.getScanners();
+    List<KeyValueScanner> memstorescanners = this.memstore.getScanners(mvcc.memstoreReadPoint());
     assertEquals(1, memstorescanners.size());
     final KeyValueScanner scanner = memstorescanners.get(0);
     scanner.seek(KeyValue.createFirstOnRow(HConstants.EMPTY_START_ROW));
@@ -248,14 +245,12 @@ public class TestMemStore extends TestCase {
     kv1.setMvccVersion(w.getWriteNumber());
     memstore.add(kv1);
 
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-    KeyValueScanner s = this.memstore.getScanners().get(0);
+    KeyValueScanner s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{});
 
     mvcc.completeMemstoreInsert(w);
 
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-    s = this.memstore.getScanners().get(0);
+    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv1});
 
     w = mvcc.beginMemstoreInsert();
@@ -263,14 +258,12 @@ public class TestMemStore extends TestCase {
     kv2.setMvccVersion(w.getWriteNumber());
     memstore.add(kv2);
 
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-    s = this.memstore.getScanners().get(0);
+    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv1});
 
     mvcc.completeMemstoreInsert(w);
 
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-    s = this.memstore.getScanners().get(0);
+    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv1, kv2});
   }
 
@@ -302,8 +295,7 @@ public class TestMemStore extends TestCase {
     mvcc.completeMemstoreInsert(w);
 
     // BEFORE STARTING INSERT 2, SEE FIRST KVS
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-    KeyValueScanner s = this.memstore.getScanners().get(0);
+    KeyValueScanner s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv11, kv12});
 
     // START INSERT 2: Write both columns val2
@@ -317,8 +309,7 @@ public class TestMemStore extends TestCase {
     memstore.add(kv22);
 
     // BEFORE COMPLETING INSERT 2, SEE FIRST KVS
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-    s = this.memstore.getScanners().get(0);
+    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv11, kv12});
 
     // COMPLETE INSERT 2
@@ -327,8 +318,7 @@ public class TestMemStore extends TestCase {
     // NOW SHOULD SEE NEW KVS IN ADDITION TO OLD KVS.
     // See HBASE-1485 for discussion about what we should do with
     // the duplicate-TS inserts
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-    s = this.memstore.getScanners().get(0);
+    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv21, kv11, kv22, kv12});
   }
 
@@ -357,8 +347,7 @@ public class TestMemStore extends TestCase {
     mvcc.completeMemstoreInsert(w);
 
     // BEFORE STARTING INSERT 2, SEE FIRST KVS
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-    KeyValueScanner s = this.memstore.getScanners().get(0);
+    KeyValueScanner s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv11, kv12});
 
     // START DELETE: Insert delete for one of the columns
@@ -369,16 +358,14 @@ public class TestMemStore extends TestCase {
     memstore.add(kvDel);
 
     // BEFORE COMPLETING DELETE, SEE FIRST KVS
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-    s = this.memstore.getScanners().get(0);
+    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv11, kv12});
 
     // COMPLETE DELETE
     mvcc.completeMemstoreInsert(w);
 
     // NOW WE SHOULD SEE DELETE
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-    s = this.memstore.getScanners().get(0);
+    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv11, kvDel, kv12});
   }
 
@@ -430,9 +417,7 @@ public class TestMemStore extends TestCase {
         mvcc.completeMemstoreInsert(w);
 
         // Assert that we can read back
-        MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-
-        KeyValueScanner s = this.memstore.getScanners().get(0);
+        KeyValueScanner s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
         s.seek(kv);
 
         KeyValue ret = s.next();
@@ -507,7 +492,6 @@ public class TestMemStore extends TestCase {
    * @throws InterruptedException
    */
   public void testGetNextRow() throws Exception {
-    MultiVersionConsistencyControl.resetThreadReadPoint();
     addRows(this.memstore);
     // Add more versions to make it a little more interesting.
     Thread.sleep(1);
@@ -532,7 +516,7 @@ public class TestMemStore extends TestCase {
       ScanType scanType = ScanType.USER_SCAN;
       InternalScanner scanner = new StoreScanner(new Scan(
           Bytes.toBytes(startRowId)), scanInfo, scanType, null,
-          memstore.getScanners());
+          memstore.getScanners(0));
       List<Cell> results = new ArrayList<Cell>();
       for (int i = 0; scanner.next(results); i++) {
         int rowId = startRowId + i;
@@ -1036,7 +1020,7 @@ public class TestMemStore extends TestCase {
 
   static void doScan(MemStore ms, int iteration) throws IOException {
     long nanos = System.nanoTime();
-    KeyValueScanner s = ms.getScanners().get(0);
+    KeyValueScanner s = ms.getScanners(0).get(0);
     s.seek(KeyValue.createFirstOnRow(new byte[]{}));
 
     System.out.println(iteration + " create/seek took: " + (System.nanoTime() - nanos)/1000);
@@ -1055,17 +1039,11 @@ public class TestMemStore extends TestCase {
     addRows(25000, ms);
     System.out.println("Took for insert: " + (System.nanoTime()-n1)/1000);
 
-
     System.out.println("foo");
-
-    MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
 
     for (int i = 0 ; i < 50 ; i++)
       doScan(ms, i);
 
   }
-
-
-
 }
 

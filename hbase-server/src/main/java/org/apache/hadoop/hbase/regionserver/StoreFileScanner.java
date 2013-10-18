@@ -58,12 +58,16 @@ public class StoreFileScanner implements KeyValueScanner {
   private static AtomicLong seekCount;
 
   private ScanQueryMatcher matcher;
+  
+  private long readPt;
 
   /**
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
    * @param hfs HFile scanner
    */
-  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs, boolean useMVCC, boolean hasMVCC) {
+  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs, boolean useMVCC,
+      boolean hasMVCC, long readPt) {
+    this.readPt = readPt;
     this.reader = reader;
     this.hfs = hfs;
     this.enforceMVCC = useMVCC;
@@ -77,9 +81,9 @@ public class StoreFileScanner implements KeyValueScanner {
   public static List<StoreFileScanner> getScannersForStoreFiles(
       Collection<StoreFile> files,
       boolean cacheBlocks,
-      boolean usePread) throws IOException {
+      boolean usePread, long readPt) throws IOException {
     return getScannersForStoreFiles(files, cacheBlocks,
-                                   usePread, false);
+                                   usePread, false, readPt);
   }
 
   /**
@@ -87,9 +91,9 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(
       Collection<StoreFile> files, boolean cacheBlocks, boolean usePread,
-      boolean isCompaction) throws IOException {
+      boolean isCompaction, long readPt) throws IOException {
     return getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction,
-        null);
+        null, readPt);
   }
 
   /**
@@ -99,13 +103,13 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(
       Collection<StoreFile> files, boolean cacheBlocks, boolean usePread,
-      boolean isCompaction, ScanQueryMatcher matcher) throws IOException {
+      boolean isCompaction, ScanQueryMatcher matcher, long readPt) throws IOException {
     List<StoreFileScanner> scanners = new ArrayList<StoreFileScanner>(
         files.size());
     for (StoreFile file : files) {
       StoreFile.Reader r = file.createReader();
       StoreFileScanner scanner = r.getStoreFileScanner(cacheBlocks, usePread,
-          isCompaction);
+          isCompaction, readPt);
       scanner.setScanQueryMatcher(matcher);
       scanners.add(scanner);
     }
@@ -180,13 +184,11 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   protected boolean skipKVsNewerThanReadpoint() throws IOException {
-    long readPoint = MultiVersionConsistencyControl.getThreadReadPoint();
-
     // We want to ignore all key-values that are newer than our current
     // readPoint
     while(enforceMVCC
         && cur != null
-        && (cur.getMvccVersion() > readPoint)) {
+        && (cur.getMvccVersion() > readPt)) {
       hfs.next();
       cur = hfs.getKeyValue();
     }
@@ -202,7 +204,7 @@ public class StoreFileScanner implements KeyValueScanner {
     // older KV which was not reset to 0 (because it was
     // not old enough during flush). Make sure that we set it correctly now,
     // so that the comparision order does not change.
-    if (cur.getMvccVersion() <= readPoint) {
+    if (cur.getMvccVersion() <= readPt) {
       cur.setMvccVersion(0);
     }
     return true;

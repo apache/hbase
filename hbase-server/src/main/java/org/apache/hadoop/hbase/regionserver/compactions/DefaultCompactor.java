@@ -47,12 +47,12 @@ public class DefaultCompactor extends Compactor {
     FileDetails fd = getFileDetails(request.getFiles(), request.isMajor());
     this.progress = new CompactionProgress(fd.maxKeyCount);
 
-    List<StoreFileScanner> scanners = createFileScanners(request.getFiles());
+    // Find the smallest read point across all the Scanners.
+    long smallestReadPoint = getSmallestReadPoint();
+    List<StoreFileScanner> scanners = createFileScanners(request.getFiles(), smallestReadPoint);
 
     StoreFile.Writer writer = null;
     List<Path> newFiles = new ArrayList<Path>();
-    // Find the smallest read point across all the Scanners.
-    long smallestReadPoint = setSmallestReadPoint();
     try {
       InternalScanner scanner = null;
       try {

@@ -24,9 +24,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.Log;
-
 /**
  * Manages the read/write consistency within memstore. This provides
  * an interface for readers to determine what entries to ignore, and
@@ -43,15 +40,6 @@ public class MultiVersionConsistencyControl {
   // This is the pending queue of writes.
   private final LinkedList<WriteEntry> writeQueue =
       new LinkedList<WriteEntry>();
-
-  private static final ThreadLocal<Long> perThreadReadPoint =
-      new ThreadLocal<Long>() {
-       @Override
-      protected
-       Long initialValue() {
-         return Long.MAX_VALUE;
-       }
-  };
 
   /**
    * Default constructor. Initializes the memstoreRead/Write points to 0.
@@ -72,40 +60,6 @@ public class MultiVersionConsistencyControl {
 
       this.memstoreRead = this.memstoreWrite = startPoint;
     }
-  }
-
-  /**
-   * Get this thread's read point. Used primarily by the memstore scanner to
-   * know which values to skip (ie: have not been completed/committed to
-   * memstore).
-   */
-  public static long getThreadReadPoint() {
-      return perThreadReadPoint.get();
-  }
-
-  /**
-   * Set the thread read point to the given value. The thread MVCC
-   * is used by the Memstore scanner so it knows which values to skip.
-   * Give it a value of 0 if you want everything.
-   */
-  public static void setThreadReadPoint(long readPoint) {
-    perThreadReadPoint.set(readPoint);
-  }
-
-  /**
-   * Set the thread MVCC read point to whatever the current read point is in
-   * this particular instance of MVCC.  Returns the new thread read point value.
-   */
-  public static long resetThreadReadPoint(MultiVersionConsistencyControl mvcc) {
-    perThreadReadPoint.set(mvcc.memstoreReadPoint());
-    return getThreadReadPoint();
-  }
-
-  /**
-   * Set the thread MVCC read point to 0 (include everything).
-   */
-  public static void resetThreadReadPoint() {
-    perThreadReadPoint.set(0L);
   }
 
   /**

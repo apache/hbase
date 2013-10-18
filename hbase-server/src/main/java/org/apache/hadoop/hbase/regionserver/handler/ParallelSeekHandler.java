@@ -54,7 +54,6 @@ public class ParallelSeekHandler extends EventHandler {
   @Override
   public void process() {
     try {
-      MultiVersionConsistencyControl.setThreadReadPoint(readPoint);
       scanner.seek(keyValue);
     } catch (IOException e) {
       LOG.error("", e);

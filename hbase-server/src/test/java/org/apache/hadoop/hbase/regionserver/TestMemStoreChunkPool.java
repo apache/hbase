@@ -164,7 +164,7 @@ public class TestMemStoreChunkPool {
     assertEquals(2, memstore.kvset.size());
 
     // opening scanner before clear the snapshot
-    List<KeyValueScanner> scanners = memstore.getScanners();
+    List<KeyValueScanner> scanners = memstore.getScanners(0);
     // Shouldn't putting back the chunks to pool,since some scanners are opening
     // based on their data
     memstore.clearSnapshot(snapshot);
@@ -187,7 +187,7 @@ public class TestMemStoreChunkPool {
     memstore.add(new KeyValue(row, fam, qf6, val));
     memstore.add(new KeyValue(row, fam, qf7, val));
     // opening scanners
-    scanners = memstore.getScanners();
+    scanners = memstore.getScanners(0);
     // close scanners before clear the snapshot
     for (KeyValueScanner scanner : scanners) {
       scanner.close();

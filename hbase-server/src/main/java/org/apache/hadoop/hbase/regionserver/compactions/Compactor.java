@@ -178,14 +178,13 @@ public abstract class Compactor {
   }
 
   protected List<StoreFileScanner> createFileScanners(
-      final Collection<StoreFile> filesToCompact) throws IOException {
-    return StoreFileScanner.getScannersForStoreFiles(filesToCompact, false, false, true);
+      final Collection<StoreFile> filesToCompact, long smallestReadPoint) throws IOException {
+    return StoreFileScanner.getScannersForStoreFiles(filesToCompact, false, false, true,
+      smallestReadPoint);
   }
 
-  protected long setSmallestReadPoint() {
-    long smallestReadPoint = store.getSmallestReadPoint();
-    MultiVersionConsistencyControl.setThreadReadPoint(smallestReadPoint);
-    return smallestReadPoint;
+  protected long getSmallestReadPoint() {
+    return store.getSmallestReadPoint();
   }
 
   protected InternalScanner preCreateCoprocScanner(final CompactionRequest request,

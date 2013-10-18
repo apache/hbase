@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -335,10 +336,6 @@ public class HFileReadWriteTest {
   public void runMergeWorkload() throws IOException {
     long maxKeyCount = prepareForMerge();
 
-    List<StoreFileScanner> scanners =
-        StoreFileScanner.getScannersForStoreFiles(inputStoreFiles, false,
-            false);
-
     HColumnDescriptor columnDescriptor = new HColumnDescriptor(
         HFileReadWriteTest.class.getSimpleName());
     columnDescriptor.setBlocksize(blockSize);
@@ -349,6 +346,10 @@ public class HFileReadWriteTest {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
     HRegion region = new HRegion(outputDir, null, fs, conf, regionInfo, htd, null);
     HStore store = new HStore(region, columnDescriptor, conf);
+
+    List<StoreFileScanner> scanners =
+        StoreFileScanner.getScannersForStoreFiles(inputStoreFiles, false,
+            false, region.getReadpoint(IsolationLevel.READ_COMMITTED));
 
     StoreFile.Writer writer = store.createWriterInTmp(maxKeyCount, compression, false, true, false);
 

@@ -3066,7 +3066,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
                 maxResultSize = maxScannerResultSize;
               }
               List<Cell> values = new ArrayList<Cell>();
-              MultiVersionConsistencyControl.setThreadReadPoint(scanner.getMvccReadPoint());
               region.startRegionOperation(Operation.SCAN);
               try {
                 int i = 0;

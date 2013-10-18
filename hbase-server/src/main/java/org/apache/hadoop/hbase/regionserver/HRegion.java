@@ -872,6 +872,17 @@ public class HRegion implements HeapSize { // , Writable{
    public MultiVersionConsistencyControl getMVCC() {
      return mvcc;
    }
+   
+   /*
+    * Returns readpoint considering given IsolationLevel
+    */
+   public long getReadpoint(IsolationLevel isolationLevel) {
+     if (isolationLevel == IsolationLevel.READ_UNCOMMITTED) {
+       // This scan can read even uncommitted transactions
+       return Long.MAX_VALUE;
+     }
+     return mvcc.memstoreReadPoint();
+   }
 
    public boolean isLoadingCfsOnDemandDefault() {
      return this.isLoadingCfsOnDemandDefault;
@@ -3392,13 +3403,7 @@ public class HRegion implements HeapSize { // , Writable{
       // getSmallestReadPoint, before scannerReadPoints is updated.
       IsolationLevel isolationLevel = scan.getIsolationLevel();
       synchronized(scannerReadPoints) {
-        if (isolationLevel == IsolationLevel.READ_UNCOMMITTED) {
-          // This scan can read even uncommitted transactions
-          this.readPt = Long.MAX_VALUE;
-          MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
-        } else {
-          this.readPt = MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
-        }
+        this.readPt = getReadpoint(isolationLevel);
         scannerReadPoints.put(this, this.readPt);
       }
 
@@ -3413,7 +3418,7 @@ public class HRegion implements HeapSize { // , Writable{
       for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
           scan.getFamilyMap().entrySet()) {
         Store store = stores.get(entry.getKey());
-        KeyValueScanner scanner = store.getScanner(scan, entry.getValue());
+        KeyValueScanner scanner = store.getScanner(scan, entry.getValue(), this.readPt);
         if (this.filter == null || !scan.doLoadColumnFamiliesOnDemand()
           || this.filter.isFamilyEssential(entry.getKey())) {
           scanners.add(scanner);
@@ -3469,10 +3474,6 @@ public class HRegion implements HeapSize { // , Writable{
       startRegionOperation(Operation.SCAN);
       readRequestsCount.increment();
       try {
-
-        // This could be a new thread from the last time we called next().
-        MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
-
         return nextRaw(outResults, limit);
       } finally {
         closeRegionOperation();
@@ -3740,8 +3741,6 @@ public class HRegion implements HeapSize { // , Writable{
       boolean result = false;
       startRegionOperation();
       try {
-        // This could be a new thread from the last time we called next().
-        MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
         KeyValue kv = KeyValue.createFirstOnRow(row);
         // use request seek to make use of the lazy seek option. See HBASE-5520
         result = this.storeHeap.requestSeek(kv, true, true);

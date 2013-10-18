@@ -75,7 +75,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @return a scanner over the current key values
    * @throws IOException on failure
    */
-  KeyValueScanner getScanner(Scan scan, final NavigableSet<byte[]> targetCols)
+  KeyValueScanner getScanner(Scan scan, final NavigableSet<byte[]> targetCols, long readPt)
       throws IOException;
 
   /**
@@ -88,6 +88,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @param matcher
    * @param startRow
    * @param stopRow
+   * @param readPt
    * @return all scanners for this store
    */
   List<KeyValueScanner> getScanners(
@@ -97,7 +98,8 @@ public interface Store extends HeapSize, StoreConfigInformation {
     boolean isCompaction,
     ScanQueryMatcher matcher,
     byte[] startRow,
-    byte[] stopRow
+    byte[] stopRow,
+    long readPt
   ) throws IOException;
 
   ScanInfo getScanInfo();

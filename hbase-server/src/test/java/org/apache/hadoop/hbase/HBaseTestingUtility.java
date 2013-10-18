@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -2772,10 +2773,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public static List<Cell> getFromStoreFile(HStore store,
                                                 Get get) throws IOException {
-    MultiVersionConsistencyControl.resetThreadReadPoint();
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getFamily().getName()));
+        scan.getFamilyMap().get(store.getFamily().getName()),
+        // originally MultiVersionConsistencyControl.resetThreadReadPoint() was called to set
+        // readpoint 0.
+        0);
 
     List<Cell> result = new ArrayList<Cell>();
     scanner.next(result);

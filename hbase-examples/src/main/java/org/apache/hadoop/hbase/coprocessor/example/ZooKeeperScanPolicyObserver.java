@@ -27,11 +27,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -229,6 +231,7 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
       // take default action
       return null;
     }
-    return new StoreScanner(store, scanInfo, scan, targetCols);
+    return new StoreScanner(store, scanInfo, scan, targetCols,
+      ((HStore)store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED));
   }
 }

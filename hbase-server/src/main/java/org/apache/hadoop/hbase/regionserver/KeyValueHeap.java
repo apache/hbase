@@ -59,7 +59,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
   private KeyValueScanner current = null;
 
   private KVScannerComparator comparator;
-
+  
   /**
    * Constructor.  This KeyValueHeap will handle closing of passed in
    * KeyValueScanners.
