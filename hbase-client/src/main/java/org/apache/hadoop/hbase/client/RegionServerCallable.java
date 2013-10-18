@@ -117,7 +117,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
       // if thrown these exceptions, we clear all the cache entries that
       // map to that slow/dead server; otherwise, let cache miss and ask
       // hbase:meta again to find the new location
-      getConnection().clearCaches(location.getServerName());
+      if (this.location != null) getConnection().clearCaches(location.getServerName());
     } else if (t instanceof RegionMovedException) {
       getConnection().updateCachedLocations(tableName, row, t, location);
     } else if (t instanceof NotServingRegionException && !retrying) {
@@ -136,7 +136,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
   public long sleep(long pause, int tries) {
     // Tries hasn't been bumped up yet so we use "tries + 1" to get right pause time
     long sleep = ConnectionUtils.getPauseTime(pause, tries + 1);
-    if (sleep < MIN_WAIT_DEAD_SERVER 
+    if (sleep < MIN_WAIT_DEAD_SERVER
         && (location == null || getConnection().isDeadServer(location.getServerName()))) {
       sleep = ConnectionUtils.addJitter(MIN_WAIT_DEAD_SERVER, 0.10f);
     }
