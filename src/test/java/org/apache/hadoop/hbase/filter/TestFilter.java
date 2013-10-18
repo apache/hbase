@@ -28,10 +28,12 @@ import java.util.Arrays;
 import java.util.List;
 
 import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -1223,6 +1225,52 @@ public class TestFilter extends HBaseTestCase {
     };
     verifyScanNoEarlyOut(s, 6, 3);
     verifyScanFull(s, kvs);
+  }
+
+  // HBASE-9747
+  public void testFilterListWithPrefixFilter() throws IOException {
+    byte[] family = Bytes.toBytes("f1");
+    byte[] qualifier = Bytes.toBytes("q1");
+    HTableDescriptor htd = new HTableDescriptor(getName());
+    htd.addFamily(new HColumnDescriptor(family));
+    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegion testRegion = HRegion.createHRegion(info, testDir, conf, htd);
+
+    for(int i=0; i<5; i++) {
+      Put p = new Put(Bytes.toBytes((char)('a'+i) + "row"));
+      p.setDurability(Durability.SKIP_WAL);
+      p.add(family, qualifier, Bytes.toBytes(String.valueOf(111+i)));
+      testRegion.put(p);
+    }
+    testRegion.flushcache();
+
+    // rows starting with "b"
+    PrefixFilter pf = new PrefixFilter(new byte[] {'b'}) ;
+    // rows with value of column 'q1' set to '113'
+    SingleColumnValueFilter scvf = new SingleColumnValueFilter(
+        family, qualifier, CompareOp.EQUAL, Bytes.toBytes("113"));
+    // combine these two with OR in a FilterList
+    FilterList filterList = new FilterList(Operator.MUST_PASS_ONE, pf, scvf);
+
+    Scan s1 = new Scan();
+    s1.setFilter(filterList);
+    InternalScanner scanner = testRegion.getScanner(s1);
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    int resultCount = 0;
+    while(scanner.next(results)) {
+      resultCount++;
+      byte[] row = results.get(0).getRow();
+      LOG.debug("Found row: " + Bytes.toStringBinary(row));
+      Assert.assertTrue(Bytes.equals(row, Bytes.toBytes("brow"))
+          || Bytes.equals(row, Bytes.toBytes("crow")));
+      results.clear();
+    }
+    Assert.assertEquals(2, resultCount);
+    scanner.close();
+
+    HLog hlog = testRegion.getLog();
+    testRegion.close();
+    hlog.closeAndDelete();
   }
 
   public void testNestedFilterListWithSCVF() throws IOException {
