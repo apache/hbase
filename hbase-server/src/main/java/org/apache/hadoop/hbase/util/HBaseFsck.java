@@ -1867,6 +1867,10 @@ public class HBaseFsck extends Configured implements Tool {
   private void loadTableInfosForTablesWithNoRegion() throws IOException {
     Map<String, HTableDescriptor> allTables = new FSTableDescriptors(getConf()).getAll();
     for (HTableDescriptor htd : allTables.values()) {
+      if (checkMetaOnly && !htd.isMetaTable()) {
+        continue;
+      }
+
       TableName tableName = htd.getTableName();
       if (isTableIncluded(tableName) && !tablesInfo.containsKey(tableName)) {
         TableInfo tableInfo = new TableInfo(tableName);
