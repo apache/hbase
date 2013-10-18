@@ -58,8 +58,6 @@ import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
@@ -889,6 +887,7 @@ public class HTable implements HTableInterface {
    */
   private void doPut(Put put) throws InterruptedIOException, RetriesExhaustedWithDetailsException {
     if (ap.hasError()){
+      writeAsyncBuffer.add(put);
       backgroundFlushCommits(true);
     }
 
@@ -907,25 +906,29 @@ public class HTable implements HTableInterface {
    * Send the operations in the buffer to the servers. Does not wait for the server's answer.
    * If the is an error (max retried reach from a previous flush or bad operation), it tries to
    * send all operations in the buffer and sends an exception.
+   * @param synchronous - if true, sends all the writes and wait for all of them to finish before
+   *                     returning.
    */
   private void backgroundFlushCommits(boolean synchronous) throws
       InterruptedIOException, RetriesExhaustedWithDetailsException {
 
     try {
-      // If there is an error on the operations in progress, we don't add new operations.
-      if (writeAsyncBuffer.size() > 0 && !ap.hasError()) {
+      do {
         ap.submit(writeAsyncBuffer, true);
-      }
+      } while (synchronous && !writeAsyncBuffer.isEmpty());
 
-      if (synchronous || ap.hasError()) {
-        if (ap.hasError() && LOG.isDebugEnabled()) {
-          LOG.debug(tableName + ": One or more of the operations have failed -" +
-              " waiting for all operation in progress to finish (successfully or not)");
-        }
+      if (synchronous) {
         ap.waitUntilDone();
       }
 
       if (ap.hasError()) {
+        LOG.debug(tableName + ": One or more of the operations have failed -" +
+            " waiting for all operation in progress to finish (successfully or not)");
+        while (!writeAsyncBuffer.isEmpty()) {
+          ap.submit(writeAsyncBuffer, true);
+        }
+        ap.waitUntilDone();
+
         if (!clearBufferOnFail) {
           // if clearBufferOnFailed is not set, we're supposed to keep the failed operation in the
           //  write buffer. This is a questionable feature kept here for backward compatibility
@@ -1186,12 +1189,9 @@ public class HTable implements HTableInterface {
    */
   @Override
   public void flushCommits() throws InterruptedIOException, RetriesExhaustedWithDetailsException {
-    // We're looping, as if one region is overloaded we keep its operations in the buffer.
     // As we can have an operation in progress even if the buffer is empty, we call
     //  backgroundFlushCommits at least one time.
-    do {
-      backgroundFlushCommits(true);
-    } while (!writeAsyncBuffer.isEmpty());
+    backgroundFlushCommits(true);
   }
 
   /**
