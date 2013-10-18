@@ -356,10 +356,6 @@
   </developers>
   <repositories>
     <repository>
-      <id>Arun Staging 2.1.0-beta RCs</id>
-      <url>https://repository.apache.org/content/repositories/orgapachehadoop-099/</url>
-    </repository>
-    <repository>
       <id>apache release</id>
       <url>https://repository.apache.org/content/repositories/releases/</url>
     </repository>
@@ -847,7 +843,7 @@
     <buildDate>${maven.build.timestamp}</buildDate>
     <compileSource>1.6</compileSource>
     <!-- Dependencies -->
-    <hadoop-two.version>2.1.0-beta</hadoop-two.version>
+    <hadoop-two.version>2.2.0</hadoop-two.version>
     <hadoop-one.version>1.1.2</hadoop-one.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.7</commons-codec.version>
@@ -1929,7 +1925,7 @@
 		<groupId>org.apache.hadoop</groupId>
 		<!-- doclet lives in hadoop 2's hadoop-common module -->
 		<artifactId>hadoop-common</artifactId>
-		<version>2.1.0-beta</version>
+		<version>2.2.0</version>
 	      </docletArtifact>
 	      <destDir>apidocs</destDir>
 	      <name>User API</name>
