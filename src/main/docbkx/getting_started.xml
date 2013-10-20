@@ -32,24 +32,31 @@
     <title>Introduction</title>
 
     <para><xref linkend="quickstart" /> will get you up and
-    running on a single-node instance of HBase using the local filesystem.
+    running on a single-node, standalone instance of HBase.
     </para>
   </section>
 
   <section xml:id="quickstart">
     <title>Quick Start</title>
 
-    <para>This guide describes setup of a standalone HBase instance that uses
-    the local filesystem. It leads you through creating a table, inserting
+    <para>This guide describes setup of a standalone HBase instance. It will
+        run against the local filesystem.  In later sections we will take you through
+        how to run HBase on HDFS, a distributed filesystem.  This section
+        leads you through creating a table, inserting
     rows via the HBase <command>shell</command>, and then cleaning
-    up and shutting down your standalone HBase instance. The below exercise
+    up and shutting down your standalone, local filesystem  HBase instance. The below exercise
     should take no more than ten minutes (not including download time).
     </para>
     <note xml:id="local.fs.durability"><title>Local Filesystem and Durability</title>
         <para>Using HBase with a LocalFileSystem does not currently guarantee durability.
-            See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3696"/> and its associated issues for more details.</para></note>
+            You need to run HBase on HDFS to ensure all writes are preserved.  Running
+            against the local filesystem though will get you off the ground quickly and get you
+            familiar with how the general system works so lets run with it for now. See
+            <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3696"/> and its associated issues for more details.</para></note>
     <note xml:id="loopback.ip.getting.started">
         <title>Loopback IP</title>
+        <para>The below advice is for hbase-0.94.0 (and older) versions; we believe this fixed in hbase-0.96.0 and beyond (let us know if we have it wrong) -- there should be no need of modification to
+        <filename>/etc/hosts</filename>.</para>
         <para>HBase expects the loopback IP address to be 127.0.0.1.  Ubuntu and some other distributions,
             for example, will default to 127.0.1.1 and this will cause problems for you
             <footnote><para>See <link xlink:href="http://blog.devving.com/why-does-hbase-care-about-etchosts/">Why does HBase care about /etc/hosts?</link> for detail.</para></footnote>.
@@ -60,9 +67,6 @@
             127.0.0.1 ubuntu.ubuntu-domain ubuntu
 </programlisting>
         </para>
-        <tip><title>Fixed in 0.96.0+</title>
-        <para>As of hbase-0.96.0+, this should no longer be an issue; it should work w/o special modification of <filename>/etc/hosts</filename></para>
-        </tip>
        </note>
 
 

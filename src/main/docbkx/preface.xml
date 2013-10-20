@@ -41,10 +41,10 @@
       be found at <filename>src/main/docbkx</filename> in a checkout of the hbase
       project.  This reference guide is marked up using
       <link xlink:href="http://www.docbook.com/">DocBook</link> from which the
-      the finished guide is generated as part of the 'site' build target:
-      i.e. run <programlisting>$mvn site</programlisting> to generate this documentation.
-      Feel free to add content by adding
-  a patch to an issue up in the HBase <link
+      the finished guide is generated as part of the 'site' build target.  Run
+      <programlisting>mvn site</programlisting> to generate this documentation.
+      Amendments and improvements to the documentation are welcomed.  Add a
+      patch to an issue up in the HBase <link
   xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>
 
   <note xml:id="headsup">
