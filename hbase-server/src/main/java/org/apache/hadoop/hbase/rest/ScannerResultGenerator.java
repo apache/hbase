@@ -109,6 +109,10 @@ public class ScannerResultGenerator extends ResultGenerator {
   }
 
   public void close() {
+    if (scanner != null) {
+      scanner.close();
+      scanner = null;
+    }
   }
 
   public boolean hasNext() {
