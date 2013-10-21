@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -223,8 +224,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
   private StoreScanner(Store store, ScanInfo scanInfo, Scan scan,
       List<? extends KeyValueScanner> scanners, ScanType scanType, long smallestReadPoint,
       long earliestPutTs, byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
-    this(store, false, scan, null, scanInfo.getTtl(),
-        scanInfo.getMinVersions(), smallestReadPoint);
+    this(store, false, scan, null, scanInfo.getTtl(), scanInfo.getMinVersions(),
+        ((HStore)store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED));
     if (dropDeletesFromRow == null) {
       matcher = new ScanQueryMatcher(scan, scanInfo, null, scanType,
           smallestReadPoint, earliestPutTs, oldestUnexpiredTS);
