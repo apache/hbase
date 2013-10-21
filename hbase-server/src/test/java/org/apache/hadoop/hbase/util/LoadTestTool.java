@@ -61,6 +61,9 @@ public class LoadTestTool extends AbstractHBaseTool {
   /** Column families used by the test */
   protected static final byte[][] COLUMN_FAMILIES = { COLUMN_FAMILY };
 
+  /** The default data size if not specified */
+  protected static final int DEFAULT_DATA_SIZE = 64;
+
   /** The number of reader/writer threads if not specified */
   protected static final int DEFAULT_NUM_THREADS = 20;
 
@@ -139,7 +142,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   // Writer options
   protected int numWriterThreads = DEFAULT_NUM_THREADS;
   protected int minColsPerKey, maxColsPerKey;
-  protected int minColDataSize, maxColDataSize;
+  protected int minColDataSize = DEFAULT_DATA_SIZE, maxColDataSize = DEFAULT_DATA_SIZE;
   protected boolean isMultiPut;
 
   // Updater options
