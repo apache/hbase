@@ -4923,6 +4923,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       long txid = 0;
       boolean walSyncSuccessful = false;
+      boolean memstoreUpdated = false;
       boolean locked = false;
 
       // 2. acquire the row lock(s)
@@ -4982,6 +4983,7 @@ public class HRegion implements HeapSize { // , Writable{
 
         // 7. apply to memstore
         long addedSize = 0;
+        memstoreUpdated = true;
         for (Mutation m : mutations) {
           addedSize += applyFamilyMapToMemstore(m.getFamilyMap(), w);
         }
@@ -5021,7 +5023,7 @@ public class HRegion implements HeapSize { // , Writable{
         }
       } finally {
         // 12. clean up if needed
-        if (!walSyncSuccessful) {
+        if (memstoreUpdated && !walSyncSuccessful) {
           int kvsRolledback = 0;
           for (Mutation m : mutations) {
             for (Map.Entry<byte[], List<KeyValue>> e : m.getFamilyMap()

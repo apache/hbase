@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
@@ -1013,6 +1014,26 @@ public class TestHRegion extends HBaseTestCase {
     }
   }
 
+  public void testmutateRowsWithLocks_wrongCF() throws IOException {
+    this.region = initHRegion(tableName, this.getName(), conf, fam1, fam2);
+    try {
+      Put put = new Put(row2);
+      put.add(fam3, qual1, value1);
+      RowMutations rm = new RowMutations(row2);
+      rm.add(put);
+      try {
+        region.mutateRow(rm);
+        fail();
+      } catch (DoNotRetryIOException expected) {
+        // expected exception.
+        LOG.debug("Caught expected exception: " + expected.getMessage());
+      }
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+  
   public void testCheckAndDelete_ThatDeleteWasWritten() throws IOException{
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
