@@ -549,19 +549,37 @@ public class HFile {
     FixedFileTrailer trailer = null;
     try {
       trailer = FixedFileTrailer.readFromStream(fsdis, size);
-    } catch (IllegalArgumentException iae) {
-      throw new CorruptHFileException("Problem reading HFile Trailer from file " + path, iae);
-    }
-    switch (trailer.getMajorVersion()) {
-    case 1:
-      return new HFileReaderV1(path, trailer, fsdis, size, closeIStream,
-          cacheConf);
-    case 2:
-      return new HFileReaderV2(path, trailer, fsdis, fsdisNoFsChecksum,
-          size, closeIStream,
-          cacheConf, preferredEncodingInCache, hfs);
-    default:
-      throw new CorruptHFileException("Invalid HFile version " + trailer.getMajorVersion());
+      switch (trailer.getMajorVersion()) {
+      case 1:
+        return new HFileReaderV1(path, trailer, fsdis, size, closeIStream,
+            cacheConf);
+      case 2:
+        return new HFileReaderV2(path, trailer, fsdis, fsdisNoFsChecksum,
+            size, closeIStream,
+            cacheConf, preferredEncodingInCache, hfs);
+      default:
+        throw new IllegalArgumentException("Invalid HFile version " + trailer.getMajorVersion());
+      }
+    } catch (Throwable t) {
+      if (closeIStream) {
+        try {
+          if (fsdis != fsdisNoFsChecksum && fsdisNoFsChecksum != null) {
+            fsdisNoFsChecksum.close();
+            fsdisNoFsChecksum = null;
+          }
+        } catch (Throwable t2) {
+          LOG.warn("Error closing fsdisNoFsChecksum FSDataInputStream", t2);
+        }
+        try {
+          if (fsdis != null) {
+            fsdis.close();
+            fsdis = null;
+          }
+        } catch (Throwable t2) {
+          LOG.warn("Error closing fsdis FSDataInputStream", t2);
+        }
+      }
+      throw new CorruptHFileException("Problem reading HFile Trailer from file " + path, t);
     }
   }
 
