@@ -67,6 +67,7 @@
             127.0.0.1 ubuntu.ubuntu-domain ubuntu
 </programlisting>
         </para>
+        </tip>
        </note>
 
 
@@ -92,7 +93,7 @@ $ cd hbase-<?eval ${project.version}?>
       it, edit <filename>conf/hbase-site.xml</filename>, the file you write
       your site-specific configurations into. Set
       <varname>hbase.rootdir</varname>, the directory HBase writes data to,
-      and <varname>hbase.zookeeper.property.dataDir</varname>, the director
+      and <varname>hbase.zookeeper.property.dataDir</varname>, the directory
       ZooKeeper writes its data too:
 <programlisting>&lt;?xml version="1.0"?&gt;
 &lt;?xml-stylesheet type="text/xsl" href="configuration.xsl"?&gt;

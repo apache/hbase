@@ -56,7 +56,8 @@ to ensure well-formedness of your document after an edit session.
     an edit to an HBase configuration, make sure you copy the
     content of the <filename>conf</filename> directory to
     all nodes of the cluster.  HBase will not do this for you.
-    Use <command>rsync</command>.</para>
+    Use <command>rsync</command>.  For most configuration, a restart is
+needed for servers to pick up changes (caveat dynamic config. to be described later below).</para>
 
     <section xml:id="basic.prerequisites">
     <title>Basic Prerequisites</title>
@@ -67,8 +68,7 @@ to ensure well-formedness of your document after an edit session.
         <title>Java</title>
         <para>Just like Hadoop, HBase requires at least Java 6 from
         <link xlink:href="http://www.java.com/download/">Oracle</link>.
-        Java 7 should work and can even be faster than Java 6, but almost all testing
-        has been done on the latter at this point.</para>
+        </para>
     </section>
 
     <section xml:id="os">
@@ -110,7 +110,7 @@ to ensure well-formedness of your document after an edit session.
       </section>
       <section xml:id="loopback.ip">
         <title>Loopback IP</title>
-        <para>HBase expects the loopback IP address to be 127.0.0.1.  See <xref linkend="loopback.ip"/></para>
+        <para>Previous to hbase-0.96.0, HBase expects the loopback IP address to be 127.0.0.1.  See <xref linkend="loopback.ip"/></para>
        </section>
 
       <section xml:id="ntp">
@@ -203,17 +203,18 @@ to ensure well-formedness of your document after an edit session.
       <section xml:id="windows">
         <title>Windows</title>
 
-        <para>Apache HBase has been little tested running on Windows. Running a
-        production install of HBase on top of Windows is not
-        recommended.</para>
+        <para>Previous to hbase-0.96.0, Apache HBase was little tested running on Windows. Running a
+        production install of HBase on top of Windows is not recommended.</para>
 
-        <para>If you are running HBase on Windows, you must install <link
+        <para>If you are running HBase on Windows pre-hbase-0.96.0, you must install <link
         xlink:href="http://cygwin.com/">Cygwin</link> to have a *nix-like
         environment for the shell scripts. The full details are explained in
         the <link xlink:href="http://hbase.apache.org/cygwin.html">Windows
         Installation</link> guide. Also
         <link xlink:href="http://search-hadoop.com/?q=hbase+windows&amp;fc_project=HBase&amp;fc_type=mail+_hash_+dev">search our user mailing list</link> to pick
         up latest fixes figured by Windows users.</para>
+    <para>Post-hbase-0.96.0, hbase runs natively on windows with supporting <command>*.cmd</command> scripts bundled.
+    </para>
       </section>
 
     </section>   <!--  OS -->
@@ -223,8 +224,7 @@ to ensure well-formedness of your document after an edit session.
         xlink:href="http://hadoop.apache.org">Hadoop</link><indexterm>
             <primary>Hadoop</primary>
           </indexterm></title>
-          <para>Selecting a Hadoop version is critical for your HBase deployment.
-              Below table shows some information about what versions of Hadoop are supported by various HBase versions.
+          <para>The below table shows some information about what versions of Hadoop are supported by various HBase versions.
               Based on the version of HBase, you should select the most appropriate version of Hadoop.
               We are not in the Hadoop distro selection business.
               You can use Hadoop distributions from Apache, or learn about vendor distributions of
@@ -250,6 +250,7 @@ to ensure well-formedness of your document after an edit session.
          <row><entry>Hadoop-0.23.x  </entry><entry>X</entry>          <entry>S</entry>           <entry>NT</entry></row>
          <row><entry>Hadoop-2.0.x-alpha     </entry><entry>X</entry>          <entry>NT</entry>           <entry>X</entry></row>
          <row><entry>Hadoop-2.1.0-beta     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry></row>
+         <row><entry>Hadoop-2.2.0     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry></row>
          <row><entry>Hadoop-2.x     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry></row>
 		 </tbody></tgroup></table>
 
@@ -260,9 +261,11 @@ to ensure well-formedness of your document after an edit session.
 		<member>NT = it should run, but not tested enough.</member>
 		</simplelist>
         </para>
+        <note xml:id="replace.hadoop"><title>Replace the Hadoop Bundled With HBase!</title>
         <para>
 	Because HBase depends on Hadoop, it bundles an instance of the Hadoop jar under its <filename>lib</filename> directory. The bundled jar is ONLY for use in standalone mode. In distributed mode, it is <emphasis>critical</emphasis> that the version of Hadoop that is out on your cluster match what is under HBase. Replace the hadoop jar found in the HBase lib directory with the hadoop jar you are running on your cluster to avoid version mismatch issues. Make sure you replace the jar in HBase everywhere on your cluster. Hadoop version mismatch issues have various manifestations but often all looks like its hung up.
     </para>
+</note>
     <section xml:id="hadoop.hbase-0.94">
 	<title>Apache HBase 0.92 and 0.94</title>
 	<para>HBase 0.92 and 0.94 versions can work with Hadoop versions, 0.20.205, 0.22.x, 1.0.x, and 1.1.x. HBase-0.94 can additionally work with Hadoop-0.23.x and 2.x, but you may have to recompile the code using the specific maven profile (see top level pom.xml)</para>
@@ -270,8 +273,8 @@ to ensure well-formedness of your document after an edit session.
 
     <section xml:id="hadoop.hbase-0.96">
 	<title>Apache HBase 0.96</title>
-	<para>Apache HBase 0.96.0 requires Apache Hadoop 1.x at a minimum, and it can run equally well on hadoop-2.0.
-	As of Apache HBase 0.96.x, Apache Hadoop 1.0.x at least is required. We will no longer run properly on older Hadoops such as 0.20.205 or branch-0.20-append. Do not move to Apache HBase 0.96.x if you cannot upgrade your Hadoop<footnote><para>See <link xlink:href="http://search-hadoop.com/m/7vFVx4EsUb2">HBase, mail # dev - DISCUSS: Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?</link></para></footnote>.</para>
+    As of Apache HBase 0.96.x, Apache Hadoop 1.0.x at least is required.  Hadoop 2 is strongly encouraged (faster but also has fixes that help MTTR).
+    We will no longer run properly on older Hadoops such as 0.20.205 or branch-0.20-append. Do not move to Apache HBase 0.96.x if you cannot upgrade your Hadoop<footnote><para>See <link xlink:href="http://search-hadoop.com/m/7vFVx4EsUb2">HBase, mail # dev - DISCUSS: Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?</link></para></footnote>.</para>
    </section>
 
     <section xml:id="hadoop.older.versions">
