@@ -202,8 +202,8 @@
     <section xml:id="hbase.regionserver.checksum.verify">
         <title><varname>hbase.regionserver.checksum.verify</varname></title>
         <para>Have HBase write the checksum into the datablock and save
-        having to do the checksum seek whenever you read.</para> 
-        
+        having to do the checksum seek whenever you read.</para>
+
         <para>See <xref linkend="hbase.regionserver.checksum.verify"/>,
         <xref linkend="hbase.hstore.bytes.per.checksum"/> and <xref linkend="hbase.hstore.checksum.algorithm"/>
         For more information see the
@@ -313,7 +313,7 @@ Result r = htable.get(get);
 byte[] b = r.getValue(CF, ATTR);  // returns current version of value
 </programlisting>
       </para>
-    </section> 
+    </section>
 
   </section>
   <section xml:id="perf.writing">
@@ -332,11 +332,11 @@ byte[] b = r.getValue(CF, ATTR);  // returns current version of value
     Table Creation: Pre-Creating Regions
     </title>
 <para>
-Tables in HBase are initially created with one region by default.  For bulk imports, this means that all clients will write to the same region 
-until it is large enough to split and become distributed across the cluster.  A useful pattern to speed up the bulk import process is to pre-create empty regions. 
- Be somewhat conservative in this, because too-many regions can actually degrade performance.  
+Tables in HBase are initially created with one region by default.  For bulk imports, this means that all clients will write to the same region
+until it is large enough to split and become distributed across the cluster.  A useful pattern to speed up the bulk import process is to pre-create empty regions.
+ Be somewhat conservative in this, because too-many regions can actually degrade performance.
 </para>
-	<para>There are two different approaches to pre-creating splits.  The first approach is to rely on the default <code>HBaseAdmin</code> strategy 
+	<para>There are two different approaches to pre-creating splits.  The first approach is to rely on the default <code>HBaseAdmin</code> strategy
 	(which is implemented in <code>Bytes.split</code>)...
 	</para>
 <programlisting>
@@ -664,7 +664,19 @@ faster<footnote><para>See JD's <link xlink:href="http://files.meetup.com/1350427
 Also see <link xlink:href="http://search-hadoop.com/m/zV6dKrLCVh1">HBase, mail # dev - read short circuit</link> thread for
 more discussion around short circuit reads.
 </para>
-<para>To enable "short circuit" reads, you must set two configurations.
+<para>To enable "short circuit" reads, it will depend on your version of Hadoop.
+    The original shortcircuit read patch was much improved upon in Hadoop 2 in
+    <link xlink:href="https://issues.apache.org/jira/browse/HDFS-347">HDFS-347</link>.
+    See <link xlink:href="http://blog.cloudera.com/blog/2013/08/how-improved-short-circuit-local-reads-bring-better-performance-and-security-to-hadoop/"></link> for details
+    on the difference between the old and new implementations.  See
+    <link xlink:href="http://archive.cloudera.com/cdh4/cdh/4/hadoop/hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html">Hadoop shortcircuit reads configuration page</link>
+    for how to enable the later version of shortcircuit.
+</para>
+<para>If you are running on an old Hadoop, one that is without
+    <link xlink:href="https://issues.apache.org/jira/browse/HDFS-347">HDFS-347</link> but that
+    has
+<link xlink:href="https://issues.apache.org/jira/browse/HDFS-2246">HDFS-2246</link>,
+you must set two configurations.
 First, the hdfs-site.xml needs to be amended. Set
 the property  <varname>dfs.block.local-path-access.user</varname>
 to be the <emphasis>only</emphasis> user that can use the shortcut.
@@ -686,7 +698,15 @@ username than the one configured here also has the shortcircuit
 enabled, it will get an Exception regarding an unauthorized access but
 the data will still be read.
 </para>
+<note xml:id="dfs.client.read.shortcircuit.buffer.size">
+    <title>dfs.client.read.shortcircuit.buffer.size</title>
+    <para>The default for this value is too high when running on a highly trafficed HBase.  Set it down from its
+        1M default down to 128k or so.  Put this configuration in the HBase configs (its a HDFS client-side configuration).
+        The Hadoop DFSClient in HBase will allocate a direct byte buffer of this size for <emphasis>each</emphasis>
+    block it has open; given HBase keeps its HDFS files open all the time, this can add up quickly.</para>
+</note>
   </section>
+
     <section xml:id="perf.hdfs.comp"><title>Performance Comparisons of HBase vs. HDFS</title>
      <para>A fairly common question on the dist-list is why HBase isn't as performant as HDFS files in a batch context (e.g., as
      a MapReduce source or sink).  The short answer is that HBase is doing a lot more than HDFS (e.g., reading the KeyValues,
