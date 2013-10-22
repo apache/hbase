@@ -66,7 +66,7 @@ class SnapshotLogSplitter implements Closeable {
     public LogWriter(final Configuration conf, final FileSystem fs,
         final Path logDir, long seqId) throws IOException {
       logFile = new Path(logDir, logFileName(seqId, true));
-      this.writer = HLogFactory.createWriter(fs, logFile, conf);
+      this.writer = HLogFactory.createRecoveredEditsWriter(fs, logFile, conf);
       this.seqId = seqId;
     }
 

@@ -376,7 +376,7 @@ public class TestHLogSplit {
     Path p = HLogSplitter.getRegionSplitEditsPath(fs, entry, HBASEDIR, true);
     String parentOfParent = p.getParent().getParent().getName();
     assertEquals(parentOfParent, HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
-    HLogFactory.createWriter(fs, p, conf).close();
+    HLogFactory.createRecoveredEditsWriter(fs, p, conf).close();
   }
 
   @Test (timeout=300000)
@@ -1168,8 +1168,8 @@ public class TestHLogSplit {
         }
 
         fs.mkdirs(new Path(tableDir, region));
-        HLog.Writer writer = HLogFactory.createWriter(fs,
-            julietLog, conf);
+        HLog.Writer writer = HLogFactory.createWALWriter(fs,
+          julietLog, conf);
         appendEntry(writer, TableName.valueOf("juliet"), ("juliet").getBytes(),
             ("r").getBytes(), FAMILY, QUALIFIER, VALUE, 0);
         writer.close();
@@ -1289,7 +1289,7 @@ public class TestHLogSplit {
         conf, HBASEDIR, fs, null, null) {
       protected HLog.Writer createWriter(FileSystem fs, Path logfile, Configuration conf)
       throws IOException {
-        HLog.Writer writer = HLogFactory.createWriter(fs, logfile, conf);
+        HLog.Writer writer = HLogFactory.createRecoveredEditsWriter(fs, logfile, conf);
         // After creating writer, simulate region's
         // replayRecoveredEditsIfAny() which gets SplitEditFiles of this
         // region and delete them, excluding files with '.temp' suffix.
@@ -1350,7 +1350,7 @@ public class TestHLogSplit {
     HLog.Writer [] ws = new HLog.Writer[writers];
     int seq = 0;
     for (int i = 0; i < writers; i++) {
-      ws[i] = HLogFactory.createWriter(dfs, new Path(HLOGDIR, HLOG_FILE_PREFIX + i), dfs.getConf());
+      ws[i] = HLogFactory.createWALWriter(dfs, new Path(HLOGDIR, HLOG_FILE_PREFIX + i), dfs.getConf());
       for (int j = 0; j < entries; j++) {
         int prefix = 0;
         for (String region : REGIONS) {
@@ -1505,7 +1505,7 @@ public class TestHLogSplit {
 
   private void injectEmptyFile(String suffix, boolean closeFile)
           throws IOException {
-    HLog.Writer writer = HLogFactory.createWriter(
+    HLog.Writer writer = HLogFactory.createWALWriter(
         fs, new Path(HLOGDIR, HLOG_FILE_PREFIX + suffix), conf);
     if (closeFile) writer.close();
   }

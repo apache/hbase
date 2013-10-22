@@ -563,7 +563,7 @@ class FSHLog implements HLog, Syncable {
     if (forMeta) {
       //TODO: set a higher replication for the hlog files (HBASE-6773)
     }
-    return HLogFactory.createWriter(fs, path, conf);
+    return HLogFactory.createWALWriter(fs, path, conf);
   }
 
   /*

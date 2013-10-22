@@ -28,12 +28,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * Writer for protobuf-based WAL.
@@ -55,7 +54,8 @@ public class ProtobufLogWriter extends WriterBase {
   }
 
   @Override
-  public void init(FileSystem fs, Path path, Configuration conf) throws IOException {
+  @SuppressWarnings("deprecation")
+  public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable) throws IOException {
     assert this.output == null;
     boolean doCompress = initializeCompressionContext(conf, path);
     this.trailerWarnSize = conf.getInt(HLog.WAL_TRAILER_WARN_SIZE,
@@ -65,7 +65,7 @@ public class ProtobufLogWriter extends WriterBase {
         "hbase.regionserver.hlog.replication", FSUtils.getDefaultReplication(fs, path));
     long blockSize = conf.getLong("hbase.regionserver.hlog.blocksize",
         FSUtils.getDefaultBlockSize(fs, path));
-    output = fs.create(path, true, bufferSize, replication, blockSize);
+    output = fs.createNonRecursive(path, overwritable, bufferSize, replication, blockSize, null);
     output.write(ProtobufLogReader.PB_WAL_MAGIC);
     WALHeader.newBuilder().setHasCompression(doCompress).build().writeDelimitedTo(output);
 

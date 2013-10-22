@@ -172,8 +172,18 @@ public class HLogFactory {
      * @return A WAL writer.  Close when done with it.
      * @throws IOException
      */
-    public static HLog.Writer createWriter(final FileSystem fs,
-        final Path path, Configuration conf)
+    public static HLog.Writer createWALWriter(final FileSystem fs,
+        final Path path, Configuration conf) throws IOException {
+      return createWriter(fs, path, conf, false);
+    }
+
+    public static HLog.Writer createRecoveredEditsWriter(final FileSystem fs,
+        final Path path, Configuration conf) throws IOException {
+      return createWriter(fs, path, conf, true);
+    }
+
+    private static HLog.Writer createWriter(final FileSystem fs,
+        final Path path, Configuration conf, boolean overwritable)
     throws IOException {
       try {
         if (logWriterClass == null) {
@@ -181,11 +191,10 @@ public class HLogFactory {
               ProtobufLogWriter.class, Writer.class);
         }
         HLog.Writer writer = (HLog.Writer)logWriterClass.newInstance();
-        writer.init(fs, path, conf);
+        writer.init(fs, path, conf, overwritable);
         return writer;
       } catch (Exception e) {
         throw new IOException("cannot get log writer", e);
       }
     }
-    
 }

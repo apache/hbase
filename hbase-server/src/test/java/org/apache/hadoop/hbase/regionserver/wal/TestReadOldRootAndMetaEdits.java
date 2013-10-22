@@ -112,7 +112,7 @@ public class TestReadOldRootAndMetaEdits {
           HConstants.DEFAULT_CLUSTER_ID), kvs);
 
       // write above entries
-      writer = HLogFactory.createWriter(fs, path, conf);
+      writer = HLogFactory.createWALWriter(fs, path, conf);
       writer.append(tEntry);
       writer.append(rootEntry);
       writer.append(oldMetaEntry);

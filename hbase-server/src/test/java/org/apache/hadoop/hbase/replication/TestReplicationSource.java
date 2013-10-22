@@ -79,8 +79,8 @@ public class TestReplicationSource {
     Path logPath = new Path(logDir, "log");
     if (!FS.exists(logDir)) FS.mkdirs(logDir);
     if (!FS.exists(oldLogDir)) FS.mkdirs(oldLogDir);
-    HLog.Writer writer = HLogFactory.createWriter(FS, 
-        logPath, conf);
+    HLog.Writer writer = HLogFactory.createWALWriter(FS,
+      logPath, conf);
     for(int i = 0; i < 3; i++) {
       byte[] b = Bytes.toBytes(Integer.toString(i));
       KeyValue kv = new KeyValue(b,b,b);
