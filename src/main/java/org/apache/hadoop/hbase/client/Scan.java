@@ -83,6 +83,7 @@ public class Scan extends OperationWithAttributes implements Writable {
   private static final String RAW_ATTR = "_raw_";
   private static final String ONDEMAND_ATTR = "_ondemand_";
   private static final String ISOLATION_LEVEL = "_isolationlevel_";
+  private static final String SMALL_ATTR = "_small_";
 
   private static final byte SCAN_VERSION = (byte)2;
   private byte [] startRow = HConstants.EMPTY_START_ROW;
@@ -487,6 +488,39 @@ public class Scan extends OperationWithAttributes implements Writable {
    */
   public boolean doLoadColumnFamiliesOnDemand() {
     byte[] attr = getAttribute(ONDEMAND_ATTR);
+    return attr == null ? false : Bytes.toBoolean(attr);
+  }
+
+  /**
+   * Set whether this scan is a small scan
+   * <p>
+   * Small scan should use pread and big scan can use seek + read
+   * 
+   * seek + read is fast but can cause two problem (1) resource contention (2)
+   * cause too much network io
+   * 
+   * [89-fb] Using pread for non-compaction read request
+   * https://issues.apache.org/jira/browse/HBASE-7266
+   * 
+   * On the other hand, if setting it true, we would do
+   * openScanner,next,closeScanner in one RPC call. It means the better
+   * performance for small scan. [HBASE-9488].
+   * 
+   * Generally, if the scan range is within one data block(64KB), it could be
+   * considered as a small scan.
+   * 
+   * @param small
+   */
+  public void setSmall(boolean small) {
+    setAttribute(SMALL_ATTR, Bytes.toBytes(small));
+  }
+
+  /**
+   * Get whether this scan is a small scan
+   * @return true if small scan
+   */
+  public boolean isSmall() {
+    byte[] attr = getAttribute(SMALL_ATTR);
     return attr == null ? false : Bytes.toBoolean(attr);
   }
 

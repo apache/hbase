@@ -662,4 +662,17 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
 
   @Override
   public void stop(String why);
+
+  /**
+   * Perform scan operation.
+   * @param regionName name of region to get from
+   * @param Scan scan operation
+   * @param numberOfRows the maximum number of rows to fetch
+   * @return Array of Results;array is empty if done with this region and null
+   *         if we are NOT to go to the next region (happens when a filter rules
+   *         that the scan is done).
+   * @throws IOException e
+   */
+  public Result[] scan(byte[] regionName, Scan scan, int numberOfRows)
+      throws IOException;
 }

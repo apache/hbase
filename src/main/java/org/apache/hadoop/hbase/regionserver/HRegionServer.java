@@ -2521,8 +2521,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   //
   // remote scanner interface
   //
-
+  
   public long openScanner(byte[] regionName, Scan scan) throws IOException {
+    RegionScanner s = internalOpenScanner(regionName, scan);
+    long scannerId = addScanner(s);
+    return scannerId;
+  }
+
+  private RegionScanner internalOpenScanner(byte[] regionName, Scan scan)
+      throws IOException {
     checkOpen();
     NullPointerException npe = null;
     if (regionName == null) {
@@ -2557,7 +2564,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           s = savedScanner;
         }
       }
-      return addScanner(s);
+      return s;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t, "Failed openScanner"));
     }
@@ -2587,16 +2594,23 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       LOG.info("Client tried to access missing scanner " + scannerName);
       throw new UnknownScannerException("Name: " + scannerName);
     }
+    return internalNext(s, nbRows, scannerName);
+  }
+
+  private Result[] internalNext(final RegionScanner s, int nbRows,
+      String scannerName) throws IOException {
     try {
       checkOpen();
     } catch (IOException e) {
       // If checkOpen failed, server not running or filesystem gone,
       // cancel this lease; filesystem is gone or we're closing or something.
-      try {
-        this.leases.cancelLease(scannerName);
-      } catch (LeaseException le) {
-        LOG.info("Server shutting down and client tried to access missing scanner " +
-          scannerName);
+      if (scannerName != null) {
+        try {
+          this.leases.cancelLease(scannerName);
+        } catch (LeaseException le) {
+          LOG.info("Server shutting down and client tried to access missing scanner "
+              + scannerName);
+        }
       }
       throw e;
     }
@@ -2605,7 +2619,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // Remove lease while its being processed in server; protects against case
       // where processing of request takes > lease expiration time.
       try {
-        lease = this.leases.removeLease(scannerName);
+        if (scannerName != null) {
+          lease = this.leases.removeLease(scannerName);
+        }
       } catch (LeaseException le) {
         // What it really means is that there's no such scanner.
         LOG.info("Client tried to access missing scanner " + scannerName + " (no lease)");
@@ -2675,25 +2691,30 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       return s.isFilterDone() && results.isEmpty() ? null
           : results.toArray(new Result[0]);
     } catch (Throwable t) {
-      if (t instanceof NotServingRegionException) {
+      if (t instanceof NotServingRegionException && scannerName != null) {
         this.scanners.remove(scannerName);
       }
       throw convertThrowableToIOE(cleanup(t));
     } finally {
       // We're done. On way out readd the above removed lease.  Adding resets
       // expiration time on lease.
-      if (this.scanners.containsKey(scannerName)) {
+      if (scannerName != null && this.scanners.containsKey(scannerName)) {
         if (lease != null) this.leases.addLease(lease);
       }
     }
   }
 
   public void close(final long scannerId) throws IOException {
+    String scannerName = String.valueOf(scannerId);
+    RegionScanner s = scanners.get(scannerName);
+    internalCloseScanner(s, scannerName);
+  }
+
+  private void internalCloseScanner(final RegionScanner s, String scannerName)
+      throws IOException {
     try {
       checkOpen();
       requestCount.incrementAndGet();
-      String scannerName = String.valueOf(scannerId);
-      RegionScanner s = scanners.get(scannerName);
 
       HRegion region = null;
       if (s != null) {
@@ -2705,18 +2726,34 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           }
         }
       }
-
-      s = scanners.remove(scannerName);
-      if (s != null) {
-        s.close();
-        this.leases.cancelLease(scannerName);
+      RegionScanner toCloseScanner = s;
+      if (scannerName != null) {
+        toCloseScanner = scanners.remove(scannerName);
+      }
+      if (toCloseScanner != null) {
+        toCloseScanner.close();
+        if (scannerName != null) {
+          this.leases.cancelLease(scannerName);
+        }
 
         if (region != null && region.getCoprocessorHost() != null) {
-          region.getCoprocessorHost().postScannerClose(s);
+          region.getCoprocessorHost().postScannerClose(toCloseScanner);
         }
       }
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
+    }
+  }
+
+  @Override
+  public Result[] scan(byte[] regionName, Scan scan, int numberOfRows)
+      throws IOException {
+    RegionScanner s = internalOpenScanner(regionName, scan);
+    try {
+      Result[] results = internalNext(s, numberOfRows, null);
+      return results;
+    } finally {
+      internalCloseScanner(s, null);
     }
   }
 

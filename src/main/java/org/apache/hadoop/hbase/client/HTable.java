@@ -695,6 +695,10 @@ public class HTable implements HTableInterface {
     if (scan.getCaching() <= 0) {
       scan.setCaching(getScannerCaching());
     }
+    if (scan.isSmall()) {
+      return new ClientSmallScanner(getConfiguration(), scan, getTableName(),
+          this.connection);
+    }
     return new ClientScanner(getConfiguration(), scan, getTableName(),
         this.connection);
   }
