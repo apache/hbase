@@ -113,7 +113,8 @@ Valid program names are:
         <section xml:id="copytable">
         <title>CopyTable</title>
       <para>
-            CopyTable is a utility that can copy part or of all of a table, either to the same cluster or another cluster. The usage is as follows:
+          CopyTable is a utility that can copy part or of all of a table, either to the same cluster or another cluster. The target table must
+          first exist. The usage is as follows:
 <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.CopyTable [--starttime=X] [--endtime=Y] [--new.name=NEW] [--peer.adr=ADR] tablename
 </programlisting>
         </para>
@@ -962,7 +963,7 @@ false
 do it using the hbase shell:
 <programlisting>hbase shell> disable 'tableName'
 hbase shell> snapshot 'tableName', 'tableSnapshot'
-hbase shell> clone 'tableSnapshot', 'newTableName'
+hbase shell> clone_snapshot 'tableSnapshot', 'newTableName'
 hbase shell> delete_snapshot 'tableSnapshot'
 hbase shell> drop 'tableName'</programlisting>
 or in code it would be as follows:

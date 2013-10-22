@@ -410,8 +410,8 @@ to ensure well-formedness of your document after an edit session.
           evaluating HBase performance.</para>
 
       <para>First, if you want to run on HDFS rather than on the local filesystem,
-          setup your HDFS.  You can set up HDFS also in
-          <link xlink:href="http://hadoop.apache.org/docs/r1.0.3/single_node_setup.html">pseudo-distributed mode</link>.
+          setup your HDFS.  You can set up HDFS also in pseudo-distributed mode
+          (TODO: Add pointer to HOWTO doc; the hadoop site doesn't have any any more).
           Ensure you have a working HDFS before proceeding.
    	      </para>
 

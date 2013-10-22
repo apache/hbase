@@ -102,7 +102,8 @@
       By convention, a column name is made of its column family prefix and a
       <emphasis>qualifier</emphasis>. For example, the
       column
-      <emphasis>contents:html</emphasis> is of the column family <varname>contents</varname>
+      <emphasis>contents:html</emphasis> is made up of the column family <varname>contents</varname>
+      and <varname>html</varname> qualifier.
           The colon character (<literal
           moreinfo="none">:</literal>) delimits the column family from the
           column family <emphasis>qualifier</emphasis>.
@@ -655,8 +656,8 @@ htable.put(put);
   <para>See <link xlink:href="http://hbase.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#package_description">
   HBase and MapReduce</link> up in javadocs.
   Start there.  Below is some additional help.</para>
-  <para>For more information about MapReduce (i.e., the framework in general), see the
-   <link xlink:href="http://hadoop.apache.org/common/docs/current/mapred_tutorial.html">Hadoop MapReduce Tutorial</link>.</para>
+  <para>For more information about MapReduce (i.e., the framework in general), see the Hadoop site (TODO: Need good links here --
+      we used to have some but they rotted against apache hadoop).</para>
   <section xml:id="splitter">
     <title>Map-Task Splitting</title>
     <section xml:id="splitter.default">
