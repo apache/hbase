@@ -1216,11 +1216,65 @@ of all regions.
     </section>
     <section xml:id="mttr">
       <title>Better Mean Time to Recover (MTTR)</title>
-      <para>See the Deveraj Das an Nicolas Liochon blog post
+      <para>This section is about configurations that will make servers come back faster after a fail.
+          See the Deveraj Das an Nicolas Liochon blog post
           <link xlink:href="http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/">Introduction to HBase Mean Time to Recover (MTTR)</link>
-          for a brief introduction.  The issue <link xlink:href="https://issues.apache.org/jira/browse/HBASE-8389">HBASE-8354 forces Namenode into loop with lease recovery requests</link>
+          for a brief introduction.</para>
+      <para>The issue <link xlink:href="https://issues.apache.org/jira/browse/HBASE-8389">HBASE-8354 forces Namenode into loop with lease recovery requests</link>
           is messy but has a bunch of good discussion toward the end on low timeouts and how to effect faster recovery including citation of fixes
-          added to HDFS.  Read the Varun Sharma comments.</para>
+          added to HDFS.  Read the Varun Sharma comments.  The below suggested configurations are Varun's suggestions distilled and tested.  Make sure you are
+          running on a late-version HDFS so you have the fixes he refers too and himself adds to HDFS that help HBase MTTR
+          (e.g. HDFS-3703, HDFS-3712, and HDFS-4791 -- hadoop 2 for sure has them and late hadoop 1 has some).
+          Set the following in the RegionServer.
+<![CDATA[<property>
+    <name>hbase.lease.recovery.dfs.timeout</name>
+    <value>23000</value>
+    <description>How much time we allow elapse between calls to recover lease.
+    Should be larger than the dfs timeout.</description>
+</property>
+<property>
+    <name>dfs.client.socket-timeout</name>
+    <value>10000</value>
+    <description>Down the DFS timeout from 60 to 10 seconds.</description>
+</property>]]>
+And on the namenode/datanode side, set the following to enable 'staleness' introduced in HDFS-3703, HDFS-3912.
+<![CDATA[<property>
+    <name>dfs.client.socket-timeout</name>
+    <value>10000</value>
+    <description>Down the DFS timeout from 60 to 10 seconds.</description>
+</property>
+<property>
+    <name>dfs.datanode.socket.write.timeout</name>
+    <value>10000</value>
+    <description>Down the DFS timeout from 8 * 60 to 10 seconds.</description>
+</property>
+<property>
+    <name>ipc.client.connect.timeout</name>
+    <value>3000</value>
+    <description>Down from 60 seconds to 3.</description>
+</property>
+<property>
+    <name>ipc.client.connect.max.retries.on.timeouts</name>
+    <value>2</value>
+    <description>Down from 45 seconds to 3 (2 == 3 retries).</description>
+</property>
+<property>
+    <name>dfs.namenode.avoid.read.stale.datanode</name>
+    <value>true</value>
+    <description>Enable stale state in hdfs</description>
+</property>
+<property>
+    <name>dfs.namenode.stale.datanode.interval</name>
+    <value>20000</value>
+    <description>Down from default 30 seconds</description>
+</property>
+<property>
+    <name>dfs.namenode.avoid.write.stale.datanode</name>
+    <value>true</value>
+    <description>Enable stale state in hdfs</description>
+</property>]]>
+
+      </para>
     </section>
 
       </section>
