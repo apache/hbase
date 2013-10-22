@@ -17,23 +17,20 @@
  */
 
 package org.apache.hadoop.hbase.regionserver.wal;
-import org.apache.hadoop.classification.InterfaceAudience;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.WritableUtils;
+
 import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
 
 /**
  * A set of static functions for running our custom WAL compression/decompression.
@@ -80,7 +77,7 @@ public class Compressor {
       }
       boolean compress = ((ReaderBase)in).hasCompression();
       conf.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, !compress);
-      out = HLogFactory.createWriter(outFS, output, conf);
+      out = HLogFactory.createWALWriter(outFS, output, conf);
 
       HLog.Entry e = null;
       while ((e = in.next()) != null) out.append(e);

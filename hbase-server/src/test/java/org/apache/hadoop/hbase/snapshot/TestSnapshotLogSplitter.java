@@ -144,7 +144,7 @@ public class TestSnapshotLogSplitter {
    */
   private void writeTestLog(final Path logFile) throws IOException {
     fs.mkdirs(logFile.getParent());
-    HLog.Writer writer = HLogFactory.createWriter(fs, logFile, conf);
+    HLog.Writer writer = HLogFactory.createWALWriter(fs, logFile, conf);
     try {
       for (int i = 0; i < 7; ++i) {
         TableName tableName = getTableName(i);

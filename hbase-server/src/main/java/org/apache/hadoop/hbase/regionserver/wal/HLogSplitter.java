@@ -634,7 +634,7 @@ public class HLogSplitter {
    */
   protected Writer createWriter(FileSystem fs, Path logfile, Configuration conf)
       throws IOException {
-    return HLogFactory.createWriter(fs, logfile, conf);
+    return HLogFactory.createRecoveredEditsWriter(fs, logfile, conf);
   }
 
   /**

@@ -293,7 +293,7 @@ public class TestHRegion {
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
         Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
         fs.create(recoveredEdits);
-        HLog.Writer writer = HLogFactory.createWriter(fs, recoveredEdits, conf);
+        HLog.Writer writer = HLogFactory.createRecoveredEditsWriter(fs, recoveredEdits, conf);
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
@@ -343,7 +343,7 @@ public class TestHRegion {
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
         Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
         fs.create(recoveredEdits);
-        HLog.Writer writer = HLogFactory.createWriter(fs, recoveredEdits, conf);
+        HLog.Writer writer = HLogFactory.createRecoveredEditsWriter(fs, recoveredEdits, conf);
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
@@ -468,7 +468,7 @@ public class TestHRegion {
 
       Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", 1000));
       fs.create(recoveredEdits);
-      HLog.Writer writer = HLogFactory.createWriter(fs, recoveredEdits, conf);
+      HLog.Writer writer = HLogFactory.createRecoveredEditsWriter(fs, recoveredEdits, conf);
 
       long time = System.nanoTime();
 

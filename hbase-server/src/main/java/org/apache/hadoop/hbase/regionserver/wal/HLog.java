@@ -33,11 +33,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
-import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.io.Writable;
 
 
@@ -95,7 +94,7 @@ public interface HLog {
   }
 
   interface Writer {
-    void init(FileSystem fs, Path path, Configuration c) throws IOException;
+    void init(FileSystem fs, Path path, Configuration c, boolean overwritable) throws IOException;
 
     void close() throws IOException;
 
@@ -173,6 +172,7 @@ public interface HLog {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void write(DataOutput dataOutput) throws IOException {
       this.key.write(dataOutput);
       this.edit.write(dataOutput);
