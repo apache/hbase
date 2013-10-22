@@ -273,6 +273,7 @@ needed for servers to pick up changes (caveat dynamic config. to be described la
 
     <section xml:id="hadoop.hbase-0.96">
 	<title>Apache HBase 0.96</title>
+	<para>
     As of Apache HBase 0.96.x, Apache Hadoop 1.0.x at least is required.  Hadoop 2 is strongly encouraged (faster but also has fixes that help MTTR).
     We will no longer run properly on older Hadoops such as 0.20.205 or branch-0.20-append. Do not move to Apache HBase 0.96.x if you cannot upgrade your Hadoop<footnote><para>See <link xlink:href="http://search-hadoop.com/m/7vFVx4EsUb2">HBase, mail # dev - DISCUSS: Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?</link></para></footnote>.</para>
    </section>
