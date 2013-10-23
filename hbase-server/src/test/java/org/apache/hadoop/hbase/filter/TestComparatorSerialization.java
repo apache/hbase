@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.regex.Pattern;
@@ -70,8 +71,11 @@ public class TestComparatorSerialization {
       ProtobufUtil.toComparator(ProtobufUtil.toComparator(regexStringComparator))));
 
     // test with specifying flags
-    regexStringComparator =
+    try {
       new RegexStringComparator("regex", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    } catch (Throwable t) {
+      assertNull("Exception occured while created the RegexStringComparator object", t);
+    }
   }
 
   @Test

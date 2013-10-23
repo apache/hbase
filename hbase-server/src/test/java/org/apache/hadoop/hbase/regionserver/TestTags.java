@@ -453,10 +453,6 @@ public class TestTags {
             ((List<Cell>) updatedCells).add(newKV);
           }
         }
-        // add new set of familymap to the put. Can we update the existing kvs
-        // itself
-        NavigableMap<byte[], List<? extends Cell>> familyMap = new TreeMap<byte[], List<? extends Cell>>(
-            Bytes.BYTES_COMPARATOR);
         put.getFamilyCellMap().remove(cf);
         // Update the family map
         put.getFamilyCellMap().put(cf, updatedCells);

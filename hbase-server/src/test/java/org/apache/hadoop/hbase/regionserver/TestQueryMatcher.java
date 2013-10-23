@@ -291,10 +291,6 @@ public class TestQueryMatcher extends HBaseTestCase {
   }
 
   public void testMatch_PartialRangeDropDeletes() throws Exception {
-    long now = EnvironmentEdgeManager.currentTimeMillis();
-    ScanInfo scanInfo = new ScanInfo(fam2, 0, 1, ttl, false, 0, rowComparator);
-    NavigableSet<byte[]> cols = get.getFamilyMap().get(fam2);
-
     // Some ranges.
     testDropDeletes(
         row2, row3, new byte[][] { row1, row2, row2, row3 }, INCLUDE, SKIP, SKIP, INCLUDE);
