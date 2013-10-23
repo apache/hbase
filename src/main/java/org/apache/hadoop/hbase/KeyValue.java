@@ -1067,6 +1067,36 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
     public byte [] getValue() { return this.split[5]; }
   }
 
+  public void verify() {
+    int splitOffset = this.offset;
+    int keyLen = Bytes.toInt(bytes, splitOffset);
+    splitOffset += Bytes.SIZEOF_INT;
+    int valLen = Bytes.toInt(bytes, splitOffset);
+    splitOffset += Bytes.SIZEOF_INT;
+    short rowLen = Bytes.toShort(bytes, splitOffset);
+    splitOffset += Bytes.SIZEOF_SHORT;
+    splitOffset += rowLen;
+    byte famLen = bytes[splitOffset];
+    if (!(keyLen >= 0 && valLen >=0
+        && keyLen + valLen + KEYVALUE_INFRASTRUCTURE_SIZE == this.length
+        && this.length + this.offset <= this.bytes.length
+        && rowLen >=0 && rowLen <= keyLen
+        && famLen >=0 && famLen <= keyLen
+        && rowLen + famLen <= keyLen
+        )) {
+      String msg = "Malformed key value: "
+         + ", offset ="  + offset
+         + ", keyLen ="  + keyLen
+         + ", valLen ="  + valLen
+         + ", length ="  + length
+         + ", rowLen ="  + rowLen
+         + ", famLen ="  + famLen
+         + ", bytes[] is " + Bytes.toStringBinary(bytes, offset, length);
+      LOG.error(msg);
+      throw new IllegalArgumentException(msg);
+    };
+  }
+
   public SplitKeyValue split() {
     SplitKeyValue split = new SplitKeyValue();
     int splitOffset = this.offset;
@@ -2191,6 +2221,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
     this.offset = 0;
     this.bytes = new byte[this.length];
     in.readFully(this.bytes, 0, this.length);
+    this.verify();
   }
 
   // Writable
@@ -2200,6 +2231,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
   }
 
   public void write(final DataOutput out) throws IOException {
+    this.verify();
     out.writeInt(this.length);
     out.write(this.bytes, this.offset, this.length);
   }
