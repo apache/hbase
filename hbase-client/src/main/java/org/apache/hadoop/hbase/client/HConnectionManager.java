@@ -718,8 +718,9 @@ public class HConnectionManager {
             long keepAliveTime = conf.getLong(
                 "hbase.hconnection.threads.keepalivetime", 60);
             LinkedBlockingQueue<Runnable> workQueue =
-                new LinkedBlockingQueue<Runnable>(128 *
-                    conf.getInt("hbase.client.max.total.tasks", 200));
+                new LinkedBlockingQueue<Runnable>(256 *
+                    conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+                    HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
             this.batchPool = new ThreadPoolExecutor(
                 maxThreads,
                 maxThreads,

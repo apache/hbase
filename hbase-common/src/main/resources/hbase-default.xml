@@ -448,6 +448,26 @@ possible configurations would overwhelm and obscure the important.
     ramps up.  Change this setting and hbase.client.pause to suit your workload.</description>
   </property>
   <property>
+    <name>hbase.client.max.total.tasks</name>
+    <value>100</value>
+    <description>The maximum number of concurrent tasks a single HTable instance will
+    send to the cluster.</description>
+  </property>
+  <property>
+    <name>hbase.client.max.perserver.tasks</name>
+    <value>5</value>
+    <description>The maximum number of concurrent tasks a single HTable instance will
+    send to a single region server.</description>
+  </property>
+  <property>
+    <name>hbase.client.max.perregion.tasks</name>
+    <value>1</value>
+    <description>The maximum number of concurrent connections the client will
+    maintain to a single Region. That is, if there is already
+    hbase.client.max.perregion.tasks writes in progress for this region, new puts
+    won't be sent to this region until some writes finishes.</description>
+  </property>
+  <property>
     <name>hbase.client.scanner.caching</name>
     <value>100</value>
     <description>Number of rows that will be fetched when calling next

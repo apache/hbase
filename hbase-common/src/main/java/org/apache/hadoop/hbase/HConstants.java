@@ -571,6 +571,38 @@ public final class HConstants {
   public static long DEFAULT_HBASE_CLIENT_PAUSE = 100;
 
   /**
+   * The maximum number of concurrent connections the client will maintain.
+   */
+  public static final String HBASE_CLIENT_MAX_TOTAL_TASKS = "hbase.client.max.total.tasks";
+
+  /**
+   * Default value of {@link #HBASE_CLIENT_MAX_TOTAL_TASKS}.
+   */
+  public static final int DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS = 100;
+
+  /**
+   * The maximum number of concurrent connections the client will maintain to a single
+   * RegionServer.
+   */
+  public static final String HBASE_CLIENT_MAX_PERSERVER_TASKS = "hbase.client.max.perserver.tasks";
+
+  /**
+   * Default value of {@link #HBASE_CLIENT_MAX_PERSERVER_TASKS}.
+   */
+  public static final int DEFAULT_HBASE_CLIENT_MAX_PERSERVER_TASKS = 5;
+
+  /**
+   * The maximum number of concurrent connections the client will maintain to a single
+   * Region.
+   */
+  public static final String HBASE_CLIENT_MAX_PERREGION_TASKS = "hbase.client.max.perregion.tasks";
+
+  /**
+   * Default value of {@link #HBASE_CLIENT_MAX_PERREGION_TASKS}.
+   */
+  public static final int DEFAULT_HBASE_CLIENT_MAX_PERREGION_TASKS = 1;
+
+  /**
    * Parameter name for server pause value, used mostly as value to wait before
    * running a retry of a failed operation.
    */
