@@ -53,6 +53,7 @@ public abstract class MonkeyFactory {
 
 
   public static final String CALM = "calm";
+  // TODO: the name has become a misnomer since the default (not-slow) monkey has been removed
   public static final String SLOW_DETERMINISTIC = "slowDeterministic";
   public static final String UNBALANCE = "unbalance";
 
@@ -63,10 +64,6 @@ public abstract class MonkeyFactory {
     .build();
 
   public static MonkeyFactory getFactory(String factoryName) {
-     MonkeyFactory fact = FACTORIES.get(factoryName);
-    if (fact == null)  {
-      fact = FACTORIES.get(CALM);
-    }
-    return fact;
+    return FACTORIES.get(factoryName);
   }
 }

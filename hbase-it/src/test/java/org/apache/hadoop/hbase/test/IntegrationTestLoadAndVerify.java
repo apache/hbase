@@ -64,8 +64,6 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -121,8 +119,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     REFERENCES_CHECKED
   }
 
-  @Before
-  public void setUp() throws Exception {
+  public void setUpCluster() throws Exception {
     util = getTestingUtil(getConf());
     util.initializeCluster(3);
     this.setConf(util.getConfiguration());
@@ -150,12 +147,6 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
       ( ( ( value >> 40 ) & 0xff ) << 16 ) +
       ( ( ( value >> 48 ) & 0xff ) << 8 ) +
       ( ( ( value >> 56 ) & 0xff ) << 0 );
-  }
-
-  @Override
-  @After
-  public void cleanUp() throws Exception {
-    util.restoreCluster();
   }
 
   public static class LoadMapper

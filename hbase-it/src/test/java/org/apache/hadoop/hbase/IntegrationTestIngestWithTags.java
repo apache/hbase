@@ -17,16 +17,14 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.junit.Before;
 import org.junit.experimental.categories.Category;
 
 @Category(IntegrationTests.class)
 public class IntegrationTestIngestWithTags extends IntegrationTestIngest {
-  @Before
   @Override
-  public void setUp() throws Exception {
+  public void setUpCluster() throws Exception {
     getTestingUtil(conf).getConfiguration().setInt("hfile.format.version", 3);
-    super.setUp();
+    super.setUpCluster();
   }
 
   @Override
