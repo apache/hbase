@@ -1065,18 +1065,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return An HTable instance for the created table.
    * @throws IOException
    */
-  public HTable createTable(String tableName, String[] families)
-  throws IOException {
-    return createTable(tableName, families);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   */
   public HTable createTable(TableName tableName, String[] families)
   throws IOException {
     List<byte[]> fams = new ArrayList<byte[]>(families.length);
