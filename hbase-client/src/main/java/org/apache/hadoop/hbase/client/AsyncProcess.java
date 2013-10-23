@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -211,9 +210,12 @@ class AsyncProcess<CResult> {
     this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
 
-    this.maxTotalConcurrentTasks = conf.getInt("hbase.client.max.total.tasks", 100);
-    this.maxConcurrentTasksPerServer = conf.getInt("hbase.client.max.perserver.tasks", 5);
-    this.maxConcurrentTasksPerRegion = conf.getInt("hbase.client.max.perregion.tasks", 1);
+    this.maxTotalConcurrentTasks = conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+      HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS);
+    this.maxConcurrentTasksPerServer = conf.getInt(HConstants.HBASE_CLIENT_MAX_PERSERVER_TASKS,
+          HConstants.DEFAULT_HBASE_CLIENT_MAX_PERSERVER_TASKS);
+    this.maxConcurrentTasksPerRegion = conf.getInt(HConstants.HBASE_CLIENT_MAX_PERREGION_TASKS,
+          HConstants.DEFAULT_HBASE_CLIENT_MAX_PERREGION_TASKS);
 
     if (this.maxTotalConcurrentTasks <= 0) {
       throw new IllegalArgumentException("maxTotalConcurrentTasks=" + maxTotalConcurrentTasks);
