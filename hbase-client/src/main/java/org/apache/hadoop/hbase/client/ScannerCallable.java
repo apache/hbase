@@ -146,6 +146,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   /**
    * @see java.util.concurrent.Callable#call()
    */
+  @SuppressWarnings("deprecation")
   public Result [] call() throws IOException {
     if (closed) {
       if (scannerId != -1) {
@@ -199,7 +200,8 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
           updateResultsMetrics(rrs);
         } catch (IOException e) {
           if (logScannerActivity) {
-            LOG.info("Got exception making request " + TextFormat.shortDebugString(request), e);
+            LOG.info("Got exception making request " + TextFormat.shortDebugString(request)
+              + " to " + getLocation(), e);
           }
           IOException ioe = e;
           if (e instanceof RemoteException) {

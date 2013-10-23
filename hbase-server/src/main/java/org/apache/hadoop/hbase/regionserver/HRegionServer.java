@@ -2686,8 +2686,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   protected long addScanner(RegionScanner s) throws LeaseStillHeldException {
     long scannerId = -1;
     while (true) {
-      scannerId = rand.nextLong();
-      if (scannerId == -1) continue;
+      scannerId = Math.abs(rand.nextLong() << 24) ^ startcode;
       String scannerName = String.valueOf(scannerId);
       RegionScannerHolder existing = scanners.putIfAbsent(scannerName, new RegionScannerHolder(s));
       if (existing == null) {
