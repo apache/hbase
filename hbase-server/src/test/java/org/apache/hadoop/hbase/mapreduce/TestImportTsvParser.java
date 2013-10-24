@@ -54,7 +54,7 @@ public class TestImportTsvParser {
     ArrayList<String> parsedCols = new ArrayList<String>();
     for (int i = 0; i < parsed.getColumnCount(); i++) {
       parsedCols.add(Bytes.toString(parsed.getLineBytes(), parsed.getColumnOffset(i),
-        parsed.getColumnLength(i)));
+          parsed.getColumnLength(i)));
     }
     if (!Iterables.elementsEqual(parsedCols, expected)) {
       fail("Expected: " + Joiner.on(",").join(expected) + "\n" + "Got:"
@@ -100,6 +100,32 @@ public class TestImportTsvParser {
     assertEquals(0, parser.getRowKeyColumnIndex());
     assertTrue(parser.hasTimestamp());
     assertEquals(2, parser.getTimestampKeyColumnIndex());
+
+    parser = new TsvParser("HBASE_ROW_KEY,col1:scol1,HBASE_TS_KEY,col1:scol2,HBASE_ATTRIBUTES_KEY",
+        "\t");
+    assertNull(parser.getFamily(0));
+    assertNull(parser.getQualifier(0));
+    assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(1));
+    assertBytesEquals(Bytes.toBytes("scol1"), parser.getQualifier(1));
+    assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(3));
+    assertBytesEquals(Bytes.toBytes("scol2"), parser.getQualifier(3));
+    assertEquals(0, parser.getRowKeyColumnIndex());
+    assertTrue(parser.hasTimestamp());
+    assertEquals(2, parser.getTimestampKeyColumnIndex());
+    assertEquals(4, parser.getAttributesKeyColumnIndex());
+
+    parser = new TsvParser("HBASE_ATTRIBUTES_KEY,col1:scol1,HBASE_TS_KEY,col1:scol2,HBASE_ROW_KEY",
+        "\t");
+    assertNull(parser.getFamily(0));
+    assertNull(parser.getQualifier(0));
+    assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(1));
+    assertBytesEquals(Bytes.toBytes("scol1"), parser.getQualifier(1));
+    assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(3));
+    assertBytesEquals(Bytes.toBytes("scol2"), parser.getQualifier(3));
+    assertEquals(4, parser.getRowKeyColumnIndex());
+    assertTrue(parser.hasTimestamp());
+    assertEquals(2, parser.getTimestampKeyColumnIndex());
+    assertEquals(0, parser.getAttributesKeyColumnIndex());
   }
 
   @Test
@@ -113,8 +139,7 @@ public class TestImportTsvParser {
     assertNull(parser.getQualifier(2));
     assertEquals(2, parser.getRowKeyColumnIndex());
 
-    assertEquals(TsvParser.DEFAULT_TIMESTAMP_COLUMN_INDEX,
-      parser.getTimestampKeyColumnIndex());
+    assertEquals(TsvParser.DEFAULT_TIMESTAMP_COLUMN_INDEX, parser.getTimestampKeyColumnIndex());
 
     byte[] line = Bytes.toBytes("val_a\tval_b\tval_c\tval_d");
     ParsedLine parsed = parser.parse(line, line.length);
@@ -187,14 +212,13 @@ public class TestImportTsvParser {
     byte[] line = Bytes.toBytes("rowkey\tval_a");
     parser.parse(line, line.length);
   }
-  
+
   @Test
   public void testTsvParserParseRowKey() throws BadTsvLineException {
     TsvParser parser = new TsvParser("HBASE_ROW_KEY,col_a,HBASE_TS_KEY", "\t");
     assertEquals(0, parser.getRowKeyColumnIndex());
     byte[] line = Bytes.toBytes("rowkey\tval_a\t1234");
-    Pair<Integer, Integer> rowKeyOffsets = parser
-        .parseRowKey(line, line.length);
+    Pair<Integer, Integer> rowKeyOffsets = parser.parseRowKey(line, line.length);
     assertEquals(0, rowKeyOffsets.getFirst().intValue());
     assertEquals(5, rowKeyOffsets.getSecond().intValue());
     try {
@@ -223,6 +247,52 @@ public class TestImportTsvParser {
     rowKeyOffsets = parser.parseRowKey(line, line.length);
     assertEquals(11, rowKeyOffsets.getFirst().intValue());
     assertEquals(16, rowKeyOffsets.getSecond().intValue());
+  }
+
+  @Test
+  public void testTsvParseAttributesKey() throws BadTsvLineException {
+    TsvParser parser = new TsvParser("HBASE_ROW_KEY,col_a,HBASE_TS_KEY,HBASE_ATTRIBUTES_KEY", "\t");
+    assertEquals(0, parser.getRowKeyColumnIndex());
+    byte[] line = Bytes.toBytes("rowkey\tval_a\t1234\tkey=>value");
+    ParsedLine parse = parser.parse(line, line.length);
+    assertEquals(18, parse.getAttributeKeyOffset());
+    assertEquals(3, parser.getAttributesKeyColumnIndex());
+    String attributes[] = parse.getIndividualAttributes();
+    assertEquals(attributes[0], "key=>value");
+    try {
+      line = Bytes.toBytes("rowkey\tval_a\t1234");
+      parser.parse(line, line.length);
+      fail("Should get BadTsvLineException on empty rowkey.");
+    } catch (BadTsvLineException b) {
+
+    }
+    parser = new TsvParser("HBASE_ATTRIBUTES_KEY,col_a,HBASE_ROW_KEY,HBASE_TS_KEY", "\t");
+    assertEquals(2, parser.getRowKeyColumnIndex());
+    line = Bytes.toBytes("key=>value\tval_a\trowkey\t1234");
+    parse = parser.parse(line, line.length);
+    assertEquals(0, parse.getAttributeKeyOffset());
+    assertEquals(0, parser.getAttributesKeyColumnIndex());
+    attributes = parse.getIndividualAttributes();
+    assertEquals(attributes[0], "key=>value");
+    try {
+      line = Bytes.toBytes("val_a");
+      ParsedLine parse2 = parser.parse(line, line.length);
+      fail("Should get BadTsvLineException when number of columns less than rowkey position.");
+    } catch (BadTsvLineException b) {
+
+    }
+    parser = new TsvParser("col_a,HBASE_ATTRIBUTES_KEY,HBASE_TS_KEY,HBASE_ROW_KEY", "\t");
+    assertEquals(3, parser.getRowKeyColumnIndex());
+    line = Bytes.toBytes("val_a\tkey0=>value0,key1=>value1,key2=>value2\t1234\trowkey");
+    parse = parser.parse(line, line.length);
+    assertEquals(1, parser.getAttributesKeyColumnIndex());
+    assertEquals(6, parse.getAttributeKeyOffset());
+    String[] attr = parse.getIndividualAttributes();
+    int i = 0;
+    for(String str :  attr) {
+      assertEquals(("key"+i+"=>"+"value"+i), str );
+      i++;
+    }
   }
 
 }

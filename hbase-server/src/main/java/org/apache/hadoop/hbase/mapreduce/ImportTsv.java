@@ -82,8 +82,10 @@ public class ImportTsv extends Configured implements Tool {
   public final static String SKIP_LINES_CONF_KEY = "importtsv.skip.bad.lines";
   public final static String COLUMNS_CONF_KEY = "importtsv.columns";
   public final static String SEPARATOR_CONF_KEY = "importtsv.separator";
-
+  public final static String ATTRIBUTE_SEPERATOR_CONF_KEY = "attributes.seperator";
   final static String DEFAULT_SEPARATOR = "\t";
+  final static String DEFAULT_ATTRIBUTES_SEPERATOR = "=>";
+  final static String DEFAULT_MULTIPLE_ATTRIBUTES_SEPERATOR = ",";
   final static Class DEFAULT_MAPPER = TsvImporterMapper.class;
 
   public static class TsvParser {
@@ -108,11 +110,20 @@ public class ImportTsv extends Configured implements Tool {
 
     public static final String TIMESTAMPKEY_COLUMN_SPEC = "HBASE_TS_KEY";
 
+    public static final String ATTRIBUTES_COLUMN_SPEC = "HBASE_ATTRIBUTES_KEY";
+
+    private int attrKeyColumnIndex = DEFAULT_ATTRIBUTES_COLUMN_INDEX;
+
+    public static final int DEFAULT_ATTRIBUTES_COLUMN_INDEX = -1;
     /**
      * @param columnsSpecification the list of columns to parser out, comma separated.
      * The row key should be the special token TsvParser.ROWKEY_COLUMN_SPEC
+     * @param tagSeperatorStr 
      */
-    public TsvParser(String columnsSpecification, String separatorStr) {
+    public TsvParser(String columnsSpecification, String seperatorStr) {
+      this(columnsSpecification, seperatorStr, null);
+    }
+    public TsvParser(String columnsSpecification, String separatorStr, String tagSeperatorStr) {
       // Configure separator
       byte[] separator = Bytes.toBytes(separatorStr);
       Preconditions.checkArgument(separator.length == 1,
@@ -133,12 +144,14 @@ public class ImportTsv extends Configured implements Tool {
           rowKeyColumnIndex = i;
           continue;
         }
-        
         if (TIMESTAMPKEY_COLUMN_SPEC.equals(str)) {
           timestampKeyColumnIndex = i;
           continue;
         }
-        
+        if(ATTRIBUTES_COLUMN_SPEC.equals(str)) {
+          attrKeyColumnIndex = i;
+          continue;
+        }
         String[] parts = str.split(":", 2);
         if (parts.length == 1) {
           families[i] = str.getBytes();
@@ -158,6 +171,13 @@ public class ImportTsv extends Configured implements Tool {
       return timestampKeyColumnIndex;
     }
 
+    public boolean hasAttributes() {
+      return attrKeyColumnIndex != DEFAULT_ATTRIBUTES_COLUMN_INDEX;
+    }
+
+    public int getAttributesKeyColumnIndex() {
+      return attrKeyColumnIndex;
+    }
     public int getRowKeyColumnIndex() {
       return rowKeyColumnIndex;
     }
@@ -190,6 +210,8 @@ public class ImportTsv extends Configured implements Tool {
       } else if (hasTimestamp()
           && tabOffsets.size() <= getTimestampKeyColumnIndex()) {
         throw new BadTsvLineException("No timestamp");
+      } else if (hasAttributes() && tabOffsets.size() <= getAttributesKeyColumnIndex()) {
+        throw new BadTsvLineException("No attributes specified");
       }
       return new ParsedLine(tabOffsets, lineBytes);
     }
@@ -226,6 +248,41 @@ public class ImportTsv extends Configured implements Tool {
           throw new BadTsvLineException("Invalid timestamp " + timeStampStr);
         }
       }
+
+      private String getAttributes() {
+        if (!hasAttributes()) {
+          return null;
+        } else {
+          return Bytes.toString(lineBytes, getColumnOffset(attrKeyColumnIndex),
+              getColumnLength(attrKeyColumnIndex));
+        }
+      }
+      
+      public String[] getIndividualAttributes() {
+        String attributes = getAttributes();
+        if (attributes != null) {
+          return attributes.split(DEFAULT_MULTIPLE_ATTRIBUTES_SEPERATOR);
+        } else {
+          return null;
+        }
+      }
+       
+      public int getAttributeKeyOffset() {
+        if (hasAttributes()) {
+          return getColumnOffset(attrKeyColumnIndex);
+        } else {
+          return DEFAULT_ATTRIBUTES_COLUMN_INDEX;
+        }
+      }
+
+      public int getAttributeKeyLength() {
+        if (hasAttributes()) {
+          return getColumnLength(attrKeyColumnIndex);
+        } else {
+          return DEFAULT_ATTRIBUTES_COLUMN_INDEX;
+        }
+      }
+      
       
       public int getColumnOffset(int idx) {
         if (idx > 0)
@@ -398,6 +455,9 @@ public class ImportTsv extends Configured implements Tool {
       "Record with invalid timestamps (blank, non-numeric) will be treated as bad record.\n" +
       "Note: if you use this option, then '" + TIMESTAMP_CONF_KEY + "' option will be ignored.\n" +
       "\n" +
+      TsvParser.ATTRIBUTES_COLUMN_SPEC+" can be used to specify Operation Attributes per record.\n"+
+      " Should be specified as key=>value where "+TsvParser.DEFAULT_ATTRIBUTES_COLUMN_INDEX+ " is used \n"+
+      " as the seperator.  Note that more than one OperationAttributes can be specified.\n"+
       "By default importtsv will load data directly into HBase. To instead generate\n" +
       "HFiles of data to prepare for a bulk data load, pass the option:\n" +
       "  -D" + BULK_OUTPUT_CONF_KEY + "=/path/for/output\n" +
@@ -460,10 +520,21 @@ public class ImportTsv extends Configured implements Tool {
             + TsvParser.TIMESTAMPKEY_COLUMN_SPEC);
         return -1;
       }
+      
+      int attrKeysFound = 0;
+      for (String col : columns) {
+        if (col.equals(TsvParser.ATTRIBUTES_COLUMN_SPEC))
+          attrKeysFound++;
+      }
+      if (attrKeysFound > 1) {
+        usage("Must specify at most one column as "
+            + TsvParser.ATTRIBUTES_COLUMN_SPEC);
+        return -1;
+      }
     
       // Make sure one or more columns are specified excluding rowkey and
       // timestamp key
-      if (columns.length - (rowkeysFound + tskeysFound) < 1) {
+      if (columns.length - (rowkeysFound + tskeysFound + attrKeysFound) < 1) {
         usage("One or more columns in addition to the row key and timestamp(optional) are required");
         return -1;
       }

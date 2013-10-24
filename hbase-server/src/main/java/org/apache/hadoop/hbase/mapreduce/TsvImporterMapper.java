@@ -17,19 +17,20 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.util.Base64;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Counter;
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-
-import java.io.IOException;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
+import org.apache.hadoop.hbase.util.Base64;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.Mapper;
 
 /**
  * Write table content out to files in hdfs.
@@ -41,7 +42,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
 {
 
   /** Timestamp for all inserted rows */
-  private long ts;
+  protected long ts;
 
   /** Column seperator */
   private String separator;
@@ -50,7 +51,9 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
   private boolean skipBadLines;
   private Counter badLineCount;
 
-  private ImportTsv.TsvParser parser;
+  protected ImportTsv.TsvParser parser;
+
+  protected Configuration conf;
 
   public long getTs() {
     return ts;
@@ -80,8 +83,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
   protected void setup(Context context) {
     doSetup(context);
 
-    Configuration conf = context.getConfiguration();
-
+    conf = context.getConfiguration();
     parser = new ImportTsv.TsvParser(conf.get(ImportTsv.COLUMNS_CONF_KEY),
                            separator);
     if (parser.getRowKeyColumnIndex() == -1) {
@@ -104,7 +106,6 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
     } else {
       separator = new String(Base64.decode(separator));
     }
-
     // Should never get 0 as we are setting this to a valid value in job
     // configuration.
     ts = conf.getLong(ImportTsv.TIMESTAMP_CONF_KEY, 0);
@@ -135,18 +136,11 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
 
       Put put = new Put(rowKey.copyBytes());
       for (int i = 0; i < parsed.getColumnCount(); i++) {
-        if (i == parser.getRowKeyColumnIndex()
-            || i == parser.getTimestampKeyColumnIndex()) {
+        if (i == parser.getRowKeyColumnIndex() || i == parser.getTimestampKeyColumnIndex()
+            || i == parser.getAttributesKeyColumnIndex()) {
           continue;
         }
-        KeyValue kv = new KeyValue(
-            lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
-            parser.getFamily(i), 0, parser.getFamily(i).length,
-            parser.getQualifier(i), 0, parser.getQualifier(i).length,
-            ts,
-            KeyValue.Type.Put,
-            lineBytes, parsed.getColumnOffset(i), parsed.getColumnLength(i));
-        put.add(kv);
+        KeyValue kv = createPuts(lineBytes, parsed, put, i);
       }
       context.write(rowKey, put);
     } catch (ImportTsv.TsvParser.BadTsvLineException badLine) {
@@ -172,5 +166,16 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
+  }
+
+  protected KeyValue createPuts(byte[] lineBytes, ImportTsv.TsvParser.ParsedLine parsed, Put put,
+      int i) throws BadTsvLineException, IOException {
+    KeyValue kv;
+    kv = new KeyValue(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
+        parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
+        parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes, parsed.getColumnOffset(i),
+        parsed.getColumnLength(i));
+    put.add(kv);
+    return kv;
   }
 }
