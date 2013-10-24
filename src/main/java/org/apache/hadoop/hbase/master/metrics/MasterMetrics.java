@@ -30,7 +30,6 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
-import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 
 
@@ -90,7 +89,7 @@ public class MasterMetrics implements Updater {
 
     // get custom attributes
     try {
-      Object m = 
+      Object m =
         ContextFactory.getFactory().getAttribute("hbase.extendedperiod");
       if (m instanceof String) {
         this.extendedPeriod = Long.parseLong((String) m)*1000;
@@ -135,7 +134,7 @@ public class MasterMetrics implements Updater {
   public void resetAllMinMax() {
     // Nothing to do
   }
-  
+
   /**
    * Record a single instance of a split
    * @param time time that the split took
