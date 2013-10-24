@@ -711,6 +711,24 @@ public class TestHLog  {
     }
   }
 
+  @Test
+  public void testFailedToCreateHLogIfParentRenamed() throws IOException {
+    FSHLog log = (FSHLog)HLogFactory.createHLog(
+      fs, hbaseDir, "testFailedToCreateHLogIfParentRenamed", conf);
+    long filenum = System.currentTimeMillis();
+    Path path = log.computeFilename(filenum);
+    HLogFactory.createWALWriter(fs, path, conf);
+    Path parent = path.getParent();
+    path = log.computeFilename(filenum + 1);
+    Path newPath = new Path(parent.getParent(), parent.getName() + "-splitting");
+    fs.rename(parent, newPath);
+    try {
+      HLogFactory.createWALWriter(fs, path, conf);
+      fail("It should fail to create the new WAL");
+    } catch (IOException ioe) {
+      // expected, good.
+    }
+  }
 
   @Test
   public void testGetServerNameFromHLogDirectoryName() throws IOException {
