@@ -106,8 +106,8 @@ public class SequenceFileLogReader implements HLog.Reader {
             Field fIn = FilterInputStream.class.getDeclaredField("in");
             fIn.setAccessible(true);
             Object realIn = fIn.get(this.in);
-            Method getFileLength = realIn.getClass().
-              getMethod("getFileLength", new Class<?> []{});
+            Method getFileLength = realIn.getClass()
+                .getDeclaredMethod("getFileLength", new Class<?> []{});
             getFileLength.setAccessible(true);
             long realLength = ((Long)getFileLength.
               invoke(realIn, new Object []{})).longValue();
