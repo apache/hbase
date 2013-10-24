@@ -291,6 +291,23 @@
       </property>
     ]]></programlisting>
     <para>
+        For 0.94, add the following to the <code>hbase-site.xml</code> file on every server machine in the cluster:
+    </para>
+    <programlisting><![CDATA[
+      <property>
+        <name>hbase.rpc.engine</name>
+        <value>org.apache.hadoop.hbase.ipc.SecureRpcEngine</value>
+      </property>
+      <property>
+        <name>hbase.coprocessor.master.classes</name>
+        <value>org.apache.hadoop.hbase.security.access.AccessController</value>
+      </property>
+      <property>
+        <name>hbase.coprocessor.region.classes</name>
+        <value>org.apache.hadoop.hbase.security.access.AccessController</value>
+      </property> 
+    ]]></programlisting>
+    <para>
        A full shutdown and restart of HBase service is required when deploying
        these configuration changes.
     </para>
@@ -304,6 +321,15 @@
       <property>
         <name>hbase.security.authentication</name>
         <value>simple</value>
+      </property>
+    ]]></programlisting>
+    <para>
+        For 0.94, add the following to the <code>hbase-site.xml</code> file on every server machine in the cluster:
+    </para>
+    <programlisting><![CDATA[
+      <property>
+        <name>hbase.rpc.engine</name>
+        <value>org.apache.hadoop.hbase.ipc.SecureRpcEngine</value>
       </property>
     ]]></programlisting>
     <para>
