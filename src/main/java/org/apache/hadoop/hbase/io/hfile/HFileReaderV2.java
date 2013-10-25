@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
+import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
@@ -514,9 +515,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
     public int reseekTo(byte[] key, int offset, int length) throws IOException {
       int compared;
       if (isSeeked()) {
-        ByteBuffer bb = getKey();
-        compared = reader.getComparator().compare(key, offset,
-            length, bb.array(), bb.arrayOffset(), bb.limit());
+        compared = compareKey(reader.getComparator(), key, offset, length);
         if (compared < 1) {
           // If the required key is less than or equal to current key, then
           // don't do anything.
@@ -608,6 +607,16 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       return curBlock;
     }
+    /**
+     * Compare the given key against the current key
+     * @param comparator
+     * @param key
+     * @param offset
+     * @param length
+     * @return -1 is the passed key is smaller than the current key, 0 if equal and 1 if greater
+     */
+    public abstract int compareKey(RawComparator<byte[]> comparator, byte[] key, int offset,
+        int length);
   }
 
   /**
@@ -645,6 +654,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
           blockBuffer.arrayOffset() + blockBuffer.position()
               + KEY_VALUE_LEN_SIZE, currKeyLen).slice();
     }
+
+    @Override
+    public int compareKey(RawComparator<byte []> comparator, byte[] key, int offset, int length) {
+      return comparator.compare(key, offset, length, blockBuffer.array(), blockBuffer.arrayOffset()
+          + blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen);
+      }
 
     @Override
     public ByteBuffer getValue() {
@@ -1039,6 +1054,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
     public ByteBuffer getKey() {
       assertValidSeek();
       return seeker.getKeyDeepCopy();
+    }
+
+    @Override
+    public int compareKey(RawComparator<byte []> comparator, byte[] key, int offset, int length) {
+      return seeker.compareKey(comparator, key, offset, length);
     }
 
     @Override

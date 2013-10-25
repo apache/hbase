@@ -125,6 +125,11 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
+    public int compareKey(RawComparator<byte[]> comparator, byte[] key, int offset, int length) {
+      return comparator.compare(key,  offset, length, current.keyBuffer, 0, current.keyLength);
+    }
+
+    @Override
     public void setCurrentBuffer(ByteBuffer buffer) {
       currentBuffer = buffer;
       decodeFirst();
