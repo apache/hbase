@@ -430,7 +430,7 @@ public class ZKAssign {
    * @param zkw zk reference
    * @param encodedRegionName region to be deleted from zk
    * @param expectedState state region must be in for delete to complete
-   * @param sn the expected region transition target server name
+   * @param serverName the expected region transition target server name
    * @param expectedVersion of the znode that is to be deleted.
    *        If expectedVersion need not be compared while deleting the znode
    *        pass -1
