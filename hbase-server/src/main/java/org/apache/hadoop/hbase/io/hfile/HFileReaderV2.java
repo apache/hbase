@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -504,9 +505,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
     public int reseekTo(byte[] key, int offset, int length) throws IOException {
       int compared;
       if (isSeeked()) {
-        ByteBuffer bb = getKey();
-        compared = reader.getComparator().compareFlatKey(key, offset,
-            length, bb.array(), bb.arrayOffset(), bb.limit());
+        compared = compareKey(reader.getComparator(), key, offset, length);
         if (compared < 1) {
           // If the required key is less than or equal to current key, then
           // don't do anything.
@@ -598,6 +597,16 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       return curBlock;
     }
+    /**
+     * Compare the given key against the current key
+     * @param comparator
+     * @param key
+     * @param offset
+     * @param length
+     * @return -1 is the passed key is smaller than the current key, 0 if equal and 1 if greater
+     */
+    public abstract int compareKey(KVComparator comparator, byte[] key, int offset,
+        int length);
   }
 
   /**
@@ -634,6 +643,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
           blockBuffer.array(),
           blockBuffer.arrayOffset() + blockBuffer.position()
               + KEY_VALUE_LEN_SIZE, currKeyLen).slice();
+    }
+
+    @Override
+    public int compareKey(KVComparator comparator, byte[] key, int offset, int length) {
+      return comparator.compareFlatKey(key, offset, length, blockBuffer.array(),
+          blockBuffer.arrayOffset() + blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen);
     }
 
     @Override
@@ -1033,6 +1048,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
     public ByteBuffer getKey() {
       assertValidSeek();
       return seeker.getKeyDeepCopy();
+    }
+
+    @Override
+    public int compareKey(KVComparator comparator, byte[] key, int offset, int length) {
+      return seeker.compareKey(comparator, key, offset, length);
     }
 
     @Override

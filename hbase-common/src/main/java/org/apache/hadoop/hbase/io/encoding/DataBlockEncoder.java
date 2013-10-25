@@ -205,5 +205,15 @@ public interface DataBlockEncoder {
     int seekToKeyInBlock(
       byte[] key, int offset, int length, boolean seekBefore
     );
+
+    /**
+     * Compare the given key against the current key
+     * @param comparator
+     * @param key
+     * @param offset
+     * @param length
+     * @return -1 is the passed key is smaller than the current key, 0 if equal and 1 if greater
+     */
+    public int compareKey(KVComparator comparator, byte[] key, int offset, int length);
   }
 }
