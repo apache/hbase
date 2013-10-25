@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.DecoderFactory;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition;
@@ -218,4 +219,10 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     throw new RuntimeException("unexpected CellScannerPosition:"+position);
   }
 
+  @Override
+  public int compareKey(KVComparator comparator, byte[] key, int offset, int length) {
+    // can't optimize this, make a copy of the key
+    ByteBuffer bb = getKeyDeepCopy();
+    return comparator.compareFlatKey(key, offset, length, bb.array(), bb.arrayOffset(), bb.limit());
+  }
 }
