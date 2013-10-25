@@ -59,7 +59,7 @@ public class EnableTableHandler extends EventHandler {
   private final AssignmentManager assignmentManager;
   private final TableLockManager tableLockManager;
   private final CatalogTracker catalogTracker;
-  private boolean retainAssignment = false;
+  private boolean skipTableStateCheck = false;
   private TableLock tableLock;
 
   public EnableTableHandler(Server server, TableName tableName,
@@ -70,7 +70,7 @@ public class EnableTableHandler extends EventHandler {
     this.catalogTracker = catalogTracker;
     this.assignmentManager = assignmentManager;
     this.tableLockManager = tableLockManager;
-    this.retainAssignment = skipTableStateCheck;
+    this.skipTableStateCheck = skipTableStateCheck;
   }
 
   public EnableTableHandler prepare()
@@ -85,7 +85,7 @@ public class EnableTableHandler extends EventHandler {
       // Check if table exists
       if (!MetaReader.tableExists(catalogTracker, tableName)) {
         // retainAssignment is true only during recovery.  In normal case it is false
-        if (!this.retainAssignment) {
+        if (!this.skipTableStateCheck) {
           throw new TableNotFoundException(tableName);
         } 
         try {
@@ -101,7 +101,7 @@ public class EnableTableHandler extends EventHandler {
       // the table at the same time. Ensure only the first request is honored
       // After that, no other requests can be accepted until the table reaches
       // DISABLED or ENABLED.
-      if (!retainAssignment) {
+      if (!skipTableStateCheck) {
         try {
           if (!this.assignmentManager.getZKTable().checkDisabledAndSetEnablingTable
             (this.tableName)) {
@@ -186,7 +186,7 @@ public class EnableTableHandler extends EventHandler {
     LOG.info("Table '" + this.tableName + "' has " + countOfRegionsInTable
       + " regions, of which " + regionsCount + " are offline.");
     BulkEnabler bd = new BulkEnabler(this.server, regions, countOfRegionsInTable,
-        this.retainAssignment);
+        true);
     try {
       if (bd.bulkAssign()) {
         done = true;
@@ -223,7 +223,7 @@ public class EnableTableHandler extends EventHandler {
       HRegionInfo hri = regionLocation.getFirst();
       ServerName sn = regionLocation.getSecond();
       if (regionStates.isRegionOffline(hri)) {
-        if (this.retainAssignment && sn != null && serverManager.isServerOnline(sn)) {
+        if (sn != null && serverManager.isServerOnline(sn)) {
           this.assignmentManager.addPlan(hri.getEncodedName(), new RegionPlan(hri, null, sn));
         }
         regions.add(hri);
@@ -244,43 +244,29 @@ public class EnableTableHandler extends EventHandler {
     private final List<HRegionInfo> regions;
     // Count of regions in table at time this assign was launched.
     private final int countOfRegionsInTable;
-    private final boolean retainAssignment;
 
     BulkEnabler(final Server server, final List<HRegionInfo> regions,
         final int countOfRegionsInTable, boolean retainAssignment) {
       super(server);
       this.regions = regions;
       this.countOfRegionsInTable = countOfRegionsInTable;
-      this.retainAssignment = retainAssignment;
     }
 
     @Override
     protected void populatePool(ExecutorService pool) throws IOException {
-      boolean roundRobinAssignment = this.server.getConfiguration().getBoolean(
-          "hbase.master.enabletable.roundrobin", false);
-
       // In case of masterRestart always go with single assign.  Going thro
       // roundRobinAssignment will use bulkassign which may lead to double assignment.
-      if (retainAssignment || !roundRobinAssignment) {
-        for (HRegionInfo region : regions) {
-          if (assignmentManager.getRegionStates()
-              .isRegionInTransition(region)) {
-            continue;
+      for (HRegionInfo region : regions) {
+        if (assignmentManager.getRegionStates()
+            .isRegionInTransition(region)) {
+          continue;
+        }
+        final HRegionInfo hri = region;
+        pool.execute(Trace.wrap("BulkEnabler.populatePool",new Runnable() {
+          public void run() {
+            assignmentManager.assign(hri, true);
           }
-          final HRegionInfo hri = region;
-          pool.execute(Trace.wrap("BulkEnabler.populatePool",new Runnable() {
-            public void run() {
-              assignmentManager.assign(hri, true);
-            }
-          }));
-        }
-      } else {
-        try {
-          assignmentManager.assign(regions);
-        } catch (InterruptedException e) {
-          LOG.warn("Assignment was interrupted");
-          Thread.currentThread().interrupt();
-        }
+        }));
       }
     }
 
