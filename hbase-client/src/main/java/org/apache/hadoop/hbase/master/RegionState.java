@@ -202,24 +202,34 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     return serverName != null && serverName.equals(sn);
   }
 
-  // Is a region in a state ready to go offline
+  /**
+   * Check if a region state can transition to offline
+   */
   public boolean isReadyToOffline() {
     return isMerged() || isSplit() || isOffline()
       || isSplittingNew() || isMergingNew();
   }
 
-  // Is a region in a state ready to go online
+  /**
+   * Check if a region state can transition to online
+   */
   public boolean isReadyToOnline() {
     return isOpened() || isSplittingNew() || isMergingNew();
   }
 
-  // Is a region in a state not in transition but not unassignable
-  public boolean isNotUnassignableNotInTransition() {
-    return isNotUnassignableNotInTransition(state);
+  /**
+   * Check if a region state is one of offline states that
+   * can't transition to pending_close/closing (unassign/offline)
+   */
+  public boolean isUnassignable() {
+    return isUnassignable(state);
   }
 
-  // Check if a state is not in transition, but not unassignable
-  public static boolean isNotUnassignableNotInTransition(State state) {
+  /**
+   * Check if a region state is one of offline states that
+   * can't transition to pending_close/closing (unassign/offline)
+   */
+  public static boolean isUnassignable(State state) {
     return state == State.MERGED || state == State.SPLIT || state == State.OFFLINE
       || state == State.SPLITTING_NEW || state == State.MERGING_NEW;
   }
@@ -233,7 +243,7 @@ public class RegionState implements org.apache.hadoop.io.Writable {
   }
 
   /**
-   * A slower (but more easy-to-read) stringification 
+   * A slower (but more easy-to-read) stringification
    */
   public String toDescriptiveString() {
     long lstamp = stamp.get();

@@ -776,7 +776,7 @@ public class TestMasterFailover {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
       if (rt != null && rt.getEventType().equals(EventType.RS_ZK_REGION_OPENED)) {
-        ZKAssign.deleteOpenedNode(zkw, region.getEncodedName());
+        ZKAssign.deleteOpenedNode(zkw, region.getEncodedName(), rt.getServerName());
         LOG.debug("DELETED " + rt);
         break;
       }
@@ -794,7 +794,7 @@ public class TestMasterFailover {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
       if (rt != null && rt.getEventType().equals(EventType.RS_ZK_REGION_OPENED)) {
-        ZKAssign.deleteOpenedNode(zkw, region.getEncodedName());
+        ZKAssign.deleteOpenedNode(zkw, region.getEncodedName(), rt.getServerName());
         break;
       }
       Thread.sleep(100);

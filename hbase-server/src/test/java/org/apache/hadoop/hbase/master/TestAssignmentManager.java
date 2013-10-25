@@ -682,7 +682,7 @@ public class TestAssignmentManager {
       // First make sure my mock up basically works.  Unassign a region.
       unassign(am, SERVERNAME_A, hri);
       // This delete will fail if the previous unassign did wrong thing.
-      ZKAssign.deleteClosingNode(this.watcher, hri);
+      ZKAssign.deleteClosingNode(this.watcher, hri, SERVERNAME_A);
       // Now put a SPLITTING region in the way.  I don't have to assert it
       // go put in place.  This method puts it in place then asserts it still
       // owns it by moving state from SPLITTING to SPLITTING.
