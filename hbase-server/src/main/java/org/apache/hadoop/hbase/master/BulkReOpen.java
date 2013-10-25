@@ -67,7 +67,12 @@ public class BulkReOpen extends BulkAssigner {
       assignmentManager.addPlans(plans);
       pool.execute(new Runnable() {
         public void run() {
-          assignmentManager.unassign(hris);
+          try {
+            unassign(hris);
+          } catch (Throwable t) {
+            LOG.warn("Failed bulking re-open " + hris.size()
+              + " region(s)", t);
+          }
         }
       });
     }
@@ -96,5 +101,36 @@ public class BulkReOpen extends BulkAssigner {
 
   public boolean bulkReOpen() throws InterruptedException, IOException {
     return bulkAssign();
+  }
+
+  /**
+   * Unassign the list of regions. Configuration knobs:
+   * hbase.bulk.waitbetween.reopen indicates the number of milliseconds to
+   * wait before unassigning another region from this region server
+   *
+   * @param regions
+   * @throws InterruptedException
+   */
+  private void unassign(
+      List<HRegionInfo> regions) throws InterruptedException {
+    int waitTime = this.server.getConfiguration().getInt(
+        "hbase.bulk.waitbetween.reopen", 0);
+    RegionStates regionStates = assignmentManager.getRegionStates();
+    for (HRegionInfo region : regions) {
+      if (server.isStopped()) {
+        return;
+      }
+      if (regionStates.isRegionInTransition(region)) {
+        continue;
+      }
+      assignmentManager.unassign(region, false);
+      while (regionStates.isRegionInTransition(region)
+          && !server.isStopped()) {
+        regionStates.waitForUpdate(100);
+      }
+      if (waitTime > 0 && !server.isStopped()) {
+        Thread.sleep(waitTime);
+      }
+    }
   }
 }

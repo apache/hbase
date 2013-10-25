@@ -717,7 +717,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           String keyString = it.next().getName();
           byte[] key = Bytes.toBytes(keyString);
           HRegionLocation loc = conn.relocateRegion(tableName, key);
-          LOG.error("undefined row " + keyString + " region " + loc);
+          LOG.error("undefined row " + keyString + ", " + loc);
         }
         g = counters.getGroup("unref");
         it = g.iterator();
@@ -725,7 +725,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           String keyString = it.next().getName();
           byte[] key = Bytes.toBytes(keyString);
           HRegionLocation loc = conn.relocateRegion(tableName, key);
-          LOG.error("unreferred row " + keyString + " region " + loc);
+          LOG.error("unreferred row " + keyString + ", " + loc);
         }
       }
       return success;

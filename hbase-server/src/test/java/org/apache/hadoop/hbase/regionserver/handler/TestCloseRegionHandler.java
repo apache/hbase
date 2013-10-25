@@ -211,8 +211,9 @@ public class TestCloseRegionHandler {
        // This parse is not used?
        RegionTransition.parseFrom(ZKAssign.getData(server.getZooKeeper(), hri.getEncodedName()));
        // delete the node, which is what Master do after the region is opened
-       ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(), EventType.RS_ZK_REGION_OPENED);
-     }  
+       ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(),
+         EventType.RS_ZK_REGION_OPENED, server.getServerName());
+     }
 
 }
 

@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
@@ -991,17 +992,18 @@ MasterServices, Server {
     status.setStatus("Assigning hbase:meta region");
     ServerName logReplayFailedMetaServer = null;
 
-    assignmentManager.getRegionStates().createRegionState(HRegionInfo.FIRST_META_REGIONINFO);
+    RegionStates regionStates = assignmentManager.getRegionStates();
+    regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO);
     boolean rit = this.assignmentManager
-        .processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
+      .processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
     boolean metaRegionLocation = this.catalogTracker.verifyMetaRegionLocation(timeout);
+    ServerName currentMetaServer = this.catalogTracker.getMetaLocation();
     if (!metaRegionLocation) {
       // Meta location is not verified. It should be in transition, or offline.
       // We will wait for it to be assigned in enableSSHandWaitForMeta below.
       assigned++;
       if (!rit) {
         // Assign meta since not already in transition
-        ServerName currentMetaServer = this.catalogTracker.getMetaLocation();
         if (currentMetaServer != null) {
           if (expireIfOnline(currentMetaServer)) {
             splitMetaLogBeforeAssignment(currentMetaServer);
@@ -1014,8 +1016,10 @@ MasterServices, Server {
       }
     } else {
       // Region already assigned. We didn't assign it. Add to in-memory state.
-      this.assignmentManager.regionOnline(HRegionInfo.FIRST_META_REGIONINFO,
-        this.catalogTracker.getMetaLocation());
+      regionStates.updateRegionState(
+        HRegionInfo.FIRST_META_REGIONINFO, State.OPEN, currentMetaServer);
+      this.assignmentManager.regionOnline(
+        HRegionInfo.FIRST_META_REGIONINFO, currentMetaServer);
     }
 
     enableMeta(TableName.META_TABLE_NAME);

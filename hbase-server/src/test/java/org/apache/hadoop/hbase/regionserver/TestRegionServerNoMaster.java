@@ -123,7 +123,8 @@ public class TestRegionServerNoMaster {
     Assert.assertTrue(getRS().getRegion(regionName).isAvailable());
 
     Assert.assertTrue(
-        ZKAssign.deleteOpenedNode(HTU.getZooKeeperWatcher(), hri.getEncodedName()));
+      ZKAssign.deleteOpenedNode(HTU.getZooKeeperWatcher(), hri.getEncodedName(),
+        getRS().getServerName()));
   }
 
 
@@ -194,7 +195,8 @@ public class TestRegionServerNoMaster {
 
     checkRegionIsClosed();
 
-    ZKAssign.deleteClosedNode(HTU.getZooKeeperWatcher(), hri.getEncodedName());
+    ZKAssign.deleteClosedNode(HTU.getZooKeeperWatcher(), hri.getEncodedName(),
+      getRS().getServerName());
 
     reopenRegion();
   }
@@ -274,7 +276,8 @@ public class TestRegionServerNoMaster {
     checkRegionIsClosed();
 
     Assert.assertTrue(
-        ZKAssign.deleteClosedNode(HTU.getZooKeeperWatcher(), hri.getEncodedName())
+      ZKAssign.deleteClosedNode(HTU.getZooKeeperWatcher(), hri.getEncodedName(),
+        getRS().getServerName())
     );
 
     reopenRegion();

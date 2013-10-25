@@ -526,7 +526,7 @@ public class RegionMergeTransaction {
 
   /**
    * Wait for the merging node to be transitioned from pending_merge
-   * to merging by master.  That's how we are sure master has processed
+   * to merging by master. That's how we are sure master has processed
    * the event and is good with us to move on. If we don't get any update,
    * we periodically transition the node so that master gets the callback.
    * If the node is removed or is not in pending_merge state any more,
@@ -725,12 +725,12 @@ public class RegionMergeTransaction {
     try {
       // Only delete if its in expected state; could have been hijacked.
       if (!ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(),
-          RS_ZK_REQUEST_REGION_MERGE)) {
+          RS_ZK_REQUEST_REGION_MERGE, server.getServerName())) {
         ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(),
-          RS_ZK_REGION_MERGING);
+          RS_ZK_REGION_MERGING, server.getServerName());
       }
     } catch (KeeperException.NoNodeException e) {
-      LOG.warn("Failed cleanup zk node of " + hri.getRegionNameAsString(), e);
+      LOG.info("Failed cleanup zk node of " + hri.getRegionNameAsString(), e);
     } catch (KeeperException e) {
       server.abort("Failed cleanup zk node of " + hri.getRegionNameAsString(),e);
     }

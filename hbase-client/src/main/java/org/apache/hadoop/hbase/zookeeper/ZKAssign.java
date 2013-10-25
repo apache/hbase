@@ -259,13 +259,15 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param encodedRegionName opened region to be deleted from zk
+   * @param sn the expected region transition target server name
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
   public static boolean deleteOpenedNode(ZooKeeperWatcher zkw,
-      String encodedRegionName)
+      String encodedRegionName, ServerName sn)
   throws KeeperException, KeeperException.NoNodeException {
-    return deleteNode(zkw, encodedRegionName, EventType.RS_ZK_REGION_OPENED);
+    return deleteNode(zkw, encodedRegionName,
+      EventType.RS_ZK_REGION_OPENED, sn);
   }
 
   /**
@@ -284,13 +286,15 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param encodedRegionName closed region to be deleted from zk
+   * @param sn the expected region transition target server name
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
   public static boolean deleteOfflineNode(ZooKeeperWatcher zkw,
-      String encodedRegionName)
+      String encodedRegionName, ServerName sn)
   throws KeeperException, KeeperException.NoNodeException {
-    return deleteNode(zkw, encodedRegionName, EventType.M_ZK_REGION_OFFLINE);
+    return deleteNode(zkw, encodedRegionName,
+      EventType.M_ZK_REGION_OFFLINE, sn);
   }
 
   /**
@@ -310,13 +314,15 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param encodedRegionName closed region to be deleted from zk
+   * @param sn the expected region transition target server name
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
   public static boolean deleteClosedNode(ZooKeeperWatcher zkw,
-      String encodedRegionName)
+      String encodedRegionName, ServerName sn)
   throws KeeperException, KeeperException.NoNodeException {
-    return deleteNode(zkw, encodedRegionName, EventType.RS_ZK_REGION_CLOSED);
+    return deleteNode(zkw, encodedRegionName,
+      EventType.RS_ZK_REGION_CLOSED, sn);
   }
 
   /**
@@ -336,14 +342,16 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param region closing region to be deleted from zk
+   * @param sn the expected region transition target server name
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
   public static boolean deleteClosingNode(ZooKeeperWatcher zkw,
-      HRegionInfo region)
+      HRegionInfo region, ServerName sn)
   throws KeeperException, KeeperException.NoNodeException {
     String encodedRegionName = region.getEncodedName();
-    return deleteNode(zkw, encodedRegionName, EventType.M_ZK_REGION_CLOSING);
+    return deleteNode(zkw, encodedRegionName,
+      EventType.M_ZK_REGION_CLOSING, sn);
   }
 
   /**
@@ -364,13 +372,14 @@ public class ZKAssign {
    * @param zkw zk reference
    * @param encodedRegionName region to be deleted from zk
    * @param expectedState state region must be in for delete to complete
+   * @param sn the expected region transition target server name
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
   public static boolean deleteNode(ZooKeeperWatcher zkw, String encodedRegionName,
-      EventType expectedState)
+      EventType expectedState, ServerName sn)
   throws KeeperException, KeeperException.NoNodeException {
-    return deleteNode(zkw, encodedRegionName, expectedState, -1);
+    return deleteNode(zkw, encodedRegionName, expectedState, sn, -1);
   }
 
   /**
@@ -400,6 +409,37 @@ public class ZKAssign {
   public static boolean deleteNode(ZooKeeperWatcher zkw, String encodedRegionName,
       EventType expectedState, int expectedVersion)
   throws KeeperException, KeeperException.NoNodeException {
+    return deleteNode(zkw, encodedRegionName, expectedState, null, expectedVersion);
+  }
+
+  /**
+   * Deletes an existing unassigned node that is in the specified state for the
+   * specified region.
+   *
+   * <p>If a node does not already exist for this region, a
+   * {@link NoNodeException} will be thrown.
+   *
+   * <p>No watcher is set whether this succeeds or not.
+   *
+   * <p>Returns false if the node was not in the proper state but did exist.
+   *
+   * <p>This method is used when a region finishes opening/closing.
+   * The Master acknowledges completion
+   * of the specified regions transition to being closed/opened.
+   *
+   * @param zkw zk reference
+   * @param encodedRegionName region to be deleted from zk
+   * @param expectedState state region must be in for delete to complete
+   * @param sn the expected region transition target server name
+   * @param expectedVersion of the znode that is to be deleted.
+   *        If expectedVersion need not be compared while deleting the znode
+   *        pass -1
+   * @throws KeeperException if unexpected zookeeper exception
+   * @throws KeeperException.NoNodeException if node does not exist
+   */
+  public static boolean deleteNode(ZooKeeperWatcher zkw, String encodedRegionName,
+      EventType expectedState, ServerName serverName, int expectedVersion)
+  throws KeeperException, KeeperException.NoNodeException {
     if (LOG.isTraceEnabled()) {
     	LOG.trace(zkw.prefix("Deleting existing unassigned " +
       "node " + encodedRegionName + " in expected state " + expectedState));
@@ -417,6 +457,12 @@ public class ZKAssign {
     if (!et.equals(expectedState)) {
       LOG.warn(zkw.prefix("Attempting to delete unassigned node " + encodedRegionName + " in " +
         expectedState + " state but node is in " + et + " state"));
+      return false;
+    }
+    // Verify the server transition happens on is not changed
+    if (serverName != null && !rt.getServerName().equals(serverName)) {
+      LOG.warn(zkw.prefix("Attempting to delete unassigned node " + encodedRegionName
+        + " with target " + serverName + " but node has " + rt.getServerName()));
       return false;
     }
     if (expectedVersion != -1

@@ -448,7 +448,7 @@ public class SplitTransaction {
 
   /**
    * Wait for the splitting node to be transitioned from pending_split
-   * to splitting by master.  That's how we are sure master has processed
+   * to splitting by master. That's how we are sure master has processed
    * the event and is good with us to move on. If we don't get any update,
    * we periodically transition the node so that master gets the callback.
    * If the node is removed or is not in pending_split state any more,
@@ -793,12 +793,12 @@ public class SplitTransaction {
     try {
       // Only delete if its in expected state; could have been hijacked.
       if (!ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(),
-          RS_ZK_REQUEST_REGION_SPLIT)) {
+          RS_ZK_REQUEST_REGION_SPLIT, server.getServerName())) {
         ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(),
-          RS_ZK_REGION_SPLITTING);
+          RS_ZK_REGION_SPLITTING, server.getServerName());
       }
     } catch (KeeperException.NoNodeException e) {
-      LOG.warn("Failed cleanup zk node of " + hri.getRegionNameAsString(), e);
+      LOG.info("Failed cleanup zk node of " + hri.getRegionNameAsString(), e);
     } catch (KeeperException e) {
       server.abort("Failed cleanup of " + hri.getRegionNameAsString(), e);
     }

@@ -266,7 +266,7 @@ public class ServerShutdownHandler extends EventHandler {
                 // but though we did assign we will not be clearing the znode in CLOSING state.
                 // Doing this will have no harm. See HBASE-5927
                 regionStates.updateRegionState(hri, State.OFFLINE);
-                am.deleteClosingOrClosedNode(hri);
+                am.deleteClosingOrClosedNode(hri, rit.getServerName());
                 am.offlineDisabledRegion(hri);
               } else {
                 LOG.warn("THIS SHOULD NOT HAPPEN: unexpected region in transition "
