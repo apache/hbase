@@ -118,12 +118,9 @@ public class ImportTsv extends Configured implements Tool {
     /**
      * @param columnsSpecification the list of columns to parser out, comma separated.
      * The row key should be the special token TsvParser.ROWKEY_COLUMN_SPEC
-     * @param tagSeperatorStr 
+     * @param separatorStr 
      */
-    public TsvParser(String columnsSpecification, String seperatorStr) {
-      this(columnsSpecification, seperatorStr, null);
-    }
-    public TsvParser(String columnsSpecification, String separatorStr, String tagSeperatorStr) {
+    public TsvParser(String columnsSpecification, String separatorStr) {
       // Configure separator
       byte[] separator = Bytes.toBytes(separatorStr);
       Preconditions.checkArgument(separator.length == 1,
