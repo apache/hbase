@@ -147,7 +147,7 @@ public class ZKTable {
   public boolean checkAndSetEnablingTable(final TableName tableName)
     throws KeeperException {
     synchronized (this.cache) {
-      if (isEnablingTable(tableName)) {
+      if (isEnablingOrEnabledTable(tableName)) {
         return false;
       }
       setTableState(tableName, ZooKeeperProtos.Table.State.ENABLING);
@@ -225,6 +225,12 @@ public class ZKTable {
   public boolean isDisablingOrDisabledTable(final TableName tableName) {
     synchronized (this.cache) {
       return isDisablingTable(tableName) || isDisabledTable(tableName);
+    }
+  }
+
+  public boolean isEnablingOrEnabledTable(final TableName tableName) {
+    synchronized (this.cache) {
+      return isEnablingTable(tableName) || isEnabledTable(tableName);
     }
   }
 
