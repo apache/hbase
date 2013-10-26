@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -86,6 +85,10 @@ public class LoadTestTool extends AbstractHBaseTool {
         + "compression) to use for data blocks in the test column family, "
         + "one of " + Arrays.toString(DataBlockEncoding.values()) + ".";
 
+  public static final String OPT_INMEMORY = "in_memory";
+  public static final String OPT_USAGE_IN_MEMORY = "Tries to keep the HFiles of the CF " +
+      "inmemory as far as possible.  Not guaranteed that reads are always served from inmemory";
+
   private static final String OPT_BLOOM = "bloom";
   private static final String OPT_COMPRESSION = "compression";
   public static final String OPT_DATA_BLOCK_ENCODING =
@@ -126,6 +129,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected boolean encodeInCacheOnly;
   protected Compression.Algorithm compressAlgo;
   protected StoreFile.BloomType bloomType;
+  private boolean inMemoryCF;
 
   // Writer options
   protected int numWriterThreads = DEFAULT_NUM_THREADS;
@@ -189,6 +193,9 @@ public class LoadTestTool extends AbstractHBaseTool {
         columnDesc.setDataBlockEncoding(dataBlockEncodingAlgo);
         columnDesc.setEncodeOnDisk(!encodeInCacheOnly);
       }
+      if (inMemoryCF) {
+        columnDesc.setInMemory(inMemoryCF);
+      }
       if (isNewCf) {
         admin.addColumn(tableName, columnDesc);
       } else {
@@ -220,6 +227,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptNoArg(OPT_MULTIPUT, "Whether to use multi-puts as opposed to " +
         "separate puts for every column in a row");
     addOptNoArg(OPT_ENCODE_IN_CACHE_ONLY, OPT_ENCODE_IN_CACHE_ONLY_USAGE);
+    addOptNoArg(OPT_INMEMORY, OPT_USAGE_IN_MEMORY);
 
     addOptWithArg(OPT_NUM_KEYS, "The number of keys to read/write");
     addOptWithArg(OPT_START_KEY, "The first key to read/write " +
@@ -340,6 +348,8 @@ public class LoadTestTool extends AbstractHBaseTool {
     String bloomStr = cmd.getOptionValue(OPT_BLOOM);
     bloomType = bloomStr == null ? null :
         StoreFile.BloomType.valueOf(bloomStr);
+
+    inMemoryCF = cmd.hasOption(OPT_INMEMORY);
   }
 
   public void initTestTable() throws IOException {
