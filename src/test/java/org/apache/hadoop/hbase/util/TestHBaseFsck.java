@@ -356,7 +356,9 @@ public class TestHBaseFsck {
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.getConnection().clearRegionCache();
     byte[] tbytes = Bytes.toBytes(tablename);
-    admin.disableTableAsync(tbytes);
+    if (admin.isTableEnabled(tbytes)) {
+      admin.disableTableAsync(tbytes);
+    }
     while (!admin.isTableDisabled(tbytes)) {
       try {
         Thread.sleep(250);
@@ -1616,7 +1618,7 @@ public class TestHBaseFsck {
   /**
    * This creates a table and then corrupts an hfile.  Hbck should quarantine the file.
    */
-  @Test(timeout=120000)
+  @Test(timeout=180000)
   public void testQuarantineCorruptHFile() throws Exception {
     String table = name.getMethodName();
     try {
@@ -1697,7 +1699,7 @@ public class TestHBaseFsck {
    * This creates a table and simulates the race situation where a concurrent compaction or split
    * has removed an hfile after the corruption checker learned about it.
    */
-  @Test(timeout=120000)
+  @Test(timeout=180000)
   public void testQuarantineMissingHFile() throws Exception {
     String table = name.getMethodName();
     ExecutorService exec = new ScheduledThreadPoolExecutor(10);
@@ -1724,7 +1726,7 @@ public class TestHBaseFsck {
    * This creates a table and simulates the race situation where a concurrent compaction or split
    * has removed an colfam dir before the corruption checker got to it.
    */
-  @Test(timeout=120000)
+  @Test(timeout=180000)
   public void testQuarantineMissingFamdir() throws Exception {
     String table = name.getMethodName();
     ExecutorService exec = new ScheduledThreadPoolExecutor(10);
@@ -1751,7 +1753,7 @@ public class TestHBaseFsck {
    * This creates a table and simulates the race situation where a concurrent compaction or split
    * has removed a region dir before the corruption checker got to it.
    */
-  @Test(timeout=120000)
+  @Test(timeout=180000)
   public void testQuarantineMissingRegionDir() throws Exception {
     String table = name.getMethodName();
     ExecutorService exec = new ScheduledThreadPoolExecutor(10);
