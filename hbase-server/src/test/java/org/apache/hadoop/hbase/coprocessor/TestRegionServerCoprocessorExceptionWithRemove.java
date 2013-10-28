@@ -39,7 +39,7 @@ import static org.junit.Assert.*;
 
 /**
  * Tests unhandled exceptions thrown by coprocessors running on regionserver.
- * Expected result is that the master will remove the buggy coprocessor from
+ * Expected result is that the region server will remove the buggy coprocessor from
  * its set of coprocessors and throw a org.apache.hadoop.hbase.exceptions.DoNotRetryIOException
  * back to the client.
  * (HBASE-4014).
