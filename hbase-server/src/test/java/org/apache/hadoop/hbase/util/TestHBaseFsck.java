@@ -371,7 +371,9 @@ public class TestHBaseFsck {
   void deleteTable(TableName tablename) throws IOException {
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.getConnection().clearRegionCache();
-    admin.disableTableAsync(tablename);
+    if (admin.isTableEnabled(tablename)) {
+      admin.disableTableAsync(tablename);
+    }
     long totalWait = 0;
     long maxWait = 30*1000;
     long sleepTime = 250;
@@ -1672,7 +1674,7 @@ public class TestHBaseFsck {
   /**
    * This creates a table and then corrupts an hfile.  Hbck should quarantine the file.
    */
-  @Test(timeout=120000)
+  @Test(timeout=180000)
   public void testQuarantineCorruptHFile() throws Exception {
     TableName table = TableName.valueOf(name.getMethodName());
     try {
@@ -1754,7 +1756,7 @@ public class TestHBaseFsck {
    * This creates a table and simulates the race situation where a concurrent compaction or split
    * has removed an hfile after the corruption checker learned about it.
    */
-  @Test(timeout=120000)
+  @Test(timeout=180000)
   public void testQuarantineMissingHFile() throws Exception {
     TableName table = TableName.valueOf(name.getMethodName());
     ExecutorService exec = new ScheduledThreadPoolExecutor(10);
@@ -1785,7 +1787,7 @@ public class TestHBaseFsck {
    */
   // Disabled because fails sporadically.  Is this test right?  Timing-wise, there could be no
   // files in a column family on initial creation -- as suggested by Matteo.
-  @Ignore @Test(timeout=120000)
+  @Ignore @Test(timeout=180000)
   public void testQuarantineMissingFamdir() throws Exception {
     TableName table = TableName.valueOf(name.getMethodName());
     ExecutorService exec = new ScheduledThreadPoolExecutor(10);
@@ -1814,7 +1816,7 @@ public class TestHBaseFsck {
    * This creates a table and simulates the race situation where a concurrent compaction or split
    * has removed a region dir before the corruption checker got to it.
    */
-  @Test(timeout=120000)
+  @Test(timeout=180000)
   public void testQuarantineMissingRegionDir() throws Exception {
     TableName table = TableName.valueOf(name.getMethodName());
     ExecutorService exec = new ScheduledThreadPoolExecutor(10);
