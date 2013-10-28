@@ -98,8 +98,7 @@ public final class Canary implements Tool {
 
     @Override
     public void publishReadFailure(String table, String server) {
-      LOG.error(String.format("Read from table:%s on region server:%s",
-          table, server));
+      LOG.error(String.format("Read from table:%s on region server:%s", table, server));
     }
 
     @Override
@@ -109,6 +108,10 @@ public final class Canary implements Tool {
     }
   }
 
+  private static final int USAGE_EXIT_CODE = 1;
+  private static final int INIT_ERROR_EXIT_CODE = 2;
+  private static final int TIMEOUT_ERROR_EXIT_CODE = 3;
+  private static final int ERROR_EXIT_CODE = 4;
 
   private static final long DEFAULT_INTERVAL = 6000;
 
@@ -237,28 +240,27 @@ public final class Canary implements Tool {
         // exit if any error occurs
         if (this.failOnError && monitor.hasError()) {
           monitorThread.interrupt();
-          System.exit(1);
+          System.exit(monitor.errorCode);
         }
         currentTimeLength = System.currentTimeMillis() - startTime;
         if (currentTimeLength > this.timeout) {
           LOG.error("The monitor is running too long (" + currentTimeLength
               + ") after timeout limit:" + this.timeout
               + " will be killed itself !!");
-          monitorThread.interrupt();
-          monitor.setError(true);
+          monitor.errorCode = TIMEOUT_ERROR_EXIT_CODE;
           break;
         }
       }
 
       if (this.failOnError && monitor.hasError()) {
         monitorThread.interrupt();
-        System.exit(1);
+        System.exit(monitor.errorCode);
       }
 
-        Thread.sleep(interval);
+      Thread.sleep(interval);
     } while (interval > 0);
 
-    return(monitor.hasError()? 1: 0);
+    return(monitor.errorCode);
   }
 
   private void printUsageAndExit() {
@@ -276,7 +278,7 @@ public final class Canary implements Tool {
     System.err.println("   -f <B>         stop whole program if first error occurs," +
         " default is true");
     System.err.println("   -t <N>         timeout for a check, default is 600000 (milisecs)");
-    System.exit(1);
+    System.exit(USAGE_EXIT_CODE);
   }
 
   /**
@@ -297,8 +299,11 @@ public final class Canary implements Tool {
     }
 
     if(this.regionServerMode) {
-      monitor = new RegionServerMonitor(this.conf, monitorTargets,
-          this.useRegExp, (ExtendedSink)this.sink);
+      monitor = new RegionServerMonitor(
+          this.conf,
+          monitorTargets,
+          this.useRegExp,
+          (ExtendedSink)this.sink);
     } else {
       monitor = new RegionMonitor(this.conf, monitorTargets, this.useRegExp, this.sink);
     }
@@ -314,7 +319,7 @@ public final class Canary implements Tool {
     protected boolean useRegExp;
 
     protected boolean done = false;
-    protected boolean error = false;
+    protected int errorCode = 0;
     protected Sink sink;
 
     public boolean isDone() {
@@ -322,11 +327,7 @@ public final class Canary implements Tool {
     }
 
     public boolean hasError() {
-      return error;
-    }
-
-    public void setError(boolean error) {
-      this.error = error;
+      return errorCode != 0;
     }
 
     protected Monitor(Configuration config, String[] monitorTargets,
@@ -348,14 +349,13 @@ public final class Canary implements Tool {
           this.admin = new HBaseAdmin(config);
         } catch (Exception e) {
           LOG.error("Initial HBaseAdmin failed...", e);
-          this.error = true;
+          this.errorCode = INIT_ERROR_EXIT_CODE;
         }
-      }
-      if (admin.isAborted()) {
+      } else if (admin.isAborted()) {
         LOG.error("HBaseAdmin aborted");
-        this.error = true;
+        this.errorCode = INIT_ERROR_EXIT_CODE;
       }
-      return !this.error;
+      return !this.hasError();
     }
   }
 
@@ -381,7 +381,7 @@ public final class Canary implements Tool {
           }
         } catch (Exception e) {
           LOG.error("Run regionMonitor failed", e);
-          this.error = true;
+          this.errorCode = ERROR_EXIT_CODE;
         }
       }
       this.done = true;
@@ -395,11 +395,11 @@ public final class Canary implements Tool {
         HTableDescriptor[] tds = null;
         Set<String> tmpTables = new TreeSet<String>();
         try {
-          for(int a = 0; a < monitorTargets.length; a++) {
-            pattern = Pattern.compile(monitorTargets[a]);
+          for (String monitorTarget : monitorTargets) {
+            pattern = Pattern.compile(monitorTarget);
             tds = this.admin.listTables(pattern);
-            if(tds != null) {
-              for(HTableDescriptor td : tds) {
+            if (tds != null) {
+              for (HTableDescriptor td : tds) {
                 tmpTables.add(td.getNameAsString());
               }
             }
@@ -410,13 +410,13 @@ public final class Canary implements Tool {
         }
 
         if(tmpTables.size() > 0) {
-          returnTables = tmpTables.toArray(new String[]{});
+          returnTables = tmpTables.toArray(new String[tmpTables.size()]);
         } else {
           String msg = "No any HTable found, tablePattern:"
               + Arrays.toString(monitorTargets);
           LOG.error(msg);
-          this.error = true;
-          new TableNotFoundException(msg);
+          this.errorCode = INIT_ERROR_EXIT_CODE;
+          throw new TableNotFoundException(msg);
         }
       } else {
         returnTables = monitorTargets;
@@ -438,8 +438,6 @@ public final class Canary implements Tool {
 
   /**
    * Canary entry point for specified table.
-   * @param admin
-   * @param tableName
    * @throws Exception
    */
   public static void sniff(final HBaseAdmin admin, TableName tableName) throws Exception {
@@ -448,9 +446,6 @@ public final class Canary implements Tool {
 
   /**
    * Canary entry point for specified table.
-   * @param admin
-   * @param sink
-   * @param tableName
    * @throws Exception
    */
   private static void sniff(final HBaseAdmin admin, final Sink sink, String tableName)
@@ -489,9 +484,11 @@ public final class Canary implements Tool {
    * For each column family of the region tries to get one row and outputs the latency, or the
    * failure.
    */
-  private static void
-      sniffRegion(final HBaseAdmin admin, final Sink sink, HRegionInfo region, HTable table)
-          throws Exception {
+  private static void sniffRegion(
+      final HBaseAdmin admin,
+      final Sink sink,
+      HRegionInfo region,
+      HTable table) throws Exception {
     HTableDescriptor tableDesc = table.getTableDescriptor();
     byte[] startKey = null;
     Get get = null;
@@ -551,44 +548,38 @@ public final class Canary implements Tool {
     @Override
     public void run() {
       if (this.initAdmin() && this.checkNoTableNames()) {
-        Map<String, List<HRegionInfo>> rsAndRMap = null;
-        rsAndRMap = this.filterRegionServerByName();
+        Map<String, List<HRegionInfo>> rsAndRMap = this.filterRegionServerByName();
         this.monitorRegionServers(rsAndRMap);
       }
       this.done = true;
     }
 
     private boolean checkNoTableNames() {
-      boolean pass = true;
       List<String> foundTableNames = new ArrayList<String>();
       TableName[] tableNames = null;
-
-      if (this.targets == null || this.targets.length == 0) return pass;
 
       try {
         tableNames = this.admin.listTableNames();
       } catch (IOException e) {
         LOG.error("Get listTableNames failed", e);
-        this.error = true;
+        this.errorCode = INIT_ERROR_EXIT_CODE;
         return false;
       }
 
       for (String target : this.targets) {
         for (TableName tableName : tableNames) {
           if (target.equals(tableName.getNameAsString())) {
-            pass = false;
             foundTableNames.add(target);
           }
         }
       }
 
-      if (!pass) {
-        System.err
-            .println("Cannot pass a tablename when using the -regionserver option, tablenames:"
-                + foundTableNames.toString());
-        this.error = true;
+      if (foundTableNames.size() > 0) {
+        System.err.println("Cannot pass a tablename when using the -regionserver " +
+            "option, tablenames:" + foundTableNames.toString());
+        this.errorCode = USAGE_EXIT_CODE;
       }
-      return pass;
+      return foundTableNames.size() == 0;
     }
 
     private void monitorRegionServers(Map<String, List<HRegionInfo>> rsAndRMap) {
@@ -628,7 +619,7 @@ public final class Canary implements Tool {
         } catch (IOException e) {
           this.getSink().publishReadFailure(tableName, serverName);
           LOG.error(e);
-          this.error = true;
+          this.errorCode = ERROR_EXIT_CODE;
         } finally {
           if (table != null) {
             try {
@@ -644,10 +635,8 @@ public final class Canary implements Tool {
     }
 
     private Map<String, List<HRegionInfo>> filterRegionServerByName() {
-      Map<String, List<HRegionInfo>> regionServerAndRegionsMap = this.
-          getAllRegionServerByName();
-      regionServerAndRegionsMap = this.doFilterRegionServerByName(
-          regionServerAndRegionsMap);
+      Map<String, List<HRegionInfo>> regionServerAndRegionsMap = this.getAllRegionServerByName();
+      regionServerAndRegionsMap = this.doFilterRegionServerByName(regionServerAndRegionsMap);
       return regionServerAndRegionsMap;
     }
 
@@ -680,7 +669,7 @@ public final class Canary implements Tool {
       } catch (IOException e) {
         String msg = "Get HTables info failed";
         LOG.error(msg, e);
-        this.error = true;
+        this.errorCode = INIT_ERROR_EXIT_CODE;
       } finally {
         if (table != null) {
           try {
@@ -708,25 +697,23 @@ public final class Canary implements Tool {
           if (this.useRegExp) {
             regExpFound = false;
             pattern = Pattern.compile(rsName);
-            for (String tmpRsName : fullRsAndRMap.keySet()) {
-              matcher = pattern.matcher(tmpRsName);
+            for (Map.Entry<String,List<HRegionInfo>> entry : fullRsAndRMap.entrySet()) {
+              matcher = pattern.matcher(entry.getKey());
               if (matcher.matches()) {
-                filteredRsAndRMap.put(tmpRsName, fullRsAndRMap.get(tmpRsName));
+                filteredRsAndRMap.put(entry.getKey(), entry.getValue());
                 regExpFound = true;
               }
             }
             if (!regExpFound) {
-              LOG.error("No any RegionServerInfo found, regionServerPattern:"
-                  + rsName);
-              this.error = true;
+              LOG.error("No any RegionServerInfo found, regionServerPattern:" + rsName);
+              this.errorCode = INIT_ERROR_EXIT_CODE;
             }
           } else {
             if (fullRsAndRMap.containsKey(rsName)) {
               filteredRsAndRMap.put(rsName, fullRsAndRMap.get(rsName));
             } else {
-              LOG.error("No any RegionServerInfo found, regionServerName:"
-                  + rsName);
-              this.error = true;
+              LOG.error("No any RegionServerInfo found, regionServerName:" + rsName);
+              this.errorCode = INIT_ERROR_EXIT_CODE;
             }
           }
         }
