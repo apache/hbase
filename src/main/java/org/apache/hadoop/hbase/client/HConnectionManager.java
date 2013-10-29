@@ -1972,28 +1972,19 @@ public class HConnectionManager {
     }
 
     public HTableDescriptor[] listTables() throws IOException {
-      if (this.master == null) {
-        this.master = getMaster();
-      }
-      HTableDescriptor[] htd = master.getHTableDescriptors();
+      HTableDescriptor[] htd = getMaster().getHTableDescriptors();
       return htd;
     }
 
     public HTableDescriptor[] getHTableDescriptors(List<String> tableNames) throws IOException {
       if (tableNames == null || tableNames.isEmpty()) return new HTableDescriptor[0];
       if (tableNames == null || tableNames.size() == 0) return null;
-      if (this.master == null) {
-        this.master = getMaster();
-      }
-      return master.getHTableDescriptors(tableNames);
+      return getMaster().getHTableDescriptors(tableNames);
     }
 
     @Override
     public String[] getTableNames() throws IOException {
-      if (this.master == null) {
-        this.master = getMaster();
-      }
-      return master.getTableNames();
+      return getMaster().getTableNames();
     }
 
     public HTableDescriptor getHTableDescriptor(final byte[] tableName)
@@ -2007,10 +1998,7 @@ public class HConnectionManager {
       }
       List<String> tableNameList = new ArrayList<String>(1);
       tableNameList.add(Bytes.toString(tableName));
-      if (this.master == null) {
-        this.master = getMaster();
-      }
-      HTableDescriptor[] htds = master.getHTableDescriptors(tableNameList);
+      HTableDescriptor[] htds = getHTableDescriptors(tableNameList);
       if (htds != null && htds.length > 0) {
         return htds[0];
       }
