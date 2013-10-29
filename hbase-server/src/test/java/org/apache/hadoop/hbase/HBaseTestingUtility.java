@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -81,7 +80,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.security.User;
@@ -186,7 +184,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           { new Boolean(false) },
           { new Boolean(true) }
       });
-  
+
   /** This is for unit tests parameterized with a single boolean. */
   public static final List<Object[]> MEMSTORETS_TAGS_PARAMETRIZED = memStoreTSAndTagsCombination()  ;
   /** Compression algorithms to use in testing */
@@ -1486,13 +1484,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   // ==========================================================================
   // Canned table and table descriptor creation
   // TODO replace HBaseTestCase
-  
+
   public final static byte [] fam1 = Bytes.toBytes("colfamily11");
   public final static byte [] fam2 = Bytes.toBytes("colfamily21");
   public final static byte [] fam3 = Bytes.toBytes("colfamily31");
   public static final byte[][] COLUMNS = {fam1, fam2, fam3};
   private static final int MAXVERSIONS = 3;
-  
+
   public static final char FIRST_CHAR = 'a';
   public static final char LAST_CHAR = 'z';
   public static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
@@ -1569,7 +1567,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc, hlog);
   }
 
-  
+
   /**
    * @param tableName
    * @param startKey
@@ -2034,7 +2032,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     int numRetries = getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
-    RetryCounter retrier = new RetryCounter(numRetries, (int)pause, TimeUnit.MICROSECONDS);
+    RetryCounter retrier = new RetryCounter(numRetries+1, (int)pause, TimeUnit.MICROSECONDS);
     while(retrier.shouldRetry()) {
       int index = getMiniHBaseCluster().getServerWith(firstrow);
       if (index != -1) {
@@ -2159,12 +2157,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Create a stubbed out RegionServerService, mainly for getting FS.
    */
-  public RegionServerServices createMockRegionServerService() throws IOException { 
+  public RegionServerServices createMockRegionServerService() throws IOException {
     return createMockRegionServerService((ServerName)null);
   }
 
   /**
-   * Create a stubbed out RegionServerService, mainly for getting FS. 
+   * Create a stubbed out RegionServerService, mainly for getting FS.
    * This version is used by TestTokenAuthentication
    */
   public RegionServerServices createMockRegionServerService(RpcServerInterface rpc) throws IOException {
@@ -2175,7 +2173,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Create a stubbed out RegionServerService, mainly for getting FS. 
+   * Create a stubbed out RegionServerService, mainly for getting FS.
    * This version is used by TestOpenRegionHandler
    */
   public RegionServerServices createMockRegionServerService(ServerName name) throws IOException {
