@@ -20,10 +20,11 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -40,8 +42,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
 
 @Category(MediumTests.class)
 public class TestRpcMetrics {
@@ -123,12 +123,15 @@ public class TestRpcMetrics {
     TestRegionServer rs = new TestRegionServer(TEST_UTIL.getConfiguration());
     rs.incTest(5);
 
-    // wait for metrics context update
-    Thread.sleep(1000);
-
     String metricName = HBaseRpcMetrics.getMetricName(TestMetrics.class, "test");
-    assertTrue("Metric should have set incremented for "+metricName,
-        wasSet(metricName + "_num_ops"));
+    long start = EnvironmentEdgeManager.currentTimeMillis();
+    while (!wasSet(metricName + "_num_ops")) {
+      if (EnvironmentEdgeManager.currentTimeMillis() - start > 60000) {
+        assertTrue("Metric should have set incremented for "+metricName,
+          wasSet(metricName + "_num_ops"));
+      }
+      Thread.sleep(200);
+    }
   }
 
   public boolean wasSet(String name) {
