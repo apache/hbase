@@ -1246,18 +1246,36 @@ public class HLogSplitter {
         if (thrown == null) {
           thrown = Lists.newArrayList();
         }
-        for (WriterAndPath wap : logWriters.values()) {
-          try {
-            wap.w.close();
-          } catch (IOException ioe) {
-            LOG.error("Couldn't close log at " + wap.p, ioe);
-            thrown.add(ioe);
-            continue;
+        try {
+          for (WriterThread t : writerThreads) {
+            while (t.isAlive()) {
+              t.shouldStop = true;
+              t.interrupt();
+              try {
+                t.join(10);
+              } catch (InterruptedException e) {
+                IOException iie = new InterruptedIOException();
+                iie.initCause(e);
+                throw iie;
+              }
+            }
           }
-          LOG.info("Closed path " + wap.p + " (wrote " + wap.editsWritten
-              + " edits in " + (wap.nanosSpent / 1000 / 1000) + "ms)");
+        } finally {
+          synchronized (logWriters) {
+            for (WriterAndPath wap : logWriters.values()) {
+              try {
+                wap.w.close();
+              } catch (IOException ioe) {
+                LOG.error("Couldn't close log at " + wap.p, ioe);
+                thrown.add(ioe);
+                continue;
+              }
+              LOG.info("Closed path " + wap.p + " (wrote " + wap.editsWritten
+                  + " edits in " + (wap.nanosSpent / 1000 / 1000) + "ms)");
+            }
+          }
+          logWritersClosed = true;
         }
-        logWritersClosed = true;
       }
       return thrown;
     }
