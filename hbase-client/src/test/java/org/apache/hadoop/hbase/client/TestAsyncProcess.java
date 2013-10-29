@@ -679,7 +679,7 @@ public class TestAsyncProcess {
     HTable ht = new HTable();
     Configuration configuration = new Configuration(conf);
     configuration.setBoolean(HConnectionManager.RETRIES_BY_SERVER_KEY, true);
-    configuration.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 20);
+    configuration.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     // set default writeBufferSize
     ht.setWriteBufferSize(configuration.getLong("hbase.client.write.buffer", 2097152));
 
@@ -688,24 +688,21 @@ public class TestAsyncProcess {
     ht.ap = new MyAsyncProcess<Object>(mci, null, configuration);
 
 
-    Assert.assertTrue(ht.ap.useServerTrackerForRetries);
     Assert.assertNotNull(ht.ap.createServerErrorTracker());
-    Assert.assertTrue(ht.ap.serverTrackerTimeout > 10000);
+    Assert.assertTrue(ht.ap.serverTrackerTimeout > 200);
     ht.ap.serverTrackerTimeout = 1;
-
 
     Put p = createPut(1, false);
     ht.setAutoFlush(false, false);
     ht.put(p);
 
-    long start = System.currentTimeMillis();
     try {
       ht.flushCommits();
       Assert.fail();
     } catch (RetriesExhaustedWithDetailsException expected) {
     }
-    // Checking that the ErrorsServers came into play and made us stop immediately
-    Assert.assertTrue((System.currentTimeMillis() - start) < 10000);
+    // Checking that the ErrorsServers came into play and didn't make us stop immediately
+    Assert.assertEquals(ht.ap.tasksSent.get(), 3);
   }
 
   /**
@@ -731,8 +728,7 @@ public class TestAsyncProcess {
     MyConnectionImpl2 con = new MyConnectionImpl2(hrls);
     ht.connection = con;
 
-      ht.batch(gets);
-
+    ht.batch(gets);
 
     Assert.assertEquals(con.ap.nbActions.get(), NB_REGS);
     Assert.assertEquals("1 multi response per server", 2, con.ap.nbMultiResponse.get());

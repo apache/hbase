@@ -93,13 +93,13 @@ public class ClusterStatusPublisher extends Chore {
    * We want to limit the size of the protobuf message sent, do fit into a single packet.
    * a reasonable size for ip / ethernet is less than 1Kb.
    */
-  public static int MAX_SERVER_PER_MESSAGE = 10;
+  public final static int MAX_SERVER_PER_MESSAGE = 10;
 
   /**
    * If a server dies, we're sending the information multiple times in case a receiver misses the
    * message.
    */
-  public static int NB_SEND = 5;
+  public final static int NB_SEND = 5;
 
   public ClusterStatusPublisher(HMaster master, Configuration conf,
                                 Class<? extends Publisher> publisherClass)
