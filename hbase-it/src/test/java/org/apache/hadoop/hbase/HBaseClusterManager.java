@@ -27,6 +27,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClusterManager.CommandProvider.Operation;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RetryCounter;
+import org.apache.hadoop.hbase.util.RetryCounter.RetryConfig;
+import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.util.Shell;
 
 /**
@@ -48,6 +51,14 @@ public class HBaseClusterManager extends ClusterManager {
   private static final String DEFAULT_TUNNEL_CMD = "/usr/bin/ssh %1$s %2$s%3$s%4$s \"%5$s\"";
   private String tunnelCmd;
 
+  private static final String RETRY_ATTEMPTS_KEY = "hbase.it.clustermanager.retry.attempts";
+  private static final int DEFAULT_RETRY_ATTEMPTS = 5;
+
+  private static final String RETRY_SLEEP_INTERVAL_KEY = "hbase.it.clustermanager.retry.sleep.interval";
+  private static final int DEFAULT_RETRY_SLEEP_INTERVAL = 1000;
+
+  protected RetryCounterFactory retryCounterFactory;
+
   @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
@@ -68,6 +79,10 @@ public class HBaseClusterManager extends ClusterManager {
         (sshOptions != null && sshOptions.length() > 0)) {
       LOG.info("Running with SSH user [" + sshUserName + "] and options [" + sshOptions + "]");
     }
+
+    this.retryCounterFactory = new RetryCounterFactory(new RetryConfig()
+        .setMaxAttempts(conf.getInt(RETRY_ATTEMPTS_KEY, DEFAULT_RETRY_ATTEMPTS))
+        .setSleepInterval(conf.getLong(RETRY_SLEEP_INTERVAL_KEY, DEFAULT_RETRY_SLEEP_INTERVAL)));
   }
 
   /**
@@ -184,7 +199,15 @@ public class HBaseClusterManager extends ClusterManager {
     LOG.info("Executing remote command: " + StringUtils.join(cmd, " ") + " , hostname:" + hostname);
 
     RemoteShell shell = new RemoteShell(hostname, cmd);
-    shell.execute();
+    try {
+      shell.execute();
+    } catch (Shell.ExitCodeException ex) {
+      // capture the stdout of the process as well.
+      String output = shell.getOutput();
+      // add output for the ExitCodeException.
+      throw new Shell.ExitCodeException(ex.getExitCode(), "stderr: " + ex.getMessage()
+        + ", stdout: " + output);
+    }
 
     LOG.info("Executed remote command, exit code:" + shell.getExitCode()
         + " , output:" + shell.getOutput());
@@ -192,8 +215,37 @@ public class HBaseClusterManager extends ClusterManager {
     return new Pair<Integer, String>(shell.getExitCode(), shell.getOutput());
   }
 
+  private Pair<Integer, String> execWithRetries(String hostname, String... cmd)
+      throws IOException {
+    RetryCounter retryCounter = retryCounterFactory.create();
+    while (true) {
+      try {
+        return exec(hostname, cmd);
+      } catch (IOException e) {
+        retryOrThrow(retryCounter, e, hostname, cmd);
+      }
+      try {
+        retryCounter.sleepUntilNextRetry();
+      } catch (InterruptedException ex) {
+        // ignore
+        LOG.warn("Sleep Interrupted:" + ex);
+      }
+    }
+  }
+
+  private <E extends Exception> void retryOrThrow(RetryCounter retryCounter, E ex,
+      String hostname, String[] cmd) throws E {
+    if (retryCounter.shouldRetry()) {
+      LOG.warn("Remote command: " + StringUtils.join(cmd, " ") + " , hostname:" + hostname
+        + " failed at attempt " + retryCounter.getAttemptTimes() + ". Retrying until maxAttempts: "
+          + retryCounter.getMaxAttempts() + ". Exception: " + ex.getMessage());
+      return;
+    }
+    throw ex;
+  }
+
   private void exec(String hostname, ServiceType service, Operation op) throws IOException {
-    exec(hostname, getCommandProvider(service).getCommand(service, op));
+    execWithRetries(hostname, getCommandProvider(service).getCommand(service, op));
   }
 
   @Override
@@ -213,12 +265,12 @@ public class HBaseClusterManager extends ClusterManager {
 
   @Override
   public void signal(ServiceType service, String signal, String hostname) throws IOException {
-    exec(hostname, getCommandProvider(service).signalCommand(service, signal));
+    execWithRetries(hostname, getCommandProvider(service).signalCommand(service, signal));
   }
 
   @Override
   public boolean isRunning(ServiceType service, String hostname) throws IOException {
-    String ret = exec(hostname, getCommandProvider(service).isRunningCommand(service))
+    String ret = execWithRetries(hostname, getCommandProvider(service).isRunningCommand(service))
         .getSecond();
     return ret.length() > 0;
   }

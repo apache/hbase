@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.lang.math.RandomUtils;
@@ -34,6 +35,7 @@ public class MoveRegionsOfTableAction extends Action {
   private final long sleepTime;
   private final byte[] tableNameBytes;
   private final String tableName;
+  private final long maxTime;
 
   public MoveRegionsOfTableAction(String tableName) {
     this(-1, tableName);
@@ -43,6 +45,7 @@ public class MoveRegionsOfTableAction extends Action {
     this.sleepTime = sleepTime;
     this.tableNameBytes = Bytes.toBytes(tableName);
     this.tableName = tableName;
+    this.maxTime = 10 * 60 * 1000; // 10 min default
   }
 
   @Override
@@ -62,6 +65,9 @@ public class MoveRegionsOfTableAction extends Action {
       return;
     }
 
+    Collections.shuffle(regions);
+
+    long start = System.currentTimeMillis();
     for (HRegionInfo regionInfo:regions) {
       try {
         String destServerName =
@@ -73,6 +79,12 @@ public class MoveRegionsOfTableAction extends Action {
       }
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);
+      }
+
+      // put a limit on max num regions. Otherwise, this won't finish
+      // with a sleep time of 10sec, 100 regions will finish in 16min
+      if (System.currentTimeMillis() - start > maxTime) {
+        break;
       }
     }
   }

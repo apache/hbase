@@ -111,7 +111,7 @@ public class RecoverableZooKeeper {
     // TODO: Add support for zk 'chroot'; we don't add it to the quorumServers String as we should.
     this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
     this.retryCounterFactory =
-      new RetryCounterFactory(maxRetries, retryIntervalMillis);
+      new RetryCounterFactory(maxRetries+1, retryIntervalMillis);
 
     if (identifier == null || identifier.length() == 0) {
       // the identifier = processID@hostName
@@ -177,7 +177,6 @@ public class RecoverableZooKeeper {
           }
         }
         retryCounter.sleepUntilNextRetry();
-        retryCounter.useRetry();
         isRetry = true;
       }
     } finally {
@@ -211,7 +210,6 @@ public class RecoverableZooKeeper {
           }
         }
         retryCounter.sleepUntilNextRetry();
-        retryCounter.useRetry();
       }
     } finally {
       if (traceScope != null) traceScope.close();
@@ -244,7 +242,6 @@ public class RecoverableZooKeeper {
           }
         }
         retryCounter.sleepUntilNextRetry();
-        retryCounter.useRetry();
       }
     } finally {
       if (traceScope != null) traceScope.close();
@@ -256,7 +253,7 @@ public class RecoverableZooKeeper {
     LOG.warn("Possibly transient ZooKeeper, quorum=" + quorumServers + ", exception=" + e);
     if (!retryCounter.shouldRetry()) {
       LOG.error("ZooKeeper " + opName + " failed after "
-        + retryCounter.getMaxRetries() + " retries");
+        + retryCounter.getMaxAttempts() + " attempts");
       throw e;
     }
   }
@@ -287,7 +284,6 @@ public class RecoverableZooKeeper {
           }
         }
         retryCounter.sleepUntilNextRetry();
-        retryCounter.useRetry();
       }
     } finally {
       if (traceScope != null) traceScope.close();
@@ -320,7 +316,6 @@ public class RecoverableZooKeeper {
           }
         }
         retryCounter.sleepUntilNextRetry();
-        retryCounter.useRetry();
       }
     } finally {
       if (traceScope != null) traceScope.close();
@@ -354,7 +349,6 @@ public class RecoverableZooKeeper {
           }
         }
         retryCounter.sleepUntilNextRetry();
-        retryCounter.useRetry();
       }
     } finally {
       if (traceScope != null) traceScope.close();
@@ -388,7 +382,6 @@ public class RecoverableZooKeeper {
           }
         }
         retryCounter.sleepUntilNextRetry();
-        retryCounter.useRetry();
       }
     } finally {
       if (traceScope != null) traceScope.close();
@@ -440,7 +433,6 @@ public class RecoverableZooKeeper {
           }
         }
         retryCounter.sleepUntilNextRetry();
-        retryCounter.useRetry();
         isRetry = true;
       }
     } finally {
@@ -528,7 +520,6 @@ public class RecoverableZooKeeper {
         }
       }
       retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
       isRetry = true;
     }
   }
@@ -563,7 +554,6 @@ public class RecoverableZooKeeper {
         }
       }
       retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
     }
   }
   /**
@@ -620,7 +610,6 @@ public class RecoverableZooKeeper {
           }
         }
         retryCounter.sleepUntilNextRetry();
-        retryCounter.useRetry();
     }
     } finally {
       if (traceScope != null) traceScope.close();

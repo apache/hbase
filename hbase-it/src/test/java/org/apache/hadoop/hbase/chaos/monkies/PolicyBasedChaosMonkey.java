@@ -145,6 +145,7 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
       return;
     }
     for (Thread monkeyThread : monkeyThreads) {
+      // TODO: bound the wait time per policy
       monkeyThread.join();
     }
   }
