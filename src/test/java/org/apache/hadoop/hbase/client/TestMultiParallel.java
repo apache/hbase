@@ -244,7 +244,8 @@ public class TestMultiParallel {
     JVMClusterUtil.RegionServerThread liveRS = UTIL.getMiniHBaseCluster()
         .getLiveRegionServerThreads().get(0);
     if (doAbort) {
-      LOG.info("Aborted=" + UTIL.getMiniHBaseCluster().abortRegionServer(0));
+      liveRS.getRegionServer().abort("Aborting for tests",
+          new Exception("doTestFlushCommits"));
 
       // If we waiting for no regions being online after we abort the server, we
       // could ensure the master has re-assigned the regions on killed server
