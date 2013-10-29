@@ -2345,8 +2345,23 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     private boolean matchingRows(final KeyValue left, final short lrowlength,
         final KeyValue right, final short rrowlength) {
       return lrowlength == rrowlength &&
-          Bytes.equals(left.getBuffer(), left.getRowOffset(), lrowlength,
+          matchingRows(left.getBuffer(), left.getRowOffset(), lrowlength,
               right.getBuffer(), right.getRowOffset(), rrowlength);
+    }
+
+    /**
+     * Compare rows. Just calls Bytes.equals, but it's good to have this encapsulated.
+     * @param left Left row array.
+     * @param loffset Left row offset.
+     * @param llength Left row length.
+     * @param right Right row array.
+     * @param roffset Right row offset.
+     * @param rlength Right row length.
+     * @return Whether rows are the same row.
+     */
+    public boolean matchingRows(final byte [] left, final int loffset, final int llength,
+        final byte [] right, final int roffset, final int rlength) {
+      return Bytes.equals(left, loffset, llength, right, roffset, rlength);
     }
 
     public byte[] calcIndexKey(byte[] lastKeyOfPreviousBlock, byte[] firstKeyInBlock) {

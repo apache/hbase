@@ -58,8 +58,7 @@ public interface StoreFileManager {
    * @param results The resulting files for the compaction.
    */
   void addCompactionResults(
-    Collection<StoreFile> compactedFiles, Collection<StoreFile> results
-  );
+      Collection<StoreFile> compactedFiles, Collection<StoreFile> results) throws IOException;
 
   /**
    * Clears all the files currently in use and returns them.

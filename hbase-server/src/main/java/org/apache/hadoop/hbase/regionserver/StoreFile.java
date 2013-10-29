@@ -285,6 +285,10 @@ public class StoreFile {
     return modificationTimeStamp;
   }
 
+  byte[] getMetadataValue(byte[] key) {
+    return metadataMap.get(key);
+  }
+
   /**
    * Return the largest memstoreTS found across all storefiles in
    * the given list. Store files that were created by a mapreduce

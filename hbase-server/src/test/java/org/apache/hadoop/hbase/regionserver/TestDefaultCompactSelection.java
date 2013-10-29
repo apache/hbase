@@ -125,64 +125,6 @@ public class TestDefaultCompactSelection extends TestCase {
     }
   }
 
-  // used so our tests don't deal with actual StoreFiles
-  static class MockStoreFile extends StoreFile {
-    long length = 0;
-    boolean isRef = false;
-    long ageInDisk;
-    long sequenceid;
-
-    MockStoreFile(long length, long ageInDisk, boolean isRef, long sequenceid) throws IOException {
-      super(TEST_UTIL.getTestFileSystem(), TEST_FILE, TEST_UTIL.getConfiguration(),
-            new CacheConfig(TEST_UTIL.getConfiguration()), BloomType.NONE,
-            NoOpDataBlockEncoder.INSTANCE);
-      this.length = length;
-      this.isRef = isRef;
-      this.ageInDisk = ageInDisk;
-      this.sequenceid = sequenceid;
-    }
-
-    void setLength(long newLen) {
-      this.length = newLen;
-    }
-
-    @Override
-    public long getMaxSequenceId() {
-      return sequenceid;
-    }
-
-    @Override
-    public boolean isMajorCompaction() {
-      return false;
-    }
-
-    @Override
-    public boolean isReference() {
-      return this.isRef;
-    }
-
-    @Override
-    public StoreFile.Reader getReader() {
-      final long len = this.length;
-      return new StoreFile.Reader() {
-        @Override
-        public long length() {
-          return len;
-        }
-      };
-    }
-
-    @Override
-    public String toString() {
-      return "MockStoreFile{" +
-          "length=" + length +
-          ", isRef=" + isRef +
-          ", ageInDisk=" + ageInDisk +
-          ", sequenceid=" + sequenceid +
-          '}';
-    }
-  }
-
   ArrayList<Long> toArrayList(long... numbers) {
     ArrayList<Long> result = new ArrayList<Long>();
     for (long i : numbers) {
@@ -216,7 +158,8 @@ public class TestDefaultCompactSelection extends TestCase {
       throws IOException {
     List<StoreFile> ret = Lists.newArrayList();
     for (int i = 0; i < sizes.size(); i++) {
-      ret.add(new MockStoreFile(sizes.get(i), ageInDisk.get(i), isReference, i));
+      ret.add(new MockStoreFile(TEST_UTIL, TEST_FILE,
+          sizes.get(i), ageInDisk.get(i), isReference, i));
     }
     return ret;
   }
