@@ -285,7 +285,7 @@ public class StoreFile {
     return modificationTimeStamp;
   }
 
-  byte[] getMetadataValue(byte[] key) {
+  public byte[] getMetadataValue(byte[] key) {
     return metadataMap.get(key);
   }
 

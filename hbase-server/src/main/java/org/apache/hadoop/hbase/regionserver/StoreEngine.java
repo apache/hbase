@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -78,6 +79,12 @@ public abstract class StoreEngine<SF extends StoreFlusher,
   public StoreFlusher getStoreFlusher() {
     return this.storeFlusher;
   }
+
+  /**
+   * @param filesCompacting Files currently compacting
+   * @return whether a compaction selection is possible
+   */
+  public abstract boolean needsCompaction(List<StoreFile> filesCompacting);
 
   /**
    * Creates an instance of a compaction context specific to this engine.

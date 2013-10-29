@@ -79,32 +79,6 @@ public abstract class Compactor {
     void append(KeyValue kv) throws IOException;
   }
 
-  /**
-   * Do a minor/major compaction on an explicit set of storefiles from a Store.
-   * @param request the requested compaction
-   * @return Product of compaction or an empty list if all cells expired or deleted and nothing made
-   *         it through the compaction.
-   * @throws IOException
-   */
-  public abstract List<Path> compact(final CompactionRequest request) throws IOException;
-
-  /**
-   * Compact a list of files for testing. Creates a fake {@link CompactionRequest} to pass to
-   * {@link #compact(CompactionRequest)};
-   * @param filesToCompact the files to compact. These are used as the compactionSelection for the
-   *          generated {@link CompactionRequest}.
-   * @param isMajor true to major compact (prune all deletes, max versions, etc)
-   * @return Product of compaction or an empty list if all cells expired or deleted and nothing made
-   *         it through the compaction.
-   * @throws IOException
-   */
-  public List<Path> compactForTesting(final Collection<StoreFile> filesToCompact, boolean isMajor)
-      throws IOException {
-    CompactionRequest cr = new CompactionRequest(filesToCompact);
-    cr.setIsMajor(isMajor);
-    return this.compact(cr);
-  }
-
   public CompactionProgress getProgress() {
     return this.progress;
   }

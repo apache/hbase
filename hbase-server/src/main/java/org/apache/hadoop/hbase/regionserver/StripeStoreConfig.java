@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
@@ -28,25 +30,116 @@ import org.apache.hadoop.conf.Configuration;
  */
 @InterfaceAudience.Private
 public class StripeStoreConfig {
-  public static final String MAX_SPLIT_IMBALANCE = "hbase.store.stripe.split.max.imbalance";
-  private float maxSplitImbalance;
+  static final Log LOG = LogFactory.getLog(StripeStoreConfig.class);
 
-  public StripeStoreConfig(Configuration config) {
-    maxSplitImbalance = config.getFloat(MAX_SPLIT_IMBALANCE, 1.5f);
-    if (maxSplitImbalance == 0) {
-      maxSplitImbalance = 1.5f;
+  /** The maximum number of files to compact within a stripe; same as for regular compaction. */
+  public static final String MAX_FILES_KEY = "hbase.store.stripe.compaction.maxFiles";
+  /** The minimum number of files to compact within a stripe; same as for regular compaction. */
+  public static final String MIN_FILES_KEY = "hbase.store.stripe.compaction.minFiles";
+
+  /**  The minimum number of files to compact when compacting L0; same as minFiles for regular
+   * compaction. Given that L0 causes unnecessary overwriting of the data, should be higher than
+   * regular minFiles. */
+  public static final String MIN_FILES_L0_KEY = "hbase.store.stripe.compaction.minFilesL0";
+
+  /** The size the stripe should achieve to be considered for splitting into multiple stripes.
+   Stripe will be split when it can be fully compacted, and it is above this size. */
+  public static final String SIZE_TO_SPLIT_KEY = "hbase.store.stripe.sizeToSplit";
+  /** The target count of new stripes to produce when splitting a stripe. A floating point
+   number, default is 2. Values less than 1 will be converted to 1/x. Non-whole numbers will
+   produce unbalanced splits, which may be good for some cases. In this case the "smaller" of
+   the new stripes will always be the rightmost one. If the stripe is bigger than sizeToSplit
+   when splitting, this will be adjusted by a whole increment. */
+  public static final String SPLIT_PARTS_KEY = "hbase.store.stripe.splitPartCount";
+  /** The initial stripe count to create. If the row distribution is roughly the same over time,
+   it's good to set this to a count of stripes that is expected to be achieved in most regions,
+   to get this count from the outset and prevent unnecessary splitting. */
+  public static final String INITIAL_STRIPE_COUNT_KEY = "hbase.store.stripe.initialStripeCount";
+
+  /** When splitting region, the maximum size imbalance to allow in an attempt to split at a
+   stripe boundary, so that no files go to both regions. Most users won't need to change that. */
+  public static final String MAX_REGION_SPLIT_IMBALANCE_KEY =
+      "hbase.store.stripe.region.split.max.imbalance";
+
+
+  private final float maxRegionSplitImbalance;
+  private final int level0CompactMinFiles;
+  private final int stripeCompactMinFiles;
+  private final int stripeCompactMaxFiles;
+
+  private final int initialCount;
+  private final long sizeToSplitAt;
+  private final float splitPartCount;
+  private final long splitPartSize; // derived from sizeToSplitAt and splitPartCount
+
+  private final double EPSILON = 0.001; // good enough for this, not a real epsilon.
+  public StripeStoreConfig(Configuration config, StoreConfigInformation sci) {
+    this.level0CompactMinFiles = config.getInt(MIN_FILES_L0_KEY, 4);
+    this.stripeCompactMinFiles = config.getInt(MIN_FILES_KEY, 3);
+    this.stripeCompactMaxFiles = config.getInt(MAX_FILES_KEY, 10);
+    this.maxRegionSplitImbalance = getFloat(config, MAX_REGION_SPLIT_IMBALANCE_KEY, 1.5f, true);
+
+    this.splitPartCount = getFloat(config, SPLIT_PARTS_KEY, 2.0f, true);
+    if (Math.abs(splitPartCount - 1.0) < EPSILON) {
+      throw new RuntimeException("Split part count cannot be 1: " + this.splitPartCount);
     }
-    if (maxSplitImbalance < 1f) {
-      maxSplitImbalance = 1f / maxSplitImbalance;
+    // TODO: change when no L0.
+    // Arbitrary default split size - 4 times the size of one L0 compaction.
+    double flushSize = sci.getMemstoreFlushSize();
+    if (flushSize == 0) {
+      flushSize = 128 * 1024 * 1024;
     }
+    long defaultSplitSize = (long)(flushSize * getLevel0MinFiles() * 4 * splitPartCount);
+    this.sizeToSplitAt = config.getLong(SIZE_TO_SPLIT_KEY, defaultSplitSize);
+    this.initialCount = config.getInt(INITIAL_STRIPE_COUNT_KEY, 1);
+    this.splitPartSize = (long)(this.sizeToSplitAt / this.splitPartCount);
+  }
+
+  private static float getFloat(
+      Configuration config, String key, float defaultValue, boolean moreThanOne) {
+    float value = config.getFloat(key, defaultValue);
+    if (value == 0) {
+      LOG.warn(String.format("%s is set to 0; using default value of %f", key, defaultValue));
+      value = defaultValue;
+    } else if ((value > 1f) != moreThanOne) {
+      value = 1f / value;
+    }
+    return value;
+  }
+
+  public float getMaxSplitImbalance() {
+    return this.maxRegionSplitImbalance;
+  }
+
+  public int getLevel0MinFiles() {
+    return level0CompactMinFiles;
+  }
+
+  public int getStripeCompactMinFiles() {
+    return stripeCompactMinFiles;
+  }
+
+  public int getStripeCompactMaxFiles() {
+    return stripeCompactMaxFiles;
+  }
+
+  public long getSplitSize() {
+    return sizeToSplitAt;
+  }
+
+  public int getInitialCount() {
+    return initialCount;
+  }
+
+  public float getSplitCount() {
+    return splitPartCount;
   }
 
   /**
-   * @return the maximum imbalance to tolerate between sides when splitting the region
-   * at the stripe boundary. If the ratio of a larger to a smaller side of the split on
-   * the stripe-boundary is bigger than this, then some stripe will be split.
+   * @return the desired size of the target stripe when splitting, in bytes.
+   *         Derived from {@link #getSplitSize()} and {@link #getSplitCount()}.
    */
-  public float getMaxSplitImbalance() {
-    return this.maxSplitImbalance;
+  public long getSplitPartSize() {
+    return splitPartSize;
   }
 }

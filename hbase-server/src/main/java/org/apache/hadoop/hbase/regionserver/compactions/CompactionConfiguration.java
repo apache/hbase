@@ -47,6 +47,7 @@ public class CompactionConfiguration {
   static final Log LOG = LogFactory.getLog(CompactionConfiguration.class);
 
   private static final String CONFIG_PREFIX = "hbase.hstore.compaction.";
+  public static final String RATIO_KEY = CONFIG_PREFIX + "ratio";
 
   Configuration conf;
   StoreConfigInformation storeConfigInfo;
@@ -72,7 +73,7 @@ public class CompactionConfiguration {
     minFilesToCompact = Math.max(2, conf.getInt(CONFIG_PREFIX + "min",
           /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
     maxFilesToCompact = conf.getInt(CONFIG_PREFIX + "max", 10);
-    compactionRatio = conf.getFloat(CONFIG_PREFIX + "ratio", 1.2F);
+    compactionRatio = conf.getFloat(RATIO_KEY, 1.2F);
     offPeekCompactionRatio = conf.getFloat(CONFIG_PREFIX + "ratio.offpeak", 5.0F);
 
     throttlePoint =  conf.getLong("hbase.regionserver.thread.compaction.throttle",

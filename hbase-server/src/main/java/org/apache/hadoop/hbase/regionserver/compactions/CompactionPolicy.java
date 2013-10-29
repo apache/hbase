@@ -56,14 +56,6 @@ public abstract class CompactionPolicy {
   public abstract boolean throttleCompaction(long compactionSize);
 
   /**
-   * @param storeFiles Current store files.
-   * @param filesCompacting files currently compacting.
-   * @return whether a compactionSelection is possible
-   */
-  public abstract boolean needsCompaction(final Collection<StoreFile> storeFiles,
-      final List<StoreFile> filesCompacting);
-
-  /**
    * Inform the policy that some configuration has been change,
    * so cached value should be updated it any.
    */

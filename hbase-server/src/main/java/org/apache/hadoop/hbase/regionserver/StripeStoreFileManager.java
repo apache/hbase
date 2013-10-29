@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
 
@@ -58,7 +59,8 @@ import com.google.common.collect.ImmutableList;
  *  - Compaction has one contiguous set of stripes both in and out, except if L0 is involved.
  */
 @InterfaceAudience.Private
-class StripeStoreFileManager implements StoreFileManager {
+public class StripeStoreFileManager
+  implements StoreFileManager, StripeCompactionPolicy.StripeInformationProvider {
   static final Log LOG = LogFactory.getLog(StripeStoreFileManager.class);
 
   /**
@@ -81,16 +83,16 @@ class StripeStoreFileManager implements StoreFileManager {
    */
   private static class State {
     /**
-     * The end keys of each stripe. The last stripe end is always open-ended, so it's not stored
-     * here. It is invariant that the start key of the stripe is the end key of the previous one
+     * The end rows of each stripe. The last stripe end is always open-ended, so it's not stored
+     * here. It is invariant that the start row of the stripe is the end row of the previous one
      * (and is an open boundary for the first one).
      */
     public byte[][] stripeEndRows = new byte[0][];
 
     /**
-     * Files by stripe. Each element of the list corresponds to stripeEndKey with the corresponding
-     * index, except the last one. Inside each list, the files are in reverse order by seqNum.
-     * Note that the length of this is one higher than that of stripeEndKeys.
+     * Files by stripe. Each element of the list corresponds to stripeEndRow element with the
+     * same index, except the last one. Inside each list, the files are in reverse order by
+     * seqNum. Note that the length of this is one higher than that of stripeEndKeys.
      */
     public ArrayList<ImmutableList<StoreFile>> stripeFiles
       = new ArrayList<ImmutableList<StoreFile>>();
@@ -105,16 +107,20 @@ class StripeStoreFileManager implements StoreFileManager {
   /** Cached file metadata (or overrides as the case may be) */
   private HashMap<StoreFile, byte[]> fileStarts = new HashMap<StoreFile, byte[]>();
   private HashMap<StoreFile, byte[]> fileEnds = new HashMap<StoreFile, byte[]>();
+  /** Normally invalid key is null, but in the map null is the result for "no key"; so use
+   * the following constant value in these maps instead. Note that this is a constant and
+   * we use it to compare by reference when we read from the map. */
+  private static final byte[] INVALID_KEY_IN_MAP = new byte[0];
 
   private final KVComparator kvComparator;
   private StripeStoreConfig config;
 
   private final int blockingFileCount;
 
-  public StripeStoreFileManager(KVComparator kvComparator, Configuration conf) throws Exception {
+  public StripeStoreFileManager(
+      KVComparator kvComparator, Configuration conf, StripeStoreConfig config) {
     this.kvComparator = kvComparator;
-    // TODO: create this in a shared manner in StoreEngine when there's one
-    this.config = new StripeStoreConfig(conf);
+    this.config = config;
     this.blockingFileCount = conf.getInt(
         HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
   }
@@ -378,7 +384,7 @@ class StripeStoreFileManager implements StoreFileManager {
     while (entryIter.hasNext()) {
       Map.Entry<byte[], ArrayList<StoreFile>> entry = entryIter.next();
       ArrayList<StoreFile> files = entry.getValue();
-      // Validate the file start keys, and remove the bad ones to level 0.
+      // Validate the file start rows, and remove the bad ones to level 0.
       for (int i = 0; i < files.size(); ++i) {
         StoreFile sf = files.get(i);
         byte[] startRow = startOf(sf);
@@ -459,15 +465,8 @@ class StripeStoreFileManager implements StoreFileManager {
   }
 
   private void ensureLevel0Metadata(StoreFile sf) {
-    if (!isInvalid(startOf(sf))) this.fileStarts.put(sf, null);
-    if (!isInvalid(endOf(sf))) this.fileEnds.put(sf, null);
-  }
-
-  /**
-   * For testing.
-   */
-  List<StoreFile> getLevel0Files() {
-    return state.level0Files;
+    if (!isInvalid(startOf(sf))) this.fileStarts.put(sf, INVALID_KEY_IN_MAP);
+    if (!isInvalid(endOf(sf))) this.fileEnds.put(sf, INVALID_KEY_IN_MAP);
   }
 
   private void debugDumpState(String string) {
@@ -515,7 +514,7 @@ class StripeStoreFileManager implements StoreFileManager {
   }
 
   /**
-   * Finds the stripe index by end key.
+   * Finds the stripe index by end row.
    */
   private final int findStripeIndexByEndRow(byte[] endRow) {
     assert !isInvalid(endRow);
@@ -524,7 +523,7 @@ class StripeStoreFileManager implements StoreFileManager {
   }
 
   /**
-   * Finds the stripe index for the stripe containing a key provided externally for get/scan.
+   * Finds the stripe index for the stripe containing a row provided externally for get/scan.
    */
   private final int findStripeForRow(byte[] row, boolean isStart) {
     if (isStart && row == HConstants.EMPTY_START_ROW) return 0;
@@ -537,33 +536,28 @@ class StripeStoreFileManager implements StoreFileManager {
     return Math.abs(Arrays.binarySearch(state.stripeEndRows, row, Bytes.BYTES_COMPARATOR) + 1);
   }
 
-  /**
-   * Gets the start key for a given stripe.
-   * @param stripeIndex Stripe index.
-   * @return Start key. May be an open key.
-   */
+  @Override
   public final byte[] getStartRow(int stripeIndex) {
     return (stripeIndex == 0  ? OPEN_KEY : state.stripeEndRows[stripeIndex - 1]);
   }
 
-  /**
-   * Gets the start key for a given stripe.
-   * @param stripeIndex Stripe index.
-   * @return Start key. May be an open key.
-   */
+  @Override
   public final byte[] getEndRow(int stripeIndex) {
     return (stripeIndex == state.stripeEndRows.length
         ? OPEN_KEY : state.stripeEndRows[stripeIndex]);
   }
 
+
   private byte[] startOf(StoreFile sf) {
     byte[] result = this.fileStarts.get(sf);
-    return result != null ? result : sf.getMetadataValue(STRIPE_START_KEY);
+    return result == null ? sf.getMetadataValue(STRIPE_START_KEY)
+        : (result == INVALID_KEY_IN_MAP ? INVALID_KEY : result);
   }
 
   private byte[] endOf(StoreFile sf) {
     byte[] result = this.fileEnds.get(sf);
-    return result != null ? result : sf.getMetadataValue(STRIPE_END_KEY);
+    return result == null ? sf.getMetadataValue(STRIPE_END_KEY)
+        : (result == INVALID_KEY_IN_MAP ? INVALID_KEY : result);
   }
 
   /**
@@ -793,8 +787,8 @@ class StripeStoreFileManager implements StoreFileManager {
 
     /**
      * See {@link #addCompactionResults(Collection, Collection)} - updates the stripe list with
-     * new candidate stripes/removes old stripes; produces new set of stripe end keys.
-     * @param newStripes  New stripes - files by end key.
+     * new candidate stripes/removes old stripes; produces new set of stripe end rows.
+     * @param newStripes  New stripes - files by end row.
      */
     private void processNewCandidateStripes(
         TreeMap<byte[], StoreFile> newStripes) throws IOException {
@@ -858,5 +852,32 @@ class StripeStoreFileManager implements StoreFileManager {
         ++insertAt;
       }
     }
+  }
+
+  @Override
+  public List<StoreFile> getLevel0Files() {
+    return this.state.level0Files;
+  }
+
+  @Override
+  public List<byte[]> getStripeBoundaries() {
+    if (this.state.stripeFiles.isEmpty()) return new ArrayList<byte[]>();
+    ArrayList<byte[]> result = new ArrayList<byte[]>(this.state.stripeEndRows.length + 2);
+    result.add(OPEN_KEY);
+    for (int i = 0; i < this.state.stripeEndRows.length; ++i) {
+      result.add(this.state.stripeEndRows[i]);
+    }
+    result.add(OPEN_KEY);
+    return result;
+  }
+
+  @Override
+  public ArrayList<ImmutableList<StoreFile>> getStripes() {
+    return this.state.stripeFiles;
+  }
+
+  @Override
+  public int getStripeCount() {
+    return this.state.stripeFiles.size();
   }
 }

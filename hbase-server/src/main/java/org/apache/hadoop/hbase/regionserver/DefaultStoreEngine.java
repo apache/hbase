@@ -54,6 +54,12 @@ public class DefaultStoreEngine extends StoreEngine<
     DEFAULT_COMPACTION_POLICY_CLASS = ExploringCompactionPolicy.class;
 
   @Override
+  public boolean needsCompaction(List<StoreFile> filesCompacting) {
+    return compactionPolicy.needsCompaction(
+        this.storeFileManager.getStorefiles(), filesCompacting);
+  }
+
+  @Override
   protected void createComponents(
       Configuration conf, Store store, KVComparator kvComparator) throws IOException {
     storeFileManager = new DefaultStoreFileManager(kvComparator, conf);

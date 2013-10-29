@@ -43,6 +43,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 
 @Category(SmallTests.class)
@@ -237,7 +238,7 @@ public class TestStripeStoreFileManager {
 
     Configuration conf = HBaseConfiguration.create();
     if (splitRatioToVerify != 0) {
-      conf.setFloat(StripeStoreConfig.MAX_SPLIT_IMBALANCE, splitRatioToVerify);
+      conf.setFloat(StripeStoreConfig.MAX_REGION_SPLIT_IMBALANCE_KEY, splitRatioToVerify);
     }
     StripeStoreFileManager manager = createManager(al(), conf);
     manager.addCompactionResults(al(), sfs);
@@ -536,6 +537,7 @@ public class TestStripeStoreFileManager {
     verifyGetOrScanScenario(manager, false, null, null, results);
   }
 
+  // TODO: replace with Mockito?
   private static MockStoreFile createFile(
       long size, long seqNum, byte[] startKey, byte[] endKey) throws Exception {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
@@ -573,7 +575,9 @@ public class TestStripeStoreFileManager {
 
   private static StripeStoreFileManager createManager(
       ArrayList<StoreFile> sfs, Configuration conf) throws Exception {
-    StripeStoreFileManager result = new StripeStoreFileManager(new KVComparator(), conf);
+    StripeStoreConfig config = new StripeStoreConfig(
+        conf, Mockito.mock(StoreConfigInformation.class));
+    StripeStoreFileManager result = new StripeStoreFileManager(new KVComparator(), conf, config);
     result.loadFiles(sfs);
     return result;
   }

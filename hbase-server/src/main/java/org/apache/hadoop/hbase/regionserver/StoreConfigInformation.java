@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public interface StoreConfigInformation {
   /**
-   * TODO: remove after HBASE-7252 is fixed.
    * @return Gets the Memstore flush size for the region that this store works with.
    */
   long getMemstoreFlushSize();

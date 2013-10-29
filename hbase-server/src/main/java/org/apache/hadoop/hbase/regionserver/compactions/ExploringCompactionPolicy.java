@@ -53,9 +53,19 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
   @Override
   final ArrayList<StoreFile> applyCompactionPolicy(final ArrayList<StoreFile> candidates,
     final boolean mayUseOffPeak, final boolean mightBeStuck) throws IOException {
+    return new ArrayList<StoreFile>(applyCompactionPolicy(candidates, mightBeStuck,
+        mayUseOffPeak, comConf.getMinFilesToCompact(), comConf.getMaxFilesToCompact()));
+  }
+
+  public List<StoreFile> applyCompactionPolicy(final List<StoreFile> candidates,
+       boolean mightBeStuck, boolean mayUseOffPeak, int minFiles, int maxFiles) {
+
+    final double currentRatio = mayUseOffPeak
+        ? comConf.getCompactionRatioOffPeak() : comConf.getCompactionRatio();
+
     // Start off choosing nothing.
     List<StoreFile> bestSelection = new ArrayList<StoreFile>(0);
-    List<StoreFile> smallest = new ArrayList<StoreFile>(0);
+    List<StoreFile> smallest = mightBeStuck ? new ArrayList<StoreFile>(0) : null;
     long bestSize = 0;
     long smallestSize = Long.MAX_VALUE;
 
@@ -63,15 +73,15 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
     // Consider every starting place.
     for (int start = 0; start < candidates.size(); start++) {
       // Consider every different sub list permutation in between start and end with min files.
-      for (int currentEnd = start + comConf.getMinFilesToCompact() - 1;
+      for (int currentEnd = start + minFiles - 1;
           currentEnd < candidates.size(); currentEnd++) {
         List<StoreFile> potentialMatchFiles = candidates.subList(start, currentEnd + 1);
 
         // Sanity checks
-        if (potentialMatchFiles.size() < comConf.getMinFilesToCompact()) {
+        if (potentialMatchFiles.size() < minFiles) {
           continue;
         }
-        if (potentialMatchFiles.size() > comConf.getMaxFilesToCompact()) {
+        if (potentialMatchFiles.size() > maxFiles) {
           continue;
         }
 
@@ -81,7 +91,7 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
 
         // Store the smallest set of files.  This stored set of files will be used
         // if it looks like the algorithm is stuck.
-        if (size < smallestSize) {
+        if (mightBeStuck && size < smallestSize) {
           smallest = potentialMatchFiles;
           smallestSize = size;
         }
@@ -92,7 +102,7 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
 
         ++opts;
         if (size >= comConf.getMinCompactSize()
-            && !filesInRatio(potentialMatchFiles, mayUseOffPeak)) {
+            && !filesInRatio(potentialMatchFiles, currentRatio)) {
           continue;
         }
 
@@ -150,15 +160,13 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
    *      FileSize(i) <= ( Sum(0,N,FileSize(_)) - FileSize(i) ) * Ratio.
    *
    * @param files List of store files to consider as a compaction candidate.
-   * @param isOffPeak should the offPeak compaction ratio be used ?
+   * @param currentRatio The ratio to use.
    * @return a boolean if these files satisfy the ratio constraints.
    */
-  private boolean filesInRatio(final List<StoreFile> files, final boolean isOffPeak) {
+  private boolean filesInRatio(final List<StoreFile> files, final double currentRatio) {
     if (files.size() < 2) {
-      return  true;
+      return true;
     }
-    final double currentRatio =
-        isOffPeak ? comConf.getCompactionRatioOffPeak() : comConf.getCompactionRatio();
 
     long totalFileSize = getTotalStoreSize(files);
 

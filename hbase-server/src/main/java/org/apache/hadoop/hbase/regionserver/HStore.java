@@ -71,6 +71,8 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
+import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1194,8 +1196,8 @@ public class HStore implements Store {
 
     try {
       // Ready to go. Have list of files to compact.
-      List<Path> newFiles =
-          this.storeEngine.getCompactor().compactForTesting(filesToCompact, isMajor);
+      List<Path> newFiles = ((DefaultCompactor)this.storeEngine.getCompactor())
+          .compactForTesting(filesToCompact, isMajor);
       for (Path newFile: newFiles) {
         // Move the compaction into place.
         StoreFile sf = moveFileIntoPlace(newFile);
@@ -1881,8 +1883,7 @@ public class HStore implements Store {
 
   @Override
   public boolean needsCompaction() {
-    return storeEngine.getCompactionPolicy().needsCompaction(
-        this.storeEngine.getStoreFileManager().getStorefiles(), filesCompacting);
+    return this.storeEngine.needsCompaction(this.filesCompacting);
   }
 
   @Override
