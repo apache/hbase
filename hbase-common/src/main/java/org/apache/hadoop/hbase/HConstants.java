@@ -510,9 +510,10 @@ public final class HConstants {
    * run out of array items.  Retries beyond this use the last number in the array.  So, for
    * example, if hbase.client.pause is 1 second, and maximum retries count
    * hbase.client.retries.number is 10, we will retry at the following intervals:
-   * 1, 2, 3, 10, 100, 100, 100, 100, 100, 100.
+   * 1, 2, 3, 5, 10, 20, 40, 100, 100, 100.
+   * With 100ms, a back-off of 200 means 20s
    */
-  public static int RETRY_BACKOFF[] = { 1, 2, 3, 5, 10, 100 };
+  public static int RETRY_BACKOFF[] = { 1, 2, 3, 5, 10, 20, 40, 100, 100, 100, 100, 200, 200 };
 
   public static final String REGION_IMPL = "hbase.hregion.impl";
 
@@ -589,7 +590,7 @@ public final class HConstants {
   /**
    * Default value of {@link #HBASE_CLIENT_MAX_PERSERVER_TASKS}.
    */
-  public static final int DEFAULT_HBASE_CLIENT_MAX_PERSERVER_TASKS = 5;
+  public static final int DEFAULT_HBASE_CLIENT_MAX_PERSERVER_TASKS = 2;
 
   /**
    * The maximum number of concurrent connections the client will maintain to a single

@@ -2541,7 +2541,13 @@ public class HRegion implements HeapSize { // , Writable{
 
     if (this.memstoreSize.get() > this.blockingMemStoreSize) {
       requestFlush();
-      throw new RegionTooBusyException("above memstore limit");
+      throw new RegionTooBusyException("Above memstore limit, " +
+          "regionName=" + (this.getRegionInfo() == null ? "unknown" :
+          this.getRegionInfo().getRegionNameAsString()) +
+          ", server=" + (this.getRegionServerServices() == null ? "unknown" :
+          this.getRegionServerServices().getServerName()) +
+          ", memstoreSize=" + memstoreSize.get() +
+          ", blockingMemStoreSize=" + blockingMemStoreSize);
     }
   }
 
@@ -5381,10 +5387,14 @@ public class HRegion implements HeapSize { // , Writable{
       throws RegionTooBusyException, InterruptedIOException {
     try {
       final long waitTime = Math.min(maxBusyWaitDuration,
-        busyWaitDuration * Math.min(multiplier, maxBusyWaitMultiplier));
+          busyWaitDuration * Math.min(multiplier, maxBusyWaitMultiplier));
       if (!lock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
         throw new RegionTooBusyException(
-          "failed to get a lock in " + waitTime + "ms");
+            "failed to get a lock in " + waitTime + " ms. " +
+                "regionName=" + (this.getRegionInfo() == null ? "unknown" :
+                this.getRegionInfo().getRegionNameAsString()) +
+                ", server=" + (this.getRegionServerServices() == null ? "unknown" :
+                this.getRegionServerServices().getServerName()));
       }
     } catch (InterruptedException ie) {
       LOG.info("Interrupted while waiting for a lock");

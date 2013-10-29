@@ -870,7 +870,7 @@ public class TestHCM {
       long timeBase = timeMachine.currentTimeMillis();
       long largeAmountOfTime = ANY_PAUSE * 1000;
       HConnectionManager.ServerErrorTracker tracker =
-          new HConnectionManager.ServerErrorTracker(largeAmountOfTime);
+          new HConnectionManager.ServerErrorTracker(largeAmountOfTime, 100);
 
       // The default backoff is 0.
       assertEquals(0, tracker.calculateBackoffTime(location, ANY_PAUSE));
@@ -912,11 +912,11 @@ public class TestHCM {
       // We also should not go over the boundary; last retry would be on it.
       long timeLeft = (long)(ANY_PAUSE * 0.5);
       timeMachine.setValue(timeBase + largeAmountOfTime - timeLeft);
-      assertTrue(tracker.canRetryMore());
+      assertTrue(tracker.canRetryMore(1));
       tracker.reportServerError(location);
       assertEquals(timeLeft, tracker.calculateBackoffTime(location, ANY_PAUSE));
       timeMachine.setValue(timeBase + largeAmountOfTime);
-      assertFalse(tracker.canRetryMore());
+      assertFalse(tracker.canRetryMore(1));
     } finally {
       EnvironmentEdgeManager.reset();
     }

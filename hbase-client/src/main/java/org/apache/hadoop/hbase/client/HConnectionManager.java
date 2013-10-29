@@ -24,6 +24,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -2637,15 +2638,23 @@ public class HConnectionManager {
     // We need a concurrent map here, as we could have multiple threads updating it in parallel.
     private final ConcurrentMap<HRegionLocation, ServerErrors> errorsByServer =
         new ConcurrentHashMap<HRegionLocation, ServerErrors>();
-    private long canRetryUntil = 0;
+    private final long canRetryUntil;
+    private final int maxRetries;
+    private final String startTrackingTime;
 
-    public ServerErrorTracker(long timeout) {
-      LOG.trace("Server tracker timeout is " + timeout + "ms");
+    public ServerErrorTracker(long timeout, int maxRetries) {
+      this.maxRetries = maxRetries;
       this.canRetryUntil = EnvironmentEdgeManager.currentTimeMillis() + timeout;
+      this.startTrackingTime = new Date().toString();
     }
 
-    boolean canRetryMore() {
-      return EnvironmentEdgeManager.currentTimeMillis() < this.canRetryUntil;
+    /**
+     * We stop to retry when we have exhausted BOTH the number of retries and the time allocated.
+     */
+    boolean canRetryMore(int numRetry) {
+      // If there is a single try we must not take into account the time.
+      return numRetry < maxRetries || (maxRetries > 1 &&
+          EnvironmentEdgeManager.currentTimeMillis() < this.canRetryUntil);
     }
 
     /**
@@ -2656,20 +2665,12 @@ public class HConnectionManager {
      * @return The time to wait before sending next request.
      */
     long calculateBackoffTime(HRegionLocation server, long basePause) {
-      long result = 0;
+      long result;
       ServerErrors errorStats = errorsByServer.get(server);
       if (errorStats != null) {
-        result = ConnectionUtils.getPauseTime(basePause, errorStats.retries);
-        // Adjust by the time we already waited since last talking to this server.
-        long now = EnvironmentEdgeManager.currentTimeMillis();
-        long timeSinceLastError = now - errorStats.getLastErrorTime();
-        if (timeSinceLastError > 0) {
-          result = Math.max(0, result - timeSinceLastError);
-        }
-        // Finally, see if the backoff time overshoots the timeout.
-        if (result > 0 && (now + result > this.canRetryUntil)) {
-          result = Math.max(0, this.canRetryUntil - now);
-        }
+        result = ConnectionUtils.getPauseTime(basePause, errorStats.retries.get());
+      } else {
+        result = 0; // yes, if the server is not in our list we don't wait before retrying.
       }
       return result;
     }
@@ -2684,29 +2685,25 @@ public class HConnectionManager {
       if (errors != null) {
         errors.addError();
       } else {
-        errorsByServer.put(server, new ServerErrors());
+        errors = errorsByServer.putIfAbsent(server, new ServerErrors());
+        if (errors != null){
+          errors.addError();
+        }
       }
+    }
+
+    String getStartTrackingTime() {
+      return startTrackingTime;
     }
 
     /**
      * The record of errors for a server.
      */
     private static class ServerErrors {
-      public long lastErrorTime;
-      public int retries;
-
-      public ServerErrors() {
-        this.lastErrorTime = EnvironmentEdgeManager.currentTimeMillis();
-        this.retries = 0;
-      }
+      public final AtomicInteger retries = new AtomicInteger(0);
 
       public void addError() {
-        this.lastErrorTime = EnvironmentEdgeManager.currentTimeMillis();
-        ++this.retries;
-      }
-
-      public long getLastErrorTime() {
-        return this.lastErrorTime;
+        retries.incrementAndGet();
       }
     }
   }
