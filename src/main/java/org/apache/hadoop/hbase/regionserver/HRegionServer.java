@@ -466,6 +466,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.rpcServer.setQosFunction(new QosFunction());
     this.startcode = System.currentTimeMillis();
 
+    conf.set("hbase.regionserver.rpc.client.socket.bind.address", this.isa.getHostName());
+
     // login the zookeeper client principal (if using security)
     ZKUtil.loginClient(this.conf, "hbase.zookeeper.client.keytab.file",
       "hbase.zookeeper.client.kerberos.principal", this.isa.getHostName());
@@ -738,6 +740,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
 
     try {
+      // Set our ephemeral znode up in zookeeper now we have a name.
+      createMyEphemeralNode();
+   
       // Try and register with the Master; tell it we are here.  Break if
       // server is stopped or the clusterup flag is down or hdfs went wacky.
       while (keepLooping()) {
@@ -1080,8 +1085,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         this.conf.set("mapred.task.id", "hb_rs_" +
           this.serverNameFromMasterPOV.toString());
       }
-      // Set our ephemeral znode up in zookeeper now we have a name.
-      createMyEphemeralNode();
 
       // Master sent us hbase.rootdir to use. Should be fully qualified
       // path with file system specification included. Set 'fs.defaultFS'

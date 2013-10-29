@@ -87,6 +87,7 @@ public class HBaseClient {
   protected final boolean tcpKeepAlive; // if T then use keepalives
   protected int pingInterval; // how often sends ping to the server in msecs
   protected int socketTimeout; // socket timeout
+  protected final InetSocketAddress bindAddress; // address to bind to the client socket
   protected FailedServers failedServers;
 
   protected final SocketFactory socketFactory;           // how to create sockets
@@ -386,6 +387,7 @@ public class HBaseClient {
           this.socket = socketFactory.createSocket();
           this.socket.setTcpNoDelay(tcpNoDelay);
           this.socket.setKeepAlive(tcpKeepAlive);
+          if (bindAddress != null) this.socket.bind(bindAddress);
           // connection time out is 20s
           NetUtils.connect(this.socket, remoteId.getAddress(),
               getSocketTimeout(conf));
@@ -870,6 +872,12 @@ public class HBaseClient {
     this.clusterId = conf.get(HConstants.CLUSTER_ID, "default");
     this.connections = new PoolMap<ConnectionId, Connection>(
         getPoolType(conf), getPoolSize(conf));
+    String hostName = this.conf.get("hbase.regionserver.rpc.client.socket.bind.address");
+    if (hostName != null) {
+      this.bindAddress = new InetSocketAddress(hostName, 0);
+    } else {
+      this.bindAddress = null;
+    }
     this.failedServers = new FailedServers(conf);
   }
 
