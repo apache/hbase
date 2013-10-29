@@ -72,7 +72,7 @@ public abstract class Compactor {
   }
 
   /**
-   * TODO: Replace this with {@link CellOutputStream} when StoreFile.Writer uses cells.
+   * TODO: Replace this with CellOutputStream when StoreFile.Writer uses cells.
    */
   public interface CellSink {
     void append(KeyValue kv) throws IOException;
@@ -262,10 +262,12 @@ public abstract class Compactor {
   }
 
   /**
+   * @param store The store.
    * @param scanners Store file scanners.
-   * @param scanType Scan type.
    * @param smallestReadPoint Smallest MVCC read point.
    * @param earliestPutTs Earliest put across all files.
+   * @param dropDeletesFromRow Drop deletes starting with this row, inclusive. Can be null.
+   * @param dropDeletesToRow Drop deletes ending with this row, exclusive. Can be null.
    * @return A compaction scanner.
    */
   protected InternalScanner createScanner(Store store, List<StoreFileScanner> scanners,
