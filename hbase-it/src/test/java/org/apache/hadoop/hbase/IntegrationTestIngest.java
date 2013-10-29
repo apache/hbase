@@ -62,6 +62,10 @@ public class IntegrationTestIngest extends IntegrationTestBase {
     loadTool.setConf(util.getConfiguration());
     // Initialize load test tool before we start breaking things;
     // LoadTestTool init, even when it is a no-op, is very fragile.
+    initTable();
+  }
+
+  protected void initTable() throws IOException {
     int ret = loadTool.run(new String[] { "-tn", getTablename(), "-init_only" });
     Assert.assertEquals("Failed to initialize LoadTestTool", 0, ret);
   }

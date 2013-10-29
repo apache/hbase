@@ -623,6 +623,12 @@ public class HStore implements Store {
     notifyChangedReadersObservers();
     LOG.info("Successfully loaded store file " + srcPath
         + " into store " + this + " (new location: " + dstPath + ")");
+    if (LOG.isTraceEnabled()) {
+      String traceMessage = "BULK LOAD time,size,store size,store files ["
+          + EnvironmentEdgeManager.currentTimeMillis() + "," + r.length() + "," + storeSize
+          + "," + storeEngine.getStoreFileManager().getStorefileCount() + "]";
+      LOG.trace(traceMessage);
+    }
   }
 
   @Override
@@ -861,6 +867,16 @@ public class HStore implements Store {
     // Tell listeners of the change in readers.
     notifyChangedReadersObservers();
 
+    if (LOG.isTraceEnabled()) {
+      long totalSize = 0;
+      for (StoreFile sf : sfs) {
+        totalSize += sf.getReader().length();
+      }
+      String traceMessage = "FLUSH time,count,size,store size,store files ["
+          + EnvironmentEdgeManager.currentTimeMillis() + "," + sfs.size() + "," + totalSize
+          + "," + storeSize + "," + storeEngine.getStoreFileManager().getStorefileCount() + "]";
+      LOG.trace(traceMessage);
+    }
     return needsCompaction();
   }
 
@@ -1104,6 +1120,17 @@ public class HStore implements Store {
       .append(", and took ").append(StringUtils.formatTimeDiff(now, compactionStartTime))
       .append(" to execute.");
     LOG.info(message.toString());
+    if (LOG.isTraceEnabled()) {
+     int fileCount = storeEngine.getStoreFileManager().getStorefileCount();
+     long resultSize = 0;
+     for (StoreFile sf : sfs) {
+       resultSize += sf.getReader().length();
+     }
+     String traceMessage = "COMPACTION start,end,size out,files in,files out,store size,"
+       + "store files [" + compactionStartTime + "," + now + "," + resultSize + ","
+         + cr.getFiles().size() + "," + sfs.size() + "," +  storeSize + "," + fileCount + "]";
+     LOG.trace(traceMessage);
+    }
   }
 
   /**
