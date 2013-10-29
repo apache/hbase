@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.io.Writable;
@@ -169,9 +170,10 @@ public class TableMapReduceUtil {
   }
 
   public static void initCredentials(JobConf job) throws IOException {
-    if (User.isHBaseSecurityEnabled(job)) {
+    UserProvider provider = UserProvider.instantiate(job);
+    if (provider.isHBaseSecurityEnabled()) {
       try {
-        User.getCurrent().obtainAuthTokenForJob(job);
+        provider.getCurrent().obtainAuthTokenForJob(job);
       } catch (InterruptedException ie) {
         ie.printStackTrace();
         Thread.interrupted();

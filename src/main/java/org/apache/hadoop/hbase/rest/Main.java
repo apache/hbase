@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -82,11 +83,12 @@ public class Main implements Constants {
     VersionInfo.logVersion();
     Configuration conf = HBaseConfiguration.create();
     // login the server principal (if using secure Hadoop)
-    if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
+    UserProvider provider = UserProvider.instantiate(conf);
+    if (provider.isHadoopSecurityEnabled() && provider.isHBaseSecurityEnabled()) {
       String machineName = Strings.domainNamePointerToHostName(
         DNS.getDefaultHost(conf.get("hbase.rest.dns.interface", "default"),
           conf.get("hbase.rest.dns.nameserver", "default")));
-      User.login(conf, "hbase.rest.keytab.file", "hbase.rest.kerberos.principal",
+      provider.login("hbase.rest.keytab.file", "hbase.rest.kerberos.principal",
         machineName);
     }
 

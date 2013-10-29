@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
@@ -58,18 +59,20 @@ public class SecureRpcEngine implements RpcEngine {
 
   private Configuration conf;
   private SecureClient client;
+  private UserProvider provider;
 
   @Override
   public void setConf(Configuration config) {
     this.conf = config;
-    if (User.isHBaseSecurityEnabled(conf)) {
+    this.provider = UserProvider.instantiate(config);
+    if (provider.isHBaseSecurityEnabled()) {
       HBaseSaslRpcServer.init(conf);
     }
     // check for an already created client
     if (this.client != null) {
       this.client.stop();
     }
-    this.client = new SecureClient(HbaseObjectWritable.class, conf);
+    this.client = new SecureClient(HbaseObjectWritable.class, conf, provider);
   }
 
   @Override
@@ -136,7 +139,7 @@ public class SecureRpcEngine implements RpcEngine {
     T proxy =
         (T) Proxy.newProxyInstance(
             protocol.getClassLoader(), new Class[] { protocol },
-            new Invoker(this.client, protocol, addr, User.getCurrent(),
+          new Invoker(this.client, protocol, addr, provider.getCurrent(),
                 HBaseRPC.getRpcTimeout(rpcTimeout)));
     /*
      * TODO: checking protocol version only needs to be done once when we setup a new

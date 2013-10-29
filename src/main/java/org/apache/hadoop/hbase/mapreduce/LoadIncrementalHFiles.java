@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ServerCallable;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.coprocessor.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
@@ -74,7 +75,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.token.Token;
@@ -104,19 +104,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private Token<?> userToken;
   private String bulkToken;
   private final boolean assignSeqIds;
+  private UserProvider userProvider;
 
   //package private for testing
-  LoadIncrementalHFiles(Configuration conf, Boolean useSecure) throws Exception {
+  public LoadIncrementalHFiles(Configuration conf) throws Exception {
     super(conf);
     this.cfg = conf;
     this.hbAdmin = new HBaseAdmin(conf);
     //added simple for testing
-    this.useSecure = useSecure != null ? useSecure : User.isHBaseSecurityEnabled(conf);
+    this.userProvider = UserProvider.instantiate(conf);
+    this.useSecure = userProvider.isHBaseSecurityEnabled();
     this.assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, false);
-  }
-
-  public LoadIncrementalHFiles(Configuration conf) throws Exception {
-    this(conf, null);
   }
 
   private void usage() {
@@ -232,7 +230,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       if(useSecure) {
         //This condition is here for unit testing
         //Since delegation token doesn't work in mini cluster
-        if(User.isSecurityEnabled()) {
+        if (userProvider.isHadoopSecurityEnabled()) {
           FileSystem fs = FileSystem.get(cfg);
           userToken = fs.getDelegationToken("renewer");
         }

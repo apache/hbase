@@ -37,6 +37,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Operation;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -97,6 +98,7 @@ class WritableRpcEngine implements RpcEngine {
 
   private Configuration conf;
   private HBaseClient client;
+  private UserProvider userProvider;
 
   @Override
   public void setConf(Configuration config) {
@@ -106,6 +108,7 @@ class WritableRpcEngine implements RpcEngine {
       this.client.stop();
     }
     this.client = new HBaseClient(HbaseObjectWritable.class, conf);
+    this.userProvider = UserProvider.instantiate(config);
   }
 
   @Override
@@ -127,7 +130,7 @@ class WritableRpcEngine implements RpcEngine {
     T proxy =
           (T) Proxy.newProxyInstance(
               protocol.getClassLoader(), new Class[] { protocol },
-              new Invoker(client, protocol, addr, User.getCurrent(), conf,
+              new Invoker(client, protocol, addr, userProvider.getCurrent(), conf,
                   HBaseRPC.getRpcTimeout(rpcTimeout)));
 
     /*

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.AuthMethod;
 import org.apache.hadoop.hbase.security.KerberosInfo;
@@ -102,7 +103,7 @@ public class SecureClient extends HBaseClient {
 
       User ticket = remoteId.getTicket();
       Class<?> protocol = remoteId.getProtocol();
-      this.useSasl = User.isHBaseSecurityEnabled(conf);
+      this.useSasl = userProvider.isHBaseSecurityEnabled();
       if (useSasl && protocol != null) {
         TokenInfo tokenInfo = protocol.getAnnotation(TokenInfo.class);
         if (tokenInfo != null) {
@@ -276,7 +277,7 @@ public class SecureClient extends HBaseClient {
             if (authMethod == AuthMethod.KERBEROS) {
               UserGroupInformation ugi = ticket.getUGI();
               if (ugi != null && ugi.getRealUser() != null) {
-                ticket = User.create(ugi.getRealUser());
+                ticket = userProvider.create(ugi.getRealUser());
               }
             }
             boolean continueSasl = false;
@@ -467,6 +468,7 @@ public class SecureClient extends HBaseClient {
   }
 
   private final boolean fallbackAllowed;
+  private UserProvider userProvider;
 
   /**
    * Construct an IPC client whose values are of the given {@link org.apache.hadoop.io.Writable}
@@ -476,7 +478,7 @@ public class SecureClient extends HBaseClient {
    * @param factory socket factory
    */
   public SecureClient(Class<? extends Writable> valueClass, Configuration conf,
-      SocketFactory factory) {
+      SocketFactory factory, UserProvider provider) {
     super(valueClass, conf, factory);
     this.fallbackAllowed =
       conf.getBoolean(IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
@@ -484,6 +486,7 @@ public class SecureClient extends HBaseClient {
     if (LOG.isDebugEnabled()) {
       LOG.debug("fallbackAllowed=" + this.fallbackAllowed);
     }
+    this.userProvider = provider;
   }
 
   /**
@@ -491,8 +494,9 @@ public class SecureClient extends HBaseClient {
    * @param valueClass value class
    * @param conf configuration
    */
-  public SecureClient(Class<? extends Writable> valueClass, Configuration conf) {
-    this(valueClass, conf, NetUtils.getDefaultSocketFactory(conf));
+  public SecureClient(Class<? extends Writable> valueClass, Configuration conf,
+      UserProvider provider) {
+    this(valueClass, conf, NetUtils.getDefaultSocketFactory(conf), provider);
   }
 
   /**

@@ -102,6 +102,7 @@ public class TestMasterStatusServlet {
 
     // Mock admin
     admin = Mockito.mock(HBaseAdmin.class); 
+    Mockito.when(admin.getConfiguration()).thenReturn(conf);
   }
   
 

@@ -470,10 +470,8 @@ public class HConnectionManager {
       this.properties = Collections.unmodifiableMap(m);
 
       try {
-        User currentUser = User.getCurrent();
-        if (currentUser != null) {
-          username = currentUser.getName();
-        }
+        UserProvider provider = UserProvider.instantiate(conf);
+        username = provider.getCurrentUserName();
       } catch (IOException ioe) {
         LOG.warn("Error obtaining current user, skipping username in HConnectionKey",
             ioe);

@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
@@ -328,7 +329,8 @@ Server {
       "hbase.zookeeper.client.kerberos.principal", this.isa.getHostName());
 
     // initialize server principal (if using secure Hadoop)
-    User.login(conf, "hbase.master.keytab.file",
+    UserProvider provider = UserProvider.instantiate(conf);
+    provider.login("hbase.master.keytab.file",
       "hbase.master.kerberos.principal", this.isa.getHostName());
 
     // set the thread name now we have an address

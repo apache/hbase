@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
@@ -97,6 +98,7 @@ public abstract class SecureServer extends HBaseServer {
 
   protected SecretManager<TokenIdentifier> secretManager;
   protected ServiceAuthorizationManager authManager;
+  private UserProvider userProvider;
 
   protected class SecureCall extends HBaseServer.Call {
     public SecureCall(int id, Writable param, Connection connection,
@@ -252,9 +254,9 @@ public abstract class SecureServer extends HBaseServer {
               "Can't retrieve username from tokenIdentifier.");
         }
         ugi.addTokenIdentifier(tokenId);
-        return User.create(ugi);
+        return userProvider.create(ugi);
       } else {
-        return User.create(UserGroupInformation.createRemoteUser(authorizedId));
+        return userProvider.create(UserGroupInformation.createRemoteUser(authorizedId));
       }
     }
 
@@ -540,7 +542,8 @@ public abstract class SecureServer extends HBaseServer {
             // for simple auth or kerberos auth
             // The user is the real user. Now we create a proxy user
             UserGroupInformation realUser = ticket.getUGI();
-            ticket = User.create(
+            ticket =
+                userProvider.create(
                 UserGroupInformation.createProxyUser(protocolUser.getName(),
                     realUser));
             // Now the user is a proxy user, set Authentication method Proxy.
@@ -690,7 +693,8 @@ public abstract class SecureServer extends HBaseServer {
         conf, serverName, highPriorityLevel);
     this.authorize =
       conf.getBoolean(HADOOP_SECURITY_AUTHORIZATION, false);
-    this.isSecurityEnabled = User.isHBaseSecurityEnabled(this.conf);
+    this.userProvider = UserProvider.instantiate(this.conf);
+    this.isSecurityEnabled = userProvider.isHBaseSecurityEnabled();
 
     if (isSecurityEnabled) {
       HBaseSaslRpcServer.init(conf);

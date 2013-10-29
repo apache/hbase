@@ -30,10 +30,15 @@ import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -41,7 +46,9 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -64,8 +71,6 @@ public class TestLoadIncrementalHFiles {
     Compression.Algorithm.NONE.getName();
 
   static HBaseTestingUtility util = new HBaseTestingUtility();
-  //used by secure subclass
-  static boolean useSecure = false;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -154,7 +159,8 @@ public class TestLoadIncrementalHFiles {
 
     HTable table = new HTable(util.getConfiguration(), TABLE);
     util.waitTableAvailable(TABLE, 30000);
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration(), useSecure);
+
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
     loader.doBulkLoad(dir, table);
 
     assertEquals(expectedRows, util.countRows(table));
@@ -239,7 +245,9 @@ public class TestLoadIncrementalHFiles {
 
     HTable table = new HTable(util.getConfiguration(), TABLE);
     util.waitTableAvailable(TABLE, 30000);
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration(), false);
+    // make sure we go back to the usual user provider
+    UserProvider.setUserProviderForTesting(util.getConfiguration(), UserProvider.class);
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
     try {
       loader.doBulkLoad(dir, table);
       assertTrue("Loading into table with non-existent family should have failed", false);

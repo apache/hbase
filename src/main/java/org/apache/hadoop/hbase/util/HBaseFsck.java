@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -1411,9 +1412,11 @@ public class HBaseFsck extends Configured implements Tool {
       return;
     }
 
-    Path hbaseDir = new Path(getConf().get(HConstants.HBASE_DIR));
-    FileSystem fs = hbaseDir.getFileSystem(getConf());
-    User user = User.getCurrent();
+    Configuration conf = getConf();
+    Path hbaseDir = new Path(conf.get(HConstants.HBASE_DIR));
+    FileSystem fs = hbaseDir.getFileSystem(conf);
+    UserProvider provider = UserProvider.instantiate(conf);
+    User user = provider.getCurrent();
     FileStatus[] files = fs.listStatus(hbaseDir);
     for (FileStatus file : files) {
       try {

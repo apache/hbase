@@ -403,7 +403,7 @@ public abstract class User {
    * {@link org.apache.hadoop.security.UserGroupInformation} for secure Hadoop
    * 0.20 and versions 0.21 and above.
    */
-  private static class SecureHadoopUser extends User {
+  public static class SecureHadoopUser extends User {
     private String shortName;
 
     private SecureHadoopUser() throws IOException {
@@ -419,7 +419,7 @@ public abstract class User {
       }
     }
 
-    private SecureHadoopUser(UserGroupInformation ugi) {
+    public SecureHadoopUser(UserGroupInformation ugi) {
       this.ugi = ugi;
     }
 

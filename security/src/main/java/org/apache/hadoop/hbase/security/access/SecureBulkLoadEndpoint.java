@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.coprocessor.BaseEndpointCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.RequestContext;
@@ -101,6 +102,7 @@ public class SecureBulkLoadEndpoint extends BaseEndpointCoprocessor
 
   private RegionCoprocessorEnvironment env;
 
+  private UserProvider provider;
 
   @Override
   public void start(CoprocessorEnvironment env) {
@@ -110,6 +112,7 @@ public class SecureBulkLoadEndpoint extends BaseEndpointCoprocessor
     random = new SecureRandom();
     conf = env.getConfiguration();
     baseStagingDir = getBaseStagingDir(conf);
+    this.provider = UserProvider.instantiate(conf);
 
     try {
       fs = FileSystem.get(conf);
@@ -152,7 +155,7 @@ public class SecureBulkLoadEndpoint extends BaseEndpointCoprocessor
     final UserGroupInformation ugi = user.getUGI();
     if(userToken != null) {
       ugi.addToken(userToken);
-    } else if(User.isSecurityEnabled()) {
+    } else if (provider.isHadoopSecurityEnabled()) {
       //we allow this to pass through in "simple" security mode
       //for mini cluster testing
       throw new DoNotRetryIOException("User token cannot be null");

@@ -21,9 +21,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.AuthMethod;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -61,14 +64,16 @@ class SecureConnectionHeader extends ConnectionHeader {
     if (ugiUsernamePresent) {
       String username = in.readUTF();
       boolean realUserNamePresent = in.readBoolean();
+      Configuration conf = HBaseConfiguration.create();
+      UserProvider provider = UserProvider.instantiate(conf);
       if (realUserNamePresent) {
         String realUserName = in.readUTF();
         UserGroupInformation realUserUgi =
             UserGroupInformation.createRemoteUser(realUserName);
-        user = User.create(
+        user = provider.create(
             UserGroupInformation.createProxyUser(username, realUserUgi));
       } else {
-        user = User.create(UserGroupInformation.createRemoteUser(username));
+        user = provider.create(UserGroupInformation.createRemoteUser(username));
       }
     } else {
       user = null;

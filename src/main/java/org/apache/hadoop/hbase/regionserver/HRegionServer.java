@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -473,7 +474,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       "hbase.zookeeper.client.kerberos.principal", this.isa.getHostName());
 
     // login the server principal (if using secure Hadoop)
-    User.login(this.conf, "hbase.regionserver.keytab.file",
+    UserProvider provider = UserProvider.instantiate(conf);
+    provider.login("hbase.regionserver.keytab.file",
       "hbase.regionserver.kerberos.principal", this.isa.getHostName());
     regionServerAccounting = new RegionServerAccounting();
     cacheConfig = new CacheConfig(conf);
