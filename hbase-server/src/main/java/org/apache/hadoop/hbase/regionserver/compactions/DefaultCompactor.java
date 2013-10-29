@@ -75,7 +75,8 @@ public class DefaultCompactor extends Compactor {
             fd.maxMVCCReadpoint >= smallestReadPoint, fd.maxTagsLength > 0);
         boolean finished = performCompaction(scanner, writer, smallestReadPoint);
         if (!finished) {
-          abortWriter(writer);
+          writer.close();
+          store.getFileSystem().delete(writer.getPath(), false);
           writer = null;
           throw new InterruptedIOException( "Aborting compaction of store " + store +
               " in region " + store.getRegionInfo().getRegionNameAsString() +

@@ -81,6 +81,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
    * KVs skipped via seeking to next row/column. TODO: estimate them?
    */
   private long kvsScanned = 0;
+  private KeyValue prevKV = null;
 
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
@@ -411,7 +412,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
     }
 
     KeyValue kv;
-    KeyValue prevKV = null;
 
     // Only do a sanity-check if store and comparator are available.
     KeyValue.KVComparator comparator =
@@ -419,7 +419,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
     int count = 0;
     LOOP: while((kv = this.heap.peek()) != null) {
-      ++kvsScanned;
+      if (prevKV != kv) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
       // Check that the heap gives us KVs in an increasing order.
       assert prevKV == null || comparator == null || comparator.compare(prevKV, kv) <= 0 :
         "Key " + prevKV + " followed by a " + "smaller key " + kv + " in cf " + store;

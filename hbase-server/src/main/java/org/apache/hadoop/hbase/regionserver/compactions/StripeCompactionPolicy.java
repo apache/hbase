@@ -380,7 +380,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
      * @param compactor Compactor.
      * @return result of compact(...)
      */
-    public abstract List<Path> execute(StripeCompactor compactor);
+    public abstract List<Path> execute(StripeCompactor compactor) throws IOException;
 
     public StripeCompactionRequest(CompactionRequest request) {
       this.request = request;
@@ -431,7 +431,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     }
 
     @Override
-    public List<Path> execute(StripeCompactor compactor) {
+    public List<Path> execute(StripeCompactor compactor) throws IOException {
       return compactor.compact(
           this.request, this.targetBoundaries, this.majorRangeFromRow, this.majorRangeToRow);
     }
@@ -481,7 +481,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     }
 
     @Override
-    public List<Path> execute(StripeCompactor compactor) {
+    public List<Path> execute(StripeCompactor compactor) throws IOException {
       return compactor.compact(this.request, this.targetCount, this.targetKvs,
           this.startRow, this.endRow, this.majorRangeFromRow, this.majorRangeToRow);
     }
