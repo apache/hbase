@@ -103,7 +103,6 @@ public class UserProvider extends BaseConfigurable {
    * org.apache.hadoop.security.SecurityUtil#login(Configuration,String,String,String). On regular
    * Hadoop (without security features), this will safely be ignored.
    * </p>
-   * @param conf The configuration data to use
    * @param fileConfKey Property key used to configure path to the credential file
    * @param principalConfKey Property key used to configure login principal
    * @param localhost Current hostname to use in any credentials
