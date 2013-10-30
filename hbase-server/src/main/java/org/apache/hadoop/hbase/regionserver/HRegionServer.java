@@ -198,6 +198,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -489,6 +490,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   // Table level lock manager for locking for region operations
   private TableLockManager tableLockManager;
 
+  private UserProvider userProvider;
+
   /**
    * Starts a HRegionServer at the default location
    *
@@ -502,6 +505,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     this.conf = conf;
     this.isOnline = false;
     checkCodecs(this.conf);
+    this.userProvider = UserProvider.instantiate(conf);
 
     // do we use checksum verification in the hbase? If hbase checksum verification
     // is enabled, then we automatically switch off hdfs checksum verification.
@@ -589,7 +593,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       "hbase.zookeeper.client.kerberos.principal", this.isa.getHostName());
 
     // login the server principal (if using secure Hadoop)
-    User.login(this.conf, "hbase.regionserver.keytab.file",
+    userProvider.login("hbase.regionserver.keytab.file",
       "hbase.regionserver.kerberos.principal", this.isa.getHostName());
     regionServerAccounting = new RegionServerAccounting();
     cacheConfig = new CacheConfig(conf);
@@ -1884,8 +1888,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
       new InetSocketAddress(sn.getHostname(), sn.getPort());
       try {
-        BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(sn,
-            User.getCurrent(), this.rpcTimeout);
+        BlockingRpcChannel channel =
+            this.rpcClient.createBlockingRpcChannel(sn, userProvider.getCurrent(), this.rpcTimeout);
         intf = RegionServerStatusService.newBlockingStub(channel);
         break;
       } catch (IOException e) {

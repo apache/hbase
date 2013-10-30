@@ -27,6 +27,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 
 /**
  * Denotes a unique key to an {@link HConnection} instance.
@@ -64,7 +65,8 @@ class HConnectionKey {
     this.properties = Collections.unmodifiableMap(m);
 
     try {
-      User currentUser = User.getCurrent();
+      UserProvider provider = UserProvider.instantiate(conf);
+      User currentUser = provider.getCurrent();
       if (currentUser != null) {
         username = currentUser.getName();
       }

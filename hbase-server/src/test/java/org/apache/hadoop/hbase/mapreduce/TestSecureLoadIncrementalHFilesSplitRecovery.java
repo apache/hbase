@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 
@@ -46,8 +47,10 @@ public class TestSecureLoadIncrementalHFilesSplitRecovery extends TestLoadIncrem
   //make sure they are in sync
   @BeforeClass
   public static void setupCluster() throws Exception {
-    useSecure = true;
     util = new HBaseTestingUtility();
+    // set the always on security provider
+    UserProvider.setUserProviderForTesting(util.getConfiguration(),
+      HadoopSecurityEnabledUserProviderForTesting.class);
     // setup configuration
     SecureTestUtil.enableSecurity(util.getConfiguration());
 

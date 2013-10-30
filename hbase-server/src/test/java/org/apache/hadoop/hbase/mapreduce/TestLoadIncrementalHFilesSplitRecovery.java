@@ -142,7 +142,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   private void populateTable(String table, int value) throws Exception {
     // create HFiles for different column families
-    LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration(), useSecure);
+    LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration());
     Path bulk1 = buildBulkFiles(table, value);
     HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
     lih.doBulkLoad(bulk1, t);
@@ -237,7 +237,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     final AtomicInteger attmptedCalls = new AtomicInteger();
     final AtomicInteger failedCalls = new AtomicInteger();
     LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
-        util.getConfiguration(), useSecure) {
+        util.getConfiguration()) {
 
       protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
           TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis)
@@ -306,7 +306,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     // files to fail when attempt to atomically import.  This is recoverable.
     final AtomicInteger attemptedCalls = new AtomicInteger();
     LoadIncrementalHFiles lih2 = new LoadIncrementalHFiles(
-        util.getConfiguration(), useSecure) {
+        util.getConfiguration()) {
 
       protected void bulkLoadPhase(final HTable htable, final HConnection conn,
           ExecutorService pool, Deque<LoadQueueItem> queue,
@@ -347,7 +347,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
     final AtomicInteger countedLqis= new AtomicInteger();
     LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
-        util.getConfiguration(), useSecure) {
+        util.getConfiguration()) {
       protected List<LoadQueueItem> groupOrSplit(
           Multimap<ByteBuffer, LoadQueueItem> regionGroups,
           final LoadQueueItem item, final HTable htable,
@@ -379,7 +379,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     setupTable(table, 10);
 
     LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
-        util.getConfiguration(), useSecure) {
+        util.getConfiguration()) {
       int i = 0;
 
       protected List<LoadQueueItem> groupOrSplit(

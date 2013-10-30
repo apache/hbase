@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -122,7 +123,8 @@ public class TableAuthManager {
    * from the {@code hbase.superuser} configuration key.
    */
   private PermissionCache<Permission> initGlobal(Configuration conf) throws IOException {
-    User user = User.getCurrent();
+    UserProvider userProvider = UserProvider.instantiate(conf);
+    User user = userProvider.getCurrent();
     if (user == null) {
       throw new IOException("Unable to obtain the current user, " +
           "authorization checks for internal operations will not work correctly!");

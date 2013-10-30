@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -87,9 +88,9 @@ public class RESTServer implements Constants {
     FilterHolder authFilter = null;
     Configuration conf = HBaseConfiguration.create();
     Class<? extends ServletContainer> containerClass = ServletContainer.class;
-
+    UserProvider userProvider = UserProvider.instantiate(conf);
     // login the server principal (if using secure Hadoop)
-    if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
+    if (userProvider.isHadoopSecurityEnabled() && userProvider.isHBaseSecurityEnabled()) {
       String machineName = Strings.domainNamePointerToHostName(
         DNS.getDefaultHost(conf.get(REST_DNS_INTERFACE, "default"),
           conf.get(REST_DNS_NAMESERVER, "default")));
@@ -99,7 +100,7 @@ public class RESTServer implements Constants {
       String principalConfig = conf.get(REST_KERBEROS_PRINCIPAL);
       Preconditions.checkArgument(principalConfig != null && !principalConfig.isEmpty(),
         REST_KERBEROS_PRINCIPAL + " should be set if security is enabled");
-      User.login(conf, REST_KEYTAB_FILE, REST_KERBEROS_PRINCIPAL, machineName);
+      userProvider.login(REST_KEYTAB_FILE, REST_KERBEROS_PRINCIPAL, machineName);
       if (conf.get(REST_AUTHENTICATION_TYPE) != null) {
         containerClass = RESTServletContainer.class;
         authFilter = new FilterHolder();
@@ -108,7 +109,7 @@ public class RESTServer implements Constants {
       }
     }
 
-    UserGroupInformation realUser = User.getCurrent().getUGI();
+    UserGroupInformation realUser = userProvider.getCurrent().getUGI();
     RESTServlet servlet = RESTServlet.getInstance(conf, realUser);
 
     Options options = new Options();

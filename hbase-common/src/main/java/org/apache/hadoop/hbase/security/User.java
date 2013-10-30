@@ -121,12 +121,12 @@ public abstract class User {
     }
     return ugi.equals(((User) o).ugi);
   }
-  
+
   @Override
   public int hashCode() {
     return ugi.hashCode();
   }
-  
+
   @Override
   public String toString() {
     return ugi.toString();

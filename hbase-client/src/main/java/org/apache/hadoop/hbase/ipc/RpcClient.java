@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSelector;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -132,6 +133,7 @@ public class RpcClient {
   protected final SocketAddress localAddr;
 
   private final boolean fallbackAllowed;
+  private UserProvider userProvider;
 
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
   final private static String SOCKET_TIMEOUT = "ipc.socket.timeout";
@@ -385,7 +387,7 @@ public class RpcClient {
 
       UserGroupInformation ticket = remoteId.getTicket().getUGI();
       SecurityInfo securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
-      this.useSasl = User.isHBaseSecurityEnabled(conf);
+      this.useSasl = userProvider.isHBaseSecurityEnabled();
       if (useSasl && securityInfo != null) {
         AuthenticationProtos.TokenIdentifier.Kind tokenKind = securityInfo.getTokenKind();
         if (tokenKind != null) {
@@ -1258,6 +1260,8 @@ public class RpcClient {
     this.fallbackAllowed = conf.getBoolean(IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
         IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
     this.localAddr = localAddr;
+    this.userProvider = UserProvider.instantiate(conf);
+    // login the server principal (if using secure Hadoop)
     if (LOG.isDebugEnabled()) {
       LOG.debug("Codec=" + this.codec + ", compressor=" + this.compressor +
         ", tcpKeepAlive=" + this.tcpKeepAlive +
@@ -1405,9 +1409,9 @@ public class RpcClient {
    * @param cells
    * @param addr
    * @param returnType
-   * @param ticket Be careful which ticket you pass.  A new user will mean a new Connection.
-   * {@link User#getCurrent()} makes a new instance of User each time so will be a new Connection
-   * each time.
+   * @param ticket Be careful which ticket you pass. A new user will mean a new Connection.
+   *          {@link UserProvider#getCurrent()} makes a new instance of User each time so will be a
+   *          new Connection each time.
    * @param rpcTimeout
    * @return A pair with the Message response and the Cell data (if any).
    * @throws InterruptedException
@@ -1614,17 +1618,17 @@ public class RpcClient {
     rpcTimeout.remove();
   }
 
-  /** Make a blocking call.
-   * Throws exceptions if there are network problems or if the remote code
+  /**
+   * Make a blocking call. Throws exceptions if there are network problems or if the remote code
    * threw an exception.
    * @param md
    * @param controller
    * @param param
    * @param returnType
    * @param isa
-   * @param ticket Be careful which ticket you pass.  A new user will mean a new Connection.
-   * {@link User#getCurrent()} makes a new instance of User each time so will be a new Connection
-   * each time.
+   * @param ticket Be careful which ticket you pass. A new user will mean a new Connection.
+   *          {@link UserProvider#getCurrent()} makes a new instance of User each time so will be a
+   *          new Connection each time.
    * @param rpcTimeout
    * @return A pair with the Message response and the Cell data (if any).
    * @throws InterruptedException

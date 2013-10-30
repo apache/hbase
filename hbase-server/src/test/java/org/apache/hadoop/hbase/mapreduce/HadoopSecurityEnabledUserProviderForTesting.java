@@ -15,26 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.ipc;
+package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 
-@Category(SmallTests.class)
-public class TestCallRunner {
-  /**
-   * Does nothing but exercise a {@link CallRunner} outside of {@link RpcServer} context.
-   */
-  @Test
-  public void testSimpleCall() {
-    RpcServerInterface mockRpcServer = Mockito.mock(RpcServerInterface.class);
-    Mockito.when(mockRpcServer.isStarted()).thenReturn(true);
-    RpcServer.Call mockCall = Mockito.mock(RpcServer.Call.class);
-    mockCall.connection = Mockito.mock(RpcServer.Connection.class);
-    CallRunner cr = new CallRunner(mockRpcServer, mockCall, new UserProvider());
-    cr.run();
+/**
+ * A {@link UserProvider} that always says hadoop security is enabled, regardless of the underlying
+ * configuration. HBase security is <i>not enabled</i> as this is used to determine if SASL is used
+ * to do the authentication, which requires a Kerberos ticket (which we currently don't have in
+ * tests).
+ * <p>
+ * This should only be used for <b>TESTING</b>.
+ */
+public class HadoopSecurityEnabledUserProviderForTesting extends UserProvider {
+
+  @Override
+  public boolean isHBaseSecurityEnabled() {
+    return false;
+  }
+
+  @Override
+  public boolean isHadoopSecurityEnabled() {
+    return true;
   }
 }

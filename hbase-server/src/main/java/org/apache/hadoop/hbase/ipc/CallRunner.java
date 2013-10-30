@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.ipc.RpcServer.Call;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -42,6 +42,7 @@ public class CallRunner {
   private final Call call;
   private final RpcServerInterface rpcServer;
   private final MonitoredRPCHandler status;
+  private UserProvider userProvider;
 
   /**
    * On construction, adds the size of this call to the running count of outstanding call sizes.
@@ -51,12 +52,13 @@ public class CallRunner {
    * @param rpcServer
    */
   // The constructor is shutdown so only RpcServer in this class can make one of these.
-  CallRunner(final RpcServerInterface rpcServer, final Call call) {
+  CallRunner(final RpcServerInterface rpcServer, final Call call, UserProvider userProvider) {
     this.call = call;
     this.rpcServer = rpcServer;
     // Add size of the call to queue size.
     this.rpcServer.addCallSize(call.getSize());
     this.status = getStatus();
+    this.userProvider = userProvider;
   }
 
   public Call getCall() {
@@ -84,7 +86,7 @@ public class CallRunner {
         if (call.tinfo != null) {
           traceScope = Trace.startSpan(call.toTraceString(), call.tinfo);
         }
-        RequestContext.set(User.create(call.connection.user), RpcServer.getRemoteIp(),
+        RequestContext.set(userProvider.create(call.connection.user), RpcServer.getRemoteIp(),
           call.connection.service);
         // make the call
         resultPair = this.rpcServer.call(call.service, call.md, call.param, call.cellScanner,

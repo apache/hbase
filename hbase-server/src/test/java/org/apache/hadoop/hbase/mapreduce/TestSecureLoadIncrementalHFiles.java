@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 
@@ -42,7 +43,9 @@ public class TestSecureLoadIncrementalHFiles extends  TestLoadIncrementalHFiles{
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    useSecure = true;
+    // set the always on security provider
+    UserProvider.setUserProviderForTesting(util.getConfiguration(),
+      HadoopSecurityEnabledUserProviderForTesting.class);
     // setup configuration
     SecureTestUtil.enableSecurity(util.getConfiguration());
 

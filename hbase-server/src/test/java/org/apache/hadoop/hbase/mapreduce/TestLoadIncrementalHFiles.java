@@ -72,8 +72,6 @@ public class TestLoadIncrementalHFiles {
     Compression.Algorithm.NONE;
 
   static HBaseTestingUtility util = new HBaseTestingUtility();
-  //used by secure subclass
-  static boolean useSecure = false;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -158,7 +156,7 @@ public class TestLoadIncrementalHFiles {
     familyDesc.setBloomFilterType(bloomType);
     htd.addFamily(familyDesc);
 
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration(), useSecure);
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
     String [] args= {dir.toString(),"mytable_"+testName};
     loader.run(args);
     HTable table = new HTable(util.getConfiguration(), TABLE);
@@ -203,7 +201,7 @@ public class TestLoadIncrementalHFiles {
 
     HTable table = new HTable(util.getConfiguration(), TABLE);
     util.waitTableEnabled(TABLE);
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration(), false);
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
     try {
       loader.doBulkLoad(dir, table);
       assertTrue("Loading into table with non-existent family should have failed", false);
