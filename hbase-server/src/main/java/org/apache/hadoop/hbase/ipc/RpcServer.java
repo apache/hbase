@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslDigestCallbackHandler;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.hbase.security.SaslStatus;
@@ -246,6 +247,8 @@ public class RpcServer implements RpcServerInterface {
   private final int warnResponseSize;
   private final Object serverInstance;
   private final List<BlockingServiceAndInterface> services;
+
+  private UserProvider userProvider;
 
   /**
    * Datastructure that holds all necessary to a method invocation and then afterward, carries
@@ -1845,7 +1848,7 @@ public class RpcServer implements RpcServerInterface {
             }
 
             // make the call
-          RequestContext.set(User.create(call.connection.user), getRemoteIp(),
+          RequestContext.set(userProvider.create(call.connection.user), getRemoteIp(),
             call.connection.service);
           // make the call
           resultPair = call(call.service, call.md, call.param, call.cellScanner, call.timestamp,
@@ -2004,7 +2007,8 @@ public class RpcServer implements RpcServerInterface {
     // Create the responder here
     responder = new Responder();
     this.authorize = conf.getBoolean(HADOOP_SECURITY_AUTHORIZATION, false);
-    this.isSecurityEnabled = User.isHBaseSecurityEnabled(this.conf);
+    this.userProvider = UserProvider.instantiate(conf);
+    this.isSecurityEnabled = userProvider.isHBaseSecurityEnabled();
     if (isSecurityEnabled) {
       HBaseSaslRpcServer.init(conf);
     }

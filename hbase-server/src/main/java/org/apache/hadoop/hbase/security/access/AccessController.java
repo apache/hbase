@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -139,9 +140,10 @@ public class AccessController extends BaseRegionObserver
   private Map<InternalScanner,String> scannerOwners =
       new MapMaker().weakKeys().makeMap();
 
+  private UserProvider userProvider;
+
   void initialize(RegionCoprocessorEnvironment e) throws IOException {
     final HRegion region = e.getRegion();
-
     Map<byte[], ListMultimap<String,TablePermission>> tables =
         AccessControlLists.loadAll(region);
     // For each table, write out the table's permissions to the respective
@@ -319,7 +321,7 @@ public class AccessController extends BaseRegionObserver
     User user = RequestContext.getRequestUser();
     if (!RequestContext.isInRequestContext()) {
       // for non-rpc handling, fallback to system user
-      user = User.getCurrent();
+      user = userProvider.getCurrent();
     }
     return user;
   }
@@ -517,6 +519,9 @@ public class AccessController extends BaseRegionObserver
       regionEnv = (RegionCoprocessorEnvironment) env;
       zk = regionEnv.getRegionServerServices().getZooKeeper();
     }
+
+    //set the user provider
+    this.userProvider = UserProvider.instantiate(env.getConfiguration());
 
     // If zk is null or IOException while obtaining auth manager,
     // throw RuntimeException so that the coprocessor is unloaded.
@@ -1440,7 +1445,7 @@ public class AccessController extends BaseRegionObserver
   }
 
   private void isSystemOrSuperUser(Configuration conf) throws IOException {
-    User user = User.getCurrent();
+    User user = userProvider.getCurrent();
     if (user == null) {
       throw new IOException("Unable to obtain the current user, " +
         "authorization checks for internal operations will not work correctly!");

@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.token.Token;
@@ -105,21 +106,15 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
   private boolean assignSeqIds;
 
-  private boolean useSecure;
   private Token<?> userToken;
   private String bulkToken;
+  private UserProvider userProvider;
 
-  //package private for testing
-  LoadIncrementalHFiles(Configuration conf, Boolean useSecure) throws Exception {
+  public LoadIncrementalHFiles(Configuration conf) throws Exception {
     super(conf);
     this.cfg = conf;
     this.hbAdmin = new HBaseAdmin(conf);
-    //added simple for testing
-    this.useSecure = useSecure != null ? useSecure : User.isHBaseSecurityEnabled(conf);
-  }
-
-  public LoadIncrementalHFiles(Configuration conf) throws Exception {
-    this(conf, null);
+    this.userProvider = UserProvider.instantiate(conf);
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
   }
 
@@ -254,11 +249,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
       //If using secure bulk load
       //prepare staging directory and token
-      if(useSecure) {
+      if (userProvider.isHBaseSecurityEnabled()) {
         FileSystem fs = FileSystem.get(cfg);
         //This condition is here for unit testing
         //Since delegation token doesn't work in mini cluster
-        if(User.isSecurityEnabled()) {
+        if (userProvider.isHadoopSecurityEnabled()) {
          userToken = fs.getDelegationToken("renewer");
         }
         bulkToken = new SecureBulkLoadClient(table).prepareBulkLoad(table.getName());
@@ -292,7 +287,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       }
 
     } finally {
-      if(useSecure) {
+      if (userProvider.isHBaseSecurityEnabled()) {
         if(userToken != null) {
           try {
             userToken.cancel(cfg);
@@ -560,7 +555,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           LOG.debug("Going to connect to server " + getLocation() + " for row "
               + Bytes.toStringBinary(getRow()) + " with hfile group " + famPaths);
           byte[] regionName = getLocation().getRegionInfo().getRegionName();
-          if(!useSecure) {
+          if(!userProvider.isHBaseSecurityEnabled()) {
             success = ProtobufUtil.bulkLoadHFile(getStub(), famPaths, regionName, assignSeqIds);
           } else {
             HTable table = new HTable(conn.getConfiguration(), getTableName());

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBul
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.security.SecureBulkLoadUtil;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
@@ -114,6 +115,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
 
   private RegionCoprocessorEnvironment env;
 
+  private UserProvider userProvider;
 
   @Override
   public void start(CoprocessorEnvironment env) {
@@ -121,6 +123,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     random = new SecureRandom();
     conf = env.getConfiguration();
     baseStagingDir = SecureBulkLoadUtil.getBaseStagingDir(conf);
+    this.userProvider = UserProvider.instantiate(conf);
 
     try {
       fs = FileSystem.get(conf);
@@ -196,7 +199,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     final UserGroupInformation ugi = user.getUGI();
     if(userToken != null) {
       ugi.addToken(userToken);
-    } else if(User.isSecurityEnabled()) {
+    } else if (userProvider.isHadoopSecurityEnabled()) {
       //we allow this to pass through in "simple" security mode
       //for mini cluster testing
       ResponseConverter.setControllerException(controller,

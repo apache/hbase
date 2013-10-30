@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.mapreduce.hadoopbackport.JarFinder;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -293,16 +294,17 @@ public class TableMapReduceUtil {
   }
 
   public static void initCredentials(Job job) throws IOException {
-    if (User.isHBaseSecurityEnabled(job.getConfiguration())) {
+    UserProvider userProvider = UserProvider.instantiate(job.getConfiguration());
+    if (userProvider.isHBaseSecurityEnabled()) {
       try {
         // init credentials for remote cluster
         String quorumAddress = job.getConfiguration().get(TableOutputFormat.QUORUM_ADDRESS);
         if (quorumAddress != null) {
           Configuration peerConf = HBaseConfiguration.create(job.getConfiguration());
           ZKUtil.applyClusterKeyToConf(peerConf, quorumAddress);
-          User.getCurrent().obtainAuthTokenForJob(peerConf, job);
+          userProvider.getCurrent().obtainAuthTokenForJob(peerConf, job);
         }
-        User.getCurrent().obtainAuthTokenForJob(job.getConfiguration(), job);
+        userProvider.getCurrent().obtainAuthTokenForJob(job.getConfiguration(), job);
       } catch (InterruptedException ie) {
         LOG.info("Interrupted obtaining user authentication token");
         Thread.interrupted();

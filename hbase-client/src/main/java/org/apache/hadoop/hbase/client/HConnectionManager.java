@@ -112,6 +112,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.*;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
@@ -276,7 +277,8 @@ public class HConnectionManager {
    */
   public static HConnection createConnection(Configuration conf)
   throws IOException {
-    return createConnection(conf, false, null, User.getCurrent());
+    UserProvider provider = UserProvider.instantiate(conf);
+    return createConnection(conf, false, null, provider.getCurrent());
   }
 
   /**
@@ -301,7 +303,8 @@ public class HConnectionManager {
    */
   public static HConnection createConnection(Configuration conf, ExecutorService pool)
   throws IOException {
-    return createConnection(conf, false, pool, User.getCurrent());
+    UserProvider provider = UserProvider.instantiate(conf);
+    return createConnection(conf, false, pool, provider.getCurrent());
   }
 
   /**
@@ -358,7 +361,8 @@ public class HConnectionManager {
   @Deprecated
   static HConnection createConnection(final Configuration conf, final boolean managed)
       throws IOException {
-    return createConnection(conf, managed, null, User.getCurrent());
+    UserProvider provider = UserProvider.instantiate(conf);
+    return createConnection(conf, managed, null, provider.getCurrent());
   }
 
   @Deprecated

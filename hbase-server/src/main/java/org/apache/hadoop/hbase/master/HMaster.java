@@ -202,6 +202,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
@@ -450,7 +451,8 @@ MasterServices, Server {
       "hbase.zookeeper.client.kerberos.principal", this.isa.getHostName());
 
     // initialize server principal (if using secure Hadoop)
-    User.login(conf, "hbase.master.keytab.file",
+    UserProvider provider = UserProvider.instantiate(conf);
+    provider.login("hbase.master.keytab.file",
       "hbase.master.kerberos.principal", this.isa.getHostName());
 
     LOG.info("hbase.rootdir=" + FSUtils.getRootDir(this.conf) +

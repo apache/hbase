@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Strings;
@@ -91,14 +92,16 @@ public class ThriftServer {
    */
    void doMain(final String[] args) throws Exception {
      processOptions(args);
-     
+
+     UserProvider userProvider = UserProvider.instantiate(conf);
      // login the server principal (if using secure Hadoop)
-     if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
-       String machineName = Strings.domainNamePointerToHostName(
-         DNS.getDefaultHost(conf.get("hbase.thrift.dns.interface", "default"),
-           conf.get("hbase.thrift.dns.nameserver", "default")));
-       User.login(conf, "hbase.thrift.keytab.file",
-           "hbase.thrift.kerberos.principal", machineName);
+     if (userProvider.isHadoopSecurityEnabled() && userProvider.isHBaseSecurityEnabled()) {
+       String machineName =
+           Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+             conf.get("hbase.thrift.dns.interface", "default"),
+             conf.get("hbase.thrift.dns.nameserver", "default")));
+       userProvider
+           .login("hbase.thrift.keytab.file", "hbase.thrift.kerberos.principal", machineName);
      }
      
      serverRunner = new ThriftServerRunner(conf);

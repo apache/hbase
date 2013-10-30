@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Threads;
@@ -66,6 +67,7 @@ public class RESTServlet implements Constants {
   // A chore to clean up idle connections.
   private final Chore connectionCleaner;
   private final Stoppable stoppable;
+  private UserProvider userProvider;
 
   class ConnectionInfo {
     final HConnection connection;
@@ -167,6 +169,7 @@ public class RESTServlet implements Constants {
    */
   RESTServlet(final Configuration conf,
       final UserGroupInformation realUser) {
+    this.userProvider = UserProvider.instantiate(conf);
     stoppable = new Stoppable() {
       private volatile boolean isStopped = false;
       @Override public void stop(String why) { isStopped = true;}
@@ -242,7 +245,7 @@ public class RESTServlet implements Constants {
           if (!userName.equals(NULL_USERNAME)) {
             ugi = UserGroupInformation.createProxyUser(userName, realUser);
           }
-          User user = User.create(ugi);
+          User user = userProvider.create(ugi);
           HConnection conn = HConnectionManager.createConnection(conf, user);
           connInfo = new ConnectionInfo(conn, userName);
           connections.put(userName, connInfo);

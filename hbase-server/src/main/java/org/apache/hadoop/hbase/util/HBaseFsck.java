@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
@@ -1451,7 +1452,8 @@ public class HBaseFsck extends Configured implements Tool {
 
     Path hbaseDir = FSUtils.getRootDir(getConf());
     FileSystem fs = hbaseDir.getFileSystem(getConf());
-    UserGroupInformation ugi = User.getCurrent().getUGI();
+    UserProvider userProvider = UserProvider.instantiate(getConf());
+    UserGroupInformation ugi = userProvider.getCurrent().getUGI();
     FileStatus[] files = fs.listStatus(hbaseDir);
     for (FileStatus file : files) {
       try {

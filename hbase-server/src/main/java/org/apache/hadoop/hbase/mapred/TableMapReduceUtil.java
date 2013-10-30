@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.MutationSerialization;
 import org.apache.hadoop.hbase.mapreduce.ResultSerialization;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.InputFormat;
@@ -176,9 +177,11 @@ public class TableMapReduceUtil {
   }
 
   public static void initCredentials(JobConf job) throws IOException {
-    if (User.isHBaseSecurityEnabled(job)) {
+    UserProvider userProvider = UserProvider.instantiate(job);
+    // login the server principal (if using secure Hadoop)
+    if (userProvider.isHBaseSecurityEnabled()) {
       try {
-        User.getCurrent().obtainAuthTokenForJob(job);
+        userProvider.getCurrent().obtainAuthTokenForJob(job);
       } catch (InterruptedException ie) {
         ie.printStackTrace();
         Thread.interrupted();

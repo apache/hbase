@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSelector;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -132,6 +133,7 @@ public class RpcClient {
   protected final SocketAddress localAddr;
 
   private final boolean fallbackAllowed;
+private UserProvider userProvider;
 
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
   final private static String SOCKET_TIMEOUT = "ipc.socket.timeout";
@@ -385,7 +387,7 @@ public class RpcClient {
 
       UserGroupInformation ticket = remoteId.getTicket().getUGI();
       SecurityInfo securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
-      this.useSasl = User.isHBaseSecurityEnabled(conf);
+      this.useSasl = userProvider.isHBaseSecurityEnabled();
       if (useSasl && securityInfo != null) {
         AuthenticationProtos.TokenIdentifier.Kind tokenKind = securityInfo.getTokenKind();
         if (tokenKind != null) {
@@ -1258,6 +1260,7 @@ public class RpcClient {
     this.fallbackAllowed = conf.getBoolean(IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
         IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
     this.localAddr = localAddr;
+    this.userProvider = UserProvider.instantiate(conf);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Codec=" + this.codec + ", compressor=" + this.compressor +
         ", tcpKeepAlive=" + this.tcpKeepAlive +
