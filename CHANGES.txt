@@ -1,5 +1,52 @@
 HBase Change Log
 
+Release 0.94.13 - 10/29/2013
+Sub-task
+
+    [HBASE-9711] - Improve HBASE-9428 - avoid copying bytes for RegexFilter unless necessary
+
+Bug
+
+    [HBASE-7600] - TestAdmin.testCreateBadTables is failing occasionally
+    [HBASE-8521] - Cells cannot be overwritten with bulk loaded HFiles
+    [HBASE-9430] - Memstore heapSize calculation - DEEP_OVERHEAD is incorrect
+    [HBASE-9504] - Backport HBASE-1212 to 0.94
+    [HBASE-9548] - Cleanup SnapshotTestingUtils
+    [HBASE-9607] - Data loss after snapshot restore into cloned table
+    [HBASE-9649] - HFilePrettyPrinter should not throw a NPE if FirstKey or LastKey is null.
+    [HBASE-9651] - Backport HBASE-3890 'Scheduled tasks in distributed log splitting not in sync with ZK' to 0.94
+    [HBASE-9727] - HBase Rest Server - DELETE scanner operation is a no-op
+    [HBASE-9731] - updatesBlockedSeconds RegionServer metric should not be a histogram
+    [HBASE-9732] - Static AtomicLong updated in StoreFileScanner every (re)seek
+    [HBASE-9737] - Corrupt HFile cause resource leak leading to Region Server OOM
+    [HBASE-9745] - Append HBASE_CLASSPATH to end of Java classpath and use another env var for prefix
+    [HBASE-9747] - PrefixFilter with OR condition gives wrong results
+    [HBASE-9751] - Excessive readpoints checks in StoreFileScanner
+    [HBASE-9753] - Excessive readpoint checks in MemstoreScanner
+    [HBASE-9783] - o.a.h.h.r.HRegion.mutateRow() with non-existent CF cause NPE
+    [HBASE-9789] - Change logging for Coprocessor exec call to trace
+    [HBASE-9807] - block encoder unnecessarily copies the key for each reseek
+    [HBASE-9842] - Backport HBASE-9593 and HBASE-8667 to 0.94
+    [HBASE-9847] - HConnectionImplementation does not connect to new active master
+
+Improvement
+
+    [HBASE-9221] - Provide interface for getting a User in the client
+    [HBASE-9488] - Improve performance for small scan
+    [HBASE-9716] - LoadTestTool should provide default min and max settings to the data generator
+    [HBASE-9749] - Custom threadpool for Coprocessor obtained HTables
+
+Task
+
+    [HBASE-9819] - Backport HBASE-8372 'Provide mutability to CompoundConfiguration' to 0.94
+
+Test
+
+    [HBASE-8553] - improve unit-test coverage of package org.apache.hadoop.hbase.mapreduce.hadoopbackport
+    [HBASE-9851] - TestHBaseFsck.testQuarantineMissingHFile is flaky
+    [HBASE-9852] - TestRpcMetrics.testCustomMetrics is flaky
+
+
 Release 0.94.12 - 9/19/2013
 Sub-task
 
