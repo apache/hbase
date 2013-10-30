@@ -173,6 +173,10 @@ public class IntegrationTestLazyCfLoading {
     util.initializeCluster(NUM_SERVERS);
     LOG.info("Done initializing cluster");
     createTable();
+    // after table creation, ACLs need time to be propagated to RSs in a secure deployment
+    // so we sleep a little bit because we don't have a good way to know when permissions
+    // are received by RSs
+    Thread.sleep(3000);
   }
 
   private void createTable() throws Exception {
