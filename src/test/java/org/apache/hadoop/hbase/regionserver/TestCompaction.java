@@ -587,8 +587,12 @@ public class TestCompaction extends HBaseClusterTestCase {
   }
 
   private void createStoreFile(final HRegion region) throws IOException {
+    createStoreFile(region, null);
+  }
+
+  private void createStoreFile(final HRegion region, String column) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
-    addContent(loader, Bytes.toString(COLUMN_FAMILY));
+    addContent(loader, Bytes.toString(COLUMN_FAMILY), column);
     loader.flushcache();
   }
 
@@ -635,5 +639,84 @@ public class TestCompaction extends HBaseClusterTestCase {
     }
     fail("testCompactionWithCorruptResult failed since no exception was" +
         "thrown while completing a corrupt file");
+  }
+
+  /**
+   * This test is to verify that the compaction related online configuration
+   * changes actually cause the desired behaviour in compaction, not just
+   * changing of the values. We will change a bunch of compaction properties in
+   * an online fashion, and verify that they cause the desired change in
+   * compaction behavior.
+   */
+  public void testOnlineConfigurationChange() throws IOException {
+    // Creating two files of the same size (say, 'x').
+    createStoreFile(r, "abc");
+    createStoreFile(r, "def");
+
+    Store store = r.getStore(COLUMN_FAMILY);
+    List<StoreFile> storeFiles = store.getStorefiles();
+    // Check that we wouldn't get to do a compaction, because we just have
+    // two files.
+    r.compactStores();
+    assertEquals(storeFiles, store.getStorefiles());
+
+    // Now set the minimum number of files for compaction to 2.
+    conf.setInt(HConstants.HSTORE_COMPACTION_PREFIX + "min", 2);
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+    r.compactStores();
+    assertNotSame(storeFiles, store.getStorefiles());
+
+    // Check that we only have one store file.
+    assertEquals(1, store.getStorefiles().size());
+
+    // We now have one file of size roughly 2x.
+    // Creating two more files of size x each.
+    createStoreFile(r, "ghi");
+    createStoreFile(r, "jkl");
+    storeFiles = store.getStorefiles();
+    assertEquals(3, storeFiles.size());
+    long firstFileSizeBeforeCompaction = storeFiles.get(0).getReader().length();
+
+    // We now have 3 files, of sizes 2x, x and x each.
+    // If we were compact regularly, it would get compacted into one file of
+    // size 4x roughly. We will reduce the max number of files to be
+    // compacted, and set the compaction ratio to be > 2, so that the
+    // first two files (of sizes 2x and x), get compacted.
+    conf.setInt(HConstants.HSTORE_COMPACTION_PREFIX + "max", 2);
+    conf.setFloat(HConstants.HSTORE_COMPACTION_PREFIX + "ratio", 2.5f);
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+    r.compactStores();
+    storeFiles = store.getStorefiles();
+    assertEquals(2, storeFiles.size());
+
+    // Verify that the first file in the new set of store files is
+    // bigger than the first file in the old set of store files.
+    assertTrue(storeFiles.get(0).getReader().length() >
+               firstFileSizeBeforeCompaction);
+    firstFileSizeBeforeCompaction = storeFiles.get(0).getReader().length();
+
+    // We will try to compact but nothing will happen, since the files are of
+    // sizes 3x and x respectively, and we have just set the compaction ratio to
+    // 2.5.
+    r.compactStores();
+    storeFiles = store.getStorefiles();
+    // Check that nothing has changed.
+    assertEquals(2, storeFiles.size());
+    assertEquals(firstFileSizeBeforeCompaction,
+                 storeFiles.get(0).getReader().length());
+
+    // Now change the min compact size, below which, we don't check the
+    // compaction ratio.
+    conf.setLong(HConstants.HSTORE_COMPACTION_PREFIX + "min.size",
+                  2 * firstFileSizeBeforeCompaction);
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+    r.compactStores();
+    storeFiles = store.getStorefiles();
+
+    // We should have just one massive file,
+    assertEquals(1, storeFiles.size());
+    // whose size will be bigger than the previous biggest file.
+    assertTrue(storeFiles.get(0).getReader().length() >
+               firstFileSizeBeforeCompaction);
   }
 }
