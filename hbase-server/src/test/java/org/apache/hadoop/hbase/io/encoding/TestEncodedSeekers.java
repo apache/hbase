@@ -71,6 +71,7 @@ public class TestEncodedSeekers {
   private final DataBlockEncoding encoding;
   private final boolean encodeOnDisk;
   private final boolean includeTags;
+  private final boolean compressTags;
 
   /** Enable when debugging */
   private static final boolean VERBOSE = false;
@@ -81,22 +82,27 @@ public class TestEncodedSeekers {
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       for (boolean includeTags : new boolean[] { false, true }) {
         for (boolean encodeOnDisk : new boolean[] { false, true }) {
-          paramList.add(new Object[] { encoding, encodeOnDisk, includeTags });
+          for (boolean compressTags : new boolean[] { false, true }) {
+            paramList.add(new Object[] { encoding, encodeOnDisk, includeTags, compressTags });
+          }
         }
       }
     }
     return paramList;
   }
 
-  public TestEncodedSeekers(DataBlockEncoding encoding, boolean encodeOnDisk, boolean includeTags) {
+  public TestEncodedSeekers(DataBlockEncoding encoding, boolean encodeOnDisk, boolean includeTags,
+      boolean compressTags) {
     this.encoding = encoding;
     this.encodeOnDisk = encodeOnDisk;
     this.includeTags = includeTags;
+    this.compressTags = compressTags;
   }
 
   @Test
   public void testEncodedSeeker() throws IOException {
-    System.err.println("Testing encoded seekers for encoding " + encoding);
+    System.err.println("Testing encoded seekers for encoding : " + encoding + ", encodeOnDisk : "
+        + encodeOnDisk + ", includeTags : " + includeTags + ", compressTags : " + compressTags);
     if(includeTags) {
       testUtil.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 3);
     }
@@ -108,7 +114,8 @@ public class TestEncodedSeekers {
         setDataBlockEncoding(encoding).
         setEncodeOnDisk(encodeOnDisk).
         setBlocksize(BLOCK_SIZE).
-        setBloomFilterType(BloomType.NONE);
+        setBloomFilterType(BloomType.NONE).
+        setCompressTags(compressTags);
     HRegion region = testUtil.createTestRegion(TABLE_NAME, hcd);
 
     //write the data, but leave some in the memstore

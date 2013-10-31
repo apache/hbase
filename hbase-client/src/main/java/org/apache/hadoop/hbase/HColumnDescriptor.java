@@ -94,6 +94,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
   public static final String MIN_VERSIONS = "MIN_VERSIONS";
   public static final String KEEP_DELETED_CELLS = "KEEP_DELETED_CELLS";
+  public static final String COMPRESS_TAGS = "COMPRESS_TAGS";
 
   /**
    * Default compression type.
@@ -186,6 +187,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * close.
    */
   public static final boolean DEFAULT_EVICT_BLOCKS_ON_CLOSE = false;
+
+  /**
+   * Default compress tags along with any type of DataBlockEncoding
+   */
+  public static final boolean DEFAULT_COMPRESS_TAGS = true;
 
   private final static Map<String, String> DEFAULT_VALUES
     = new HashMap<String, String>();
@@ -672,6 +678,30 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       name = DataBlockEncoding.NONE.toString();
     }
     return setValue(DATA_BLOCK_ENCODING, name);
+  }
+
+  /**
+   * Set whether the tags should be compressed along with DataBlockEncoding. When no
+   * DataBlockEncoding is been used, this is having no effect.
+   * 
+   * @param compressTags
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setCompressTags(boolean compressTags) {
+    return setValue(COMPRESS_TAGS, String.valueOf(compressTags));
+  }
+
+  /**
+   * @return Whether KV tags should be compressed along with DataBlockEncoding. When no
+   *         DataBlockEncoding is been used, this is having no effect.
+   */
+  public boolean shouldCompressTags() {
+    String compressTagsStr = getValue(COMPRESS_TAGS);
+    boolean compressTags = DEFAULT_COMPRESS_TAGS;
+    if (compressTagsStr != null) {
+      compressTags = Boolean.valueOf(compressTagsStr);
+    }
+    return compressTags;
   }
 
   /**

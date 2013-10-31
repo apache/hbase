@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 
@@ -38,6 +39,7 @@ public class HFileBlockDefaultDecodingContext implements
     HFileBlockDecodingContext {
 
   private final HFileContext fileContext;
+  private TagCompressionContext tagCompressionContext;
   
   public HFileBlockDefaultDecodingContext(HFileContext fileContext) {
     this.fileContext = fileContext;
@@ -57,5 +59,13 @@ public class HFileBlockDefaultDecodingContext implements
   @Override
   public HFileContext getHFileContext() {
     return this.fileContext;
+  }
+
+  public TagCompressionContext getTagCompressionContext() {
+    return tagCompressionContext;
+  }
+
+  public void setTagCompressionContext(TagCompressionContext tagCompressionContext) {
+    this.tagCompressionContext = tagCompressionContext;
   }
 }

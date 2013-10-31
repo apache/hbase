@@ -26,8 +26,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
+import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
@@ -50,6 +52,14 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     HFileBlockDefaultDecodingContext decodingCtx =
         (HFileBlockDefaultDecodingContext) blkDecodingCtx;
+    if (decodingCtx.getHFileContext().shouldCompressTags()) {
+      try {
+        TagCompressionContext tagCompressionContext = new TagCompressionContext(LRUDictionary.class);
+        decodingCtx.setTagCompressionContext(tagCompressionContext);
+      } catch (Exception e) {
+        throw new IOException("Failed to initialize TagCompressionContext", e);
+      }
+    }
     return internalDecodeKeyValues(source, 0, 0, decodingCtx);
   }
 
@@ -58,11 +68,12 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected int keyLength;
     protected int valueLength;
     protected int lastCommonPrefix;
-    protected int tagLength = 0;
-    protected int tagOffset = -1;
+    protected int tagsLength = 0;
+    protected int tagsOffset = -1;
 
     /** We need to store a copy of the key. */
     protected byte[] keyBuffer = new byte[INITIAL_KEY_BUFFER_SIZE];
+    protected byte[] tagsBuffer = new byte[INITIAL_KEY_BUFFER_SIZE];
 
     protected long memstoreTS;
     protected int nextKvOffset;
@@ -85,6 +96,19 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         byte[] newKeyBuffer = new byte[newKeyBufferLength];
         System.arraycopy(keyBuffer, 0, newKeyBuffer, 0, keyBuffer.length);
         keyBuffer = newKeyBuffer;
+      }
+    }
+
+    protected void ensureSpaceForTags() {
+      if (tagsLength > tagsBuffer.length) {
+        // rare case, but we need to handle arbitrary length of tags
+        int newTagsBufferLength = Math.max(tagsBuffer.length, 1) * 2;
+        while (tagsLength > newTagsBufferLength) {
+          newTagsBufferLength *= 2;
+        }
+        byte[] newTagsBuffer = new byte[newTagsBufferLength];
+        System.arraycopy(tagsBuffer, 0, newTagsBuffer, 0, tagsBuffer.length);
+        tagsBuffer = newTagsBuffer;
       }
     }
 
@@ -127,6 +151,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected ByteBuffer currentBuffer;
     protected STATE current = createSeekerState(); // always valid
     protected STATE previous = createSeekerState(); // may not be valid
+    protected TagCompressionContext tagCompressionContext = null;
 
     public BufferedEncodedSeeker(KVComparator comparator,
         HFileBlockDecodingContext decodingCtx) {
@@ -137,6 +162,13 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         this.samePrefixComparator = null;
       }
       this.decodingCtx = decodingCtx;
+      if (decodingCtx.getHFileContext().shouldCompressTags()) {
+        try {
+          tagCompressionContext = new TagCompressionContext(LRUDictionary.class);
+        } catch (Exception e) {
+          throw new RuntimeException("Failed to initialize TagCompressionContext", e);
+        }
+      }
     }
     
     protected boolean includesMvcc() {
@@ -183,17 +215,25 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       kvBuffer.put(currentBuffer.array(),
           currentBuffer.arrayOffset() + current.valueOffset,
           current.valueLength);
-      if (current.tagLength > 0) {
-        kvBuffer.putShort((short) current.tagLength);
-        kvBuffer.put(currentBuffer.array(), currentBuffer.arrayOffset() + current.tagOffset,
-            current.tagLength);
+      if (current.tagsLength > 0) {
+        kvBuffer.putShort((short) current.tagsLength);
+        if (current.tagsOffset != -1) {
+          // the offset of the tags bytes in the underlying buffer is marked. So the temp
+          // buffer,tagsBuffer was not been used.
+          kvBuffer.put(currentBuffer.array(), currentBuffer.arrayOffset() + current.tagsOffset,
+              current.tagsLength);
+        } else {
+          // When tagsOffset is marked as -1, tag compression was present and so the tags were
+          // uncompressed into temp buffer, tagsBuffer. Let us copy it from there
+          kvBuffer.put(current.tagsBuffer, 0, current.tagsLength);
+        }
       }
       return kvBuffer;
     }
 
     protected ByteBuffer createKVBuffer() {
       int kvBufSize = (int) KeyValue.getKeyValueDataStructureSize(current.keyLength,
-          current.valueLength, current.tagLength);
+          current.valueLength, current.tagsLength);
       ByteBuffer kvBuffer = ByteBuffer.allocate(kvBufSize);
       return kvBuffer;
     }
@@ -225,9 +265,23 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     public void decodeTags() {
-      current.tagLength = ByteBufferUtils.readCompressedInt(currentBuffer);
-      current.tagOffset = currentBuffer.position();
-      ByteBufferUtils.skip(currentBuffer, current.tagLength);
+      current.tagsLength = ByteBufferUtils.readCompressedInt(currentBuffer);
+      if (tagCompressionContext != null) {
+        // Tag compression is been used. uncompress it into tagsBuffer
+        current.ensureSpaceForTags();
+        try {
+          tagCompressionContext.uncompressTags(currentBuffer, current.tagsBuffer, 0,
+              current.tagsLength);
+        } catch (IOException e) {
+          throw new RuntimeException("Exception while uncompressing tags", e);
+        }
+        current.tagsOffset = -1;
+      } else {
+        // When tag compress is not used, let us not do temp copying of tags bytes into tagsBuffer.
+        // Just mark the tags Offset so as to create the KV buffer later in getKeyValueBuffer()
+        current.tagsOffset = currentBuffer.position();
+        ByteBufferUtils.skip(currentBuffer, current.tagsLength);
+      }
     }
 
     @Override
@@ -320,9 +374,19 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   protected final void afterEncodingKeyValue(ByteBuffer in,
       DataOutputStream out, HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
     if (encodingCtx.getHFileContext().shouldIncludeTags()) {
-      int tagsLength = in.getShort();
+      short tagsLength = in.getShort();
       ByteBufferUtils.putCompressedInt(out, tagsLength);
-      ByteBufferUtils.moveBufferToStream(out, in, tagsLength);
+      // There are some tags to be written
+      if (tagsLength > 0) {
+        TagCompressionContext tagCompressionContext = encodingCtx.getTagCompressionContext();
+        // When tag compression is enabled, tagCompressionContext will have a not null value. Write
+        // the tags using Dictionary compression in such a case
+        if (tagCompressionContext != null) {
+          tagCompressionContext.compressTags(out, in, tagsLength);
+        } else {
+          ByteBufferUtils.moveBufferToStream(out, in, tagsLength);
+        }
+      }
     }
     if (encodingCtx.getHFileContext().shouldIncludeMvcc()) {
       // Copy memstore timestamp from the byte buffer to the output stream.
@@ -340,9 +404,18 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   protected final void afterDecodingKeyValue(DataInputStream source,
       ByteBuffer dest, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
     if (decodingCtx.getHFileContext().shouldIncludeTags()) {
-      int tagsLength = ByteBufferUtils.readCompressedInt(source);
-      dest.putShort((short)tagsLength);
-      ByteBufferUtils.copyFromStreamToBuffer(dest, source, tagsLength);
+      short tagsLength = (short) ByteBufferUtils.readCompressedInt(source);
+      dest.putShort(tagsLength);
+      if (tagsLength > 0) {
+        TagCompressionContext tagCompressionContext = decodingCtx.getTagCompressionContext();
+        // When tag compression is been used in this file, tagCompressionContext will have a not
+        // null value passed.
+        if (tagCompressionContext != null) {
+          tagCompressionContext.uncompressTags(source, dest, tagsLength);
+        } else {
+          ByteBufferUtils.copyFromStreamToBuffer(dest, source, tagsLength);
+        }
+      }
     }
     if (decodingCtx.getHFileContext().shouldIncludeMvcc()) {
       long memstoreTS = -1;
@@ -398,6 +471,14 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     DataOutputStream dataOut =
         ((HFileBlockDefaultEncodingContext) encodingCtx)
         .getOutputStreamForEncoder();
+    if (encodingCtx.getHFileContext().shouldCompressTags()) {
+      try {
+        TagCompressionContext tagCompressionContext = new TagCompressionContext(LRUDictionary.class);
+        encodingCtx.setTagCompressionContext(tagCompressionContext);
+      } catch (Exception e) {
+        throw new IOException("Failed to initialize TagCompressionContext", e);
+      }
+    }
     internalEncodeKeyValues(dataOut, in, encodingCtx);
     if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
       encodingCtx.postEncoding(BlockType.ENCODED_DATA);

@@ -64,6 +64,10 @@ public class HFileReaderV3 extends HFileReaderV2 {
     // max tag length is not present in the HFile means tags were not at all written to file.
     if (tmp != null) {
       hfileContext.setIncludesTags(true);
+      tmp = fileInfo.get(FileInfo.TAGS_COMPRESSED);
+      if (tmp != null && Bytes.toBoolean(tmp)) {
+        hfileContext.setCompressTags(true);
+      }
     }
   }
 

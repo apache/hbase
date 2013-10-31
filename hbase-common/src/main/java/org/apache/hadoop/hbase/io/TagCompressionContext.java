@@ -23,17 +23,19 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 
 /**
  * Context that holds the dictionary for Tag compression and doing the compress/uncompress. This
- * will be used for compressing tags while writing into WALs.
+ * will be used for compressing tags while writing into HFiles and WALs.
  */
 @InterfaceAudience.Private
 public class TagCompressionContext {
@@ -52,7 +54,7 @@ public class TagCompressionContext {
   }
 
   /**
-   * Compress tags one by one and writes the OutputStream. 
+   * Compress tags one by one and writes to the OutputStream.
    * @param out Stream to which the compressed tags to be written
    * @param in Source where tags are available
    * @param offset Offset for the tags bytes
@@ -69,6 +71,24 @@ public class TagCompressionContext {
       pos += Tag.TAG_LENGTH_SIZE;
       write(in, pos, tagLen, out);
       pos += tagLen;
+    }
+  }
+
+  /**
+   * Compress tags one by one and writes to the OutputStream.
+   * @param out Stream to which the compressed tags to be written
+   * @param in Source buffer where tags are available
+   * @param length Length of all tag bytes
+   * @throws IOException
+   */
+  public void compressTags(OutputStream out, ByteBuffer in, short length) throws IOException {
+    if (in.hasArray()) {
+      compressTags(out, in.array(), in.arrayOffset() + in.position(), length);
+      ByteBufferUtils.skip(in, length);
+    } else {
+      byte[] tagBuf = new byte[length];
+      in.get(tagBuf);
+      compressTags(out, tagBuf, 0, length);
     }
   }
 
@@ -102,6 +122,58 @@ public class TagCompressionContext {
         System.arraycopy(entry, 0, dest, offset, entry.length);
         offset += entry.length;
       }
+    }
+  }
+
+  /**
+   * Uncompress tags from the input ByteBuffer and writes to the destination array.
+   * @param src Buffer where the compressed tags are available
+   * @param dest Destination array where to write the uncompressed tags
+   * @param offset Offset in destination where tags to be written
+   * @param length Length of all tag bytes
+   * @throws IOException
+   */
+  public void uncompressTags(ByteBuffer src, byte[] dest, int offset, int length)
+      throws IOException {
+    int endOffset = offset + length;
+    while (offset < endOffset) {
+      byte status = src.get();
+      short tagLen;
+      if (status == Dictionary.NOT_IN_DICTIONARY) {
+        // We are writing short as tagLen. So can downcast this without any risk.
+        tagLen = (short) StreamUtils.readRawVarint32(src);
+        offset = Bytes.putShort(dest, offset, tagLen);
+        src.get(dest, offset, tagLen);
+        tagDict.addEntry(dest, offset, tagLen);
+        offset += tagLen;
+      } else {
+        short dictIdx = StreamUtils.toShort(status, src.get());
+        byte[] entry = tagDict.getEntry(dictIdx);
+        if (entry == null) {
+          throw new IOException("Missing dictionary entry for index " + dictIdx);
+        }
+        tagLen = (short) entry.length;
+        offset = Bytes.putShort(dest, offset, tagLen);
+        System.arraycopy(entry, 0, dest, offset, tagLen);
+        offset += tagLen;
+      }
+    }
+  }
+
+  /**
+   * Uncompress tags from the InputStream and writes to the destination buffer.
+   * @param src Stream where the compressed tags are available
+   * @param dest Destination buffer where to write the uncompressed tags
+   * @param length Length of all tag bytes
+   * @throws IOException
+   */
+  public void uncompressTags(InputStream src, ByteBuffer dest, short length) throws IOException {
+    if (dest.hasArray()) {
+      uncompressTags(src, dest.array(), dest.arrayOffset() + dest.position(), length);
+    } else {
+      byte[] tagBuf = new byte[length];
+      uncompressTags(src, tagBuf, 0, length);
+      dest.put(tagBuf);
     }
   }
 

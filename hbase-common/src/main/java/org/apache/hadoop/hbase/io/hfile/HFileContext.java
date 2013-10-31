@@ -122,6 +122,10 @@ public class HFileContext implements HeapSize, Cloneable {
     return compressTags;
   }
 
+  public void setCompressTags(boolean compressTags) {
+    this.compressTags = compressTags;
+  }
+
   public ChecksumType getChecksumType() {
     return checksumType;
   }

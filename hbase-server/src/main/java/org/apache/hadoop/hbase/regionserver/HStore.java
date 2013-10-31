@@ -828,6 +828,7 @@ public class HStore implements Store {
     HFileContext hFileContext = new HFileContextBuilder()
                                 .withIncludesMvcc(includeMVCCReadpoint)
                                 .withIncludesTags(includesTag)
+                                .withCompressTags(family.shouldCompressTags())
                                 .withCompressionAlgo(compression)
                                 .withChecksumType(checksumType)
                                 .withBytesPerCheckSum(bytesPerChecksum)
