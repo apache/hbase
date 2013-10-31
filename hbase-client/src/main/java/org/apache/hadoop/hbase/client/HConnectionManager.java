@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -2207,7 +2208,8 @@ public class HConnectionManager {
 
     /**
      * Update the location with the new value (if the exception is a RegionMovedException)
-     * or delete it from the cache.
+     * or delete it from the cache. Does nothing if we can be sure from the exception that
+     * the location is still accurate, or if the cache has already been updated.
      * @param exception an object (to simplify user code) on which we will try to find a nested
      *                  or wrapped or both RegionMovedException
      * @param source server that is the source of the location update.
@@ -2221,30 +2223,45 @@ public class HConnectionManager {
         return;
       }
 
+      if (source == null || source.getServerName() == null){
+        // This should not happen, but let's secure ourselves.
+        return;
+      }
+
       // Is it something we have already updated?
       final HRegionLocation oldLocation = getCachedLocation(tableName, rowkey);
-      if (oldLocation == null) {
-        // There is no such location in the cache => it's been removed already => nothing to do
+      if (oldLocation == null || !source.getServerName().equals(oldLocation.getServerName())) {
+        // There is no such location in the cache (it's been removed already) or
+        // the cache has already been refreshed with a different location.  => nothing to do
         return;
       }
 
       HRegionInfo regionInfo = oldLocation.getRegionInfo();
-      final RegionMovedException rme = RegionMovedException.find(exception);
-      if (rme != null) {
-        if (LOG.isTraceEnabled()){
-          LOG.trace("Region " + regionInfo.getRegionNameAsString() + " moved to " +
-            rme.getHostname() + ":" + rme.getPort() + " according to " + source.getHostnamePort());
+      Throwable cause = findException(exception);
+      if (cause != null) {
+        if (cause instanceof RegionTooBusyException || cause instanceof RegionOpeningException) {
+          // We know that the region is still on this region server
+          return;
         }
-        updateCachedLocation(
-            regionInfo, source, rme.getServerName(), rme.getLocationSeqNum());
-      } else if (RegionOpeningException.find(exception) != null) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Region " + regionInfo.getRegionNameAsString() + " is being opened on "
-              + source.getHostnamePort() + "; not deleting the cache entry");
+
+        if (cause instanceof RegionMovedException) {
+          RegionMovedException rme = (RegionMovedException) cause;
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Region " + regionInfo.getRegionNameAsString() + " moved to " +
+                rme.getHostname() + ":" + rme.getPort() +
+                " according to " + source.getHostnamePort());
+          }
+          // We know that the region is not anymore on this region server, but we know
+          //  the new location.
+          updateCachedLocation(
+              regionInfo, source, rme.getServerName(), rme.getLocationSeqNum());
+          return;
         }
-      } else {
-        deleteCachedLocation(regionInfo, source);
       }
+
+      // If we're here, it means that can cannot be sure about the location, so we remove it from
+      //  the cache.
+      deleteCachedLocation(regionInfo, source);
     }
 
     @Override
@@ -2710,6 +2727,46 @@ public class HConnectionManager {
         retries.incrementAndGet();
       }
     }
+  }
+
+  /**
+   * Look for an exception we know in the remote exception:
+   * - hadoop.ipc wrapped exceptions
+   * - nested exceptions
+   * 
+   * Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException
+   * @returns null if we didn't find the exception, the exception otherwise.
+   */
+  public static Throwable findException(Object exception) {
+    if (exception == null || !(exception instanceof Throwable)) {
+      return null;
+    }
+    Throwable cur = (Throwable) exception;
+    while (cur != null) {
+      if (cur instanceof RegionMovedException || cur instanceof RegionOpeningException
+          || cur instanceof RegionTooBusyException) {
+        return cur;
+      }
+      if (cur instanceof RemoteException) {
+        RemoteException re = (RemoteException) cur;
+        cur = re.unwrapRemoteException(
+            RegionOpeningException.class, RegionMovedException.class,
+            RegionTooBusyException.class);
+        if (cur == null) {
+          cur = re.unwrapRemoteException();
+        }
+        // unwrapRemoteException can return the exception given as a parameter when it cannot
+        //  unwrap it. In this case, there is no need to look further
+        // noinspection ObjectEquality
+        if (cur == re) {
+          return null;
+        }
+      } else {
+        cur = cur.getCause();
+      }
+    }
+
+    return null;
   }
 
   /**

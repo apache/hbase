@@ -38,42 +38,4 @@ public class RegionOpeningException extends NotServingRegionException {
   public RegionOpeningException(String message) {
     super(message);
   }
-
-  /**
-   * Look for a RegionOpeningException in the exception:
-   *  - hadoop.ipc wrapped exceptions
-   *  - nested exceptions
-   * Returns null if we didn't find the exception.
-   * TODO: this code is mostly C/Ped from RegionMovedExecption. Due to the limitations of
-   *       generics it's not amenable to generalizing without adding parameters/isAssignableFrom.
-   *       Might make general if used in more places.
-   */
-  public static RegionOpeningException find(Object exception) {
-    if (exception == null || !(exception instanceof Throwable)) {
-      return null;
-    }
-    RegionOpeningException res = null;
-    Throwable cur = (Throwable)exception;
-    while (res == null && cur != null) {
-      if (cur instanceof RegionOpeningException) {
-        res = (RegionOpeningException) cur;
-      } else {
-        if (cur instanceof RemoteException) {
-          RemoteException re = (RemoteException) cur;
-          Exception e = re.unwrapRemoteException(RegionOpeningException.class);
-          if (e == null) {
-            e = re.unwrapRemoteException();
-          }
-          // unwrapRemoteException can return the exception given as a parameter when it cannot
-          //  unwrap it. In this case, there is no need to look further
-          // noinspection ObjectEquality
-          if (e != re) {
-            res = find(e);
-          }
-        }
-        cur = cur.getCause();
-      }
-    }
-    return res;
-  }
 }

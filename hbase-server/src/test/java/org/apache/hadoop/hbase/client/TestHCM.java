@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -449,12 +450,18 @@ public class TestHCM {
     } catch (RetriesExhaustedWithDetailsException e){
       LOG.info("Put done, exception caught: " + e.getClass());
       Assert.assertEquals(1, e.getNumExceptions());
+      Assert.assertEquals(1, e.getCauses().size());
       Assert.assertArrayEquals(e.getRow(0).getRow(), ROW);
+
+      // Check that we unserialized the exception as expected
+      Throwable cause = HConnectionManager.findException(e.getCause(0));
+      Assert.assertNotNull(cause);
+      Assert.assertTrue(cause instanceof RegionMovedException);
     }
     Assert.assertNotNull("Cached connection is null", conn.getCachedLocation(TABLE_NAME, ROW));
     Assert.assertEquals(
-      "Previous server was "+curServer.getServerName().getHostAndPort(),
-      destServerName.getPort(), conn.getCachedLocation(TABLE_NAME, ROW).getPort());
+        "Previous server was " + curServer.getServerName().getHostAndPort(),
+        destServerName.getPort(), conn.getCachedLocation(TABLE_NAME, ROW).getPort());
 
     Assert.assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
     Assert.assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
