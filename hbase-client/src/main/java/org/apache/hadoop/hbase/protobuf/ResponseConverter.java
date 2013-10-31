@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResul
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
@@ -94,13 +95,17 @@ public final class ResponseConverter {
     for (int i = 0; i < responseRegionActionResultCount; i++) {
       RegionAction actions = request.getRegionAction(i);
       RegionActionResult actionResult = response.getRegionActionResult(i);
-      byte[] regionName = actions.getRegion().toByteArray();
+      HBaseProtos.RegionSpecifier rs = actions.getRegion();
+      if (rs.hasType() &&
+          (rs.getType() != HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME)){
+        throw new IllegalArgumentException(
+            "We support only encoded types for protobuf multi response.");
+      }
+      byte[] regionName = rs.getValue().toByteArray();
 
       if (actionResult.hasException()){
         Throwable regionException =  ProtobufUtil.toException(actionResult.getException());
-        for (ClientProtos.Action a : actions.getActionList()){
-          results.add(regionName, new Pair<Integer, Object>(a.getIndex(), regionException));
-        }
+        results.addException(regionName, regionException);
         continue;
       }
 
