@@ -91,28 +91,12 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
     try {
       responseProto = getStub().multi(controller, requestProto);
     } catch (ServiceException e) {
-      return createAllFailedResponse(requestProto, ProtobufUtil.getRemoteException(e));
+      throw ProtobufUtil.getRemoteException(e);
     }
     return ResponseConverter.getResults(requestProto, responseProto, controller.cellScanner());
   }
 
-  /**
-   * @param request
-   * @param t
-   * @return Return a response that has every action in request failed w/ the passed in
-   * exception <code>t</code> -- this will get them all retried after some backoff.
-   */
-  private static MultiResponse createAllFailedResponse(final ClientProtos.MultiRequest request,
-      final Throwable t) {
-    MultiResponse massFailedResponse = new MultiResponse();
-    for (RegionAction rAction: request.getRegionActionList()) {
-      byte [] regionName = rAction.getRegion().getValue().toByteArray();
-      for (ClientProtos.Action action: rAction.getActionList()) {
-        massFailedResponse.add(regionName, new Pair<Integer, Object>(action.getIndex(), t));
-      }
-    }
-    return massFailedResponse;
-  }
+
 
   /**
    * @return True if we should send data in cellblocks.  This is an expensive call.  Cache the

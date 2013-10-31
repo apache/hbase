@@ -40,6 +40,13 @@ public class MultiResponse {
   private Map<byte[], List<Pair<Integer, Object>>> results =
       new TreeMap<byte[], List<Pair<Integer, Object>>>(Bytes.BYTES_COMPARATOR);
 
+  /**
+   * The server can send us a failure for the region itself, instead of individual failure.
+   * It's a part of the protobuf definition.
+   */
+  private Map<byte[], Throwable> exceptions =
+      new TreeMap<byte[], Throwable>(Bytes.BYTES_COMPARATOR);
+
   public MultiResponse() {
     super();
   }
@@ -79,5 +86,20 @@ public class MultiResponse {
 
   public Map<byte[], List<Pair<Integer, Object>>> getResults() {
     return results;
+  }
+
+  public void addException(byte []regionName, Throwable ie){
+    exceptions.put(regionName, ie);
+  }
+
+  /**
+   * @return the exception for the region, if any. Null otherwise.
+   */
+  public Throwable getException(byte []regionName){
+    return exceptions.get(regionName);
+  }
+
+  public Map<byte[], Throwable> getExceptions() {
+    return exceptions;
   }
 }
