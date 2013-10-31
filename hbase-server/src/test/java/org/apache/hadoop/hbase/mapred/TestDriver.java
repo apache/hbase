@@ -18,34 +18,24 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.util.ProgramDriver;
-import com.google.common.annotations.VisibleForTesting;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
-/**
- * Driver for hbase mapreduce jobs. Select which to run by passing name of job
- * to this main.
- */
-@Deprecated
-@InterfaceAudience.Public
-@InterfaceStability.Stable
-public class Driver {
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
-  private static ProgramDriver pgd = new ProgramDriver();
+@Category(SmallTests.class)
+public class TestDriver {
 
-  @VisibleForTesting
-  static void setProgramDriver(ProgramDriver pgd0) {    
-    pgd = pgd0;
-  }
-
-  /**
-   * @param args
-   * @throws Throwable
-   */
-  public static void main(String[] args) throws Throwable {
-    pgd.addClass(RowCounter.NAME, RowCounter.class, "Count rows in HBase table");
-    ProgramDriver.class.getMethod("driver", new Class[] { String[].class })
-        .invoke(pgd, new Object[] { args });    
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testDriverMainMethod() throws Throwable {
+    ProgramDriver programDriverMock = mock(ProgramDriver.class);
+    Driver.setProgramDriver(programDriverMock);
+    Driver.main(new String[]{});
+    verify(programDriverMock).driver(Mockito.any(String[].class));    
   }
 }
