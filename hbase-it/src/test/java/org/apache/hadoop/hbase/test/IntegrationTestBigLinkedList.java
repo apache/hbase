@@ -89,8 +89,6 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -1044,18 +1042,11 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
   protected IntegrationTestingUtility util;
 
-  @Before
   @Override
-  public void setUp() throws Exception {
+  public void setUpCluster() throws Exception {
     util = getTestingUtil(getConf());
     util.initializeCluster(util.isDistributedCluster() ? 1 : this.NUM_SLAVES_BASE);
     this.setConf(util.getConfiguration());
-  }
-
-  @After
-  @Override
-  public void cleanUp() throws Exception {
-    util.restoreCluster();
   }
 
   @Test

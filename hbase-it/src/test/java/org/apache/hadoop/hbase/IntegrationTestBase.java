@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase;
 import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
@@ -33,13 +35,14 @@ import org.junit.Before;
  */
 public abstract class IntegrationTestBase extends AbstractHBaseTool {
   public static final String LONG_OPT = "monkey";
+  private static final Log LOG = LogFactory.getLog(IntegrationTestBase.class);
 
   protected IntegrationTestingUtility util;
   protected ChaosMonkey monkey;
   protected String monkeyToUse;
 
   public IntegrationTestBase() {
-    this(MonkeyFactory.CALM);
+    this(null);
   }
 
   public IntegrationTestBase(String monkeyToUse) {
@@ -71,12 +74,10 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
   @Override
   protected int doWork() throws Exception {
     setUp();
-    setUpMonkey();
     int result = -1;
     try {
       result = runTestFromCommandLine();
     } finally {
-      cleanUpMonkey();
       cleanUp();
     }
 
@@ -84,16 +85,31 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
   }
 
   @Before
+  public void setUp() throws Exception {
+    setUpCluster();
+    setUpMonkey();
+  }
+
+  @After
+  public void cleanUp() throws Exception {
+    cleanUpMonkey();
+    cleanUpCluster();
+  }
+
   public void setUpMonkey() throws Exception {
     util = getTestingUtil(getConf());
     MonkeyFactory fact = MonkeyFactory.getFactory(monkeyToUse);
+    if (fact == null) {
+      // Run with no monkey in distributed context, with real monkey in local test context.
+      fact = MonkeyFactory.getFactory(
+          util.isDistributedCluster() ? MonkeyFactory.CALM : MonkeyFactory.SLOW_DETERMINISTIC);
+    }
     monkey = fact.setUtil(util)
                  .setTableName(getTablename())
                  .setColumnFamilies(getColumnFamilies()).build();
     monkey.start();
   }
 
-  @After
   public void cleanUpMonkey() throws Exception {
     cleanUpMonkey("Ending test");
   }
@@ -116,9 +132,13 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     return util;
   }
 
-  public abstract void setUp() throws Exception;
+  public abstract void setUpCluster() throws Exception;
 
-  public abstract void cleanUp()  throws Exception;
+  public void cleanUpCluster() throws Exception {
+    LOG.debug("Restoring the cluster");
+    util.restoreCluster();
+    LOG.debug("Done restoring the cluster");
+  }
 
   public abstract int runTestFromCommandLine() throws Exception;
 

@@ -66,8 +66,6 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -593,9 +591,8 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     util.getTestFileSystem().delete(p, true);
   }
 
-  @Before
   @Override
-  public void setUp() throws Exception {
+  public void setUpCluster() throws Exception {
     util = getTestingUtil(getConf());
     util.initializeCluster(1);
 
@@ -608,13 +605,6 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     } else {
       util.startMiniMapReduceCluster();
     }
-  }
-
-  @After
-  @Override
-  public void cleanUp() throws Exception {
-    util.restoreCluster();
-    util = null;
   }
 
   private static final String OPT_LOAD = "load";

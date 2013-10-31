@@ -40,6 +40,7 @@ import org.junit.experimental.categories.Category;
 public class IntegrationTestIngest extends IntegrationTestBase {
   private static final int SERVER_COUNT = 4; // number of slaves for the smallest cluster
   private static final long DEFAULT_RUN_TIME = 20 * 60 * 1000;
+  private static final long JUNIT_RUN_TIME = 10 * 60 * 1000;
 
   /** A soft limit on how long we should run */
   private static final String RUN_TIME_KEY = "hbase.%s.runtime";
@@ -49,10 +50,11 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   protected HBaseCluster cluster;
   private LoadTestTool loadTool;
 
-  protected void setUp(int numSlavesBase) throws Exception {
+  @Override
+  public void setUpCluster() throws Exception {
     util = getTestingUtil(null);
-    LOG.debug("Initializing/checking cluster has " + numSlavesBase + " servers");
-    util.initializeCluster(numSlavesBase);
+    LOG.debug("Initializing/checking cluster has " + SERVER_COUNT + " servers");
+    util.initializeCluster(SERVER_COUNT);
     LOG.debug("Done initializing/checking cluster");
     cluster = util.getHBaseClusterInterface();
     deleteTableIfNecessary();
@@ -65,26 +67,18 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   }
 
   @Override
-  public void setUp() throws Exception {
-    setUp(SERVER_COUNT);
-  }
-
-  @Override
-  public void cleanUp() throws Exception {
-    LOG.debug("Restoring the cluster");
-    util.restoreCluster();
-    LOG.debug("Done restoring the cluster");
-  }
-
-  @Override
   public int runTestFromCommandLine() throws Exception {
-    internalRunIngestTest();
+    internalRunIngestTest(DEFAULT_RUN_TIME);
     return 0;
   }
 
   @Test
-  public void internalRunIngestTest() throws Exception {
-    runIngestTest(DEFAULT_RUN_TIME, 2500, 10, 1024, 10);
+  public void testIngest() throws Exception {
+   runIngestTest(JUNIT_RUN_TIME, 2500, 10, 1024, 10);
+  }
+
+  private void internalRunIngestTest(long runTime) throws Exception {
+   runIngestTest(runTime, 2500, 10, 1024, 10);
   }
 
   @Override
