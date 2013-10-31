@@ -18,18 +18,21 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -37,6 +40,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -53,11 +57,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * TestEndpoint: test cases to verify coprocessor Endpoint
@@ -123,9 +125,9 @@ public class TestCoprocessorEndpoint {
               new BlockingRpcCallback<ColumnAggregationProtos.SumResponse>();
           ColumnAggregationProtos.SumRequest.Builder builder =
             ColumnAggregationProtos.SumRequest.newBuilder();
-          builder.setFamily(ByteString.copyFrom(family));
+          builder.setFamily(ZeroCopyLiteralByteString.wrap(family));
           if (qualifier != null && qualifier.length > 0) {
-            builder.setQualifier(ByteString.copyFrom(qualifier));
+            builder.setQualifier(ZeroCopyLiteralByteString.wrap(qualifier));
           }
           instance.sum(null, builder.build(), rpcCallback);
           return rpcCallback.get().getSum();

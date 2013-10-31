@@ -19,9 +19,9 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.IOException;
+import java.util.ArrayList;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -38,8 +38,9 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import com.google.common.base.Preconditions;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * This filter is used to filter cells based on value. It takes a {@link CompareFilter.CompareOp}
@@ -306,10 +307,10 @@ public class SingleColumnValueFilter extends FilterBase {
     FilterProtos.SingleColumnValueFilter.Builder builder =
       FilterProtos.SingleColumnValueFilter.newBuilder();
     if (this.columnFamily != null) {
-      builder.setColumnFamily(ByteString.copyFrom(this.columnFamily));
+      builder.setColumnFamily(ZeroCopyLiteralByteString.wrap(this.columnFamily));
     }
     if (this.columnQualifier != null) {
-      builder.setColumnQualifier(ByteString.copyFrom(this.columnQualifier));
+      builder.setColumnQualifier(ZeroCopyLiteralByteString.wrap(this.columnQualifier));
     }
     HBaseProtos.CompareType compareOp = CompareType.valueOf(this.compareOp.name());
     builder.setCompareOp(compareOp);

@@ -46,8 +46,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.io.DataInputBuffer;
 
-import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * HRegion information.
@@ -843,10 +843,10 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     builder.setTableName(ProtobufUtil.toProtoTableName(info.getTable()));
     builder.setRegionId(info.getRegionId());
     if (info.getStartKey() != null) {
-      builder.setStartKey(ByteString.copyFrom(info.getStartKey()));
+      builder.setStartKey(ZeroCopyLiteralByteString.wrap(info.getStartKey()));
     }
     if (info.getEndKey() != null) {
-      builder.setEndKey(ByteString.copyFrom(info.getEndKey()));
+      builder.setEndKey(ZeroCopyLiteralByteString.wrap(info.getEndKey()));
     }
     builder.setOffline(info.isOffline());
     builder.setSplit(info.isSplit());

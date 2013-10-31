@@ -36,8 +36,8 @@ import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * A filter for adding inter-column timestamp matching
@@ -225,10 +225,10 @@ public class DependentColumnFilter extends CompareFilter {
       FilterProtos.DependentColumnFilter.newBuilder();
     builder.setCompareFilter(super.convert());
     if (this.columnFamily != null) {
-      builder.setColumnFamily(ByteString.copyFrom(this.columnFamily));
+      builder.setColumnFamily(ZeroCopyLiteralByteString.wrap(this.columnFamily));
     }
     if (this.columnQualifier != null) {
-      builder.setColumnQualifier(ByteString.copyFrom(this.columnQualifier));
+      builder.setColumnQualifier(ZeroCopyLiteralByteString.wrap(this.columnQualifier));
     }
     builder.setDropDependentColumn(this.dropDependentColumn);
     return builder.build().toByteArray();

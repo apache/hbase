@@ -53,8 +53,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * HTableDescriptor contains the details about an HBase table  such as the descriptors of
@@ -1435,8 +1435,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     builder.setTableName(ProtobufUtil.toProtoTableName(getTableName()));
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: this.values.entrySet()) {
       BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
-      aBuilder.setFirst(ByteString.copyFrom(e.getKey().get()));
-      aBuilder.setSecond(ByteString.copyFrom(e.getValue().get()));
+      aBuilder.setFirst(ZeroCopyLiteralByteString.wrap(e.getKey().get()));
+      aBuilder.setSecond(ZeroCopyLiteralByteString.wrap(e.getValue().get()));
       builder.addAttributes(aBuilder.build());
     }
     for (HColumnDescriptor hcd: getColumnFamilies()) {

@@ -24,13 +24,9 @@ import java.io.OutputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.codec.BaseDecoder;
-import org.apache.hadoop.hbase.codec.BaseEncoder;
-import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 
 import com.google.protobuf.ByteString;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Codec that just writes out Cell as a protobuf Cell Message.  Does not write the mvcc stamp.
