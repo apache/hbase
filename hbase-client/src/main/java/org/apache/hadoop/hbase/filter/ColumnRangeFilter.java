@@ -22,8 +22,9 @@ package org.apache.hadoop.hbase.filter;
 import static org.apache.hadoop.hbase.util.Bytes.len;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.ZeroCopyLiteralByteString;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
@@ -172,9 +173,9 @@ public class ColumnRangeFilter extends FilterBase {
   public byte [] toByteArray() {
     FilterProtos.ColumnRangeFilter.Builder builder =
       FilterProtos.ColumnRangeFilter.newBuilder();
-    if (this.minColumn != null) builder.setMinColumn(ByteString.copyFrom(this.minColumn));
+    if (this.minColumn != null) builder.setMinColumn(ZeroCopyLiteralByteString.wrap(this.minColumn));
     builder.setMinColumnInclusive(this.minColumnInclusive);
-    if (this.maxColumn != null) builder.setMaxColumn(ByteString.copyFrom(this.maxColumn));
+    if (this.maxColumn != null) builder.setMaxColumn(ZeroCopyLiteralByteString.wrap(this.maxColumn));
     builder.setMaxColumnInclusive(this.maxColumnInclusive);
     return builder.build().toByteArray();
   }

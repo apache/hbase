@@ -22,15 +22,16 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -38,7 +39,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
@@ -99,9 +99,9 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLa
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
-import org.mortbay.log.Log;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Helper utility to build protocol buffer requests,
@@ -133,10 +133,10 @@ public final class RequestConverter {
     builder.setRegion(region);
 
     Column.Builder columnBuilder = Column.newBuilder();
-    columnBuilder.setFamily(ByteString.copyFrom(family));
+    columnBuilder.setFamily(ZeroCopyLiteralByteString.wrap(family));
     ClientProtos.Get.Builder getBuilder =
       ClientProtos.Get.newBuilder();
-    getBuilder.setRow(ByteString.copyFrom(row));
+    getBuilder.setRow(ZeroCopyLiteralByteString.wrap(row));
     getBuilder.addColumn(columnBuilder.build());
     getBuilder.setClosestRowBefore(true);
     builder.setGet(getBuilder.build());
@@ -181,14 +181,14 @@ public final class RequestConverter {
     builder.setRegion(region);
 
     MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
-    mutateBuilder.setRow(ByteString.copyFrom(row));
+    mutateBuilder.setRow(ZeroCopyLiteralByteString.wrap(row));
     mutateBuilder.setMutateType(MutationType.INCREMENT);
     mutateBuilder.setDurability(ProtobufUtil.toDurability(durability));
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
-    columnBuilder.setFamily(ByteString.copyFrom(family));
+    columnBuilder.setFamily(ZeroCopyLiteralByteString.wrap(family));
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-    valueBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(amount)));
-    valueBuilder.setQualifier(ByteString.copyFrom(qualifier));
+    valueBuilder.setValue(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(amount)));
+    valueBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(qualifier));
     columnBuilder.addQualifierValue(valueBuilder.build());
     mutateBuilder.addColumnValue(columnBuilder.build());
     builder.setMutation(mutateBuilder.build());
@@ -466,7 +466,7 @@ public final class RequestConverter {
     builder.setRegion(region);
     FamilyPath.Builder familyPathBuilder = FamilyPath.newBuilder();
     for (Pair<byte[], String> familyPath: familyPaths) {
-      familyPathBuilder.setFamily(ByteString.copyFrom(familyPath.getFirst()));
+      familyPathBuilder.setFamily(ZeroCopyLiteralByteString.wrap(familyPath.getFirst()));
       familyPathBuilder.setPath(familyPath.getSecond());
       builder.addFamilyPath(familyPathBuilder.build());
     }
@@ -629,7 +629,7 @@ public final class RequestConverter {
    RegionSpecifier region = buildRegionSpecifier(
      RegionSpecifierType.REGION_NAME, regionName);
    builder.setRegion(region);
-   builder.addFamily(ByteString.copyFrom(family));
+   builder.addFamily(ZeroCopyLiteralByteString.wrap(family));
    return builder.build();
  }
 
@@ -775,7 +775,7 @@ public final class RequestConverter {
      RegionSpecifierType.REGION_NAME, regionName);
    builder.setRegion(region);
    if (splitPoint != null) {
-     builder.setSplitPoint(ByteString.copyFrom(splitPoint));
+     builder.setSplitPoint(ZeroCopyLiteralByteString.wrap(splitPoint));
    }
    return builder.build();
  }
@@ -815,7 +815,7 @@ public final class RequestConverter {
    builder.setRegion(region);
    builder.setMajor(major);
    if (family != null) {
-     builder.setFamily(ByteString.copyFrom(family));
+     builder.setFamily(ZeroCopyLiteralByteString.wrap(family));
    }
    return builder.build();
  }
@@ -874,7 +874,7 @@ public final class RequestConverter {
   public static RegionSpecifier buildRegionSpecifier(
       final RegionSpecifierType type, final byte[] value) {
     RegionSpecifier.Builder regionBuilder = RegionSpecifier.newBuilder();
-    regionBuilder.setValue(ByteString.copyFrom(value));
+    regionBuilder.setValue(ZeroCopyLiteralByteString.wrap(value));
     regionBuilder.setType(type);
     return regionBuilder.build();
   }
@@ -895,9 +895,9 @@ public final class RequestConverter {
       final ByteArrayComparable comparator,
       final CompareType compareType) throws IOException {
     Condition.Builder builder = Condition.newBuilder();
-    builder.setRow(ByteString.copyFrom(row));
-    builder.setFamily(ByteString.copyFrom(family));
-    builder.setQualifier(ByteString.copyFrom(qualifier));
+    builder.setRow(ZeroCopyLiteralByteString.wrap(row));
+    builder.setFamily(ZeroCopyLiteralByteString.wrap(family));
+    builder.setQualifier(ZeroCopyLiteralByteString.wrap(qualifier));
     builder.setComparator(ProtobufUtil.toComparator(comparator));
     builder.setCompareType(compareType);
     return builder.build();
@@ -929,7 +929,7 @@ public final class RequestConverter {
       final TableName tableName, final byte [] columnName) {
     DeleteColumnRequest.Builder builder = DeleteColumnRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
-    builder.setColumnName(ByteString.copyFrom(columnName));
+    builder.setColumnName(ZeroCopyLiteralByteString.wrap(columnName));
     return builder.build();
   }
 
@@ -1069,7 +1069,7 @@ public final class RequestConverter {
     builder.setTableSchema(hTableDesc.convert());
     if (splitKeys != null) {
       for (byte [] splitKey : splitKeys) {
-        builder.addSplitKeys(ByteString.copyFrom(splitKey));
+        builder.addSplitKeys(ZeroCopyLiteralByteString.wrap(splitKey));
       }
     }
     return builder.build();
@@ -1222,7 +1222,7 @@ public final class RequestConverter {
   public static GetLastFlushedSequenceIdRequest buildGetLastFlushedSequenceIdRequest(
       byte[] regionName) {
     return GetLastFlushedSequenceIdRequest.newBuilder().setRegionName(
-        ByteString.copyFrom(regionName)).build();
+        ZeroCopyLiteralByteString.wrap(regionName)).build();
   }
 
   /**
@@ -1277,10 +1277,10 @@ public final class RequestConverter {
     permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
 
     if (family != null) {
-      permissionBuilder.setFamily(ByteString.copyFrom(family));
+      permissionBuilder.setFamily(ZeroCopyLiteralByteString.wrap(family));
     }
     if (qualifier != null) {
-      permissionBuilder.setQualifier(ByteString.copyFrom(qualifier));
+      permissionBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(qualifier));
     }
     ret.setType(AccessControlProtos.Permission.Type.Table)
        .setTablePermission(permissionBuilder);
@@ -1373,10 +1373,10 @@ public final class RequestConverter {
       permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     }
     if (family != null) {
-      permissionBuilder.setFamily(ByteString.copyFrom(family));
+      permissionBuilder.setFamily(ZeroCopyLiteralByteString.wrap(family));
     }
     if (qualifier != null) {
-      permissionBuilder.setQualifier(ByteString.copyFrom(qualifier));
+      permissionBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(qualifier));
     }
     ret.setType(AccessControlProtos.Permission.Type.Table)
        .setTablePermission(permissionBuilder);

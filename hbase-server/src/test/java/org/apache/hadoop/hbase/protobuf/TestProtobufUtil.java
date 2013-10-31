@@ -42,6 +42,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Class to test ProtobufUtil.
@@ -53,12 +54,12 @@ public class TestProtobufUtil {
     NameBytesPair.Builder builder = NameBytesPair.newBuilder();
     final String omg = "OMG!!!";
     builder.setName("java.io.IOException");
-    builder.setValue(ByteString.copyFrom(Bytes.toBytes(omg)));
+    builder.setValue(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(omg)));
     Throwable t = ProtobufUtil.toException(builder.build());
     assertEquals(omg, t.getMessage());
     builder.clear();
     builder.setName("org.apache.hadoop.ipc.RemoteException");
-    builder.setValue(ByteString.copyFrom(Bytes.toBytes(omg)));
+    builder.setValue(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(omg)));
     t = ProtobufUtil.toException(builder.build());
     assertEquals(omg, t.getMessage());
   }
@@ -202,10 +203,10 @@ public class TestProtobufUtil {
     valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
     QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c1"));
-    qualifierBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(11L)));
+    qualifierBuilder.setValue(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(11L)));
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
-    qualifierBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(22L)));
+    qualifierBuilder.setValue(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(22L)));
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     mutateBuilder.addColumnValue(valueBuilder.build());
 

@@ -69,8 +69,8 @@ import org.apache.zookeeper.proto.DeleteRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
 import org.apache.zookeeper.server.ZooKeeperSaslServer;
 
-import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Internal HBase utility class for ZooKeeper.
@@ -1940,7 +1940,7 @@ public class ZKUtil {
     if (storeSequenceIds != null) {
       for (byte[] columnFamilyName : storeSequenceIds.keySet()) {
         Long curSeqId = storeSequenceIds.get(columnFamilyName);
-        storeSequenceIdBuilder.setFamilyName(ByteString.copyFrom(columnFamilyName));
+        storeSequenceIdBuilder.setFamilyName(ZeroCopyLiteralByteString.wrap(columnFamilyName));
         storeSequenceIdBuilder.setSequenceId(curSeqId);
         regionSequenceIdsBuilder.addStoreSequenceId(storeSequenceIdBuilder.build());
         storeSequenceIdBuilder.clear();

@@ -33,9 +33,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
-
-import com.google.protobuf.ByteString;
 import org.codehaus.jackson.annotate.JsonProperty;
+
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Representation of a cell. A cell is a single value associated a column and
@@ -185,8 +185,8 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   @Override
   public byte[] createProtobufOutput() {
     Cell.Builder builder = Cell.newBuilder();
-    builder.setColumn(ByteString.copyFrom(getColumn()));
-    builder.setData(ByteString.copyFrom(getValue()));
+    builder.setColumn(ZeroCopyLiteralByteString.wrap(getColumn()));
+    builder.setData(ZeroCopyLiteralByteString.wrap(getValue()));
     if (hasUserTimestamp()) {
       builder.setTimestamp(getTimestamp());
     }

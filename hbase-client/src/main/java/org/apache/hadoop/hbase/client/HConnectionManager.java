@@ -1206,9 +1206,9 @@ public class HConnectionManager {
 
           ServerName serverName = HRegionInfo.getServerName(regionInfoRow);
           if (serverName == null) {
-            throw new NoServerForRegionException("No server address listed " +
-              "in " + parentTable + " for region " +
-              regionInfo.getRegionNameAsString() + " containing row " +
+            throw new NoServerForRegionException("No serverName " +
+              "in " + parentTable + " for " +
+              regionInfo.getRegionNameAsString() + " containing " +
               Bytes.toStringBinary(row));
           }
 
@@ -1234,12 +1234,10 @@ public class HConnectionManager {
           }
           if (tries < numTries - 1) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("locateRegionInMeta parentTable=" +
-                parentTable + ", metaLocation=" +
-                ((metaLocation == null)? "null": "{" + metaLocation + "}") +
-                ", attempt=" + tries + " of " +
-                this.numTries + " failed; retrying after sleep of " +
-                ConnectionUtils.getPauseTime(this.pause, tries) + " because: " + e.getMessage());
+              LOG.debug("locateRegionInMeta failed; parentTable=" + parentTable +
+                ", metaLocation=" + ((metaLocation == null)? "null": "{" + metaLocation + "}") +
+                ", attempt=" + tries + "/" + this.numTries + "; retrying after=" +
+                ConnectionUtils.getPauseTime(this.pause, tries) + "ms; because: " + e.getMessage());
             }
           } else {
             throw e;

@@ -32,46 +32,45 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.MediumTests;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.RowProcessorClient;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.FriendsOfFriendsProcessorRequest;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.FriendsOfFriendsProcessorResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.IncCounterProcessorResponse;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.IncCounterProcessorRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.IncCounterProcessorResponse;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.RowSwapProcessorRequest;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.RowSwapProcessorResponse;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.TimeoutProcessorRequest;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.TimeoutProcessorResponse;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorService;
 import org.apache.hadoop.hbase.regionserver.BaseRowProcessor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 import com.sun.org.apache.commons.logging.Log;
 import com.sun.org.apache.commons.logging.LogFactory;
 
@@ -363,7 +362,7 @@ public class TestRowProcessorEndpoint {
       public IncCounterProcessorRequest getRequestData() throws IOException {
         IncCounterProcessorRequest.Builder builder = IncCounterProcessorRequest.newBuilder();
         builder.setCounter(counter);
-        builder.setRow(ByteString.copyFrom(row));
+        builder.setRow(ZeroCopyLiteralByteString.wrap(row));
         return builder.build();
       }
 
@@ -442,8 +441,8 @@ public class TestRowProcessorEndpoint {
       public FriendsOfFriendsProcessorRequest getRequestData() throws IOException {
         FriendsOfFriendsProcessorRequest.Builder builder =
             FriendsOfFriendsProcessorRequest.newBuilder();
-        builder.setPerson(ByteString.copyFrom(person));
-        builder.setRow(ByteString.copyFrom(row));
+        builder.setPerson(ZeroCopyLiteralByteString.wrap(person));
+        builder.setRow(ZeroCopyLiteralByteString.wrap(row));
         builder.addAllResult(result);
         FriendsOfFriendsProcessorRequest f = builder.build();
         return f;
@@ -547,8 +546,8 @@ public class TestRowProcessorEndpoint {
       @Override
       public RowSwapProcessorRequest getRequestData() throws IOException {
         RowSwapProcessorRequest.Builder builder = RowSwapProcessorRequest.newBuilder();
-        builder.setRow1(ByteString.copyFrom(row1));
-        builder.setRow2(ByteString.copyFrom(row2));
+        builder.setRow1(ZeroCopyLiteralByteString.wrap(row1));
+        builder.setRow2(ZeroCopyLiteralByteString.wrap(row2));
         return builder.build();
       }
 
@@ -607,7 +606,7 @@ public class TestRowProcessorEndpoint {
       @Override
       public TimeoutProcessorRequest getRequestData() throws IOException {
         TimeoutProcessorRequest.Builder builder = TimeoutProcessorRequest.newBuilder();
-        builder.setRow(ByteString.copyFrom(row));
+        builder.setRow(ZeroCopyLiteralByteString.wrap(row));
         return builder.build();
       }
 

@@ -137,6 +137,7 @@ import com.google.protobuf.RpcChannel;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 import com.google.protobuf.TextFormat;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Protobufs utility.
@@ -746,17 +747,17 @@ public final class ProtobufUtil {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
       for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
         attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(ByteString.copyFrom(attribute.getValue()));
+        attributeBuilder.setValue(ZeroCopyLiteralByteString.wrap(attribute.getValue()));
         scanBuilder.addAttribute(attributeBuilder.build());
       }
     }
     byte[] startRow = scan.getStartRow();
     if (startRow != null && startRow.length > 0) {
-      scanBuilder.setStartRow(ByteString.copyFrom(startRow));
+      scanBuilder.setStartRow(ZeroCopyLiteralByteString.wrap(startRow));
     }
     byte[] stopRow = scan.getStopRow();
     if (stopRow != null && stopRow.length > 0) {
-      scanBuilder.setStopRow(ByteString.copyFrom(stopRow));
+      scanBuilder.setStopRow(ZeroCopyLiteralByteString.wrap(stopRow));
     }
     if (scan.hasFilter()) {
       scanBuilder.setFilter(ProtobufUtil.toFilter(scan.getFilter()));
@@ -765,12 +766,12 @@ public final class ProtobufUtil {
       Column.Builder columnBuilder = Column.newBuilder();
       for (Map.Entry<byte[],NavigableSet<byte []>>
           family: scan.getFamilyMap().entrySet()) {
-        columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
+        columnBuilder.setFamily(ZeroCopyLiteralByteString.wrap(family.getKey()));
         NavigableSet<byte []> qualifiers = family.getValue();
         columnBuilder.clearQualifier();
         if (qualifiers != null && qualifiers.size() > 0) {
           for (byte [] qualifier: qualifiers) {
-            columnBuilder.addQualifier(ByteString.copyFrom(qualifier));
+            columnBuilder.addQualifier(ZeroCopyLiteralByteString.wrap(qualifier));
           }
         }
         scanBuilder.addColumn(columnBuilder.build());
@@ -872,7 +873,7 @@ public final class ProtobufUtil {
       final Get get) throws IOException {
     ClientProtos.Get.Builder builder =
       ClientProtos.Get.newBuilder();
-    builder.setRow(ByteString.copyFrom(get.getRow()));
+    builder.setRow(ZeroCopyLiteralByteString.wrap(get.getRow()));
     builder.setCacheBlocks(get.getCacheBlocks());
     builder.setMaxVersions(get.getMaxVersions());
     if (get.getFilter() != null) {
@@ -891,7 +892,7 @@ public final class ProtobufUtil {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
       for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
         attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(ByteString.copyFrom(attribute.getValue()));
+        attributeBuilder.setValue(ZeroCopyLiteralByteString.wrap(attribute.getValue()));
         builder.addAttribute(attributeBuilder.build());
       }
     }
@@ -900,11 +901,11 @@ public final class ProtobufUtil {
       Map<byte[], NavigableSet<byte[]>> families = get.getFamilyMap();
       for (Map.Entry<byte[], NavigableSet<byte[]>> family: families.entrySet()) {
         NavigableSet<byte[]> qualifiers = family.getValue();
-        columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
+        columnBuilder.setFamily(ZeroCopyLiteralByteString.wrap(family.getKey()));
         columnBuilder.clearQualifier();
         if (qualifiers != null && qualifiers.size() > 0) {
           for (byte[] qualifier: qualifiers) {
-            columnBuilder.addQualifier(ByteString.copyFrom(qualifier));
+            columnBuilder.addQualifier(ZeroCopyLiteralByteString.wrap(qualifier));
           }
         }
         builder.addColumn(columnBuilder.build());
@@ -933,7 +934,7 @@ public final class ProtobufUtil {
    */
   public static MutationProto toMutation(final Increment increment) {
     MutationProto.Builder builder = MutationProto.newBuilder();
-    builder.setRow(ByteString.copyFrom(increment.getRow()));
+    builder.setRow(ZeroCopyLiteralByteString.wrap(increment.getRow()));
     builder.setMutateType(MutationType.INCREMENT);
     builder.setDurability(toDurability(increment.getDurability()));
     TimeRange timeRange = increment.getTimeRange();
@@ -947,14 +948,14 @@ public final class ProtobufUtil {
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
    for (Map.Entry<byte[], List<Cell>> family: increment.getFamilyCellMap().entrySet()) {
-      columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
+      columnBuilder.setFamily(ZeroCopyLiteralByteString.wrap(family.getKey()));
       columnBuilder.clearQualifierValue();
       List<Cell> values = family.getValue();
       if (values != null && values.size() > 0) {
         for (Cell cell: values) {
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          valueBuilder.setQualifier(ByteString.copyFrom(kv.getQualifier()));
-          valueBuilder.setValue(ByteString.copyFrom(kv.getValue()));
+          valueBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(kv.getQualifier()));
+          valueBuilder.setValue(ZeroCopyLiteralByteString.wrap(kv.getValue()));
           columnBuilder.addQualifierValue(valueBuilder.build());
         }
       }
@@ -977,12 +978,12 @@ public final class ProtobufUtil {
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
     for (Map.Entry<byte[],List<Cell>> family: mutation.getFamilyCellMap().entrySet()) {
-      columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
+      columnBuilder.setFamily(ZeroCopyLiteralByteString.wrap(family.getKey()));
       columnBuilder.clearQualifierValue();
       for (Cell cell: family.getValue()) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        valueBuilder.setQualifier(ByteString.copyFrom(kv.getQualifier()));
-        valueBuilder.setValue(ByteString.copyFrom(kv.getValue()));
+        valueBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(kv.getQualifier()));
+        valueBuilder.setValue(ZeroCopyLiteralByteString.wrap(kv.getValue()));
         valueBuilder.setTimestamp(kv.getTimestamp());
         if (type == MutationType.DELETE) {
           KeyValue.Type keyValueType = KeyValue.Type.codeToType(kv.getType());
@@ -1020,7 +1021,7 @@ public final class ProtobufUtil {
   private static MutationProto.Builder getMutationBuilderAndSetCommonFields(final MutationType type,
       final Mutation mutation) {
     MutationProto.Builder builder = MutationProto.newBuilder();
-    builder.setRow(ByteString.copyFrom(mutation.getRow()));
+    builder.setRow(ZeroCopyLiteralByteString.wrap(mutation.getRow()));
     builder.setMutateType(type);
     builder.setDurability(toDurability(mutation.getDurability()));
     builder.setTimestamp(mutation.getTimeStamp());
@@ -1029,7 +1030,7 @@ public final class ProtobufUtil {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
       for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
         attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(ByteString.copyFrom(attribute.getValue()));
+        attributeBuilder.setValue(ZeroCopyLiteralByteString.wrap(attribute.getValue()));
         builder.addAttribute(attributeBuilder.build());
       }
     }
@@ -1144,7 +1145,7 @@ public final class ProtobufUtil {
   public static ComparatorProtos.Comparator toComparator(ByteArrayComparable comparator) {
     ComparatorProtos.Comparator.Builder builder = ComparatorProtos.Comparator.newBuilder();
     builder.setName(comparator.getClass().getName());
-    builder.setSerializedComparator(ByteString.copyFrom(comparator.toByteArray()));
+    builder.setSerializedComparator(ZeroCopyLiteralByteString.wrap(comparator.toByteArray()));
     return builder.build();
   }
 
@@ -1206,7 +1207,7 @@ public final class ProtobufUtil {
   public static FilterProtos.Filter toFilter(Filter filter) throws IOException {
     FilterProtos.Filter.Builder builder = FilterProtos.Filter.newBuilder();
     builder.setName(filter.getClass().getName());
-    builder.setSerializedFilter(ByteString.copyFrom(filter.toByteArray()));
+    builder.setSerializedFilter(ZeroCopyLiteralByteString.wrap(filter.toByteArray()));
     return builder.build();
   }
 
@@ -1691,10 +1692,10 @@ public final class ProtobufUtil {
             AccessControlProtos.TablePermission.newBuilder();
         builder.setTableName(ProtobufUtil.toProtoTableName(tablePerm.getTableName()));
         if (tablePerm.hasFamily()) {
-          builder.setFamily(ByteString.copyFrom(tablePerm.getFamily()));
+          builder.setFamily(ZeroCopyLiteralByteString.wrap(tablePerm.getFamily()));
         }
         if (tablePerm.hasQualifier()) {
-          builder.setQualifier(ByteString.copyFrom(tablePerm.getQualifier()));
+          builder.setQualifier(ZeroCopyLiteralByteString.wrap(tablePerm.getQualifier()));
         }
         for (Permission.Action a : perm.getActions()) {
           builder.addAction(toPermissionAction(a));
@@ -1783,7 +1784,7 @@ public final class ProtobufUtil {
    */
   public static AccessControlProtos.UserPermission toUserPermission(UserPermission perm) {
     return AccessControlProtos.UserPermission.newBuilder()
-        .setUser(ByteString.copyFrom(perm.getUser()))
+        .setUser(ZeroCopyLiteralByteString.wrap(perm.getUser()))
         .setPermission(toPermission(perm))
         .build();
   }
@@ -2055,8 +2056,8 @@ public final class ProtobufUtil {
    */
   public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
     AuthenticationProtos.Token.Builder builder = AuthenticationProtos.Token.newBuilder();
-    builder.setIdentifier(ByteString.copyFrom(token.getIdentifier()));
-    builder.setPassword(ByteString.copyFrom(token.getPassword()));
+    builder.setIdentifier(ZeroCopyLiteralByteString.wrap(token.getIdentifier()));
+    builder.setPassword(ZeroCopyLiteralByteString.wrap(token.getPassword()));
     if (token.getService() != null) {
       builder.setService(ByteString.copyFromUtf8(token.getService().toString()));
     }
@@ -2239,9 +2240,9 @@ public final class ProtobufUtil {
     // input / output paths are relative to the store dir
     // store dir is relative to region dir
     CompactionDescriptor.Builder builder = CompactionDescriptor.newBuilder()
-        .setTableName(ByteString.copyFrom(info.getTableName()))
-        .setEncodedRegionName(ByteString.copyFrom(info.getEncodedNameAsBytes()))
-        .setFamilyName(ByteString.copyFrom(family))
+        .setTableName(ZeroCopyLiteralByteString.wrap(info.getTableName()))
+        .setEncodedRegionName(ZeroCopyLiteralByteString.wrap(info.getEncodedNameAsBytes()))
+        .setFamilyName(ZeroCopyLiteralByteString.wrap(family))
         .setStoreHomeDir(storeDir.getName()); //make relative
     for (Path inputPath : inputPaths) {
       builder.addCompactionInput(inputPath.getName()); //relative path
@@ -2318,8 +2319,8 @@ public final class ProtobufUtil {
 
   public static HBaseProtos.TableName toProtoTableName(TableName tableName) {
     return HBaseProtos.TableName.newBuilder()
-        .setNamespace(ByteString.copyFrom(tableName.getNamespace()))
-        .setQualifier(ByteString.copyFrom(tableName.getQualifier())).build();
+        .setNamespace(ZeroCopyLiteralByteString.wrap(tableName.getNamespace()))
+        .setQualifier(ZeroCopyLiteralByteString.wrap(tableName.getQualifier())).build();
   }
 
   public static TableName[] getTableNameArray(List<HBaseProtos.TableName> tableNamesList) {

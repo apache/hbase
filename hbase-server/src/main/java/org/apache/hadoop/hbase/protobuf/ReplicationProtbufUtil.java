@@ -26,7 +26,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.TreeMap;
 import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -42,11 +41,10 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
-import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 @InterfaceAudience.Private
 public class ReplicationProtbufUtil {
@@ -91,8 +89,8 @@ public class ReplicationProtbufUtil {
       WALProtos.WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
       HLogKey key = entry.getKey();
       keyBuilder.setEncodedRegionName(
-        ByteString.copyFrom(key.getEncodedRegionName()));
-      keyBuilder.setTableName(ByteString.copyFrom(key.getTablename().getName()));
+        ZeroCopyLiteralByteString.wrap(key.getEncodedRegionName()));
+      keyBuilder.setTableName(ZeroCopyLiteralByteString.wrap(key.getTablename().getName()));
       keyBuilder.setLogSequenceNumber(key.getLogSeqNum());
       keyBuilder.setWriteTime(key.getWriteTime());
       for(UUID clusterId : key.getClusterIds()) {
@@ -104,7 +102,7 @@ public class ReplicationProtbufUtil {
       NavigableMap<byte[], Integer> scopes = key.getScopes();
       if (scopes != null && !scopes.isEmpty()) {
         for (Map.Entry<byte[], Integer> scope: scopes.entrySet()) {
-          scopeBuilder.setFamily(ByteString.copyFrom(scope.getKey()));
+          scopeBuilder.setFamily(ZeroCopyLiteralByteString.wrap(scope.getKey()));
           WALProtos.ScopeType scopeType =
               WALProtos.ScopeType.valueOf(scope.getValue().intValue());
           scopeBuilder.setScopeType(scopeType);

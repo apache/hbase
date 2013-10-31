@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.protobuf.ByteString;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Representation of the status of a storage cluster:
@@ -719,7 +719,7 @@ public class StorageClusterStatusModel
       for (Node.Region region: node.regions) {
         StorageClusterStatus.Region.Builder regionBuilder =
           StorageClusterStatus.Region.newBuilder();
-        regionBuilder.setName(ByteString.copyFrom(region.name));
+        regionBuilder.setName(ZeroCopyLiteralByteString.wrap(region.name));
         regionBuilder.setStores(region.stores);
         regionBuilder.setStorefiles(region.storefiles);
         regionBuilder.setStorefileSizeMB(region.storefileSizeMB);

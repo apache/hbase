@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.HConstants.LAST_ROW;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
@@ -136,8 +137,8 @@ public class SecureBulkLoadClient {
       if(userToken != null) {
         protoDT =
             SecureBulkLoadProtos.DelegationToken.newBuilder()
-              .setIdentifier(ByteString.copyFrom(userToken.getIdentifier()))
-              .setPassword(ByteString.copyFrom(userToken.getPassword()))
+              .setIdentifier(ZeroCopyLiteralByteString.wrap(userToken.getIdentifier()))
+              .setPassword(ZeroCopyLiteralByteString.wrap(userToken.getPassword()))
               .setKind(userToken.getKind().toString())
               .setService(userToken.getService().toString()).build();
       }
@@ -146,7 +147,7 @@ public class SecureBulkLoadClient {
           new ArrayList<ClientProtos.BulkLoadHFileRequest.FamilyPath>();
       for(Pair<byte[], String> el: familyPaths) {
         protoFamilyPaths.add(ClientProtos.BulkLoadHFileRequest.FamilyPath.newBuilder()
-          .setFamily(ByteString.copyFrom(el.getFirst()))
+          .setFamily(ZeroCopyLiteralByteString.wrap(el.getFirst()))
           .setPath(el.getSecond()).build());
       }
 

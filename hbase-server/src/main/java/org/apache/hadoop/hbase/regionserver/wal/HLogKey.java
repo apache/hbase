@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -35,9 +34,9 @@ import java.util.UUID;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType;
@@ -47,6 +46,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * A Key for an entry in the change log.
@@ -425,8 +425,8 @@ public class HLogKey implements WritableComparable<HLogKey> {
       WALCellCodec.ByteStringCompressor compressor) throws IOException {
     WALKey.Builder builder = WALKey.newBuilder();
     if (compressionContext == null) {
-      builder.setEncodedRegionName(ByteString.copyFrom(this.encodedRegionName));
-      builder.setTableName(ByteString.copyFrom(this.tablename.getName()));
+      builder.setEncodedRegionName(ZeroCopyLiteralByteString.wrap(this.encodedRegionName));
+      builder.setTableName(ZeroCopyLiteralByteString.wrap(this.tablename.getName()));
     } else {
       builder.setEncodedRegionName(
           compressor.compress(this.encodedRegionName, compressionContext.regionDict));
@@ -443,7 +443,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
     }
     if (scopes != null) {
       for (Map.Entry<byte[], Integer> e : scopes.entrySet()) {
-        ByteString family = (compressionContext == null) ? ByteString.copyFrom(e.getKey())
+        ByteString family = (compressionContext == null) ? ZeroCopyLiteralByteString.wrap(e.getKey())
             : compressor.compress(e.getKey(), compressionContext.familyDict);
         builder.addScopes(FamilyScope.newBuilder()
             .setFamily(family).setScopeType(ScopeType.valueOf(e.getValue())));

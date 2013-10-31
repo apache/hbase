@@ -80,13 +80,14 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
       } else {
         regionActionBuilder = RequestConverter.buildRegionAction(regionName, actions);
       }
-      multiRequestBuilder.addRegionAction(regionActionBuilder.build());
+      RegionAction ra = regionActionBuilder.build();
+      multiRequestBuilder.addRegionAction(ra);
     }
     // Controller optionally carries cell data over the proxy/service boundary and also
     // optionally ferries cell response data back out again.
     PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cells);
     controller.setPriority(getTableName());
-    ClientProtos.MultiResponse responseProto;
+    ClientProtos.MultiResponse responseProto = null;
     ClientProtos.MultiRequest requestProto = multiRequestBuilder.build();
     try {
       responseProto = getStub().multi(controller, requestProto);

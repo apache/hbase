@@ -32,7 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo;
 
-import com.google.protobuf.ByteString;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Representation of a list of table regions. 
@@ -135,8 +135,8 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
       TableInfo.Region.Builder regionBuilder = TableInfo.Region.newBuilder();
       regionBuilder.setName(aRegion.getName());
       regionBuilder.setId(aRegion.getId());
-      regionBuilder.setStartKey(ByteString.copyFrom(aRegion.getStartKey()));
-      regionBuilder.setEndKey(ByteString.copyFrom(aRegion.getEndKey()));
+      regionBuilder.setStartKey(ZeroCopyLiteralByteString.wrap(aRegion.getStartKey()));
+      regionBuilder.setEndKey(ZeroCopyLiteralByteString.wrap(aRegion.getEndKey()));
       regionBuilder.setLocation(aRegion.getLocation());
       builder.addRegions(regionBuilder);
     }

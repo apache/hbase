@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
@@ -133,13 +130,13 @@ public class ClientSmallScanner extends ClientScanner {
           || checkScanStopRow(endKey) || done) {
         close();
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Finished with small scan at " + this.currentRegion);
+          LOG.debug("Finished scan of " + this.currentRegion);
         }
         return false;
       }
       localStartKey = endKey;
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Finished with region " + this.currentRegion);
+        LOG.debug("Finished with " + this.currentRegion);
       }
     } else if (this.lastResult != null) {
       localStartKey = this.lastResult.getRow();
@@ -150,8 +147,7 @@ public class ClientSmallScanner extends ClientScanner {
     }
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Advancing internal small scanner to startKey at '"
-          + Bytes.toStringBinary(localStartKey) + "'");
+      LOG.trace("Advancing to startKey at '" + Bytes.toStringBinary(localStartKey) + "'");
     }
     smallScanCallable = getSmallScanCallable(localStartKey, cacheNum);
     if (this.scanMetrics != null && skipRowOfFirstResult == null) {
