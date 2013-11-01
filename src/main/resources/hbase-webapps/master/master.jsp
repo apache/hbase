@@ -1,4 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8"
+  import="java.text.SimpleDateFormat"
   import="java.util.*"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.util.Bytes"
@@ -70,6 +71,7 @@
 <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
 <tr><td>HBase Version</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, <%= org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and branch@revision</td></tr>
 <tr><td>HBase Compiled</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
+<tr><td>Master started</td><td><%= (new SimpleDateFormat("EEE MMM d HH:mm:ss z yyyy")).format(new Date(master.getMasterStartupTime())) %></td><td>When Master was started</td></tr>
 <tr><td>Hadoop Version</td><td><%= org.apache.hadoop.util.VersionInfo.getVersion() %>, r<%= org.apache.hadoop.util.VersionInfo.getRevision() %></td><td>Hadoop version and svn revision</td></tr>
 <tr><td>Hadoop Compiled</td><td><%= org.apache.hadoop.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.util.VersionInfo.getUser() %></td><td>When Hadoop version was compiled and by whom</td></tr>
 <tr><td>HBase Root Directory</td><td><%= master.getRootDir().toString() %></td><td>Location of HBase home directory</td></tr>

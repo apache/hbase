@@ -1,4 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8"
+  import="java.text.SimpleDateFormat"
   import="java.util.*"
   import="java.io.IOException"
   import="org.apache.hadoop.io.Text"
@@ -45,6 +46,7 @@
 <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
 <tr><td>HBase Version</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, <%= org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and branch@revision</td></tr>
 <tr><td>HBase Compiled</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
+<tr><td>RegionServer started</td><td><%= (new SimpleDateFormat("EEE MMM d HH:mm:ss z yyyy")).format(new Date(serverInfo.getStartCode())) %></td><td>When RegionServer was started</td></tr>
 <tr><td>Metrics</td><td><%= metrics.toString() %></td><td>RegionServer Metrics; file and heap sizes are in megabytes</td></tr>
 <tr><td>Zookeeper Quorum</td><td><%= regionServer.getZooKeeperWrapper().getQuorumServers() %></td><td>Addresses of all registered ZK servers</td></tr>
 </table>
