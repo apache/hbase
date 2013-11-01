@@ -705,6 +705,9 @@ public final class ProtobufUtil {
       increment.setTimeRange(minStamp, maxStamp);
     }
     increment.setDurability(toDurability(proto.getDurability()));
+    for (NameBytesPair attribute : proto.getAttributeList()) {
+      increment.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
+    }
     return increment;
   }
 
@@ -947,7 +950,7 @@ public final class ProtobufUtil {
     }
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-   for (Map.Entry<byte[], List<Cell>> family: increment.getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte[], List<Cell>> family: increment.getFamilyCellMap().entrySet()) {
       columnBuilder.setFamily(ZeroCopyLiteralByteString.wrap(family.getKey()));
       columnBuilder.clearQualifierValue();
       List<Cell> values = family.getValue();
@@ -960,6 +963,15 @@ public final class ProtobufUtil {
         }
       }
       builder.addColumnValue(columnBuilder.build());
+    }
+    Map<String, byte[]> attributes = increment.getAttributesMap();
+    if (!attributes.isEmpty()) {
+      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
+      for (Map.Entry<String, byte[]> attribute : attributes.entrySet()) {
+        attributeBuilder.setName(attribute.getKey());
+        attributeBuilder.setValue(ZeroCopyLiteralByteString.wrap(attribute.getValue()));
+        builder.addAttribute(attributeBuilder.build());
+      }
     }
     return builder.build();
   }
