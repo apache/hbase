@@ -957,8 +957,10 @@ public final class ProtobufUtil {
       if (values != null && values.size() > 0) {
         for (Cell cell: values) {
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          valueBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(kv.getQualifier()));
-          valueBuilder.setValue(ZeroCopyLiteralByteString.wrap(kv.getValue()));
+          valueBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(
+              kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
+          valueBuilder.setValue(ZeroCopyLiteralByteString.wrap(
+              kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
           columnBuilder.addQualifierValue(valueBuilder.build());
         }
       }
@@ -994,8 +996,10 @@ public final class ProtobufUtil {
       columnBuilder.clearQualifierValue();
       for (Cell cell: family.getValue()) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        valueBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(kv.getQualifier()));
-        valueBuilder.setValue(ZeroCopyLiteralByteString.wrap(kv.getValue()));
+        valueBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(
+            kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
+        valueBuilder.setValue(ZeroCopyLiteralByteString.wrap(
+            kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
         valueBuilder.setTimestamp(kv.getTimestamp());
         if (type == MutationType.DELETE) {
           KeyValue.Type keyValueType = KeyValue.Type.codeToType(kv.getType());

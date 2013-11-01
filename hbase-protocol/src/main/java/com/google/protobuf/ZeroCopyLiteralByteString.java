@@ -42,6 +42,13 @@ public final class ZeroCopyLiteralByteString extends LiteralByteString {
     return new LiteralByteString(array);
   }
 
+  /**
+   * Wraps a subset of a byte array in a {@link ByteString} without copying it.
+   */
+  public static ByteString wrap(final byte[] array, int offset, int length) {
+    return new BoundedByteString(array, offset, length);
+  }
+
   // TODO:
   // ZeroCopyLiteralByteString.wrap(this.buf, 0, this.count);
 

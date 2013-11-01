@@ -487,10 +487,12 @@ public final class RequestConverter {
       final List<Action<R>> actions)
   throws IOException {
     RegionAction.Builder builder = getRegionActionBuilderWithRegion(regionName);
+    ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
+    MutationProto.Builder mutationBuilder = ClientProtos.MutationProto.newBuilder();
     for (Action<R> action: actions) {
       Row row = action.getAction();
-      ClientProtos.Action.Builder actionBuilder =
-          ClientProtos.Action.newBuilder().setIndex(action.getOriginalIndex());
+      actionBuilder.clear();
+      actionBuilder.setIndex(action.getOriginalIndex());
       if (row instanceof Get) {
         Get g = (Get)row;
         builder.addAction(actionBuilder.setGet(ProtobufUtil.toGet(g)));
@@ -535,10 +537,11 @@ public final class RequestConverter {
       final List<Action<R>> actions, final List<CellScannable> cells)
   throws IOException {
     RegionAction.Builder builder = getRegionActionBuilderWithRegion(regionName);
+    ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
     for (Action<R> action: actions) {
       Row row = action.getAction();
-      ClientProtos.Action.Builder actionBuilder =
-        ClientProtos.Action.newBuilder().setIndex(action.getOriginalIndex());
+      actionBuilder.clear();
+      actionBuilder.setIndex(action.getOriginalIndex());
       if (row instanceof Get) {
         Get g = (Get)row;
         builder.addAction(actionBuilder.setGet(ProtobufUtil.toGet(g)));

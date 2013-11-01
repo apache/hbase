@@ -128,7 +128,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
     list.add(kv);
-    familyMap.put(CellUtil.cloneFamily(kv), list);
+    familyMap.put(family, list);
     return this;
   }
 

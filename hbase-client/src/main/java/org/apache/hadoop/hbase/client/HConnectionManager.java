@@ -2733,7 +2733,7 @@ public class HConnectionManager {
    * - nested exceptions
    * 
    * Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException
-   * @returns null if we didn't find the exception, the exception otherwise.
+   * @return null if we didn't find the exception, the exception otherwise.
    */
   public static Throwable findException(Object exception) {
     if (exception == null || !(exception instanceof Throwable)) {

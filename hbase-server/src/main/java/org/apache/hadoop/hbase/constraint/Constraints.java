@@ -294,7 +294,7 @@ public final class Constraints {
    *          <tt>true</tt> if it should be run
    * @param priority
    *          relative to other constraints
-   * @returns a new configuration, storable in the {@link HTableDescriptor}
+   * @return a new configuration, storable in the {@link HTableDescriptor}
    */
   private static Configuration configure(Configuration conf, boolean enabled,
       long priority) {
