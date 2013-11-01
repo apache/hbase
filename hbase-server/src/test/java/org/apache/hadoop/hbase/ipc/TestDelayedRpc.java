@@ -28,7 +28,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +46,7 @@ import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.google.common.collect.Lists;
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.RpcController;
@@ -122,7 +122,7 @@ public class TestDelayedRpc {
   }
 
   private static class ListAppender extends AppenderSkeleton {
-    private List<String> messages = new ArrayList<String>();
+    private final List<String> messages = new ArrayList<String>();
 
     @Override
     protected void append(LoggingEvent event) {
@@ -203,13 +203,13 @@ public class TestDelayedRpc {
     }
   }
 
-  static class TestDelayedImplementation
+  public static class TestDelayedImplementation
   implements TestDelayedRpcProtos.TestDelayedService.BlockingInterface {
     /**
      * Should the return value of delayed call be set at the end of the delay
      * or at call return.
      */
-    private boolean delayReturnValue;
+    private final boolean delayReturnValue;
 
     /**
      * @param delayReturnValue Should the response to the delayed call be set
@@ -231,11 +231,12 @@ public class TestDelayedRpc {
       final Delayable call = RpcServer.getCurrentCall();
       call.startDelay(delayReturnValue);
       new Thread() {
+        @Override
         public void run() {
           try {
             Thread.sleep(500);
             TestResponse.Builder responseBuilder = TestResponse.newBuilder();
-            call.endDelay(delayReturnValue ? 
+            call.endDelay(delayReturnValue ?
                 responseBuilder.setResponse(DELAYED).build() : null);
           } catch (Exception e) {
             e.printStackTrace();
@@ -249,10 +250,10 @@ public class TestDelayedRpc {
     }
   }
 
-  private static class TestThread extends Thread {
-    private TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub;
-    private boolean delay;
-    private List<Integer> results;
+  public static class TestThread extends Thread {
+    private final TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub;
+    private final boolean delay;
+    private final List<Integer> results;
 
     public TestThread(TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub,
         boolean delay, List<Integer> results) {
