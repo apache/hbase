@@ -181,7 +181,8 @@ public class Increment extends Mutation implements Comparable<Row> {
       NavigableMap<byte [], Long> longs = new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
       for (Cell cell: entry.getValue()) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        longs.put(kv.getQualifier(), Bytes.toLong(kv.getValue()));
+        longs.put(kv.getQualifier(),
+            Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
       }
       results.put(entry.getKey(), longs);
     }
@@ -224,7 +225,8 @@ public class Increment extends Mutation implements Comparable<Row> {
             moreThanOneB = true;
           }
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          sb.append(Bytes.toStringBinary(kv.getKey()) + "+=" + Bytes.toLong(kv.getValue()));
+          sb.append(Bytes.toStringBinary(kv.getKey()) + "+=" +
+              Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
         }
         sb.append("}");
       }
