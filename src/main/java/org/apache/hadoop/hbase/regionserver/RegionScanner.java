@@ -102,23 +102,36 @@ public class RegionScanner implements InternalScanner {
 
     // synchronize on scannerReadPoints so that nobody calculates
     // getSmallestReadPoint, before scannerReadPoints is updated.
+    //
+    // TODO: "this" reference is escaping here. Refactor to move this logic
+    // out of constructor into an initialize method
     synchronized(scannerReadPoints) {
       this.readPt = MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
       scannerReadPoints.put(this, this.readPt);
     }
 
-    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
-    if (additionalScanners != null) {
-      scanners.addAll(additionalScanners);
-    }
+    try {
+      List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
+      if (additionalScanners != null) {
+        scanners.addAll(additionalScanners);
+      }
 
-    for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
-        scan.getFamilyMap().entrySet()) {
-      Store store = stores.get(entry.getKey());
-      StoreScanner scanner = store.getScanner(scan, entry.getValue());
-      scanners.add(scanner);
+      for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
+          scan.getFamilyMap().entrySet()) {
+        Store store = stores.get(entry.getKey());
+        StoreScanner scanner = store.getScanner(scan, entry.getValue());
+        scanners.add(scanner);
+      }
+      this.storeHeap = new KeyValueHeap(scanners, comparator);
+    } catch (IOException ioe) {
+      LOG.warn("Caught exception while initializing region scanner.", ioe);
+      scannerReadPoints.remove(this);
+      throw ioe;
+    } catch (RuntimeException re) {
+      LOG.warn("Caught exception while initializing region scanner.", re);
+      scannerReadPoints.remove(this);
+      throw re;
     }
-    this.storeHeap = new KeyValueHeap(scanners, comparator);
   }
 
   /**
