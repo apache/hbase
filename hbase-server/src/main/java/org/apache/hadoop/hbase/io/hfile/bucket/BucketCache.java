@@ -30,9 +30,11 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,11 +60,13 @@ import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.util.ConcurrentIndex;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -169,8 +173,19 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private IdLock offsetLock = new IdLock();
 
+  private final ConcurrentIndex<String, BlockCacheKey> blocksByHFile =
+      new ConcurrentIndex<String, BlockCacheKey>(new Comparator<BlockCacheKey>() {
+        @Override
+        public int compare(BlockCacheKey a, BlockCacheKey b) {
+          if (a.getOffset() == b.getOffset()) {
+            return 0;
+          } else if (a.getOffset() < b.getOffset()) {
+            return -1;
+          }
+          return 1;
+        }
+      });
 
-  
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
   private final ScheduledExecutorService scheduleThreadPool =
     Executors.newScheduledThreadPool(1,
@@ -322,6 +337,7 @@ public class BucketCache implements BlockCache, HeapSize {
     } else {
       this.blockNumber.incrementAndGet();
       this.heapSize.addAndGet(cachedItem.heapSize());
+      blocksByHFile.put(cacheKey.getHfileName(), cacheKey);
     }
   }
 
@@ -392,6 +408,7 @@ public class BucketCache implements BlockCache, HeapSize {
         if (bucketEntry.equals(backingMap.remove(cacheKey))) {
           bucketAllocator.freeBlock(bucketEntry.offset());
           realCacheSize.addAndGet(-1 * bucketEntry.getLength());
+          blocksByHFile.remove(cacheKey.getHfileName(), cacheKey);
           if (removedBlock == null) {
             this.blockNumber.decrementAndGet();
           }
@@ -914,10 +931,7 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Evicts all blocks for a specific HFile. This is an expensive operation
-   * implemented as a linear-time search through all blocks in the cache.
-   * Ideally this should be a search in a log-access-time map.
-   * 
+   * Evicts all blocks for a specific HFile. 
    * <p>
    * This is used for evict-on-close to remove all blocks of a specific HFile.
    * 
@@ -925,13 +939,20 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
+    // Copy the list to avoid ConcurrentModificationException
+    // as evictBlockKey removes the key from the index
+    Set<BlockCacheKey> keySet = blocksByHFile.values(hfileName);
+    if (keySet == null) {
+      return 0;
+    }
     int numEvicted = 0;
-    for (BlockCacheKey key : this.backingMap.keySet()) {
-      if (key.getHfileName().equals(hfileName)) {
-        if (evictBlock(key))
+    List<BlockCacheKey> keysForHFile = ImmutableList.copyOf(keySet);
+    for (BlockCacheKey key : keysForHFile) {
+      if (evictBlock(key)) {
           ++numEvicted;
       }
     }
+    
     return numEvicted;
   }
 
