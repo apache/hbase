@@ -255,8 +255,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
 
   @Override
   public int compareTo(ServerName other) {
-    int compare = this.getHostname().toLowerCase().
-      compareTo(other.getHostname().toLowerCase());
+    int compare = this.getHostname().compareToIgnoreCase(other.getHostname());
     if (compare != 0) return compare;
     compare = this.getPort() - other.getPort();
     if (compare != 0) return compare;
