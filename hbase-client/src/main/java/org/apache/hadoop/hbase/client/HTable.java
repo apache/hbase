@@ -911,7 +911,6 @@ public class HTable implements HTableInterface {
    */
   private void backgroundFlushCommits(boolean synchronous) throws
       InterruptedIOException, RetriesExhaustedWithDetailsException {
-    if (this.writeAsyncBuffer.isEmpty()) return;
 
     try {
       do {
