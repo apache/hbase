@@ -3102,7 +3102,9 @@ MasterServices, Server {
 
   @Override
   public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException {
-    if (!isTableNamespaceManagerReady()) {
+    boolean ready = tableNamespaceManager != null &&
+        tableNamespaceManager.isTableAvailableAndInitialized();
+    if (!ready) {
       throw new IOException("Table Namespace Manager not ready yet, try again later");
     }
     NamespaceDescriptor nsd = tableNamespaceManager.get(name);
@@ -3114,17 +3116,11 @@ MasterServices, Server {
 
   @Override
   public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException {
-    if (!isTableNamespaceManagerReady()) {
-      return Lists.newArrayList();
-    }
     return Lists.newArrayList(tableNamespaceManager.list());
   }
 
   @Override
   public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
-    if (!isTableNamespaceManagerReady()) {
-      return Lists.newArrayList();
-    }
     getNamespaceDescriptor(name); // check that namespace exists
     return Lists.newArrayList(tableDescriptors.getByNamespace(name).values());
   }
@@ -3132,23 +3128,11 @@ MasterServices, Server {
   @Override
   public List<TableName> listTableNamesByNamespace(String name) throws IOException {
     List<TableName> tableNames = Lists.newArrayList();
-    if (!isTableNamespaceManagerReady()) {
-      return tableNames;
-    }
     getNamespaceDescriptor(name); // check that namespace exists
     for (HTableDescriptor descriptor: tableDescriptors.getByNamespace(name).values()) {
       tableNames.add(descriptor.getTableName());
     }
     return tableNames;
-  }
-
-  private boolean isTableNamespaceManagerReady() throws IOException {
-    boolean ready = tableNamespaceManager != null &&
-        tableNamespaceManager.isTableAvailableAndInitialized();
-    if (!ready) {
-      LOG.warn("Table Namespace Manager not ready yet");
-    }
-    return ready;
   }
 
 }

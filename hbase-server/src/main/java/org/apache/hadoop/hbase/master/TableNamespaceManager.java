@@ -115,7 +115,8 @@ public class TableNamespaceManager {
 
 
   public synchronized NamespaceDescriptor get(String name) throws IOException {
-    return get(getNamespaceTable(), name);
+    if (!isTableAvailableAndInitialized()) return null;
+    return zkNamespaceManager.get(name);
   }
 
   public synchronized void create(NamespaceDescriptor ns) throws IOException {
