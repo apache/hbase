@@ -19,13 +19,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.HTableMultiplexer.HTableMultiplexerStatus;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
@@ -33,6 +30,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class TestHTableMultiplexer {
   final Log LOG = LogFactory.getLog(getClass());
@@ -128,9 +128,77 @@ public class TestHTableMultiplexer {
         tries++;
       } catch (InterruptedException e) {
       } // ignore
+      status.recalculateCounters();
     } while (status.getTotalBufferedCounter() != 0 && tries != retries);
 
     Assert.assertEquals("There are still some buffered puts left in the queue",
         0, status.getTotalBufferedCounter());
+  }
+
+
+  /**
+   * This test is to verify that the buffered and succeeded counters work as
+   * expected.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testCounters() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testCounters");
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setLong("hbase.htablemultiplexer.flush.frequency.ms", 100);
+
+    HTableMultiplexer multiplexer =
+      new HTableMultiplexer(TEST_UTIL.getConfiguration(),
+        100);
+    HTableMultiplexerStatus status = multiplexer.getHTableMultiplexerStatus();
+
+    HTable ht = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY });
+
+    int numPuts = 100;
+    boolean bufferWasNonEmptyAtSomePoint = false;
+    for (int i = 1; i <= numPuts; i++) {
+      byte[] row = Bytes.toBytes("Row" + i);
+      byte[] qualifier = Bytes.toBytes("Qualifier" + i);
+      byte[] value = Bytes.toBytes("Value" + i);
+      Put put = new Put(row);
+      put.add(FAMILY, qualifier, value);
+
+      multiplexer.put(TABLE, put, HBaseRPCOptions.DEFAULT);
+      status.recalculateCounters();
+      if (status.getTotalBufferedCounter() > 0) {
+        bufferWasNonEmptyAtSomePoint = true;
+      }
+
+      try {
+        Thread.sleep(5);
+      } catch (Exception e) {}
+    }
+
+    // Verify that all the puts got flushed.
+    verifyAllBufferedPutsHasFlushed(status);
+
+    // Recalculate the counters, and ensure that:
+    // 1. The number of buffered puts was non-zero at some point.
+    // 2. The number of buffered puts is zero now.
+    // 3. The total number of succeeded puts is equal to the number of puts.
+    status.recalculateCounters();
+    Assert.assertTrue(bufferWasNonEmptyAtSomePoint);
+    Assert.assertEquals(0, status.getTotalBufferedCounter());
+    Assert.assertEquals(numPuts, status.getTotalSucccededPutCounter());
+
+    // Check if all the puts went through correctly.
+    for (int i = 1; i <= numPuts; i++) {
+      byte[] row = Bytes.toBytes("Row" + i);
+      byte[] qualifier = Bytes.toBytes("Qualifier" + i);
+      byte[] value = Bytes.toBytes("Value" + i);
+
+      // verify that the Get returns the correct result
+      Get get = new Get(row);
+      get.addColumn(FAMILY, qualifier);
+      Result r = ht.get(get);
+      Assert.assertEquals(0,
+        Bytes.compareTo(value, r.getValue(FAMILY, qualifier)));
+    }
   }
 }

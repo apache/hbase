@@ -19,6 +19,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
+
 import java.io.IOException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
@@ -33,14 +41,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 
 /**
  * HTableMultiplexer provides a thread-safe non blocking PUT API across all the tables.
@@ -264,15 +264,42 @@ public class HTableMultiplexer {
 
   /**
    * HTableMultiplexerStatus keeps track of the current status of the HTableMultiplexer.
-   * report the number of buffered requests and the number of the failed (dropped) requests
+   * report the number of buffered requests, the number of the failed (dropped)
+   * requests, the number of succeeded and the number of retried requests
    * in total or on per region server basis.
+   *
+   * Some notes regarding the usage:
+   * 1. The number of buffered requests reported by HTableMultiplexerStatus
+   * can be > than the number of puts to HTableMultiplexer, because it reports
+   * the number of puts in the queue + the number of puts being processed. If
+   * some of the puts being processed need to be retried later, they are added
+   * to the queue, before the processing ends. And hence, some puts might be
+   * counted twice temporarily. But, eventually it will settle down to the
+   * number of puts in the queue.
+   *
+   * 2. The number of retried puts, is the total number of times we retried
+   * puts which failed. So, if a put has to be retried 3 times before it
+   * succeeds, it will increase the retry count by 3.
+   *
+   * 3. The counters in the HTableMultiplexer object are calculated upon
+   * instantiation, or when recalculateCounters() is called. Whenever you want
+   * to get the latest numbers, you can either create a new one (by calling
+   * getHTableMultiplexerStatus() on your HTableMultiplexer instance) or simply
+   * do a .recalculateCounters() on the same status instance.
+   *
+   * 4. Some of the metrics, such as max latency are reset every time the
+   * counters are calculated.
    */
   public static class HTableMultiplexerStatus {
     private long totalFailedPutCounter;
+    private long totalSucceededPutCounter;
+    private long totalRetriedPutCounter;
     private long totalBufferedPutCounter;
     private long maxLatency;
     private long overallAverageLatency;
     private Map<String, Long> serverToFailedCounterMap;
+    private Map<String, Long> serverToSucceededCounterMap;
+    private Map<String, Long> serverToRetriedCounterMap;
     private Map<String, Long> serverToBufferedCounterMap;
     private Map<String, Long> serverToAverageLatencyMap;
     private Map<String, Long> serverToMaxLatencyMap;
@@ -283,10 +310,14 @@ public class HTableMultiplexer {
     public HTableMultiplexerStatus(Map<HServerAddress, HTableFlushWorker> serverToFlushWorkerMap) {
       this.totalBufferedPutCounter = 0;
       this.totalFailedPutCounter = 0;
+      this.totalSucceededPutCounter = 0;
+      this.totalRetriedPutCounter = 0;
       this.maxLatency = 0;
       this.overallAverageLatency = 0;
       this.serverToBufferedCounterMap = new HashMap<String, Long>();
       this.serverToFailedCounterMap = new HashMap<String, Long>();
+      this.serverToSucceededCounterMap = new HashMap<String, Long>();
+      this.serverToRetriedCounterMap = new HashMap<String, Long>();
       this.serverToAverageLatencyMap = new HashMap<String, Long>();
       this.serverToMaxLatencyMap = new HashMap<String, Long>();
       this.serverToFlushWorkerMap = serverToFlushWorkerMap;
@@ -308,7 +339,9 @@ public class HTableMultiplexer {
 
         long bufferedCounter = worker.getTotalBufferedCount();
         long failedCounter = worker.getTotalFailedCount();
-        long serverMaxLatency = worker.getMaxLatency();
+        long succeededCounter = worker.getTotalSucceededCount();
+        long retriedCounter = worker.getTotalRetriedCount();
+        long serverMaxLatency = worker.getAndResetMaxLatency();
         AtomicAverageCounter averageCounter = worker.getAverageLatencyCounter();
         // Get sum and count pieces separately to compute overall average
         SimpleEntry<Long, Integer> averageComponents =
@@ -317,6 +350,8 @@ public class HTableMultiplexer {
 
         this.totalBufferedPutCounter += bufferedCounter;
         this.totalFailedPutCounter += failedCounter;
+        this.totalSucceededPutCounter += succeededCounter;
+        this.totalRetriedPutCounter += retriedCounter;
         if (serverMaxLatency > this.maxLatency) {
           this.maxLatency = serverMaxLatency;
         }
@@ -326,6 +361,8 @@ public class HTableMultiplexer {
         String hostnameWithPort = addr.getHostNameWithPort();
         this.serverToBufferedCounterMap.put(hostnameWithPort, bufferedCounter);
         this.serverToFailedCounterMap.put(hostnameWithPort, failedCounter);
+        this.serverToSucceededCounterMap.put(hostnameWithPort, succeededCounter);
+        this.serverToRetriedCounterMap.put(hostnameWithPort, retriedCounter);
         this.serverToAverageLatencyMap.put(hostnameWithPort, serverAvgLatency);
         this.serverToMaxLatencyMap.put(hostnameWithPort, serverMaxLatency);
         this.metrics.resetMultiPutMetrics(hostnameWithPort, worker);
@@ -340,12 +377,45 @@ public class HTableMultiplexer {
                                     : 0;
     }
 
+    private void resetCounters() {
+      this.totalBufferedPutCounter = 0;
+      this.totalFailedPutCounter = 0;
+      this.totalSucceededPutCounter = 0;
+      this.totalRetriedPutCounter = 0;
+      this.maxLatency = 0;
+      this.serverToBufferedCounterMap.clear();
+      this.serverToFailedCounterMap.clear();
+      this.serverToSucceededCounterMap.clear();
+      this.serverToAverageLatencyMap.clear();
+      this.serverToMaxLatencyMap.clear();
+      this.overallAverageLatency = 0;
+      this.overallAvgMultiPutSize = 0;
+    }
+
+    /**
+     * Recalculate all the counters, since the state of the HTM might have
+     * changed since we last calculated them, if we are interested in the latest
+     * values.
+     */
+    public void recalculateCounters() {
+      resetCounters();
+      initialize();
+    }
+
     public long getTotalBufferedCounter() {
       return this.totalBufferedPutCounter;
     }
 
     public long getTotalFailedCounter() {
       return this.totalFailedPutCounter;
+    }
+
+    public long getTotalSucccededPutCounter() {
+      return this.totalSucceededPutCounter;
+    }
+
+    public long getTotalRetriedPutCounter() {
+      return this.totalRetriedPutCounter;
     }
 
     public long getMaxLatency() {
@@ -392,14 +462,14 @@ public class HTableMultiplexer {
   private static class PutStatus {
     private final HRegionInfo regionInfo;
     private final Put put;
-    private final int retryCount;
+    private final int maxRetryCount;
     private final HBaseRPCOptions options;
 
     public PutStatus(final HRegionInfo regionInfo, final Put put,
-        final int retryCount, final HBaseRPCOptions options) {
+        final int maxRetryCount, final HBaseRPCOptions options) {
       this.regionInfo = regionInfo;
       this.put = put;
-      this.retryCount = retryCount;
+      this.maxRetryCount = maxRetryCount;
       this.options = options;
     }
 
@@ -411,8 +481,17 @@ public class HTableMultiplexer {
       return put;
     }
 
+    /**
+     * @deprecated Use {@link #getMaxRetryCount()} instead.
+     * @return
+     */
+    @Deprecated
     public int getRetryCount() {
-      return retryCount;
+      return getMaxRetryCount();
+    }
+
+    public int getMaxRetryCount() {
+      return maxRetryCount;
     }
 
     public HBaseRPCOptions getOptions () {
@@ -468,6 +547,8 @@ public class HTableMultiplexer {
     private HConnection connection;
     private HTableMultiplexer htableMultiplexer;
     private AtomicLong totalFailedPutCount;
+    private AtomicLong totalSucceededPutCount;
+    private AtomicLong totalRetriedPutCount;
     private AtomicInteger currentProcessingPutCount;
     private AtomicInteger minProcessingPutCount;
     private AtomicInteger maxProcessingPutCount;
@@ -484,6 +565,8 @@ public class HTableMultiplexer {
       this.htableMultiplexer = htableMultiplexer;
       this.queue = queue;
       this.totalFailedPutCount = new AtomicLong(0);
+      this.totalSucceededPutCount = new AtomicLong(0);
+      this.totalRetriedPutCount = new AtomicLong(0);
       this.currentProcessingPutCount = new AtomicInteger(0);
       this.minProcessingPutCount = new AtomicInteger(0);
       this.maxProcessingPutCount = new AtomicInteger(0);
@@ -496,6 +579,14 @@ public class HTableMultiplexer {
       return totalFailedPutCount.get();
     }
 
+    public long getTotalSucceededCount() {
+      return totalSucceededPutCount.get();
+    }
+
+    public long getTotalRetriedCount() {
+      return totalRetriedPutCount.get();
+    }
+
     public long getTotalBufferedCount() {
       return queue.size() + currentProcessingPutCount.get();
     }
@@ -504,7 +595,16 @@ public class HTableMultiplexer {
       return this.averageLatency;
     }
 
+    /**
+     * @deprecated Use {@link #getAndResetMaxLatency()} instead.
+     * @return
+     */
+    @Deprecated
     public long getMaxLatency() {
+      return this.maxLatency.getAndSet(0);
+    }
+
+    public long getAndResetMaxLatency() {
       return this.maxLatency.getAndSet(0);
     }
 
@@ -513,14 +613,14 @@ public class HTableMultiplexer {
       // The currentPut is failed. So get the table name for the currentPut.
       byte[] tableName = failedPutStatus.getRegionInfo().getTableDesc().getName();
       // Decrease the retry count
-      int retryCount = failedPutStatus.getRetryCount() - 1;
-      
+      int retryCount = failedPutStatus.getMaxRetryCount() - 1;
+
       if (retryCount <= 0) {
         // Update the failed counter and no retry any more.
         return false;
       } else {
         // Retry one more time
-        HBaseRPCOptions options = failedPutStatus.getOptions ();
+        HBaseRPCOptions options = failedPutStatus.getOptions();
         return this.htableMultiplexer.put(tableName, failedPut, retryCount, options);
       }
     }
@@ -602,6 +702,7 @@ public class HTableMultiplexer {
               }
             }
 
+            long putsToRetry = 0;
             if (failed != null) {
               if (failed.size() == processingList.size()) {
                 // All the puts for this region server are failed. Going to retry it later
@@ -619,9 +720,15 @@ public class HTableMultiplexer {
                   }
                 }
               }
+              putsToRetry = failed.size() - failedCount;
             }
             // Update the totalFailedCount
             this.totalFailedPutCount.addAndGet(failedCount);
+            // Update the totalSucceededPutCount
+            this.totalSucceededPutCount.addAndGet(processingList.size() -
+                                                  failedCount - putsToRetry);
+            // Updated the total retried put counts.
+            this.totalRetriedPutCount.addAndGet(putsToRetry);
             
             elapsed = System.currentTimeMillis() - start;
             // Update latency counters
