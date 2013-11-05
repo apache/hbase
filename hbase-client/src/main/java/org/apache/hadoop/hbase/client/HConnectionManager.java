@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
@@ -1025,7 +1026,7 @@ public class HConnectionManager {
       // disabled tables should not be desirable.  This will ensure that an exception is thrown when
       // the first time a disabled table is interacted with.
       if (isTableDisabled(tableName)) {
-        throw new DoNotRetryIOException(tableName.getNameAsString() + " is disabled.");
+        throw new TableNotEnabledException(tableName.getNameAsString() + " is disabled.");
       }
 
       return locateRegion(tableName, row, false, true);
