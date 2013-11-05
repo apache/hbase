@@ -34,11 +34,13 @@ import org.apache.commons.lang.time.StopWatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -616,6 +618,14 @@ public final class Canary implements Tool {
             stopWatch.stop();
           }
           this.getSink().publishReadTiming(tableName, serverName, stopWatch.getTime());
+        } catch (TableNotFoundException tnfe) {
+          // This is ignored because it doesn't imply that the regionserver is dead
+        } catch (TableNotEnabledException tnee) {
+          // This is considered a success since we got a response.
+          LOG.debug("The targeted table was disabled.  Assuming success.");
+        } catch (DoNotRetryIOException dnrioe) {
+            this.getSink().publishReadFailure(tableName, serverName);
+            LOG.error(dnrioe);
         } catch (IOException e) {
           this.getSink().publishReadFailure(tableName, serverName);
           LOG.error(e);
