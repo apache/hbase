@@ -1632,14 +1632,19 @@ public class HStore implements Store {
   @Override
   public KeyValueScanner getScanner(Scan scan,
       final NavigableSet<byte []> targetCols) throws IOException {
-    KeyValueScanner scanner = null;
-    if (this.getCoprocessorHost() != null) {
-      scanner = this.getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols);
+    lock.readLock().lock();
+    try {
+      KeyValueScanner scanner = null;
+      if (this.getCoprocessorHost() != null) {
+        scanner = this.getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols);
+      }
+      if (scanner == null) {
+        scanner = new StoreScanner(this, getScanInfo(), scan, targetCols);
+      }
+      return scanner;
+    } finally {
+      lock.readLock().unlock();
     }
-    if (scanner == null) {
-      scanner = new StoreScanner(this, getScanInfo(), scan, targetCols);
-    }
-    return scanner;
   }
 
   @Override
