@@ -2200,15 +2200,20 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @throws IOException
    */
   public KeyValueScanner getScanner(Scan scan,
-    final NavigableSet<byte []> targetCols) throws IOException {
-    KeyValueScanner scanner = null;
-    if (getHRegion().getCoprocessorHost() != null) {
-      scanner = getHRegion().getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols);
+      final NavigableSet<byte []> targetCols) throws IOException {
+    lock.readLock().lock();
+    try {
+      KeyValueScanner scanner = null;
+      if (getHRegion().getCoprocessorHost() != null) {
+        scanner = getHRegion().getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols);
+      }
+      if (scanner == null) {
+        scanner = new StoreScanner(this, getScanInfo(), scan, targetCols);
+      }
+      return scanner;
+    } finally {
+      lock.readLock().unlock();
     }
-    if (scanner == null) {
-      scanner = new StoreScanner(this, getScanInfo(), scan, targetCols);
-    }
-    return scanner;
   }
 
   @Override
