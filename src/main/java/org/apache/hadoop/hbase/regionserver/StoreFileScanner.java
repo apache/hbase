@@ -91,7 +91,7 @@ public class StoreFileScanner implements KeyValueScanner {
       Collection<StoreFile> files, boolean cacheBlocks, boolean isCompaction)
       throws IOException {
     return getScannersForStoreFiles(files, cacheBlocks, isCompaction,
-      false, null);
+      false, null, isCompaction);
   }
 
   /**
@@ -101,13 +101,15 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(
       Collection<StoreFile> files, boolean cacheBlocks, boolean isCompaction,
-      boolean preloadBlocks, ScanQueryMatcher matcher) throws IOException {
+      boolean preloadBlocks, ScanQueryMatcher matcher, boolean isClientSideScan)
+          throws IOException {
     List<StoreFileScanner> scanners = new ArrayList<StoreFileScanner>(
         files.size());
     for (StoreFile file : files) {
       StoreFile.Reader r = file.createReader();
       StoreFileScanner scanner =
-          r.getStoreFileScanner(cacheBlocks, isCompaction, preloadBlocks);
+          r.getStoreFileScanner(cacheBlocks, isCompaction, preloadBlocks,
+              isClientSideScan);
       scanner.setScanQueryMatcher(matcher);
       scanners.add(scanner);
     }

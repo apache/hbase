@@ -590,7 +590,8 @@ public class HFileReadWriteTest {
     public Boolean call() throws Exception {
       Thread.currentThread().setName("reader " + readerId);
       Random rand = new Random();
-      StoreFileScanner scanner = reader.getStoreFileScanner(true, pread, false);
+      StoreFileScanner scanner = reader.getStoreFileScanner(true, pread, false,
+          false);
 
       while (System.currentTimeMillis() < endTime) {
         byte[] row = createRandomRow(rand, firstRow, lastRow);

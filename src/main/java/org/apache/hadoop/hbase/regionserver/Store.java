@@ -966,9 +966,15 @@ public class Store extends SchemaConfigured implements HeapSize,
     // TODO this used to get the store files in descending order,
     // but now we get them in ascending order, which I think is
     // actually more correct, since memstore get put at the end.
+
+    boolean isClientSideScanOrCompaction =
+        this.conf.getBoolean(HConstants.CLIENT_SIDE_SCAN,
+        HConstants.DEFAULT_CLIENT_SIDE_SCAN) || isCompaction;
+    // useMVCC = !isClientSideScanOrCompaction
+
     List<StoreFileScanner> sfScanners =
         StoreFileScanner.getScannersForStoreFiles(storeFiles, cacheBlocks,
-          isCompaction, preloadBlocks, matcher);
+          isCompaction, preloadBlocks, matcher, isClientSideScanOrCompaction);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
     scanners.addAll(sfScanners);

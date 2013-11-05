@@ -1330,7 +1330,7 @@ REGION_LOOP:
       }
       s.close();
       // If I get to here and all rows have a Server, then all have been assigned.
-      if (rows == countOfRegions)
+      if (rows >= countOfRegions)
         break;
       LOG.info("Found " + rows + " open regions, waiting for " +
           countOfRegions);

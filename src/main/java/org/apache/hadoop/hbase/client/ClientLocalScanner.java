@@ -115,6 +115,7 @@ public class ClientLocalScanner extends ResultScannerImpl {
     this.currentRegion.getTableDesc().setReadOnly(true);
     HTable table = this.htable;
     final Configuration conf = table.getConfiguration();
+    conf.setBoolean(HConstants.CLIENT_SIDE_SCAN, true);
     boolean flushAndWait = conf.getBoolean(
         HConstants.CLIENT_LOCAL_SCANNER_FLUSH_AND_WAIT,
         HConstants.DEFAULT_CLIENT_LOCAL_SCANNER_FLUSH_AND_WAIT);
@@ -134,6 +135,7 @@ public class ClientLocalScanner extends ResultScannerImpl {
 
     HRegionUtilities.parallelStoreOpener(info, conf, families, tableDir,
         fs, this.stores, this.areHardlinksCreated);
+    HConnectionManager.deleteAllZookeeperConnections();
   }
 
   private Collection<HColumnDescriptor> filterFamilies(

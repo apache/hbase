@@ -268,9 +268,9 @@ public class StoreScanner extends NonLazyKeyValueScanner
    * Get a filtered list of scanners. Assumes we are not in a compaction.
    * @return list of scanners to seek
    */
-  private List<KeyValueScanner> getScannersNoCompaction() throws IOException {
-    final boolean isCompaction = false;
-    return selectScannersFrom(store.getScanners(cacheBlocks, isCompaction,
+  private List<KeyValueScanner> getScannersNoCompaction()
+      throws IOException {
+    return selectScannersFrom(store.getScanners(cacheBlocks, false,
       scan.isPreloadBlocks(), matcher));
   }
 

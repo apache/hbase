@@ -898,6 +898,9 @@ public final class HConstants {
   public static final int DEFAULT_CLIENT_LOCAL_SCANNER_MAX_WAITTIME_FOR_FLUSH_MS
     = 10000; // ms
 
+  public static final String CLIENT_SIDE_SCAN = "hbase.client.side.scan";
+  public static final boolean DEFAULT_CLIENT_SIDE_SCAN = false;
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

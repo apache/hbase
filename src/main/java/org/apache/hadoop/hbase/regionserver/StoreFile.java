@@ -1297,7 +1297,7 @@ public class StoreFile extends SchemaConfigured {
      * @return a scanner
      */
     public StoreFileScanner getStoreFileScanner(boolean cacheBlocks) {
-      return getStoreFileScanner(cacheBlocks, false, false);
+      return getStoreFileScanner(cacheBlocks, false, false, false);
     }
 
     /**
@@ -1310,9 +1310,9 @@ public class StoreFile extends SchemaConfigured {
      * @return a scanner
      */
     public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
-        boolean isCompaction, boolean preloadBlocks) {
+        boolean isCompaction, boolean preloadBlocks, boolean isClientSideScan) {
       return new StoreFileScanner(this, getScanner(cacheBlocks, isCompaction,
-        preloadBlocks), !isCompaction);
+        preloadBlocks), !isClientSideScan);
     }
 
     /**
