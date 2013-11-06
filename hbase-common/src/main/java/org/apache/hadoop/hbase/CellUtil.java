@@ -172,6 +172,12 @@ public final class CellUtil {
     return keyValue;
   }
 
+  public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
+      final long timestamp, Type type, final byte[] value, byte[] tags) {
+    KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp, type, value, tags);
+    return keyValue;
+  }
+
   /**
    * @param cellScannerables
    * @return CellScanner interface over <code>cellIterables</code>

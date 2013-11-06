@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NavigableMap;
-import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -37,9 +36,11 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -55,8 +56,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  *  Class that test tags
@@ -66,6 +69,9 @@ public class TestTags {
   static boolean useFilter = false;
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public final TestName TEST_NAME = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -90,7 +96,7 @@ public class TestTags {
   public void testTags() throws Exception {
     HTable table = null;
     try {
-      TableName tableName = TableName.valueOf("testTags");
+      TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
       byte[] fam = Bytes.toBytes("info");
       byte[] row = Bytes.toBytes("rowa");
       // column names
@@ -168,7 +174,7 @@ public class TestTags {
   public void testFlushAndCompactionWithoutTags() throws Exception {
     HTable table = null;
     try {
-      TableName tableName = TableName.valueOf("testFlushAndCompactionWithoutTags");
+      TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
       byte[] fam = Bytes.toBytes("info");
       byte[] row = Bytes.toBytes("rowa");
       // column names
@@ -270,7 +276,7 @@ public class TestTags {
   public void testFlushAndCompactionwithCombinations() throws Exception {
     HTable table = null;
     try {
-      TableName tableName = TableName.valueOf("testFlushAndCompactionwithCombinations");
+      TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
       byte[] fam = Bytes.toBytes("info");
       byte[] row = Bytes.toBytes("rowa");
       // column names
@@ -387,6 +393,114 @@ public class TestTags {
           scanner.close();
         }
       }
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+    }
+  }
+
+  @Test
+  public void testTagsWithAppendAndIncrement() throws Exception {
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    byte[] f = Bytes.toBytes("f");
+    byte[] q = Bytes.toBytes("q");
+    byte[] row1 = Bytes.toBytes("r1");
+    byte[] row2 = Bytes.toBytes("r2");
+
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HColumnDescriptor colDesc = new HColumnDescriptor(f);
+    desc.addFamily(colDesc);
+    TEST_UTIL.getHBaseAdmin().createTable(desc);
+
+    HTable table = null;
+    try {
+      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      Put put = new Put(row1);
+      byte[] v = Bytes.toBytes(2L);
+      put.add(f, q, v, new Tag[] { new Tag((byte) 1, "tag1") });
+      table.put(put);
+      Increment increment = new Increment(row1);
+      increment.addColumn(f, q, 1L);
+      table.increment(increment);
+      ResultScanner scanner = table.getScanner(new Scan());
+      Result result = scanner.next();
+      KeyValue kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
+      List<Tag> tags = kv.getTags();
+      assertEquals(3L, Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+      assertEquals(1, tags.size());
+      assertEquals("tag1", Bytes.toString(tags.get(0).getValue()));
+      increment = new Increment(row1);
+      increment.add(new KeyValue(row1, f, q, 1234L, v, new Tag[] { new Tag((byte) 1, "tag2") }));
+      table.increment(increment);
+      scanner = table.getScanner(new Scan());
+      result = scanner.next();
+      kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
+      tags = kv.getTags();
+      assertEquals(5L, Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+      assertEquals(2, tags.size());
+      assertEquals("tag1", Bytes.toString(tags.get(0).getValue()));
+      assertEquals("tag2", Bytes.toString(tags.get(1).getValue()));
+
+      put = new Put(row2);
+      v = Bytes.toBytes(2L);
+      put.add(f, q, v);
+      table.put(put);
+      increment = new Increment(row2);
+      increment.add(new KeyValue(row2, f, q, 1234L, v, new Tag[] { new Tag((byte) 1, "tag2") }));
+      table.increment(increment);
+      Scan scan = new Scan();
+      scan.setStartRow(row2);
+      scanner = table.getScanner(scan);
+      result = scanner.next();
+      kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
+      tags = kv.getTags();
+      assertEquals(4L, Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+      assertEquals(1, tags.size());
+      assertEquals("tag2", Bytes.toString(tags.get(0).getValue()));
+
+      // Test Append
+      byte[] row3 = Bytes.toBytes("r3");
+      put = new Put(row3);
+      put.add(f, q, Bytes.toBytes("a"), new Tag[] { new Tag((byte) 1, "tag1") });
+      table.put(put);
+      Append append = new Append(row3);
+      append.add(f, q, Bytes.toBytes("b"));
+      table.append(append);
+      scan = new Scan();
+      scan.setStartRow(row3);
+      scanner = table.getScanner(scan);
+      result = scanner.next();
+      kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
+      tags = kv.getTags();
+      assertEquals(1, tags.size());
+      assertEquals("tag1", Bytes.toString(tags.get(0).getValue()));
+      append = new Append(row3);
+      append.add(new KeyValue(row3, f, q, 1234L, v, new Tag[] { new Tag((byte) 1, "tag2") }));
+      table.append(append);
+      scanner = table.getScanner(scan);
+      result = scanner.next();
+      kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
+      tags = kv.getTags();
+      assertEquals(2, tags.size());
+      assertEquals("tag1", Bytes.toString(tags.get(0).getValue()));
+      assertEquals("tag2", Bytes.toString(tags.get(1).getValue()));
+
+      byte[] row4 = Bytes.toBytes("r4");
+      put = new Put(row4);
+      put.add(f, q, Bytes.toBytes("a"));
+      table.put(put);
+      append = new Append(row4);
+      append.add(new KeyValue(row4, f, q, 1234L, v, new Tag[] { new Tag((byte) 1, "tag2") }));
+      table.append(append);
+      scan = new Scan();
+      scan.setStartRow(row4);
+      scanner = table.getScanner(scan);
+      result = scanner.next();
+      kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
+      tags = kv.getTags();
+      assertEquals(1, tags.size());
+      assertEquals("tag2", Bytes.toString(tags.get(0).getValue()));
     } finally {
       if (table != null) {
         table.close();

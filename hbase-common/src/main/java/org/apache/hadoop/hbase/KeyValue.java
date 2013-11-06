@@ -809,7 +809,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     pos += flength + qlength;
     pos = Bytes.putLong(bytes, pos, timestamp);
     pos = Bytes.putByte(bytes, pos, type.getCode());
-    pos += keylength + vlength;
+    pos += vlength;
     if (tagsLength > 0) {
       pos = Bytes.putShort(bytes, pos, (short)(tagsLength & 0x0000ffff));
     }

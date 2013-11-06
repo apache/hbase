@@ -477,4 +477,10 @@ public abstract class BaseRegionObserver implements RegionObserver {
       DataBlockEncoding preferredEncodingInCache, Reference r, Reader reader) throws IOException {
     return reader;
   }
+
+  @Override
+  public Cell postMutationBeforeWAL(ObserverContext<RegionCoprocessorEnvironment> ctx,
+      MutationType opType, Mutation mutation, Cell oldCell, Cell newCell) throws IOException {
+    return newCell;
+  }
 }

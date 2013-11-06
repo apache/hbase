@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
@@ -4667,13 +4668,15 @@ public class HRegion implements HeapSize { // , Writable{
             for (Cell cell : family.getValue()) {
               KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
               KeyValue newKV;
+              KeyValue oldKv = null;
               if (idx < results.size()
                   && CellUtil.matchingQualifier(results.get(idx),kv)) {
-                KeyValue oldKv = KeyValueUtil.ensureKeyValue(results.get(idx));
+                oldKv = KeyValueUtil.ensureKeyValue(results.get(idx));
                 // allocate an empty kv once
                 newKV = new KeyValue(row.length, kv.getFamilyLength(),
                     kv.getQualifierLength(), now, KeyValue.Type.Put,
-                    oldKv.getValueLength() + kv.getValueLength());
+                    oldKv.getValueLength() + kv.getValueLength(),
+                    oldKv.getTagsLength() + kv.getTagsLength());
                 // copy in the value
                 System.arraycopy(oldKv.getBuffer(), oldKv.getValueOffset(),
                     newKV.getBuffer(), newKV.getValueOffset(),
@@ -4682,16 +4685,24 @@ public class HRegion implements HeapSize { // , Writable{
                     newKV.getBuffer(),
                     newKV.getValueOffset() + oldKv.getValueLength(),
                     kv.getValueLength());
+                // copy in the tags
+                System.arraycopy(oldKv.getBuffer(), oldKv.getTagsOffset(), newKV.getBuffer(),
+                    newKV.getTagsOffset(), oldKv.getTagsLength());
+                System.arraycopy(kv.getBuffer(), kv.getTagsOffset(), newKV.getBuffer(),
+                    newKV.getTagsOffset() + oldKv.getTagsLength(), kv.getTagsLength());
                 idx++;
               } else {
                 // allocate an empty kv once
                 newKV = new KeyValue(row.length, kv.getFamilyLength(),
                     kv.getQualifierLength(), now, KeyValue.Type.Put,
-                    kv.getValueLength());
+                    kv.getValueLength(), kv.getTagsLength());
                 // copy in the value
                 System.arraycopy(kv.getBuffer(), kv.getValueOffset(),
                     newKV.getBuffer(), newKV.getValueOffset(),
                     kv.getValueLength());
+                // copy in tags
+                System.arraycopy(kv.getBuffer(), kv.getTagsOffset(), newKV.getBuffer(),
+                    newKV.getTagsOffset(), kv.getTagsLength());
               }
               // copy in row, family, and qualifier
               System.arraycopy(kv.getBuffer(), kv.getRowOffset(),
@@ -4704,6 +4715,11 @@ public class HRegion implements HeapSize { // , Writable{
                   kv.getQualifierLength());
 
               newKV.setMvccVersion(w.getWriteNumber());
+              // Give coprocessors a chance to update the new cell
+              if (coprocessorHost != null) {
+                newKV = KeyValueUtil.ensureKeyValue(coprocessorHost.postMutationBeforeWAL(
+                    RegionObserver.MutationType.APPEND, append, oldKv, (Cell) newKV));
+              }
               kvs.add(newKV);
 
               // Append update to WAL
@@ -4837,8 +4853,9 @@ public class HRegion implements HeapSize { // , Writable{
             int idx = 0;
             for (Cell kv: family.getValue()) {
               long amount = Bytes.toLong(CellUtil.cloneValue(kv));
+              Cell c = null;
               if (idx < results.size() && CellUtil.matchingQualifier(results.get(idx), kv)) {
-                Cell c = results.get(idx);
+                c = results.get(idx);
                 if(c.getValueLength() == Bytes.SIZEOF_LONG) {
                   amount += Bytes.toLong(c.getValueArray(), c.getValueOffset(), Bytes.SIZEOF_LONG);
                 } else {
@@ -4850,9 +4867,33 @@ public class HRegion implements HeapSize { // , Writable{
               }
 
               // Append new incremented KeyValue to list
-              KeyValue newKV =
-                new KeyValue(row, family.getKey(), CellUtil.cloneQualifier(kv), now, Bytes.toBytes(amount));
+              byte[] q = CellUtil.cloneQualifier(kv);
+              byte[] val = Bytes.toBytes(amount);
+              int oldCellTagsLen = (c == null) ? 0 : c.getTagsLength();
+              int incCellTagsLen = kv.getTagsLength();
+              KeyValue newKV = new KeyValue(row.length, family.getKey().length, q.length, now,
+                  KeyValue.Type.Put, val.length, oldCellTagsLen + incCellTagsLen);
+              System.arraycopy(row, 0, newKV.getBuffer(), newKV.getRowOffset(), row.length);
+              System.arraycopy(family.getKey(), 0, newKV.getBuffer(), newKV.getFamilyOffset(),
+                  family.getKey().length);
+              System.arraycopy(q, 0, newKV.getBuffer(), newKV.getQualifierOffset(), q.length);
+              // copy in the value
+              System.arraycopy(val, 0, newKV.getBuffer(), newKV.getValueOffset(), val.length);
+              // copy tags
+              if (oldCellTagsLen > 0) {
+                System.arraycopy(c.getTagsArray(), c.getTagsOffset(), newKV.getBuffer(),
+                    newKV.getTagsOffset(), oldCellTagsLen);
+              }
+              if (incCellTagsLen > 0) {
+                System.arraycopy(kv.getTagsArray(), kv.getTagsOffset(), newKV.getBuffer(),
+                    newKV.getTagsOffset() + oldCellTagsLen, incCellTagsLen);
+              }
               newKV.setMvccVersion(w.getWriteNumber());
+              // Give coprocessors a chance to update the new cell
+              if (coprocessorHost != null) {
+                newKV = KeyValueUtil.ensureKeyValue(coprocessorHost.postMutationBeforeWAL(
+                    RegionObserver.MutationType.INCREMENT, increment, c, (Cell) newKV));
+              }
               kvs.add(newKV);
 
               // Prepare WAL updates

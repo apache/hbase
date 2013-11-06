@@ -627,7 +627,9 @@ public final class ProtobufUtil {
               "Missing required field: qualifer value");
           }
           byte[] value = qv.getValue().toByteArray();
-          append.add(family, qualifier, value);
+          byte[] tags = qv.getTags().toByteArray();
+          append.add(CellUtil.createCell(row, family, qualifier, append.getTimeStamp(),
+              KeyValue.Type.Put, value, tags));
         }
       }
     }
@@ -699,8 +701,10 @@ public final class ProtobufUtil {
           if (!qv.hasValue()) {
             throw new DoNotRetryIOException("Missing required field: qualifer value");
           }
-          long value = Bytes.toLong(qv.getValue().toByteArray());
-          increment.addColumn(family, qualifier, value);
+          byte[] value = qv.getValue().toByteArray();
+          byte[] tags = qv.getTags().toByteArray();
+          increment.add(CellUtil.createCell(row, family, qualifier, increment.getTimeStamp(),
+              KeyValue.Type.Put, value, tags));
         }
       }
     }
@@ -973,6 +977,10 @@ public final class ProtobufUtil {
               kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
           valueBuilder.setValue(ZeroCopyLiteralByteString.wrap(
               kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+          if (kv.getTagsLength() > 0) {
+            valueBuilder.setTags(ZeroCopyLiteralByteString.wrap(kv.getTagsArray(),
+                kv.getTagsOffset(), kv.getTagsLength()));
+          }
           columnBuilder.addQualifierValue(valueBuilder.build());
         }
       }
