@@ -2839,12 +2839,12 @@ public class AssignmentManager extends ZooKeeperListener {
   public boolean waitOnRegionToClearRegionsInTransition(final HRegionInfo hri, long timeOut)
       throws InterruptedException {
     if (!regionStates.isRegionInTransition(hri)) return true;
-    RegionState rs = null;
     long end = (timeOut <= 0) ? Long.MAX_VALUE : EnvironmentEdgeManager.currentTimeMillis()
         + timeOut;
     // There is already a timeout monitor on regions in transition so I
     // should not have to have one here too?
-    LOG.info("Waiting on " + rs + " to clear regions-in-transition");
+    LOG.info("Waiting for " + hri.getEncodedName() +
+        " to leave regions-in-transition, timeOut=" + timeOut + " ms.");
     while (!this.server.isStopped() && regionStates.isRegionInTransition(hri)) {
       regionStates.waitForUpdate(100);
       if (EnvironmentEdgeManager.currentTimeMillis() > end) {
