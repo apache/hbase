@@ -488,6 +488,7 @@ public final class RequestConverter {
   throws IOException {
     RegionAction.Builder builder = getRegionActionBuilderWithRegion(regionName);
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
+    MutationProto.Builder mutationBuilder = ClientProtos.MutationProto.newBuilder();
     for (Action<R> action: actions) {
       Row row = action.getAction();
       actionBuilder.clear();
