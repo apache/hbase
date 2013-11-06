@@ -38,7 +38,7 @@ import com.google.common.base.Preconditions;
  * The storage engine that implements the stripe-based store/compaction scheme.
  */
 @InterfaceAudience.Private
-public class StripeStoreEngine extends StoreEngine<DefaultStoreFlusher,
+public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
   StripeCompactionPolicy, StripeCompactor, StripeStoreFileManager> {
   static final Log LOG = LogFactory.getLog(StripeStoreEngine.class);
   private StripeStoreConfig config;
@@ -58,8 +58,9 @@ public class StripeStoreEngine extends StoreEngine<DefaultStoreFlusher,
       Configuration conf, Store store, KVComparator comparator) throws IOException {
     this.config = new StripeStoreConfig(conf, store);
     this.compactionPolicy = new StripeCompactionPolicy(conf, store, config);
-    this.storeFlusher = new DefaultStoreFlusher(conf, store);
     this.storeFileManager = new StripeStoreFileManager(comparator, conf, this.config);
+    this.storeFlusher = new StripeStoreFlusher(
+      conf, store, this.compactionPolicy, this.storeFileManager);
     this.compactor = new StripeCompactor(conf, store);
   }
 

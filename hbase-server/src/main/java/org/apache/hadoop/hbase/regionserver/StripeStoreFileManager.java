@@ -24,8 +24,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
@@ -41,6 +43,8 @@ import org.apache.hadoop.hbase.util.ConcatenatedLists;
 
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+
 
 /**
  * Stripe implementation of StoreFileManager.
@@ -136,15 +140,10 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public void insertNewFile(StoreFile sf) {
-    LOG.debug("New level 0 file: " + sf);
-    ArrayList<StoreFile> newFiles = new ArrayList<StoreFile>(state.level0Files);
-    insertFileIntoStripe(newFiles, sf);
-    ensureLevel0Metadata(sf);
-    this.state.level0Files = ImmutableList.copyOf(newFiles);
-    ArrayList<StoreFile> newAllFiles = new ArrayList<StoreFile>(state.allFilesCached);
-    newAllFiles.add(sf);
-    this.state.allFilesCached = ImmutableList.copyOf(newAllFiles);
+  public void insertNewFiles(Collection<StoreFile> sfs) throws IOException {
+    CompactionOrFlushMergeCopy cmc = new CompactionOrFlushMergeCopy(true);
+    cmc.mergeResults(null, sfs);
+    debugDumpState("Added new files");
   }
 
   @Override
@@ -304,7 +303,7 @@ public class StripeStoreFileManager
         + " files replaced by " + results.size());
     // In order to be able to fail in the middle of the operation, we'll operate on lazy
     // copies and apply the result at the end.
-    CompactionResultsMergeCopy cmc = new CompactionResultsMergeCopy();
+    CompactionOrFlushMergeCopy cmc = new CompactionOrFlushMergeCopy(false);
     cmc.mergeResults(compactedFiles, results);
     debugDumpState("Merged compaction results");
   }
@@ -628,11 +627,11 @@ public class StripeStoreFileManager
   }
 
   /**
-   * Non-static helper class for merging compaction results.
-   * Since we want to merge them atomically (more or less), it operates on lazy copies, and
-   * then applies copies to real lists as necessary.
+   * Non-static helper class for merging compaction or flush results.
+   * Since we want to merge them atomically (more or less), it operates on lazy copies,
+   * then creates a new state object and puts it in place.
    */
-  private class CompactionResultsMergeCopy {
+  private class CompactionOrFlushMergeCopy {
     private ArrayList<List<StoreFile>> stripeFiles = null;
     private ArrayList<StoreFile> level0Files = null;
     private ArrayList<byte[]> stripeEndRows = null;
@@ -641,11 +640,13 @@ public class StripeStoreFileManager
     private Collection<StoreFile> results = null;
 
     private List<StoreFile> l0Results = new ArrayList<StoreFile>();
+    private final boolean isFlush;
 
-    public CompactionResultsMergeCopy() {
+    public CompactionOrFlushMergeCopy(boolean isFlush) {
       // Create a lazy mutable copy (other fields are so lazy they start out as nulls).
       this.stripeFiles = new ArrayList<List<StoreFile>>(
           StripeStoreFileManager.this.state.stripeFiles);
+      this.isFlush = isFlush;
     }
 
     public void mergeResults(Collection<StoreFile> compactedFiles, Collection<StoreFile> results)
@@ -654,8 +655,8 @@ public class StripeStoreFileManager
       this.compactedFiles = compactedFiles;
       this.results = results;
       // Do logical processing.
-      removeCompactedFiles();
-      TreeMap<byte[], StoreFile> newStripes = processCompactionResults();
+      if (!isFlush) removeCompactedFiles();
+      TreeMap<byte[], StoreFile> newStripes = processResults();
       if (newStripes != null) {
         processNewCandidateStripes(newStripes);
       }
@@ -681,7 +682,7 @@ public class StripeStoreFileManager
       }
 
       List<StoreFile> newAllFiles = new ArrayList<StoreFile>(oldState.allFilesCached);
-      newAllFiles.removeAll(compactedFiles);
+      if (!isFlush) newAllFiles.removeAll(compactedFiles);
       newAllFiles.addAll(results);
       newState.allFilesCached = ImmutableList.copyOf(newAllFiles);
       return newState;
@@ -689,12 +690,16 @@ public class StripeStoreFileManager
 
     private void updateMetadataMaps() {
       StripeStoreFileManager parent = StripeStoreFileManager.this;
-      for (StoreFile sf : this.compactedFiles) {
-        parent.fileStarts.remove(sf);
-        parent.fileEnds.remove(sf);
+      if (!isFlush) {
+        for (StoreFile sf : this.compactedFiles) {
+          parent.fileStarts.remove(sf);
+          parent.fileEnds.remove(sf);
+        }
       }
-      for (StoreFile sf : this.l0Results) {
-        parent.ensureLevel0Metadata(sf);
+      if (this.l0Results != null) {
+        for (StoreFile sf : this.l0Results) {
+          parent.ensureLevel0Metadata(sf);
+        }
       }
     }
 
@@ -729,12 +734,14 @@ public class StripeStoreFileManager
      * or to the list of new candidate stripes.
      * @return New candidate stripes.
      */
-    private TreeMap<byte[], StoreFile> processCompactionResults() throws IOException {
+    private TreeMap<byte[], StoreFile> processResults() throws IOException {
       TreeMap<byte[], StoreFile> newStripes = null;
       for (StoreFile sf : this.results) {
         byte[] startRow = startOf(sf), endRow = endOf(sf);
         if (isInvalid(endRow) || isInvalid(startRow)) {
-          LOG.warn("The newly compacted files doesn't have stripe rows set: " + sf.getPath());
+          if (!isFlush) {
+            LOG.warn("The newly compacted file doesn't have stripes set: " + sf.getPath());
+          }
           insertFileIntoStripe(getLevel0Copy(), sf);
           this.l0Results.add(sf);
           continue;
@@ -775,7 +782,7 @@ public class StripeStoreFileManager
           int stripeIndex = findStripeIndexByEndRow(oldEndRow);
           if (stripeIndex < 0) {
             throw new IOException("An allegedly compacted file [" + oldFile + "] does not belong"
-                + " to a known stripe (end row + [" + Bytes.toString(oldEndRow) + "])");
+                + " to a known stripe (end row - [" + Bytes.toString(oldEndRow) + "])");
           }
           source = getStripeCopy(stripeIndex);
         }
@@ -803,6 +810,8 @@ public class StripeStoreFileManager
         throw new IOException("Newly created stripes do not cover the entire key space.");
       }
 
+      boolean canAddNewStripes = true;
+      Collection<StoreFile> filesForL0 = null;
       if (hasStripes) {
         // Determine which stripes will need to be removed because they conflict with new stripes.
         // The new boundaries should match old stripe boundaries, so we should get exact matches.
@@ -815,19 +824,48 @@ public class StripeStoreFileManager
         }
         int removeTo = findStripeIndexByEndRow(lastEndRow);
         if (removeTo < 0) throw new IOException("Compaction is trying to add a bad range.");
-        // Remove old empty stripes.
-        int originalCount = this.stripeFiles.size();
+        // See if there are files in the stripes we are trying to replace.
+        ArrayList<StoreFile> conflictingFiles = new ArrayList<StoreFile>();
         for (int removeIndex = removeTo; removeIndex >= removeFrom; --removeIndex) {
-          if (!this.stripeFiles.get(removeIndex).isEmpty()) {
-            throw new IOException("Compaction intends to create a new stripe that replaces an"
-                + " existing one, but the latter contains some files.");
+          conflictingFiles.addAll(this.stripeFiles.get(removeIndex));
+        }
+        if (!conflictingFiles.isEmpty()) {
+          // This can be caused by two things - concurrent flush into stripes, or a bug.
+          // Unfortunately, we cannot tell them apart without looking at timing or something
+          // like that. We will assume we are dealing with a flush and dump it into L0.
+          if (isFlush) {
+            long newSize = StripeCompactionPolicy.getTotalFileSize(newStripes.values());
+            LOG.warn("Stripes were created by a flush, but results of size " + newSize
+                + " cannot be added because the stripes have changed");
+            canAddNewStripes = false;
+            filesForL0 = newStripes.values();
+          } else {
+            long oldSize = StripeCompactionPolicy.getTotalFileSize(conflictingFiles);
+            LOG.info(conflictingFiles.size() + " conflicting files (likely created by a flush) "
+                + " of size " + oldSize + " are moved to L0 due to concurrent stripe change");
+            filesForL0 = conflictingFiles;
           }
-          if (removeIndex != originalCount - 1) {
-            this.stripeEndRows.remove(removeIndex);
+          if (filesForL0 != null) {
+            for (StoreFile sf : filesForL0) {
+              insertFileIntoStripe(getLevel0Copy(), sf);
+            }
+            l0Results.addAll(filesForL0);
           }
-          this.stripeFiles.remove(removeIndex);
+        }
+
+        if (canAddNewStripes) {
+          // Remove old empty stripes.
+          int originalCount = this.stripeFiles.size();
+          for (int removeIndex = removeTo; removeIndex >= removeFrom; --removeIndex) {
+            if (removeIndex != originalCount - 1) {
+              this.stripeEndRows.remove(removeIndex);
+            }
+            this.stripeFiles.remove(removeIndex);
+          }
         }
       }
+
+      if (!canAddNewStripes) return; // Files were already put into L0.
 
       // Now, insert new stripes. The total ranges match, so we can insert where we removed.
       byte[] previousEndRow = null;
@@ -838,7 +876,8 @@ public class StripeStoreFileManager
           assert !isOpen(previousEndRow);
           byte[] startRow = startOf(newStripe.getValue());
           if (!rowEquals(previousEndRow, startRow)) {
-            throw new IOException("The new stripes produced by compaction are not contiguous");
+            throw new IOException("The new stripes produced by "
+                + (isFlush ? "flush" : "compaction") + " are not contiguous");
           }
         }
         // Add the new stripe.

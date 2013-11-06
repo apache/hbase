@@ -47,10 +47,10 @@ public interface StoreFileManager {
   void loadFiles(List<StoreFile> storeFiles);
 
   /**
-   * Adds new file, either for from MemStore flush or bulk insert, into the structure.
+   * Adds new files, either for from MemStore flush or bulk insert, into the structure.
    * @param sf New store file.
    */
-  void insertNewFile(StoreFile sf);
+  void insertNewFiles(Collection<StoreFile> sfs) throws IOException;
 
   /**
    * Adds compaction results into the structure.

@@ -46,6 +46,9 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
   /** Source scanner that is tracking KV count; may be null if source is not StoreScanner */
   protected StoreScanner sourceScanner;
 
+  /** Whether to write stripe metadata */
+  private boolean doWriteStripeMetadata = true;
+
   public interface WriterFactory {
     public StoreFile.Writer createWriter() throws IOException;
   }
@@ -63,18 +66,24 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
     this.comparator = comparator;
   }
 
+  public void setNoStripeMetadata() {
+    this.doWriteStripeMetadata = false;
+  }
+
   public List<Path> commitWriters(long maxSeqId, boolean isMajor) throws IOException {
     assert this.existingWriters != null;
     commitWritersInternal();
     assert this.boundaries.size() == (this.existingWriters.size() + 1);
-    LOG.debug("Writing out metadata for " + this.existingWriters.size() + " writers");
-
+    LOG.debug((this.doWriteStripeMetadata ? "W" : "Not w")
+      + "riting out metadata for " + this.existingWriters.size() + " writers");
     List<Path> paths = new ArrayList<Path>();
     for (int i = 0; i < this.existingWriters.size(); ++i) {
       StoreFile.Writer writer = this.existingWriters.get(i);
       if (writer == null) continue; // writer was skipped due to 0 KVs
-      writer.appendFileInfo(StripeStoreFileManager.STRIPE_START_KEY, this.boundaries.get(i));
-      writer.appendFileInfo(StripeStoreFileManager.STRIPE_END_KEY, this.boundaries.get(i + 1));
+      if (doWriteStripeMetadata) {
+        writer.appendFileInfo(StripeStoreFileManager.STRIPE_START_KEY, this.boundaries.get(i));
+        writer.appendFileInfo(StripeStoreFileManager.STRIPE_END_KEY, this.boundaries.get(i + 1));
+      }
       writer.appendMetadata(maxSeqId, isMajor);
       paths.add(writer.getPath());
       writer.close();
@@ -109,8 +118,8 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
       byte[] left, byte[] row, int rowOffset, int rowLength) throws IOException {
     if (StripeStoreFileManager.OPEN_KEY != left &&
         comparator.compareRows(row, rowOffset, rowLength, left, 0, left.length) < 0) {
-      String error = "The first row is lower than the left boundary of ["
-        + Bytes.toString(left) + "]: [" + Bytes.toString(row, rowOffset, rowLength) + "]";
+      String error = "The first row is lower than the left boundary of [" + Bytes.toString(left)
+        + "]: [" + Bytes.toString(row, rowOffset, rowLength) + "]";
       LOG.error(error);
       throw new IOException(error);
     }

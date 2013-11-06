@@ -38,16 +38,20 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StripeMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.StripeStoreConfig;
 import org.apache.hadoop.hbase.regionserver.StripeStoreFileManager;
+import org.apache.hadoop.hbase.regionserver.StripeStoreFlusher;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy.StripeInformationProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
+import org.apache.hadoop.hbase.regionserver.TestStripeCompactor.StoreFileWritersCapture;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.ArgumentMatcher;
@@ -62,11 +66,50 @@ public class TestStripeCompactionPolicy {
   private static final byte[] KEY_C = Bytes.toBytes("ccc");
   private static final byte[] KEY_D = Bytes.toBytes("ddd");
   private static final byte[] KEY_E = Bytes.toBytes("eee");
+  private static final KeyValue KV_A = new KeyValue(KEY_A, 0L);
+  private static final KeyValue KV_B = new KeyValue(KEY_B, 0L);
+  private static final KeyValue KV_C = new KeyValue(KEY_C, 0L);
+  private static final KeyValue KV_D = new KeyValue(KEY_D, 0L);
+  private static final KeyValue KV_E = new KeyValue(KEY_E, 0L);
+
 
   private static long defaultSplitSize = 18;
   private static float defaultSplitCount = 1.8F;
   private final static int defaultInitialCount = 1;
   private static long defaultTtl = 1000 * 1000;
+
+  @Test
+  public void testNoStripesFromFlush() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(StripeStoreConfig.FLUSH_TO_L0_KEY, true);
+    StripeCompactionPolicy policy = createPolicy(conf);
+    StripeInformationProvider si = createStripesL0Only(0, 0);
+
+    KeyValue[] input = new KeyValue[] { KV_A, KV_B, KV_C, KV_D, KV_E };
+    KeyValue[][] expected = new KeyValue[][] { input };
+    verifyFlush(policy, si, input, expected, null);
+  }
+
+  @Test
+  public void testOldStripesFromFlush() throws Exception {
+    StripeCompactionPolicy policy = createPolicy(HBaseConfiguration.create());
+    StripeInformationProvider si = createStripes(0, KEY_C, KEY_D);
+
+    KeyValue[] input = new KeyValue[] { KV_B, KV_C, KV_C, KV_D, KV_E };
+    KeyValue[][] expected = new KeyValue[][] { new KeyValue[] { KV_B },
+        new KeyValue[] { KV_C, KV_C }, new KeyValue[] {  KV_D, KV_E } };
+    verifyFlush(policy, si, input, expected, new byte[][] { OPEN_KEY, KEY_C, KEY_D, OPEN_KEY });
+  }
+
+  @Test
+  public void testNewStripesFromFlush() throws Exception {
+    StripeCompactionPolicy policy = createPolicy(HBaseConfiguration.create());
+    StripeInformationProvider si = createStripesL0Only(0, 0);
+    KeyValue[] input = new KeyValue[] { KV_B, KV_C, KV_C, KV_D, KV_E };
+    // Starts with one stripe; unlike flush results, must have metadata
+    KeyValue[][] expected = new KeyValue[][] { input };
+    verifyFlush(policy, si, input, expected, new byte[][] { OPEN_KEY, OPEN_KEY });
+  }
 
   @Test
   public void testSingleStripeCompaction() throws Exception {
@@ -423,6 +466,25 @@ public class TestStripeCompactionPolicy {
         size == null ? anyLong() : eq(size.longValue()), aryEq(start), aryEq(end),
         dropDeletesMatcher(dropDeletes, start), dropDeletesMatcher(dropDeletes, end));
   }
+
+  /** Verify arbitrary flush. */
+  protected void verifyFlush(StripeCompactionPolicy policy, StripeInformationProvider si,
+      KeyValue[] input, KeyValue[][] expected, byte[][] boundaries) throws IOException {
+    StoreFileWritersCapture writers = new StoreFileWritersCapture();
+    StripeStoreFlusher.StripeFlushRequest req = policy.selectFlush(si, input.length);
+    StripeMultiFileWriter mw = req.createWriter();
+    mw.init(null, writers, new KeyValue.KVComparator());
+    for (KeyValue kv : input) {
+      mw.append(kv);
+    }
+    boolean hasMetadata = boundaries != null;
+    mw.commitWriters(0, false);
+    writers.verifyKvs(expected, true, hasMetadata);
+    if (hasMetadata) {
+      writers.verifyBoundaries(boundaries);
+    }
+  }
+
 
   private byte[] dropDeletesMatcher(Boolean dropDeletes, byte[] value) {
     return dropDeletes == null ? any(byte[].class)

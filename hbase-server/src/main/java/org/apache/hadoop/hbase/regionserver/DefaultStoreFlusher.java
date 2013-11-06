@@ -53,13 +53,7 @@ public class DefaultStoreFlusher extends StoreFlusher {
 
     // Use a store scanner to find which rows to flush.
     long smallestReadPoint = store.getSmallestReadPoint();
-    KeyValueScanner memstoreScanner =
-        new CollectionBackedScanner(snapshot, store.getComparator());
-    InternalScanner scanner = preCreateCoprocScanner(memstoreScanner);
-    if (scanner == null) {
-      scanner = createStoreScanner(smallestReadPoint, memstoreScanner);
-    }
-    scanner = postCreateCoprocScanner(scanner);
+    InternalScanner scanner = createScanner(snapshot, smallestReadPoint);
     if (scanner == null) {
       return result; // NULL scanner returned from coprocessor hooks means skip normal processing
     }

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.StripeStoreConfig;
+import org.apache.hadoop.hbase.regionserver.StripeStoreFlusher;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -75,9 +76,24 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     if (si.getStripeCount() > 0) {
       return new BoundaryStripeCompactionRequest(request, si.getStripeBoundaries());
     }
-    int initialCount = this.config.getInitialCount();
-    long targetKvs = estimateTargetKvs(request.getFiles(), initialCount).getFirst();
-    return new SplitStripeCompactionRequest(request, OPEN_KEY, OPEN_KEY, targetKvs);
+    Pair<Long, Integer> targetKvsAndCount = estimateTargetKvs(
+        request.getFiles(), this.config.getInitialCount());
+    return new SplitStripeCompactionRequest(
+        request, OPEN_KEY, OPEN_KEY, targetKvsAndCount.getSecond(), targetKvsAndCount.getFirst());
+  }
+
+  public StripeStoreFlusher.StripeFlushRequest selectFlush(
+      StripeInformationProvider si, int kvCount) {
+    if (this.config.isUsingL0Flush()) {
+      return new StripeStoreFlusher.StripeFlushRequest(); // L0 is used, return dumb request.
+    }
+    if (si.getStripeCount() == 0) {
+      // No stripes - start with the requisite count, derive KVs per stripe.
+      int initialCount = this.config.getInitialCount();
+      return new StripeStoreFlusher.SizeStripeFlushRequest(initialCount, kvCount / initialCount);
+    }
+    // There are stripes - do according to the boundaries.
+    return new StripeStoreFlusher.BoundaryStripeFlushRequest(si.getStripeBoundaries());
   }
 
   public StripeCompactionRequest selectCompaction(StripeInformationProvider si,
@@ -341,7 +357,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     return totalSize;
   }
 
-  private static long getTotalFileSize(final Collection<StoreFile> candidates) {
+  public static long getTotalFileSize(final Collection<StoreFile> candidates) {
     long totalSize = 0;
     for (StoreFile storeFile : candidates) {
       totalSize += storeFile.getReader().length();

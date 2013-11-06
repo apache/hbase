@@ -68,9 +68,9 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public void insertNewFile(StoreFile sf) {
+  public void insertNewFiles(Collection<StoreFile> sfs) throws IOException {
     ArrayList<StoreFile> newFiles = new ArrayList<StoreFile>(storefiles);
-    newFiles.add(sf);
+    newFiles.addAll(sfs);
     sortAndSetStoreFiles(newFiles);
   }
 

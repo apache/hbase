@@ -611,7 +611,7 @@ public class HStore implements Store {
     // Append the new storefile into the list
     this.lock.writeLock().lock();
     try {
-      this.storeEngine.getStoreFileManager().insertNewFile(sf);
+      this.storeEngine.getStoreFileManager().insertNewFiles(Lists.newArrayList(sf));
     } finally {
       // We need the lock, as long as we are updating the storeFiles
       // or changing the memstore. Let us release it before calling
@@ -852,9 +852,7 @@ public class HStore implements Store {
       final List<StoreFile> sfs, final SortedSet<KeyValue> set) throws IOException {
     this.lock.writeLock().lock();
     try {
-      for (StoreFile sf : sfs) {
-        this.storeEngine.getStoreFileManager().insertNewFile(sf);
-      }
+      this.storeEngine.getStoreFileManager().insertNewFiles(sfs);
       this.memstore.clearSnapshot(set);
     } finally {
       // We need the lock, as long as we are updating the storeFiles
@@ -1122,15 +1120,15 @@ public class HStore implements Store {
       .append(" to execute.");
     LOG.info(message.toString());
     if (LOG.isTraceEnabled()) {
-     int fileCount = storeEngine.getStoreFileManager().getStorefileCount();
-     long resultSize = 0;
-     for (StoreFile sf : sfs) {
-       resultSize += sf.getReader().length();
-     }
-     String traceMessage = "COMPACTION start,end,size out,files in,files out,store size,"
-       + "store files [" + compactionStartTime + "," + now + "," + resultSize + ","
-         + cr.getFiles().size() + "," + sfs.size() + "," +  storeSize + "," + fileCount + "]";
-     LOG.trace(traceMessage);
+      int fileCount = storeEngine.getStoreFileManager().getStorefileCount();
+      long resultSize = 0;
+      for (StoreFile sf : sfs) {
+        resultSize += sf.getReader().length();
+      }
+      String traceMessage = "COMPACTION start,end,size out,files in,files out,store size,"
+        + "store files [" + compactionStartTime + "," + now + "," + resultSize + ","
+          + cr.getFiles().size() + "," + sfs.size() + "," +  storeSize + "," + fileCount + "]";
+      LOG.trace(traceMessage);
     }
   }
 

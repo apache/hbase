@@ -83,7 +83,7 @@ public class TestStripeStoreFileManager {
   public void testInsertFilesIntoL0() throws Exception {
     StripeStoreFileManager manager = createManager();
     MockStoreFile sf = createFile();
-    manager.insertNewFile(sf);
+    manager.insertNewFiles(al(sf));
     assertEquals(1, manager.getStorefileCount());
     Collection<StoreFile> filesForGet = manager.getFilesForScanOrGet(true, KEY_A, KEY_A);
     assertEquals(1, filesForGet.size());
@@ -99,8 +99,8 @@ public class TestStripeStoreFileManager {
   @Test
   public void testClearFiles() throws Exception {
     StripeStoreFileManager manager = createManager();
-    manager.insertNewFile(createFile());
-    manager.insertNewFile(createFile());
+    manager.insertNewFiles(al(createFile()));
+    manager.insertNewFiles(al(createFile()));
     manager.addCompactionResults(al(), al(createFile(OPEN_KEY, KEY_B),
         createFile(KEY_B, OPEN_KEY)));
     assertEquals(4, manager.getStorefileCount());
@@ -120,8 +120,8 @@ public class TestStripeStoreFileManager {
   public void testRowKeyBefore() throws Exception {
     StripeStoreFileManager manager = createManager();
     StoreFile l0File = createFile(), l0File2 = createFile();
-    manager.insertNewFile(l0File);
-    manager.insertNewFile(l0File2);
+    manager.insertNewFiles(al(l0File));
+    manager.insertNewFiles(al(l0File2));
     // Get candidate files.
     Iterator<StoreFile> sfs = manager.getCandidateFilesForRowKeyBefore(KV_B);
     sfs.next();
@@ -174,8 +174,8 @@ public class TestStripeStoreFileManager {
     // If there are no stripes, should pick midpoint from the biggest file in L0.
     MockStoreFile sf5 = createFile(5, 0);
     sf5.splitPoint = new byte[1];
-    manager.insertNewFile(sf5);
-    manager.insertNewFile(createFile(1, 0));
+    manager.insertNewFiles(al(sf5));
+    manager.insertNewFiles(al(createFile(1, 0)));
     assertEquals(sf5.splitPoint, manager.getSplitPoint());
 
     // Same if there's one stripe but the biggest file is still in L0.
@@ -259,7 +259,7 @@ public class TestStripeStoreFileManager {
 
     // Populate one L0 file.
     MockStoreFile sf0 = createFile();
-    manager.insertNewFile(sf0);
+    manager.insertNewFiles(al(sf0));
     verifyGetAndScanScenario(manager, null, null,   sf0);
     verifyGetAndScanScenario(manager, null, KEY_C,  sf0);
     verifyGetAndScanScenario(manager, KEY_B, null,  sf0);
@@ -356,14 +356,11 @@ public class TestStripeStoreFileManager {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void testAddingCompactionResults() throws Exception {
     StripeStoreFileManager manager = createManager();
     // First, add some L0 files and "compact" one with new stripe creation.
-    StoreFile sf_L0_0a = createFile();
-    StoreFile sf_L0_0b = createFile();
-    manager.insertNewFile(sf_L0_0a);
-    manager.insertNewFile(sf_L0_0b);
+    StoreFile sf_L0_0a = createFile(), sf_L0_0b = createFile();
+    manager.insertNewFiles(al(sf_L0_0a, sf_L0_0b));
 
     // Try compacting with invalid new branches (gaps, overlaps) - no effect.
     verifyInvalidCompactionScenario(manager, al(sf_L0_0a), al(createFile(OPEN_KEY, KEY_B)));
@@ -384,7 +381,7 @@ public class TestStripeStoreFileManager {
     StoreFile sf_L0_1 = createFile();
     StoreFile sf_i2B_1 = createFile(OPEN_KEY, KEY_B);
     StoreFile sf_B2C_1 = createFile(KEY_B, KEY_C);
-    manager.insertNewFile(sf_L0_1);
+    manager.insertNewFiles(al(sf_L0_1));
     manager.addCompactionResults(al(sf_L0_0b, sf_L0_1), al(sf_i2B_1, sf_B2C_1));
     verifyAllFiles(manager, al(sf_i2B_0, sf_B2C_0, sf_C2i_0, sf_i2B_1, sf_B2C_1));
 
@@ -400,27 +397,21 @@ public class TestStripeStoreFileManager {
     manager.addCompactionResults(al(sf_i2B_0, sf_i2B_1), al(sf_i2B_3));
     verifyAllFiles(manager, al(sf_B2C_0, sf_C2i_0, sf_B2C_1, sf_i2B_3));
 
-    // Try to rebalance two stripes, but don't take all files from them - no effect.
+    // Rebalance two stripes.
     StoreFile sf_B2D_4 = createFile(KEY_B, KEY_D);
     StoreFile sf_D2i_4 = createFile(KEY_D, OPEN_KEY);
-    ArrayList<StoreFile> compacted3 = al();
-    verifyInvalidCompactionScenario(manager, al(sf_B2C_0, sf_C2i_0), al(sf_B2D_4, sf_D2i_4));
-
-    // Rebalance two stripes correctly.
     manager.addCompactionResults(al(sf_B2C_0, sf_C2i_0, sf_B2C_1), al(sf_B2D_4, sf_D2i_4));
     verifyAllFiles(manager, al(sf_i2B_3, sf_B2D_4, sf_D2i_4));
 
     // Split the first stripe.
     StoreFile sf_i2A_5 = createFile(OPEN_KEY, KEY_A);
     StoreFile sf_A2B_5 = createFile(KEY_A, KEY_B);
-    ArrayList<StoreFile> compacted4 = al(createFile(OPEN_KEY, KEY_A), createFile(KEY_A, KEY_B));
     manager.addCompactionResults(al(sf_i2B_3), al(sf_i2A_5, sf_A2B_5));
     verifyAllFiles(manager, al(sf_B2D_4, sf_D2i_4, sf_i2A_5, sf_A2B_5));
 
     // Split the middle stripe.
     StoreFile sf_B2C_6 = createFile(KEY_B, KEY_C);
     StoreFile sf_C2D_6 = createFile(KEY_C, KEY_D);
-    ArrayList<StoreFile> compacted5 = al(createFile(KEY_B, KEY_C), createFile(KEY_C, KEY_D));
     manager.addCompactionResults(al(sf_B2D_4), al(sf_B2C_6, sf_C2D_6));
     verifyAllFiles(manager, al(sf_D2i_4, sf_i2A_5, sf_A2B_5, sf_B2C_6, sf_C2D_6));
 
@@ -428,14 +419,6 @@ public class TestStripeStoreFileManager {
     StoreFile sf_A2C_7 = createFile(KEY_A, KEY_C);
     manager.addCompactionResults(al(sf_A2B_5, sf_B2C_6), al(sf_A2C_7));
     verifyAllFiles(manager, al(sf_D2i_4, sf_i2A_5, sf_C2D_6, sf_A2C_7));
-
-    // Try various range mismatch cases in replaced and new data - no effect.
-    ArrayList<StoreFile> tmp = al(sf_A2C_7, sf_C2D_6); // [A, C)
-    verifyInvalidCompactionScenario(manager, tmp, al(createFile(KEY_B, KEY_C)));
-    verifyInvalidCompactionScenario(manager, tmp, al(createFile(OPEN_KEY, KEY_D)));
-    verifyInvalidCompactionScenario(manager, tmp, al(createFile(KEY_A, OPEN_KEY)));
-    verifyInvalidCompactionScenario(manager, tmp, al(createFile(KEY_A, KEY_B)));
-    verifyInvalidCompactionScenario(manager, tmp, al(createFile(KEY_B, keyAfter(KEY_B))));
 
     // Merge lower half.
     StoreFile sf_i2C_8 = createFile(OPEN_KEY, KEY_C);
@@ -449,13 +432,39 @@ public class TestStripeStoreFileManager {
   }
 
   @Test
+  public void testCompactionAndFlushConflict() throws Exception {
+    // Add file flush into stripes
+    StripeStoreFileManager sfm = createManager();
+    assertEquals(0, sfm.getStripeCount());
+    StoreFile sf_i2c = createFile(OPEN_KEY, KEY_C), sf_c2i = createFile(KEY_C, OPEN_KEY);
+    sfm.insertNewFiles(al(sf_i2c, sf_c2i));
+    assertEquals(2, sfm.getStripeCount());
+    // Now try to add conflicting flush - should throw.
+    StoreFile sf_i2d = createFile(OPEN_KEY, KEY_D), sf_d2i = createFile(KEY_D, OPEN_KEY);
+    sfm.insertNewFiles(al(sf_i2d, sf_d2i));
+    assertEquals(2, sfm.getStripeCount());
+    assertEquals(2, sfm.getLevel0Files().size());
+    verifyGetAndScanScenario(sfm, KEY_C, KEY_C, sf_i2d, sf_d2i, sf_c2i);
+    // Remove these files.
+    sfm.addCompactionResults(al(sf_i2d, sf_d2i), al());
+    assertEquals(0, sfm.getLevel0Files().size());
+    // Add another file to stripe; then "rebalance" stripes w/o it - the file, which was
+    // presumably flushed during compaction, should go to L0.
+    StoreFile sf_i2c_2 = createFile(OPEN_KEY, KEY_C);
+    sfm.insertNewFiles(al(sf_i2c_2));
+    sfm.addCompactionResults(al(sf_i2c, sf_c2i), al(sf_i2d, sf_d2i));
+    assertEquals(1, sfm.getLevel0Files().size());
+    verifyGetAndScanScenario(sfm, KEY_C, KEY_C, sf_i2d, sf_i2c_2);
+  }
+
+  @Test
   public void testEmptyResultsForStripes() throws Exception {
     // Test that we can compact L0 into a subset of stripes.
     StripeStoreFileManager manager = createManager();
     StoreFile sf0a = createFile();
     StoreFile sf0b = createFile();
-    manager.insertNewFile(sf0a);
-    manager.insertNewFile(sf0b);
+    manager.insertNewFiles(al(sf0a));
+    manager.insertNewFiles(al(sf0b));
     ArrayList<StoreFile> compacted = al(createFile(OPEN_KEY, KEY_B),
         createFile(KEY_B, KEY_C), createFile(KEY_C, OPEN_KEY));
     manager.addCompactionResults(al(sf0a), compacted);
@@ -491,7 +500,7 @@ public class TestStripeStoreFileManager {
     conf.setInt("hbase.hstore.blockingStoreFiles", limit);
     StripeStoreFileManager sfm = createManager(al(), conf);
     for (int i = 0; i < l0Files; ++i) {
-      sfm.insertNewFile(createFile());
+      sfm.insertNewFiles(al(createFile()));
     }
     for (int i = 0; i < filesInStripe; ++i) {
       ArrayList<StoreFile> stripe = new ArrayList<StoreFile>();

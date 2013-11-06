@@ -125,7 +125,7 @@ public class TestStripeCompactor {
     StripeCompactor sc = createCompactor(writers, input);
     List<Path> paths =
         sc.compact(createDummyRequest(), Arrays.asList(boundaries), majorFrom, majorTo);
-    writers.verifyKvs(output, allFiles);
+    writers.verifyKvs(output, allFiles, true);
     if (allFiles) {
       assertEquals(output.length, paths.size());
       writers.verifyBoundaries(boundaries);
@@ -162,7 +162,7 @@ public class TestStripeCompactor {
     List<Path> paths = sc.compact(
         createDummyRequest(), targetCount, targetSize, left, right, null, null);
     assertEquals(output.length, paths.size());
-    writers.verifyKvs(output, true);
+    writers.verifyKvs(output, true, true);
     List<byte[]> boundaries = new ArrayList<byte[]>();
     boundaries.add(left);
     for (int i = 1; i < output.length; ++i) {
@@ -242,7 +242,8 @@ public class TestStripeCompactor {
   }
 
   // StoreFile.Writer has private ctor and is unwieldy, so this has to be convoluted.
-  private static class StoreFileWritersCapture implements Answer<StoreFile.Writer> {
+  public static class StoreFileWritersCapture implements
+    Answer<StoreFile.Writer>, StripeMultiFileWriter.WriterFactory {
     public static class Writer {
       public ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
       public TreeMap<byte[], byte[]> data = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
@@ -251,7 +252,7 @@ public class TestStripeCompactor {
     private List<Writer> writers = new ArrayList<Writer>();
 
     @Override
-    public StoreFile.Writer answer(InvocationOnMock invocation) throws Throwable {
+    public StoreFile.Writer createWriter() throws IOException {
       final Writer realWriter = new Writer();
       writers.add(realWriter);
       StoreFile.Writer writer = mock(StoreFile.Writer.class);
@@ -267,7 +268,12 @@ public class TestStripeCompactor {
       return writer;
     }
 
-    public void verifyKvs(KeyValue[][] kvss, boolean allFiles) {
+    @Override
+    public StoreFile.Writer answer(InvocationOnMock invocation) throws Throwable {
+      return createWriter();
+    }
+
+    public void verifyKvs(KeyValue[][] kvss, boolean allFiles, boolean requireMetadata) {
       if (allFiles) {
         assertEquals(kvss.length, writers.size());
       }
@@ -276,8 +282,13 @@ public class TestStripeCompactor {
         KeyValue[] kvs = kvss[i];
         if (kvs != null) {
           Writer w = writers.get(i - skippedWriters);
-          assertNotNull(w.data.get(STRIPE_START_KEY));
-          assertNotNull(w.data.get(STRIPE_END_KEY));
+          if (requireMetadata) {
+            assertNotNull(w.data.get(STRIPE_START_KEY));
+            assertNotNull(w.data.get(STRIPE_END_KEY));
+          } else {
+            assertNull(w.data.get(STRIPE_START_KEY));
+            assertNull(w.data.get(STRIPE_END_KEY));
+          }
           assertEquals(kvs.length, w.kvs.size());
           for (int j = 0; j < kvs.length; ++j) {
             assertEquals(kvs[j], w.kvs.get(j));

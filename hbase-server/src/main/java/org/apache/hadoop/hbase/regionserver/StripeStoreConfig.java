@@ -56,6 +56,9 @@ public class StripeStoreConfig {
    to get this count from the outset and prevent unnecessary splitting. */
   public static final String INITIAL_STRIPE_COUNT_KEY = "hbase.store.stripe.initialStripeCount";
 
+  /** Whether to flush memstore to L0 files, or directly to stripes. */
+  public static final String FLUSH_TO_L0_KEY = "hbase.store.stripe.compaction.flushToL0";
+
   /** When splitting region, the maximum size imbalance to allow in an attempt to split at a
    stripe boundary, so that no files go to both regions. Most users won't need to change that. */
   public static final String MAX_REGION_SPLIT_IMBALANCE_KEY =
@@ -70,36 +73,46 @@ public class StripeStoreConfig {
   private final int initialCount;
   private final long sizeToSplitAt;
   private final float splitPartCount;
+  private final boolean flushIntoL0;
   private final long splitPartSize; // derived from sizeToSplitAt and splitPartCount
 
-  private final double EPSILON = 0.001; // good enough for this, not a real epsilon.
+  private static final double EPSILON = 0.001; // good enough for this, not a real epsilon.
   public StripeStoreConfig(Configuration config, StoreConfigInformation sci) {
     this.level0CompactMinFiles = config.getInt(MIN_FILES_L0_KEY, 4);
     this.stripeCompactMinFiles = config.getInt(MIN_FILES_KEY, 3);
     this.stripeCompactMaxFiles = config.getInt(MAX_FILES_KEY, 10);
     this.maxRegionSplitImbalance = getFloat(config, MAX_REGION_SPLIT_IMBALANCE_KEY, 1.5f, true);
+    this.flushIntoL0 = config.getBoolean(FLUSH_TO_L0_KEY, false);
 
-    this.splitPartCount = getFloat(config, SPLIT_PARTS_KEY, 2.0f, true);
+    float splitPartCount = getFloat(config, SPLIT_PARTS_KEY, 2f, true);
     if (Math.abs(splitPartCount - 1.0) < EPSILON) {
-      throw new RuntimeException("Split part count cannot be 1: " + this.splitPartCount);
+      LOG.error("Split part count cannot be 1 (" + this.splitPartCount + "), using the default");
+      splitPartCount = 2f;
     }
-    // TODO: change when no L0.
+    this.splitPartCount = splitPartCount;
     // Arbitrary default split size - 4 times the size of one L0 compaction.
+    // If we flush into L0 there's no split compaction, but for default value it is ok.
     double flushSize = sci.getMemstoreFlushSize();
     if (flushSize == 0) {
       flushSize = 128 * 1024 * 1024;
     }
     long defaultSplitSize = (long)(flushSize * getLevel0MinFiles() * 4 * splitPartCount);
     this.sizeToSplitAt = config.getLong(SIZE_TO_SPLIT_KEY, defaultSplitSize);
-    this.initialCount = config.getInt(INITIAL_STRIPE_COUNT_KEY, 1);
+    int initialCount = config.getInt(INITIAL_STRIPE_COUNT_KEY, 1);
+    if (initialCount == 0) {
+      LOG.error("Initial stripe count is 0, using the default");
+      initialCount = 1;
+    }
+    this.initialCount = initialCount;
     this.splitPartSize = (long)(this.sizeToSplitAt / this.splitPartCount);
   }
 
   private static float getFloat(
       Configuration config, String key, float defaultValue, boolean moreThanOne) {
     float value = config.getFloat(key, defaultValue);
-    if (value == 0) {
-      LOG.warn(String.format("%s is set to 0; using default value of %f", key, defaultValue));
+    if (value < EPSILON) {
+      LOG.warn(String.format(
+          "%s is set to 0 or negative; using default value of %f", key, defaultValue));
       value = defaultValue;
     } else if ((value > 1f) != moreThanOne) {
       value = 1f / value;
@@ -121,6 +134,10 @@ public class StripeStoreConfig {
 
   public int getStripeCompactMaxFiles() {
     return stripeCompactMaxFiles;
+  }
+
+  public boolean isUsingL0Flush() {
+    return flushIntoL0;
   }
 
   public long getSplitSize() {
