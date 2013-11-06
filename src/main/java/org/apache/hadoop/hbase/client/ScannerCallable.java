@@ -29,6 +29,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.mortbay.log.Log;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 
 /**
@@ -40,6 +41,9 @@ public class ScannerCallable extends ServerCallable<Result[]> {
   private boolean closed = false;
   private Scan scan;
   private int caching = 1;
+  private boolean skipFirstRow = false;
+  private boolean forceReopen = false;
+  private byte[] lastRowSeen = null;
 
   /**
    * @param connection which connection
@@ -58,31 +62,76 @@ public class ScannerCallable extends ServerCallable<Result[]> {
   public Result [] call() throws IOException {
     if (scannerId != -1L && closed) {
       close();
-    } else if (scannerId == -1L && !closed) {
+    } else if (scannerId == -1L && !closed && !forceReopen) {
       this.scannerId = openScanner();
     } else {
+      ensureScannerIsOpened();
       Result [] rrs = null;
       try {
-        rrs = server.next(scannerId, caching);
+        rrs = next();
       } catch (IOException e) {
-        IOException ioe = null;
-        if (e instanceof RemoteException) {
-          ioe = RemoteExceptionHandler.decodeRemoteException((RemoteException)e);
-        }
-        if (ioe == null) throw new IOException(e);
-        if (ioe instanceof NotServingRegionException) {
-          // Throw a DNRE so that we break out of cycle of calling NSRE
-          // when what we need is to open scanner against new location.
-          // Attach NSRE to signal client that it needs to resetup scanner.
-          throw new DoNotRetryIOException("Reset scanner", ioe);
-        } else {
-          // The outer layers will retry
-          throw ioe;
-        }
+        fixStateOrCancelRetryThanRethrow(e);
       }
       return rrs;
     }
     return null;
+  }
+
+  private void fixStateOrCancelRetryThanRethrow(IOException e) throws IOException {
+    IOException ioe = null;
+    if (e instanceof RemoteException) {
+      ioe = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+    }
+    if (ioe == null) {
+      ioe = new IOException(e);
+    }
+    if (ioe instanceof NotServingRegionException) {
+      // Throw a DNRE so that we break out of cycle of calling NSRE
+      // when what we need is to open scanner against new location.
+      // Attach NSRE to signal client that it needs to resetup scanner.
+      throw new DoNotRetryIOException("Reset scanner", ioe);
+    } else {
+      // The outer layers will retry
+      fixStateForFutureRetries();
+      throw ioe;
+    }
+  }
+
+  private Result[] next() throws IOException {
+    Result[] results = server.next(scannerId, caching);
+    if (results != null && results.length > 0) {
+      byte[] lastRow = results[results.length - 1].getRow();
+      if (lastRow.length > 0) {
+        lastRowSeen = lastRow;
+      }
+      if (skipFirstRow) {
+        skipFirstRow = false;
+        // We can't return empty results as it will prematurely signal end of region
+        if (results.length > 1) {
+          results = Arrays.copyOfRange(results, 1, results.length);
+        } else {
+          return next();
+        }
+      }
+    }
+    return results;
+  }
+
+  private void fixStateForFutureRetries() {
+    Log.info("Fixing scan state for future retries");
+    close();
+    if (lastRowSeen != null && lastRowSeen.length > 0) {
+      scan.setStartRow(lastRowSeen);
+      skipFirstRow = true;
+    }
+    forceReopen = true;
+  }
+
+  private void ensureScannerIsOpened() throws IOException {
+    if (forceReopen) {
+      scannerId = openScanner();
+      forceReopen = false;
+    }
   }
 
   private void close() {

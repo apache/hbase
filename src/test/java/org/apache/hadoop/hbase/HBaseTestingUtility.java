@@ -363,6 +363,11 @@ public class HBaseTestingUtility {
     return startMiniCluster(1, numSlaves);
   }
 
+  public MiniHBaseCluster startMiniCluster(final int numMasters,
+      final int numSlaves) throws IOException, InterruptedException {
+    return startMiniCluster(numMasters, numSlaves, MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
+  }
+
   /**
    * Start up a minicluster of hbase, optionally dfs, and zookeeper.
    * Modifies Configuration.  Homes the cluster data directory under a random
@@ -380,7 +385,7 @@ public class HBaseTestingUtility {
    * @return Mini hbase cluster instance created.
    */
   public MiniHBaseCluster startMiniCluster(final int numMasters,
-      final int numSlaves) throws IOException, InterruptedException {
+      final int numSlaves, final Class<? extends HRegionServer> regionServerClass) throws IOException, InterruptedException {
     LOG.info("Starting up minicluster");
     // If we already put up a cluster, fail.
     if (miniClusterRunning) {
@@ -413,7 +418,7 @@ public class HBaseTestingUtility {
     this.conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
-    startMiniHBaseCluster(numMasters, numSlaves);
+    startMiniHBaseCluster(numMasters, numSlaves, regionServerClass);
 
     // Don't leave here till we've done a successful scan of the .META.
     HTable t = null;
@@ -439,9 +444,16 @@ public class HBaseTestingUtility {
     return this.hbaseCluster;
   }
 
+
   public void startMiniHBaseCluster(final int numMasters, final int numSlaves)
-      throws IOException, InterruptedException {
-    this.hbaseCluster = new MiniHBaseCluster(this.conf, numMasters, numSlaves);
+    throws IOException, InterruptedException {
+    startMiniHBaseCluster(numMasters, numSlaves, MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
+  }
+
+  public void startMiniHBaseCluster(final int numMasters, final int numSlaves,
+    Class<? extends HRegionServer> regionServerClass)
+  throws IOException, InterruptedException {
+    this.hbaseCluster = new MiniHBaseCluster(this.conf, numMasters, numSlaves, regionServerClass);
   }
 
   /**

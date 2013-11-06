@@ -30,18 +30,18 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  * This class creates a single process HBase cluster.
@@ -87,6 +87,11 @@ public class MiniHBaseCluster {
   public MiniHBaseCluster(Configuration conf, int numMasters,
       int numRegionServers)
   throws IOException, InterruptedException {
+    this(conf, numMasters, numRegionServers, MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
+  }
+
+  public MiniHBaseCluster(Configuration conf, int numMasters, int numRegionServers, Class regionServerClass)
+    throws IOException, InterruptedException {
     this.conf = conf;
     MiniHBaseCluster.numClusters ++;
     conf.set(HConstants.MASTER_PORT, "0");
@@ -94,7 +99,7 @@ public class MiniHBaseCluster {
         PREFERRED_ASSIGNMENT);
     conf.setLong("hbase.master.holdRegionForBestLocality.period",
         PREFERRED_ASSIGNMENT / 5);
-    init(numMasters, numRegionServers);
+    init(numMasters, numRegionServers, regionServerClass);
   }
 
   /**
@@ -252,13 +257,13 @@ public class MiniHBaseCluster {
     }
   }
 
-  private void init(final int nMasterNodes, final int nRegionNodes)
+  private void init(final int nMasterNodes, final int nRegionNodes, Class regionServerClass)
   throws IOException {
     try {
       // start up a LocalHBaseCluster
       hbaseCluster = new LocalHBaseCluster(conf, nMasterNodes, nRegionNodes,
           MiniHBaseCluster.MiniHBaseClusterMaster.class,
-          MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
+          regionServerClass);
       hbaseCluster.startup();
     } catch(IOException e) {
       shutdown();
