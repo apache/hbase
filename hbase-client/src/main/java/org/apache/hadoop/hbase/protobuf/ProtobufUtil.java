@@ -153,35 +153,6 @@ public final class ProtobufUtil {
   private final static Map<String, Class<?>>
     PRIMITIVES = new HashMap<String, Class<?>>();
 
-
-  /**
-   * Many results are simple: no cell, exists true or false. To save on object creations,
-   *  we reuse them across calls.
-   */
-  private final static Cell[] EMPTY_CELL_ARRAY = new Cell[]{};
-  private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
-  private final static Result EMPTY_RESULT_EXISTS_TRUE = Result.create(null, true);
-  private final static Result EMPTY_RESULT_EXISTS_FALSE = Result.create(null, false);
-
-  private final static ClientProtos.Result EMPTY_RESULT_PB;
-  private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_TRUE;
-  private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_FALSE;
-
-  static {
-    ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-
-    builder.setExists(true);
-    EMPTY_RESULT_PB_EXISTS_TRUE =  builder.build();
-
-    builder.clear();
-    builder.setExists(false);
-    EMPTY_RESULT_PB_EXISTS_FALSE =  builder.build();
-
-    builder.clear();
-    builder.setAssociatedCellCount(0);
-    EMPTY_RESULT_PB =  builder.build();
-  }
-
   /**
    * Dynamic class loader to load filter/comparators
    */
@@ -1089,20 +1060,16 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResult(final Result result) {
-    if (result.getExists() != null) {
-      return toResult(result.getExists());
-    }
-
-    Cell[] cells = result.rawCells();
-    if (cells == null || cells.length == 0) {
-      return EMPTY_RESULT_PB;
-    }
-
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-    for (Cell c : cells) {
-      builder.addCell(toCell(c));
+    Cell [] cells = result.rawCells();
+    if (cells != null) {
+      for (Cell c : cells) {
+        builder.addCell(toCell(c));
+      }
     }
-
+    if (result.getExists() != null){
+      builder.setExists(result.getExists());
+    }
     return builder.build();
   }
 
@@ -1113,7 +1080,9 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResult(final boolean existence) {
-    return existence ? EMPTY_RESULT_PB_EXISTS_TRUE : EMPTY_RESULT_PB_EXISTS_FALSE;
+    ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
+    builder.setExists(existence);
+    return builder.build();
   }
 
   /**
@@ -1124,19 +1093,11 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResultNoData(final Result result) {
-    if (result.getExists() != null){
-      return result.getExists() ? EMPTY_RESULT_PB_EXISTS_TRUE : EMPTY_RESULT_PB_EXISTS_FALSE;
-    }
-
-    int size = result.size();
-
-    if (size == 0){
-      return EMPTY_RESULT_PB;
-    }
-
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-    builder.setAssociatedCellCount(size);
-
+    builder.setAssociatedCellCount(result.size());
+    if (result.getExists() != null){
+      builder.setExists(result.getExists());
+    }
     return builder.build();
   }
 
@@ -1148,14 +1109,10 @@ public final class ProtobufUtil {
    */
   public static Result toResult(final ClientProtos.Result proto) {
     if (proto.hasExists()) {
-      return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE : EMPTY_RESULT_EXISTS_FALSE;
+      return Result.create(null, proto.getExists());
     }
 
     List<CellProtos.Cell> values = proto.getCellList();
-    if (values.isEmpty()){
-      return EMPTY_RESULT;
-    }
-
     List<Cell> cells = new ArrayList<Cell>(values.size());
     for (CellProtos.Cell c : values) {
       cells.add(toCell(c));
@@ -1174,7 +1131,7 @@ public final class ProtobufUtil {
   public static Result toResult(final ClientProtos.Result proto, final CellScanner scanner)
   throws IOException {
     if (proto.hasExists()){
-      return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE : EMPTY_RESULT_EXISTS_FALSE;
+      return Result.create(null, proto.getExists());
     }
 
     // TODO: Unit test that has some Cells in scanner and some in the proto.
@@ -1188,19 +1145,12 @@ public final class ProtobufUtil {
       }
     }
     List<CellProtos.Cell> values = proto.getCellList();
-    if (cells == null) {
-      if (values.isEmpty()) {
-        return EMPTY_RESULT;
-      } else {
-        cells = new ArrayList<Cell>(values.size());
-        for (CellProtos.Cell c : values) {
-          cells.add(toCell(c));
-        }
-      }
+    if (cells == null) cells = new ArrayList<Cell>(values.size());
+    for (CellProtos.Cell c: values) {
+      cells.add(toCell(c));
     }
     return Result.create(cells, null);
   }
-
 
   /**
    * Convert a ByteArrayComparable to a protocol buffer Comparator
