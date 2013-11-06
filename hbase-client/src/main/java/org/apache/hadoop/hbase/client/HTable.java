@@ -1523,6 +1523,11 @@ public class HTable implements HTableInterface {
     return operationTimeout;
   }
 
+  @Override
+  public String toString() {
+    return tableName + ", " + connection;
+  }
+
   /**
    * Run basic test.
    * @param args Pass table name and row and will get the content.
