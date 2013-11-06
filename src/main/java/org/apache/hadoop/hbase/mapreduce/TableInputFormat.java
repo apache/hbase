@@ -93,6 +93,10 @@ implements Configurable {
   /** The number of mappers that should be assigned to each region. */
   public static final String MAPPERS_PER_REGION = "hbase.mapreduce.mappersperregion";
 
+  /** The number of mappers that should be assigned per job. */
+  public static final String NUM_MAPPERS_PER_JOB = "hbase.mapreduce.num.mappers";
+
+
   /** The Algorithm used to split each region's keyspace. */
   public static final String SPLIT_ALGO = "hbase.mapreduce.tableinputformat.split.algo";
 
@@ -135,6 +139,10 @@ implements Configurable {
     setScan(createScan(conf));
     if (conf.get(MAPPERS_PER_REGION) != null) {
       setNumMapperPerRegion(Integer.parseInt(conf.get(MAPPERS_PER_REGION)));
+    }
+
+    if (conf.get(NUM_MAPPERS_PER_JOB) != null) {
+      setNumMappersPerJob(Integer.parseInt(conf.get(NUM_MAPPERS_PER_JOB)));
     }
 
     setSplitAlgorithm(conf.get(SPLIT_ALGO, UniformSplit.class.getSimpleName()));

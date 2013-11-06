@@ -34,6 +34,7 @@ import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.hbase.mapreduce.TableInputFormat.MAPPERS_PER_REGION;
+import static org.apache.hadoop.hbase.mapreduce.TableInputFormat.NUM_MAPPERS_PER_JOB;
 import static org.apache.hadoop.hbase.mapreduce.TableInputFormat.SPLIT_ALGO;
 
 /**
@@ -68,6 +69,10 @@ public class TableInputFormat extends TableInputFormatBase implements
     setScan(org.apache.hadoop.hbase.mapreduce.TableInputFormat.createScan(job));
     if (job.get(MAPPERS_PER_REGION) != null) {
       setNumMapperPerRegion(Integer.parseInt(job.get(MAPPERS_PER_REGION)));
+    }
+
+    if (job.get(NUM_MAPPERS_PER_JOB) != null) {
+      setNumMappersPerJob(Integer.parseInt(job.get(NUM_MAPPERS_PER_JOB)));
     }
 
     setSplitAlgorithm(job.get(SPLIT_ALGO, UniformSplit.class.getSimpleName()));

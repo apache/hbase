@@ -79,7 +79,12 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   private Scan scan;
 
   /** The number of mappers to assign to each region. */
-  private int numMappersPerRegion = 1;
+  private int numMappers = 1;
+
+  /** The total number of mappers. The number of mappers per region is
+   * mutually exclusive with number of mappers per job. In case both
+   * are defined, mapperPerJob will take the precedence.*/
+  private boolean mappersPerJob = false;
 
   /** Splitting algorithm to be used to split the keys */
   private String splitAlgmName; // default to Uniform
@@ -134,7 +139,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     List<org.apache.hadoop.mapreduce.InputSplit> newStyleSplits =
         org.apache.hadoop.hbase.mapreduce.TableInputFormatBase.getSplitsInternal(
-            table, job, scan, numMappersPerRegion, splitAlgmName, null);
+            table, job, scan, numMappers, mappersPerJob, splitAlgmName, null);
     int n = newStyleSplits.size();
     InputSplit[] result = new InputSplit[n];
     for (int i = 0; i < n; ++i) {
@@ -210,7 +215,30 @@ implements InputFormat<ImmutableBytesWritable, Result> {
       throw new IllegalArgumentException("Expecting at least 1 mapper " +
           "per region; instead got: " + num);
     }
-    numMappersPerRegion = num;
+    if (!mappersPerJob) {
+      numMappers = num;
+    } else {
+      LOG.warn("Ignoring mappersPerRegion config value as mappersPerJob is" +
+        " already set.");
+    }
+  }
+
+  /**
+   * Sets the number of mappers per job.
+   *
+   * @param num
+   * @throws IllegalArgumentException When <code>num</code> <= 0.
+   */
+  public void setNumMappersPerJob(int num) throws IllegalArgumentException {
+    if (num <= 0) {
+      throw new IllegalArgumentException("Expecting at least 1 mapper " +
+          "per region; instead got: " + num);
+    }
+    if (numMappers > 1) {
+      LOG.warn("Overriding num of mappers per region.");
+    }
+    numMappers = num;
+    mappersPerJob = true;
   }
 
   public void setSplitAlgorithm(String name) {

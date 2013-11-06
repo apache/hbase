@@ -394,6 +394,35 @@ public class HTable implements HTableInterface {
   }
   
   /**
+   * Gets the starting and ending row keys for every region in the currently
+   * open table.
+   * <p>
+   * This is mainly useful for the MapReduce integration.
+   * @return TreeMap of {startKey,endKey} pairs
+   * @throws IOException if a remote or network exception occurs
+   */
+  @SuppressWarnings("unchecked")
+  public TreeMap<byte[], byte[]> getStartEndKeysMap() throws IOException {
+    final TreeMap<byte[], byte[]> startEndKeysMap =
+      new TreeMap<byte[], byte[]>(new Bytes.ByteArrayComparator());
+    MetaScannerVisitor visitor = new MetaScannerVisitor() {
+      public boolean processRow(Result rowResult) throws IOException {
+        HRegionInfo info = Writables.getHRegionInfo(
+            rowResult.getValue(HConstants.CATALOG_FAMILY,
+                HConstants.REGIONINFO_QUALIFIER));
+        if (Bytes.equals(info.getTableDesc().getName(), getTableName())) {
+          if (!(info.isOffline() || info.isSplit())) {
+            startEndKeysMap.put(info.getStartKey(), info.getEndKey());
+          }
+        }
+        return true;
+      }
+    };
+    MetaScanner.metaScan(configuration, visitor, this.tableName);
+    return startEndKeysMap;
+  }
+
+  /**
    * Returns the Array of StartKeys along with the favoredNodes 
    * for a particular region. Identifying the the favoredNodes using the 
    * Meta table similar to the 

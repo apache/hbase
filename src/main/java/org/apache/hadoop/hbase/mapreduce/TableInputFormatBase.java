@@ -21,10 +21,10 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.naming.NamingException;
@@ -67,7 +67,11 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   /** The reader scanning the table, can be a custom one. */
   private TableRecordReader tableRecordReader = null;
   /** The number of mappers to assign to each region. */
-  private int numMappersPerRegion = 1;
+  private int numMappers = 1;
+  /** The total number of mappers. The number of mappers per region is
+   * mutually exclusive with number of mappers per job. In case both
+   * are defined, mappersPerJob will take the precedence.*/
+  private boolean mappersPerJob = false;
   /** Splitting algorithm to be used to split the keys */
   private String splitAlgmName; // default to Uniform
 
@@ -121,20 +125,26 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException {
-    return getSplitsInternal(table, context.getConfiguration(), scan, numMappersPerRegion,
-        splitAlgmName, this);
+    return getSplitsInternal(table, context.getConfiguration(), scan, numMappers,
+      mappersPerJob, splitAlgmName, this);
   }
 
   public static List<InputSplit> getSplitsInternal(HTable table,
       Configuration conf,
       Scan scan,
-      int numMappersPerRegion,
+      int numMappers,
+      boolean mappersPerJob,
       String splitAlgmName,
       TableInputFormatBase tifb) throws IOException {
     if (table == null) {
       throw new IOException("No table was provided.");
     }
     determineNameServer(conf);
+
+    if (mappersPerJob) {
+      return getSplitsInternalBasedOnNumMappersPerJob(table, conf, scan, numMappers,
+        splitAlgmName);
+    }
 
     Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
     if (keys == null || keys.getFirst() == null ||
@@ -144,15 +154,15 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     Pair<byte[][], byte[][]> splitKeys = null;
     int numRegions = keys.getFirst().length;
     //TODO: Can anything else be done when there are less than 3 regions?
-    if ((numMappersPerRegion == 1) || (numRegions < 3)) {
-      numMappersPerRegion = 1;
+    if ((numMappers == 1) || (numRegions < 3)) {
+      numMappers = 1;
       splitKeys = keys;
     } else {
-      byte[][] startKeys = new byte[numRegions * numMappersPerRegion][];
-      byte[][] stopKeys = new byte[numRegions * numMappersPerRegion][];
+      byte[][] startKeys = new byte[numRegions * numMappers][];
+      byte[][] stopKeys = new byte[numRegions * numMappers][];
       // Insert null keys at edges
       startKeys[0] = HConstants.EMPTY_START_ROW;
-      stopKeys[numRegions * numMappersPerRegion - 1] = HConstants.EMPTY_END_ROW;
+      stopKeys[numRegions * numMappers - 1] = HConstants.EMPTY_END_ROW;
 
       byte[][] originalStartKeys = keys.getFirst();
       byte[][] originalStopKeys = keys.getSecond();
@@ -166,14 +176,14 @@ extends InputFormat<ImmutableBytesWritable, Result> {
           algmImpl.setFirstRow(algmImpl.rowToStr(originalStartKeys[i]));
         if (originalStopKeys[i].length != 0)
           algmImpl.setLastRow(algmImpl.rowToStr(originalStopKeys[i]));
-        byte[][] dividingKeys = algmImpl.split(numMappersPerRegion);
+        byte[][] dividingKeys = algmImpl.split(numMappers);
 
-        startKeys[i*numMappersPerRegion] = originalStartKeys[i];
-        for (int j = 0; j < numMappersPerRegion - 1; j++) {
-          stopKeys[i * numMappersPerRegion + j] = dividingKeys[j];
-          startKeys[i * numMappersPerRegion + j + 1] = dividingKeys[j];
+        startKeys[i*numMappers] = originalStartKeys[i];
+        for (int j = 0; j < numMappers - 1; j++) {
+          stopKeys[i * numMappers + j] = dividingKeys[j];
+          startKeys[i * numMappers + j + 1] = dividingKeys[j];
         }
-        stopKeys[(i+1)*numMappersPerRegion - 1] = originalStopKeys[i];
+        stopKeys[(i+1)*numMappers - 1] = originalStopKeys[i];
       }
       splitKeys = new Pair<byte[][], byte[][]>();
       splitKeys.setFirst(startKeys);
@@ -181,12 +191,12 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     }
 
     List<InputSplit> splits =
-        new ArrayList<InputSplit>(numRegions * numMappersPerRegion);
+        new ArrayList<InputSplit>(numRegions * numMappers);
     byte[] startRow = scan.getStartRow();
     byte[] stopRow = scan.getStopRow();
-    for (int i = 0; i < numRegions * numMappersPerRegion; i++) {
-      if (tifb != null && !tifb.includeRegionInSplit(keys.getFirst()[i / numMappersPerRegion],
-          keys.getSecond()[i / numMappersPerRegion])) {
+    for (int i = 0; i < numRegions * numMappers; i++) {
+      if (tifb != null && !tifb.includeRegionInSplit(keys.getFirst()[i / numMappers],
+          keys.getSecond()[i / numMappers])) {
         continue;
       }
       HServerAddress regionServerAddress = 
@@ -226,11 +236,101 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     return splits;
   }
 
+  public static List<InputSplit> getSplitsInternalBasedOnNumMappersPerJob(
+    HTable table, Configuration conf, Scan scan, int numMappersPerJob,
+    String splitAlgmName) throws IOException {
+    List<InputSplit> splits =
+      new ArrayList<InputSplit>(numMappersPerJob);
+    byte[] startRow = scan.getStartRow();
+    byte[] stopRow = scan.getStopRow();
+
+    SplitAlgorithm algmImpl = RegionSplitter.newSplitAlgoInstance(conf,
+      splitAlgmName);
+    if (startRow.length != 0)
+      algmImpl.setFirstRow(algmImpl.rowToStr(startRow));
+    if (stopRow.length != 0)
+      algmImpl.setLastRow(algmImpl.rowToStr(stopRow));
+
+    // This will return numMappersPerJob - 1 split interval
+    byte[][] dividingKeys = algmImpl.split(numMappersPerJob);
+
+    byte[] splitStartKey =  algmImpl.firstRow();
+    byte[] splitStopKey = algmImpl.lastRow();
+
+    TreeMap<byte[], byte[]> regions = table.getStartEndKeysMap();
+
+    // No splits possible, just default it to 1
+    if (dividingKeys == null || dividingKeys.length == 0) {
+      byte[] startRowOfFullRegion = getNearestFullRegion(regions, splitStartKey,
+        splitStopKey);
+      InputSplit split = new TableSplit(table.getTableName(),
+        splitStartKey, splitStopKey, getRegionServerAddress(table,
+          startRowOfFullRegion));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("getSplits: split -> " + split);
+      }
+      splits.add(split);
+    } else {
+      for (int i = 0; i <= dividingKeys.length; i++) {
+        if (i == dividingKeys.length) {
+          splitStopKey = algmImpl.lastRow();
+        } else {
+          splitStopKey = dividingKeys[i];
+        }
+        byte[] startRowOfFullRegion = getNearestFullRegion(regions, splitStartKey,
+          splitStopKey);
+        InputSplit split = new TableSplit(table.getTableName(),
+          splitStartKey, splitStopKey, getRegionServerAddress(table,
+            startRowOfFullRegion));
+        splits.add(split);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("getSplits: split -> " + i + " -> " + split);
+        }
+        splitStartKey = splitStopKey;
+      }
+    }
+    HConnectionManager.deleteAllZookeeperConnections();
+    return splits;
+  }
+
+  private static byte[] getNearestFullRegion(
+    final TreeMap<byte[], byte[]> regions,
+    final byte[] startKey, final byte[] stopKey) {
+
+    Map.Entry<byte[], byte[]> region = regions.ceilingEntry(startKey);
+    if (region != null) {
+      if (Bytes.compareTo(region.getValue(), stopKey) < 0) {
+        // The given range spans at least one complete region. Return
+        // the start row for this region
+        return region.getKey();
+      }
+    }
+    return startKey;
+  }
+
   private static synchronized void determineNameServer(Configuration conf) {
     // Get the name server address and the default value is null.
     if (nameServer == null) {
       nameServer = conf.get("hbase.nameserver.address", null);
     }
+  }
+
+  private static String getRegionServerAddress(final HTable table, final byte[] row)
+    throws IOException {
+    String regionLocation = null;
+    HServerAddress regionServerAddress =
+      table.getRegionLocation(row).getServerAddress();
+    InetAddress regionAddress = null;
+    try {
+      regionAddress =
+        regionServerAddress.getInetSocketAddress().getAddress();
+      regionLocation = reverseDNS(regionAddress);
+    } catch (NamingException e) {
+      LOG.error("Cannot resolve the host name for " + regionAddress +
+          " because of " + e);
+      regionLocation = regionServerAddress.getHostname();
+    }
+    return regionLocation;
   }
 
   private static String reverseDNS(InetAddress ipAddress)
@@ -327,7 +427,30 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       throw new IllegalArgumentException("Expecting at least 1 mapper " +
           "per region; instead got: " + num);
     }
-    numMappersPerRegion = num;
+    if (!mappersPerJob) {
+      numMappers = num;
+    } else {
+      LOG.warn("Ingoring mappersPerRegion config value as mappersPerJob is" +
+        " already set.");
+    }
+  }
+
+  /**
+   * Sets the number of mappers assigned for the job.
+   *
+   * @param num
+   * @throws IllegalArgumentException When <code>num</code> <= 0.
+   */
+  public void setNumMappersPerJob(int num) throws IllegalArgumentException {
+    if (num <= 0) {
+      throw new IllegalArgumentException("Expecting at least 1 mapper " +
+        "per job; instead got: " + num);
+    }
+    if (numMappers > 1) {
+      LOG.warn("Overriding num of mappers per region.");
+    }
+    numMappers = num;
+    mappersPerJob = true;
   }
 
   public void setSplitAlgorithm(String name) {
