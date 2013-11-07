@@ -848,6 +848,7 @@ public class TestAssignmentManager {
         REGIONINFO.getRegionName(), SERVERNAME_A, HConstants.EMPTY_BYTE_ARRAY);
     version = ZKAssign.getVersion(this.watcher, REGIONINFO);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(false);
+    am.getRegionStates().logSplit(SERVERNAME_A); // Assume log splitting is done
     am.getRegionStates().createRegionState(REGIONINFO);
     am.gate.set(false);
     am.processRegionsInTransition(rt, REGIONINFO, version);

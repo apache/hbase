@@ -268,9 +268,8 @@ public class RegionStates {
   public synchronized RegionState updateRegionState(
       final HRegionInfo hri, final State state) {
     RegionState regionState = regionStates.get(hri.getEncodedName());
-    ServerName serverName = (regionState == null || state == State.CLOSED
-      || state == State.OFFLINE) ? null : regionState.getServerName();
-    return updateRegionState(hri, state, serverName);
+    return updateRegionState(hri, state,
+      regionState == null ? null : regionState.getServerName());
   }
 
   /**
@@ -300,42 +299,46 @@ public class RegionStates {
    */
   public synchronized RegionState updateRegionState(
       final HRegionInfo hri, final State state, final ServerName serverName) {
-    ServerName newServerName = serverName;
-    if (serverName != null &&
-        (state == State.CLOSED || state == State.OFFLINE)) {
-      LOG.info(hri.getShortNameToLog() + " is " + state
-        + ", reset server info from " + serverName + " to null");
-      newServerName = null;
-    }
-
     if (state == State.FAILED_CLOSE || state == State.FAILED_OPEN) {
-      LOG.warn("Failed to transition " + hri.getShortNameToLog()
+      LOG.warn("Failed to open/close " + hri.getShortNameToLog()
         + " on " + serverName + ", set to " + state);
     }
 
     String encodedName = hri.getEncodedName();
     RegionState regionState = new RegionState(
-      hri, state, System.currentTimeMillis(), newServerName);
+      hri, state, System.currentTimeMillis(), serverName);
+    regionsInTransition.put(encodedName, regionState);
     RegionState oldState = regionStates.put(encodedName, regionState);
-    if (oldState == null || oldState.getState() != regionState.getState()) {
+    ServerName oldServerName = oldState == null ? null : oldState.getServerName();
+    if (oldState == null || oldState.getState() != regionState.getState()
+        || (oldServerName == null && serverName != null)
+        || (oldServerName != null && !oldServerName.equals(serverName))) {
       LOG.info("Transitioned " + oldState + " to " + regionState);
-    }
-    if (newServerName != null || (
-        state != State.PENDING_CLOSE && state != State.CLOSING)) {
-      regionsInTransition.put(encodedName, regionState);
     }
 
     // For these states, region should be properly closed.
     // There should be no log splitting issue.
     if ((state == State.CLOSED || state == State.MERGED
         || state == State.SPLIT) && lastAssignments.containsKey(encodedName)) {
-      ServerName oldServerName = oldState == null ? null : oldState.getServerName();
       ServerName last = lastAssignments.get(encodedName);
-      if (last.equals(oldServerName)) {
+      if (last.equals(serverName)) {
         lastAssignments.remove(encodedName);
       } else {
         LOG.warn(encodedName + " moved to " + state + " on "
-          + oldServerName + ", expected " + last);
+          + serverName + ", expected " + last);
+      }
+    }
+
+    // Once a region is opened, record its last assignment right away.
+    if (serverName != null && state == State.OPEN) {
+      ServerName last = lastAssignments.get(encodedName);
+      if (!serverName.equals(last)) {
+        lastAssignments.put(encodedName, serverName);
+        if (last != null && isServerDeadAndNotProcessed(last)) {
+          LOG.warn(encodedName + " moved to " + serverName
+            + ", while it's previous host " + last
+            + " is dead but not processed yet");
+        }
       }
     }
 
@@ -365,18 +368,10 @@ public class RegionStates {
     RegionState oldState = regionStates.get(encodedName);
     if (oldState == null) {
       LOG.warn("Online region not in RegionStates: " + hri.getShortNameToLog());
-    } else {
-      ServerName sn = oldState.getServerName();
-      if (!oldState.isReadyToOnline() || sn == null || !sn.equals(serverName)) {
-        LOG.debug("Online " + hri.getShortNameToLog() + " with current state="
-          + oldState.getState() + ", expected state=OPEN/MERGING_NEW/SPLITTING_NEW"
-          + ", assigned to server: " + sn + " expected " + serverName);
-      }
     }
     updateRegionState(hri, State.OPEN, serverName);
     regionsInTransition.remove(encodedName);
 
-    lastAssignments.put(encodedName, serverName);
     ServerName oldServerName = regionAssignments.put(hri, serverName);
     if (!serverName.equals(oldServerName)) {
       LOG.info("Onlined " + hri.getShortNameToLog() + " on " + serverName);
