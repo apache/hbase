@@ -1089,6 +1089,7 @@ public class TestHLogSplit {
       HRegionInfo regioninfo = new HRegionInfo(tableName,
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
       log = HLogFactory.createHLog(fs, HBASEDIR, logName, conf);
+      final AtomicLong sequenceId = new AtomicLong(1);
 
       final int total = 20;
       for (int i = 0; i < total; i++) {
@@ -1096,7 +1097,7 @@ public class TestHLogSplit {
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
         HTableDescriptor htd = new HTableDescriptor(tableName);
         htd.addFamily(new HColumnDescriptor("column"));
-        log.append(regioninfo, tableName, kvs, System.currentTimeMillis(), htd);
+        log.append(regioninfo, tableName, kvs, System.currentTimeMillis(), htd, sequenceId);
       }
       // Send the data to HDFS datanodes and close the HDFS writer
       log.sync();

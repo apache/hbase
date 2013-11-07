@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Category(LargeTests.class)
 @RunWith(Parameterized.class)
@@ -74,6 +75,7 @@ public class TestReplicationHLogReaderManager {
   private PathWatcher pathWatcher;
   private int nbRows;
   private int walEditKVs;
+  private final AtomicLong sequenceId = new AtomicLong(1);
 
   @Parameters
   public static Collection<Object[]> parameters() {
@@ -206,7 +208,7 @@ public class TestReplicationHLogReaderManager {
   }
 
   private void appendToLogPlus(int count) throws IOException {
-    log.append(info, tableName, getWALEdits(count), System.currentTimeMillis(), htd);
+    log.append(info, tableName, getWALEdits(count), System.currentTimeMillis(), htd, sequenceId);
   }
 
   private WALEdit getWALEdits(int count) {

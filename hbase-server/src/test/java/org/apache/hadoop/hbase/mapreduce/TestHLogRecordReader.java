@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -114,11 +115,12 @@ public class TestHLogRecordReader {
     HLog log = HLogFactory.createHLog(fs, hbaseDir, logName, conf);
     long ts = System.currentTimeMillis();
     WALEdit edit = new WALEdit();
+    final AtomicLong sequenceId = new AtomicLong(0);
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), ts, value));
-    log.append(info, tableName, edit, ts, htd);
+    log.append(info, tableName, edit, ts, htd, sequenceId);
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), ts+1, value));
-    log.append(info, tableName, edit, ts+1, htd);
+    log.append(info, tableName, edit, ts+1, htd, sequenceId);
     log.rollWriter();
 
     Thread.sleep(1);
@@ -126,10 +128,10 @@ public class TestHLogRecordReader {
 
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("3"), ts1+1, value));
-    log.append(info, tableName, edit, ts1+1, htd);
+    log.append(info, tableName, edit, ts1+1, htd, sequenceId);
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("4"), ts1+2, value));
-    log.append(info, tableName, edit, ts1+2, htd);
+    log.append(info, tableName, edit, ts1+2, htd, sequenceId);
     log.close();
 
     HLogInputFormat input = new HLogInputFormat();
@@ -161,11 +163,12 @@ public class TestHLogRecordReader {
   public void testHLogRecordReader() throws Exception {
     HLog log = HLogFactory.createHLog(fs, hbaseDir, logName, conf);
     byte [] value = Bytes.toBytes("value");
+    final AtomicLong sequenceId = new AtomicLong(0);
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
         System.currentTimeMillis(), value));
     log.append(info, tableName, edit,
-      System.currentTimeMillis(), htd);
+      System.currentTimeMillis(), htd, sequenceId);
 
     Thread.sleep(1); // make sure 2nd log gets a later timestamp
     long secondTs = System.currentTimeMillis();
@@ -175,7 +178,7 @@ public class TestHLogRecordReader {
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
         System.currentTimeMillis(), value));
     log.append(info, tableName, edit,
-      System.currentTimeMillis(), htd);
+      System.currentTimeMillis(), htd, sequenceId);
     log.close();
     long thirdTs = System.currentTimeMillis();
 

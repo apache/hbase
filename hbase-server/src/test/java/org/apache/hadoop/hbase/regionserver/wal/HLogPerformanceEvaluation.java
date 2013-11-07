@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -106,9 +108,10 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
           HRegionInfo hri = region.getRegionInfo();
           if (this.noSync) {
-            hlog.appendNoSync(hri, hri.getTable(), walEdit, new ArrayList<UUID>(), now, htd);
+            hlog.appendNoSync(hri, hri.getTable(), walEdit, new ArrayList<UUID>(), now, htd,
+              region.getSequenceId());
           } else {
-            hlog.append(hri, hri.getTable(), walEdit, now, htd);
+            hlog.append(hri, hri.getTable(), walEdit, now, htd, region.getSequenceId());
           }
         }
         long totalTime = (System.currentTimeMillis() - startTime);
@@ -251,16 +254,15 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
 
   /**
    * Verify the content of the WAL file.
-   * Verify that sequenceids are ascending and that the file has expected number
-   * of edits.
+   * Verify that the file has expected number of edits.
    * @param wal
    * @return Count of edits.
    * @throws IOException
    */
   private long verify(final Path wal, final boolean verbose) throws IOException {
     HLog.Reader reader = HLogFactory.createReader(wal.getFileSystem(getConf()), wal, getConf());
-    long previousSeqid = -1;
     long count = 0;
+    Map<String, Long> sequenceIds = new HashMap<String, Long>();
     try {
       while (true) {
         Entry e = reader.next();
@@ -270,12 +272,17 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
         }
         count++;
         long seqid = e.getKey().getLogSeqNum();
-        if (verbose) LOG.info("seqid=" + seqid);
-        if (previousSeqid >= seqid) {
-          throw new IllegalStateException("wal=" + wal.getName() +
-            ", previousSeqid=" + previousSeqid + ", seqid=" + seqid);
+        if (sequenceIds.containsKey(Bytes.toString(e.getKey().getEncodedRegionName()))) {
+          // sequenceIds should be increasing for every regions
+          if (sequenceIds.get(Bytes.toString(e.getKey().getEncodedRegionName())) >= seqid) {
+            throw new IllegalStateException("wal = " + wal.getName() + ", " + "previous seqid = "
+                + sequenceIds.get(Bytes.toString(e.getKey().getEncodedRegionName()))
+                + ", current seqid = " + seqid);
+          }
+        } else {
+          sequenceIds.put(Bytes.toString(e.getKey().getEncodedRegionName()), seqid);
         }
-        previousSeqid = seqid;
+        if (verbose) LOG.info("seqid=" + seqid);
       }
     } finally {
       reader.close();

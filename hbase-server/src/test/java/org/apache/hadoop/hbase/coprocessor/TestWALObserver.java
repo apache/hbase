@@ -49,6 +49,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
 
@@ -138,6 +139,7 @@ public class TestWALObserver {
     Path basedir = new Path(this.hbaseRootDir, Bytes.toString(TEST_TABLE));
     deleteDir(basedir);
     fs.mkdirs(new Path(basedir, hri.getEncodedName()));
+    final AtomicLong sequenceId = new AtomicLong(0);
 
     HLog log = HLogFactory.createHLog(this.fs, hbaseRootDir,
         TestWALObserver.class.getName(), this.conf);
@@ -186,7 +188,7 @@ public class TestWALObserver {
 
     // it's where WAL write cp should occur.
     long now = EnvironmentEdgeManager.currentTimeMillis();
-    log.append(hri, hri.getTable(), edit, now, htd);
+    log.append(hri, hri.getTable(), edit, now, htd, sequenceId);
 
     // the edit shall have been change now by the coprocessor.
     foundFamily0 = false;
@@ -222,6 +224,7 @@ public class TestWALObserver {
     // ultimately called by HRegion::initialize()
     TableName tableName = TableName.valueOf("testWALCoprocessorReplay");
     final HTableDescriptor htd = getBasic3FamilyHTableDescriptor(tableName);
+    final AtomicLong sequenceId = new AtomicLong(0);
     // final HRegionInfo hri =
     // createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
     // final HRegionInfo hri1 =
@@ -247,9 +250,9 @@ public class TestWALObserver {
       // addWALEdits(tableName, hri, TEST_ROW, hcd.getName(), countPerFamily,
       // EnvironmentEdgeManager.getDelegate(), wal);
       addWALEdits(tableName, hri, TEST_ROW, hcd.getName(), countPerFamily,
-          EnvironmentEdgeManager.getDelegate(), wal, htd);
+          EnvironmentEdgeManager.getDelegate(), wal, htd, sequenceId);
     }
-    wal.append(hri, tableName, edit, now, htd);
+    wal.append(hri, tableName, edit, now, htd, sequenceId);
     // sync to fs.
     wal.sync();
 
@@ -369,7 +372,7 @@ public class TestWALObserver {
 
   private void addWALEdits(final TableName tableName, final HRegionInfo hri,
       final byte[] rowName, final byte[] family, final int count,
-      EnvironmentEdge ee, final HLog wal, final HTableDescriptor htd)
+      EnvironmentEdge ee, final HLog wal, final HTableDescriptor htd, final AtomicLong sequenceId)
       throws IOException {
     String familyStr = Bytes.toString(family);
     for (int j = 0; j < count; j++) {
@@ -378,7 +381,7 @@ public class TestWALObserver {
       WALEdit edit = new WALEdit();
       edit.add(new KeyValue(rowName, family, qualifierBytes, ee
           .currentTimeMillis(), columnBytes));
-      wal.append(hri, tableName, edit, ee.currentTimeMillis(), htd);
+      wal.append(hri, tableName, edit, ee.currentTimeMillis(), htd, sequenceId);
     }
   }
 

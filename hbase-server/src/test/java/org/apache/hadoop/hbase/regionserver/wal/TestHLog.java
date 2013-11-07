@@ -23,9 +23,14 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.BindException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -58,6 +63,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /** JUnit test case for HLog */
 @Category(LargeTests.class)
@@ -136,15 +144,13 @@ public class TestHLog  {
   }
 
   /**
-   * Test that with three concurrent threads we still write edits in sequence
-   * edit id order.
+   * Write to a log file with three concurrent threads and verifying all data is written.
    * @throws Exception
    */
   @Test
-  public void testMaintainOrderWithConcurrentWrites() throws Exception {
+  public void testConcurrentWrites() throws Exception {
     // Run the HPE tool with three threads writing 3000 edits each concurrently.
-    // When done, verify that all edits were written and that the order in the
-    // WALs is of ascending edit sequence ids.
+    // When done, verify that all edits were written.
     int errCode = HLogPerformanceEvaluation.
       innerMain(new Configuration(TEST_UTIL.getConfiguration()),
         new String [] {"-threads", "3", "-verify", "-noclosefs", "-iterations", "3000"});
@@ -179,6 +185,7 @@ public class TestHLog  {
     htd.addFamily(new HColumnDescriptor("column"));
 
     // Add edits for three regions.
+    final AtomicLong sequenceId = new AtomicLong(1);
     try {
       for (int ii = 0; ii < howmany; ii++) {
         for (int i = 0; i < howmany; i++) {
@@ -192,7 +199,7 @@ public class TestHLog  {
                 System.currentTimeMillis(), column));
             LOG.info("Region " + i + ": " + edit);
             log.append(infos[i], tableName, edit,
-              System.currentTimeMillis(), htd);
+              System.currentTimeMillis(), htd, sequenceId);
           }
         }
         log.rollWriter();
@@ -242,7 +249,7 @@ public class TestHLog  {
     in.close();
 
     HLog wal = HLogFactory.createHLog(fs, dir, "hlogdir", conf);
-
+    final AtomicLong sequenceId = new AtomicLong(1);
     final int total = 20;
     HLog.Reader reader = null;
 
@@ -255,7 +262,7 @@ public class TestHLog  {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-        wal.append(info, tableName, kvs, System.currentTimeMillis(), htd);
+        wal.append(info, tableName, kvs, System.currentTimeMillis(), htd, sequenceId);
       }
       // Now call sync and try reading.  Opening a Reader before you sync just
       // gives you EOFE.
@@ -273,7 +280,7 @@ public class TestHLog  {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-        wal.append(info, tableName, kvs, System.currentTimeMillis(), htd);
+        wal.append(info, tableName, kvs, System.currentTimeMillis(), htd, sequenceId);
       }
       reader = HLogFactory.createReader(fs, walPath, conf);
       count = 0;
@@ -292,7 +299,7 @@ public class TestHLog  {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), value));
-        wal.append(info, tableName, kvs, System.currentTimeMillis(), htd);
+        wal.append(info, tableName, kvs, System.currentTimeMillis(), htd, sequenceId);
       }
       // Now I should have written out lots of blocks.  Sync then read.
       wal.sync();
@@ -311,34 +318,6 @@ public class TestHLog  {
     } finally {
       if (wal != null) wal.closeAndDelete();
       if (reader != null) reader.close();
-    }
-  }
-
-  /**
-   * Test the findMemstoresWithEditsEqualOrOlderThan method.
-   * @throws IOException
-   */
-  @Test
-  public void testFindMemstoresWithEditsEqualOrOlderThan() throws IOException {
-    Map<byte [], Long> regionsToSeqids = new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
-    for (int i = 0; i < 10; i++) {
-      Long l = Long.valueOf(i);
-      regionsToSeqids.put(l.toString().getBytes(), l);
-    }
-    byte [][] regions =
-      FSHLog.findMemstoresWithEditsEqualOrOlderThan(1, regionsToSeqids);
-    assertEquals(2, regions.length);
-    assertTrue(Bytes.equals(regions[0], "0".getBytes()) ||
-        Bytes.equals(regions[0], "1".getBytes()));
-    regions = FSHLog.findMemstoresWithEditsEqualOrOlderThan(3, regionsToSeqids);
-    int count = 4;
-    assertEquals(count, regions.length);
-    // Regions returned are not ordered.
-    for (int i = 0; i < count; i++) {
-      assertTrue(Bytes.equals(regions[i], "0".getBytes()) ||
-        Bytes.equals(regions[i], "1".getBytes()) ||
-        Bytes.equals(regions[i], "2".getBytes()) ||
-        Bytes.equals(regions[i], "3".getBytes()));
     }
   }
 
@@ -391,6 +370,7 @@ public class TestHLog  {
 
     HLog wal = HLogFactory.createHLog(fs, dir, "hlogdir",
         "hlogdir_archive", conf);
+    final AtomicLong sequenceId = new AtomicLong(1);
     final int total = 20;
 
     HTableDescriptor htd = new HTableDescriptor();
@@ -399,7 +379,7 @@ public class TestHLog  {
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-      wal.append(regioninfo, tableName, kvs, System.currentTimeMillis(), htd);
+      wal.append(regioninfo, tableName, kvs, System.currentTimeMillis(), htd, sequenceId);
     }
     // Now call sync to send the data to HDFS datanodes
     wal.sync();
@@ -513,6 +493,7 @@ public class TestHLog  {
     HLog log = null;
     try {
       log = HLogFactory.createHLog(fs, hbaseDir, getName(), conf);
+      final AtomicLong sequenceId = new AtomicLong(1);
 
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...
@@ -528,7 +509,7 @@ public class TestHLog  {
       HTableDescriptor htd = new HTableDescriptor();
       htd.addFamily(new HColumnDescriptor("column"));
 
-      log.append(info, tableName, cols, System.currentTimeMillis(), htd);
+      log.append(info, tableName, cols, System.currentTimeMillis(), htd, sequenceId);
       log.startCacheFlush(info.getEncodedNameAsBytes());
       log.completeCacheFlush(info.getEncodedNameAsBytes());
       log.close();
@@ -571,6 +552,7 @@ public class TestHLog  {
     final byte [] row = Bytes.toBytes("row");
     Reader reader = null;
     HLog log = HLogFactory.createHLog(fs, hbaseDir, getName(), conf);
+    final AtomicLong sequenceId = new AtomicLong(1);
     try {
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...
@@ -585,7 +567,7 @@ public class TestHLog  {
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
       HTableDescriptor htd = new HTableDescriptor();
       htd.addFamily(new HColumnDescriptor("column"));
-      log.append(hri, tableName, cols, System.currentTimeMillis(), htd);
+      log.append(hri, tableName, cols, System.currentTimeMillis(), htd, sequenceId);
       log.startCacheFlush(hri.getEncodedNameAsBytes());
       log.completeCacheFlush(hri.getEncodedNameAsBytes());
       log.close();
@@ -626,6 +608,7 @@ public class TestHLog  {
         TableName.valueOf("tablename");
     final byte [] row = Bytes.toBytes("row");
     HLog log = HLogFactory.createHLog(fs, hbaseDir, getName(), conf);
+    final AtomicLong sequenceId = new AtomicLong(1);
     try {
       DumbWALActionsListener visitor = new DumbWALActionsListener();
       log.registerWALActionsListener(visitor);
@@ -640,7 +623,7 @@ public class TestHLog  {
         cols.add(new KeyValue(row, Bytes.toBytes("column"),
             Bytes.toBytes(Integer.toString(i)),
             timestamp, new byte[]{(byte) (i + '0')}));
-        log.append(hri, tableName, cols, System.currentTimeMillis(), htd);
+        log.append(hri, tableName, cols, System.currentTimeMillis(), htd, sequenceId);
       }
       assertEquals(COL_COUNT, visitor.increments);
       log.unregisterWALActionsListener(visitor);
@@ -648,7 +631,7 @@ public class TestHLog  {
       cols.add(new KeyValue(row, Bytes.toBytes("column"),
           Bytes.toBytes(Integer.toString(11)),
           timestamp, new byte[]{(byte) (11 + '0')}));
-      log.append(hri, tableName, cols, System.currentTimeMillis(), htd);
+      log.append(hri, tableName, cols, System.currentTimeMillis(), htd, sequenceId);
       assertEquals(COL_COUNT, visitor.increments);
     } finally {
       if (log != null) log.closeAndDelete();
@@ -665,6 +648,7 @@ public class TestHLog  {
 
     HLog log = HLogFactory.createHLog(fs, hbaseDir,
         getName(), conf);
+    final AtomicLong sequenceId = new AtomicLong(1);
     try {
       HRegionInfo hri = new HRegionInfo(tableName,
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
@@ -673,26 +657,26 @@ public class TestHLog  {
 
       // Add a single edit and make sure that rolling won't remove the file
       // Before HBASE-3198 it used to delete it
-      addEdits(log, hri, tableName, 1);
+      addEdits(log, hri, tableName, 1, sequenceId);
       log.rollWriter();
       assertEquals(1, ((FSHLog) log).getNumLogFiles());
 
       // See if there's anything wrong with more than 1 edit
-      addEdits(log, hri, tableName, 2);
+      addEdits(log, hri, tableName, 2, sequenceId);
       log.rollWriter();
       assertEquals(2, ((FSHLog) log).getNumLogFiles());
 
       // Now mix edits from 2 regions, still no flushing
-      addEdits(log, hri, tableName, 1);
-      addEdits(log, hri2, tableName2, 1);
-      addEdits(log, hri, tableName, 1);
-      addEdits(log, hri2, tableName2, 1);
+      addEdits(log, hri, tableName, 1, sequenceId);
+      addEdits(log, hri2, tableName2, 1, sequenceId);
+      addEdits(log, hri, tableName, 1, sequenceId);
+      addEdits(log, hri2, tableName2, 1, sequenceId);
       log.rollWriter();
       assertEquals(3, ((FSHLog) log).getNumLogFiles());
 
       // Flush the first region, we expect to see the first two files getting
       // archived. We need to append something or writer won't be rolled.
-      addEdits(log, hri2, tableName2, 1);
+      addEdits(log, hri2, tableName2, 1, sequenceId);
       log.startCacheFlush(hri.getEncodedNameAsBytes());
       log.completeCacheFlush(hri.getEncodedNameAsBytes());
       log.rollWriter();
@@ -701,7 +685,7 @@ public class TestHLog  {
       // Flush the second region, which removes all the remaining output files
       // since the oldest was completely flushed and the two others only contain
       // flush information
-      addEdits(log, hri2, tableName2, 1);
+      addEdits(log, hri2, tableName2, 1, sequenceId);
       log.startCacheFlush(hri2.getEncodedNameAsBytes());
       log.completeCacheFlush(hri2.getEncodedNameAsBytes());
       log.rollWriter();
@@ -778,7 +762,7 @@ public class TestHLog  {
   }
 
   private void addEdits(HLog log, HRegionInfo hri, TableName tableName,
-                        int times) throws IOException {
+                        int times, AtomicLong sequenceId) throws IOException {
     HTableDescriptor htd = new HTableDescriptor();
     htd.addFamily(new HColumnDescriptor("row"));
 
@@ -787,7 +771,7 @@ public class TestHLog  {
       long timestamp = System.currentTimeMillis();
       WALEdit cols = new WALEdit();
       cols.add(new KeyValue(row, row, row, timestamp, row));
-      log.append(hri, tableName, cols, timestamp, htd);
+      log.append(hri, tableName, cols, timestamp, htd, sequenceId);
     }
   }
 
@@ -947,6 +931,267 @@ public class TestHLog  {
         reader.close();
       }
     }
+  }
+
+  /**
+   * tests the log comparator. Ensure that we are not mixing meta logs with non-meta logs (throws
+   * exception if we do). Comparison is based on the timestamp present in the wal name.
+   * @throws Exception
+   */
+  @Test
+  public void testHLogComparator() throws Exception {
+    HLog hlog1 = null;
+    HLog hlogMeta = null;
+    try {
+      hlog1 = HLogFactory.createHLog(fs, FSUtils.getRootDir(conf), dir.toString(), conf);
+      LOG.debug("Log obtained is: " + hlog1);
+      Comparator<Path> comp = ((FSHLog) hlog1).LOG_NAME_COMPARATOR;
+      Path p1 = ((FSHLog) hlog1).computeFilename(11);
+      Path p2 = ((FSHLog) hlog1).computeFilename(12);
+      // comparing with itself returns 0
+      assertTrue(comp.compare(p1, p1) == 0);
+      // comparing with different filenum.
+      assertTrue(comp.compare(p1, p2) < 0);
+      hlogMeta = HLogFactory.createMetaHLog(fs, FSUtils.getRootDir(conf), dir.toString(), conf,
+        null, null);
+      Comparator<Path> compMeta = ((FSHLog) hlogMeta).LOG_NAME_COMPARATOR;
+
+      Path p1WithMeta = ((FSHLog) hlogMeta).computeFilename(11);
+      Path p2WithMeta = ((FSHLog) hlogMeta).computeFilename(12);
+      assertTrue(compMeta.compare(p1WithMeta, p1WithMeta) == 0);
+      assertTrue(compMeta.compare(p1WithMeta, p2WithMeta) < 0);
+      // mixing meta and non-meta logs gives error
+      boolean ex = false;
+      try {
+        comp.compare(p1WithMeta, p2);
+      } catch (Exception e) {
+        ex = true;
+      }
+      assertTrue("Comparator doesn't complain while checking meta log files", ex);
+      boolean exMeta = false;
+      try {
+        compMeta.compare(p1WithMeta, p2);
+      } catch (Exception e) {
+        exMeta = true;
+      }
+      assertTrue("Meta comparator doesn't complain while checking log files", exMeta);
+    } finally {
+      if (hlog1 != null) hlog1.close();
+      if (hlogMeta != null) hlogMeta.close();
+    }
+  }
+
+  /**
+   * Tests wal archiving by adding data, doing flushing/rolling and checking we archive old logs
+   * and also don't archive "live logs" (that is, a log with un-flushed entries).
+   * <p>
+   * This is what it does:
+   * It creates two regions, and does a series of inserts along with log rolling.
+   * Whenever a WAL is rolled, FSHLog checks previous wals for archiving. A wal is eligible for
+   * archiving if for all the regions which have entries in that wal file, have flushed - past
+   * their maximum sequence id in that wal file.
+   * <p>
+   * @throws IOException
+   */
+  @Test
+  public void testWALArchiving() throws IOException {
+    LOG.debug("testWALArchiving");
+    TableName table1 = TableName.valueOf("t1");
+    TableName table2 = TableName.valueOf("t2");
+    HLog hlog = HLogFactory.createHLog(fs, FSUtils.getRootDir(conf), dir.toString(), conf);
+    try {
+      assertEquals(0, ((FSHLog) hlog).getNumLogFiles());
+      HRegionInfo hri1 = new HRegionInfo(table1, HConstants.EMPTY_START_ROW,
+          HConstants.EMPTY_END_ROW);
+      HRegionInfo hri2 = new HRegionInfo(table2, HConstants.EMPTY_START_ROW,
+          HConstants.EMPTY_END_ROW);
+      // ensure that we don't split the regions.
+      hri1.setSplit(false);
+      hri2.setSplit(false);
+      // variables to mock region sequenceIds.
+      final AtomicLong sequenceId1 = new AtomicLong(1);
+      final AtomicLong sequenceId2 = new AtomicLong(1);
+      // start with the testing logic: insert a waledit, and roll writer
+      addEdits(hlog, hri1, table1, 1, sequenceId1);
+      hlog.rollWriter();
+      // assert that the wal is rolled
+      assertEquals(1, ((FSHLog) hlog).getNumLogFiles());
+      // add edits in the second wal file, and roll writer.
+      addEdits(hlog, hri1, table1, 1, sequenceId1);
+      hlog.rollWriter();
+      // assert that the wal is rolled
+      assertEquals(2, ((FSHLog) hlog).getNumLogFiles());
+      // add a waledit to table1, and flush the region.
+      addEdits(hlog, hri1, table1, 3, sequenceId1);
+      flushRegion(hlog, hri1.getEncodedNameAsBytes());
+      // roll log; all old logs should be archived.
+      hlog.rollWriter();
+      assertEquals(0, ((FSHLog) hlog).getNumLogFiles());
+      // add an edit to table2, and roll writer
+      addEdits(hlog, hri2, table2, 1, sequenceId2);
+      hlog.rollWriter();
+      assertEquals(1, ((FSHLog) hlog).getNumLogFiles());
+      // add edits for table1, and roll writer
+      addEdits(hlog, hri1, table1, 2, sequenceId1);
+      hlog.rollWriter();
+      assertEquals(2, ((FSHLog) hlog).getNumLogFiles());
+      // add edits for table2, and flush hri1.
+      addEdits(hlog, hri2, table2, 2, sequenceId2);
+      flushRegion(hlog, hri1.getEncodedNameAsBytes());
+      // the log : region-sequenceId map is
+      // log1: region2 (unflushed)
+      // log2: region1 (flushed)
+      // log3: region2 (unflushed)
+      // roll the writer; log2 should be archived.
+      hlog.rollWriter();
+      assertEquals(2, ((FSHLog) hlog).getNumLogFiles());
+      // flush region2, and all logs should be archived.
+      addEdits(hlog, hri2, table2, 2, sequenceId2);
+      flushRegion(hlog, hri2.getEncodedNameAsBytes());
+      hlog.rollWriter();
+      assertEquals(0, ((FSHLog) hlog).getNumLogFiles());
+    } finally {
+      if (hlog != null) hlog.close();
+    }
+  }
+
+  /**
+   * On rolling a wal after reaching the threshold, {@link HLog#rollWriter()} returns the list of
+   * regions which should be flushed in order to archive the oldest wal file.
+   * <p>
+   * This method tests this behavior by inserting edits and rolling the wal enough times to reach
+   * the max number of logs threshold. It checks whether we get the "right regions" for flush on
+   * rolling the wal.
+   * @throws Exception
+   */
+  @Test
+  public void testFindMemStoresEligibleForFlush() throws Exception {
+    LOG.debug("testFindMemStoresEligibleForFlush");
+    Configuration conf1 = HBaseConfiguration.create(conf);
+    conf1.setInt("hbase.regionserver.maxlogs", 1);
+    HLog hlog = HLogFactory.createHLog(fs, FSUtils.getRootDir(conf1), dir.toString(), conf1);
+    TableName t1 = TableName.valueOf("t1");
+    TableName t2 = TableName.valueOf("t2");
+    HRegionInfo hri1 = new HRegionInfo(t1, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    HRegionInfo hri2 = new HRegionInfo(t2, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    // variables to mock region sequenceIds
+    final AtomicLong sequenceId1 = new AtomicLong(1);
+    final AtomicLong sequenceId2 = new AtomicLong(1);
+    // add edits and roll the wal
+    try {
+      addEdits(hlog, hri1, t1, 2, sequenceId1);
+      hlog.rollWriter();
+      // add some more edits and roll the wal. This would reach the log number threshold
+      addEdits(hlog, hri1, t1, 2, sequenceId1);
+      hlog.rollWriter();
+      // with above rollWriter call, the max logs limit is reached.
+      assertTrue(((FSHLog) hlog).getNumLogFiles() == 2);
+
+      // get the regions to flush; since there is only one region in the oldest wal, it should
+      // return only one region.
+      byte[][] regionsToFlush = ((FSHLog) hlog).findRegionsToForceFlush();
+      assertEquals(regionsToFlush.length, 1);
+      assertEquals(regionsToFlush[0], hri1.getEncodedNameAsBytes());
+      // insert edits in second region
+      addEdits(hlog, hri2, t2, 2, sequenceId2);
+      // get the regions to flush, it should still read region1.
+      regionsToFlush = ((FSHLog) hlog).findRegionsToForceFlush();
+      assertEquals(regionsToFlush.length, 1);
+      assertEquals(regionsToFlush[0], hri1.getEncodedNameAsBytes());
+      // flush region 1, and roll the wal file. Only last wal which has entries for region1 should
+      // remain.
+      flushRegion(hlog, hri1.getEncodedNameAsBytes());
+      hlog.rollWriter();
+      // only one wal should remain now (that is for the second region).
+      assertEquals(1, ((FSHLog) hlog).getNumLogFiles());
+      // flush the second region
+      flushRegion(hlog, hri2.getEncodedNameAsBytes());
+      hlog.rollWriter(true);
+      // no wal should remain now.
+      assertEquals(0, ((FSHLog) hlog).getNumLogFiles());
+      // add edits both to region 1 and region 2, and roll.
+      addEdits(hlog, hri1, t1, 2, sequenceId1);
+      addEdits(hlog, hri2, t2, 2, sequenceId2);
+      hlog.rollWriter();
+      // add edits and roll the writer, to reach the max logs limit.
+      assertEquals(1, ((FSHLog) hlog).getNumLogFiles());
+      addEdits(hlog, hri1, t1, 2, sequenceId1);
+      hlog.rollWriter();
+      // it should return two regions to flush, as the oldest wal file has entries
+      // for both regions.
+      regionsToFlush = ((FSHLog) hlog).findRegionsToForceFlush();
+      assertEquals(regionsToFlush.length, 2);
+      // flush both regions
+      flushRegion(hlog, hri1.getEncodedNameAsBytes());
+      flushRegion(hlog, hri2.getEncodedNameAsBytes());
+      hlog.rollWriter(true);
+      assertEquals(0, ((FSHLog) hlog).getNumLogFiles());
+      // Add an edit to region1, and roll the wal.
+      addEdits(hlog, hri1, t1, 2, sequenceId1);
+      // tests partial flush: roll on a partial flush, and ensure that wal is not archived.
+      hlog.startCacheFlush(hri1.getEncodedNameAsBytes());
+      hlog.rollWriter();
+      hlog.completeCacheFlush(hri1.getEncodedNameAsBytes());
+      assertEquals(1, ((FSHLog) hlog).getNumLogFiles());
+    } finally {
+      if (hlog != null) hlog.close();
+    }
+  }
+
+  /**
+   * Simulates HLog append ops for a region and tests
+   * {@link FSHLog#areAllRegionsFlushed(Map, Map, Map)} API.
+   * It compares the region sequenceIds with oldestFlushing and oldestUnFlushed entries.
+   * If a region's entries are larger than min of (oldestFlushing, oldestUnFlushed), then the
+   * region should be flushed before archiving this WAL.
+  */
+  @Test
+  public void testAllRegionsFlushed() {
+    Map<byte[], Long> oldestFlushingSeqNo = new HashMap<byte[], Long>();
+    Map<byte[], Long> oldestUnFlushedSeqNo = new HashMap<byte[], Long>();
+    Map<byte[], Long> seqNo = new HashMap<byte[], Long>();
+    // create a table
+    TableName t1 = TableName.valueOf("t1");
+    // create a region
+    HRegionInfo hri1 = new HRegionInfo(t1, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    // variables to mock region sequenceIds
+    final AtomicLong sequenceId1 = new AtomicLong(1);
+    // test empty map
+    assertTrue(FSHLog.areAllRegionsFlushed(seqNo, oldestFlushingSeqNo, oldestUnFlushedSeqNo));
+    // add entries in the region
+    seqNo.put(hri1.getEncodedNameAsBytes(), sequenceId1.incrementAndGet());
+    oldestUnFlushedSeqNo.put(hri1.getEncodedNameAsBytes(), sequenceId1.get());
+    // should say region1 is not flushed.
+    assertFalse(FSHLog.areAllRegionsFlushed(seqNo, oldestFlushingSeqNo, oldestUnFlushedSeqNo));
+    // test with entries in oldestFlushing map.
+    oldestUnFlushedSeqNo.clear();
+    oldestFlushingSeqNo.put(hri1.getEncodedNameAsBytes(), sequenceId1.get());
+    assertFalse(FSHLog.areAllRegionsFlushed(seqNo, oldestFlushingSeqNo, oldestUnFlushedSeqNo));
+    // simulate region flush, i.e., clear oldestFlushing and oldestUnflushed maps
+    oldestFlushingSeqNo.clear();
+    oldestUnFlushedSeqNo.clear();
+    assertTrue(FSHLog.areAllRegionsFlushed(seqNo, oldestFlushingSeqNo, oldestUnFlushedSeqNo));
+    // insert some large values for region1
+    oldestUnFlushedSeqNo.put(hri1.getEncodedNameAsBytes(), 1000l);
+    seqNo.put(hri1.getEncodedNameAsBytes(), 1500l);
+    assertFalse(FSHLog.areAllRegionsFlushed(seqNo, oldestFlushingSeqNo, oldestUnFlushedSeqNo));
+
+    // tests when oldestUnFlushed/oldestFlushing contains larger value.
+    // It means region is flushed.
+    oldestFlushingSeqNo.put(hri1.getEncodedNameAsBytes(), 1200l);
+    oldestUnFlushedSeqNo.clear();
+    seqNo.put(hri1.getEncodedNameAsBytes(), 1199l);
+    assertTrue(FSHLog.areAllRegionsFlushed(seqNo, oldestFlushingSeqNo, oldestUnFlushedSeqNo));
+  }
+
+  /**
+   * helper method to simulate region flush for a WAL.
+   * @param hlog
+   * @param regionEncodedName
+   */
+  private void flushRegion(HLog hlog, byte[] regionEncodedName) {
+    hlog.startCacheFlush(regionEncodedName);
+    hlog.completeCacheFlush(regionEncodedName);
   }
 
   static class DumbWALActionsListener implements WALActionsListener {

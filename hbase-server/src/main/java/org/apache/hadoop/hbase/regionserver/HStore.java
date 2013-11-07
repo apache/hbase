@@ -1074,7 +1074,7 @@ public class HStore implements Store {
     CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(info,
         family.getName(), inputPaths, outputPaths, fs.getStoreDir(getFamily().getNameAsString()));
     HLogUtil.writeCompactionMarker(region.getLog(), this.region.getTableDesc(),
-        this.region.getRegionInfo(), compactionDescriptor);
+        this.region.getRegionInfo(), compactionDescriptor, this.region.getSequenceId());
   }
 
   private void replaceStoreFiles(final Collection<StoreFile> compactedFiles,

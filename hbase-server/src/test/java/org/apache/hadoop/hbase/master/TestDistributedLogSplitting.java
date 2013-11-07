@@ -252,7 +252,6 @@ public class TestDistributedLogSplitting {
   @Test(timeout = 300000)
   public void testLogReplayWithNonMetaRSDown() throws Exception {
     LOG.info("testLogReplayWithNonMetaRSDown");
-    conf.setLong("hbase.regionserver.hlog.blocksize", 100*1024);
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
     startCluster(NUM_RS);
     final int NUM_REGIONS_TO_CREATE = 40;
@@ -1144,6 +1143,9 @@ public class TestDistributedLogSplitting {
     TableName fullTName = TableName.valueOf(tname);
     // remove root and meta region
     regions.remove(HRegionInfo.FIRST_META_REGIONINFO);
+    // using one sequenceId for edits across all regions is ok.
+    final AtomicLong sequenceId = new AtomicLong(10);
+
 
     for(Iterator<HRegionInfo> iter = regions.iterator(); iter.hasNext(); ) {
       HRegionInfo regionInfo = iter.next();
@@ -1183,7 +1185,7 @@ public class TestDistributedLogSplitting {
                                              // key
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
         e.add(new KeyValue(row, family, qualifier, System.currentTimeMillis(), value));
-        log.append(curRegionInfo, fullTName, e, System.currentTimeMillis(), htd);
+        log.append(curRegionInfo, fullTName, e, System.currentTimeMillis(), htd, sequenceId);
         counts[i % n] += 1;
       }
     }

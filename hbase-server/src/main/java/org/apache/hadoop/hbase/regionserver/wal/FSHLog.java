@@ -26,13 +26,13 @@ import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
+import java.util.NavigableMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -143,13 +143,6 @@ class FSHLog implements HLog, Syncable {
   Writer writer;
 
   /**
-   * Map of all log files but the current one.
-   */
-  final SortedMap<Long, Path> outputfiles =
-    Collections.synchronizedSortedMap(new TreeMap<Long, Path>());
-
-
-  /**
    * This lock synchronizes all operations on oldestUnflushedSeqNums and oldestFlushingSeqNums,
    * with the exception of append's putIfAbsent into oldestUnflushedSeqNums.
    * We only use these to find out the low bound seqNum, or to find regions with old seqNums to
@@ -176,8 +169,6 @@ class FSHLog implements HLog, Syncable {
     new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
 
   private volatile boolean closed = false;
-
-  private final AtomicLong logSeqNum = new AtomicLong(0);
 
   private boolean forMeta = false;
 
@@ -228,6 +219,39 @@ class FSHLog implements HLog, Syncable {
 
   private final AtomicInteger closeErrorCount = new AtomicInteger();
   private final MetricsWAL metrics;
+/**
+ * Map of region encoded names to the latest sequence num obtained from them while appending
+ * WALEdits to the wal. We create one map for each WAL file at the time it is rolled.
+ * <p>
+ * When deciding whether to archive a WAL file, we compare the sequence IDs in this map to
+ * {@link #oldestFlushingSeqNums} and {@link #oldestUnflushedSeqNums}.
+ * See {@link FSHLog#areAllRegionsFlushed(Map, Map, Map)} for more info.
+ * <p>
+ * This map uses byte[] as the key, and uses reference equality. It works in our use case as we
+ * use {@link HRegionInfo#getEncodedNameAsBytes()} as keys. For a given region, it always returns
+ * the same array.
+ */
+  private Map<byte[], Long> latestSequenceNums = new HashMap<byte[], Long>();
+
+  /**
+   * WAL Comparator; it compares the timestamp (log filenum), present in the log file name.
+   */
+  public final Comparator<Path> LOG_NAME_COMPARATOR = new Comparator<Path>() {
+    @Override
+    public int compare(Path o1, Path o2) {
+      long t1 = getFileNumFromFileName(o1);
+      long t2 = getFileNumFromFileName(o2);
+      if (t1 == t2) return 0;
+      return (t1 > t2) ? 1 : -1;
+    }
+  };
+
+  /**
+   * Map of log file to the latest sequence nums of all regions it has entries of.
+   * The map is sorted by the log file creation timestamp (contained in the log file name).
+   */
+  private NavigableMap<Path, Map<byte[], Long>> hlogSequenceNums =
+    new ConcurrentSkipListMap<Path, Map<byte[], Long>>(LOG_NAME_COMPARATOR);
 
   /**
    * Constructor.
@@ -436,21 +460,6 @@ class FSHLog implements HLog, Syncable {
     return this.filenum;
   }
 
-  @Override
-  public void setSequenceNumber(final long newvalue) {
-    for (long id = this.logSeqNum.get(); id < newvalue &&
-        !this.logSeqNum.compareAndSet(id, newvalue); id = this.logSeqNum.get()) {
-      // This could spin on occasion but better the occasional spin than locking
-      // every increment of sequence number.
-      LOG.debug("Changed sequenceid from " + id + " to " + newvalue);
-    }
-  }
-
-  @Override
-  public long getSequenceNumber() {
-    return logSeqNum.get();
-  }
-
   /**
    * Method used internal to this class and for tests only.
    * @return The wrapped stream our writer is using; its not the
@@ -524,11 +533,17 @@ class FSHLog implements HLog, Syncable {
           this.writer = nextWriter;
           this.hdfs_out = nextHdfsOut;
           this.numEntries.set(0);
+          if (oldFile != null) {
+            this.hlogSequenceNums.put(oldFile, this.latestSequenceNums);
+            this.latestSequenceNums = new HashMap<byte[], Long>();
+          }
         }
         if (oldFile == null) LOG.info("New WAL " + FSUtils.getPath(newPath));
-        else LOG.info("Rolled WAL " + FSUtils.getPath(oldFile) + " with entries=" + oldNumEntries +
+        else {
+          LOG.info("Rolled WAL " + FSUtils.getPath(oldFile) + " with entries=" + oldNumEntries +
           ", filesize=" + StringUtils.humanReadableInt(this.fs.getFileStatus(oldFile).getLen()) +
           "; new WAL " + FSUtils.getPath(newPath));
+        }
 
         // Tell our listeners that a new log was created
         if (!this.listeners.isEmpty()) {
@@ -540,7 +555,7 @@ class FSHLog implements HLog, Syncable {
         // Can we delete any of the old log files?
         if (getNumLogFiles() > 0) {
           cleanOldLogs();
-          regionsToFlush = getRegionsToForceFlush();
+          regionsToFlush = findRegionsToForceFlush();
         }
       } finally {
         this.logRollRunning = false;
@@ -568,87 +583,126 @@ class FSHLog implements HLog, Syncable {
     return HLogFactory.createWALWriter(fs, path, conf);
   }
 
-  /*
-   * Clean up old commit logs.
-   * @return If lots of logs, flush the returned region so next time through
-   * we can clean logs. Returns null if nothing to flush.  Returns array of
-   * encoded region names to flush.
+  /**
+   * Archive old logs that could be archived: a log is eligible for archiving if all its WALEdits
+   * are already flushed by the corresponding regions.
+   * <p>
+   * For each log file, it compares its region to sequenceId map
+   * (@link {@link FSHLog#latestSequenceNums} with corresponding region entries in
+   * {@link FSHLog#oldestFlushingSeqNums} and {@link FSHLog#oldestUnflushedSeqNums}.
+   * If all the regions in the map are flushed past of their value, then the wal is eligible for
+   * archiving.
    * @throws IOException
    */
   private void cleanOldLogs() throws IOException {
-    long oldestOutstandingSeqNum = Long.MAX_VALUE;
+    Map<byte[], Long> oldestFlushingSeqNumsLocal = null;
+    Map<byte[], Long> oldestUnflushedSeqNumsLocal = null;
+    List<Path> logsToArchive = new ArrayList<Path>();
+    // make a local copy so as to avoid locking when we iterate over these maps.
     synchronized (oldestSeqNumsLock) {
-      Long oldestFlushing = (oldestFlushingSeqNums.size() > 0)
-        ? Collections.min(oldestFlushingSeqNums.values()) : Long.MAX_VALUE;
-      Long oldestUnflushed = (oldestUnflushedSeqNums.size() > 0)
-        ? Collections.min(oldestUnflushedSeqNums.values()) : Long.MAX_VALUE;
-      oldestOutstandingSeqNum = Math.min(oldestFlushing, oldestUnflushed);
+      oldestFlushingSeqNumsLocal = new HashMap<byte[], Long>(this.oldestFlushingSeqNums);
+      oldestUnflushedSeqNumsLocal = new HashMap<byte[], Long>(this.oldestUnflushedSeqNums);
     }
-
-    // Get the set of all log files whose last sequence number is smaller than
-    // the oldest edit's sequence number.
-    TreeSet<Long> sequenceNumbers = new TreeSet<Long>(this.outputfiles.headMap(
-        oldestOutstandingSeqNum).keySet());
-    // Now remove old log files (if any)
-    if (LOG.isDebugEnabled()) {
-      if (sequenceNumbers.size() > 0) {
-        LOG.debug("Found " + sequenceNumbers.size() + " hlogs to remove" +
-          " out of total " + this.outputfiles.size() + ";" +
-          " oldest outstanding sequenceid is " + oldestOutstandingSeqNum);
+    for (Map.Entry<Path, Map<byte[], Long>> e : hlogSequenceNums.entrySet()) {
+      // iterate over the log file.
+      Path log = e.getKey();
+      Map<byte[], Long> sequenceNums = e.getValue();
+      // iterate over the map for this log file, and tell whether it should be archive or not.
+      if (areAllRegionsFlushed(sequenceNums, oldestFlushingSeqNumsLocal,
+        oldestUnflushedSeqNumsLocal)) {
+        logsToArchive.add(log);
+        LOG.debug("log file is ready for archiving " + log);
       }
     }
-    for (Long seq : sequenceNumbers) {
-      archiveLogFile(this.outputfiles.remove(seq), seq);
+    for (Path p : logsToArchive) {
+      archiveLogFile(p);
+      this.hlogSequenceNums.remove(p);
     }
   }
 
   /**
-   * Return regions that have edits that are equal or less than a certain sequence number.
-   * Static due to some old unit test.
-   * @param walSeqNum The sequence number to compare with.
-   * @param regionsToSeqNums Encoded region names to sequence ids
-   * @return All regions whose seqNum <= walSeqNum. Null if no regions found.
+   * Takes a region:sequenceId map for a WAL file, and checks whether the file can be archived.
+   * It compares the region entries present in the passed sequenceNums map with the local copy of
+   * {@link #oldestUnflushedSeqNums} and {@link #oldestFlushingSeqNums}. If, for all regions,
+   * the value is lesser than the minimum of values present in the oldestFlushing/UnflushedSeqNums,
+   * then the wal file is eligible for archiving.
+   * @param sequenceNums for a HLog, at the time when it was rolled.
+   * @param oldestFlushingMap
+   * @param oldestUnflushedMap
+   * @return true if wal is eligible for archiving, false otherwise.
    */
-  static byte[][] findMemstoresWithEditsEqualOrOlderThan(
-      final long walSeqNum, final Map<byte[], Long> regionsToSeqNums) {
-    List<byte[]> regions = null;
-    for (Map.Entry<byte[], Long> e : regionsToSeqNums.entrySet()) {
-      if (e.getValue().longValue() <= walSeqNum) {
-        if (regions == null) regions = new ArrayList<byte[]>();
-        regions.add(e.getKey());
+   static boolean areAllRegionsFlushed(Map<byte[], Long> sequenceNums,
+      Map<byte[], Long> oldestFlushingMap, Map<byte[], Long> oldestUnflushedMap) {
+    for (Map.Entry<byte[], Long> regionSeqIdEntry : sequenceNums.entrySet()) {
+      // find region entries in the flushing/unflushed map. If there is no entry, it means
+      // a region doesn't have any unflushed entry.
+      long oldestFlushing = oldestFlushingMap.containsKey(regionSeqIdEntry.getKey()) ?
+          oldestFlushingMap.get(regionSeqIdEntry.getKey()) : Long.MAX_VALUE;
+      long oldestUnFlushed = oldestUnflushedMap.containsKey(regionSeqIdEntry.getKey()) ?
+          oldestUnflushedMap.get(regionSeqIdEntry.getKey()) : Long.MAX_VALUE;
+          // do a minimum to be sure to contain oldest sequence Id
+      long minSeqNum = Math.min(oldestFlushing, oldestUnFlushed);
+      if (minSeqNum <= regionSeqIdEntry.getValue()) return false;// can't archive
+    }
+    return true;
+  }
+
+  /**
+   * Iterates over the given map of regions, and compares their sequence numbers with corresponding
+   * entries in {@link #oldestUnflushedSeqNums}. If the sequence number is greater or equal, the
+   * region is eligible to flush, otherwise, there is no benefit to flush (from the perspective of
+   * passed regionsSequenceNums map), because the region has already flushed the entries present
+   * in the WAL file for which this method is called for (typically, the oldest wal file).
+   * @param regionsSequenceNums
+   * @return regions which should be flushed (whose sequence numbers are larger than their
+   * corresponding un-flushed entries.
+   */
+  private byte[][] findEligibleMemstoresToFlush(Map<byte[], Long> regionsSequenceNums) {
+    List<byte[]> regionsToFlush = null;
+    // Keeping the old behavior of iterating unflushedSeqNums under oldestSeqNumsLock.
+    synchronized (oldestSeqNumsLock) {
+      for (Map.Entry<byte[], Long> e : regionsSequenceNums.entrySet()) {
+        Long unFlushedVal = this.oldestUnflushedSeqNums.get(e.getKey());
+        if (unFlushedVal != null && unFlushedVal <= e.getValue()) {
+          if (regionsToFlush == null) regionsToFlush = new ArrayList<byte[]>();
+          regionsToFlush.add(e.getKey());
+        }
       }
     }
-    return regions == null ? null : regions
+    return regionsToFlush == null ? null : regionsToFlush
         .toArray(new byte[][] { HConstants.EMPTY_BYTE_ARRAY });
   }
 
-  private byte[][] getRegionsToForceFlush() throws IOException {
-    // If too many log files, figure which regions we need to flush.
-    // Array is an array of encoded region names.
+  /**
+   * If the number of un-archived WAL files is greater than maximum allowed, it checks
+   * the first (oldest) WAL file, and returns the regions which should be flushed so that it could
+   * be archived.
+   * @return regions to flush in order to archive oldest wal file.
+   * @throws IOException
+   */
+  byte[][] findRegionsToForceFlush() throws IOException {
     byte [][] regions = null;
     int logCount = getNumLogFiles();
     if (logCount > this.maxLogs && logCount > 0) {
-      // This is an array of encoded region names.
-      synchronized (oldestSeqNumsLock) {
-        regions = findMemstoresWithEditsEqualOrOlderThan(this.outputfiles.firstKey(),
-          this.oldestUnflushedSeqNums);
+      Map.Entry<Path, Map<byte[], Long>> firstWALEntry =
+        this.hlogSequenceNums.firstEntry();
+      regions = findEligibleMemstoresToFlush(firstWALEntry.getValue());
+    }
+    if (regions != null) {
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < regions.length; i++) {
+        if (i > 0) sb.append(", ");
+        sb.append(Bytes.toStringBinary(regions[i]));
       }
-      if (regions != null) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < regions.length; i++) {
-          if (i > 0) sb.append(", ");
-          sb.append(Bytes.toStringBinary(regions[i]));
-        }
-        LOG.info("Too many hlogs: logs=" + logCount + ", maxlogs=" +
-           this.maxLogs + "; forcing flush of " + regions.length + " regions(s): " +
-           sb.toString());
-      }
+      LOG.info("Too many hlogs: logs=" + logCount + ", maxlogs=" +
+         this.maxLogs + "; forcing flush of " + regions.length + " regions(s): " +
+         sb.toString());
     }
     return regions;
   }
 
   /*
-   * Cleans up current writer closing and adding to outputfiles.
+   * Cleans up current writer closing.
    * Presumes we're operating inside an updateLock scope.
    * @return Path to current writer or null if none.
    * @throws IOException
@@ -690,18 +744,13 @@ class FSHLog implements HLog, Syncable {
       }
       if (currentfilenum >= 0) {
         oldFile = computeFilename(currentfilenum);
-        this.outputfiles.put(Long.valueOf(this.logSeqNum.get()), oldFile);
       }
     }
     return oldFile;
   }
 
-  private void archiveLogFile(final Path p, final Long seqno) throws IOException {
+  private void archiveLogFile(final Path p) throws IOException {
     Path newPath = getHLogArchivePath(this.oldLogDir, p);
-    LOG.info("moving old hlog file " + FSUtils.getPath(p) +
-      " whose highest sequenceid is " + seqno + " to " +
-      FSUtils.getPath(newPath));
-
     // Tell our listeners that a log is going to be archived.
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i : this.listeners) {
@@ -743,6 +792,26 @@ class FSHLog implements HLog, Syncable {
       child += HLog.META_HLOG_FILE_EXTN;
     }
     return new Path(dir, child);
+  }
+
+/**
+ * A log file has a creation timestamp (in ms) in its file name ({@link #filenum}.
+ * This helper method returns the creation timestamp from a given log file.
+ * It extracts the timestamp assuming the filename is created with the
+ * {@link #computeFilename(long filenum)} method.
+ * @param fileName
+ * @return timestamp, as in the log file name.
+ */
+  protected long getFileNumFromFileName(Path fileName) {
+    if (fileName == null) throw new IllegalArgumentException("file name can't be null");
+    // The path should start with dir/<prefix>.
+    String prefixPathStr = new Path(dir, prefix + ".").toString();
+    if (!fileName.toString().startsWith(prefixPathStr)) {
+      throw new IllegalArgumentException("The log doesn't belong to this regionserver");
+    }
+    String chompedPath = fileName.toString().substring(prefixPathStr.length());
+    if (forMeta) chompedPath = chompedPath.substring(0, chompedPath.indexOf(META_HLOG_FILE_EXTN));
+    return Long.parseLong(chompedPath);
   }
 
   @Override
@@ -835,15 +904,15 @@ class FSHLog implements HLog, Syncable {
 
   @Override
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
-    final long now, HTableDescriptor htd)
+    final long now, HTableDescriptor htd, AtomicLong sequenceId)
   throws IOException {
-    append(info, tableName, edits, now, htd, true);
+    append(info, tableName, edits, now, htd, true, sequenceId);
   }
 
   @Override
-  public void append(HRegionInfo info, TableName tableName, WALEdit edits,
-    final long now, HTableDescriptor htd, boolean isInMemstore) throws IOException {
-    append(info, tableName, edits, new ArrayList<UUID>(), now, htd, true, isInMemstore);
+  public void append(HRegionInfo info, TableName tableName, WALEdit edits, final long now,
+      HTableDescriptor htd, boolean isInMemstore, AtomicLong sequenceId) throws IOException {
+    append(info, tableName, edits, new ArrayList<UUID>(), now, htd, true, isInMemstore, sequenceId);
   }
 
   /**
@@ -869,12 +938,13 @@ class FSHLog implements HLog, Syncable {
    * @param clusterIds that have consumed the change (for replication)
    * @param now
    * @param doSync shall we sync?
+   * @param sequenceId of the region.
    * @return txid of this transaction
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
   private long append(HRegionInfo info, TableName tableName, WALEdit edits, List<UUID> clusterIds,
-      final long now, HTableDescriptor htd, boolean doSync, boolean isInMemstore)
+      final long now, HTableDescriptor htd, boolean doSync, boolean isInMemstore, AtomicLong sequenceId)
     throws IOException {
       if (edits.isEmpty()) return this.unflushedEntries.get();
       if (this.closed) {
@@ -884,7 +954,9 @@ class FSHLog implements HLog, Syncable {
       try {
         long txid = 0;
         synchronized (this.updateLock) {
-          long seqNum = obtainSeqNum();
+          // get the sequence number from the passed Long. In normal flow, it is coming from the
+          // region.
+          long seqNum = sequenceId.incrementAndGet();
           // The 'lastSeqWritten' map holds the sequence number of the oldest
           // write for each region (i.e. the first edit added to the particular
           // memstore). . When the cache is flushed, the entry for the
@@ -901,6 +973,7 @@ class FSHLog implements HLog, Syncable {
           if (htd.isDeferredLogFlush()) {
             lastDeferredTxid = txid;
           }
+          this.latestSequenceNums.put(encodedRegionName, seqNum);
         }
         // Sync if catalog region, and if not then check if that table supports
         // deferred log flushing
@@ -918,9 +991,9 @@ class FSHLog implements HLog, Syncable {
 
   @Override
   public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
-      List<UUID> clusterIds, final long now, HTableDescriptor htd)
+      List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId)
     throws IOException {
-    return append(info, tableName, edits, clusterIds, now, htd, false, true);
+    return append(info, tableName, edits, clusterIds, now, htd, false, true, sequenceId);
   }
 
   /**
@@ -1246,21 +1319,18 @@ class FSHLog implements HLog, Syncable {
     return numEntries.get();
   }
 
-  @Override
-  public long obtainSeqNum() {
-    return this.logSeqNum.incrementAndGet();
-  }
-
   /** @return the number of log files in use */
   int getNumLogFiles() {
-    return outputfiles.size();
+    return hlogSequenceNums.size();
   }
 
   @Override
-  public Long startCacheFlush(final byte[] encodedRegionName) {
+  public boolean startCacheFlush(final byte[] encodedRegionName) {
     Long oldRegionSeqNum = null;
     if (!closeBarrier.beginOp()) {
-      return null;
+      LOG.info("Flush will not be started for " + Bytes.toString(encodedRegionName) +
+        " - because the server is closing.");
+      return false;
     }
     synchronized (oldestSeqNumsLock) {
       oldRegionSeqNum = this.oldestUnflushedSeqNums.remove(encodedRegionName);
@@ -1279,7 +1349,7 @@ class FSHLog implements HLog, Syncable {
       LOG.warn("Couldn't find oldest seqNum for the region we are about to flush: ["
         + Bytes.toString(encodedRegionName) + "]");
     }
-    return obtainSeqNum();
+    return true;
   }
 
   @Override

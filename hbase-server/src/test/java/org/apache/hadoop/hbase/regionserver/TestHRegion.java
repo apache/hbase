@@ -53,6 +53,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
@@ -462,7 +463,7 @@ public class TestHRegion {
           .getRegionFileSystem().getStoreDir(Bytes.toString(family)));
 
       HLogUtil.writeCompactionMarker(region.getLog(), this.region.getTableDesc(),
-          this.region.getRegionInfo(), compactionDescriptor);
+          this.region.getRegionInfo(), compactionDescriptor, new AtomicLong(1));
 
       Path recoveredEditsDir = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
 
@@ -3799,10 +3800,10 @@ public class TestHRegion {
     put.add(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
     put.setDurability(mutationDurability);
     region.put(put);
-
-    // verify append called or not
-    verify(log, expectAppend ? times(1) : never()).appendNoSync((HRegionInfo) any(), eq(tableName),
-        (WALEdit) any(), (List<UUID>) any(), anyLong(), (HTableDescriptor) any());
+    //verify append called or not
+    verify(log, expectAppend ? times(1) : never())
+      .appendNoSync((HRegionInfo)any(), eq(tableName), (WALEdit)any(), (List<UUID>)any(),
+        anyLong(), (HTableDescriptor)any(), (AtomicLong)any());
 
     // verify sync called or not
     if (expectSync || expectSyncFromLogSyncer) {

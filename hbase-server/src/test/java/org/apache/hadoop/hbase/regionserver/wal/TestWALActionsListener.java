@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -89,6 +90,7 @@ public class TestWALActionsListener {
     DummyWALActionsListener laterobserver = new DummyWALActionsListener();
     HLog hlog = HLogFactory.createHLog(fs, TEST_UTIL.getDataTestDir(), logName,
                                        conf, list, null);
+    final AtomicLong sequenceId = new AtomicLong(1);
     HRegionInfo hri = new HRegionInfo(TableName.valueOf(SOME_BYTES),
              SOME_BYTES, SOME_BYTES, false);
 
@@ -100,7 +102,7 @@ public class TestWALActionsListener {
       HTableDescriptor htd = new HTableDescriptor();
       htd.addFamily(new HColumnDescriptor(b));
 
-      hlog.append(hri, TableName.valueOf(b), edit, 0, htd);
+      hlog.append(hri, TableName.valueOf(b), edit, 0, htd, sequenceId);
       if (i == 10) {
         hlog.registerWALActionsListener(laterobserver);
       }

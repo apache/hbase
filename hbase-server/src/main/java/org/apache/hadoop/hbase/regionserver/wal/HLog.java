@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -205,19 +206,6 @@ public interface HLog {
   // TODO: Remove.  Implementation detail.
   long getFilenum();
 
-  /**
-   * Called to ensure that log sequence numbers are always greater
-   *
-   * @param newvalue We'll set log edit/sequence number to this value if it is greater
-   * than the current value.
-   */
-  void setSequenceNumber(final long newvalue);
-
-  /**
-   * @return log sequence number
-   */
-  long getSequenceNumber();
-
   // TODO: Log rolling should not be in this interface.
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
@@ -270,9 +258,10 @@ public interface HLog {
   /**
    * Same as appendNoSync(HRegionInfo, TableName, WALEdit, List, long, HTableDescriptor),
    * except it causes a sync on the log
+   * @param sequenceId of the region.
    */
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
-      final long now, HTableDescriptor htd) throws IOException;
+      final long now, HTableDescriptor htd, AtomicLong sequenceId) throws IOException;
 
   /**
    * Append a set of edits to the log. Log edits are keyed by (encoded)
@@ -284,9 +273,10 @@ public interface HLog {
    * @param now
    * @param htd
    * @param isInMemstore Whether the record is in memstore. False for system records.
+   * @param sequenceId of the region.
    */
-  public void append(HRegionInfo info, TableName tableName, WALEdit edits,
-      final long now, HTableDescriptor htd, boolean isInMemstore) throws IOException;
+  public void append(HRegionInfo info, TableName tableName, WALEdit edits, final long now,
+      HTableDescriptor htd, boolean isInMemstore, AtomicLong sequenceId) throws IOException;
 
   /**
    * Append a set of edits to the log. Log edits are keyed by (encoded) regionName, rowname, and
@@ -297,11 +287,12 @@ public interface HLog {
    * @param clusterIds The clusters that have consumed the change (for replication)
    * @param now
    * @param htd
+   * @param sequenceId of the region
    * @return txid of this transaction
    * @throws IOException
    */
   public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
-      List<UUID> clusterIds, final long now, HTableDescriptor htd) throws IOException;
+      List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId) throws IOException;
 
   // TODO: Do we need all these versions of sync?
   void hsync() throws IOException;
@@ -313,27 +304,20 @@ public interface HLog {
   void sync(long txid) throws IOException;
 
   /**
-   * Obtain a log sequence number.
-   */
-  // TODO: Name better to differentiate from getSequenceNumber.
-  long obtainSeqNum();
-
-  /**
    * WAL keeps track of the sequence numbers that were not yet flushed from memstores
    * in order to be able to do cleanup. This method tells WAL that some region is about
    * to flush memstore.
    *
    * We stash the oldest seqNum for the region, and let the the next edit inserted in this
-   * region be recorded in {@link #append(HRegionInfo, TableName, WALEdit, long, HTableDescriptor)}
-   * as new oldest seqnum. In case of flush being aborted, we put the stashed value back;
-   * in case of flush succeeding, the seqNum of that first edit after start becomes the
-   * valid oldest seqNum for this region.
+   * region be recorded in {@link #append(HRegionInfo, TableName, WALEdit, long, HTableDescriptor,
+   * AtomicLong)} as new oldest seqnum.
+   * In case of flush being aborted, we put the stashed value back; in case of flush succeeding,
+   * the seqNum of that first edit after start becomes the valid oldest seqNum for this region.
    *
-   * @return current seqNum, to pass on to flushers (who will put it into the metadata of
-   *         the resulting file as an upper-bound seqNum for that file), or NULL if flush
-   *         should not be started.
+   * @return true if the flush can proceed, false in case wal is closing (ususally, when server is
+   * closing) and flush couldn't be started.
    */
-  Long startCacheFlush(final byte[] encodedRegionName);
+  boolean startCacheFlush(final byte[] encodedRegionName);
 
   /**
    * Complete the cache flush.

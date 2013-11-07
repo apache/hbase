@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -188,7 +189,7 @@ public class TestReplicationSourceManager {
     listeners.add(replication);
     HLog hlog = HLogFactory.createHLog(fs, utility.getDataTestDir(), logName,
         conf, listeners, URLEncoder.encode("regionserver:60020", "UTF8"));
-
+    final AtomicLong sequenceId = new AtomicLong(1);
     manager.init();
     HTableDescriptor htd = new HTableDescriptor();
     htd.addFamily(new HColumnDescriptor(f1));
@@ -200,7 +201,7 @@ public class TestReplicationSourceManager {
       LOG.info(i);
       HLogKey key = new HLogKey(hri.getRegionName(), test, seq++,
           System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
-      hlog.append(hri, test, edit, System.currentTimeMillis(), htd);
+      hlog.append(hri, test, edit, System.currentTimeMillis(), htd, sequenceId);
     }
 
     // Simulate a rapid insert that's followed
@@ -211,7 +212,7 @@ public class TestReplicationSourceManager {
     LOG.info(baseline + " and " + time);
 
     for (int i = 0; i < 3; i++) {
-      hlog.append(hri, test, edit, System.currentTimeMillis(), htd);
+      hlog.append(hri, test, edit, System.currentTimeMillis(), htd, sequenceId);
     }
 
     assertEquals(6, manager.getHLogs().get(slaveId).size());
@@ -221,7 +222,7 @@ public class TestReplicationSourceManager {
     manager.logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(),
         "1", 0, false, false);
 
-    hlog.append(hri, test, edit, System.currentTimeMillis(), htd);
+    hlog.append(hri, test, edit, System.currentTimeMillis(), htd, sequenceId);
 
     assertEquals(1, manager.getHLogs().size());
 

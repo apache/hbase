@@ -209,6 +209,13 @@ public class HRegion implements HeapSize { // , Writable{
   protected long completeSequenceId = -1L;
 
   /**
+   * Region level sequence Id. It is used for appending WALEdits in HLog. Its default value is -1,
+   * as a marker that the region hasn't opened yet. Once it is opened, it is set to
+   * {@link #openSeqNum}.
+   */
+  private final AtomicLong sequenceId = new AtomicLong(-1L);
+
+  /**
    * Operation enum is used in {@link HRegion#startRegionOperation} to provide operation context for
    * startRegionOperation to possibly invoke different checks before any region operations. Not all
    * operations have to be defined here. It's only needed when a special check is need in
@@ -1518,16 +1525,16 @@ public class HRegion implements HeapSize { // , Writable{
       // Record the mvcc for all transactions in progress.
       w = mvcc.beginMemstoreInsert();
       mvcc.advanceMemstore(w);
-
+      // check if it is not closing.
       if (wal != null) {
-        Long startSeqId = wal.startCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
-        if (startSeqId == null) {
-          status.setStatus("Flush will not be started for [" + this.getRegionInfo().getEncodedName()
-              + "] - WAL is going away");
+        if (!wal.startCacheFlush(this.getRegionInfo().getEncodedNameAsBytes())) {
+          status.setStatus("Flush will not be started for ["
+              + this.getRegionInfo().getEncodedName() + "] - because the WAL is closing.");
           return false;
         }
-        flushSeqId = startSeqId;
+        flushSeqId = this.sequenceId.incrementAndGet();
       } else {
+        // use the provided sequence Id as WAL is not being used for this flush.
         flushSeqId = myseqid;
       }
 
@@ -2221,7 +2228,7 @@ public class HRegion implements HeapSize { // , Writable{
       Mutation mutation = batchOp.operations[firstIndex];
       if (walEdit.size() > 0) {
         txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
-              walEdit, mutation.getClusterIds(), now, this.htableDescriptor);
+              walEdit, mutation.getClusterIds(), now, this.htableDescriptor, this.sequenceId);
       }
 
       // -------------------------------
@@ -3312,7 +3319,7 @@ public class HRegion implements HeapSize { // , Writable{
           if(bulkLoadListener != null) {
             finalPath = bulkLoadListener.prepareBulkLoad(familyName, path);
           }
-          store.bulkLoadHFile(finalPath, assignSeqId ? this.log.obtainSeqNum() : -1);
+          store.bulkLoadHFile(finalPath, assignSeqId ? this.sequenceId.incrementAndGet() : -1);
           if(bulkLoadListener != null) {
             bulkLoadListener.doneBulkLoad(familyName, path);
           }
@@ -3906,7 +3913,9 @@ public class HRegion implements HeapSize { // , Writable{
     HRegion region = HRegion.newHRegion(tableDir,
         effectiveHLog, fs, conf, info, hTableDescriptor, null);
     if (initialize) {
-      region.initialize();
+      // If initializing, set the sequenceId. It is also required by HLogPerformanceEvaluation when
+      // verifying the WALEdits.
+      region.setSequenceId(region.initialize());
     }
     return region;
   }
@@ -4087,10 +4096,7 @@ public class HRegion implements HeapSize { // , Writable{
     checkCompressionCodecs();
 
     this.openSeqNum = initialize(reporter);
-    if (this.log != null) {
-      this.log.setSequenceNumber(this.openSeqNum);
-    }
-
+    this.setSequenceId(openSeqNum);
     return this;
   }
 
@@ -4498,8 +4504,9 @@ public class HRegion implements HeapSize { // , Writable{
           long txid = 0;
           // 7. Append no sync
           if (!walEdit.isEmpty()) {
-            txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
-                  walEdit, processor.getClusterIds(), now, this.htableDescriptor);
+            txid = this.log.appendNoSync(this.getRegionInfo(),
+              this.htableDescriptor.getTableName(), walEdit, processor.getClusterIds(), now,
+              this.htableDescriptor, this.sequenceId);
           }
           // 8. Release region lock
           if (locked) {
@@ -4740,9 +4747,9 @@ public class HRegion implements HeapSize { // , Writable{
             // Using default cluster id, as this can only happen in the orginating
             // cluster. A slave cluster receives the final value (not the delta)
             // as a Put.
-            txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
-              walEdits, new ArrayList<UUID>(), EnvironmentEdgeManager.currentTimeMillis(),
-                  this.htableDescriptor);
+            txid = this.log.appendNoSync(this.getRegionInfo(),
+              this.htableDescriptor.getTableName(), walEdits, new ArrayList<UUID>(),
+              EnvironmentEdgeManager.currentTimeMillis(), this.htableDescriptor, this.sequenceId);
           } else {
             recordMutationWithoutWal(append.getFamilyCellMap());
           }
@@ -4914,9 +4921,9 @@ public class HRegion implements HeapSize { // , Writable{
             // Using default cluster id, as this can only happen in the orginating
             // cluster. A slave cluster receives the final value (not the delta)
             // as a Put.
-            txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
-                walEdits, new ArrayList<UUID>(), EnvironmentEdgeManager.currentTimeMillis(),
-                  this.htableDescriptor);
+            txid = this.log.appendNoSync(this.getRegionInfo(),
+              this.htableDescriptor.getTableName(), walEdits, new ArrayList<UUID>(),
+              EnvironmentEdgeManager.currentTimeMillis(), this.htableDescriptor, this.sequenceId);
           } else {
             recordMutationWithoutWal(increment.getFamilyCellMap());
           }
@@ -4981,7 +4988,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      40 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      41 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (11 * Bytes.SIZEOF_LONG) +
       5 * Bytes.SIZEOF_BOOLEAN);
 
@@ -5563,6 +5570,21 @@ public class HRegion implements HeapSize { // , Writable{
     compactionNumBytesCompacted.addAndGet(filesSizeCompacted);
 
     assert newValue >= 0;
+  }
+
+  /**
+   * @return sequenceId.
+   */
+  public AtomicLong getSequenceId() {
+    return this.sequenceId;
+  }
+
+  /**
+   * sets this region's sequenceId.
+   * @param value new value
+   */
+  private void setSequenceId(long value) {
+    this.sequenceId.set(value);
   }
 
   /**

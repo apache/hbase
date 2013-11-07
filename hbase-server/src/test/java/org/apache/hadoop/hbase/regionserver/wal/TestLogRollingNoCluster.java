@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -110,6 +111,7 @@ public class TestLogRollingNoCluster {
     @Override
     public void run() {
       this.log.info(getName() +" started");
+      final AtomicLong sequenceId = new AtomicLong(1);
       try {
         for (int i = 0; i < this.count; i++) {
           long now = System.currentTimeMillis();
@@ -123,7 +125,7 @@ public class TestLogRollingNoCluster {
 
           this.wal.append(HRegionInfo.FIRST_META_REGIONINFO,
               HTableDescriptor.META_TABLEDESC.getTableName(),
-              edit, now, HTableDescriptor.META_TABLEDESC);
+              edit, now, HTableDescriptor.META_TABLEDESC, sequenceId);
         }
         String msg = getName() + " finished";
         if (isException())

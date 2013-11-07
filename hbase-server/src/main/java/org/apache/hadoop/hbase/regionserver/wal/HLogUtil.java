@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.IOException;
 import java.util.NavigableSet;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -256,12 +257,13 @@ public class HLogUtil {
    * This provides info to the HMaster to allow it to recover the compaction if
    * this regionserver dies in the middle (This part is not yet implemented). It also prevents
    * the compaction from finishing if this regionserver has already lost its lease on the log.
+   * @param sequenceId Used by HLog to get sequence Id for the waledit.
    */
   public static void writeCompactionMarker(HLog log, HTableDescriptor htd, HRegionInfo info,
-      final CompactionDescriptor c) throws IOException {
+      final CompactionDescriptor c, AtomicLong sequenceId) throws IOException {
     WALEdit e = WALEdit.createCompaction(c);
     log.append(info, TableName.valueOf(c.getTableName().toByteArray()), e,
-        EnvironmentEdgeManager.currentTimeMillis(), htd, false);
+        EnvironmentEdgeManager.currentTimeMillis(), htd, false, sequenceId);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));
     }
