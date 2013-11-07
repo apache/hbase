@@ -406,6 +406,29 @@ checkHadoop10Compile () {
 
 
 ###############################################################################
+### Check against known anti-patterns
+checkAntiPatterns () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Checking against known anti-patterns."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  warnings=`$GREP 'new TreeMap<byte.*()' $PATCH_DIR/patch`
+  if [[ $warnings != "" ]]; then
+    JIRA_COMMENT="$JIRA_COMMENT
+
+		    {color:red}-1 Anti-pattern{color}.  The patch appears to have anti-pattern where BYTES_COMPARATOR was omitted:
+             $warnings."
+	  return 1
+  fi
+  return 0
+}
+
+###############################################################################
 ### Check there are no javadoc warnings
 checkJavadocWarnings () {
   echo ""
@@ -868,6 +891,8 @@ if [[ $? != 0 ]] ; then
   cleanupAndExit 1
 fi
 
+checkAntiPatterns
+(( RESULT = RESULT + $? ))
 checkHadoop10Compile
 (( RESULT = RESULT + $? ))
 checkHadoop20Compile
