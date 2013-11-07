@@ -661,18 +661,30 @@ public class TestAssignmentManagerOnCluster {
       // Hold SSH before killing the hosting server
       master.enableSSH(false);
 
-      // Kill the hosting server
       AssignmentManager am = master.getAssignmentManager();
       RegionStates regionStates = am.getRegionStates();
-      assertTrue(am.waitForAssignment(hri));
-      RegionState state = regionStates.getRegionState(hri);
-      ServerName oldServerName = state.getServerName();
-      cluster.killRegionServer(oldServerName);
-      cluster.waitForRegionServerToStop(oldServerName, -1);
+      ServerName metaServer = regionStates.getRegionServerOfRegion(
+        HRegionInfo.FIRST_META_REGIONINFO);
+      while (true) {
+        assertTrue(am.waitForAssignment(hri));
+        RegionState state = regionStates.getRegionState(hri);
+        ServerName oldServerName = state.getServerName();
+        if (!ServerName.isSameHostnameAndPort(oldServerName, metaServer)) {
+          // Kill the hosting server, which doesn't have meta on it.
+          cluster.killRegionServer(oldServerName);
+          cluster.waitForRegionServerToStop(oldServerName, -1);
+          break;
+        }
+        int i = cluster.getServerWithMeta();
+        HRegionServer rs = cluster.getRegionServer(i == 0 ? 1 : 0);
+        oldServerName = rs.getServerName();
+        master.move(hri.getEncodedNameAsBytes(),
+          Bytes.toBytes(oldServerName.getServerName()));
+      }
 
       // You can't assign a dead region before SSH
       am.assign(hri, true, true);
-      state = regionStates.getRegionState(hri);
+      RegionState state = regionStates.getRegionState(hri);
       assertTrue(state.isFailedClose());
 
       // You can't unassign a dead region before SSH either

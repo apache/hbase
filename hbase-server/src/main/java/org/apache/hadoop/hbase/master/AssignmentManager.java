@@ -579,8 +579,8 @@ public class AssignmentManager extends ZooKeeperListener {
           return false;
         }
       }
-      processRegionsInTransition(rt, hri, stat.getVersion());
-      return true;
+      return processRegionsInTransition(
+        rt, hri, stat.getVersion());
     } finally {
       lock.unlock();
     }
@@ -589,11 +589,12 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * This call is invoked only (1) master assign meta;
    * (2) during failover mode startup, zk assignment node processing.
-   * The locker is set in the caller.
+   * The locker is set in the caller. It returns true if the region
+   * is in transition for sure, false otherwise.
    *
    * It should be private but it is used by some test too.
    */
-  void processRegionsInTransition(
+  boolean processRegionsInTransition(
       final RegionTransition rt, final HRegionInfo regionInfo,
       final int expectedVersion) throws KeeperException {
     EventType et = rt.getEventType();
@@ -609,101 +610,87 @@ public class AssignmentManager extends ZooKeeperListener {
         + et + ", does nothing since the region is already in transition "
         + regionStates.getRegionTransitionState(encodedName));
       // Just return
-      return;
+      return true;
+    }
+    if (!serverManager.isServerOnline(sn)) {
+      // It was on a dead server, it's closed now. Force to OFFLINE and put
+      // it in transition. Try to re-assign it, but it will fail most likely,
+      // since we have not done log splitting for the dead server yet.
+      LOG.debug("RIT " + encodedName + " in state=" + rt.getEventType() +
+        " was on deadserver; forcing offline");
+      ZKAssign.createOrForceNodeOffline(this.watcher, regionInfo, sn);
+      regionStates.updateRegionState(regionInfo, State.OFFLINE, sn);
+      invokeAssign(regionInfo);
+      return false;
     }
     switch (et) {
       case M_ZK_REGION_CLOSING:
-        // If zk node of the region was updated by a live server skip this
-        // region and just add it into RIT.
-        if (!serverManager.isServerOnline(sn)) {
-          // If was not online, its closed now. Force to OFFLINE and this
-          // will get it reassigned if appropriate
-          forceOffline(regionInfo, rt);
-        } else {
-          // Insert into RIT & resend the query to the region server: may be the previous master
-          // died before sending the query the first time.
-          final RegionState rs = regionStates.updateRegionState(rt, State.CLOSING);
-          this.executorService.submit(
-              new EventHandler(server, EventType.M_MASTER_RECOVERY) {
-                @Override
-                public void process() throws IOException {
-                  ReentrantLock lock = locker.acquireLock(regionInfo.getEncodedName());
-                  try {
-                    unassign(regionInfo, rs, expectedVersion, null, true, null);
-                    if (regionStates.isRegionOffline(regionInfo)) {
-                      assign(regionInfo, true);
-                    }
-                  } finally {
-                    lock.unlock();
-                  }
+        // Insert into RIT & resend the query to the region server: may be the previous master
+        // died before sending the query the first time.
+        final RegionState rsClosing = regionStates.updateRegionState(rt, State.CLOSING);
+        this.executorService.submit(
+          new EventHandler(server, EventType.M_MASTER_RECOVERY) {
+            @Override
+            public void process() throws IOException {
+              ReentrantLock lock = locker.acquireLock(regionInfo.getEncodedName());
+              try {
+                unassign(regionInfo, rsClosing, expectedVersion, null, true, null);
+                if (regionStates.isRegionOffline(regionInfo)) {
+                  assign(regionInfo, true);
                 }
-              });
-        }
+              } finally {
+                lock.unlock();
+              }
+            }
+          });
         break;
 
       case RS_ZK_REGION_CLOSED:
       case RS_ZK_REGION_FAILED_OPEN:
         // Region is closed, insert into RIT and handle it
-        addToRITandInvokeAssign(regionInfo, State.CLOSED, rt);
+        regionStates.updateRegionState(regionInfo, State.CLOSED, sn);
+        invokeAssign(regionInfo);
         break;
 
       case M_ZK_REGION_OFFLINE:
-        // If zk node of the region was updated by a live server skip this
-        // region and just add it into RIT.
-        if (!serverManager.isServerOnline(sn)) {
-          // Region is offline, insert into RIT and invoke assign
-          addToRITandInvokeAssign(regionInfo, State.OFFLINE, rt);
-        } else {
-          // Insert in RIT and resend to the regionserver
-          regionStates.updateRegionState(rt, State.PENDING_OPEN);
-          final RegionState rs = regionStates.getRegionState(regionInfo);
-          this.executorService.submit(
-              new EventHandler(server, EventType.M_MASTER_RECOVERY) {
-                @Override
-                public void process() throws IOException {
-                  ReentrantLock lock = locker.acquireLock(regionInfo.getEncodedName());
-                  try {
-                    RegionPlan plan = new RegionPlan(regionInfo, null, sn);
-                    addPlan(encodedName, plan);
-                    assign(rs, false, false);
-                  } finally {
-                    lock.unlock();
-                  }
-                }
-              });
-        }
+        // Insert in RIT and resend to the regionserver
+        regionStates.updateRegionState(rt, State.PENDING_OPEN);
+        final RegionState rsOffline = regionStates.getRegionState(regionInfo);
+        this.executorService.submit(
+          new EventHandler(server, EventType.M_MASTER_RECOVERY) {
+            @Override
+            public void process() throws IOException {
+              ReentrantLock lock = locker.acquireLock(regionInfo.getEncodedName());
+              try {
+                RegionPlan plan = new RegionPlan(regionInfo, null, sn);
+                addPlan(encodedName, plan);
+                assign(rsOffline, false, false);
+              } finally {
+                lock.unlock();
+              }
+            }
+          });
         break;
 
       case RS_ZK_REGION_OPENING:
-        if (!serverManager.isServerOnline(sn)) {
-          forceOffline(regionInfo, rt);
-        } else {
-          regionStates.updateRegionState(rt, State.OPENING);
-        }
+        regionStates.updateRegionState(rt, State.OPENING);
         break;
 
       case RS_ZK_REGION_OPENED:
-        if (!serverManager.isServerOnline(sn)) {
-          forceOffline(regionInfo, rt);
-        } else {
-          // Region is opened, insert into RIT and handle it
-          // This could be done asynchronously, we would need then to acquire the lock in the
-          //  handler.
-          regionStates.updateRegionState(rt, State.OPEN);
-          new OpenedRegionHandler(server, this, regionInfo, sn, expectedVersion).process();
-        }
+        // Region is opened, insert into RIT and handle it
+        // This could be done asynchronously, we would need then to acquire the lock in the
+        //  handler.
+        regionStates.updateRegionState(rt, State.OPEN);
+        new OpenedRegionHandler(server, this, regionInfo, sn, expectedVersion).process();
         break;
       case RS_ZK_REQUEST_REGION_SPLIT:
       case RS_ZK_REGION_SPLITTING:
       case RS_ZK_REGION_SPLIT:
-        if (serverManager.isServerOnline(sn)) {
-          // Splitting region should be online. We could have skipped it during
-          // user region rebuilding since we may consider the split is completed.
-          // Put it in SPLITTING state to avoid complications.
-          regionStates.updateRegionState(regionInfo, State.OPEN, sn);
-          regionStates.regionOnline(regionInfo, sn);
-          regionStates.updateRegionState(rt, State.SPLITTING);
-        }
+        // Splitting region should be online. We could have skipped it during
+        // user region rebuilding since we may consider the split is completed.
+        // Put it in SPLITTING state to avoid complications.
+        regionStates.regionOnline(regionInfo, sn);
+        regionStates.updateRegionState(rt, State.SPLITTING);
         if (!handleRegionSplitting(
             rt, encodedName, prettyPrintedRegionName, sn)) {
           deleteSplittingNode(encodedName, sn);
@@ -723,38 +710,7 @@ public class AssignmentManager extends ZooKeeperListener {
     LOG.info("Processed region " + prettyPrintedRegionName + " in state "
       + et + ", on " + (serverManager.isServerOnline(sn) ? "" : "dead ")
       + "server: " + sn);
-  }
-
-  /**
-   * Put the region <code>hri</code> into an offline state up in zk.
-   *
-   * You need to have lock on the region before calling this method.
-   *
-   * @param hri
-   * @param oldRt
-   * @throws KeeperException
-   */
-  private void forceOffline(final HRegionInfo hri, final RegionTransition oldRt)
-      throws KeeperException {
-    // If was on dead server, its closed now.  Force to OFFLINE and then
-    // invoke assign; this will get it reassigned if appropriate
-    LOG.debug("RIT " + hri.getEncodedName() + " in state=" + oldRt.getEventType() +
-      " was on deadserver; forcing offline");
-    ZKAssign.createOrForceNodeOffline(this.watcher, hri, oldRt.getServerName());
-    addToRITandInvokeAssign(hri, State.OFFLINE, oldRt);
-  }
-
-  /**
-   * Add to the in-memory copy of regions in transition and then invoke
-   * assign on passed region <code>hri</code>
-   * @param hri
-   * @param state
-   * @param oldData
-   */
-  private void addToRITandInvokeAssign(final HRegionInfo hri,
-      final State state, final RegionTransition oldData) {
-    regionStates.updateRegionState(oldData, state);
-    invokeAssign(hri);
+    return true;
   }
 
   /**
@@ -1770,6 +1726,7 @@ public class AssignmentManager extends ZooKeeperListener {
       state = regionStates.createRegionState(region);
     }
 
+    ServerName sn = state.getServerName();
     if (forceNewPlan && LOG.isDebugEnabled()) {
       LOG.debug("Force region state offline " + state);
     }
@@ -1788,23 +1745,27 @@ public class AssignmentManager extends ZooKeeperListener {
     case FAILED_CLOSE:
     case FAILED_OPEN:
       unassign(region, state, -1, null, false, null);
-      RegionState oldState = state;
       state = regionStates.getRegionState(region);
       if (state.isFailedClose()) {
+        // If we can't close the region, we can't re-assign
+        // it so as to avoid possible double assignment/data loss.
         LOG.info("Skip assigning " +
           region + ", we couldn't close it: " + state);
         return null;
       }
-      // In these cases, we need to confirm with meta
-      // the region was not on a dead server if it's open/pending.
-      if ((oldState.isOpened() || oldState.isPendingOpenOrOpening())
-          && wasRegionOnDeadServerByMeta(region, oldState.getServerName())) {
+    case OFFLINE:
+      // This region could have been open on this server
+      // for a while. If the server is dead and not processed
+      // yet, we can move on only if the meta shows the
+      // region is not on this server actually, or on a server
+      // not dead, or dead and processed already.
+      if (regionStates.isServerDeadAndNotProcessed(sn)
+          && wasRegionOnDeadServerByMeta(region, sn)) {
         LOG.info("Skip assigning " + region.getRegionNameAsString()
           + ", it is on a dead but not processed yet server");
         return null;
       }
     case CLOSED:
-    case OFFLINE:
       break;
     default:
       LOG.error("Trying to assign region " + region
