@@ -10,7 +10,7 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distr=ibuted on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -152,6 +152,35 @@ public final class ProtobufUtil {
    */
   private final static Map<String, Class<?>>
     PRIMITIVES = new HashMap<String, Class<?>>();
+
+
+  /**
+   * Many results are simple: no cell, exists true or false. To save on object creations,
+   *  we reuse them across calls.
+   */
+  private final static Cell[] EMPTY_CELL_ARRAY = new Cell[]{};
+  private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
+  private final static Result EMPTY_RESULT_EXISTS_TRUE = Result.create(null, true);
+  private final static Result EMPTY_RESULT_EXISTS_FALSE = Result.create(null, false);
+
+  private final static ClientProtos.Result EMPTY_RESULT_PB;
+  private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_TRUE;
+  private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_FALSE;
+
+  static {
+    ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
+
+    builder.setExists(true);
+    EMPTY_RESULT_PB_EXISTS_TRUE =  builder.build();
+
+    builder.clear();
+    builder.setExists(false);
+    EMPTY_RESULT_PB_EXISTS_FALSE =  builder.build();
+
+    builder.clear();
+    builder.setAssociatedCellCount(0);
+    EMPTY_RESULT_PB =  builder.build();
+  }
 
   /**
    * Dynamic class loader to load filter/comparators
@@ -1060,16 +1089,20 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResult(final Result result) {
+    if (result.getExists() != null) {
+      return toResult(result.getExists());
+    }
+
+    Cell[] cells = result.rawCells();
+    if (cells == null || cells.length == 0) {
+      return EMPTY_RESULT_PB;
+    }
+
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-    Cell [] cells = result.rawCells();
-    if (cells != null) {
-      for (Cell c : cells) {
-        builder.addCell(toCell(c));
-      }
+    for (Cell c : cells) {
+      builder.addCell(toCell(c));
     }
-    if (result.getExists() != null){
-      builder.setExists(result.getExists());
-    }
+
     return builder.build();
   }
 
@@ -1080,9 +1113,7 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResult(final boolean existence) {
-    ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-    builder.setExists(existence);
-    return builder.build();
+    return existence ? EMPTY_RESULT_PB_EXISTS_TRUE : EMPTY_RESULT_PB_EXISTS_FALSE;
   }
 
   /**
@@ -1093,11 +1124,19 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResultNoData(final Result result) {
-    ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-    builder.setAssociatedCellCount(result.size());
     if (result.getExists() != null){
-      builder.setExists(result.getExists());
+      return result.getExists() ? EMPTY_RESULT_PB_EXISTS_TRUE : EMPTY_RESULT_PB_EXISTS_FALSE;
     }
+
+    int size = result.size();
+
+    if (size == 0){
+      return EMPTY_RESULT_PB;
+    }
+
+    ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
+    builder.setAssociatedCellCount(size);
+
     return builder.build();
   }
 
@@ -1109,10 +1148,14 @@ public final class ProtobufUtil {
    */
   public static Result toResult(final ClientProtos.Result proto) {
     if (proto.hasExists()) {
-      return Result.create(null, proto.getExists());
+      return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE : EMPTY_RESULT_EXISTS_FALSE;
     }
 
     List<CellProtos.Cell> values = proto.getCellList();
+    if (values.isEmpty()){
+      return EMPTY_RESULT;
+    }
+
     List<Cell> cells = new ArrayList<Cell>(values.size());
     for (CellProtos.Cell c : values) {
       cells.add(toCell(c));
@@ -1130,27 +1173,37 @@ public final class ProtobufUtil {
    */
   public static Result toResult(final ClientProtos.Result proto, final CellScanner scanner)
   throws IOException {
-    if (proto.hasExists()){
-      return Result.create(null, proto.getExists());
+    List<CellProtos.Cell> values = proto.getCellList();
+
+    if (proto.hasExists()) {
+      if ((values != null && !values.isEmpty()) ||
+          (proto.hasAssociatedCellCount() && proto.getAssociatedCellCount() > 0)) {
+        throw new IllegalArgumentException("bad proto: exists with cells is no allowed " + proto);
+      }
+      return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE : EMPTY_RESULT_EXISTS_FALSE;
     }
 
     // TODO: Unit test that has some Cells in scanner and some in the proto.
     List<Cell> cells = null;
     if (proto.hasAssociatedCellCount()) {
       int count = proto.getAssociatedCellCount();
-      cells = new ArrayList<Cell>(count);
+      cells = new ArrayList<Cell>(count + values.size());
       for (int i = 0; i < count; i++) {
         if (!scanner.advance()) throw new IOException("Failed get " + i + " of " + count);
         cells.add(scanner.current());
       }
     }
-    List<CellProtos.Cell> values = proto.getCellList();
-    if (cells == null) cells = new ArrayList<Cell>(values.size());
-    for (CellProtos.Cell c: values) {
-      cells.add(toCell(c));
+
+    if (!values.isEmpty()){
+      if (cells == null) cells = new ArrayList<Cell>(values.size());
+      for (CellProtos.Cell c: values) {
+        cells.add(toCell(c));
+      }
     }
-    return Result.create(cells, null);
+
+    return (cells == null || cells.isEmpty()) ? EMPTY_RESULT : Result.create(cells, null);
   }
+
 
   /**
    * Convert a ByteArrayComparable to a protocol buffer Comparator
