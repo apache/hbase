@@ -37,9 +37,13 @@
   </Match>
 
   <Match>
-    <Package name="org.apache.hadoop.hbase.tmpl"/>
+    <!-- Nested packages are not included by the filter, so we need a regexp... -->
+    <Package name="~org\.apache\.hadoop\.hbase\.tmpl\..*"/>
   </Match>
 
+  <Match>
+    <Package name="~org\.apache\.hadoop\.hbase\.generated\..*"/>
+  </Match>
 
   <Match>
     <Class name="org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost"/>
