@@ -23,21 +23,21 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Random;
 
-import junit.framework.TestCase;
-
+import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  *  Set of long-running tests to measure performance of HFile.
@@ -47,22 +47,25 @@ import org.junit.experimental.categories.Category;
  * Remove after tfile is committed and use the tfile version of this class
  * instead.</p>
  */
-@Category(MediumTests.class)
-public class TestHFilePerformance extends TestCase {
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static String ROOT_DIR =
-    TEST_UTIL.getDataTestDir("TestHFilePerformance").toString();
+public class TestHFilePerformance extends AbstractHBaseTool {
+  private HBaseTestingUtility TEST_UTIL;
+  private static String ROOT_DIR;
   private FileSystem fs;
-  private Configuration conf;
   private long startTimeEpoch;
   private long finishTimeEpoch;
   private DateFormat formatter;
 
   @Override
-  public void setUp() throws IOException {
-    conf = new Configuration();
-    fs = FileSystem.get(conf);
+  public void setConf(Configuration conf) {
+    super.setConf(conf);
+    try {
+      fs = FileSystem.get(conf);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    TEST_UTIL = new HBaseTestingUtility(conf);
+    ROOT_DIR = TEST_UTIL.getDataTestDir("TestHFilePerformance").toString();
   }
 
   public void startTime() {
@@ -392,5 +395,22 @@ public class TestHFilePerformance extends TestCase {
             " better number.");
   }
 
-}
+  @Override
+  protected void addOptions() {
+  }
 
+  @Override
+  protected void processOptions(CommandLine cmd) {
+  }
+
+  @Override
+  protected int doWork() throws Exception {
+    testRunComparisons();
+    return 0;
+  }
+
+  public static void main(String[] args) throws Exception {
+    int ret = ToolRunner.run(HBaseConfiguration.create(), new TestHFilePerformance(), args);
+    System.exit(ret);
+  }
+}
