@@ -27,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -39,9 +38,8 @@ import org.junit.experimental.categories.Category;
 public class TestDynamicClassLoader {
   private static final Log LOG = LogFactory.getLog(TestDynamicClassLoader.class);
 
-  private static final Configuration conf = HBaseConfiguration.create();
-
   private static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
+  private static final Configuration conf = TEST_UTIL.getConfiguration();
 
   static {
     conf.set("hbase.dynamic.jars.dir", TEST_UTIL.getDataTestDir().toString());

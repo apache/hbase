@@ -71,7 +71,6 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
@@ -819,7 +818,7 @@ public class HStore implements Store {
             .build();
     return w;
   }
-  
+
   private HFileContext createFileContext(Compression.Algorithm compression,
       boolean includeMVCCReadpoint, boolean includesTag) {
     if (compression == null) {
@@ -1014,6 +1013,7 @@ public class HStore implements Store {
         for (Path newFile : newFiles) {
           // Create storefile around what we wrote with a reader on it.
           StoreFile sf = createStoreFileAndReader(newFile);
+          sf.closeReader(true);
           sfs.add(sf);
         }
         return sfs;

@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,7 +52,7 @@ import org.junit.experimental.categories.Category;
 public class TestFSUtils {
   /**
    * Test path compare and prefix checking.
-   * @throws IOException 
+   * @throws IOException
    */
   @Test
   public void testMatchingTail() throws IOException {
@@ -115,7 +115,7 @@ public class TestFSUtils {
       if (cluster != null) cluster.shutdown();
     }
   }
-  
+
   private void WriteDataToHDFS(FileSystem fs, Path file, int dataSize)
     throws Exception {
     FSDataOutputStream out = fs.create(file);
@@ -123,14 +123,14 @@ public class TestFSUtils {
     out.write(data, 0, dataSize);
     out.close();
   }
-  
+
   @Test public void testcomputeHDFSBlocksDistribution() throws Exception {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     final int DEFAULT_BLOCK_SIZE = 1024;
     htu.getConfiguration().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     MiniDFSCluster cluster = null;
     Path testFile = null;
-    
+
     try {
       // set up a cluster with 3 nodes
       String hosts[] = new String[] { "host1", "host2", "host3" };
@@ -141,7 +141,7 @@ public class TestFSUtils {
       // create a file with two blocks
       testFile = new Path("/test1.txt");
       WriteDataToHDFS(fs, testFile, 2*DEFAULT_BLOCK_SIZE);
-      
+
       // given the default replication factor is 3, the same as the number of
       // datanodes; the locality index for each host should be 100%,
       // or getWeight for each host should be the same as getUniqueBlocksWeights
@@ -173,9 +173,9 @@ public class TestFSUtils {
       FileSystem fs = cluster.getFileSystem();
 
       // create a file with three blocks
-      testFile = new Path("/test2.txt");        
+      testFile = new Path("/test2.txt");
       WriteDataToHDFS(fs, testFile, 3*DEFAULT_BLOCK_SIZE);
-              
+
       // given the default replication factor is 3, we will have total of 9
       // replica of blocks; thus the host with the highest weight should have
       // weight == 3 * DEFAULT_BLOCK_SIZE
@@ -199,7 +199,7 @@ public class TestFSUtils {
       htu.shutdownMiniDFSCluster();
     }
 
-    
+
     try {
       // set up a cluster with 4 nodes
       String hosts[] = new String[] { "host1", "host2", "host3", "host4" };
@@ -208,9 +208,9 @@ public class TestFSUtils {
       FileSystem fs = cluster.getFileSystem();
 
       // create a file with one block
-      testFile = new Path("/test3.txt");        
+      testFile = new Path("/test3.txt");
       WriteDataToHDFS(fs, testFile, DEFAULT_BLOCK_SIZE);
-      
+
       // given the default replication factor is 3, we will have total of 3
       // replica of blocks; thus there is one host without weight
       final long maxTime = System.currentTimeMillis() + 2000;
@@ -257,7 +257,7 @@ public class TestFSUtils {
       fs.delete(p, true);
     }
   }
-  
+
   @Test
   public void testDeleteAndExists() throws Exception {
     HBaseTestingUtility htu = new HBaseTestingUtility();
@@ -292,30 +292,30 @@ public class TestFSUtils {
   public void testRenameAndSetModifyTime() throws Exception {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     Configuration conf = htu.getConfiguration();
-        
+
     MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
     assertTrue(FSUtils.isHDFS(conf));
 
     FileSystem fs = FileSystem.get(conf);
-    Path testDir = htu.getDataTestDir("testArchiveFile");
-    
+    Path testDir = htu.getDataTestDirOnTestFS("testArchiveFile");
+
     String file = UUID.randomUUID().toString();
     Path p = new Path(testDir, file);
 
     FSDataOutputStream out = fs.create(p);
     out.close();
     assertTrue("The created file should be present", FSUtils.isExists(fs, p));
-    
+
     long expect = System.currentTimeMillis() + 1000;
     assertNotEquals(expect, fs.getFileStatus(p).getModificationTime());
-    
+
     ManualEnvironmentEdge mockEnv = new ManualEnvironmentEdge();
     mockEnv.setValue(expect);
     EnvironmentEdgeManager.injectEdge(mockEnv);
-    
+
     String dstFile = UUID.randomUUID().toString();
     Path dst = new Path(testDir , dstFile);
-    
+
     assertTrue(FSUtils.renameAndSetModifyTime(fs, p, dst));
     assertFalse("The moved file should not be present", FSUtils.isExists(fs, p));
     assertTrue("The dst file should be present", FSUtils.isExists(fs, dst));

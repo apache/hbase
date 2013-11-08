@@ -18,14 +18,13 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -51,7 +50,7 @@ public class TestDurability {
   private static FileSystem FS;
   private static MiniDFSCluster CLUSTER;
   private static Configuration CONF;
-  private static final Path DIR = TEST_UTIL.getDataTestDir("TestDurability");
+  private static Path DIR;
 
   private static byte[] FAMILY = Bytes.toBytes("family");
   private static byte[] ROW = Bytes.toBytes("row");
@@ -66,6 +65,7 @@ public class TestDurability {
 
     CLUSTER = TEST_UTIL.getDFSCluster();
     FS = CLUSTER.getFileSystem();
+    DIR = TEST_UTIL.getDataTestDirOnTestFS("TestDurability");
   }
 
   @AfterClass
@@ -162,7 +162,7 @@ public class TestDurability {
           throw new IOException("Failed delete of " + path);
         }
       }
-      return HRegion.createHRegion(info, path, HBaseConfiguration.create(), htd, log);
+      return HRegion.createHRegion(info, path, CONF, htd, log);
     }
 
 }
