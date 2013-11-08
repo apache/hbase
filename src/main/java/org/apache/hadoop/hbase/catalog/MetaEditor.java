@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 
 /**
@@ -355,6 +356,24 @@ public class MetaEditor {
     if (regionsToAdd != null && regionsToAdd.size() > 0) {
       LOG.debug("Add to META, regions: " + regionsToAdd);
     }
+  }
+
+  /**
+   * Overwrites the specified regions from hbase:meta
+   * @param catalogTracker
+   * @param regionInfos list of regions to be added to META
+   * @throws IOException
+   */
+  public static void overwriteRegions(CatalogTracker catalogTracker,
+      List<HRegionInfo> regionInfos) throws IOException {
+    deleteRegions(catalogTracker, regionInfos);
+    // Why sleep? This is the easiest way to ensure that the previous deletes does not
+    // eclipse the following puts, that might happen in the same ts from the server.
+    // See HBASE-9906, and HBASE-9879. Once either HBASE-9879, HBASE-8770 is fixed,
+    // or HBASE-9905 is fixed and meta uses seqIds, we do not need the sleep.
+    Threads.sleep(20);
+    addRegionsToMeta(catalogTracker, regionInfos);
+    LOG.info("Overwritten " + regionInfos);
   }
 
   public static HRegionInfo getHRegionInfo(
