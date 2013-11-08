@@ -997,6 +997,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
           this.meta);
       seeker = dataBlockEncoder.createSeeker(reader.getComparator(), decodingCtx);
     }
+
+    @Override
+    public boolean isSeeked(){
+      return this.block != null;
+    }
+
     /**
      * Updates the current block to be the given {@link HFileBlock}. Seeks to
      * the the first key/value pair.
@@ -1015,6 +1021,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
       updateDataBlockEncoder(block);
       seeker.setCurrentBuffer(getEncodedBuffer(newBlock));
       blockFetches++;
+
+      // Reset the next indexed key
+      this.nextIndexedKey = null;
     }
 
     private void updateDataBlockEncoder(HFileBlock curBlock) {
