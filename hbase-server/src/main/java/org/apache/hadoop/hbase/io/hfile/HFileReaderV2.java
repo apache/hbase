@@ -597,6 +597,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       return curBlock;
     }
+
+    @Override
+    public boolean isSeeked(){
+      return this.block != null;
+    }
+
     /**
      * Compare the given key against the current key
      * @param comparator
@@ -992,6 +998,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       seeker.setCurrentBuffer(getEncodedBuffer(newBlock));
       blockFetches++;
+
+      // Reset the next indexed key
+      this.nextIndexedKey = null;
     }
 
     private ByteBuffer getEncodedBuffer(HFileBlock newBlock) {
