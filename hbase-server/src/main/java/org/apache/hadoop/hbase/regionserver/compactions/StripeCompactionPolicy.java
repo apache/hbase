@@ -114,7 +114,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     Collection<StoreFile> allFiles = si.getStorefiles();
     if (StoreUtils.hasReferences(allFiles)) {
       LOG.debug("There are references in the store; compacting all files");
-      long targetKvs = estimateTargetKvs(allFiles, config.getSplitCount()).getFirst();
+      long targetKvs = estimateTargetKvs(allFiles, config.getInitialCount()).getFirst();
       SplitStripeCompactionRequest request = new SplitStripeCompactionRequest(
           allFiles, OPEN_KEY, OPEN_KEY, targetKvs);
       request.setMajorRangeFull();
@@ -506,35 +506,6 @@ public class StripeCompactionPolicy extends CompactionPolicy {
      * See {@link #setMajorRange(byte[], byte[])}. */
     public void setMajorRangeFull() {
       setMajorRange(this.startRow, this.endRow);
-    }
-  }
-
-  /** Helper class used to calculate size related things */
-  private static class StripeSizes {
-    public final ArrayList<Long> kvCounts;
-    public final ArrayList<Long> fileSizes;
-    public double avgKvCount = 0;
-    public long minKvCount = Long.MAX_VALUE, maxKvCount = Long.MIN_VALUE;
-    public int minIndex = -1, maxIndex = -1;
-
-    public StripeSizes(List<ImmutableList<StoreFile>> stripes) {
-      assert !stripes.isEmpty();
-      kvCounts = new ArrayList<Long>(stripes.size());
-      fileSizes = new ArrayList<Long>(stripes.size());
-      for (int i = 0; i < stripes.size(); ++i) {
-        long kvCount = getTotalKvCount(stripes.get(i));
-        fileSizes.add(getTotalFileSize(stripes.get(i)));
-        kvCounts.add(kvCount);
-        avgKvCount += (double)(kvCount - avgKvCount) / (i + 1);
-        if (minKvCount > kvCount) {
-          minIndex = i;
-          minKvCount = kvCount;
-        }
-        if (maxKvCount < kvCount) {
-          maxIndex = i;
-          maxKvCount = kvCount;
-        }
-      }
     }
   }
 

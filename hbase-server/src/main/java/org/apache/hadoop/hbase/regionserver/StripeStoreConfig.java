@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 
 /**
  * Configuration class for stripe store and compactions.
@@ -79,14 +80,17 @@ public class StripeStoreConfig {
   private static final double EPSILON = 0.001; // good enough for this, not a real epsilon.
   public StripeStoreConfig(Configuration config, StoreConfigInformation sci) {
     this.level0CompactMinFiles = config.getInt(MIN_FILES_L0_KEY, 4);
-    this.stripeCompactMinFiles = config.getInt(MIN_FILES_KEY, 3);
-    this.stripeCompactMaxFiles = config.getInt(MAX_FILES_KEY, 10);
-    this.maxRegionSplitImbalance = getFloat(config, MAX_REGION_SPLIT_IMBALANCE_KEY, 1.5f, true);
     this.flushIntoL0 = config.getBoolean(FLUSH_TO_L0_KEY, false);
+    int minMinFiles = flushIntoL0 ? 3 : 4; // make sure not to compact tiny files too often.
+    int minFiles = config.getInt(CompactionConfiguration.MIN_KEY, -1);
+    this.stripeCompactMinFiles = config.getInt(MIN_FILES_KEY, Math.max(minMinFiles, minFiles));
+    this.stripeCompactMaxFiles = config.getInt(MAX_FILES_KEY,
+        config.getInt(CompactionConfiguration.MAX_KEY, 10));
+    this.maxRegionSplitImbalance = getFloat(config, MAX_REGION_SPLIT_IMBALANCE_KEY, 1.5f, true);
 
     float splitPartCount = getFloat(config, SPLIT_PARTS_KEY, 2f, true);
     if (Math.abs(splitPartCount - 1.0) < EPSILON) {
-      LOG.error("Split part count cannot be 1 (" + this.splitPartCount + "), using the default");
+      LOG.error("Split part count cannot be 1 (" + splitPartCount + "), using the default");
       splitPartCount = 2f;
     }
     this.splitPartCount = splitPartCount;

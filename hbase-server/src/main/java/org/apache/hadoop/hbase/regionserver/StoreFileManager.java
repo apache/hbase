@@ -48,7 +48,7 @@ public interface StoreFileManager {
 
   /**
    * Adds new files, either for from MemStore flush or bulk insert, into the structure.
-   * @param sf New store file.
+   * @param sfs New store files.
    */
   void insertNewFiles(Collection<StoreFile> sfs) throws IOException;
 

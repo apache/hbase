@@ -48,6 +48,8 @@ public class CompactionConfiguration {
 
   private static final String CONFIG_PREFIX = "hbase.hstore.compaction.";
   public static final String RATIO_KEY = CONFIG_PREFIX + "ratio";
+  public static final String MIN_KEY = CONFIG_PREFIX + "min";
+  public static final String MAX_KEY = CONFIG_PREFIX + "max";
 
   Configuration conf;
   StoreConfigInformation storeConfigInfo;
@@ -70,9 +72,9 @@ public class CompactionConfiguration {
     maxCompactSize = conf.getLong(CONFIG_PREFIX + "max.size", Long.MAX_VALUE);
     minCompactSize = conf.getLong(CONFIG_PREFIX + "min.size",
         storeConfigInfo.getMemstoreFlushSize());
-    minFilesToCompact = Math.max(2, conf.getInt(CONFIG_PREFIX + "min",
+    minFilesToCompact = Math.max(2, conf.getInt(MIN_KEY,
           /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
-    maxFilesToCompact = conf.getInt(CONFIG_PREFIX + "max", 10);
+    maxFilesToCompact = conf.getInt(MAX_KEY, 10);
     compactionRatio = conf.getFloat(RATIO_KEY, 1.2F);
     offPeekCompactionRatio = conf.getFloat(CONFIG_PREFIX + "ratio.offpeak", 5.0F);
 

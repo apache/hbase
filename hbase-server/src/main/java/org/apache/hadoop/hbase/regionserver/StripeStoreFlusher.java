@@ -89,7 +89,9 @@ public class StripeStoreFlusher extends StoreFlusher {
       }
     } finally {
       if (!success && (mw != null)) {
-        result.clear();
+        if (result != null) {
+          result.clear();
+        }
         for (Path leftoverFile : mw.abortWriters()) {
           try {
             store.getFileSystem().delete(leftoverFile, false);

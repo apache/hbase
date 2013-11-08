@@ -329,7 +329,7 @@ public class TestStripeCompactionPolicy {
     Configuration conf = HBaseConfiguration.create();
     StripeCompactionPolicy policy = createPolicy(conf);
     // Verify the deletes can be dropped if there are no L0 files.
-    Long[][] stripes = new Long[][] { new Long[] { 3L, 2L, 2L }, new Long[] { 6L } };
+    Long[][] stripes = new Long[][] { new Long[] { 3L, 2L, 2L, 2L }, new Long[] { 6L } };
     StripeInformationProvider si = createStripesWithSizes(0, 0, stripes);
     verifySingleStripeCompaction(policy, si, 0, true);
     // But cannot be dropped if there are.
