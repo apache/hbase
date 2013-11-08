@@ -572,7 +572,7 @@ public class TableAuthManager {
   }
 
   public void removeNamespace(byte[] ns) {
-    nsCache.remove(ns);
+    nsCache.remove(Bytes.toString(ns));
   }
 
   public void removeTable(TableName table) {
