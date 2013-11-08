@@ -981,6 +981,7 @@ public class HStore implements Store {
         for (Path newFile : newFiles) {
           // Create storefile around what we wrote with a reader on it.
           StoreFile sf = createStoreFileAndReader(newFile);
+          sf.closeReader(true);
           sfs.add(sf);
         }
         return sfs;

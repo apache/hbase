@@ -126,7 +126,6 @@ import org.apache.zookeeper.ZooKeeper.States;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HBaseTestingUtility extends HBaseCommonTestingUtility {
-   protected Configuration conf;
    private MiniZooKeeperCluster zkCluster = null;
 
   /**
@@ -214,7 +213,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   public HBaseTestingUtility(Configuration conf) {
-    this.conf = conf;
+    super(conf);
 
     // a hbase checksum verification failure will cause unit tests to fail
     ChecksumUtil.generateExceptionForChecksumFailureForTest(true);
@@ -257,8 +256,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * <code>Configuration c = new Configuration(INSTANCE.getConfiguration());</code>
    * @return Instance of Configuration.
    */
+  @Override
   public Configuration getConfiguration() {
-    return this.conf;
+    return super.getConfiguration();
   }
 
   public void setHBaseCluster(HBaseCluster hbaseCluster) {
@@ -303,17 +303,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       "mapred.local.dir",
       testPath, "mapred-local-dir");
 
-    createSubDir(
-      "hbase.local.dir",
-      testPath, "hbase-local-dir");
     return testPath;
-  }
-
-  private void createSubDir(String propertyName, Path parent, String subDirName){
-    Path newPath= new Path(parent, subDirName);
-    File newDir = new File(newPath.toString()).getAbsoluteFile();
-    if (deleteOnExit()) newDir.deleteOnExit();
-    conf.set(propertyName, newDir.getAbsolutePath());
   }
 
   private void createSubDirAndSystemProperty(

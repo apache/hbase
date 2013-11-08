@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 /**
@@ -38,6 +39,24 @@ import org.apache.hadoop.fs.Path;
 @InterfaceStability.Unstable
 public class HBaseCommonTestingUtility {
   protected static final Log LOG = LogFactory.getLog(HBaseCommonTestingUtility.class);
+
+  protected Configuration conf;
+
+  public HBaseCommonTestingUtility() {
+    this(HBaseConfiguration.create());
+  }
+
+  public HBaseCommonTestingUtility(Configuration conf) {
+    this.conf = conf;
+  }
+
+  /**
+   * Returns this classes's instance of {@link Configuration}.
+   * @return Instance of Configuration.
+   */
+  public Configuration getConfiguration() {
+    return this.conf;
+  }
 
   /**
    * System property key to get base test directory value
@@ -95,7 +114,17 @@ public class HBaseCommonTestingUtility {
     // Set this property so if mapreduce jobs run, they will use this as their home dir.
     System.setProperty("test.build.dir", this.dataTestDir.toString());
     if (deleteOnExit()) this.dataTestDir.deleteOnExit();
+
+    createSubDir("hbase.local.dir", testPath, "hbase-local-dir");
+
     return testPath;
+  }
+
+  protected void createSubDir(String propertyName, Path parent, String subDirName){
+    Path newPath= new Path(parent, subDirName);
+    File newDir = new File(newPath.toString()).getAbsoluteFile();
+    if (deleteOnExit()) newDir.deleteOnExit();
+    conf.set(propertyName, newDir.getAbsolutePath());
   }
 
   /**

@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.hbase.HConstants;
 
 /**
  * This class runs performance benchmarks for {@link HLog}.
@@ -60,7 +59,7 @@ import org.apache.hadoop.hbase.HConstants;
 public final class HLogPerformanceEvaluation extends Configured implements Tool {
   static final Log LOG = LogFactory.getLog(HLogPerformanceEvaluation.class.getName());
 
-  private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private HBaseTestingUtility TEST_UTIL;
 
   static final String TABLE_NAME = "HLogPerformanceEvaluation";
   static final String QUALIFIER_PREFIX = "q";
@@ -69,6 +68,12 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
   private int numQualifiers = 1;
   private int valueSize = 512;
   private int keySize = 16;
+
+  @Override
+  public void setConf(Configuration conf) {
+    super.setConf(conf);
+    TEST_UTIL = new HBaseTestingUtility(conf);
+  }
 
   /**
    * Perform HLog.append() of Put object, for the number of iterations requested.
@@ -91,6 +96,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       this.htd = htd;
     }
 
+    @Override
     public void run() {
       byte[] key = new byte[keySize];
       byte[] value = new byte[valueSize];
@@ -181,7 +187,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     LOG.info("FileSystem: " + fs);
     try {
       if (rootRegionDir == null) {
-        rootRegionDir = TEST_UTIL.getDataTestDir("HLogPerformanceEvaluation");
+        rootRegionDir = TEST_UTIL.getDataTestDirOnTestFS("HLogPerformanceEvaluation");
       }
       rootRegionDir = rootRegionDir.makeQualified(fs);
       cleanRegionRootDir(fs, rootRegionDir);
@@ -190,6 +196,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       final long whenToRoll = roll;
       HLog hlog = new FSHLog(fs, rootRegionDir, "wals", getConf()) {
         int appends = 0;
+        @Override
         protected void doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit,
             HTableDescriptor htd)
         throws IOException {

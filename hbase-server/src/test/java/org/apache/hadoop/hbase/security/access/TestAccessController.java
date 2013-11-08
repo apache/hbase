@@ -233,12 +233,14 @@ public class TestAccessController extends SecureTestUtil {
     assertEquals(0, AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
   }
 
+  @Override
   public void verifyAllowed(PrivilegedExceptionAction action, User... users) throws Exception {
     for (User user : users) {
       verifyAllowed(user, action);
     }
   }
 
+  @Override
   public void verifyDenied(User user, PrivilegedExceptionAction... actions) throws Exception {
     for (PrivilegedExceptionAction action : actions) {
       try {
@@ -289,6 +291,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
+  @Override
   public void verifyDenied(PrivilegedExceptionAction action, User... users) throws Exception {
     for (User user : users) {
       verifyDenied(user, action);
@@ -298,6 +301,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testTableCreate() throws Exception {
     PrivilegedExceptionAction createTable = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testnewtable"));
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
@@ -316,6 +320,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testTableModify() throws Exception {
     PrivilegedExceptionAction modifyTable = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
@@ -333,6 +338,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testTableDelete() throws Exception {
     PrivilegedExceptionAction deleteTable = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER
             .preDeleteTable(ObserverContext.createAndPrepare(CP_ENV, null), TEST_TABLE.getTableName());
@@ -348,6 +354,7 @@ public class TestAccessController extends SecureTestUtil {
   public void testAddColumn() throws Exception {
     final HColumnDescriptor hcd = new HColumnDescriptor("fam_new");
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preAddColumn(ObserverContext.createAndPrepare(CP_ENV, null), TEST_TABLE.getTableName(),
           hcd);
@@ -364,6 +371,7 @@ public class TestAccessController extends SecureTestUtil {
     final HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
     hcd.setMaxVersions(10);
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preModifyColumn(ObserverContext.createAndPrepare(CP_ENV, null),
           TEST_TABLE.getTableName(), hcd);
@@ -378,6 +386,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testDeleteColumn() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDeleteColumn(ObserverContext.createAndPrepare(CP_ENV, null),
           TEST_TABLE.getTableName(), TEST_FAMILY);
@@ -392,6 +401,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testTableDisable() throws Exception {
     PrivilegedExceptionAction disableTable = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDisableTable(ObserverContext.createAndPrepare(CP_ENV, null),
           TEST_TABLE.getTableName());
@@ -400,6 +410,7 @@ public class TestAccessController extends SecureTestUtil {
     };
 
     PrivilegedExceptionAction disableAclTable = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDisableTable(ObserverContext.createAndPrepare(CP_ENV, null),
             AccessControlLists.ACL_TABLE_NAME);
@@ -417,6 +428,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testTableEnable() throws Exception {
     PrivilegedExceptionAction enableTable = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER
             .preEnableTable(ObserverContext.createAndPrepare(CP_ENV, null), TEST_TABLE.getTableName());
@@ -440,6 +452,7 @@ public class TestAccessController extends SecureTestUtil {
     final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet().iterator().next();
     final ServerName server = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preMove(ObserverContext.createAndPrepare(CP_ENV, null),
           firstRegion.getKey(), server, server);
@@ -463,6 +476,7 @@ public class TestAccessController extends SecureTestUtil {
     final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet().iterator().next();
 
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preAssign(ObserverContext.createAndPrepare(CP_ENV, null),
           firstRegion.getKey());
@@ -486,6 +500,7 @@ public class TestAccessController extends SecureTestUtil {
     final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet().iterator().next();
 
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preUnassign(ObserverContext.createAndPrepare(CP_ENV, null),
           firstRegion.getKey(), false);
@@ -509,6 +524,7 @@ public class TestAccessController extends SecureTestUtil {
     final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet().iterator().next();
 
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preRegionOffline(ObserverContext.createAndPrepare(CP_ENV, null),
           firstRegion.getKey());
@@ -523,6 +539,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testBalance() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preBalance(ObserverContext.createAndPrepare(CP_ENV, null));
         return null;
@@ -536,6 +553,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testBalanceSwitch() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preBalanceSwitch(ObserverContext.createAndPrepare(CP_ENV, null), true);
         return null;
@@ -549,6 +567,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testShutdown() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preShutdown(ObserverContext.createAndPrepare(CP_ENV, null));
         return null;
@@ -562,6 +581,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testStopMaster() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preStopMaster(ObserverContext.createAndPrepare(CP_ENV, null));
         return null;
@@ -580,6 +600,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testSplit() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preSplit(ObserverContext.createAndPrepare(RCP_ENV, null));
         return null;
@@ -593,6 +614,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testSplitWithSplitRow() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preSplit(
             ObserverContext.createAndPrepare(RCP_ENV, null),
@@ -609,6 +631,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testFlush() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preFlush(ObserverContext.createAndPrepare(RCP_ENV, null));
         return null;
@@ -622,6 +645,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testCompact() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCompact(ObserverContext.createAndPrepare(RCP_ENV, null), null, null,
           ScanType.COMPACT_RETAIN_DELETES);
@@ -636,6 +660,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testPreCompactSelection() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCompactSelection(ObserverContext.createAndPrepare(RCP_ENV, null), null, null);
         return null;
@@ -660,6 +685,7 @@ public class TestAccessController extends SecureTestUtil {
   public void testRead() throws Exception {
     // get action
     PrivilegedExceptionAction getAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Get g = new Get(Bytes.toBytes("random_row"));
         g.addFamily(TEST_FAMILY);
@@ -676,6 +702,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // action for scanning
     PrivilegedExceptionAction scanAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Scan s = new Scan();
         s.addFamily(TEST_FAMILY);
@@ -705,6 +732,7 @@ public class TestAccessController extends SecureTestUtil {
   public void testWrite() throws Exception {
     // put action
     PrivilegedExceptionAction putAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Put p = new Put(Bytes.toBytes("random_row"));
         p.add(TEST_FAMILY, Bytes.toBytes("Qualifier"), Bytes.toBytes(1));
@@ -721,6 +749,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // delete action
     PrivilegedExceptionAction deleteAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Delete d = new Delete(Bytes.toBytes("random_row"));
         d.deleteFamily(TEST_FAMILY);
@@ -737,6 +766,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // increment action
     PrivilegedExceptionAction incrementAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Increment inc = new Increment(Bytes.toBytes("random_row"));
         inc.addColumn(TEST_FAMILY, Bytes.toBytes("Qualifier"), 1);
@@ -756,6 +786,7 @@ public class TestAccessController extends SecureTestUtil {
   public void testReadWrite() throws Exception {
     // action for checkAndDelete
     PrivilegedExceptionAction checkAndDeleteAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Delete d = new Delete(Bytes.toBytes("random_row"));
         d.deleteFamily(TEST_FAMILY);
@@ -773,6 +804,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // action for checkAndPut()
     PrivilegedExceptionAction checkAndPut = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Put p = new Put(Bytes.toBytes("random_row"));
         p.add(TEST_FAMILY, Bytes.toBytes("Qualifier"), Bytes.toBytes(1));
@@ -792,13 +824,14 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testBulkLoad() throws Exception {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    final Path dir = TEST_UTIL.getDataTestDir("testBulkLoad");
+    final Path dir = TEST_UTIL.getDataTestDirOnTestFS("testBulkLoad");
     fs.mkdirs(dir);
     //need to make it globally writable
     //so users creating HFiles have write permissions
     fs.setPermission(dir, FsPermission.valueOf("-rwxrwxrwx"));
 
     PrivilegedExceptionAction bulkLoadAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         int numRows = 3;
 
@@ -903,6 +936,7 @@ public class TestAccessController extends SecureTestUtil {
   public void testAppend() throws Exception {
 
     PrivilegedExceptionAction appendAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         byte[] row = Bytes.toBytes("random_row");
         byte[] qualifier = Bytes.toBytes("q");
@@ -929,6 +963,7 @@ public class TestAccessController extends SecureTestUtil {
   public void testGrantRevoke() throws Exception {
 
     PrivilegedExceptionAction grantAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
         try {
@@ -945,6 +980,7 @@ public class TestAccessController extends SecureTestUtil {
     };
 
     PrivilegedExceptionAction revokeAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
         try {
@@ -961,6 +997,7 @@ public class TestAccessController extends SecureTestUtil {
     };
 
     PrivilegedExceptionAction getPermissionsAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
         try {
@@ -1012,6 +1049,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // prepare actions:
     PrivilegedExceptionAction putActionAll = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Put p = new Put(Bytes.toBytes("a"));
         p.add(family1, qualifier, Bytes.toBytes("v1"));
@@ -1026,6 +1064,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
     PrivilegedExceptionAction putAction1 = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Put p = new Put(Bytes.toBytes("a"));
         p.add(family1, qualifier, Bytes.toBytes("v1"));
@@ -1039,6 +1078,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
     PrivilegedExceptionAction putAction2 = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Put p = new Put(Bytes.toBytes("a"));
         p.add(family2, qualifier, Bytes.toBytes("v2"));
@@ -1052,6 +1092,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
     PrivilegedExceptionAction getActionAll = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Get g = new Get(Bytes.toBytes("random_row"));
         g.addFamily(family1);
@@ -1066,6 +1107,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
     PrivilegedExceptionAction getAction1 = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Get g = new Get(Bytes.toBytes("random_row"));
         g.addFamily(family1);
@@ -1079,6 +1121,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
     PrivilegedExceptionAction getAction2 = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Get g = new Get(Bytes.toBytes("random_row"));
         g.addFamily(family2);
@@ -1092,6 +1135,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
     PrivilegedExceptionAction deleteActionAll = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Delete d = new Delete(Bytes.toBytes("random_row"));
         d.deleteFamily(family1);
@@ -1106,6 +1150,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
     PrivilegedExceptionAction deleteAction1 = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Delete d = new Delete(Bytes.toBytes("random_row"));
         d.deleteFamily(family1);
@@ -1119,6 +1164,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
     PrivilegedExceptionAction deleteAction2 = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Delete d = new Delete(Bytes.toBytes("random_row"));
         d.deleteFamily(family2);
@@ -1323,6 +1369,7 @@ public class TestAccessController extends SecureTestUtil {
     User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), "user", new String[0]);
 
     PrivilegedExceptionAction getQualifierAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Get g = new Get(Bytes.toBytes("random_row"));
         g.addColumn(family1, qualifier);
@@ -1336,6 +1383,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
     PrivilegedExceptionAction putQualifierAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Put p = new Put(Bytes.toBytes("random_row"));
         p.add(family1, qualifier, Bytes.toBytes("v1"));
@@ -1349,6 +1397,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
     PrivilegedExceptionAction deleteQualifierAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         Delete d = new Delete(Bytes.toBytes("random_row"));
         d.deleteColumn(family1, qualifier);
@@ -1828,6 +1877,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testStopRegionServer() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preStopRegionServer(ObserverContext.createAndPrepare(RSCP_ENV, null));
         return null;
@@ -1841,6 +1891,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testOpenRegion() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preOpen(ObserverContext.createAndPrepare(RCP_ENV, null));
         return null;
@@ -1854,6 +1905,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testCloseRegion() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preClose(ObserverContext.createAndPrepare(RCP_ENV, null), false);
         return null;
@@ -1867,6 +1919,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testSnapshot() throws Exception {
     PrivilegedExceptionAction snapshotAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
           null, null);
@@ -1875,6 +1928,7 @@ public class TestAccessController extends SecureTestUtil {
     };
 
     PrivilegedExceptionAction deleteAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDeleteSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
           null);
@@ -1883,6 +1937,7 @@ public class TestAccessController extends SecureTestUtil {
     };
 
     PrivilegedExceptionAction restoreAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preRestoreSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
           null, null);
@@ -1891,6 +1946,7 @@ public class TestAccessController extends SecureTestUtil {
     };
 
     PrivilegedExceptionAction cloneAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCloneSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
           null, null);
@@ -1952,6 +2008,7 @@ public class TestAccessController extends SecureTestUtil {
           .iterator().next();
 
       PrivilegedExceptionAction moveAction = new PrivilegedExceptionAction() {
+        @Override
         public Object run() throws Exception {
           admin.move(firstRegion.getKey().getEncodedNameAsBytes(),
               Bytes.toBytes(newRs.getServerName().getServerName()));
@@ -1977,6 +2034,7 @@ public class TestAccessController extends SecureTestUtil {
       // Verify write permission for user "admin2" who has the global
       // permissions.
       PrivilegedExceptionAction putAction = new PrivilegedExceptionAction() {
+        @Override
         public Object run() throws Exception {
           Put put = new Put(Bytes.toBytes("test"));
           put.add(TEST_FAMILY, Bytes.toBytes("qual"), Bytes.toBytes("value"));
@@ -2007,6 +2065,7 @@ public class TestAccessController extends SecureTestUtil {
     }
 
     PrivilegedExceptionAction listTablesAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
         try {
@@ -2019,6 +2078,7 @@ public class TestAccessController extends SecureTestUtil {
     };
 
     PrivilegedExceptionAction getTableDescAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
         try {
@@ -2054,6 +2114,7 @@ public class TestAccessController extends SecureTestUtil {
     }
 
     PrivilegedExceptionAction deleteTableAction = new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
         try {

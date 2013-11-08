@@ -30,7 +30,6 @@ import java.io.FileOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
@@ -41,9 +40,12 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestCoprocessorClassLoader {
-  private static final Configuration conf = HBaseConfiguration.create();
 
   private static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
+  private static final Configuration conf = TEST_UTIL.getConfiguration();
+  static {
+    TEST_UTIL.getDataTestDir(); // prepare data test dir and hbase local dir
+  }
 
   @Test
   public void testCleanupOldJars() throws Exception {

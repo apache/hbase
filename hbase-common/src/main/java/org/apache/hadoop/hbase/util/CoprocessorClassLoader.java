@@ -152,7 +152,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
     synchronized (parentDirLockSet) {
       if (!parentDirLockSet.contains(parentDirStr)) {
         Path parentDir = new Path(parentDirStr);
-        FileSystem fs = parentDir.getFileSystem(conf);
+        FileSystem fs = FileSystem.getLocal(conf);
         fs.delete(parentDir, true); // it's ok if the dir doesn't exist now
         parentDirLockSet.add(parentDirStr);
         if (!fs.mkdirs(parentDir) && !fs.getFileStatus(parentDir).isDir()) {
