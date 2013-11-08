@@ -972,6 +972,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
           includesMemstoreTS);
     }
 
+    @Override
+    public boolean isSeeked(){
+      return this.block != null;
+    }
+
     /**
      * Updates the current block to be the given {@link HFileBlock}. Seeks to
      * the the first key/value pair.
@@ -998,6 +1003,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       seeker.setCurrentBuffer(getEncodedBuffer(newBlock));
       blockFetches++;
+
+      // Reset the next indexed key
+      this.nextIndexedKey = null;
     }
 
     private ByteBuffer getEncodedBuffer(HFileBlock newBlock) {
