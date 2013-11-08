@@ -29,9 +29,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
@@ -92,6 +92,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
           + hTableDescriptor.getTableName());
   }
 
+  @Override
   public RestoreSnapshotHandler prepare() throws IOException {
     return (RestoreSnapshotHandler) super.prepare();
   }
@@ -145,7 +146,6 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       // that are not correct after the restore.
       List<HRegionInfo> hrisToRemove = new LinkedList<HRegionInfo>();
       if (metaChanges.hasRegionsToRemove()) hrisToRemove.addAll(metaChanges.getRegionsToRemove());
-      if (metaChanges.hasRegionsToRestore()) hrisToRemove.addAll(metaChanges.getRegionsToRestore());
       MetaEditor.deleteRegions(catalogTracker, hrisToRemove);
 
       // 4.2 Add the new set of regions to META
@@ -156,8 +156,8 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       // in the snapshot folder.
       hris.clear();
       if (metaChanges.hasRegionsToAdd()) hris.addAll(metaChanges.getRegionsToAdd());
-      if (metaChanges.hasRegionsToRestore()) hris.addAll(metaChanges.getRegionsToRestore());
       MetaEditor.addRegionsToMeta(catalogTracker, hris);
+      MetaEditor.overwriteRegions(catalogTracker, metaChanges.getRegionsToRestore());
       metaChanges.updateMetaParentRegions(catalogTracker, hris);
 
       // At this point the restore is complete. Next step is enabling the table.
