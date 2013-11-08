@@ -32,16 +32,16 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.protobuf.ServiceException;
 
@@ -521,6 +521,24 @@ public class MetaEditor {
     if (regionsToAdd != null && regionsToAdd.size() > 0) {
       LOG.debug("Added " + regionsToAdd);
     }
+  }
+
+  /**
+   * Overwrites the specified regions from hbase:meta
+   * @param catalogTracker
+   * @param regionInfos list of regions to be added to META
+   * @throws IOException
+   */
+  public static void overwriteRegions(CatalogTracker catalogTracker,
+      List<HRegionInfo> regionInfos) throws IOException {
+    deleteRegions(catalogTracker, regionInfos);
+    // Why sleep? This is the easiest way to ensure that the previous deletes does not
+    // eclipse the following puts, that might happen in the same ts from the server.
+    // See HBASE-9906, and HBASE-9879. Once either HBASE-9879, HBASE-8770 is fixed,
+    // or HBASE-9905 is fixed and meta uses seqIds, we do not need the sleep.
+    Threads.sleep(20);
+    addRegionsToMeta(catalogTracker, regionInfos);
+    LOG.info("Overwritten " + regionInfos);
   }
 
   /**
