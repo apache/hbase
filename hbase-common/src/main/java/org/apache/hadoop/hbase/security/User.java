@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 
 /**
  * Wrapper to abstract out usage of user and group information in HBase.
@@ -110,6 +111,25 @@ public abstract class User {
    */
   public abstract void obtainAuthTokenForJob(JobConf job)
       throws IOException, InterruptedException;
+
+  /**
+   * Returns the Token of the specified kind associated with this user,
+   * or null if the Token is not present.
+   *
+   * @param kind the kind of token
+   * @param service service on which the token is supposed to be used
+   * @return the token of the specified kind.
+   */
+  public Token<?> getToken(String kind, String service) throws IOException {
+    for (Token<?> token: ugi.getTokens()) {
+      if (token.getKind().toString().equals(kind) &&
+          (service != null && token.getService().toString().equals(service)))
+      {
+        return token;
+      }
+    }
+    return null;
+  }
 
   @Override
   public boolean equals(Object o) {

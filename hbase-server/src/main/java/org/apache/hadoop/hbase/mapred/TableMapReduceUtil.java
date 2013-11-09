@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -28,8 +29,13 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.MutationSerialization;
 import org.apache.hadoop.hbase.mapreduce.ResultSerialization;
+import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
+import org.apache.hadoop.hbase.security.token.AuthenticationTokenSelector;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.InputFormat;
@@ -37,6 +43,8 @@ import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.jobcontrol.Job;
+import org.apache.hadoop.security.token.Token;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Utility for {@link TableMap} and {@link TableReduce}
@@ -178,14 +186,44 @@ public class TableMapReduceUtil {
 
   public static void initCredentials(JobConf job) throws IOException {
     UserProvider userProvider = UserProvider.instantiate(job);
-    // login the server principal (if using secure Hadoop)
+    if (userProvider.isHadoopSecurityEnabled()) {
+      // propagate delegation related props from launcher job to MR job
+      if (System.getenv("HADOOP_TOKEN_FILE_LOCATION") != null) {
+        job.set("mapreduce.job.credentials.binary", System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
+      }
+    }
+
     if (userProvider.isHBaseSecurityEnabled()) {
       try {
-        userProvider.getCurrent().obtainAuthTokenForJob(job);
+        // login the server principal (if using secure Hadoop)
+        User user = userProvider.getCurrent();
+        Token<AuthenticationTokenIdentifier> authToken = getAuthToken(job, user);
+        if (authToken == null) {
+          user.obtainAuthTokenForJob(job);
+        } else {
+          job.getCredentials().addToken(authToken.getService(), authToken);
+        }
       } catch (InterruptedException ie) {
         ie.printStackTrace();
         Thread.interrupted();
       }
+    }
+  }
+
+  /**
+   * Get the authentication token of the user for the cluster specified in the configuration
+   * @return null if the user does not have the token, otherwise the auth token for the cluster.
+   */
+  private static Token<AuthenticationTokenIdentifier> getAuthToken(Configuration conf, User user)
+      throws IOException, InterruptedException {
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "mr-init-credentials", null);
+    try {
+      String clusterId = ZKClusterId.readClusterIdZNode(zkw);
+      return new AuthenticationTokenSelector().selectToken(new Text(clusterId), user.getUGI().getTokens());
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    } finally {
+      zkw.close();
     }
   }
 
