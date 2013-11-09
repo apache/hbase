@@ -101,6 +101,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   public static String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
 
   private boolean useSecure;
+  private boolean hasForwardedToken;
   private Token<?> userToken;
   private String bulkToken;
   private final boolean assignSeqIds;
@@ -232,7 +233,15 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         //Since delegation token doesn't work in mini cluster
         if (userProvider.isHadoopSecurityEnabled()) {
           FileSystem fs = FileSystem.get(cfg);
-          userToken = fs.getDelegationToken("renewer");
+          userToken = userProvider.getCurrent().getToken("HDFS_DELEGATION_TOKEN",
+                                                         fs.getCanonicalServiceName());
+          if (userToken == null) {
+            hasForwardedToken = false;
+            userToken = fs.getDelegationToken("renewer");
+          } else {
+            hasForwardedToken = true;
+            LOG.info("Use the existing token: " + userToken);
+          }
         }
         bulkToken = new SecureBulkLoadClient(table).prepareBulkLoad(table.getTableName());
       }
@@ -266,7 +275,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
     } finally {
       if(useSecure) {
-        if(userToken != null) {
+        if(userToken != null && !hasForwardedToken) {
           try {
             userToken.cancel(cfg);
           } catch (Exception e) {
