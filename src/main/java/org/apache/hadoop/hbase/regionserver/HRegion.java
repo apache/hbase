@@ -5920,7 +5920,11 @@ public class HRegion implements HeapSize { // , Writable{
         busyWaitDuration * Math.min(multiplier, maxBusyWaitMultiplier));
       if (!lock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
         throw new RegionTooBusyException(
-          "failed to get a lock in " + waitTime + "ms");
+          "failed to get a lock in " + waitTime + " ms. " +
+            "regionName=" + (this.getRegionInfo() == null ? "unknown" :
+            this.getRegionInfo().getRegionNameAsString()) +
+            ", server=" + (this.getRegionServerServices() == null ? "unknown" :
+            this.getRegionServerServices().getServerName()));
       }
     } catch (InterruptedException ie) {
       LOG.info("Interrupted while waiting for a lock");
