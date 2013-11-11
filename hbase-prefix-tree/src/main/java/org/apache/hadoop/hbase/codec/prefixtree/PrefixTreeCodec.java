@@ -79,8 +79,8 @@ public class PrefixTreeCodec implements DataBlockEncoder{
         = (HFileBlockDefaultEncodingContext) blkEncodingCtx;
     encodingCtx.prepareEncoding();
     DataOutputStream dataOut = encodingCtx.getOutputStreamForEncoder();
-    internalEncodeKeyValues(dataOut, in, encodingCtx.getHFileContext().shouldIncludeMvcc(),
-        encodingCtx.getHFileContext().shouldIncludeTags());
+    internalEncodeKeyValues(dataOut, in, encodingCtx.getHFileContext().isIncludesMvcc(),
+        encodingCtx.getHFileContext().isIncludesTags());
 
     //do i need to check this, or will it always be DataBlockEncoding.PREFIX_TREE?
     if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
@@ -130,7 +130,7 @@ public class PrefixTreeCodec implements DataBlockEncoder{
     result.rewind();
     CellSearcher searcher = null;
     try {
-      boolean includesMvcc = decodingCtx.getHFileContext().shouldIncludeMvcc();
+      boolean includesMvcc = decodingCtx.getHFileContext().isIncludesMvcc();
       searcher = DecoderFactory.checkOut(sourceAsBuffer, includesMvcc);
       while (searcher.advance()) {
         KeyValue currentCell = KeyValueUtil.copyToNewKeyValue(searcher.current());
@@ -199,7 +199,7 @@ public class PrefixTreeCodec implements DataBlockEncoder{
           +"table");
     }
 
-    return new PrefixTreeSeeker(decodingCtx.getHFileContext().shouldIncludeMvcc());
+    return new PrefixTreeSeeker(decodingCtx.getHFileContext().isIncludesMvcc());
   }
 
 }

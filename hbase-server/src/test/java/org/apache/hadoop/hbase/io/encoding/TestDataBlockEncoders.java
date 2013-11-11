@@ -81,7 +81,7 @@ public class TestDataBlockEncoders {
                         .withHBaseCheckSum(false)
                         .withIncludesMvcc(includesMemstoreTS)
                         .withIncludesTags(includesTags)
-                        .withCompressionAlgo(algo).build();
+                        .withCompression(algo).build();
     if (encoder != null) {
       return encoder.newDataBlockEncodingContext(encoding,
           HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
@@ -119,7 +119,7 @@ public class TestDataBlockEncoders {
                         .withHBaseCheckSum(false)
                         .withIncludesMvcc(includesMemstoreTS)
                         .withIncludesTags(includesTags)
-                        .withCompressionAlgo(Compression.Algorithm.NONE).build();
+                        .withCompression(Compression.Algorithm.NONE).build();
     actualDataset = encoder.decodeKeyValues(dis, encoder.newDataBlockDecodingContext(meta));
     dataset.rewind();
     actualDataset.rewind();
@@ -224,7 +224,7 @@ public class TestDataBlockEncoders {
                           .withHBaseCheckSum(false)
                           .withIncludesMvcc(includesMemstoreTS)
                           .withIncludesTags(includesTags)
-                          .withCompressionAlgo(Compression.Algorithm.NONE)
+                          .withCompression(Compression.Algorithm.NONE)
                           .build();
       DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
@@ -280,7 +280,7 @@ public class TestDataBlockEncoders {
                           .withHBaseCheckSum(false)
                           .withIncludesMvcc(includesMemstoreTS)
                           .withIncludesTags(includesTags)
-                          .withCompressionAlgo(Compression.Algorithm.NONE)
+                          .withCompression(Compression.Algorithm.NONE)
                           .build();
       DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));

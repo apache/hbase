@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -80,6 +79,8 @@ import com.google.common.primitives.Longs;
  */
 @InterfaceAudience.Private
 public class KeyValue implements Cell, HeapSize, Cloneable {
+  private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<Tag>();
+
   static final Log LOG = LogFactory.getLog(KeyValue.class);
 
   /**
@@ -252,38 +253,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       }
       throw new RuntimeException("Unknown code " + b);
     }
-  }
-
-  /**
-   * @return an iterator over the tags in this KeyValue.
-   */
-  public Iterator<Tag> tagsIterator() {
-    // Subtract -1 to point to the end of the complete tag byte[]
-    final int endOffset = this.offset + this.length - 1;
-    return new Iterator<Tag>() {
-      private int pos = getTagsOffset();
-
-      @Override
-      public boolean hasNext() {
-        return this.pos < endOffset;
-      }
-
-      @Override
-      public Tag next() {
-        if (hasNext()) {
-          short curTagLen = Bytes.toShort(bytes, this.pos);
-          Tag tag = new Tag(bytes, pos, (short) (curTagLen + Bytes.SIZEOF_SHORT));
-          this.pos += Bytes.SIZEOF_SHORT + curTagLen;
-          return tag;
-        }
-        return null;
-      }
-
-      @Override
-      public void remove() {
-        throw new UnsupportedOperationException();
-      }
-    };
   }
 
   /**
@@ -1618,18 +1587,15 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   }
 
   /**
-   * This method may not be right.  But we cannot use the CellUtil.getTagIterator because we don't know
-   * getKeyOffset and getKeyLength
-   * Cannnot use the getKeyOffset and getKeyLength in CellUtil as they are not part of the Cell interface.
-   * Returns any tags embedded in the KeyValue.
+   * Returns any tags embedded in the KeyValue.  Used in testcases.
    * @return The tags
    */
   public List<Tag> getTags() {
     short tagsLength = getTagsLength();
     if (tagsLength == 0) {
-      return new ArrayList<Tag>();
+      return EMPTY_ARRAY_LIST;
     }
-    return Tag.createTags(getBuffer(), getTagsOffset(), tagsLength);
+    return Tag.asList(getBuffer(), getTagsOffset(), tagsLength);
   }
 
   /**

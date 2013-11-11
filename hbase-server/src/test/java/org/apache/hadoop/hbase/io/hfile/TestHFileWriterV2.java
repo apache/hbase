@@ -95,7 +95,7 @@ public class TestHFileWriterV2 {
 
     HFileContext context = new HFileContextBuilder()
                            .withBlockSize(4096)
-                           .withCompressionAlgo(compressAlgo)
+                           .withCompression(compressAlgo)
                            .build();
     HFileWriterV2 writer = (HFileWriterV2)
         new HFileWriterV2.WriterFactoryV2(conf, new CacheConfig(conf))
@@ -141,7 +141,7 @@ public class TestHFileWriterV2 {
                         .withHBaseCheckSum(true)
                         .withIncludesMvcc(false)
                         .withIncludesTags(false)
-                        .withCompressionAlgo(compressAlgo)
+                        .withCompression(compressAlgo)
                         .build();
     
     HFileBlock.FSReader blockReader = new HFileBlock.FSReaderV2(fsdis, fileSize, meta);

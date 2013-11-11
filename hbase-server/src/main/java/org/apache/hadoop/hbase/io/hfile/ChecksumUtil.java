@@ -104,7 +104,7 @@ public class ChecksumUtil {
     // when the minorVersion is 0, thus this is a defensive check for a
     // cannot-happen case. Since this is a cannot-happen case, it is
     // better to return false to indicate a checksum validation failure.
-    if (!block.getHFileContext().shouldUseHBaseChecksum()) {
+    if (!block.getHFileContext().isUseHBaseChecksum()) {
       return false;
     }
 

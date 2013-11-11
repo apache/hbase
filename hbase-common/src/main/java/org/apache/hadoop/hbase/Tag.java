@@ -25,11 +25,9 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
-
 /**
- * <code>&lt;taglength>&lt;tagtype>&lt;tagbytes></code>. <code>tagtype</code> is
- * one byte and <code>taglength</code> maximum is <code>Short.MAX_SIZE</code>.
- * It includes 1 byte type length and actual tag bytes length.
+ * Tags are part of cells and helps to add metadata about the KVs.
+ * Metadata could be ACLs per cells, visibility labels, etc.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -38,8 +36,8 @@ public class Tag {
   public final static int TAG_LENGTH_SIZE = Bytes.SIZEOF_SHORT;
   public final static int INFRASTRUCTURE_SIZE = TYPE_LENGTH_SIZE + TAG_LENGTH_SIZE;
 
-  private byte type;
-  private byte[] bytes;
+  private final byte type;
+  private final byte[] bytes;
   private int offset = 0;
   private short length = 0;
 
@@ -56,7 +54,9 @@ public class Tag {
    * @param tag
    */
   public Tag(byte tagType, byte[] tag) {
-    // <length of tag - 2 bytes><type code - 1 byte><tag>
+    /** <length of tag - 2 bytes><type code - 1 byte><tag>
+     * taglength maximum is Short.MAX_SIZE.  It includes 1 byte type length and actual tag bytes length.
+     */
     short tagLength = (short) ((tag.length & 0x0000ffff) + TYPE_LENGTH_SIZE);
     length = (short) (TAG_LENGTH_SIZE + tagLength);
     bytes = new byte[length];
@@ -119,14 +119,14 @@ public class Tag {
   /**
    * @return Length of actual tag bytes within the backed buffer
    */
-  public int getTagLength() {
+  int getTagLength() {
     return this.length - INFRASTRUCTURE_SIZE;
   }
 
   /**
    * @return Offset of actual tag bytes within the backed buffer
    */
-  public int getTagOffset() {
+  int getTagOffset() {
     return this.offset + INFRASTRUCTURE_SIZE;
   }
 
@@ -145,7 +145,7 @@ public class Tag {
    * @param length
    * @return List of tags
    */
-  public static List<Tag> createTags(byte[] b, int offset, short length) {
+  public static List<Tag> asList(byte[] b, int offset, short length) {
     List<Tag> tags = new ArrayList<Tag>();
     int pos = offset;
     while (pos < offset + length) {

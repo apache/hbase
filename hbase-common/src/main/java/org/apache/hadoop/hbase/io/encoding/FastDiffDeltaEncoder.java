@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.RawComparator;
 
 /**
  * Encoder similar to {@link DiffKeyDeltaEncoder} but supposedly faster.
@@ -362,7 +361,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public ByteBuffer internalDecodeKeyValues(DataInputStream source, int allocateHeaderLength,
+  protected ByteBuffer internalDecodeKeyValues(DataInputStream source, int allocateHeaderLength,
       int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
     int decompressedSize = source.readInt();
     ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +

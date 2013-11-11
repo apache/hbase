@@ -38,7 +38,7 @@ public class HFileContextBuilder {
   /** Whether tags are to be included in the Read/Write **/
   private boolean includesTags;
   /** Compression algorithm used **/
-  private Algorithm compressAlgo = Algorithm.NONE;
+  private Algorithm compression = Algorithm.NONE;
   /** Whether tags to be compressed or not **/
   private boolean compressTags;
   /** the checksum type **/
@@ -65,8 +65,8 @@ public class HFileContextBuilder {
     return this;
   }
 
-  public HFileContextBuilder withCompressionAlgo(Algorithm compressionAlgo) {
-    this.compressAlgo = compressionAlgo;
+  public HFileContextBuilder withCompression(Algorithm compression) {
+    this.compression = compression;
     return this;
   }
 
@@ -101,7 +101,7 @@ public class HFileContextBuilder {
   }
 
   public HFileContext build() {
-    return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compressAlgo,
+    return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
         compressTags, checksumType, bytesPerChecksum, blocksize, encodingOnDisk, encodingInCache);
   }
 }

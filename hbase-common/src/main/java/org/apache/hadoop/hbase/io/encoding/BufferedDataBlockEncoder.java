@@ -52,7 +52,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     HFileBlockDefaultDecodingContext decodingCtx =
         (HFileBlockDefaultDecodingContext) blkDecodingCtx;
-    if (decodingCtx.getHFileContext().shouldCompressTags()) {
+    if (decodingCtx.getHFileContext().isCompressTags()) {
       try {
         TagCompressionContext tagCompressionContext = new TagCompressionContext(LRUDictionary.class);
         decodingCtx.setTagCompressionContext(tagCompressionContext);
@@ -162,7 +162,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         this.samePrefixComparator = null;
       }
       this.decodingCtx = decodingCtx;
-      if (decodingCtx.getHFileContext().shouldCompressTags()) {
+      if (decodingCtx.getHFileContext().isCompressTags()) {
         try {
           tagCompressionContext = new TagCompressionContext(LRUDictionary.class);
         } catch (Exception e) {
@@ -172,11 +172,11 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
     
     protected boolean includesMvcc() {
-      return this.decodingCtx.getHFileContext().shouldIncludeMvcc();
+      return this.decodingCtx.getHFileContext().isIncludesMvcc();
     }
 
     protected boolean includesTags() {
-      return this.decodingCtx.getHFileContext().shouldIncludeTags();
+      return this.decodingCtx.getHFileContext().isIncludesTags();
     }
 
     @Override
@@ -264,7 +264,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       return true;
     }
 
-    public void decodeTags() {
+    protected void decodeTags() {
       current.tagsLength = ByteBufferUtils.readCompressedInt(currentBuffer);
       if (tagCompressionContext != null) {
         // Tag compression is been used. uncompress it into tagsBuffer
@@ -373,7 +373,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
   protected final void afterEncodingKeyValue(ByteBuffer in,
       DataOutputStream out, HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
-    if (encodingCtx.getHFileContext().shouldIncludeTags()) {
+    if (encodingCtx.getHFileContext().isIncludesTags()) {
       short tagsLength = in.getShort();
       ByteBufferUtils.putCompressedInt(out, tagsLength);
       // There are some tags to be written
@@ -388,7 +388,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         }
       }
     }
-    if (encodingCtx.getHFileContext().shouldIncludeMvcc()) {
+    if (encodingCtx.getHFileContext().isIncludesMvcc()) {
       // Copy memstore timestamp from the byte buffer to the output stream.
       long memstoreTS = -1;
       try {
@@ -403,7 +403,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
   protected final void afterDecodingKeyValue(DataInputStream source,
       ByteBuffer dest, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
-    if (decodingCtx.getHFileContext().shouldIncludeTags()) {
+    if (decodingCtx.getHFileContext().isIncludesTags()) {
       short tagsLength = (short) ByteBufferUtils.readCompressedInt(source);
       dest.putShort(tagsLength);
       if (tagsLength > 0) {
@@ -417,7 +417,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         }
       }
     }
-    if (decodingCtx.getHFileContext().shouldIncludeMvcc()) {
+    if (decodingCtx.getHFileContext().isIncludesMvcc()) {
       long memstoreTS = -1;
       try {
         // Copy memstore timestamp from the data input stream to the byte
@@ -452,7 +452,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   public abstract void internalEncodeKeyValues(DataOutputStream out,
       ByteBuffer in, HFileBlockDefaultEncodingContext encodingCtx) throws IOException;
 
-  public abstract ByteBuffer internalDecodeKeyValues(DataInputStream source,
+  protected abstract ByteBuffer internalDecodeKeyValues(DataInputStream source,
       int allocateHeaderLength, int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx)
       throws IOException;
 
@@ -471,7 +471,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     DataOutputStream dataOut =
         ((HFileBlockDefaultEncodingContext) encodingCtx)
         .getOutputStreamForEncoder();
-    if (encodingCtx.getHFileContext().shouldCompressTags()) {
+    if (encodingCtx.getHFileContext().isCompressTags()) {
       try {
         TagCompressionContext tagCompressionContext = new TagCompressionContext(LRUDictionary.class);
         encodingCtx.setTagCompressionContext(tagCompressionContext);

@@ -201,7 +201,7 @@ public class TestHFileBlockCompatibility {
                            .withHBaseCheckSum(false)
                            .withIncludesMvcc(includesMemstoreTS)
                            .withIncludesTags(includesTag)
-                           .withCompressionAlgo(algo)
+                           .withCompression(algo)
                            .build();
         HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
             totalSize, fs, path, meta);
@@ -284,7 +284,7 @@ public class TestHFileBlockCompatibility {
                               .withHBaseCheckSum(false)
                               .withIncludesMvcc(includesMemstoreTS)
                               .withIncludesTags(includesTag)
-                              .withCompressionAlgo(algo)
+                              .withCompression(algo)
                               .build();
           HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
               totalSize, fs, path, meta);
@@ -425,7 +425,7 @@ public class TestHFileBlockCompatibility {
               .withHBaseCheckSum(false)
               .withIncludesMvcc(includesMemstoreTS)
               .withIncludesTags(includesTag)
-              .withCompressionAlgo(compressionAlgorithm)
+              .withCompression(compressionAlgorithm)
               .build();
       defaultBlockEncodingCtx = new HFileBlockDefaultEncodingContext(null, DUMMY_HEADER, meta);
       dataBlockEncodingCtx =

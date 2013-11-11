@@ -113,13 +113,13 @@ public class EncodedDataBlock {
         short tagsLen = 0;
         ByteBufferUtils.skip(decompressedData, klen + vlen);
         // Read the tag length in case when steam contain tags
-        if (meta.shouldIncludeTags()) {
+        if (meta.isIncludesTags()) {
           tagsLen = decompressedData.getShort();
           ByteBufferUtils.skip(decompressedData, tagsLen);
         }
         KeyValue kv = new KeyValue(decompressedData.array(), offset,
             (int) KeyValue.getKeyValueDataStructureSize(klen, vlen, tagsLen));
-        if (meta.shouldIncludeMvcc()) {
+        if (meta.isIncludesMvcc()) {
           long mvccVersion = ByteBufferUtils.readVLong(decompressedData);
           kv.setMvccVersion(mvccVersion);
         }

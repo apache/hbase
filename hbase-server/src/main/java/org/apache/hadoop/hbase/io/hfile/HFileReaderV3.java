@@ -76,7 +76,7 @@ public class HFileReaderV3 extends HFileReaderV2 {
     HFileContext hfileContext = new HFileContextBuilder()
                                 .withIncludesMvcc(this.includesMemstoreTS)
                                 .withHBaseCheckSum(true)
-                                .withCompressionAlgo(this.compressAlgo)
+                                .withCompression(this.compressAlgo)
                                 .build();
     return hfileContext;
   }
@@ -120,9 +120,9 @@ public class HFileReaderV3 extends HFileReaderV2 {
     }
 
     @Override
-    protected int getKvBufSize() {
-      int kvBufSize = super.getKvBufSize();
-      if (reader.hfileContext.shouldIncludeTags()) {
+    protected int getCellBufSize() {
+      int kvBufSize = super.getCellBufSize();
+      if (reader.hfileContext.isIncludesTags()) {
         kvBufSize += Bytes.SIZEOF_SHORT + currTagsLen;
       }
       return kvBufSize;
@@ -134,9 +134,9 @@ public class HFileReaderV3 extends HFileReaderV2 {
     }
 
     @Override
-    protected int getNextKVStartPosition() {
-      int nextKvPos = super.getNextKVStartPosition();
-      if (reader.hfileContext.shouldIncludeTags()) {
+    protected int getNextCellStartPosition() {
+      int nextKvPos = super.getNextCellStartPosition();
+      if (reader.hfileContext.isIncludesTags()) {
         nextKvPos += Bytes.SIZEOF_SHORT + currTagsLen;
       }
       return nextKvPos;
@@ -147,7 +147,7 @@ public class HFileReaderV3 extends HFileReaderV2 {
       currKeyLen = blockBuffer.getInt();
       currValueLen = blockBuffer.getInt();
       ByteBufferUtils.skip(blockBuffer, currKeyLen + currValueLen);
-      if (reader.hfileContext.shouldIncludeTags()) {
+      if (reader.hfileContext.isIncludesTags()) {
         currTagsLen = blockBuffer.getShort();
         ByteBufferUtils.skip(blockBuffer, currTagsLen);
       }
@@ -191,7 +191,7 @@ public class HFileReaderV3 extends HFileReaderV2 {
         klen = blockBuffer.getInt();
         vlen = blockBuffer.getInt();
         ByteBufferUtils.skip(blockBuffer, klen + vlen);
-        if (reader.hfileContext.shouldIncludeTags()) {
+        if (reader.hfileContext.isIncludesTags()) {
           tlen = blockBuffer.getShort();
           ByteBufferUtils.skip(blockBuffer, tlen);
         }
@@ -247,7 +247,7 @@ public class HFileReaderV3 extends HFileReaderV2 {
         // The size of this key/value tuple, including key/value length fields.
         lastKeyValueSize = klen + vlen + memstoreTSLen + KEY_VALUE_LEN_SIZE;
         // include tag length also if tags included with KV
-        if (reader.hfileContext.shouldIncludeTags()) {
+        if (reader.hfileContext.isIncludesTags()) {
           lastKeyValueSize += tlen + Bytes.SIZEOF_SHORT;
         }
         blockBuffer.position(blockBuffer.position() + lastKeyValueSize);

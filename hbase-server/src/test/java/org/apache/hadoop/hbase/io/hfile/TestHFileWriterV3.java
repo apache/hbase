@@ -118,7 +118,7 @@ public class TestHFileWriterV3 {
     HFileContext context = new HFileContextBuilder()
                            .withBlockSize(4096)
                            .withIncludesTags(useTags)
-                           .withCompressionAlgo(compressAlgo).build();
+                           .withCompression(compressAlgo).build();
     HFileWriterV3 writer = (HFileWriterV3)
         new HFileWriterV3.WriterFactoryV3(conf, new CacheConfig(conf))
             .withPath(fs, hfilePath)
@@ -170,7 +170,7 @@ public class TestHFileWriterV3 {
     assertEquals(3, trailer.getMajorVersion());
     assertEquals(entryCount, trailer.getEntryCount());
     HFileContext meta = new HFileContextBuilder()
-                        .withCompressionAlgo(compressAlgo)
+                        .withCompression(compressAlgo)
                         .withIncludesMvcc(false)
                         .withIncludesTags(useTags)
                         .withHBaseCheckSum(true).build();

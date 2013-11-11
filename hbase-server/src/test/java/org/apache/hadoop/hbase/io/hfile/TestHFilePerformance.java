@@ -165,7 +165,7 @@ public class TestHFilePerformance extends AbstractHBaseTool {
 
     if ("HFile".equals(fileType)){
         HFileContext meta = new HFileContextBuilder()
-                            .withCompressionAlgo(AbstractHFileWriter.compressionByName(codecName))
+                            .withCompression(AbstractHFileWriter.compressionByName(codecName))
                             .withBlockSize(minBlockSize).build();
         System.out.println("HFile write method: ");
         HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)

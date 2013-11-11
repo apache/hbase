@@ -88,7 +88,7 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public ByteBuffer internalDecodeKeyValues(DataInputStream source, int allocateHeaderLength,
+  protected ByteBuffer internalDecodeKeyValues(DataInputStream source, int allocateHeaderLength,
       int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
     int decompressedSize = source.readInt();
     ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +

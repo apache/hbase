@@ -27,9 +27,8 @@ import org.apache.hadoop.hbase.util.ClassSize;
 
 /**
  * This carries the information on some of the meta data about the HFile. This
- * meta data would be used across the HFileWriter/Readers and the HFileBlocks.
- * This would help to add new information to the HFile.
- * This class is not meant to be immutable.
+ * meta data is used across the HFileWriter/Readers and the HFileBlocks.
+ * This helps to add new information to the HFile.
  */
 @InterfaceAudience.Private
 public class HFileContext implements HeapSize, Cloneable {
@@ -96,29 +95,27 @@ public class HFileContext implements HeapSize, Cloneable {
     return compressAlgo;
   }
 
-  public boolean shouldUseHBaseChecksum() {
+  public boolean isUseHBaseChecksum() {
     return usesHBaseChecksum;
   }
 
-  public boolean shouldIncludeMvcc() {
+  public boolean isIncludesMvcc() {
     return includesMvcc;
   }
 
-  // TODO : This setter should be removed
   public void setIncludesMvcc(boolean includesMvcc) {
     this.includesMvcc = includesMvcc;
   }
 
-  public boolean shouldIncludeTags() {
+  public boolean isIncludesTags() {
     return includesTags;
   }
 
-  // TODO : This setter should be removed?
   public void setIncludesTags(boolean includesTags) {
     this.includesTags = includesTags;
   }
 
-  public boolean shouldCompressTags() {
+  public boolean isCompressTags() {
     return compressTags;
   }
 

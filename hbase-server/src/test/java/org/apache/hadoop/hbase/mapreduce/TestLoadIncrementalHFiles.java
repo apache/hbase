@@ -270,7 +270,7 @@ public class TestLoadIncrementalHFiles {
   {
     HFileContext meta = new HFileContextBuilder()
                         .withBlockSize(BLOCKSIZE)
-                        .withCompressionAlgo(COMPRESSION)
+                        .withCompression(COMPRESSION)
                         .build();
     HFile.Writer writer = HFile.getWriterFactory(configuration, new CacheConfig(configuration))
         .withPath(fs, path)

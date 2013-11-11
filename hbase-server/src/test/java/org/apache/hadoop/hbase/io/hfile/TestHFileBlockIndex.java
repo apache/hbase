@@ -192,7 +192,7 @@ public class TestHFileBlockIndex {
                         .withHBaseCheckSum(true)
                         .withIncludesMvcc(includesMemstoreTS)
                         .withIncludesTags(useTags)
-                        .withCompressionAlgo(compr)
+                        .withCompression(compr)
                         .build();
     HFileBlock.FSReader blockReader = new HFileBlock.FSReaderV2(istream, fs.getFileStatus(path)
         .getLen(), meta);
@@ -246,7 +246,7 @@ public class TestHFileBlockIndex {
                         .withHBaseCheckSum(true)
                         .withIncludesMvcc(includesMemstoreTS)
                         .withIncludesTags(useTags)
-                        .withCompressionAlgo(compr)
+                        .withCompression(compr)
                         .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                         .build();
@@ -520,7 +520,7 @@ public class TestHFileBlockIndex {
       {
         HFileContext meta = new HFileContextBuilder()
                             .withBlockSize(SMALL_BLOCK_SIZE)
-                            .withCompressionAlgo(compr)
+                            .withCompression(compr)
                             .build();
         HFile.Writer writer =
             HFile.getWriterFactory(conf, cacheConf)

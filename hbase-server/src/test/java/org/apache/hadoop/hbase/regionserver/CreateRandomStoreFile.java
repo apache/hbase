@@ -183,7 +183,7 @@ public class CreateRandomStoreFile {
           Integer.valueOf(cmdLine.getOptionValue(INDEX_BLOCK_SIZE_OPTION)));
     }
 
-    HFileContext meta = new HFileContextBuilder().withCompressionAlgo(compr)
+    HFileContext meta = new HFileContextBuilder().withCompression(compr)
                         .withBlockSize(blockSize).build();
     StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf,
         new CacheConfig(conf), fs)

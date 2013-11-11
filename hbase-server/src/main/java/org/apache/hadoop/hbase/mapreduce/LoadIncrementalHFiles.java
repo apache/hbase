@@ -77,7 +77,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -659,7 +658,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       Algorithm compression = familyDescriptor.getCompression();
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
       HFileContext hFileContext = new HFileContextBuilder()
-                                  .withCompressionAlgo(compression)
+                                  .withCompression(compression)
                                   .withChecksumType(HStore.getChecksumType(conf))
                                   .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
                                   .withBlockSize(blocksize)

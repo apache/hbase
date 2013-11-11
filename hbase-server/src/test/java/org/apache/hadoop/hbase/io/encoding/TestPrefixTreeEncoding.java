@@ -101,7 +101,7 @@ public class TestPrefixTreeEncoding {
                         .withHBaseCheckSum(false)
                         .withIncludesMvcc(false)
                         .withIncludesTags(includesTag)
-                        .withCompressionAlgo(Algorithm.NONE).build();
+                        .withCompression(Algorithm.NONE).build();
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         DataBlockEncoding.PREFIX_TREE, new byte[0], meta);
     encoder.encodeKeyValues(dataBuffer, blkEncodingCtx);
@@ -142,7 +142,7 @@ public class TestPrefixTreeEncoding {
                         .withHBaseCheckSum(false)
                         .withIncludesMvcc(false)
                         .withIncludesTags(includesTag)
-                        .withCompressionAlgo(Algorithm.NONE)
+                        .withCompression(Algorithm.NONE)
                         .build();
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         DataBlockEncoding.PREFIX_TREE, new byte[0], meta);
@@ -179,7 +179,7 @@ public class TestPrefixTreeEncoding {
                         .withHBaseCheckSum(false)
                         .withIncludesMvcc(false)
                         .withIncludesTags(includesTag)
-                        .withCompressionAlgo(Algorithm.NONE)
+                        .withCompression(Algorithm.NONE)
                         .build();
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         DataBlockEncoding.PREFIX_TREE, new byte[0], meta);
@@ -201,7 +201,7 @@ public class TestPrefixTreeEncoding {
                         .withHBaseCheckSum(false)
                         .withIncludesMvcc(false)
                         .withIncludesTags(includesTag)
-                        .withCompressionAlgo(Algorithm.NONE)
+                        .withCompression(Algorithm.NONE)
                         .build();
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         DataBlockEncoding.PREFIX_TREE, new byte[0], meta);

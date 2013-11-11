@@ -1,7 +1,3 @@
-package org.apache.hadoop.hbase.codec.prefixtree.encode.other;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,6 +15,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.codec.prefixtree.encode.other;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Specifies the type of columnnode writer.
  */

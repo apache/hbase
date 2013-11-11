@@ -146,7 +146,7 @@ public class HFileWriterV3 extends HFileWriterV2 {
       out.write(key, koffset, klength);
       out.write(value, voffset, vlength);
       // Write the additional tag into the stream
-      if (hFileContext.shouldIncludeTags()) {
+      if (hFileContext.isIncludesTags()) {
         out.writeShort((short) tagsLength);
         if (tagsLength > 0) {
           out.write(tag, tagsOffset, tagsLength);
@@ -155,7 +155,7 @@ public class HFileWriterV3 extends HFileWriterV2 {
           }
         }
       }
-      if (this.hFileContext.shouldIncludeMvcc()) {
+      if (this.hFileContext.isIncludesMvcc()) {
         WritableUtils.writeVLong(out, memstoreTS);
       }
     }
@@ -175,12 +175,12 @@ public class HFileWriterV3 extends HFileWriterV2 {
   
   protected void finishFileInfo() throws IOException {
     super.finishFileInfo();
-    if (hFileContext.shouldIncludeTags()) {
+    if (hFileContext.isIncludesTags()) {
       // When tags are not being written in this file, MAX_TAGS_LEN is excluded
       // from the FileInfo
       fileInfo.append(FileInfo.MAX_TAGS_LEN, Bytes.toBytes(this.maxTagsLength), false);
       boolean tagsCompressed = (hFileContext.getEncodingOnDisk() != DataBlockEncoding.NONE)
-          && hFileContext.shouldCompressTags();
+          && hFileContext.isCompressTags();
       fileInfo.append(FileInfo.TAGS_COMPRESSED, Bytes.toBytes(tagsCompressed), false);
     }
   }

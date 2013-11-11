@@ -376,4 +376,42 @@ public final class CellUtil {
       // Serialization is probably preceded by a length (it is in the KeyValueCodec at least).
       Bytes.SIZEOF_INT;
   }
+  
+  
+  /********************* tags *************************************/
+  /**
+   * Util method to iterate through the tags. Used in testcase
+   * 
+   * @param tags
+   * @param offset
+   * @param length
+   * @return
+   */
+  public static Iterator<Tag> tagsIterator(final byte[] tags, final int offset, final short length) {
+    return new Iterator<Tag>() {
+      private int pos = offset;
+      private int endOffset = offset + length - 1;
+
+      @Override
+      public boolean hasNext() {
+        return this.pos < endOffset;
+      }
+
+      @Override
+      public Tag next() {
+        if (hasNext()) {
+          short curTagLen = Bytes.toShort(tags, this.pos);
+          Tag tag = new Tag(tags, pos, (short) (curTagLen + Bytes.SIZEOF_SHORT));
+          this.pos += Bytes.SIZEOF_SHORT + curTagLen;
+          return tag;
+        }
+        return null;
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
 }

@@ -307,7 +307,7 @@ public class TestCacheOnWrite {
     }
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(),
         "test_cache_on_write");
-    HFileContext meta = new HFileContextBuilder().withCompressionAlgo(compress)
+    HFileContext meta = new HFileContextBuilder().withCompression(compress)
         .withBytesPerCheckSum(CKBYTES).withChecksumType(ChecksumType.NULL)
         .withBlockSize(DATA_BLOCK_SIZE).withDataBlockEncodingInCache(encoder.getEncodingInCache())
         .withDataBlockEncodingOnDisk(encoder.getEncodingOnDisk())

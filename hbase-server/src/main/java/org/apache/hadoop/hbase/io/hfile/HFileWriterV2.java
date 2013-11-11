@@ -310,7 +310,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       totalValueLength += vlength;
       out.write(key, koffset, klength);
       out.write(value, voffset, vlength);
-      if (this.hFileContext.shouldIncludeMvcc()) {
+      if (this.hFileContext.isIncludesMvcc()) {
         WritableUtils.writeVLong(out, memstoreTS);
       }
     }
@@ -379,7 +379,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     fsBlockWriter.writeHeaderAndData(outputStream);
     totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
 
-    if (this.hFileContext.shouldIncludeMvcc()) {
+    if (this.hFileContext.isIncludesMvcc()) {
       appendFileInfo(MAX_MEMSTORE_TS_KEY, Bytes.toBytes(maxMemstoreTS));
       appendFileInfo(KEY_VALUE_VERSION, Bytes.toBytes(KEY_VALUE_VER_WITH_MEMSTORE));
     }

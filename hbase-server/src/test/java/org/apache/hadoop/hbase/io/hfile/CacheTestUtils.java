@@ -344,7 +344,7 @@ public class CacheTestUtils {
                           .withHBaseCheckSum(false)
                           .withIncludesMvcc(includesMemstoreTS)
                           .withIncludesTags(false)
-                          .withCompressionAlgo(Compression.Algorithm.NONE)
+                          .withCompression(Compression.Algorithm.NONE)
                           .withBytesPerCheckSum(0)
                           .withChecksumType(ChecksumType.NULL)
                           .build();

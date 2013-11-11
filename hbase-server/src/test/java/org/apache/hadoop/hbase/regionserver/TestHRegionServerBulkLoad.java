@@ -97,7 +97,7 @@ public class TestHRegionServerBulkLoad {
   public static void createHFile(FileSystem fs, Path path, byte[] family,
       byte[] qualifier, byte[] value, int numRows) throws IOException {
     HFileContext context = new HFileContextBuilder().withBlockSize(BLOCKSIZE)
-                            .withCompressionAlgo(COMPRESSION)
+                            .withCompression(COMPRESSION)
                             .build();
     HFile.Writer writer = HFile
         .getWriterFactory(conf, new CacheConfig(conf))

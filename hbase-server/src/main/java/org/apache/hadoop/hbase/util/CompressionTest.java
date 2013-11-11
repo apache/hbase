@@ -114,7 +114,7 @@ public class CompressionTest {
   throws Exception {
     Configuration conf = HBaseConfiguration.create();
     HFileContext context = new HFileContextBuilder()
-                           .withCompressionAlgo(AbstractHFileWriter.compressionByName(codec)).build();
+                           .withCompression(AbstractHFileWriter.compressionByName(codec)).build();
     HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
         .withPath(fs, path)
         .withFileContext(context)

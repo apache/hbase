@@ -126,7 +126,7 @@ public class TestHFileDataBlockEncoder {
     buf.position(headerSize);
     keyValues.rewind();
     buf.put(keyValues);
-    HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(false)
+    HFileContext hfileContext = new HFileContextBuilder().withHBaseCheckSum(false)
                         .withIncludesMvcc(includesMemstoreTS)
                         .withIncludesTags(useTags)
                         .withBlockSize(0)
@@ -134,7 +134,7 @@ public class TestHFileDataBlockEncoder {
                         .build();
     HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
         HFileBlock.FILL_HEADER, 0,
-        0, meta);
+        0, hfileContext);
     HFileBlock cacheBlock = blockEncoder
         .diskToCacheFormat(createBlockOnDisk(block, useTags), false);
     assertEquals(headerSize, cacheBlock.getDummyHeaderForVersion().length);
@@ -205,7 +205,7 @@ public class TestHFileDataBlockEncoder {
                         .withIncludesMvcc(includesMemstoreTS)
                         .withIncludesTags(useTag)
                         .withHBaseCheckSum(true)
-                        .withCompressionAlgo(Algorithm.NONE)
+                        .withCompression(Algorithm.NONE)
                         .withBlockSize(0)
                         .withChecksumType(ChecksumType.NULL)
                         .build();

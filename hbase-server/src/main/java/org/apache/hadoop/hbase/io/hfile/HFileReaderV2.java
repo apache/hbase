@@ -182,7 +182,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
   protected HFileContext createHFileContext(FixedFileTrailer trailer) {
     HFileContext hFileContext  = new HFileContextBuilder()
                                  .withIncludesMvcc(this.includesMemstoreTS)
-                                 .withCompressionAlgo(this.compressAlgo)
+                                 .withCompression(this.compressAlgo)
                                  .withHBaseCheckSum(trailer.getMinorVersion() >= MINOR_VERSION_WITH_CHECKSUM)
                                  .build();
     return hFileContext;
@@ -651,14 +651,14 @@ public class HFileReaderV2 extends AbstractHFileReader {
         return null;
 
       KeyValue ret = new KeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-          + blockBuffer.position(), getKvBufSize(), currKeyLen);
+          + blockBuffer.position(), getCellBufSize(), currKeyLen);
       if (this.reader.shouldIncludeMemstoreTS()) {
         ret.setMvccVersion(currMemstoreTS);
       }
       return ret;
     }
 
-    protected int getKvBufSize() {
+    protected int getCellBufSize() {
       return KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen;
     }
 
@@ -707,7 +707,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       assertSeeked();
 
       try {
-        blockBuffer.position(getNextKVStartPosition());
+        blockBuffer.position(getNextCellStartPosition());
       } catch (IllegalArgumentException e) {
         LOG.error("Current pos = " + blockBuffer.position()
             + "; currKeyLen = " + currKeyLen + "; currValLen = "
@@ -742,7 +742,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       return true;
     }
 
-    protected int getNextKVStartPosition() {
+    protected int getNextCellStartPosition() {
       return blockBuffer.position() + KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen
           + currMemstoreTSLen;
     }

@@ -193,7 +193,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
         Configuration tempConf = new Configuration(conf);
         tempConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
         HFileContextBuilder contextBuilder = new HFileContextBuilder()
-                                    .withCompressionAlgo(AbstractHFileWriter.compressionByName(compression))
+                                    .withCompression(AbstractHFileWriter.compressionByName(compression))
                                     .withChecksumType(HStore.getChecksumType(conf))
                                     .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
                                     .withBlockSize(blockSize);

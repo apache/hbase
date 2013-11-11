@@ -90,7 +90,7 @@ public class TestChecksum {
             + algo);
         FSDataOutputStream os = fs.create(path);
         HFileContext meta = new HFileContextBuilder()
-                            .withCompressionAlgo(algo)
+                            .withCompression(algo)
                             .withIncludesMvcc(true)
                             .withIncludesTags(useTags)
                             .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
@@ -113,7 +113,7 @@ public class TestChecksum {
         // Do a read that purposely introduces checksum verification failures.
         FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
         meta = new HFileContextBuilder()
-              .withCompressionAlgo(algo)
+              .withCompression(algo)
               .withIncludesMvcc(true)
               .withIncludesTags(useTags)
               .withHBaseCheckSum(true)
@@ -197,7 +197,7 @@ public class TestChecksum {
                              algo + bytesPerChecksum);
         FSDataOutputStream os = fs.create(path);
         HFileContext meta = new HFileContextBuilder()
-                            .withCompressionAlgo(algo)
+                            .withCompression(algo)
                             .withIncludesMvcc(true)
                             .withIncludesTags(useTags)
                             .withHBaseCheckSum(true)
@@ -237,7 +237,7 @@ public class TestChecksum {
         FSDataInputStream is = fs.open(path);
         FSDataInputStream nochecksum = hfs.getNoChecksumFs().open(path);
         meta = new HFileContextBuilder()
-               .withCompressionAlgo(algo)
+               .withCompression(algo)
                .withIncludesMvcc(true)
                .withIncludesTags(useTags)
                .withHBaseCheckSum(true)

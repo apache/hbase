@@ -219,7 +219,7 @@ public class TestHFileBlock {
       boolean includesMemstoreTS, boolean includesTag) throws IOException {
     final BlockType blockType = BlockType.DATA;
     HFileContext meta = new HFileContextBuilder()
-                        .withCompressionAlgo(algo)
+                        .withCompression(algo)
                         .withIncludesMvcc(includesMemstoreTS)
                         .withIncludesTags(includesTag)
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
@@ -303,7 +303,7 @@ public class TestHFileBlock {
             + algo);
         FSDataOutputStream os = fs.create(path);
         HFileContext meta = new HFileContextBuilder()
-                           .withCompressionAlgo(algo)
+                           .withCompression(algo)
                            .withIncludesMvcc(includesMemstoreTS)
                            .withIncludesTags(includesTag)
                            .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
@@ -326,7 +326,7 @@ public class TestHFileBlock {
         .withHBaseCheckSum(true)
         .withIncludesMvcc(includesMemstoreTS)
         .withIncludesTags(includesTag)
-        .withCompressionAlgo(algo).build();
+        .withCompression(algo).build();
         HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, totalSize, meta);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
         is.close();
@@ -386,7 +386,7 @@ public class TestHFileBlock {
           HFileDataBlockEncoder dataBlockEncoder =
               new HFileDataBlockEncoderImpl(encoding);
           HFileContext meta = new HFileContextBuilder()
-                              .withCompressionAlgo(algo)
+                              .withCompression(algo)
                               .withIncludesMvcc(includesMemstoreTS)
                               .withIncludesTags(includesTag)
                               .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
@@ -409,7 +409,7 @@ public class TestHFileBlock {
           FSDataInputStream is = fs.open(path);
           meta = new HFileContextBuilder()
                 .withHBaseCheckSum(true)
-                .withCompressionAlgo(algo)
+                .withCompression(algo)
                 .withIncludesMvcc(includesMemstoreTS)
                 .withIncludesTags(includesTag)
                 .build();
@@ -462,7 +462,7 @@ public class TestHFileBlock {
     int headerLen = dummyHeader.length;
     byte[] encodedResultWithHeader = null;
     HFileContext meta = new HFileContextBuilder()
-                        .withCompressionAlgo(algo)
+                        .withCompression(algo)
                         .withIncludesMvcc(includesMemstoreTS)
                         .withIncludesTags(useTag)
                         .build();
@@ -559,7 +559,7 @@ public class TestHFileBlock {
                               .withHBaseCheckSum(true)
                               .withIncludesMvcc(includesMemstoreTS)
                               .withIncludesTags(includesTag)
-                              .withCompressionAlgo(algo).build();
+                              .withCompression(algo).build();
           HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, totalSize, meta);
           long curOffset = 0;
           for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
@@ -742,7 +742,7 @@ public class TestHFileBlock {
                           .withHBaseCheckSum(true)
                           .withIncludesMvcc(includesMemstoreTS)
                           .withIncludesTags(includesTag)
-                          .withCompressionAlgo(compressAlgo)
+                          .withCompression(compressAlgo)
                           .build();
       HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, fileSize, meta);
 
@@ -779,7 +779,7 @@ public class TestHFileBlock {
                         .withHBaseCheckSum(true)
                         .withIncludesMvcc(includesMemstoreTS)
                         .withIncludesTags(includesTag)
-                        .withCompressionAlgo(compressAlgo)
+                        .withCompression(compressAlgo)
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                         .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
                         .build();
@@ -850,7 +850,7 @@ public class TestHFileBlock {
                           .withIncludesMvcc(includesMemstoreTS)
                           .withIncludesTags(includesTag)
                           .withHBaseCheckSum(false)
-                          .withCompressionAlgo(Algorithm.NONE)
+                          .withCompression(Algorithm.NONE)
                           .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                           .withChecksumType(ChecksumType.NULL).build();
       HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,

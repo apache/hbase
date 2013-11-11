@@ -511,7 +511,7 @@ public final class ProtobufUtil {
           byte[] tags;
           if (qv.hasTags()) {
             tags = qv.getTags().toByteArray();
-            Object[] array = Tag.createTags(tags, 0, (short)tags.length).toArray();
+            Object[] array = Tag.asList(tags, 0, (short)tags.length).toArray();
             Tag[] tagArray = new Tag[array.length];
             for(int i = 0; i< array.length; i++) {
               tagArray[i] = (Tag)array[i];

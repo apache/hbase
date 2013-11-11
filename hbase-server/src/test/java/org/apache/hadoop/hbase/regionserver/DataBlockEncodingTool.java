@@ -216,7 +216,7 @@ public class DataBlockEncodingTool {
       }
       DataBlockEncoder d = encoding.getEncoder();
       HFileContext meta = new HFileContextBuilder()
-                          .withCompressionAlgo(Compression.Algorithm.NONE)
+                          .withCompression(Compression.Algorithm.NONE)
                           .withIncludesMvcc(includesMemstoreTS)
                           .withIncludesTags(useTag).build();
       codecs.add(new EncodedDataBlock(d, encoding, rawKVs, meta ));
