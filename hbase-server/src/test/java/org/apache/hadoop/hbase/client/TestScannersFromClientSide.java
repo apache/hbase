@@ -26,12 +26,23 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.RegionStates;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -422,6 +433,85 @@ public class TestScannersFromClientSide {
     kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[5], 1, VALUE));
     verifyResult(result, kvListExp, toLog,
        "Testing offset + multiple CFs + maxResults");
+  }
+
+  /**
+   * Test from client side for scan while the region is reopened
+   * on the same region server.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testScanOnReopenedRegion() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testScanOnReopenedRegion");
+    byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 2);
+
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+
+    Put put;
+    Scan scan;
+    Result result;
+    ResultScanner scanner;
+    boolean toLog = false;
+    List<Cell> kvListExp;
+
+    // table: row, family, c0:0, c1:1
+    put = new Put(ROW);
+    for (int i=0; i < QUALIFIERS.length; i++) {
+      KeyValue kv = new KeyValue(ROW, FAMILY, QUALIFIERS[i], i, VALUE);
+      put.add(kv);
+    }
+    ht.put(put);
+
+    scan = new Scan(ROW);
+    scanner = ht.getScanner(scan);
+
+    HRegionLocation loc = ht.getRegionLocation(ROW);
+    HRegionInfo hri = loc.getRegionInfo();
+    MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
+    byte[] regionName = hri.getRegionName();
+    int i = cluster.getServerWith(regionName);
+    HRegionServer rs = cluster.getRegionServer(i);
+    ProtobufUtil.closeRegion(rs, regionName, false);
+    long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    long timeOut = 300000;
+    while (true) {
+      if (rs.getOnlineRegion(regionName) == null) {
+        break;
+      }
+      assertTrue("Timed out in closing the testing region",
+        EnvironmentEdgeManager.currentTimeMillis() < startTime + timeOut);
+      Thread.sleep(500);
+    }
+
+    // Now open the region again.
+    ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+    try {
+      HMaster master = cluster.getMaster();
+      RegionStates states = master.getAssignmentManager().getRegionStates();
+      states.regionOffline(hri);
+      states.updateRegionState(hri, State.OPENING);
+      ZKAssign.createNodeOffline(zkw, hri, loc.getServerName());
+      ProtobufUtil.openRegion(rs, hri);
+      startTime = EnvironmentEdgeManager.currentTimeMillis();
+      while (true) {
+        if (rs.getOnlineRegion(regionName) != null) {
+          break;
+        }
+        assertTrue("Timed out in open the testing region",
+          EnvironmentEdgeManager.currentTimeMillis() < startTime + timeOut);
+        Thread.sleep(500);
+      }
+    } finally {
+      ZKAssign.deleteNodeFailSilent(zkw, hri);
+    }
+
+    // c0:0, c1:1
+    kvListExp = new ArrayList<Cell>();
+    kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[0], 0, VALUE));
+    kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[1], 1, VALUE));
+    result = scanner.next();
+    verifyResult(result, kvListExp, toLog, "Testing scan on re-opened region");
   }
 
   static void verifyResult(Result result, List<Cell> expKvList, boolean toLog,
