@@ -70,7 +70,11 @@
     <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
     <link href="/static/css/hbase.css" rel="stylesheet">
     <% if (isActionResultPage) { %>
-      <meta http-equiv="refresh" content="5,javascript:history.back()" />
+    <script type="text/javascript">
+    <!--
+        setTimeout("history.back()",5000);
+    -->
+    </script>
     <% } %>
   </head>
 <body>
