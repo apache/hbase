@@ -47,12 +47,16 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
@@ -280,10 +284,16 @@ public class TableMapReduceUtil {
 
   public static void initCredentials(Job job) throws IOException {
     if (User.isHBaseSecurityEnabled(job.getConfiguration())) {
+      // propagate delegation related props from launcher job to MR job
+      if (System.getenv("HADOOP_TOKEN_FILE_LOCATION") != null) {
+        job.getConfiguration().set("mapreduce.job.credentials.binary",
+                                   System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
+      }
+
       try {
         // init credentials for remote cluster
-        String quorumAddress = job.getConfiguration().get(
-            TableOutputFormat.QUORUM_ADDRESS);
+        String quorumAddress = job.getConfiguration().get(TableOutputFormat.QUORUM_ADDRESS);
+        User user = User.getCurrent();
         if (quorumAddress != null) {
           String[] parts = ZKUtil.transformClusterKey(quorumAddress);
           Configuration peerConf = HBaseConfiguration.create(job
@@ -291,14 +301,41 @@ public class TableMapReduceUtil {
           peerConf.set(HConstants.ZOOKEEPER_QUORUM, parts[0]);
           peerConf.set("hbase.zookeeper.client.port", parts[1]);
           peerConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, parts[2]);
-          User.getCurrent().obtainAuthTokenForJob(peerConf, job);
+          obtainAuthTokenForJob(job, peerConf, user);
         }
-        
-        User.getCurrent().obtainAuthTokenForJob(job.getConfiguration(), job);
+
+        obtainAuthTokenForJob(job, job.getConfiguration(), user);
       } catch (InterruptedException ie) {
         LOG.info("Interrupted obtaining user authentication token");
         Thread.interrupted();
       }
+    }
+  }
+
+  private static void obtainAuthTokenForJob(Job job, Configuration conf, User user)
+      throws IOException, InterruptedException {
+    Token<?> authToken = getAuthToken(conf, user);
+    if (authToken == null) {
+      user.obtainAuthTokenForJob(conf, job);
+    } else {
+      job.getCredentials().addToken(authToken.getService(), authToken);
+    }
+  }
+
+  /**
+   * Get the authentication token of the user for the cluster specified in the configuration
+   * @return null if the user does not have the token, otherwise the auth token for the cluster.
+   */
+  private static Token<?> getAuthToken(Configuration conf, User user)
+      throws IOException, InterruptedException {
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "mr-init-credentials", null);
+    try {
+      String clusterId = ClusterId.readClusterIdZNode(zkw);
+      return user.getToken("HBASE_AUTH_TOKEN", clusterId);
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    } finally {
+      zkw.close();
     }
   }
 
