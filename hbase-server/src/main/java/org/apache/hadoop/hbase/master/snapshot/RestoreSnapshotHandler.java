@@ -157,7 +157,9 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       hris.clear();
       if (metaChanges.hasRegionsToAdd()) hris.addAll(metaChanges.getRegionsToAdd());
       MetaEditor.addRegionsToMeta(catalogTracker, hris);
-      MetaEditor.overwriteRegions(catalogTracker, metaChanges.getRegionsToRestore());
+      if (metaChanges.hasRegionsToRestore()) {
+        MetaEditor.overwriteRegions(catalogTracker, metaChanges.getRegionsToRestore());
+      }
       metaChanges.updateMetaParentRegions(catalogTracker, hris);
 
       // At this point the restore is complete. Next step is enabling the table.
