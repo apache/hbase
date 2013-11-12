@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -60,6 +61,7 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -83,12 +85,12 @@ public class TestZooKeeper {
   public static void setUpBeforeClass() throws Exception {
     // Test we can first start the ZK cluster by itself
     Configuration conf = TEST_UTIL.getConfiguration();
+    TEST_UTIL.startMiniDFSCluster(2);
     TEST_UTIL.startMiniZKCluster();
     conf.setBoolean("dfs.support.append", true);
     conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockLoadBalancer.class,
         LoadBalancer.class);
-    TEST_UTIL.startMiniCluster(2);
   }
 
   /**
@@ -104,9 +106,18 @@ public class TestZooKeeper {
    */
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.ensureSomeRegionServersAvailable(2);
+    TEST_UTIL.startMiniHBaseCluster(1, 2);
   }
 
+  @After
+  public void after() throws Exception {
+    try {
+      TEST_UTIL.shutdownMiniHBaseCluster();
+    } finally {
+      TEST_UTIL.getTestFileSystem().delete(FSUtils.getRootDir(TEST_UTIL.getConfiguration()), true);
+      ZKUtil.deleteNodeRecursively(TEST_UTIL.getZooKeeperWatcher(), "/hbase");
+    }
+  }
 
   private ZooKeeperWatcher getZooKeeperWatcher(HConnection c)
   throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
@@ -473,6 +484,7 @@ public class TestZooKeeper {
   public void testRegionAssignmentAfterMasterRecoveryDueToZKExpiry() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     cluster.startRegionServer();
+    cluster.waitForActiveAndReadyMaster(10000);
     HMaster m = cluster.getMaster();
     ZooKeeperWatcher zkw = m.getZooKeeperWatcher();
     int expectedNumOfListeners = zkw.getNumberOfListeners();
@@ -495,6 +507,8 @@ public class TestZooKeeper {
       // clean startup.
       assertFalse("Retain assignment should not be called", MockLoadBalancer.retainAssignCalled);
       // number of listeners should be same as the value before master aborted
+      // wait for new master is initialized
+      cluster.waitForActiveAndReadyMaster(10000);
       assertEquals(expectedNumOfListeners, zkw.getNumberOfListeners());
     } finally {
       admin.close();

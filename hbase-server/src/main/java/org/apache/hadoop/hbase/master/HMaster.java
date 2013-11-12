@@ -202,7 +202,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -573,7 +572,6 @@ MasterServices, Server {
     startupStatus.setDescription("Master startup");
     masterStartTime = System.currentTimeMillis();
     try {
-      this.registeredZKListenersBeforeRecovery = this.zooKeeper.getListeners();
       this.masterAddressManager = new MasterAddressTracker(getZooKeeperWatcher(), this);
       this.masterAddressManager.start();
 
@@ -588,6 +586,7 @@ MasterServices, Server {
         this.infoServer.start();
       }
 
+      this.registeredZKListenersBeforeRecovery = this.zooKeeper.getListeners();
       /*
        * Block on becoming the active master.
        *
@@ -913,10 +912,10 @@ MasterServices, Server {
       this.balancerChore = getAndStartBalancerChore(this);
       this.catalogJanitorChore = new CatalogJanitor(this, this);
       startCatalogJanitorChore();
-
-      status.setStatus("Starting namespace manager");
-      initNamespace();
     }
+
+    status.setStatus("Starting namespace manager");
+    initNamespace();
 
     if (this.cpHost != null) {
       try {
