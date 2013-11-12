@@ -719,22 +719,22 @@ public class HConnectionManager {
         synchronized (this) {
           if (batchPool == null) {
             int maxThreads = conf.getInt("hbase.hconnection.threads.max", 256);
+            int coreThreads = conf.getInt("hbase.hconnection.threads.core", 0);
             if (maxThreads == 0) {
               maxThreads = Runtime.getRuntime().availableProcessors() * 8;
             }
-            long keepAliveTime = conf.getLong(
-                "hbase.hconnection.threads.keepalivetime", 60);
+            long keepAliveTime = conf.getLong("hbase.hconnection.threads.keepalivetime", 10);
             LinkedBlockingQueue<Runnable> workQueue =
-                new LinkedBlockingQueue<Runnable>(256 *
-                    conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
-                    HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
+              new LinkedBlockingQueue<Runnable>(maxThreads *
+                conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+                  HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
             this.batchPool = new ThreadPoolExecutor(
-                maxThreads,
+                coreThreads,
                 maxThreads,
                 keepAliveTime,
                 TimeUnit.SECONDS,
                 workQueue,
-                Threads.newDaemonThreadFactory("hbase-connection-shared-executor"));
+                Threads.newDaemonThreadFactory(toString() + "-shared-"));
           }
           this.cleanupPool = true;
         }
