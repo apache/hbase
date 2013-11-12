@@ -73,6 +73,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.InjectionEvent;
+import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -1478,6 +1480,10 @@ public class Store extends SchemaConfigured implements HeapSize,
 
       // Tell observers that list of StoreFiles has changed.
       notifyChangedReadersObservers();
+
+      InjectionHandler.processEvent(
+          InjectionEvent.STORESCANNER_COMPACTION_RACE, new Object[] {2});
+
       // Finally, delete old store files.
       for (StoreFile hsf: compactedFiles) {
         hsf.deleteReader();
@@ -1790,7 +1796,7 @@ public class Store extends SchemaConfigured implements HeapSize,
    */
   public StoreScanner getScanner(Scan scan,
       final NavigableSet<byte []> targetCols) throws IOException {
-    return new StoreScanner(this, scan, targetCols, getAggregator());
+    return StoreScanner.createScanner(this, scan, targetCols, getAggregator());
   }
 
   @Override
