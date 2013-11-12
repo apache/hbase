@@ -84,7 +84,7 @@ public class WALEdit implements Writable, HeapSize {
   private static final String PREFIX_CLUSTER_KEY = ".";
   private final int VERSION_2 = -1;
 
-  private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
+  private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>(1);
 
   /**
    * This variable contains the information of the column family replication settings and contains
@@ -132,7 +132,7 @@ public class WALEdit implements Writable, HeapSize {
     return kvs.size();
   }
 
-  public List<KeyValue> getKeyValues() {
+  public ArrayList<KeyValue> getKeyValues() {
     return kvs;
   }
 
@@ -218,6 +218,7 @@ public class WALEdit implements Writable, HeapSize {
     }
 
     // read in all the key values
+    kvs.ensureCapacity(length);
     for(int i=0; i< length && decoder.advance(); i++) {
       kvs.add(decoder.current());
     }
@@ -254,7 +255,7 @@ public class WALEdit implements Writable, HeapSize {
   }
 
   public long heapSize() {
-    long ret = 0;
+    long ret = ClassSize.ARRAYLIST;
     for (KeyValue kv : kvs) {
       ret += kv.heapSize();
     }
