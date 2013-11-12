@@ -638,8 +638,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       KeyValue ret = new KeyValue(blockBuffer.array(),
           blockBuffer.arrayOffset() + blockBuffer.position(),
-          KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen,
-          currKeyLen);
+          KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen);
       if (this.reader.shouldIncludeMemstoreTS()) {
         ret.setMemstoreTS(currMemstoreTS);
       }

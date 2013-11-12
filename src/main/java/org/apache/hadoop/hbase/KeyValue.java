@@ -64,7 +64,7 @@ import com.google.common.primitives.Longs;
  * be < <code>Integer.MAX_SIZE</code>.
  * The column does not contain the family/qualifier delimiter, {@link #COLUMN_FAMILY_DELIMITER}
  */
-public class KeyValue implements Writable, HeapSize {
+public class KeyValue implements Writable, HeapSize, Cloneable {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
   // TODO: Group Key-only comparators and operations into a Key class, just
   // for neatness sake, if can figure what to call it.
@@ -276,21 +276,6 @@ public class KeyValue implements Writable, HeapSize {
     this.bytes = bytes;
     this.offset = offset;
     this.length = length;
-  }
-
-  /**
-   * Creates a KeyValue from the specified byte array, starting at offset,
-   * for length <code>length</code>, and a known <code>keyLength</code>.
-   * @param bytes byte array
-   * @param offset offset to start of the KeyValue
-   * @param length length of the KeyValue
-   * @param keyLength length of the key portion of the KeyValue
-   */
-  public KeyValue(final byte [] bytes, final int offset, final int length, final int keyLength) {
-    this.bytes = bytes;
-    this.offset = offset;
-    this.length = length;
-    this.keyLength = keyLength;
   }
 
   /** Constructors that build a new backing byte array from fields */
@@ -632,6 +617,7 @@ public class KeyValue implements Writable, HeapSize {
 
   // Needed doing 'contains' on List.  Only compares the key portion, not the
   // value.
+  @Override
   public boolean equals(Object other) {
     if (!(other instanceof KeyValue)) {
       return false;
@@ -643,6 +629,7 @@ public class KeyValue implements Writable, HeapSize {
       kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
   }
 
+  @Override
   public int hashCode() {
     byte[] b = getBuffer();
     int start = getOffset(), end = getOffset() + getLength();
@@ -834,13 +821,8 @@ public class KeyValue implements Writable, HeapSize {
   /**
    * @return Length of key portion.
    */
-  private int keyLength = 0;
-
   public int getKeyLength() {
-    if (keyLength == 0) {
-      keyLength = Bytes.toInt(this.bytes, this.offset);
-    }
-    return keyLength;
+    return Bytes.toInt(this.bytes, this.offset);
   }
 
   /**
@@ -2265,7 +2247,7 @@ public class KeyValue implements Writable, HeapSize {
   public long heapSize() {
     return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE
         + ClassSize.align(ClassSize.ARRAY) + ClassSize.align(length)
-        + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_LONG);
+        + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_LONG);
   }
 
   // this overload assumes that the length bytes have already been read,
@@ -2274,7 +2256,6 @@ public class KeyValue implements Writable, HeapSize {
   public void readFields(int length, final DataInput in) throws IOException {
     this.length = length;
     this.offset = 0;
-    this.keyLength = 0;
     this.bytes = new byte[this.length];
     in.readFully(this.bytes, 0, this.length);
   }
