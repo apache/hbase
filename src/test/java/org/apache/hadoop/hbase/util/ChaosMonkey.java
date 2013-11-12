@@ -118,7 +118,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       this.util = util;
     }
 
-    public IntegrationTestingUtility getHaseIntegrationTestingUtility() {
+    public IntegrationTestingUtility getHBaseIntegrationTestingUtility() {
       return util;
     }
 
@@ -289,7 +289,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       HTable table = null;
       Collection<ServerName> serverNames;
       try {
-        Configuration conf = context.getHaseIntegrationTestingUtility().getConfiguration();
+        Configuration conf = context.getHBaseIntegrationTestingUtility().getConfiguration();
         table = new HTable(conf, tableName);
         serverNames = table.getRegionLocations().values();
       } catch (IOException e) {
@@ -318,7 +318,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     @Override
     public void perform() throws Exception {
       try {
-        HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
+        HBaseAdmin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
         List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
         Collection<ServerName> serversList = admin.getClusterStatus().getServers();
         ServerName[] servers = serversList.toArray(new ServerName[serversList.size()]);
@@ -471,7 +471,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
 
       LOG.info("Moving " + victimRegions.size() + " regions from " + victimServers.size()
           + " servers to " + targetServers.size() + " different servers");
-      HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
+      HBaseAdmin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
       for (byte[] victimRegion : victimRegions) {
         int targetIx = random.nextInt(targetServers.size());
         admin.move(victimRegion, targetServers.get(targetIx));
@@ -483,7 +483,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     @Override
     public void perform() throws Exception {
       LOG.info("Balancing regions");
-      HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
+      HBaseAdmin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
       boolean result = admin.balancer();
       if (!result) {
         LOG.error("Balancer didn't succeed");
