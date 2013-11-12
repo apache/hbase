@@ -651,7 +651,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         return null;
 
       KeyValue ret = new KeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-          + blockBuffer.position(), getCellBufSize(), currKeyLen);
+          + blockBuffer.position(), getCellBufSize());
       if (this.reader.shouldIncludeMemstoreTS()) {
         ret.setMvccVersion(currMemstoreTS);
       }
