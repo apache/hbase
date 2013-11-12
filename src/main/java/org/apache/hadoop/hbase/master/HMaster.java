@@ -457,6 +457,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     synchronized(this) {
       serverManager = new ServerManager(this);
     }
+    this.getConfigurationManager().registerObserver(serverManager);
 
     this.regionServerOperationQueue =
       new RegionServerOperationQueue(this.conf, serverManager,
@@ -2387,7 +2388,11 @@ public class HMaster extends HasThread implements HMasterInterface,
   public void updateConfiguration() {
     LOG.info("Reloading the configuration from disk.");
     conf.reloadConfiguration();
-    configurationManager.notifyAllObservers(conf);
+    getConfigurationManager().notifyAllObservers(conf);
+  }
+
+  public ConfigurationManager getConfigurationManager() {
+    return configurationManager;
   }
 }
 

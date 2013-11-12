@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.RegionManager.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -62,7 +64,7 @@ import org.apache.hadoop.hbase.util.HasThread;
  * The ServerManager class manages info about region servers - HServerInfo,
  * load numbers, dying servers, etc.
  */
-public class ServerManager {
+public class ServerManager implements ConfigurationObserver {
   private static final Log LOG =
     LogFactory.getLog(ServerManager.class.getName());
 
@@ -133,7 +135,7 @@ public class ServerManager {
    */
   final Object deadServerStatusLock = new Object();
 
-  private final boolean resendDroppedMessages;
+  private final AtomicBoolean resendDroppedMessages = new AtomicBoolean();
 
   /**
    * A set of host:port pairs representing regionservers that are blacklisted
@@ -236,7 +238,7 @@ public class ServerManager {
     this.blacklistUpdateInterval = c.getLong("hbase.master.blacklist.update.interval",
         DEFAULT_BLACKLIST_UPDATE_WINDOW);
 
-    this.resendDroppedMessages = c.getBoolean("hbase.master.msgs.resend-openclose", false);
+    this.resendDroppedMessages.set(c.getBoolean("hbase.master.msgs.resend-openclose", false));
   }
 
   /**
@@ -643,7 +645,7 @@ public class ServerManager {
       // Tell the region server to close regions that we have marked for closing.
       for (HRegionInfo i:
         this.master.getRegionManager().getMarkedToClose(serverInfo.getServerName())) {
-        if (resendDroppedMessages) {
+        if (resendDroppedMessages.get()) {
           if (closingRegions == null || !closingRegions.contains(i.getEncodedName())) {
             HMsg msg = new HMsg(HMsg.Type.MSG_REGION_CLOSE, i);
             LOG.info("HMsg " + msg.toString() + " was lost earlier. Resending to " + serverInfo.getServerName());
@@ -663,7 +665,7 @@ public class ServerManager {
 
       // Figure out what the RegionServer ought to do, and write back.
 
-      if (resendDroppedMessages) {
+      if (resendDroppedMessages.get()) {
         // 1. Remind the server to open the regions that the RS has not acked for
         // Normally, the master shouldn't need to do this. But, this may be required
         // if there was a network Incident, in which the master's message to OPEN a
@@ -1510,5 +1512,15 @@ public class ServerManager {
   public static void clearRSBlacklist() {
     LOG.debug("Cleared all the blacklisted servers");
     blacklistedRSHostPortMap.clear();
+  }
+
+  @Override
+  public void notifyOnChange(Configuration conf) {
+    boolean oldValue = this.resendDroppedMessages.get();
+    this.resendDroppedMessages.set(conf.getBoolean("hbase.master.msgs.resend-openclose", oldValue));
+  }
+
+  public boolean getResendDroppedMessages() {
+    return this.resendDroppedMessages.get();
   }
 }
