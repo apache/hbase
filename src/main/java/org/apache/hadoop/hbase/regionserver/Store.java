@@ -2119,7 +2119,6 @@ public class Store extends SchemaConfigured implements HeapSize {
       for (StoreFile sf : storefiles) {
         if (sf.isReference()) {
           // Should already be enforced since we return false in this case
-          assert false : "getSplitPoint() called on a region that can't split!";
           return null;
         }
 
