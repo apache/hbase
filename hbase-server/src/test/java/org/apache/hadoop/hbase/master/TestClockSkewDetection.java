@@ -86,19 +86,38 @@ public class TestClockSkewDetection {
     long warningSkew = c.getLong("hbase.master.warningclockskew", 1000);
 
     try {
+    	//Master Time > Region Server Time
+      LOG.debug("Test: Master Time > Region Server Time");
       LOG.debug("regionServerStartup 2");
       InetAddress ia2 = InetAddress.getLocalHost();
       sm.regionServerStartup(ia2, 1235, -1, System.currentTimeMillis() - maxSkew * 2);
-      fail("HMaster should have thrown an ClockOutOfSyncException but didn't.");
+      fail("HMaster should have thrown a ClockOutOfSyncException but didn't.");
     } catch(ClockOutOfSyncException e) {
       //we want an exception
       LOG.info("Recieved expected exception: "+e);
     }
     
+    try {
+      // Master Time < Region Server Time
+      LOG.debug("Test: Master Time < Region Server Time");
+      LOG.debug("regionServerStartup 3");
+      InetAddress ia3 = InetAddress.getLocalHost();
+      sm.regionServerStartup(ia3, 1236, -1, System.currentTimeMillis() + maxSkew * 2);
+      fail("HMaster should have thrown a ClockOutOfSyncException but didn't.");
+    } catch (ClockOutOfSyncException e) {
+      // we want an exception
+      LOG.info("Recieved expected exception: " + e);
+    }
+    
     // make sure values above warning threshold but below max threshold don't kill
-    LOG.debug("regionServerStartup 3");
-    InetAddress ia3 = InetAddress.getLocalHost();
-    sm.regionServerStartup(ia3, 1236, -1, System.currentTimeMillis() - warningSkew * 2);
+    LOG.debug("regionServerStartup 4");
+    InetAddress ia4 = InetAddress.getLocalHost();
+    sm.regionServerStartup(ia4, 1237, -1, System.currentTimeMillis() - warningSkew * 2);
+    
+    // make sure values above warning threshold but below max threshold don't kill
+    LOG.debug("regionServerStartup 5");
+    InetAddress ia5 = InetAddress.getLocalHost();
+    sm.regionServerStartup(ia5, 1238, -1, System.currentTimeMillis() + warningSkew * 2);
     
   }
 
