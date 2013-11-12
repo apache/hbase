@@ -79,14 +79,11 @@ public class ReplicationHLogReaderManager {
 
   /**
    * Get the next entry, returned and also added in the array
-   * @param entriesArray
-   * @param currentNbEntries
    * @return a new entry or null
    * @throws IOException
    */
-  public HLog.Entry readNextAndSetPosition(HLog.Entry[] entriesArray,
-                                           int currentNbEntries) throws IOException {
-    HLog.Entry entry = this.reader.next(entriesArray[currentNbEntries]);
+  public HLog.Entry readNextAndSetPosition() throws IOException {
+    HLog.Entry entry = this.reader.next();
     // Store the position so that in the future the reader can start
     // reading from here. If the above call to next() throws an
     // exception, the position won't be changed and retry will happen

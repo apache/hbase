@@ -154,10 +154,9 @@ public class TestReplicationHLogReaderManager {
     // There's one edit in the log, read it. Reading past it needs to return nulls
     assertNotNull(logManager.openReader(path));
     logManager.seek();
-    HLog.Entry[] entriesArray = new HLog.Entry[1];
-    HLog.Entry entry = logManager.readNextAndSetPosition(entriesArray, 0);
+    HLog.Entry entry = logManager.readNextAndSetPosition();
     assertNotNull(entry);
-    entry = logManager.readNextAndSetPosition(entriesArray, 0);
+    entry = logManager.readNextAndSetPosition();
     assertNull(entry);
     logManager.closeReader();
     long oldPos = logManager.getPosition();
@@ -167,7 +166,7 @@ public class TestReplicationHLogReaderManager {
     // Read the newly added entry, make sure we made progress
     assertNotNull(logManager.openReader(path));
     logManager.seek();
-    entry = logManager.readNextAndSetPosition(entriesArray, 0);
+    entry = logManager.readNextAndSetPosition();
     assertNotEquals(oldPos, logManager.getPosition());
     assertNotNull(entry);
     logManager.closeReader();
@@ -178,7 +177,7 @@ public class TestReplicationHLogReaderManager {
     // We rolled but we still should see the end of the first log and not get data
     assertNotNull(logManager.openReader(path));
     logManager.seek();
-    entry = logManager.readNextAndSetPosition(entriesArray, 0);
+    entry = logManager.readNextAndSetPosition();
     assertEquals(oldPos, logManager.getPosition());
     assertNull(entry);
     logManager.finishCurrentFile();
@@ -196,7 +195,7 @@ public class TestReplicationHLogReaderManager {
     logManager.openReader(path);
     logManager.seek();
     for (int i = 0; i < nbRows; i++) {
-      HLog.Entry e = logManager.readNextAndSetPosition(entriesArray, 0);
+      HLog.Entry e = logManager.readNextAndSetPosition();
       if (e == null) {
         fail("Should have enough entries");
       }

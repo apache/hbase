@@ -23,7 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NavigableMap;
@@ -76,8 +76,6 @@ public class ReplicationSource extends Thread
   public static final Log LOG = LogFactory.getLog(ReplicationSource.class);
   // Queue of logs to process
   private PriorityBlockingQueue<Path> queue;
-  // container of entries to replicate
-  private HLog.Entry[] entriesArray;
   private HConnection conn;
   private ReplicationQueues replicationQueues;
   private ReplicationPeers replicationPeers;
@@ -116,8 +114,6 @@ public class ReplicationSource extends Thread
   private int maxRetriesMultiplier;
   // Socket timeouts require even bolder actions since we don't want to DDOS
   private int socketTimeoutMultiplier;
-  // Current number of entries that we need to replicate
-  private int currentNbEntries = 0;
   // Current number of operations (Put/Delete) that we need to replicate
   private int currentNbOperations = 0;
   // Current size of data we need to replicate
@@ -153,10 +149,6 @@ public class ReplicationSource extends Thread
         this.conf.getLong("replication.source.size.capacity", 1024*1024*64);
     this.replicationQueueNbCapacity =
         this.conf.getInt("replication.source.nb.capacity", 25000);
-    this.entriesArray = new HLog.Entry[this.replicationQueueNbCapacity];
-    for (int i = 0; i < this.replicationQueueNbCapacity; i++) {
-      this.entriesArray[i] = new HLog.Entry();
-    }
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 10);
     this.socketTimeoutMultiplier = this.conf.getInt("replication.source.socketTimeoutMultiplier",
         maxRetriesMultiplier * maxRetriesMultiplier);
@@ -289,10 +281,10 @@ public class ReplicationSource extends Thread
 
       boolean gotIOE = false;
       currentNbOperations = 0;
-      currentNbEntries = 0;
+      List<HLog.Entry> entries = new ArrayList<HLog.Entry>(1);
       currentSize = 0;
       try {
-        if (readAllEntriesToReplicateOrNextFile(currentWALisBeingWrittenTo)) {
+        if (readAllEntriesToReplicateOrNextFile(currentWALisBeingWrittenTo, entries)) {
           continue;
         }
       } catch (IOException ioe) {
@@ -311,11 +303,6 @@ public class ReplicationSource extends Thread
             } catch (IOException e) {
               LOG.warn(this.peerClusterZnode + " Got while getting file size: ", e);
             }
-          } else if (currentNbEntries != 0) {
-            LOG.warn(this.peerClusterZnode +
-                " Got EOF while reading, " + "looks like this file is broken? " + currentPath);
-            considerDumping = true;
-            currentNbEntries = 0;
           }
 
           if (considerDumping &&
@@ -337,7 +324,7 @@ public class ReplicationSource extends Thread
       // If we didn't get anything to replicate, or if we hit a IOE,
       // wait a bit and retry.
       // But if we need to stop, don't bother sleeping
-      if (this.isActive() && (gotIOE || currentNbEntries == 0)) {
+      if (this.isActive() && (gotIOE || entries.isEmpty())) {
         if (this.lastLoggedPosition != this.repLogReader.getPosition()) {
           this.manager.logPositionAndCleanOldLogs(this.currentPath,
               this.peerClusterZnode, this.repLogReader.getPosition(),
@@ -354,8 +341,7 @@ public class ReplicationSource extends Thread
         continue;
       }
       sleepMultiplier = 1;
-      shipEdits(currentWALisBeingWrittenTo);
-
+      shipEdits(currentWALisBeingWrittenTo, entries);
     }
     if (this.conn != null) {
       try {
@@ -372,11 +358,12 @@ public class ReplicationSource extends Thread
    * Read all the entries from the current log files and retain those
    * that need to be replicated. Else, process the end of the current file.
    * @param currentWALisBeingWrittenTo is the current WAL being written to
+   * @param entries resulting entries to be replicated
    * @return true if we got nothing and went to the next file, false if we got
    * entries
    * @throws IOException
    */
-  protected boolean readAllEntriesToReplicateOrNextFile(boolean currentWALisBeingWrittenTo)
+  protected boolean readAllEntriesToReplicateOrNextFile(boolean currentWALisBeingWrittenTo, List<HLog.Entry> entries)
       throws IOException{
     long seenEntries = 0;
     if (LOG.isTraceEnabled()) {
@@ -385,7 +372,7 @@ public class ReplicationSource extends Thread
     }
     this.repLogReader.seek();
     HLog.Entry entry =
-        this.repLogReader.readNextAndSetPosition(this.entriesArray, this.currentNbEntries);
+        this.repLogReader.readNextAndSetPosition();
     while (entry != null) {
       WALEdit edit = entry.getEdit();
       this.metrics.incrLogEditsRead();
@@ -402,7 +389,7 @@ public class ReplicationSource extends Thread
           //Mark that the current cluster has the change
           logKey.addClusterId(clusterId);
           currentNbOperations += countDistinctRowKeys(edit);
-          currentNbEntries++;
+          entries.add(entry);
           currentSize += entry.getEdit().heapSize();
         } else {
           this.metrics.incrLogEditsFiltered();
@@ -410,11 +397,11 @@ public class ReplicationSource extends Thread
       }
       // Stop if too many entries or too big
       if (currentSize >= this.replicationQueueSizeCapacity ||
-          currentNbEntries >= this.replicationQueueNbCapacity) {
+          entries.size() >= this.replicationQueueNbCapacity) {
         break;
       }
       try {
-        entry = this.repLogReader.readNextAndSetPosition(this.entriesArray, this.currentNbEntries);
+        entry = this.repLogReader.readNextAndSetPosition();
       } catch (IOException ie) {
         LOG.debug("Break on IOE: " + ie.getMessage());
         break;
@@ -583,14 +570,18 @@ public class ReplicationSource extends Thread
    */
   protected void removeNonReplicableEdits(HLog.Entry entry) {
     NavigableMap<byte[], Integer> scopes = entry.getKey().getScopes();
-    List<KeyValue> kvs = entry.getEdit().getKeyValues();
-    for (int i = kvs.size()-1; i >= 0; i--) {
+    ArrayList<KeyValue> kvs = entry.getEdit().getKeyValues();
+    int size = kvs.size();
+    for (int i = size-1; i >= 0; i--) {
       KeyValue kv = kvs.get(i);
       // The scope will be null or empty if
       // there's nothing to replicate in that WALEdit
       if (scopes == null || !scopes.containsKey(kv.getFamily())) {
         kvs.remove(i);
       }
+    }
+    if (kvs.size() < size/2) {
+      kvs.trimToSize();
     }
   }
 
@@ -617,9 +608,9 @@ public class ReplicationSource extends Thread
    * @param currentWALisBeingWrittenTo was the current WAL being (seemingly)
    * written to when this method was called
    */
-  protected void shipEdits(boolean currentWALisBeingWrittenTo) {
+  protected void shipEdits(boolean currentWALisBeingWrittenTo, List<HLog.Entry> entries) {
     int sleepMultiplier = 1;
-    if (this.currentNbEntries == 0) {
+    if (entries.isEmpty()) {
       LOG.warn("Was given 0 edits to ship");
       return;
     }
@@ -635,22 +626,21 @@ public class ReplicationSource extends Thread
         sinkPeer = replicationSinkMgr.getReplicationSink();
         BlockingInterface rrs = sinkPeer.getRegionServer();
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Replicating " + this.currentNbEntries +
+          LOG.trace("Replicating " + entries.size() +
               " entries of total size " + currentSize);
         }
         ReplicationProtbufUtil.replicateWALEntry(rrs,
-            Arrays.copyOf(this.entriesArray, currentNbEntries));
+            entries.toArray(new HLog.Entry[entries.size()]));
         if (this.lastLoggedPosition != this.repLogReader.getPosition()) {
           this.manager.logPositionAndCleanOldLogs(this.currentPath,
               this.peerClusterZnode, this.repLogReader.getPosition(),
               this.replicationQueueInfo.isQueueRecovered(), currentWALisBeingWrittenTo);
           this.lastLoggedPosition = this.repLogReader.getPosition();
         }
-        this.totalReplicatedEdits += currentNbEntries;
+        this.totalReplicatedEdits += entries.size();
         this.totalReplicatedOperations += currentNbOperations;
         this.metrics.shipBatch(this.currentNbOperations);
-        this.metrics.setAgeOfLastShippedOp(
-            this.entriesArray[currentNbEntries-1].getKey().getWriteTime());
+        this.metrics.setAgeOfLastShippedOp(entries.get(entries.size()-1).getKey().getWriteTime());
         if (LOG.isTraceEnabled()) {
           LOG.trace("Replicated " + this.totalReplicatedEdits + " entries in total, or "
               + this.totalReplicatedOperations + " operations");
