@@ -86,7 +86,7 @@ public class NamespaceUpgrade implements Tool {
   private static final String DOT_SPLITLOG = "splitlog";
   private static final String DOT_ARCHIVE = ".archive";
 
-  // The old default directory of hbase.dynamic.jars.dir(0.94.12 release).  
+  // The old default directory of hbase.dynamic.jars.dir(0.94.12 release).
   private static final String DOT_LIB_DIR = ".lib";
 
   private static final String OLD_ACL = "_acl_";
@@ -233,7 +233,7 @@ public class NamespaceUpgrade implements Tool {
    * @throws IOException
    */
   public void migrateTables() throws IOException {
-    List<String> sysTables = Lists.newArrayList("-ROOT-",".META.");
+    List<String> sysTables = Lists.newArrayList("-ROOT-",".META.", ".META");
 
     // Migrate tables including archive and tmp
     for (Path baseDir: baseDirs) {
@@ -299,6 +299,16 @@ public class NamespaceUpgrade implements Tool {
       if (!fs.rename(oldMetaDir, newMetaDir)) {
         throw new IOException("Failed to migrate meta table "
             + oldMetaDir.getName() + " to " + newMetaDir);
+      }
+    } else {
+      // on windows NTFS, meta's name is .META (note the missing dot at the end)
+      oldMetaDir = new Path(rootDir, ".META");
+      if (fs.exists(oldMetaDir)) {
+        LOG.info("Migrating meta table " + oldMetaDir.getName() + " to " + newMetaDir);
+        if (!fs.rename(oldMetaDir, newMetaDir)) {
+          throw new IOException("Failed to migrate meta table "
+              + oldMetaDir.getName() + " to " + newMetaDir);
+        }
       }
     }
 
