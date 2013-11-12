@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.net.URL;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -176,7 +177,7 @@ public class TestImportExport {
 
   /**
    * Test export hbase:meta table
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -184,6 +185,38 @@ public class TestImportExport {
     String EXPORT_TABLE = TableName.META_TABLE_NAME.getNameAsString();
     String[] args = new String[] { EXPORT_TABLE, FQ_OUTPUT_DIR, "1", "0", "0" };
     assertTrue(runExport(args));
+  }
+
+  /**
+   * Test import data from 0.94 exported file
+   * @throws Exception
+   */
+  @Test
+  public void testImport94Table() throws Exception {
+    URL url = TestImportExport.class.getResource(
+        "exportedTableIn94Format");
+    Path importPath = new Path(url.getPath());
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    fs.copyFromLocalFile(importPath, new Path(FQ_OUTPUT_DIR + Path.SEPARATOR
+        + "exportedTableIn94Format"));
+    String IMPORT_TABLE = "importTableExportedFrom94";
+    HTable t = UTIL.createTable(Bytes.toBytes(IMPORT_TABLE), Bytes.toBytes("f1"), 3);
+    String[] args = new String[] {
+        "-Dhbase.import.version=0.94" ,
+        IMPORT_TABLE, FQ_OUTPUT_DIR
+    };
+    assertTrue(runImport(args));
+
+    /* exportedTableIn94Format contains 5 rows
+     ROW         COLUMN+CELL
+     r1          column=f1:c1, timestamp=1383766761171, value=val1
+     r2          column=f1:c1, timestamp=1383766771642, value=val2
+     r3          column=f1:c1, timestamp=1383766777615, value=val3
+     r4          column=f1:c1, timestamp=1383766785146, value=val4
+     r5          column=f1:c1, timestamp=1383766791506, value=val5
+     */
+    assertEquals(5, UTIL.countRows(t));
+    t.close();
   }
 
   /**

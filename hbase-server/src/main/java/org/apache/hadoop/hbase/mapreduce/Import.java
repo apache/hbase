@@ -451,6 +451,10 @@ public class Import {
       usage("Wrong number of arguments: " + otherArgs.length);
       System.exit(-1);
     }
+    String inputVersionString = System.getProperty(ResultSerialization.IMPORT_FORMAT_VER);
+    if (inputVersionString != null) {
+      conf.set(ResultSerialization.IMPORT_FORMAT_VER, inputVersionString);
+    }
     Job job = createSubmittableJob(conf, otherArgs);
     System.exit(job.waitForCompletion(true) ? 0 : 1);
   }
