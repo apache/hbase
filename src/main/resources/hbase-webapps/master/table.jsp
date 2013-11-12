@@ -70,7 +70,11 @@
 %>
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
-<meta http-equiv="refresh" content="5,javascript:history.back()" />
+  <script type="text/javascript">
+  <!--
+  setTimeout("history.back()",5000);
+  -->
+  </script>
 </head>
 <body>
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo.png" alt="HBase Logo" title="HBase Logo" /></a>

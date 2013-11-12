@@ -65,7 +65,11 @@
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
 <% if (isActionResultPage) { %>
   <title>HBase Master: <%= master.getServerName() %></title>
-  <meta http-equiv="refresh" content="5,javascript:history.back()" />
+  <script type="text/javascript">
+  <!--
+  setTimeout("history.back()",5000);
+  -->
+  </script>
 <% } else { %>
   <title>Snapshot: <%= snapshotName %></title>
 <% } %>
