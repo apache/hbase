@@ -305,7 +305,7 @@ public class ServerManager {
    */
   private void checkClockSkew(final ServerName serverName, final long serverCurrentTime)
   throws ClockOutOfSyncException {
-    long skew = System.currentTimeMillis() - serverCurrentTime;
+    long skew = Math.abs(System.currentTimeMillis() - serverCurrentTime);
     if (skew > maxSkew) {
       String message = "Server " + serverName + " has been " +
         "rejected; Reported time is too far out of sync with master.  " +
