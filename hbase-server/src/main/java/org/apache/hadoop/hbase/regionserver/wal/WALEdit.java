@@ -85,7 +85,7 @@ public class WALEdit implements Writable, HeapSize {
   private final int VERSION_2 = -1;
   private final boolean isReplay;
 
-  private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
+  private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>(1);
 
   // Only here for legacy writable deserialization
   @Deprecated
@@ -134,7 +134,7 @@ public class WALEdit implements Writable, HeapSize {
     return kvs.size();
   }
 
-  public List<KeyValue> getKeyValues() {
+  public ArrayList<KeyValue> getKeyValues() {
     return kvs;
   }
 
@@ -210,6 +210,7 @@ public class WALEdit implements Writable, HeapSize {
    */
   public int readFromCells(Codec.Decoder cellDecoder, int expectedCount) throws IOException {
     kvs.clear();
+    kvs.ensureCapacity(expectedCount);
     while (kvs.size() < expectedCount && cellDecoder.advance()) {
       Cell cell = cellDecoder.current();
       if (!(cell instanceof KeyValue)) {
@@ -221,7 +222,7 @@ public class WALEdit implements Writable, HeapSize {
   }
 
   public long heapSize() {
-    long ret = 0;
+    long ret = ClassSize.ARRAYLIST;
     for (KeyValue kv : kvs) {
       ret += kv.heapSize();
     }
