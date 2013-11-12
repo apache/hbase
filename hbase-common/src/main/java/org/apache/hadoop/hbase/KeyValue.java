@@ -288,21 +288,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     this.length = length;
   }
 
-  /**
-   * Creates a KeyValue from the specified byte array, starting at offset,
-   * for length <code>length</code>, and a known <code>keyLength</code>.
-   * @param bytes byte array
-   * @param offset offset to start of the KeyValue
-   * @param length length of the KeyValue
-   * @param keyLength length of the key portion of the KeyValue
-   */
-  public KeyValue(final byte [] bytes, final int offset, final int length, final int keyLength) {
-    this.bytes = bytes;
-    this.offset = offset;
-    this.length = length;
-    this.keyLength = keyLength;
-  }
-
   /** Constructors that build a new backing byte array from fields */
 
   /**
@@ -976,13 +961,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   /**
    * @return Length of key portion.
    */
-  private int keyLength = 0;
-
   public int getKeyLength() {
-    if (keyLength == 0) {
-      keyLength = Bytes.toInt(this.bytes, this.offset);
-    }
-    return keyLength;
+    return Bytes.toInt(this.bytes, this.offset);
   }
 
   /**
@@ -2551,7 +2531,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     sum += ClassSize.REFERENCE;// pointer to "bytes"
     sum += ClassSize.align(ClassSize.ARRAY);// "bytes"
     sum += ClassSize.align(length);// number of bytes of data in the "bytes" array
-    sum += 3 * Bytes.SIZEOF_INT;// offset, length, keyLength
+    sum += 2 * Bytes.SIZEOF_INT;// offset, length
     sum += Bytes.SIZEOF_LONG;// memstoreTS
     return ClassSize.align(sum);
   }

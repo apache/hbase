@@ -247,10 +247,11 @@ public class ScanQueryMatcher {
 
     byte [] bytes = kv.getBuffer();
     int offset = kv.getOffset();
-    int initialOffset = offset;
 
     int keyLength = Bytes.toInt(bytes, offset, Bytes.SIZEOF_INT);
     offset += KeyValue.ROW_OFFSET;
+
+    int initialOffset = offset;
 
     short rowLength = Bytes.toShort(bytes, offset, Bytes.SIZEOF_SHORT);
     offset += Bytes.SIZEOF_SHORT;
@@ -282,10 +283,10 @@ public class ScanQueryMatcher {
     byte familyLength = bytes [offset];
     offset += familyLength + 1;
 
-    int qualLength = keyLength + KeyValue.ROW_OFFSET -
+    int qualLength = keyLength -
       (offset - initialOffset) - KeyValue.TIMESTAMP_TYPE_SIZE;
 
-    long timestamp = kv.getTimestamp();
+    long timestamp = Bytes.toLong(bytes, initialOffset + keyLength - KeyValue.TIMESTAMP_TYPE_SIZE);
     // check for early out based on timestamp alone
     if (columns.isDone(timestamp)) {
         return columns.getNextRowOrNextColumn(bytes, offset, qualLength);
@@ -304,7 +305,7 @@ public class ScanQueryMatcher {
      * 7. Delete marker need to be version counted together with puts
      *    they affect
      */
-    byte type = kv.getTypeByte();
+    byte type = bytes[initialOffset + keyLength - 1];
     if (kv.isDelete()) {
       if (!keepDeletedCells) {
         // first ignore delete markers if the scanner can do so, and the
