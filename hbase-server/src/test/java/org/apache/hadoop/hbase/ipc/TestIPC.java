@@ -57,6 +57,8 @@ import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -288,7 +290,10 @@ public class TestIPC {
         List<CellScannable> cells = new ArrayList<CellScannable>();
         // Message param = RequestConverter.buildMultiRequest(HConstants.EMPTY_BYTE_ARRAY, rm);
         ClientProtos.RegionAction.Builder builder = RequestConverter.buildNoDataRegionAction(
-          HConstants.EMPTY_BYTE_ARRAY, rm, cells);
+          HConstants.EMPTY_BYTE_ARRAY, rm, cells,
+          RegionAction.newBuilder(),
+          ClientProtos.Action.newBuilder(),
+          MutationProto.newBuilder());
         CellScanner cellScanner = CellUtil.createCellScanner(cells);
         if (i % 1000 == 0) {
           LOG.info("" + i);

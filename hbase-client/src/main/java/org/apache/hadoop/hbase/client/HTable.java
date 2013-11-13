@@ -71,7 +71,10 @@ import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 /**
- * <p>Used to communicate with a single HBase table.
+ * <p>Used to communicate with a single HBase table.  An implementation of
+ * {@link HTableInterface}.  Instances of this class can be constructed directly but it is
+ * encouraged that users get instances via {@link HConnection} and {@link HConnectionManager}.
+ * See {@link HConnectionManager} class comment for an example.
  *
  * <p>This class is not thread safe for reads nor write.
  *
@@ -336,7 +339,7 @@ public class HTable implements HTableInterface {
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
 
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(configuration);
-    ap = new AsyncProcess<Object>(connection, tableName, pool, null, 
+    ap = new AsyncProcess<Object>(connection, tableName, pool, null,
         configuration, rpcCallerFactory);
 
     this.maxKeyValueSize = this.configuration.getInt(
@@ -1070,7 +1073,7 @@ public class HTable implements HTableInterface {
       throw new IOException(
           "Invalid arguments to incrementColumnValue", npe);
     }
-    
+
     RegionServerCallable<Long> callable =
       new RegionServerCallable<Long>(connection, getName(), row) {
         public Long call() throws IOException {
@@ -1525,7 +1528,7 @@ public class HTable implements HTableInterface {
 
   @Override
   public String toString() {
-    return tableName + ", " + connection;
+    return tableName + ";" + connection;
   }
 
   /**

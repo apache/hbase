@@ -31,10 +31,11 @@ import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
-import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.ServiceException;
 
@@ -65,20 +66,29 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
     int countOfActions = this.multiAction.size();
     if (countOfActions <= 0) throw new DoNotRetryIOException("No Actions");
     MultiRequest.Builder multiRequestBuilder = MultiRequest.newBuilder();
+    RegionAction.Builder regionActionBuilder = RegionAction.newBuilder();
+    ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
+    MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
     List<CellScannable> cells = null;
     // The multi object is a list of Actions by region.  Iterate by region.
     for (Map.Entry<byte[], List<Action<R>>> e: this.multiAction.actions.entrySet()) {
       final byte [] regionName = e.getKey();
       final List<Action<R>> actions = e.getValue();
-      RegionAction.Builder regionActionBuilder;
+      regionActionBuilder.clear();
+      regionActionBuilder.setRegion(RequestConverter.buildRegionSpecifier(
+        HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME, regionName) );
+
+
       if (this.cellBlock) {
         // Presize.  Presume at least a KV per Action.  There are likely more.
         if (cells == null) cells = new ArrayList<CellScannable>(countOfActions);
         // Send data in cellblocks. The call to buildNoDataMultiRequest will skip RowMutations.
         // They have already been handled above. Guess at count of cells
-        regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, actions, cells);
+        regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, actions, cells,
+          regionActionBuilder, actionBuilder, mutationBuilder);
       } else {
-        regionActionBuilder = RequestConverter.buildRegionAction(regionName, actions);
+        regionActionBuilder = RequestConverter.buildRegionAction(regionName, actions,
+          regionActionBuilder, actionBuilder, mutationBuilder);
       }
       RegionAction ra = regionActionBuilder.build();
       multiRequestBuilder.addRegionAction(ra);
