@@ -227,8 +227,16 @@ public final class ProtobufUtil {
    * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte [] bytes) {
-    if (bytes == null || bytes.length < PB_MAGIC.length) return false;
-    return Bytes.compareTo(PB_MAGIC, 0, PB_MAGIC.length, bytes, 0, PB_MAGIC.length) == 0;
+    return isPBMagicPrefix(bytes, 0, bytes.length);
+  }
+
+  /**
+   * @param bytes Bytes to check.
+   * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
+   */
+  public static boolean isPBMagicPrefix(final byte [] bytes, int offset, int len) {
+    if (bytes == null || len < PB_MAGIC.length) return false;
+    return Bytes.compareTo(PB_MAGIC, 0, PB_MAGIC.length, bytes, offset, PB_MAGIC.length) == 0;
   }
 
   /**

@@ -328,6 +328,7 @@ public final class TableName implements Comparable<TableName> {
 
   @Override
   public int compareTo(TableName tableName) {
+    if (this == tableName) return 0;
     return this.nameAsString.compareTo(tableName.getNameAsString());
   }
 

@@ -49,7 +49,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -1148,34 +1147,36 @@ public class HConnectionManager {
           // This block guards against two threads trying to load the meta
           // region at the same time. The first will load the meta region and
           // the second will use the value that the first one found.
-          synchronized (regionLockObject) {
-            // Check the cache again for a hit in case some other thread made the
-            // same query while we were waiting on the lock.
-            if (useCache) {
-              location = getCachedLocation(tableName, row);
-              if (location != null) {
-                return location;
-              }
-              // If the parent table is META, we may want to pre-fetch some
-              // region info into the global region cache for this table.
-              if (parentTable.equals(TableName.META_TABLE_NAME)
-                  && (getRegionCachePrefetch(tableName))) {
+          if (useCache) {
+            if (TableName.META_TABLE_NAME.equals(parentTable) &&
+                getRegionCachePrefetch(tableName)) {
+              synchronized (regionLockObject) {
+                // Check the cache again for a hit in case some other thread made the
+                // same query while we were waiting on the lock.
+                location = getCachedLocation(tableName, row);
+                if (location != null) {
+                  return location;
+                }
+                // If the parent table is META, we may want to pre-fetch some
+                // region info into the global region cache for this table.
                 prefetchRegionCache(tableName, row);
               }
-              location = getCachedLocation(tableName, row);
-              if (location != null) {
-                return location;
-              }
-            } else {
-              // If we are not supposed to be using the cache, delete any existing cached location
-              // so it won't interfere.
-              forceDeleteCachedLocation(tableName, row);
             }
-            // Query the meta region for the location of the meta region
-            regionInfoRow = ProtobufUtil.getRowOrBefore(service,
+            location = getCachedLocation(tableName, row);
+            if (location != null) {
+              return location;
+            }
+          } else {
+            // If we are not supposed to be using the cache, delete any existing cached location
+            // so it won't interfere.
+            forceDeleteCachedLocation(tableName, row);
+          }
+
+          // Query the meta region for the location of the meta region
+          regionInfoRow = ProtobufUtil.getRowOrBefore(service,
               metaLocation.getRegionInfo().getRegionName(), metaKey,
               HConstants.CATALOG_FAMILY);
-          }
+
           if (regionInfoRow == null) {
             throw new TableNotFoundException(tableName);
           }

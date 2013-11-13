@@ -214,14 +214,7 @@ public class MetaScanner {
    * @return HRegionInfo or null
    */
   public static HRegionInfo getHRegionInfo(Result data) {
-    byte [] bytes =
-      data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    if (bytes == null) return null;
-    HRegionInfo info = HRegionInfo.parseFromOrNull(bytes);
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Current INFO from scan results = " + info);
-    }
-    return info;
+    return HRegionInfo.getHRegionInfo(data);
   }
 
   /**
