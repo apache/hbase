@@ -238,6 +238,11 @@ public class SchemaResource extends ResourceBase {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
+    if (servlet.isReadOnly()) {
+      return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT)
+          .entity("Forbidden" + CRLF).build();
+    }
+
     try {
       HBaseAdmin admin = servlet.getAdmin();
       boolean success = false;
