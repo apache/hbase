@@ -89,10 +89,12 @@ public class TestExportSnapshot {
     TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniMapReduceCluster();
     TEST_UTIL.shutdownMiniCluster();
   }
 
