@@ -46,7 +46,7 @@ public class CompactTableAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
+    HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     HBaseAdmin admin = util.getHBaseAdmin();
     boolean major = RandomUtils.nextInt(100) < majorRatio;
 

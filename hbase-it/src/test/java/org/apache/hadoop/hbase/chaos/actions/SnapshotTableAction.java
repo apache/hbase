@@ -39,7 +39,7 @@ public class SnapshotTableAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
+    HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     String snapshotName = tableName + "-it-" + System.currentTimeMillis();
     HBaseAdmin admin = util.getHBaseAdmin();
 
