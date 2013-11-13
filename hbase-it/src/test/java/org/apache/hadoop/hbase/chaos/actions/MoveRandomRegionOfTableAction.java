@@ -50,7 +50,7 @@ public class MoveRandomRegionOfTableAction extends Action {
       Thread.sleep(sleepTime);
     }
 
-    HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
+    HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     HBaseAdmin admin = util.getHBaseAdmin();
 
     LOG.info("Performing action: Move random region of table " + tableName);

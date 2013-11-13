@@ -42,7 +42,7 @@ public class FlushTableAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
+    HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     HBaseAdmin admin = util.getHBaseAdmin();
 
     LOG.info("Performing action: Flush table " + tableName);

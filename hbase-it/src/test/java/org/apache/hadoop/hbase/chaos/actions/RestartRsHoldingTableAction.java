@@ -42,7 +42,7 @@ public class RestartRsHoldingTableAction extends RestartActionBaseAction {
   public void perform() throws Exception {
     HTable table = null;
     try {
-      Configuration conf = context.getHaseIntegrationTestingUtility().getConfiguration();
+      Configuration conf = context.getHBaseIntegrationTestingUtility().getConfiguration();
       table = new HTable(conf, tableName);
     } catch (IOException e) {
       LOG.debug("Error creating HTable used to get list of region locations.", e);
