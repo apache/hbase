@@ -749,14 +749,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   @Deprecated
-  private void readFields(byte[] bytes) throws IOException {
-    if (bytes == null || bytes.length <= 0) {
+  private void readFields(byte[] bytes, int offset, int len) throws IOException {
+    if (bytes == null || len <= 0) {
       throw new IllegalArgumentException("Can't build a writable with empty " +
-        "bytes array");
+          "bytes array");
     }
     DataInputBuffer in = new DataInputBuffer();
     try {
-      in.reset(bytes, 0, bytes.length);
+      in.reset(bytes, offset, len);
       this.readFields(in);
     } finally {
       in.close();
@@ -899,14 +899,24 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * @param bytes
-   * @return A deserialized {@link HRegionInfo} or null if we failed deserialize or passed bytes null
+   * @return A deserialized {@link HRegionInfo}
+   * or null if we failed deserialize or passed bytes null
    * @see #toByteArray()
    */
   public static HRegionInfo parseFromOrNull(final byte [] bytes) {
-    if (bytes == null || bytes.length <= 0) return null;
+    if (bytes == null) return null;
+    return parseFromOrNull(bytes, 0, bytes.length);
+  }
+
+  /**
+   * @return A deserialized {@link HRegionInfo} or null
+   *  if we failed deserialize or passed bytes null
+   * @see #toByteArray()
+   */
+  public static HRegionInfo parseFromOrNull(final byte [] bytes, int offset, int len) {
+    if (bytes == null || len <= 0) return null;
     try {
-      return parseFrom(bytes);
+      return parseFrom(bytes, offset, len);
     } catch (DeserializationException e) {
       return null;
     }
@@ -919,11 +929,26 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @see #toByteArray()
    */
   public static HRegionInfo parseFrom(final byte [] bytes) throws DeserializationException {
-    if (ProtobufUtil.isPBMagicPrefix(bytes)) {
+    if (bytes == null) return null;
+    return parseFrom(bytes, 0, bytes.length);
+  }
+
+  /**
+   * @param bytes A pb RegionInfo serialized with a pb magic prefix.
+   * @param offset starting point in the byte array
+   * @param len length to read on the byte array
+   * @return A deserialized {@link HRegionInfo}
+   * @throws DeserializationException
+   * @see #toByteArray()
+   */
+  public static HRegionInfo parseFrom(final byte [] bytes, int offset, int len)
+      throws DeserializationException {
+    if (ProtobufUtil.isPBMagicPrefix(bytes, offset, len)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       try {
         HBaseProtos.RegionInfo ri =
-          HBaseProtos.RegionInfo.newBuilder().mergeFrom(bytes, pblen, bytes.length - pblen).build();
+            HBaseProtos.RegionInfo.newBuilder().
+                mergeFrom(bytes, pblen + offset, len - pblen).build();
         return convert(ri);
       } catch (InvalidProtocolBufferException e) {
         throw new DeserializationException(e);
@@ -931,7 +956,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     } else {
       try {
         HRegionInfo hri = new HRegionInfo();
-        hri.readFields(bytes);
+        hri.readFields(bytes, offset, len);
         return hri;
       } catch (IOException e) {
         throw new DeserializationException(e);
@@ -972,11 +997,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return HRegionInfo or null
    */
   public static HRegionInfo getHRegionInfo(Result data) {
-    byte [] bytes =
-      data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    if (bytes == null) return null;
-    HRegionInfo info = parseFromOrNull(bytes);
-    return info;
+    return getHRegionInfo(data, HConstants.REGIONINFO_QUALIFIER);
   }
 
   /**
@@ -1001,12 +1022,12 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * {@link HConstants#SPLITA_QUALIFIER}, {@link HConstants#SPLITB_QUALIFIER} or
    * {@link HConstants#REGIONINFO_QUALIFIER}.
    * @return An HRegionInfo instance or null.
-   * @throws IOException
    */
   public static HRegionInfo getHRegionInfo(final Result r, byte [] qualifier) {
-    byte [] bytes = r.getValue(HConstants.CATALOG_FAMILY, qualifier);
-    if (bytes == null || bytes.length <= 0) return null;
-    return parseFromOrNull(bytes);
+    Cell cell = r.getColumnLatestCell(
+        HConstants.CATALOG_FAMILY, qualifier);
+    if (cell == null) return null;
+    return parseFromOrNull(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
   }
 
   /**
@@ -1015,14 +1036,15 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return A ServerName instance or null if necessary fields not found or empty.
    */
   public static ServerName getServerName(final Result r) {
-    byte[] value = r.getValue(HConstants.CATALOG_FAMILY,
-      HConstants.SERVER_QUALIFIER);
-    if (value == null || value.length == 0) return null;
-    String hostAndPort = Bytes.toString(value);
-    value = r.getValue(HConstants.CATALOG_FAMILY,
+    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+    if (cell == null || cell.getValueLength() == 0) return null;
+    String hostAndPort = Bytes.toString(
+        cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+    cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY,
       HConstants.STARTCODE_QUALIFIER);
-    if (value == null || value.length == 0) return null;
-    return new ServerName(hostAndPort, Bytes.toLong(value));
+    if (cell == null || cell.getValueLength() == 0) return null;
+    return new ServerName(hostAndPort,
+        Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
   }
 
   /**
@@ -1032,11 +1054,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return SeqNum, or HConstants.NO_SEQNUM if there's no value written.
    */
   public static long getSeqNumDuringOpen(final Result r) {
-    byte[] value = r.getValue(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER);
-    if (value == null || value.length == 0) return HConstants.NO_SEQNUM;
-    Long result = Bytes.toLong(value);
-    if (result == null) return HConstants.NO_SEQNUM;
-    return result.longValue();
+    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER);
+    if (cell == null || cell.getValueLength() == 0) return HConstants.NO_SEQNUM;
+    return Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
   }
 
   /**
