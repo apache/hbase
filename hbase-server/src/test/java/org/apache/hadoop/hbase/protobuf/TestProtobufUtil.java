@@ -219,7 +219,8 @@ public class TestProtobufUtil {
     mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
 
     Increment increment = ProtobufUtil.toIncrement(proto, null);
-    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(increment));
+    assertEquals(mutateBuilder.build(),
+      ProtobufUtil.toMutation(increment, MutationProto.newBuilder()));
   }
 
   /**

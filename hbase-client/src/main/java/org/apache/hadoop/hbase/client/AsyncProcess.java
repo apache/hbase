@@ -641,8 +641,7 @@ class AsyncProcess<CResult> {
   private void logAndResubmit(List<Action<Row>> initialActions, HRegionLocation oldLocation,
                               List<Action<Row>> toReplay, int numAttempt, int failureCount,
                               Throwable throwable,
-                              HConnectionManager.ServerErrorTracker errorsByServer){
-
+                              HConnectionManager.ServerErrorTracker errorsByServer) {
     if (toReplay.isEmpty()) {
       // it's either a success or a last failure
       if (failureCount != 0) {
@@ -789,22 +788,22 @@ class AsyncProcess<CResult> {
     StringBuilder sb = new StringBuilder();
 
     sb.append("#").append(id).append(", table=").append(tableName).
-        append(", Attempt #").append(numAttempt).append("/").append(numTries).append(" ");
+        append(", attempt=").append(numAttempt).append("/").append(numTries).append(" ");
 
     if (failureCount > 0 || error != null){
-      sb.append("failed ").append(failureCount).append(" ops").append(", last exception was: ").
-          append(error == null ? "null" : error.getMessage());
-    }else {
+      sb.append("failed ").append(failureCount).append(" ops").append(", last exception: ").
+          append(error == null ? "null" : error);
+    } else {
       sb.append("SUCCEEDED");
     }
 
-    sb.append(" on server ").append(sn);
+    sb.append(" on ").append(sn);
 
-    sb.append(", tracking started at ").append(startTime);
+    sb.append(", tracking started ").append(startTime);
 
     if (willRetry) {
-      sb.append(" - retrying after sleeping for ").append(backOffTime).append(" ms").
-          append(", will replay ").append(replaySize).append(" ops.");
+      sb.append(", retrying after ").append(backOffTime).append(" ms").
+          append(", replay ").append(replaySize).append(" ops.");
     } else if (failureCount > 0) {
       sb.append(" - FAILED, NOT RETRYING ANYMORE");
     }

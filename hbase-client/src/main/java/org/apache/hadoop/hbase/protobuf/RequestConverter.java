@@ -218,7 +218,7 @@ public final class RequestConverter {
     builder.setRegion(region);
     Condition condition = buildCondition(
       row, family, qualifier, comparator, compareType);
-    builder.setMutation(ProtobufUtil.toMutation(MutationType.PUT, put));
+    builder.setMutation(ProtobufUtil.toMutation(MutationType.PUT, put, MutationProto.newBuilder()));
     builder.setCondition(condition);
     return builder.build();
   }
@@ -246,7 +246,8 @@ public final class RequestConverter {
     builder.setRegion(region);
     Condition condition = buildCondition(
       row, family, qualifier, comparator, compareType);
-    builder.setMutation(ProtobufUtil.toMutation(MutationType.DELETE, delete));
+    builder.setMutation(ProtobufUtil.toMutation(MutationType.DELETE, delete,
+      MutationProto.newBuilder()));
     builder.setCondition(condition);
     return builder.build();
   }
@@ -265,7 +266,7 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutation(ProtobufUtil.toMutation(MutationType.PUT, put));
+    builder.setMutation(ProtobufUtil.toMutation(MutationType.PUT, put, MutationProto.newBuilder()));
     return builder.build();
   }
 
@@ -283,7 +284,8 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutation(ProtobufUtil.toMutation(MutationType.APPEND, append));
+    builder.setMutation(ProtobufUtil.toMutation(MutationType.APPEND, append,
+      MutationProto.newBuilder()));
     return builder.build();
   }
 
@@ -300,7 +302,7 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutation(ProtobufUtil.toMutation(increment));
+    builder.setMutation(ProtobufUtil.toMutation(increment, MutationProto.newBuilder()));
     return builder.build();
   }
 
@@ -318,7 +320,8 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutation(ProtobufUtil.toMutation(MutationType.DELETE, delete));
+    builder.setMutation(ProtobufUtil.toMutation(MutationType.DELETE, delete,
+      MutationProto.newBuilder()));
     return builder.build();
   }
 
@@ -334,7 +337,10 @@ public final class RequestConverter {
   public static RegionAction.Builder buildRegionAction(final byte [] regionName,
       final RowMutations rowMutations)
   throws IOException {
-    RegionAction.Builder builder = getRegionActionBuilderWithRegion(regionName);
+    RegionAction.Builder builder =
+      getRegionActionBuilderWithRegion(RegionAction.newBuilder(), regionName);
+    ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
+    MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
     for (Mutation mutation: rowMutations.getMutations()) {
       MutationType mutateType = null;
       if (mutation instanceof Put) {
@@ -345,8 +351,11 @@ public final class RequestConverter {
         throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
           mutation.getClass().getName());
       }
-      MutationProto mp = ProtobufUtil.toMutation(mutateType, mutation);
-      builder.addAction(ClientProtos.Action.newBuilder().setMutation(mp).build());
+      mutationBuilder.clear();
+      MutationProto mp = ProtobufUtil.toMutation(mutateType, mutation, mutationBuilder);
+      actionBuilder.clear();
+      actionBuilder.setMutation(mp);
+      builder.addAction(actionBuilder.build());
     }
     return builder;
   }
@@ -363,9 +372,11 @@ public final class RequestConverter {
    * @throws IOException
    */
   public static RegionAction.Builder buildNoDataRegionAction(final byte[] regionName,
-      final RowMutations rowMutations, final List<CellScannable> cells)
+      final RowMutations rowMutations, final List<CellScannable> cells,
+      final RegionAction.Builder regionActionBuilder,
+      final ClientProtos.Action.Builder actionBuilder,
+      final MutationProto.Builder mutationBuilder)
   throws IOException {
-    RegionAction.Builder builder = getRegionActionBuilderWithRegion(regionName);
     for (Mutation mutation: rowMutations.getMutations()) {
       MutationType type = null;
       if (mutation instanceof Put) {
@@ -376,18 +387,20 @@ public final class RequestConverter {
         throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
           mutation.getClass().getName());
       }
-      MutationProto mp = ProtobufUtil.toMutationNoData(type, mutation);
+      mutationBuilder.clear();
+      MutationProto mp = ProtobufUtil.toMutationNoData(type, mutation, mutationBuilder);
       cells.add(mutation);
-      builder.addAction(ClientProtos.Action.newBuilder().setMutation(mp).build());
+      actionBuilder.clear();
+      regionActionBuilder.addAction(actionBuilder.setMutation(mp).build());
     }
-    return builder;
+    return regionActionBuilder;
   }
 
-  private static RegionAction.Builder getRegionActionBuilderWithRegion(final byte [] regionName) {
-    RegionAction.Builder builder = RegionAction.newBuilder();
+  private static RegionAction.Builder getRegionActionBuilderWithRegion(
+      final RegionAction.Builder regionActionBuilder, final byte [] regionName) {
     RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
-    builder.setRegion(region);
-    return builder;
+    regionActionBuilder.setRegion(region);
+    return regionActionBuilder;
   }
 
   /**
@@ -484,36 +497,37 @@ public final class RequestConverter {
    * @throws IOException
    */
   public static <R> RegionAction.Builder buildRegionAction(final byte[] regionName,
-      final List<Action<R>> actions)
+      final List<Action<R>> actions, final RegionAction.Builder regionActionBuilder,
+      final ClientProtos.Action.Builder actionBuilder,
+      final MutationProto.Builder mutationBuilder)
   throws IOException {
-    RegionAction.Builder builder = getRegionActionBuilderWithRegion(regionName);
-    ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
     for (Action<R> action: actions) {
       Row row = action.getAction();
       actionBuilder.clear();
       actionBuilder.setIndex(action.getOriginalIndex());
+      mutationBuilder.clear();
       if (row instanceof Get) {
         Get g = (Get)row;
-        builder.addAction(actionBuilder.setGet(ProtobufUtil.toGet(g)));
+        regionActionBuilder.addAction(actionBuilder.setGet(ProtobufUtil.toGet(g)));
       } else if (row instanceof Put) {
-        builder.addAction(actionBuilder.
-          setMutation(ProtobufUtil.toMutation(MutationType.PUT, (Put)row)));
+        regionActionBuilder.addAction(actionBuilder.
+          setMutation(ProtobufUtil.toMutation(MutationType.PUT, (Put)row, mutationBuilder)));
       } else if (row instanceof Delete) {
-        builder.addAction(actionBuilder.
-          setMutation(ProtobufUtil.toMutation(MutationType.DELETE, (Delete)row)));
+        regionActionBuilder.addAction(actionBuilder.
+          setMutation(ProtobufUtil.toMutation(MutationType.DELETE, (Delete)row, mutationBuilder)));
       } else if (row instanceof Append) {
-        builder.addAction(actionBuilder.
-          setMutation(ProtobufUtil.toMutation(MutationType.APPEND, (Append)row)));
+        regionActionBuilder.addAction(actionBuilder.
+          setMutation(ProtobufUtil.toMutation(MutationType.APPEND, (Append)row, mutationBuilder)));
       } else if (row instanceof Increment) {
-        builder.addAction(actionBuilder.
-          setMutation(ProtobufUtil.toMutation((Increment)row)));
+        regionActionBuilder.addAction(actionBuilder.
+          setMutation(ProtobufUtil.toMutation((Increment)row, mutationBuilder)));
       } else if (row instanceof RowMutations) {
         throw new UnsupportedOperationException("No RowMutations in multi calls; use mutateRow");
       } else {
         throw new DoNotRetryIOException("Multi doesn't support " + row.getClass().getName());
       }
     }
-    return builder;
+    return regionActionBuilder;
   }
 
   /**
@@ -533,14 +547,18 @@ public final class RequestConverter {
    * @throws IOException
    */
   public static <R> RegionAction.Builder buildNoDataRegionAction(final byte[] regionName,
-      final List<Action<R>> actions, final List<CellScannable> cells)
+      final List<Action<R>> actions, final List<CellScannable> cells,
+      final RegionAction.Builder regionActionBuilder,
+      final ClientProtos.Action.Builder actionBuilder,
+      final MutationProto.Builder mutationBuilder)
   throws IOException {
-    RegionAction.Builder builder = getRegionActionBuilderWithRegion(regionName);
-    ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
+    RegionAction.Builder builder =
+      getRegionActionBuilderWithRegion(RegionAction.newBuilder(), regionName);
     for (Action<R> action: actions) {
       Row row = action.getAction();
       actionBuilder.clear();
       actionBuilder.setIndex(action.getOriginalIndex());
+      mutationBuilder.clear();
       if (row instanceof Get) {
         Get g = (Get)row;
         builder.addAction(actionBuilder.setGet(ProtobufUtil.toGet(g)));
@@ -548,7 +566,7 @@ public final class RequestConverter {
         Put p = (Put)row;
         cells.add(p);
         builder.addAction(actionBuilder.
-          setMutation(ProtobufUtil.toMutationNoData(MutationType.PUT, p)));
+          setMutation(ProtobufUtil.toMutationNoData(MutationType.PUT, p, mutationBuilder)));
       } else if (row instanceof Delete) {
         Delete d = (Delete)row;
         int size = d.size();
@@ -560,21 +578,21 @@ public final class RequestConverter {
         if (size > 0) {
           cells.add(d);
           builder.addAction(actionBuilder.
-            setMutation(ProtobufUtil.toMutationNoData(MutationType.DELETE, d)));
+            setMutation(ProtobufUtil.toMutationNoData(MutationType.DELETE, d, mutationBuilder)));
         } else {
           builder.addAction(actionBuilder.
-            setMutation(ProtobufUtil.toMutation(MutationType.DELETE, d)));
+            setMutation(ProtobufUtil.toMutation(MutationType.DELETE, d, mutationBuilder)));
         }
       } else if (row instanceof Append) {
         Append a = (Append)row;
         cells.add(a);
         builder.addAction(actionBuilder.
-          setMutation(ProtobufUtil.toMutationNoData(MutationType.APPEND, a)));
+          setMutation(ProtobufUtil.toMutationNoData(MutationType.APPEND, a, mutationBuilder)));
       } else if (row instanceof Increment) {
         Increment i = (Increment)row;
         cells.add(i);
         builder.addAction(actionBuilder.
-          setMutation(ProtobufUtil.toMutationNoData(MutationType.INCREMENT, i)));
+          setMutation(ProtobufUtil.toMutationNoData(MutationType.INCREMENT, i, mutationBuilder)));
       } else if (row instanceof RowMutations) {
         continue; // ignore RowMutations
       } else {

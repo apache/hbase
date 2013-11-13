@@ -41,10 +41,12 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 
 /**
  * A cluster connection.  Knows how to find the master, locate regions out on the cluster,
- * keeps a cache of locations and then knows how to re-calibrate after they move.
- * {@link HConnectionManager} manages instances of this class.   This is NOT a connection to a
- * particular server but to all servers in the cluster.  Individual connections are managed at a
- * lower level.
+ * keeps a cache of locations and then knows how to re-calibrate after they move.  You need one
+ * of these to talk to your HBase cluster. {@link HConnectionManager} manages instances of this
+ * class.  See it for how to get one of these.
+ * 
+ * <p>This is NOT a connection to a particular server but to ALL servers in the cluster.  Individual
+ * connections are managed at a lower level.
  *
  * <p>HConnections are used by {@link HTable} mostly but also by
  * {@link HBaseAdmin}, and {@link CatalogTracker}.  HConnection instances can be shared.  Sharing
