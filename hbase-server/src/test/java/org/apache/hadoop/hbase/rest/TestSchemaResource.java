@@ -123,14 +123,17 @@ public class TestSchemaResource {
     model = testTableSchemaModel.fromJSON(Bytes.toString(response.getBody()));
     testTableSchemaModel.checkModel(model, TABLE1);
 
-    // delete the table
-    client.delete(schemaPath);
-
-    // make sure HBase concurs
-    assertFalse(admin.tableExists(TABLE1));
+    // test delete schema operation is forbidden in read-only mode
+    response = client.delete(schemaPath);
+    assertEquals(response.getCode(), 403);
 
     // return read-only setting back to default
     conf.set("hbase.rest.readonly", "false");
+
+    // delete the table and make sure HBase concurs
+    response = client.delete(schemaPath);
+    assertEquals(response.getCode(), 200);
+    assertFalse(admin.tableExists(TABLE1));
   }
 
   @Test
@@ -171,14 +174,17 @@ public class TestSchemaResource {
     model.getObjectFromMessage(response.getBody());
     testTableSchemaModel.checkModel(model, TABLE2);
 
-    // delete the table
-    client.delete(schemaPath);
-
-    // make sure HBase concurs
-    assertFalse(admin.tableExists(TABLE2));
+    // test delete schema operation is forbidden in read-only mode
+    response = client.delete(schemaPath);
+    assertEquals(response.getCode(), 403);
 
     // return read-only setting back to default
     conf.set("hbase.rest.readonly", "false");
+
+    // delete the table and make sure HBase concurs
+    response = client.delete(schemaPath);
+    assertEquals(response.getCode(), 200);
+    assertFalse(admin.tableExists(TABLE2));
   }
 
 }
