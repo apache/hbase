@@ -112,7 +112,6 @@ public class HFileBlockIndex {
     private byte[][] blockKeys;
     private long[] blockOffsets;
     private int[] blockDataSizes;
-    private int rootByteSize = 0;
     private int rootCount = 0;
 
     // Mid-key metadata.
@@ -262,8 +261,7 @@ public class HFileBlockIndex {
         }
 
         // Found a data block, break the loop and check our level in the tree.
-        if (block.getBlockType().equals(BlockType.DATA) ||
-            block.getBlockType().equals(BlockType.ENCODED_DATA)) {
+        if (block.getBlockType().isData()) {
           break;
         }
 
@@ -423,9 +421,7 @@ public class HFileBlockIndex {
       blockOffsets[rootCount] = offset;
       blockKeys[rootCount] = key;
       blockDataSizes[rootCount] = dataSize;
-
       rootCount++;
-      rootByteSize += SECONDARY_INDEX_ENTRY_OVERHEAD + key.length;
     }
 
     /**
@@ -672,7 +668,7 @@ public class HFileBlockIndex {
     @Override
     public long heapSize() {
       long heapSize = ClassSize.align(6 * ClassSize.REFERENCE +
-          3 * Bytes.SIZEOF_INT + ClassSize.OBJECT);
+          2 * Bytes.SIZEOF_INT + ClassSize.OBJECT);
 
       // Mid-key metadata.
       heapSize += MID_KEY_METADATA_SIZE;

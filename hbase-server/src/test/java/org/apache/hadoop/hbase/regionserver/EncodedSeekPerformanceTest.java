@@ -27,11 +27,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 
 /**
  * Test seek performance for encoded data blocks. Read an HFile and do several
@@ -61,8 +58,7 @@ public class EncodedSeekPerformanceTest {
 
     // read all of the key values
     StoreFile storeFile = new StoreFile(testingUtility.getTestFileSystem(),
-        path, configuration, cacheConf, BloomType.NONE,
-        NoOpDataBlockEncoder.INSTANCE);
+        path, configuration, cacheConf, BloomType.NONE);
 
     StoreFile.Reader reader = storeFile.createReader();
     StoreFileScanner scanner = reader.getStoreFileScanner(true, false);
@@ -88,11 +84,11 @@ public class EncodedSeekPerformanceTest {
     return seeks;
   }
 
-  private void runTest(Path path, HFileDataBlockEncoder blockEncoder,
+  private void runTest(Path path, DataBlockEncoding blockEncoding,
       List<KeyValue> seeks) throws IOException {
     // read all of the key values
     StoreFile storeFile = new StoreFile(testingUtility.getTestFileSystem(),
-        path, configuration, cacheConf, BloomType.NONE, blockEncoder);
+      path, configuration, cacheConf, BloomType.NONE);
 
     long totalSize = 0;
 
@@ -137,7 +133,7 @@ public class EncodedSeekPerformanceTest {
     storeFile.closeReader(cacheConf.shouldEvictOnClose());
     clearBlockCache();
 
-    System.out.println(blockEncoder);
+    System.out.println(blockEncoding);
     System.out.printf("  Read speed:       %8.2f (MB/s)\n", readInMbPerSec);
     System.out.printf("  Seeks per second: %8.2f (#/s)\n", seeksPerSec);
     System.out.printf("  Total KV size:    %d\n", totalSize);
@@ -148,12 +144,12 @@ public class EncodedSeekPerformanceTest {
    * @param encoders List of encoders which will be used for tests.
    * @throws IOException if there is a bug while reading from disk
    */
-  public void runTests(Path path, List<HFileDataBlockEncoder> encoders)
+  public void runTests(Path path, DataBlockEncoding[] encodings)
       throws IOException {
     List<KeyValue> seeks = prepareListOfTestSeeks(path);
 
-    for (HFileDataBlockEncoder blockEncoder : encoders) {
-      runTest(path, blockEncoder, seeks);
+    for (DataBlockEncoding blockEncoding : encodings) {
+      runTest(path, blockEncoding, seeks);
     }
   }
 
@@ -169,16 +165,10 @@ public class EncodedSeekPerformanceTest {
     }
 
     Path path = new Path(args[0]);
-    List<HFileDataBlockEncoder> encoders =
-        new ArrayList<HFileDataBlockEncoder>();
 
-    for (DataBlockEncoding encodingAlgo : DataBlockEncoding.values()) {
-      encoders.add(new HFileDataBlockEncoderImpl(DataBlockEncoding.NONE,
-          encodingAlgo));
-    }
-
+    // TODO, this test doesn't work as expected any more. Need to fix.
     EncodedSeekPerformanceTest utility = new EncodedSeekPerformanceTest();
-    utility.runTests(path, encoders);
+    utility.runTests(path, DataBlockEncoding.values());
 
     System.exit(0);
   }

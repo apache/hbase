@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /** A mock used so our tests don't deal with actual StoreFiles */
@@ -41,8 +40,7 @@ public class MockStoreFile extends StoreFile {
   MockStoreFile(HBaseTestingUtility testUtil, Path testPath,
       long length, long ageInDisk, boolean isRef, long sequenceid) throws IOException {
     super(testUtil.getTestFileSystem(), testPath, testUtil.getConfiguration(),
-          new CacheConfig(testUtil.getConfiguration()), BloomType.NONE,
-          NoOpDataBlockEncoder.INSTANCE);
+      new CacheConfig(testUtil.getConfiguration()), BloomType.NONE);
     this.length = length;
     this.isRef = isRef;
     this.ageInDisk = ageInDisk;

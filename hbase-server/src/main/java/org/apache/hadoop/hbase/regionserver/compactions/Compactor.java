@@ -27,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -148,7 +146,7 @@ public abstract class Compactor {
           ", keycount=" + keyCount +
           ", bloomtype=" + r.getBloomFilterType().toString() +
           ", size=" + StringUtils.humanReadableInt(r.length()) +
-          ", encoding=" + r.getHFileReader().getEncodingOnDisk() +
+          ", encoding=" + r.getHFileReader().getDataBlockEncoding() +
           ", seqNum=" + seqNum +
           (calculatePutTs ? ", earliestPutTs=" + earliestPutTs: ""));
       }
@@ -199,7 +197,6 @@ public abstract class Compactor {
     return store.getCoprocessorHost().preCompact(store, scanner, scanType, request);
   }
 
-  @SuppressWarnings("deprecation")
   /**
    * Performs the compaction.
    * @param scanner Where to read from.

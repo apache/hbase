@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderV2;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
@@ -594,7 +593,7 @@ public class DataBlockEncodingTool {
     CacheConfig cacheConf = new CacheConfig(conf);
     FileSystem fs = FileSystem.get(conf);
     StoreFile hsf = new StoreFile(fs, path, conf, cacheConf,
-        BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+      BloomType.NONE);
 
     StoreFile.Reader reader = hsf.createReader();
     reader.loadFileInfo();

@@ -325,8 +325,8 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   }
 
   @Override
-  public DataBlockEncoding getEncodingOnDisk() {
-    return dataBlockEncoder.getEncodingOnDisk();
+  public DataBlockEncoding getDataBlockEncoding() {
+    return dataBlockEncoder.getDataBlockEncoding();
   }
 
   public abstract int getMajorVersion();

@@ -48,10 +48,8 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -123,9 +121,6 @@ public class StoreFile {
   // Block cache configuration and reference.
   private final CacheConfig cacheConf;
 
-  // What kind of data block encoding will be used
-  private final HFileDataBlockEncoder dataBlockEncoder;
-
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
   private long sequenceid = -1;
@@ -186,13 +181,11 @@ public class StoreFile {
    *          as the Bloom filter type actually present in the HFile, because
    *          column family configuration might change. If this is
    *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
-   * @param dataBlockEncoder data block encoding algorithm.
    * @throws IOException When opening the reader fails.
    */
   public StoreFile(final FileSystem fs, final Path p, final Configuration conf,
-        final CacheConfig cacheConf, final BloomType cfBloomType,
-        final HFileDataBlockEncoder dataBlockEncoder) throws IOException {
-    this(fs, new StoreFileInfo(conf, fs, p), conf, cacheConf, cfBloomType, dataBlockEncoder);
+        final CacheConfig cacheConf, final BloomType cfBloomType) throws IOException {
+    this(fs, new StoreFileInfo(conf, fs, p), conf, cacheConf, cfBloomType);
   }
 
 
@@ -209,18 +202,13 @@ public class StoreFile {
    *          as the Bloom filter type actually present in the HFile, because
    *          column family configuration might change. If this is
    *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
-   * @param dataBlockEncoder data block encoding algorithm.
    * @throws IOException When opening the reader fails.
    */
   public StoreFile(final FileSystem fs, final StoreFileInfo fileInfo, final Configuration conf,
-      final CacheConfig cacheConf,  final BloomType cfBloomType,
-      final HFileDataBlockEncoder dataBlockEncoder) throws IOException {
+      final CacheConfig cacheConf,  final BloomType cfBloomType) throws IOException {
     this.fs = fs;
     this.fileInfo = fileInfo;
     this.cacheConf = cacheConf;
-    this.dataBlockEncoder =
-        dataBlockEncoder == null ? NoOpDataBlockEncoder.INSTANCE
-            : dataBlockEncoder;
 
     if (BloomFilterFactory.isGeneralBloomEnabled(conf)) {
       this.cfBloomType = cfBloomType;
@@ -363,7 +351,7 @@ public class StoreFile {
     }
 
     // Open the StoreFile.Reader
-    this.reader = fileInfo.open(this.fs, this.cacheConf, dataBlockEncoder.getEncodingInCache());
+    this.reader = fileInfo.open(this.fs, this.cacheConf);
 
     // Load up indices and fileinfo. This also loads Bloom filter type.
     metadataMap = Collections.unmodifiableMap(this.reader.loadFileInfo());
@@ -659,6 +647,7 @@ public class StoreFile {
    * @param comparator Comparator used to compare KVs.
    * @return The split point row, or null if splitting is not possible, or reader is null.
    */
+  @SuppressWarnings("deprecation")
   byte[] getFileSplitPoint(KVComparator comparator) throws IOException {
     if (this.reader == null) {
       LOG.warn("Storefile " + this + " Reader is null; cannot get split point");
@@ -1023,17 +1012,14 @@ public class StoreFile {
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
 
-    public Reader(FileSystem fs, Path path, CacheConfig cacheConf,
-        DataBlockEncoding preferredEncodingInCache) throws IOException {
-      reader = HFile.createReaderWithEncoding(fs, path, cacheConf,
-          preferredEncodingInCache);
+    public Reader(FileSystem fs, Path path, CacheConfig cacheConf) throws IOException {
+      reader = HFile.createReader(fs, path, cacheConf);
       bloomFilterType = BloomType.NONE;
     }
 
     public Reader(FileSystem fs, Path path, FSDataInputStreamWrapper in, long size,
-        CacheConfig cacheConf, DataBlockEncoding preferredEncodingInCache) throws IOException {
-      reader = HFile.createReaderWithEncoding(
-          fs, path, in, size, cacheConf, preferredEncodingInCache);
+        CacheConfig cacheConf) throws IOException {
+      reader = HFile.createReader(fs, path, in, size, cacheConf);
       bloomFilterType = BloomType.NONE;
     }
 

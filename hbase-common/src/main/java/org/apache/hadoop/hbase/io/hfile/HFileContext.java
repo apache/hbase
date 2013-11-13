@@ -52,8 +52,7 @@ public class HFileContext implements HeapSize, Cloneable {
   private int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
   /** Number of uncompressed bytes we allow per block. */
   private int blocksize = HConstants.DEFAULT_BLOCKSIZE;
-  private DataBlockEncoding encodingOnDisk = DataBlockEncoding.NONE;
-  private DataBlockEncoding encodingInCache = DataBlockEncoding.NONE;
+  private DataBlockEncoding encoding = DataBlockEncoding.NONE;
 
   //Empty constructor.  Go with setters
   public HFileContext() {
@@ -71,14 +70,12 @@ public class HFileContext implements HeapSize, Cloneable {
     this.checksumType = context.checksumType;
     this.bytesPerChecksum = context.bytesPerChecksum;
     this.blocksize = context.blocksize;
-    this.encodingOnDisk = context.encodingOnDisk;
-    this.encodingInCache = context.encodingInCache;
+    this.encoding = context.encoding;
   }
 
   public HFileContext(boolean useHBaseChecksum, boolean includesMvcc, boolean includesTags,
       Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
-      int bytesPerChecksum, int blockSize, DataBlockEncoding encodingOnDisk,
-      DataBlockEncoding encodingInCache) {
+      int bytesPerChecksum, int blockSize, DataBlockEncoding encoding) {
     this.usesHBaseChecksum = useHBaseChecksum;
     this.includesMvcc =  includesMvcc;
     this.includesTags = includesTags;
@@ -87,8 +84,9 @@ public class HFileContext implements HeapSize, Cloneable {
     this.checksumType = checksumType;
     this.bytesPerChecksum = bytesPerChecksum;
     this.blocksize = blockSize;
-    this.encodingOnDisk = encodingOnDisk;
-    this.encodingInCache = encodingInCache;
+    if (encoding != null) {
+      this.encoding = encoding;
+    }
   }
 
   public Algorithm getCompression() {
@@ -135,12 +133,8 @@ public class HFileContext implements HeapSize, Cloneable {
     return blocksize;
   }
 
-  public DataBlockEncoding getEncodingOnDisk() {
-    return encodingOnDisk;
-  }
-
-  public DataBlockEncoding getEncodingInCache() {
-    return encodingInCache;
+  public DataBlockEncoding getDataBlockEncoding() {
+    return encoding;
   }
 
   /**
@@ -151,8 +145,8 @@ public class HFileContext implements HeapSize, Cloneable {
   @Override
   public long heapSize() {
     long size = ClassSize.align(ClassSize.OBJECT +
-        // Algorithm reference, encodingondisk, encodingincache, checksumtype
-        4 * ClassSize.REFERENCE +
+        // Algorithm reference, encoding, checksumtype
+        3 * ClassSize.REFERENCE +
         2 * Bytes.SIZEOF_INT +
         // usesHBaseChecksum, includesMvcc, includesTags and compressTags
         4 * Bytes.SIZEOF_BOOLEAN);
@@ -170,8 +164,7 @@ public class HFileContext implements HeapSize, Cloneable {
     clonnedCtx.checksumType = this.checksumType;
     clonnedCtx.bytesPerChecksum = this.bytesPerChecksum;
     clonnedCtx.blocksize = this.blocksize;
-    clonnedCtx.encodingOnDisk = this.encodingOnDisk;
-    clonnedCtx.encodingInCache = this.encodingInCache;
+    clonnedCtx.encoding = this.encoding;
     return clonnedCtx;
   }
 }

@@ -114,10 +114,9 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();
     this.hFileContext = fileContext;
-    if (hFileContext.getEncodingOnDisk() != DataBlockEncoding.NONE
-        || hFileContext.getEncodingInCache() != DataBlockEncoding.NONE) {
-      this.blockEncoder = new HFileDataBlockEncoderImpl(hFileContext.getEncodingOnDisk(),
-          hFileContext.getEncodingInCache());
+    DataBlockEncoding encoding = hFileContext.getDataBlockEncoding();
+    if (encoding != DataBlockEncoding.NONE) {
+      this.blockEncoder = new HFileDataBlockEncoderImpl(encoding);
     } else {
       this.blockEncoder = NoOpDataBlockEncoder.INSTANCE;
     }

@@ -168,11 +168,10 @@ public class StoreFileInfo {
    * Open a Reader for the StoreFile
    * @param fs The current file system to use.
    * @param cacheConf The cache configuration and block cache reference.
-   * @param dataBlockEncoding data block encoding algorithm.
    * @return The StoreFile.Reader for the file
    */
-  public StoreFile.Reader open(final FileSystem fs, final CacheConfig cacheConf,
-      final DataBlockEncoding dataBlockEncoding) throws IOException {
+  public StoreFile.Reader open(final FileSystem fs,
+      final CacheConfig cacheConf) throws IOException {
     FSDataInputStreamWrapper in;
     FileStatus status;
 
@@ -198,19 +197,18 @@ public class StoreFileInfo {
     StoreFile.Reader reader = null;
     if (this.coprocessorHost != null) {
       reader = this.coprocessorHost.preStoreFileReaderOpen(fs, this.getPath(), in, length,
-          cacheConf, dataBlockEncoding, reference);
+        cacheConf, reference);
     }
     if (reader == null) {
       if (this.reference != null) {
-        reader = new HalfStoreFileReader(fs, this.getPath(), in, length, cacheConf, reference,
-            dataBlockEncoding);
+        reader = new HalfStoreFileReader(fs, this.getPath(), in, length, cacheConf, reference);
       } else {
-        reader = new StoreFile.Reader(fs, this.getPath(), in, length, cacheConf, dataBlockEncoding);
+        reader = new StoreFile.Reader(fs, this.getPath(), in, length, cacheConf);
       }
     }
     if (this.coprocessorHost != null) {
       reader = this.coprocessorHost.postStoreFileReaderOpen(fs, this.getPath(), in, length,
-          cacheConf, dataBlockEncoding, reference, reader);
+        cacheConf, reference, reader);
     }
     return reader;
   }

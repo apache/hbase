@@ -689,7 +689,7 @@ public class HFileBlock implements Cacheable {
       defaultBlockEncodingCtx = new HFileBlockDefaultEncodingContext(null,
           HConstants.HFILEBLOCK_DUMMY_HEADER, fileContext);
       dataBlockEncodingCtx = this.dataBlockEncoder
-          .newOnDiskDataBlockEncodingContext(HConstants.HFILEBLOCK_DUMMY_HEADER, fileContext);
+          .newDataBlockEncodingContext(HConstants.HFILEBLOCK_DUMMY_HEADER, fileContext);
 
       if (fileContext.getBytesPerChecksum() < HConstants.HFILEBLOCK_HEADER_SIZE) {
         throw new RuntimeException("Unsupported value of bytesPerChecksum. " +
@@ -1025,8 +1025,7 @@ public class HFileBlock implements Cacheable {
                                 .withBytesPerCheckSum(0)
                                 .withChecksumType(ChecksumType.NULL) // no checksums in cached data
                                 .withCompression(fileContext.getCompression())
-                                .withDataBlockEncodingInCache(fileContext.getEncodingInCache())
-                                .withDataBlockEncodingOnDisk(fileContext.getEncodingOnDisk())
+                                .withDataBlockEncoding(fileContext.getDataBlockEncoding())
                                 .withHBaseCheckSum(fileContext.isUseHBaseChecksum())
                                 .withCompressTags(fileContext.isCompressTags())
                                 .withIncludesMvcc(fileContext.isIncludesMvcc())
@@ -1255,10 +1254,6 @@ public class HFileBlock implements Cacheable {
     /** The file system stream of the underlying {@link HFile} that 
      * does or doesn't do checksum validations in the filesystem */
     protected FSDataInputStreamWrapper streamWrapper;
-
-    /** Data block encoding used to read from file */
-    protected HFileDataBlockEncoder dataBlockEncoder =
-        NoOpDataBlockEncoder.INSTANCE;
 
     private HFileBlockDecodingContext encodedBlockDecodingCtx;
 
@@ -1512,7 +1507,7 @@ public class HFileBlock implements Cacheable {
       if (isCompressed) {
         // This will allocate a new buffer but keep header bytes.
         b.allocateBuffer(nextBlockOnDiskSize > 0);
-        if (b.blockType.equals(BlockType.ENCODED_DATA)) {
+        if (b.blockType == BlockType.ENCODED_DATA) {
           encodedBlockDecodingCtx.prepareDecoding(b.getOnDiskSizeWithoutHeader(),
               b.getUncompressedSizeWithoutHeader(), b.getBufferWithoutHeader(), onDiskBlock,
               hdrSize);
@@ -1557,8 +1552,7 @@ public class HFileBlock implements Cacheable {
     }
 
     void setDataBlockEncoder(HFileDataBlockEncoder encoder) {
-      this.dataBlockEncoder = encoder;
-      encodedBlockDecodingCtx = encoder.newOnDiskDataBlockDecodingContext(this.fileContext);
+      encodedBlockDecodingCtx = encoder.newDataBlockDecodingContext(this.fileContext);
     }
 
     /**

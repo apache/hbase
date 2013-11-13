@@ -47,8 +47,7 @@ public class HFileContextBuilder {
   private int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
   /** Number of uncompressed bytes we allow per block. */
   private int blocksize = HConstants.DEFAULT_BLOCKSIZE;
-  private DataBlockEncoding encodingOnDisk = DataBlockEncoding.NONE;
-  private DataBlockEncoding encodingInCache = DataBlockEncoding.NONE;
+  private DataBlockEncoding encoding = DataBlockEncoding.NONE;
 
   public HFileContextBuilder withHBaseCheckSum(boolean useHBaseCheckSum) {
     this.usesHBaseChecksum = useHBaseCheckSum;
@@ -90,18 +89,13 @@ public class HFileContextBuilder {
     return this;
   }
 
-  public HFileContextBuilder withDataBlockEncodingOnDisk(DataBlockEncoding encodingOnDisk) {
-    this.encodingOnDisk = encodingOnDisk;
-    return this;
-  }
-
-  public HFileContextBuilder withDataBlockEncodingInCache(DataBlockEncoding encodingInCache) {
-    this.encodingInCache = encodingInCache;
+  public HFileContextBuilder withDataBlockEncoding(DataBlockEncoding encoding) {
+    this.encoding = encoding;
     return this;
   }
 
   public HFileContext build() {
     return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
-        compressTags, checksumType, bytesPerChecksum, blocksize, encodingOnDisk, encodingInCache);
+      compressTags, checksumType, bytesPerChecksum, blocksize, encoding);
   }
 }

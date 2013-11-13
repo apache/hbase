@@ -198,8 +198,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
                                     .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
                                     .withBlockSize(blockSize);
         if(dataBlockEncodingStr !=  null) {
-          contextBuilder.withDataBlockEncodingOnDisk(DataBlockEncoding.valueOf(dataBlockEncodingStr))
-                        .withDataBlockEncodingInCache(DataBlockEncoding.valueOf(dataBlockEncodingStr));
+          contextBuilder.withDataBlockEncoding(DataBlockEncoding.valueOf(dataBlockEncodingStr));
         }
         HFileContext hFileContext = contextBuilder.build();
                                     

@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -58,7 +57,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Pair;
-import org.mortbay.log.Log;
 
 import com.google.common.collect.ImmutableList;
 
@@ -467,14 +465,14 @@ public abstract class BaseRegionObserver implements RegionObserver {
   @Override
   public Reader preStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
       FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
-      DataBlockEncoding preferredEncodingInCache, Reference r, Reader reader) throws IOException {
+      Reference r, Reader reader) throws IOException {
     return reader;
   }
 
   @Override
   public Reader postStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
       FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
-      DataBlockEncoding preferredEncodingInCache, Reference r, Reader reader) throws IOException {
+      Reference r, Reader reader) throws IOException {
     return reader;
   }
 

@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
  */
 @InterfaceAudience.Private
 public class BlockCacheKey implements HeapSize, java.io.Serializable {
+  private static final long serialVersionUID = -5199992013113130534L;
   private final String hfileName;
   private final long offset;
   private final DataBlockEncoding encoding;
@@ -39,8 +40,8 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
     // We add encoding to the cache key only for data blocks. If the block type
     // is unknown (this should never be the case in production), we just use
     // the provided encoding, because it might be a data block.
-    this.encoding = (blockType == null || blockType.isData()) ? encoding :
-        DataBlockEncoding.NONE;
+    this.encoding = (encoding != null && (blockType == null
+      || blockType.isData())) ? encoding : DataBlockEncoding.NONE;
   }
 
   /**
@@ -62,7 +63,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   public boolean equals(Object o) {
     if (o instanceof BlockCacheKey) {
       BlockCacheKey k = (BlockCacheKey) o;
-      return offset == k.offset
+      return offset == k.offset && encoding == k.encoding
           && (hfileName == null ? k.hfileName == null : hfileName
               .equals(k.hfileName));
     } else {

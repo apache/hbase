@@ -30,23 +30,23 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
+import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -55,9 +55,9 @@ import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Coprocessors implement this interface to observe and mediate client actions
@@ -1026,7 +1026,6 @@ public interface RegionObserver extends Coprocessor {
    * @param in {@link FSDataInputStreamWrapper}
    * @param size Full size of the file
    * @param cacheConf
-   * @param preferredEncodingInCache
    * @param r original reference file. This will be not null only when reading a split file.
    * @param reader the base reader, if not {@code null}, from previous RegionObserver in the chain
    * @return a Reader instance to use instead of the base reader if overriding
@@ -1035,8 +1034,7 @@ public interface RegionObserver extends Coprocessor {
    */
   StoreFile.Reader preStoreFileReaderOpen(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       final FileSystem fs, final Path p, final FSDataInputStreamWrapper in, long size,
-      final CacheConfig cacheConf, final DataBlockEncoding preferredEncodingInCache,
-      final Reference r, StoreFile.Reader reader) throws IOException;
+      final CacheConfig cacheConf, final Reference r, StoreFile.Reader reader) throws IOException;
 
   /**
    * Called after the creation of Reader for a store file.
@@ -1047,7 +1045,6 @@ public interface RegionObserver extends Coprocessor {
    * @param in {@link FSDataInputStreamWrapper}
    * @param size Full size of the file
    * @param cacheConf
-   * @param preferredEncodingInCache
    * @param r original reference file. This will be not null only when reading a split file.
    * @param reader the base reader instance
    * @return The reader to use
@@ -1055,8 +1052,7 @@ public interface RegionObserver extends Coprocessor {
    */
   StoreFile.Reader postStoreFileReaderOpen(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       final FileSystem fs, final Path p, final FSDataInputStreamWrapper in, long size,
-      final CacheConfig cacheConf, final DataBlockEncoding preferredEncodingInCache,
-      final Reference r, StoreFile.Reader reader) throws IOException;
+      final CacheConfig cacheConf, final Reference r, StoreFile.Reader reader) throws IOException;
 
   /**
    * Called after a new cell has been created during an increment operation, but before

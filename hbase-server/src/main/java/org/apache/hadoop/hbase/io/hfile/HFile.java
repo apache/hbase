@@ -66,11 +66,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * File format for hbase.
@@ -497,7 +496,7 @@ public class HFile {
     /** Close method with optional evictOnClose */
     void close(boolean evictOnClose) throws IOException;
 
-    DataBlockEncoding getEncodingOnDisk();
+    DataBlockEncoding getDataBlockEncoding();
 
     boolean hasMVCCInfo();
   }
@@ -510,13 +509,12 @@ public class HFile {
    * @param fsdis stream of path's file
    * @param size max size of the trailer.
    * @param cacheConf Cache configuation values, cannot be null.
-   * @param preferredEncodingInCache
    * @param hfs
    * @return an appropriate instance of HFileReader
    * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
    */
   private static Reader pickReaderVersion(Path path, FSDataInputStreamWrapper fsdis,
-      long size, CacheConfig cacheConf, DataBlockEncoding preferredEncodingInCache,
+      long size, CacheConfig cacheConf,
       HFileSystem hfs) throws IOException {
     FixedFileTrailer trailer = null;
     try {
@@ -526,10 +524,10 @@ public class HFile {
       switch (trailer.getMajorVersion()) {
       case 2:
         return new HFileReaderV2(
-            path, trailer, fsdis, size, cacheConf, preferredEncodingInCache, hfs);
+            path, trailer, fsdis, size, cacheConf, hfs);
       case 3 :
         return new HFileReaderV3(
-            path, trailer, fsdis, size, cacheConf, preferredEncodingInCache, hfs);
+            path, trailer, fsdis, size, cacheConf, hfs);
       default:
         throw new IllegalArgumentException("Invalid HFile version " + trailer.getMajorVersion());
       }
@@ -546,32 +544,14 @@ public class HFile {
   /**
    * @param fs A file system
    * @param path Path to HFile
-   * @param cacheConf Cache configuration for hfile's contents
-   * @param preferredEncodingInCache Preferred in-cache data encoding algorithm.
-   * @return A version specific Hfile Reader
-   * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
-   */
-  public static Reader createReaderWithEncoding(
-      FileSystem fs, Path path, CacheConfig cacheConf,
-      DataBlockEncoding preferredEncodingInCache) throws IOException {
-    FSDataInputStreamWrapper stream = new FSDataInputStreamWrapper(fs, path);
-    return pickReaderVersion(path, stream, fs.getFileStatus(path).getLen(),
-        cacheConf, preferredEncodingInCache, stream.getHfs());
-  }
-
-  /**
-   * @param fs A file system
-   * @param path Path to HFile
    * @param fsdis a stream of path's file
    * @param size max size of the trailer.
    * @param cacheConf Cache configuration for hfile's contents
-   * @param preferredEncodingInCache Preferred in-cache data encoding algorithm.
    * @return A version specific Hfile Reader
    * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
    */
-  public static Reader createReaderWithEncoding(FileSystem fs, Path path,
-      FSDataInputStreamWrapper fsdis, long size, CacheConfig cacheConf,
-      DataBlockEncoding preferredEncodingInCache) throws IOException {
+  public static Reader createReader(FileSystem fs, Path path,
+      FSDataInputStreamWrapper fsdis, long size, CacheConfig cacheConf) throws IOException {
     HFileSystem hfs = null;
 
     // If the fs is not an instance of HFileSystem, then create an
@@ -583,7 +563,7 @@ public class HFile {
     } else {
       hfs = (HFileSystem)fs;
     }
-    return pickReaderVersion(path, fsdis, size, cacheConf, preferredEncodingInCache, hfs);
+    return pickReaderVersion(path, fsdis, size, cacheConf, hfs);
   }
 
   /**
@@ -597,8 +577,9 @@ public class HFile {
   public static Reader createReader(
       FileSystem fs, Path path, CacheConfig cacheConf) throws IOException {
     Preconditions.checkNotNull(cacheConf, "Cannot create Reader with null CacheConf");
-    return createReaderWithEncoding(fs, path, cacheConf,
-        DataBlockEncoding.NONE);
+    FSDataInputStreamWrapper stream = new FSDataInputStreamWrapper(fs, path);
+    return pickReaderVersion(path, stream, fs.getFileStatus(path).getLen(),
+      cacheConf, stream.getHfs());
   }
 
   /**
@@ -608,7 +589,7 @@ public class HFile {
       FSDataInputStream fsdis, long size, CacheConfig cacheConf)
       throws IOException {
     FSDataInputStreamWrapper wrapper = new FSDataInputStreamWrapper(fsdis);
-    return pickReaderVersion(path, wrapper, size, cacheConf, DataBlockEncoding.NONE, null);
+    return pickReaderVersion(path, wrapper, size, cacheConf, null);
   }
 
   /**

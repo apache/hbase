@@ -109,20 +109,16 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * @param fsdis input stream.
    * @param size Length of the stream.
    * @param cacheConf Cache configuration.
-   * @param preferredEncodingInCache the encoding to use in cache in case we
-   *          have a choice. If the file is already encoded on disk, we will
-   *          still use its on-disk encoding in cache.
    * @param hfs
    */
   public HFileReaderV2(Path path, FixedFileTrailer trailer,
       final FSDataInputStreamWrapper fsdis, final long size, final CacheConfig cacheConf,
-      DataBlockEncoding preferredEncodingInCache, final HFileSystem hfs)
+      final HFileSystem hfs)
       throws IOException {
     super(path, trailer, size, cacheConf, hfs);
     trailer.expectMajorVersion(getMajorVersion());
     validateMinorVersion(path, trailer.getMinorVersion());
     this.hfileContext = createHFileContext(trailer);
-    // Should we set the preferredEncodinginCache here for the context
     HFileBlock.FSReaderV2 fsBlockReaderV2 = new HFileBlock.FSReaderV2(fsdis, fileSize, hfs, path,
         hfileContext);
     this.fsBlockReader = fsBlockReaderV2; // upcast
@@ -168,8 +164,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
     }
 
     // Read data block encoding algorithm name from file info.
-    dataBlockEncoder = HFileDataBlockEncoderImpl.createFromFileInfo(fileInfo,
-        preferredEncodingInCache);
+    dataBlockEncoder = HFileDataBlockEncoderImpl.createFromFileInfo(fileInfo);
     fsBlockReaderV2.setDataBlockEncoder(dataBlockEncoder);
 
     // Store all other load-on-open blocks for further consumption.
@@ -203,8 +198,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
    @Override
    public HFileScanner getScanner(boolean cacheBlocks, final boolean pread,
       final boolean isCompaction) {
-    // check if we want to use data block encoding in memory
-    if (dataBlockEncoder.useEncodedScanner(isCompaction)) {
+    if (dataBlockEncoder.useEncodedScanner()) {
       return new EncodedScannerV2(this, cacheBlocks, pread, isCompaction,
           hfileContext);
     }
@@ -310,7 +304,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
     BlockCacheKey cacheKey =
         new BlockCacheKey(name, dataBlockOffset,
-            dataBlockEncoder.getEffectiveEncodingInCache(isCompaction),
+            dataBlockEncoder.getDataBlockEncoding(),
             expectedBlockType);
 
     boolean useLock = false;
@@ -329,19 +323,17 @@ public class HFileReaderV2 extends AbstractHFileReader {
           HFileBlock cachedBlock = (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
               cacheBlock, useLock);
           if (cachedBlock != null) {
-            if (cachedBlock.getBlockType() == BlockType.DATA) {
-              HFile.dataBlockReadCnt.incrementAndGet();
-            }
-
             validateBlockType(cachedBlock, expectedBlockType);
+            if (cachedBlock.getBlockType().isData()) {
+              HFile.dataBlockReadCnt.incrementAndGet();
 
-            // Validate encoding type for encoded blocks. We include encoding
-            // type in the cache key, and we expect it to match on a cache hit.
-            if (cachedBlock.getBlockType() == BlockType.ENCODED_DATA
-                && cachedBlock.getDataBlockEncoding() != dataBlockEncoder.getEncodingInCache()) {
-              throw new IOException("Cached block under key " + cacheKey + " "
+              // Validate encoding type for data blocks. We include encoding
+              // type in the cache key, and we expect it to match on a cache hit.
+              if (cachedBlock.getDataBlockEncoding() != dataBlockEncoder.getDataBlockEncoding()) {
+                throw new IOException("Cached block under key " + cacheKey + " "
                   + "has wrong encoding: " + cachedBlock.getDataBlockEncoding() + " (expected: "
-                  + dataBlockEncoder.getEncodingInCache() + ")");
+                  + dataBlockEncoder.getDataBlockEncoding() + ")");
+              }
             }
             return cachedBlock;
           }
@@ -359,7 +351,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
         long startTimeNs = System.nanoTime();
         HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, -1,
             pread);
-        hfileBlock = diskToCacheFormat(hfileBlock, isCompaction);
         validateBlockType(hfileBlock, expectedBlockType);
 
         final long delta = System.nanoTime() - startTimeNs;
@@ -370,7 +361,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock, cacheConf.isInMemory());
         }
 
-        if (hfileBlock.getBlockType() == BlockType.DATA) {
+        if (hfileBlock.getBlockType().isData()) {
           HFile.dataBlockReadCnt.incrementAndGet();
         }
 
@@ -382,10 +373,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
         offsetLock.releaseLockEntry(lockEntry);
       }
     }
-  }
-
-  protected HFileBlock diskToCacheFormat( HFileBlock hfileBlock, final boolean isCompaction) {
-    return dataBlockEncoder.diskToCacheFormat(hfileBlock, isCompaction);
   }
 
   @Override
@@ -616,8 +603,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
             + curBlock.getOnDiskSizeWithHeader(),
             curBlock.getNextBlockOnDiskSizeWithHeader(), cacheBlocks, pread,
             isCompaction, null);
-      } while (!(curBlock.getBlockType().equals(BlockType.DATA) ||
-          curBlock.getBlockType().equals(BlockType.ENCODED_DATA)));
+      } while (!curBlock.getBlockType().isData());
 
       return curBlock;
     }
@@ -981,21 +967,20 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * ScannerV2 that operates on encoded data blocks.
    */
   protected static class EncodedScannerV2 extends AbstractScannerV2 {
-    private DataBlockEncoder.EncodedSeeker seeker = null;
-    protected DataBlockEncoder dataBlockEncoder = null;
+    private final HFileBlockDecodingContext decodingCtx;
+    private final DataBlockEncoder.EncodedSeeker seeker;
+    private final DataBlockEncoder dataBlockEncoder;
     protected final HFileContext meta;
-    protected HFileBlockDecodingContext decodingCtx;
+
     public EncodedScannerV2(HFileReaderV2 reader, boolean cacheBlocks,
         boolean pread, boolean isCompaction, HFileContext meta) {
       super(reader, cacheBlocks, pread, isCompaction);
+      DataBlockEncoding encoding = reader.dataBlockEncoder.getDataBlockEncoding();
+      dataBlockEncoder = encoding.getEncoder();
+      decodingCtx = dataBlockEncoder.newDataBlockDecodingContext(meta);
+      seeker = dataBlockEncoder.createSeeker(
+        reader.getComparator(), decodingCtx);
       this.meta = meta;
-    }
-
-    protected void setDataBlockEncoder(DataBlockEncoder dataBlockEncoder) {
-      this.dataBlockEncoder = dataBlockEncoder;
-      decodingCtx = this.dataBlockEncoder.newDataBlockDecodingContext(
-          this.meta);
-      seeker = dataBlockEncoder.createSeeker(reader.getComparator(), decodingCtx);
     }
 
     @Override
@@ -1008,8 +993,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
      * the the first key/value pair.
      *
      * @param newBlock the block to make current
+     * @throws CorruptHFileException
      */
-    protected void updateCurrentBlock(HFileBlock newBlock) {
+    private void updateCurrentBlock(HFileBlock newBlock) throws CorruptHFileException {
       block = newBlock;
 
       // sanity checks
@@ -1017,22 +1003,19 @@ public class HFileReaderV2 extends AbstractHFileReader {
         throw new IllegalStateException(
             "EncodedScanner works only on encoded data blocks");
       }
+      short dataBlockEncoderId = block.getDataBlockEncodingId();
+      if (!DataBlockEncoding.isCorrectEncoder(dataBlockEncoder, dataBlockEncoderId)) {
+        String encoderCls = dataBlockEncoder.getClass().getName();
+        throw new CorruptHFileException("Encoder " + encoderCls
+          + " doesn't support data block encoding "
+          + DataBlockEncoding.getNameFromId(dataBlockEncoderId));
+      }
 
-      updateDataBlockEncoder(block);
       seeker.setCurrentBuffer(getEncodedBuffer(newBlock));
       blockFetches++;
 
       // Reset the next indexed key
       this.nextIndexedKey = null;
-    }
-
-    private void updateDataBlockEncoder(HFileBlock curBlock) {
-      short dataBlockEncoderId = curBlock.getDataBlockEncodingId();
-      if (dataBlockEncoder == null ||
-          !DataBlockEncoding.isCorrectEncoder(dataBlockEncoder, dataBlockEncoderId)) {
-        DataBlockEncoder encoder = DataBlockEncoding.getDataBlockEncoderById(dataBlockEncoderId);
-        setDataBlockEncoder(encoder);
-      }
     }
 
     private ByteBuffer getEncodedBuffer(HFileBlock newBlock) {
@@ -1132,7 +1115,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
     @Override
     protected ByteBuffer getFirstKeyInBlock(HFileBlock curBlock) {
-      updateDataBlockEncoder(curBlock);
       return dataBlockEncoder.getFirstKeyInBlock(getEncodedBuffer(curBlock));
     }
 

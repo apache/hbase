@@ -148,6 +148,7 @@ public class TestStore extends TestCase {
     init(methodName, conf, htd, hcd);
   }
 
+  @SuppressWarnings("deprecation")
   private void init(String methodName, Configuration conf, HTableDescriptor htd,
       HColumnDescriptor hcd) throws IOException {
     //Setting up a Store
@@ -193,7 +194,7 @@ public class TestStore extends TestCase {
     // Verify that compression and encoding settings are respected
     HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf));
     assertEquals(hcd.getCompressionType(), reader.getCompressionAlgorithm());
-    assertEquals(hcd.getDataBlockEncoding(), reader.getEncodingOnDisk());
+    assertEquals(hcd.getDataBlockEncoding(), reader.getDataBlockEncoding());
     reader.close();
   }
 
@@ -559,7 +560,7 @@ public class TestStore extends TestCase {
 
     long computedSize=0;
     for (KeyValue kv : this.store.memstore.kvset) {
-      long kvsize = this.store.memstore.heapSizeChange(kv, true);
+      long kvsize = MemStore.heapSizeChange(kv, true);
       //System.out.println(kv + " size= " + kvsize + " kvsize= " + kv.heapSize());
       computedSize += kvsize;
     }

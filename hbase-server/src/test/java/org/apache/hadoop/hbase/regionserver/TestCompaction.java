@@ -72,7 +72,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -212,8 +211,7 @@ public class TestCompaction {
       final DataBlockEncoding inCache = DataBlockEncoding.PREFIX;
       final DataBlockEncoding onDisk = inCacheOnly ? DataBlockEncoding.NONE :
           inCache;
-      store.setDataBlockEncoderInTest(new HFileDataBlockEncoderImpl(
-          onDisk, inCache));
+      store.setDataBlockEncoderInTest(new HFileDataBlockEncoderImpl(onDisk));
     }
 
     majorCompaction();

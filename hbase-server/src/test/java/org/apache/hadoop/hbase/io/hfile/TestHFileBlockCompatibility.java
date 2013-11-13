@@ -260,8 +260,7 @@ public class TestHFileBlockCompatibility {
               + algo + "_" + encoding.toString());
           FSDataOutputStream os = fs.create(path);
           HFileDataBlockEncoder dataBlockEncoder =
-              new HFileDataBlockEncoderImpl(encoding, encoding,
-                  TestHFileBlockCompatibility.Writer.DUMMY_HEADER);
+              new HFileDataBlockEncoderImpl(encoding);
           TestHFileBlockCompatibility.Writer hbw =
               new TestHFileBlockCompatibility.Writer(algo,
                   dataBlockEncoder, includesMemstoreTS, includesTag);
@@ -429,7 +428,7 @@ public class TestHFileBlockCompatibility {
               .build();
       defaultBlockEncodingCtx = new HFileBlockDefaultEncodingContext(null, DUMMY_HEADER, meta);
       dataBlockEncodingCtx =
-          this.dataBlockEncoder.newOnDiskDataBlockEncodingContext(
+          this.dataBlockEncoder.newDataBlockEncodingContext(
               DUMMY_HEADER, meta);
       baosInMemory = new ByteArrayOutputStream();
 

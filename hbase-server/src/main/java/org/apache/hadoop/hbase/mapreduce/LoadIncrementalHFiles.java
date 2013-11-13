@@ -190,6 +190,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * @param table the table to load into
    * @throws TableNotFoundException if table does not yet exist
    */
+  @SuppressWarnings("deprecation")
   public void doBulkLoad(Path hfofDir, final HTable table)
     throws TableNotFoundException, IOException
   {
@@ -650,8 +651,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     HalfStoreFileReader halfReader = null;
     StoreFile.Writer halfWriter = null;
     try {
-      halfReader = new HalfStoreFileReader(fs, inFile, cacheConf,
-          reference, DataBlockEncoding.NONE);
+      halfReader = new HalfStoreFileReader(fs, inFile, cacheConf, reference);
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
       int blocksize = familyDescriptor.getBlocksize();
@@ -662,8 +662,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
                                   .withChecksumType(HStore.getChecksumType(conf))
                                   .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
                                   .withBlockSize(blocksize)
-                                  .withDataBlockEncodingInCache(familyDescriptor.getDataBlockEncoding())
-                                  .withDataBlockEncodingOnDisk(familyDescriptor.getDataBlockEncodingOnDisk())
+                                  .withDataBlockEncoding(familyDescriptor.getDataBlockEncoding())
                                   .build();
       halfWriter = new StoreFile.WriterBuilder(conf, cacheConf,
           fs)
