@@ -51,12 +51,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -67,7 +67,6 @@ import org.apache.hadoop.hbase.client.coprocessor.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
@@ -77,7 +76,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -191,6 +189,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * @param table the table to load into
    * @throws TableNotFoundException if table does not yet exist
    */
+  @SuppressWarnings("deprecation")
   public void doBulkLoad(Path hfofDir, final HTable table)
     throws TableNotFoundException, IOException
   {
@@ -651,11 +650,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     HalfStoreFileReader halfReader = null;
     StoreFile.Writer halfWriter = null;
     HFileDataBlockEncoder dataBlockEncoder = new HFileDataBlockEncoderImpl(
-        familyDescriptor.getDataBlockEncodingOnDisk(),
-        familyDescriptor.getDataBlockEncoding());
+      familyDescriptor.getDataBlockEncoding());
     try {
-      halfReader = new HalfStoreFileReader(fs, inFile, cacheConf,
-          reference, DataBlockEncoding.NONE);
+      halfReader = new HalfStoreFileReader(fs, inFile, cacheConf, reference);
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
       int blocksize = familyDescriptor.getBlocksize();

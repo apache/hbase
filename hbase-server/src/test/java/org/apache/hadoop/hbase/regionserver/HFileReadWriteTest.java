@@ -60,10 +60,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.MD5Hash;
@@ -145,9 +142,6 @@ public class HFileReadWriteTest {
   private int numReadThreads;
   private int durationSec;
   private DataBlockEncoding dataBlockEncoding;
-  private boolean encodeInCacheOnly;
-  private HFileDataBlockEncoder dataBlockEncoder =
-      NoOpDataBlockEncoder.INSTANCE;
 
   private BloomType bloomType = BloomType.NONE;
   private int blockSize;
@@ -193,8 +187,6 @@ public class HFileReadWriteTest {
         "reader threads" + Workload.RANDOM_READS.onlyUsedFor());
     options.addOption(LoadTestTool.OPT_DATA_BLOCK_ENCODING, true,
         LoadTestTool.OPT_DATA_BLOCK_ENCODING_USAGE);
-    options.addOption(LoadTestTool.OPT_ENCODE_IN_CACHE_ONLY, false,
-        LoadTestTool.OPT_ENCODE_IN_CACHE_ONLY_USAGE);
     options.addOptionGroup(Workload.getOptionGroup());
 
     if (args.length == 0) {
@@ -246,23 +238,9 @@ public class HFileReadWriteTest {
           BLOOM_FILTER_OPTION));
     }
 
-    encodeInCacheOnly =
-        cmdLine.hasOption(LoadTestTool.OPT_ENCODE_IN_CACHE_ONLY);
-
     if (cmdLine.hasOption(LoadTestTool.OPT_DATA_BLOCK_ENCODING)) {
       dataBlockEncoding = DataBlockEncoding.valueOf(
           cmdLine.getOptionValue(LoadTestTool.OPT_DATA_BLOCK_ENCODING));
-      // Optionally encode on disk, always encode in cache.
-      dataBlockEncoder = new HFileDataBlockEncoderImpl(
-          encodeInCacheOnly ? DataBlockEncoding.NONE : dataBlockEncoding,
-          dataBlockEncoding);
-    } else {
-      if (encodeInCacheOnly) {
-        LOG.error("The -" + LoadTestTool.OPT_ENCODE_IN_CACHE_ONLY +
-            " option does not make sense without -" +
-            LoadTestTool.OPT_DATA_BLOCK_ENCODING);
-        return false;
-      }
     }
 
     blockSize = conf.getInt("hfile.min.blocksize.size", 65536);
@@ -462,7 +440,7 @@ public class HFileReadWriteTest {
     // We are passing the ROWCOL Bloom filter type, but StoreFile will still
     // use the Bloom filter type specified in the HFile.
     return new StoreFile(fs, filePath, conf, cacheConf,
-        BloomType.ROWCOL, dataBlockEncoder);
+      BloomType.ROWCOL);
   }
 
   public static int charToHex(int c) {

@@ -158,11 +158,10 @@ public class StoreFileInfo {
    * Open a Reader for the StoreFile
    * @param fs The current file system to use.
    * @param cacheConf The cache configuration and block cache reference.
-   * @param dataBlockEncoding data block encoding algorithm.
    * @return The StoreFile.Reader for the file
    */
-  public StoreFile.Reader open(final FileSystem fs, final CacheConfig cacheConf,
-      final DataBlockEncoding dataBlockEncoding) throws IOException {
+  public StoreFile.Reader open(final FileSystem fs,
+      final CacheConfig cacheConf) throws IOException {
     FSDataInputStreamWrapper in;
     FileStatus status;
 
@@ -183,10 +182,10 @@ public class StoreFileInfo {
     if (this.reference != null) {
       hdfsBlocksDistribution = computeRefFileHDFSBlockDistribution(fs, reference, status);
       return new HalfStoreFileReader(
-          fs, this.getPath(), in, length, cacheConf, reference, dataBlockEncoding);
+          fs, this.getPath(), in, length, cacheConf, reference);
     } else {
       hdfsBlocksDistribution = FSUtils.computeHDFSBlocksDistribution(fs, status, 0, length);
-      return new StoreFile.Reader(fs, this.getPath(), in, length, cacheConf, dataBlockEncoding);
+      return new StoreFile.Reader(fs, this.getPath(), in, length, cacheConf);
     }
   }
 

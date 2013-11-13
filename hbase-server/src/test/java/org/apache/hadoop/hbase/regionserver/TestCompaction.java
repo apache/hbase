@@ -211,8 +211,7 @@ public class TestCompaction {
       final DataBlockEncoding inCache = DataBlockEncoding.PREFIX;
       final DataBlockEncoding onDisk = inCacheOnly ? DataBlockEncoding.NONE :
           inCache;
-      store.setDataBlockEncoderInTest(new HFileDataBlockEncoderImpl(
-          onDisk, inCache));
+      store.setDataBlockEncoderInTest(new HFileDataBlockEncoderImpl(onDisk));
     }
 
     majorCompaction();

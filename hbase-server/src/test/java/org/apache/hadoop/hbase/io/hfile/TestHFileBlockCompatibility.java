@@ -42,12 +42,12 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
-import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.io.compress.Compressor;
@@ -246,8 +246,7 @@ public class TestHFileBlockCompatibility {
               + algo + "_" + encoding.toString());
           FSDataOutputStream os = fs.create(path);
           HFileDataBlockEncoder dataBlockEncoder =
-              new HFileDataBlockEncoderImpl(encoding, encoding,
-                  TestHFileBlockCompatibility.Writer.DUMMY_HEADER);
+              new HFileDataBlockEncoderImpl(encoding);
           TestHFileBlockCompatibility.Writer hbw =
               new TestHFileBlockCompatibility.Writer(algo,
                   dataBlockEncoder, includesMemstoreTS);
@@ -409,7 +408,7 @@ public class TestHFileBlockCompatibility {
           new HFileBlockDefaultEncodingContext(compressionAlgorithm,
               null, DUMMY_HEADER);
       dataBlockEncodingCtx =
-        this.dataBlockEncoder.newOnDiskDataBlockEncodingContext(
+        this.dataBlockEncoder.newDataBlockEncodingContext(
             compressionAlgorithm, DUMMY_HEADER);
 
       baosInMemory = new ByteArrayOutputStream();

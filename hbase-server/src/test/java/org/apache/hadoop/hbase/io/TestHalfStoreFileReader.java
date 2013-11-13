@@ -115,7 +115,7 @@ public class TestHalfStoreFileReader {
       CacheConfig cacheConf)
       throws IOException {
     final HalfStoreFileReader halfreader = new HalfStoreFileReader(fs, p,
-        cacheConf, bottom, DataBlockEncoding.NONE);
+      cacheConf, bottom);
     halfreader.loadFileInfo();
     final HFileScanner scanner = halfreader.getScanner(false, false);
 
@@ -214,7 +214,7 @@ public class TestHalfStoreFileReader {
                                         CacheConfig cacheConfig)
             throws IOException {
       final HalfStoreFileReader halfreader = new HalfStoreFileReader(fs, p,
-              cacheConfig, bottom, DataBlockEncoding.NONE);
+              cacheConfig, bottom);
       halfreader.loadFileInfo();
       final HFileScanner scanner = halfreader.getScanner(false, false);
       scanner.seekBefore(seekBefore.getKey());

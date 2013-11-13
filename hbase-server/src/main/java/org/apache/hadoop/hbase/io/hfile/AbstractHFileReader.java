@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
-import org.apache.hadoop.io.RawComparator;
 
 /**
  * Common functionality needed by all versions of {@link HFile} readers.
@@ -326,7 +325,7 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   }
 
   @Override
-  public DataBlockEncoding getEncodingOnDisk() {
-    return dataBlockEncoder.getEncodingOnDisk();
+  public DataBlockEncoding getDataBlockEncoding() {
+    return dataBlockEncoder.getDataBlockEncoding();
   }
 }

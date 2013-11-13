@@ -71,7 +71,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   // These constants are used as FileInfo keys
   public static final String COMPRESSION = "COMPRESSION";
   public static final String COMPRESSION_COMPACT = "COMPRESSION_COMPACT";
-  public static final String ENCODE_ON_DISK =
+  public static final String ENCODE_ON_DISK = // To be removed, it is not used anymore
       "ENCODE_ON_DISK";
   public static final String DATA_BLOCK_ENCODING =
       "DATA_BLOCK_ENCODING";
@@ -203,7 +203,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       DEFAULT_VALUES.put(HConstants.IN_MEMORY, String.valueOf(DEFAULT_IN_MEMORY));
       DEFAULT_VALUES.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
       DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
-      DEFAULT_VALUES.put(ENCODE_ON_DISK, String.valueOf(DEFAULT_ENCODE_ON_DISK));
       DEFAULT_VALUES.put(DATA_BLOCK_ENCODING, String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
       DEFAULT_VALUES.put(CACHE_DATA_ON_WRITE, String.valueOf(DEFAULT_CACHE_DATA_ON_WRITE));
       DEFAULT_VALUES.put(CACHE_INDEX_ON_WRITE, String.valueOf(DEFAULT_CACHE_INDEX_ON_WRITE));
@@ -415,7 +414,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     setTimeToLive(timeToLive);
     setCompressionType(Compression.Algorithm.
       valueOf(compression.toUpperCase()));
-    setEncodeOnDisk(encodeOnDisk);
     setDataBlockEncoding(DataBlockEncoding.
         valueOf(dataBlockEncoding.toUpperCase()));
     setBloomFilterType(BloomType.
@@ -613,29 +611,19 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /** @return data block encoding algorithm used on disk */
+  @Deprecated
   public DataBlockEncoding getDataBlockEncodingOnDisk() {
-    String encodeOnDiskStr = getValue(ENCODE_ON_DISK);
-    boolean encodeOnDisk;
-    if (encodeOnDiskStr == null) {
-      encodeOnDisk = DEFAULT_ENCODE_ON_DISK;
-    } else {
-      encodeOnDisk = Boolean.valueOf(encodeOnDiskStr);
-    }
-
-    if (!encodeOnDisk) {
-      // No encoding on disk.
-      return DataBlockEncoding.NONE;
-    }
     return getDataBlockEncoding();
   }
 
   /**
-   * Set the flag indicating that we only want to encode data block in cache
-   * but not on disk.
+   * This method does nothing now. Flag ENCODE_ON_DISK is not used
+   * any more. Data blocks have the same encoding in cache as on disk.
    * @return this (for chained invocation)
    */
+  @Deprecated
   public HColumnDescriptor setEncodeOnDisk(boolean encodeOnDisk) {
-    return setValue(ENCODE_ON_DISK, String.valueOf(encodeOnDisk));
+    return this;
   }
 
   /**

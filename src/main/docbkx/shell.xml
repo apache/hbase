@@ -91,7 +91,7 @@ DESCRIPTION                                                                     
  't', {NAME => 'f', DATA_BLOCK_ENCODING => 'NONE', BLOOMFILTER => 'ROW', REPLICATION_ true                                          
  SCOPE => '0', VERSIONS => '1', COMPRESSION => 'NONE', MIN_VERSIONS => '0', TTL => '2                                               
  147483647', KEEP_DELETED_CELLS => 'false', BLOCKSIZE => '65536', IN_MEMORY => 'false                                               
- ', ENCODE_ON_DISK => 'true', BLOCKCACHE => 'true'}                                                                                 
+ ', BLOCKCACHE => 'true'}                                                                                 
 1 row(s) in 1.4430 seconds
 
 hbase(main):004:0> disable 't'
@@ -122,7 +122,7 @@ DESCRIPTION                                                                     
  't', {NAME => 'f', DATA_BLOCK_ENCODING => 'NONE', BLOOMFILTER => 'ROW', REPLICATION_ true                                          
  SCOPE => '0', VERSIONS => '1', COMPRESSION => 'NONE', MIN_VERSIONS => '0', TTL => '2                                               
  147483647', KEEP_DELETED_CELLS => 'false', BLOCKSIZE => '65536', IN_MEMORY => 'false                                               
- ', ENCODE_ON_DISK => 'true', BLOCKCACHE => 'true'}                                                                                 
+ ', BLOCKCACHE => 'true'}                                                                                 
 1 row(s) in 0.0210 seconds
 hbase(main):038:0> t.disable
 0 row(s) in 6.2350 seconds

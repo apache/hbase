@@ -62,7 +62,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -200,8 +199,7 @@ public class HStore implements Store {
     this.blocksize = family.getBlocksize();
 
     this.dataBlockEncoder =
-        new HFileDataBlockEncoderImpl(family.getDataBlockEncodingOnDisk(),
-            family.getDataBlockEncoding());
+        new HFileDataBlockEncoderImpl(family.getDataBlockEncoding());
 
     this.comparator = info.getComparator();
     // used by ScanQueryMatcher
@@ -469,12 +467,8 @@ public class HStore implements Store {
   }
 
   private StoreFile createStoreFileAndReader(final Path p) throws IOException {
-    return createStoreFileAndReader(p, this.dataBlockEncoder);
-  }
-
-  private StoreFile createStoreFileAndReader(final Path p, final HFileDataBlockEncoder encoder) throws IOException {
     StoreFile storeFile = new StoreFile(this.getFileSystem(), p, this.conf, this.cacheConf,
-        this.family.getBloomFilterType(), encoder);
+        this.family.getBloomFilterType());
     storeFile.createReader();
     return storeFile;
   }
@@ -1343,7 +1337,7 @@ public class HStore implements Store {
       throws IOException {
     StoreFile storeFile = null;
     try {
-      storeFile = createStoreFileAndReader(path, NoOpDataBlockEncoder.INSTANCE);
+      storeFile = createStoreFileAndReader(path);
     } catch (IOException e) {
       LOG.error("Failed to open store file : " + path
           + ", keeping it in tmp location", e);

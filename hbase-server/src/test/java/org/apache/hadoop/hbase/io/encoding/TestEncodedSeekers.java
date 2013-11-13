@@ -97,7 +97,6 @@ public class TestEncodedSeekers {
     // Need to disable default row bloom filter for this test to pass.
     HColumnDescriptor hcd = (new HColumnDescriptor(CF_NAME)).setMaxVersions(MAX_VERSIONS).
         setDataBlockEncoding(encoding).
-        setEncodeOnDisk(encodeOnDisk).
         setBlocksize(BLOCK_SIZE).
         setBloomFilterType(BloomType.NONE);
     HRegion region = testUtil.createTestRegion(TABLE_NAME, hcd);

@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -36,7 +34,6 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -46,9 +43,6 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 @Category(SmallTests.class)
 public class TestHFileDataBlockEncoder {
-  private Configuration conf;
-  private final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
   private HFileDataBlockEncoderImpl blockEncoder;
   private RedundantKVGenerator generator = new RedundantKVGenerator();
   private boolean includesMemstoreTS;
@@ -61,29 +55,21 @@ public class TestHFileDataBlockEncoder {
       boolean includesMemstoreTS) {
     this.blockEncoder = blockEncoder;
     this.includesMemstoreTS = includesMemstoreTS;
-    System.err.println("On-disk encoding: " + blockEncoder.getEncodingOnDisk()
-        + ", in-cache encoding: " + blockEncoder.getEncodingInCache()
+    System.err.println("Encoding: " + blockEncoder.getDataBlockEncoding()
         + ", includesMemstoreTS: " + includesMemstoreTS);
-  }
-
-  /**
-   * Preparation before JUnit test.
-   */
-  @Before
-  public void setUp() {
-    conf = TEST_UTIL.getConfiguration();
   }
 
   /**
    * Test putting and taking out blocks into cache with different
    * encoding options.
+   * @throws IOException 
    */
   @Test
-  public void testEncodingWithCache() {
+  public void testEncodingWithCache() throws IOException {
     HFileBlock block = getSampleHFileBlock();
     LruBlockCache blockCache =
         new LruBlockCache(8 * 1024 * 1024, 32 * 1024);
-    HFileBlock cacheBlock = blockEncoder.diskToCacheFormat(block, false);
+    HFileBlock cacheBlock = createBlockOnDisk(block);
     BlockCacheKey cacheKey = new BlockCacheKey("test", 0);
     blockCache.cacheBlock(cacheKey, cacheBlock);
 
@@ -92,7 +78,7 @@ public class TestHFileDataBlockEncoder {
 
     HFileBlock returnedBlock = (HFileBlock) heapSize;;
 
-    if (blockEncoder.getEncodingInCache() ==
+    if (blockEncoder.getDataBlockEncoding() ==
         DataBlockEncoding.NONE) {
       assertEquals(block.getBufferWithHeader(),
           returnedBlock.getBufferWithHeader());
@@ -119,14 +105,14 @@ public class TestHFileDataBlockEncoder {
     HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
         HFileBlock.FILL_HEADER, 0, includesMemstoreTS,
         HFileBlock.MINOR_VERSION_NO_CHECKSUM, 0, ChecksumType.NULL.getCode(), 0);
-    HFileBlock cacheBlock = blockEncoder.diskToCacheFormat(createBlockOnDisk(block), false);
+    HFileBlock cacheBlock = createBlockOnDisk(block);
     assertEquals(headerSize, cacheBlock.getDummyHeaderForVersion().length);
   }
 
   private HFileBlock createBlockOnDisk(HFileBlock block) throws IOException {
     int size;
     HFileBlockEncodingContext context = new HFileBlockDefaultEncodingContext(
-        Compression.Algorithm.NONE, blockEncoder.getEncodingOnDisk(),
+        Compression.Algorithm.NONE, blockEncoder.getDataBlockEncoding(),
         HConstants.HFILEBLOCK_DUMMY_HEADER);
     context.setDummyHeader(block.getDummyHeaderForVersion());
     blockEncoder.beforeWriteToDisk(block.getBufferWithoutHeader(),
@@ -149,23 +135,14 @@ public class TestHFileDataBlockEncoder {
     HFileBlock block = getSampleHFileBlock();
     HFileBlock blockOnDisk = createBlockOnDisk(block);
 
-    if (blockEncoder.getEncodingOnDisk() !=
+    if (blockEncoder.getDataBlockEncoding() !=
         DataBlockEncoding.NONE) {
       assertEquals(BlockType.ENCODED_DATA, blockOnDisk.getBlockType());
-      assertEquals(blockEncoder.getEncodingOnDisk().getId(),
+      assertEquals(blockEncoder.getDataBlockEncoding().getId(),
           blockOnDisk.getDataBlockEncodingId());
     } else {
       assertEquals(BlockType.DATA, blockOnDisk.getBlockType());
     }
-  }
-
-  /**
-   * Test converting blocks from disk to cache format.
-   */
-  @Test
-  public void testEncodingReadPath() {
-    HFileBlock origBlock = getSampleHFileBlock();
-    blockEncoder.diskToCacheFormat(origBlock, false);
   }
 
   private HFileBlock getSampleHFileBlock() {
@@ -191,17 +168,10 @@ public class TestHFileDataBlockEncoder {
         new ArrayList<Object[]>();
 
     for (DataBlockEncoding diskAlgo : DataBlockEncoding.values()) {
-      for (DataBlockEncoding cacheAlgo : DataBlockEncoding.values()) {
-        if (diskAlgo != cacheAlgo && diskAlgo != DataBlockEncoding.NONE) {
-          // We allow (1) the same encoding on disk and in cache, and
-          // (2) some encoding in cache but no encoding on disk (for testing).
-          continue;
-        }
-        for (boolean includesMemstoreTS : new boolean[] {false, true}) {
-          configurations.add(new Object[] {
-              new HFileDataBlockEncoderImpl(diskAlgo, cacheAlgo),
-              new Boolean(includesMemstoreTS)});
-        }
+      for (boolean includesMemstoreTS : new boolean[] {false, true}) {
+        configurations.add(new Object[] {
+            new HFileDataBlockEncoderImpl(diskAlgo),
+            new Boolean(includesMemstoreTS)});
       }
     }
 

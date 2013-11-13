@@ -24,12 +24,10 @@ import java.nio.ByteBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -66,13 +64,11 @@ public class HalfStoreFileReader extends StoreFile.Reader {
    * @param p path to hfile
    * @param cacheConf
    * @param r original reference file (contains top or bottom)
-   * @param preferredEncodingInCache
    * @throws IOException
    */
   public HalfStoreFileReader(final FileSystem fs, final Path p,
-      final CacheConfig cacheConf, final Reference r,
-      DataBlockEncoding preferredEncodingInCache) throws IOException {
-    super(fs, p, cacheConf, preferredEncodingInCache);
+      final CacheConfig cacheConf, final Reference r) throws IOException {
+    super(fs, p, cacheConf);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't
@@ -91,13 +87,11 @@ public class HalfStoreFileReader extends StoreFile.Reader {
    * @param size Full size of the hfile file
    * @param cacheConf
    * @param r original reference file (contains top or bottom)
-   * @param preferredEncodingInCache
    * @throws IOException
    */
   public HalfStoreFileReader(final FileSystem fs, final Path p, final FSDataInputStreamWrapper in,
-      long size, final CacheConfig cacheConf,  final Reference r,
-      final DataBlockEncoding preferredEncodingInCache) throws IOException {
-    super(fs, p, in, size, cacheConf, preferredEncodingInCache);
+      long size, final CacheConfig cacheConf,  final Reference r) throws IOException {
+    super(fs, p, in, size, cacheConf);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't

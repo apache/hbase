@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -35,6 +34,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
-import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -720,7 +719,7 @@ public class HFileBlock implements Cacheable {
       defaultBlockEncodingCtx =
         new HFileBlockDefaultEncodingContext(compressionAlgorithm, null, HConstants.HFILEBLOCK_DUMMY_HEADER);
       dataBlockEncodingCtx =
-        this.dataBlockEncoder.newOnDiskDataBlockEncodingContext(
+        this.dataBlockEncoder.newDataBlockEncodingContext(
             compressionAlgorithm, HConstants.HFILEBLOCK_DUMMY_HEADER);
 
       if (bytesPerChecksum < HConstants.HFILEBLOCK_HEADER_SIZE) {
@@ -1554,7 +1553,7 @@ public class HFileBlock implements Cacheable {
       if (isCompressed) {
         // This will allocate a new buffer but keep header bytes.
         b.allocateBuffer(nextBlockOnDiskSize > 0);
-        if (b.blockType.equals(BlockType.ENCODED_DATA)) {
+        if (b.blockType == BlockType.ENCODED_DATA) {
           encodedBlockDecodingCtx.prepareDecoding(b.getOnDiskSizeWithoutHeader(),
               b.getUncompressedSizeWithoutHeader(), b.getBufferWithoutHeader(), onDiskBlock,
               hdrSize);
@@ -1599,7 +1598,7 @@ public class HFileBlock implements Cacheable {
 
     void setDataBlockEncoder(HFileDataBlockEncoder encoder) {
       this.dataBlockEncoder = encoder;
-      encodedBlockDecodingCtx = encoder.newOnDiskDataBlockDecodingContext(
+      encodedBlockDecodingCtx = encoder.newDataBlockDecodingContext(
           this.compressAlgo);
     }
 

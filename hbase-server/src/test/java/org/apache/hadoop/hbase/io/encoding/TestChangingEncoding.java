@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -101,6 +102,7 @@ public class TestChangingEncoding {
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     // ((Log4JLogger)RpcServerImplementation.LOG).getLogger().setLevel(Level.TRACE);
     // ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.TRACE);
+    conf.setBoolean("hbase.online.schema.update.enable", true);
     TEST_UTIL.startMiniCluster();
   }
 
@@ -175,23 +177,30 @@ public class TestChangingEncoding {
   }
 
   private void setEncodingConf(DataBlockEncoding encoding,
-      boolean encodeOnDisk) throws IOException {
+      boolean onlineChange) throws Exception {
     LOG.debug("Setting CF encoding to " + encoding + " (ordinal="
-        + encoding.ordinal() + "), encodeOnDisk=" + encodeOnDisk);
-    admin.disableTable(tableName);
+      + encoding.ordinal() + "), onlineChange=" + onlineChange);
     hcd.setDataBlockEncoding(encoding);
-    hcd.setEncodeOnDisk(encodeOnDisk);
+    if (!onlineChange) {
+      admin.disableTable(tableName);
+    }
     admin.modifyColumn(tableName, hcd);
-    admin.enableTable(tableName);
+    if (!onlineChange) {
+      admin.enableTable(tableName);
+    }
+    // This is a unit test, not integration test. So let's
+    // wait for regions out of transition. Otherwise, for online
+    // encoding change, verification phase may be flaky because
+    // regions could be still in transition.
+    ZKAssign.blockUntilNoRIT(TEST_UTIL.getZooKeeperWatcher());
   }
 
   @Test(timeout=TIMEOUT_MS)
   public void testChangingEncoding() throws Exception {
     prepareTest("ChangingEncoding");
-    for (boolean encodeOnDisk : new boolean[]{false, true}) {
+    for (boolean onlineChange : new boolean[]{false, true}) {
       for (DataBlockEncoding encoding : ENCODINGS_TO_ITERATE) {
-        LOG.info("encoding=" + encoding + ", encodeOnDisk=" + encodeOnDisk);
-        setEncodingConf(encoding, encodeOnDisk);
+        setEncodingConf(encoding, onlineChange);
         writeSomeNewData();
         verifyAllData();
       }
@@ -201,35 +210,9 @@ public class TestChangingEncoding {
   @Test(timeout=TIMEOUT_MS)
   public void testChangingEncodingWithCompaction() throws Exception {
     prepareTest("ChangingEncodingWithCompaction");
-    for (boolean encodeOnDisk : new boolean[]{false, true}) {
+    for (boolean onlineChange : new boolean[]{false, true}) {
       for (DataBlockEncoding encoding : ENCODINGS_TO_ITERATE) {
-        setEncodingConf(encoding, encodeOnDisk);
-        writeSomeNewData();
-        verifyAllData();
-        compactAndWait();
-        verifyAllData();
-      }
-    }
-  }
-
-  @Test(timeout=TIMEOUT_MS)
-  public void testFlippingEncodeOnDisk() throws Exception {
-    prepareTest("FlippingEncodeOnDisk");
-    // The focus of this test case is to flip the "encoding on disk" flag,
-    // so we only try a couple of encodings.
-    DataBlockEncoding[] encodings = new DataBlockEncoding[] {
-        DataBlockEncoding.NONE, DataBlockEncoding.FAST_DIFF };
-    for (DataBlockEncoding encoding : encodings) {
-      boolean[] flagValues;
-      if (encoding == DataBlockEncoding.NONE) {
-        // encodeOnDisk does not matter when not using encoding.
-        flagValues =
-            new boolean[] { HColumnDescriptor.DEFAULT_ENCODE_ON_DISK };
-      } else {
-        flagValues = new boolean[] { false, true, false, true };
-      }
-      for (boolean encodeOnDisk : flagValues) {
-        setEncodingConf(encoding, encodeOnDisk);
+        setEncodingConf(encoding, onlineChange);
         writeSomeNewData();
         verifyAllData();
         compactAndWait();

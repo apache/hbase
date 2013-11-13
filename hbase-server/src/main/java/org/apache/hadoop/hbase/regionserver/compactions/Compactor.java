@@ -162,7 +162,7 @@ public abstract class Compactor {
           ", keycount=" + keyCount +
           ", bloomtype=" + r.getBloomFilterType().toString() +
           ", size=" + StringUtils.humanReadableInt(r.length()) +
-          ", encoding=" + r.getHFileReader().getEncodingOnDisk() +
+          ", encoding=" + r.getHFileReader().getDataBlockEncoding() +
           ", seqNum=" + seqNum +
           (calculatePutTs ? ", earliestPutTs=" + earliestPutTs: ""));
       }
@@ -194,6 +194,13 @@ public abstract class Compactor {
     return store.getCoprocessorHost().preCompact(store, scanner, scanType, request);
   }
 
+  /**
+   * Performs the compaction.
+   * @param scanner Where to read from.
+   * @param writer Where to write to.
+   * @param smallestReadPoint Smallest read point.
+   * @return Whether compaction ended; false if it was interrupted for some reason.
+   */
   @SuppressWarnings("deprecation")
   protected boolean performCompaction(InternalScanner scanner,
       CellSink writer, long smallestReadPoint) throws IOException {

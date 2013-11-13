@@ -95,11 +95,6 @@ public class LoadTestTool extends AbstractHBaseTool {
   private static final String OPT_COMPRESSION = "compression";
   public static final String OPT_DATA_BLOCK_ENCODING =
       HColumnDescriptor.DATA_BLOCK_ENCODING.toLowerCase();
-  public static final String OPT_ENCODE_IN_CACHE_ONLY =
-      "encode_in_cache_only";
-  public static final String OPT_ENCODE_IN_CACHE_ONLY_USAGE =
-      "If this is specified, data blocks will only be encoded in block " +
-      "cache but not on disk";
 
   public static final String OPT_INMEMORY = "in_memory";
   public static final String OPT_USAGE_IN_MEMORY = "Tries to keep the HFiles of the CF " +
@@ -135,7 +130,6 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   // Column family options
   protected DataBlockEncoding dataBlockEncodingAlgo;
-  protected boolean encodeInCacheOnly;
   protected Compression.Algorithm compressAlgo;
   protected BloomType bloomType;
   private boolean inMemoryCF;
@@ -204,7 +198,6 @@ public class LoadTestTool extends AbstractHBaseTool {
       }
       if (dataBlockEncodingAlgo != null) {
         columnDesc.setDataBlockEncoding(dataBlockEncodingAlgo);
-        columnDesc.setEncodeOnDisk(!encodeInCacheOnly);
       }
       if (inMemoryCF) {
         columnDesc.setInMemory(inMemoryCF);
@@ -242,7 +235,6 @@ public class LoadTestTool extends AbstractHBaseTool {
         "separate puts for every column in a row");
     addOptNoArg(OPT_BATCHUPDATE, "Whether to use batch as opposed to " +
         "separate updates for every column in a row");
-    addOptNoArg(OPT_ENCODE_IN_CACHE_ONLY, OPT_ENCODE_IN_CACHE_ONLY_USAGE);
     addOptNoArg(OPT_INMEMORY, OPT_USAGE_IN_MEMORY);
 
     addOptWithArg(OPT_NUM_KEYS, "The number of keys to read/write");
@@ -294,7 +286,6 @@ public class LoadTestTool extends AbstractHBaseTool {
       System.out.println("Key range: [" + startKey + ".." + (endKey - 1) + "]");
     }
 
-    encodeInCacheOnly = cmd.hasOption(OPT_ENCODE_IN_CACHE_ONLY);
     parseColumnFamilyOptions(cmd);
 
     if (isWrite) {
@@ -368,10 +359,6 @@ public class LoadTestTool extends AbstractHBaseTool {
     String dataBlockEncodingStr = cmd.getOptionValue(OPT_DATA_BLOCK_ENCODING);
     dataBlockEncodingAlgo = dataBlockEncodingStr == null ? null :
         DataBlockEncoding.valueOf(dataBlockEncodingStr);
-    if (dataBlockEncodingAlgo == DataBlockEncoding.NONE && encodeInCacheOnly) {
-      throw new IllegalArgumentException("-" + OPT_ENCODE_IN_CACHE_ONLY + " " +
-          "does not make sense when data block encoding is not used");
-    }
 
     String compressStr = cmd.getOptionValue(OPT_COMPRESSION);
     compressAlgo = compressStr == null ? Compression.Algorithm.NONE :

@@ -209,13 +209,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    *          the cache key.
    */
   private void doCacheOnWrite(long offset) {
-    // We don't cache-on-write data blocks on compaction, so assume this is not
-    // a compaction.
-    final boolean isCompaction = false;
-    HFileBlock cacheFormatBlock = blockEncoder.diskToCacheFormat(
-        fsBlockWriter.getBlockForCaching(), isCompaction);
+    HFileBlock cacheFormatBlock = fsBlockWriter.getBlockForCaching();
     cacheConf.getBlockCache().cacheBlock(
-        new BlockCacheKey(name, offset, blockEncoder.getEncodingInCache(),
+        new BlockCacheKey(name, offset, blockEncoder.getDataBlockEncoding(),
             cacheFormatBlock.getBlockType()), cacheFormatBlock);
   }
 

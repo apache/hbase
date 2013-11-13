@@ -35,23 +35,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 public interface HFileDataBlockEncoder {
   /** Type of encoding used for data blocks in HFile. Stored in file info. */
   byte[] DATA_BLOCK_ENCODING = Bytes.toBytes("DATA_BLOCK_ENCODING");
-  
-  /**
-   * Converts a block from the on-disk format to the in-cache format. Called in
-   * the following cases:
-   * <ul>
-   * <li>After an encoded or unencoded data block is read from disk, but before
-   * it is put into the cache.</li>
-   * <li>To convert brand-new blocks to the in-cache format when doing
-   * cache-on-write.</li>
-   * </ul>
-   * @param block a block in an on-disk format (read from HFile or freshly
-   *          generated).
-   * @return non null block which is coded according to the settings.
-   */
-  HFileBlock diskToCacheFormat(
-    HFileBlock block, boolean isCompaction
-  );
 
   /**
    * Should be called before an encoded or unencoded data block is written to
@@ -70,10 +53,9 @@ public interface HFileDataBlockEncoder {
 
   /**
    * Decides whether we should use a scanner over encoded blocks.
-   * @param isCompaction whether we are in a compaction.
    * @return Whether to use encoded scanner.
    */
-  boolean useEncodedScanner(boolean isCompaction);
+  boolean useEncodedScanner();
 
   /**
    * Save metadata in HFile which will be written to disk
@@ -83,17 +65,8 @@ public interface HFileDataBlockEncoder {
   void saveMetadata(HFile.Writer writer)
       throws IOException;
 
-  /** @return the on-disk data block encoding */
-  DataBlockEncoding getEncodingOnDisk();
-
-  /** @return the preferred in-cache data block encoding for normal reads */
-  DataBlockEncoding getEncodingInCache();
-
-  /**
-   * @return the effective in-cache data block encoding, taking into account
-   *         whether we are doing a compaction.
-   */
-  DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction);
+  /** @return the data block encoding */
+  DataBlockEncoding getDataBlockEncoding();
 
   /**
    * Create an encoder specific encoding context object for writing. And the
@@ -104,7 +77,7 @@ public interface HFileDataBlockEncoder {
    * @param headerBytes header bytes
    * @return a new {@link HFileBlockEncodingContext} object
    */
-  HFileBlockEncodingContext newOnDiskDataBlockEncodingContext(
+  HFileBlockEncodingContext newDataBlockEncodingContext(
     Algorithm compressionAlgorithm, byte[] headerBytes
   );
 
@@ -116,8 +89,7 @@ public interface HFileDataBlockEncoder {
    * @param compressionAlgorithm
    * @return a new {@link HFileBlockDecodingContext} object
    */
-  HFileBlockDecodingContext newOnDiskDataBlockDecodingContext(
+  HFileBlockDecodingContext newDataBlockDecodingContext(
     Algorithm compressionAlgorithm
   );
-
 }

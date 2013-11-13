@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -134,8 +133,7 @@ public class TestDefaultCompactSelection extends TestCase {
 
     MockStoreFile(long length, long ageInDisk, boolean isRef, long sequenceid) throws IOException {
       super(TEST_UTIL.getTestFileSystem(), TEST_FILE, TEST_UTIL.getConfiguration(),
-            new CacheConfig(TEST_UTIL.getConfiguration()), BloomType.NONE,
-            NoOpDataBlockEncoder.INSTANCE);
+        new CacheConfig(TEST_UTIL.getConfiguration()), BloomType.NONE);
       this.length = length;
       this.isRef = isRef;
       this.ageInDisk = ageInDisk;

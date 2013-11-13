@@ -135,22 +135,21 @@ public class TestCacheOnWrite {
 
   /** Provides fancy names for three combinations of two booleans */
   private static enum BlockEncoderTestType {
+    NO_BLOCK_ENCODING_NOOP(true, false),
     NO_BLOCK_ENCODING(false, false),
-    BLOCK_ENCODING_IN_CACHE_ONLY(false, true),
-    BLOCK_ENCODING_EVERYWHERE(true, true);
+    BLOCK_ENCODING_EVERYWHERE(false, true);
 
-    private final boolean encodeOnDisk;
-    private final boolean encodeInCache;
+    private final boolean noop;
+    private final boolean encode;
 
-    BlockEncoderTestType(boolean encodeOnDisk, boolean encodeInCache) {
-      this.encodeOnDisk = encodeOnDisk;
-      this.encodeInCache = encodeInCache;
+    BlockEncoderTestType(boolean noop, boolean encode) {
+      this.encode = encode;
+      this.noop = noop;
     }
 
     public HFileDataBlockEncoder getEncoder() {
-      return new HFileDataBlockEncoderImpl(
-          encodeOnDisk ? ENCODING_ALGO : DataBlockEncoding.NONE,
-          encodeInCache ? ENCODING_ALGO : DataBlockEncoding.NONE);
+      return noop ? NoOpDataBlockEncoder.INSTANCE : new HFileDataBlockEncoderImpl(
+        encode ? ENCODING_ALGO : DataBlockEncoding.NONE);
     }
   }
 
@@ -212,8 +211,8 @@ public class TestCacheOnWrite {
   }
 
   private void readStoreFile() throws IOException {
-    HFileReaderV2 reader = (HFileReaderV2) HFile.createReaderWithEncoding(fs,
-        storeFilePath, cacheConf, encoder.getEncodingInCache());
+    HFileReaderV2 reader = (HFileReaderV2) HFile.createReader(fs,
+      storeFilePath, cacheConf);
     LOG.info("HFile information: " + reader);
     final boolean cacheBlocks = false;
     final boolean pread = false;
@@ -226,7 +225,7 @@ public class TestCacheOnWrite {
         new EnumMap<BlockType, Integer>(BlockType.class);
 
     DataBlockEncoding encodingInCache =
-        encoderType.getEncoder().getEncodingInCache();
+        encoderType.getEncoder().getDataBlockEncoding();
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       long onDiskSize = -1;
       if (prevBlock != null) {
@@ -259,7 +258,7 @@ public class TestCacheOnWrite {
     LOG.info("Block count by type: " + blockCountByType);
     String countByType = blockCountByType.toString();
     BlockType cachedDataBlockType =
-        encoderType.encodeInCache ? BlockType.ENCODED_DATA : BlockType.DATA;
+        encoderType.encode ? BlockType.ENCODED_DATA : BlockType.DATA;
     assertEquals("{" + cachedDataBlockType
         + "=1379, LEAF_INDEX=173, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=24}",
         countByType);
@@ -331,9 +330,7 @@ public class TestCacheOnWrite {
             .setCompressionType(compress)
             .setBloomFilterType(BLOOM_TYPE)
             .setMaxVersions(maxVersions)
-            .setDataBlockEncoding(encoder.getEncodingInCache())
-            .setEncodeOnDisk(encoder.getEncodingOnDisk() !=
-                DataBlockEncoding.NONE)
+            .setDataBlockEncoding(encoder.getDataBlockEncoding())
     );
     int rowIdx = 0;
     long ts = EnvironmentEdgeManager.currentTimeMillis();
