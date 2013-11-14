@@ -157,13 +157,10 @@ public class Put extends Mutation
     byte [] family = kv.getFamily();
     List<KeyValue> list = getKeyValueList(family);
     //Checking that the row of the kv is the same as the put
-    int res = Bytes.compareTo(this.row, 0, row.length,
-        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
-    if(res != 0) {
-      throw new IOException("The row in the recently added KeyValue " +
-          Bytes.toStringBinary(kv.getBuffer(), kv.getRowOffset(),
-        kv.getRowLength()) + " doesn't match the original one " +
-        Bytes.toStringBinary(this.row));
+    if (!kv.matchingRow(row)) {
+      throw new IOException("The row in the recently added KeyValue "
+          + Bytes.toStringBinary(kv.getRow()) + " doesn't match the original one "
+          + Bytes.toStringBinary(this.row));
     }
     list.add(kv);
     familyMap.put(family, list);
@@ -177,7 +174,7 @@ public class Put extends Mutation
    */
   private KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts,
       byte[] value) {
-  return  new KeyValue(this.row, family, qualifier, ts, KeyValue.Type.Put,
+    return new KeyValue(this.row, family, qualifier, ts, KeyValue.Type.Put,
       value);
   }
 
@@ -375,23 +372,8 @@ public class Put extends Mutation
     this.ts = in.readLong();
     this.lockId = in.readLong();
     this.writeToWAL = in.readBoolean();
-    int numFamilies = in.readInt();
     if (!this.familyMap.isEmpty()) this.familyMap.clear();
-    for(int i=0;i<numFamilies;i++) {
-      byte [] family = Bytes.readByteArray(in);
-      int numKeys = in.readInt();
-      List<KeyValue> keys = new ArrayList<KeyValue>(numKeys);
-      int totalLen = in.readInt();
-      byte [] buf = new byte[totalLen];
-      int offset = 0;
-      for (int j = 0; j < numKeys; j++) {
-        int keyLength = in.readInt();
-        in.readFully(buf, offset, keyLength);
-        keys.add(new KeyValue(buf, offset, keyLength));
-        offset += keyLength;
-      }
-      this.familyMap.put(family, keys);
-    }
+    readFamilyMap(in);
     if (version > 1) {
       readAttributes(in);
     }
@@ -404,21 +386,7 @@ public class Put extends Mutation
     out.writeLong(this.ts);
     out.writeLong(this.lockId);
     out.writeBoolean(this.writeToWAL);
-    out.writeInt(familyMap.size());
-    for (Map.Entry<byte [], List<KeyValue>> entry : familyMap.entrySet()) {
-      Bytes.writeByteArray(out, entry.getKey());
-      List<KeyValue> keys = entry.getValue();
-      out.writeInt(keys.size());
-      int totalLen = 0;
-      for(KeyValue kv : keys) {
-        totalLen += kv.getLength();
-      }
-      out.writeInt(totalLen);
-      for(KeyValue kv : keys) {
-        out.writeInt(kv.getLength());
-        out.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
-      }
-    }
+    writeFamilyMap(out);
     writeAttributes(out);
   }
 }

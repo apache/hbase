@@ -20,6 +20,9 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -296,5 +299,53 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
    */
   public int numFamilies() {
     return familyMap.size();
+  }
+
+  /**
+   * Helper method to read in the family map that was written via
+   * {@link #writeFamilyMap(DataOutput)}
+   * @param in to read from
+   * @throws IOException if there was an error reading
+   */
+  protected void readFamilyMap(DataInput in) throws IOException {
+    int numFamilies = in.readInt();
+    for (int i = 0; i < numFamilies; i++) {
+      byte[] family = Bytes.readByteArray(in);
+      int numKeys = in.readInt();
+      List<KeyValue> keys = new ArrayList<KeyValue>(numKeys);
+      int totalLen = in.readInt();
+      byte[] buf = new byte[totalLen];
+      int offset = 0;
+      for (int j = 0; j < numKeys; j++) {
+        int keyLength = in.readInt();
+        in.readFully(buf, offset, keyLength);
+        keys.add(new KeyValue(buf, offset, keyLength));
+        offset += keyLength;
+      }
+      this.familyMap.put(family, keys);
+    }
+  }
+
+  /**
+   * Helper method to write out the family map. Can be read in via {@link #readFamilyMap(DataInput)}
+   * .
+   * @param out to write to
+   * @throws IOException if there was an error writing
+   */
+  protected void writeFamilyMap(DataOutput out) throws IOException {
+    out.writeInt(familyMap.size());
+    for (Map.Entry<byte[], List<KeyValue>> entry : familyMap.entrySet()) {
+      Bytes.writeByteArray(out, entry.getKey());
+      List<KeyValue> keys = entry.getValue();
+      out.writeInt(keys.size());
+      int totalLen = 0;
+      for (KeyValue kv : keys) {
+        totalLen += kv.getLength();
+      }
+      out.writeInt(totalLen);
+      for (KeyValue kv : keys) {
+        kv.write(out);
+      }
+    }
   }
 }

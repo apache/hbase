@@ -23,11 +23,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
 
 /**
  * Performs Append operations on a single row.
@@ -105,23 +103,8 @@ public class Append extends Mutation {
     this.ts = in.readLong();
     this.lockId = in.readLong();
     this.writeToWAL = in.readBoolean();
-    int numFamilies = in.readInt();
     if (!this.familyMap.isEmpty()) this.familyMap.clear();
-    for(int i=0;i<numFamilies;i++) {
-      byte [] family = Bytes.readByteArray(in);
-      int numKeys = in.readInt();
-      List<KeyValue> keys = new ArrayList<KeyValue>(numKeys);
-      int totalLen = in.readInt();
-      byte [] buf = new byte[totalLen];
-      int offset = 0;
-      for (int j = 0; j < numKeys; j++) {
-        int keyLength = in.readInt();
-        in.readFully(buf, offset, keyLength);
-        keys.add(new KeyValue(buf, offset, keyLength));
-        offset += keyLength;
-      }
-      this.familyMap.put(family, keys);
-    }
+    readFamilyMap(in);
     readAttributes(in);
   }
 
@@ -133,21 +116,36 @@ public class Append extends Mutation {
     out.writeLong(this.ts);
     out.writeLong(this.lockId);
     out.writeBoolean(this.writeToWAL);
-    out.writeInt(familyMap.size());
-    for (Map.Entry<byte [], List<KeyValue>> entry : familyMap.entrySet()) {
-      Bytes.writeByteArray(out, entry.getKey());
-      List<KeyValue> keys = entry.getValue();
-      out.writeInt(keys.size());
-      int totalLen = 0;
-      for(KeyValue kv : keys) {
-        totalLen += kv.getLength();
-      }
-      out.writeInt(totalLen);
-      for(KeyValue kv : keys) {
-        out.writeInt(kv.getLength());
-        out.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
-      }
-    }
+    writeFamilyMap(out);
     writeAttributes(out);
+  }
+
+  /**
+   * Add the specified {@link KeyValue} to this operation.
+   * @param kv whose value should be to appended to the specified column
+   * @return <tt?this</tt>
+   * @throws IllegalArgumentException if the row or type does not match <tt>this</tt>
+   */
+  public Append add(KeyValue kv) {
+    if(!(kv.getType() == KeyValue.Type.Put.getCode())){
+      throw new IllegalArgumentException("Added type " + KeyValue.Type.codeToType(kv.getType())
+          + ", but appends can only be of type " + KeyValue.Type.Put + ". Rowkey:"
+          + Bytes.toStringBinary(kv.getRow()));
+    }
+    
+    if (!kv.matchingRow(row)) {
+      throw new IllegalArgumentException("The row in the recently added KeyValue "
+          + Bytes.toStringBinary(kv.getRow()) + " doesn't match the original one "
+          + Bytes.toStringBinary(this.row));
+    }
+
+    byte[] family = kv.getFamily();
+    List<KeyValue> list = familyMap.get(family);
+    if (list == null) {
+      list = new ArrayList<KeyValue>();
+      familyMap.put(family, list);
+    }
+    list.add(kv);
+    return this;
   }
 }
