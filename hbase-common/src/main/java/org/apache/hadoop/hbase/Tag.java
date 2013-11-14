@@ -119,14 +119,14 @@ public class Tag {
   /**
    * @return Length of actual tag bytes within the backed buffer
    */
-  int getTagLength() {
+  public int getTagLength() {
     return this.length - INFRASTRUCTURE_SIZE;
   }
 
   /**
    * @return Offset of actual tag bytes within the backed buffer
    */
-  int getTagOffset() {
+  public int getTagOffset() {
     return this.offset + INFRASTRUCTURE_SIZE;
   }
 
@@ -145,7 +145,7 @@ public class Tag {
    * @param length
    * @return List of tags
    */
-  public static List<Tag> asList(byte[] b, int offset, short length) {
+  public static List<Tag> asList(byte[] b, int offset, int length) {
     List<Tag> tags = new ArrayList<Tag>();
     int pos = offset;
     while (pos < offset + length) {

@@ -380,14 +380,14 @@ public final class CellUtil {
   
   /********************* tags *************************************/
   /**
-   * Util method to iterate through the tags. Used in testcase
+   * Util method to iterate through the tags
    * 
    * @param tags
    * @param offset
    * @param length
    * @return iterator for the tags
    */
-  public static Iterator<Tag> tagsIterator(final byte[] tags, final int offset, final short length) {
+  public static Iterator<Tag> tagsIterator(final byte[] tags, final int offset, final int length) {
     return new Iterator<Tag>() {
       private int pos = offset;
       private int endOffset = offset + length - 1;
