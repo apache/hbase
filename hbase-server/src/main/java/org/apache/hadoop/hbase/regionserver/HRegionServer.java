@@ -2563,10 +2563,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   protected HRegion getRegion(final byte[] regionName)
       throws NotServingRegionException {
     String encodedRegionName = HRegionInfo.encodeRegionName(regionName);
-    return getRegionByEncodedName(encodedRegionName);
+    return getRegionByEncodedName(regionName, encodedRegionName);
   }
 
   protected HRegion getRegionByEncodedName(String encodedRegionName)
+      throws NotServingRegionException {
+    return getRegionByEncodedName(null, encodedRegionName);
+  }
+
+  protected HRegion getRegionByEncodedName(byte[] regionName, String encodedRegionName)
     throws NotServingRegionException {
     HRegion region = this.onlineRegions.get(encodedRegionName);
     if (region == null) {
@@ -2575,10 +2580,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         throw new RegionMovedException(moveInfo.getServerName(), moveInfo.getSeqNum());
       }
       Boolean isOpening = this.regionsInTransitionInRS.get(Bytes.toBytes(encodedRegionName));
+      String regionNameStr = regionName == null?
+        encodedRegionName: Bytes.toStringBinary(regionName);
       if (isOpening != null && isOpening.booleanValue()) {
-        throw new RegionOpeningException("Region is being opened: " + encodedRegionName);
+        throw new RegionOpeningException("Region " + regionNameStr + " is opening");
       }
-      throw new NotServingRegionException("Region is not online: " + encodedRegionName);
+      throw new NotServingRegionException("Region " + regionNameStr + " is not online");
     }
     return region;
   }
@@ -3943,7 +3950,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    */
   protected HRegion getRegion(
       final RegionSpecifier regionSpecifier) throws IOException {
-    return getRegionByEncodedName(
+    return getRegionByEncodedName(regionSpecifier.getValue().toByteArray(),
         ProtobufUtil.getRegionEncodedName(regionSpecifier));
   }
 
