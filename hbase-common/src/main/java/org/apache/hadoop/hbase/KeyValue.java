@@ -332,6 +332,19 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     this.length = length;
   }
 
+  /**
+   * Creates a KeyValue from the specified byte array, starting at offset, and
+   * for length <code>length</code>.
+   *
+   * @param bytes  byte array
+   * @param offset offset to start of the KeyValue
+   * @param length length of the KeyValue
+   * @param ts
+   */
+  public KeyValue(final byte[] bytes, final int offset, final int length, long ts) {
+    this(bytes, offset, length, null, 0, 0, null, 0, 0, ts, Type.Maximum, null, 0, 0, null);
+  }
+
   /** Constructors that build a new backing byte array from fields */
 
   /**
