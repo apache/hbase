@@ -1817,7 +1817,7 @@
         </property>
       </activation>
       <properties>
-        <hadoop.version>1.2.0</hadoop.version>
+        <hadoop.version>1.2.1</hadoop.version>
         <slf4j.version>1.4.3</slf4j.version>
       </properties>
       <dependencies>
