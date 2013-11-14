@@ -2850,11 +2850,11 @@ public class HRegion implements HeapSize { // , Writable{
           throw e;
         }
       }
-      // The edits size added into rsAccounting during this replaying will not
-      // be required any more. So just clear it.
-      if (this.rsAccounting != null) {
-        this.rsAccounting.clearRegionReplayEditsSize(this.getRegionName());
-      }
+    }
+    // The edits size added into rsAccounting during this replaying will not
+    // be required any more. So just clear it.
+    if (this.rsAccounting != null) {
+      this.rsAccounting.clearRegionReplayEditsSize(this.getRegionName());
     }
     if (seqid > minSeqIdForTheRegion) {
       // Then we added some edits to memory. Flush and cleanup split edit files.
