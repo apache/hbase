@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.chaos.monkies.CalmChaosMonkey;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -65,7 +64,6 @@ import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -754,7 +752,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
     }
 
-    protected boolean runVerify(String outputDir,
+    protected void runVerify(String outputDir,
         int numReducers, long expectedNumNodes) throws Exception {
       Path outputPath = new Path(outputDir);
       UUID uuid = UUID.randomUUID(); //create a random UUID.
@@ -768,19 +766,10 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       if (!verify.verify(expectedNumNodes)) {
-        try {
-          HBaseFsck fsck = new HBaseFsck(getConf());
-          HBaseFsck.setDisplayFullReport();
-          fsck.connect();
-          fsck.onlineHbck();
-        } catch (Throwable t) {
-          LOG.error("Failed to run hbck", t);
-        }
-        return false;
+        throw new RuntimeException("Verify.verify failed");
       }
 
       LOG.info("Verify finished with succees. Total nodes=" + expectedNumNodes);
-      return true;
     }
 
     @Override
@@ -810,17 +799,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         runGenerator(numMappers, numNodes, outputDir, width, wrapMuplitplier);
         expectedNumNodes += numMappers * numNodes;
 
-        if (!runVerify(outputDir, numReducers, expectedNumNodes)) {
-          if (it.monkey != null && !(it.monkey instanceof CalmChaosMonkey)) {
-            LOG.info("Verify.verify failed, let's stop CM and verify again");
-            it.cleanUpMonkey("Stop monkey before verify again after verify failed");
-            if (!runVerify(outputDir, numReducers, expectedNumNodes)) {
-              LOG.info("Verify.verify failed even without CM, verify one more");
-              runVerify(outputDir, numReducers, expectedNumNodes);
-            }
-          }
-          throw new RuntimeException("Verify.verify failed");
-        }
+        runVerify(outputDir, numReducers, expectedNumNodes);
       }
 
       return 0;
