@@ -63,4 +63,9 @@ interface StoreFlusher {
    */
   boolean commit() throws IOException;
 
+  /**
+   * Cancel the flush - remove files from file system
+   */
+  void cancel();
+
 }

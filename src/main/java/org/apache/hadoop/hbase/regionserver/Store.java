@@ -722,12 +722,13 @@ public class Store extends SchemaConfigured implements HeapSize,
   private StoreFile flushCache(final long logCacheFlushId,
       SortedSet<KeyValue> snapshot,
       TimeRangeTracker snapshotTimeRangeTracker,
-      MonitoredTask status) throws IOException {
+      MonitoredTask status,
+      CacheFlushInfo info) throws IOException {
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
     return internalFlushCache(snapshot, logCacheFlushId,
-        snapshotTimeRangeTracker, status);
+        snapshotTimeRangeTracker, status, info);
   }
 
   /*
@@ -741,7 +742,8 @@ public class Store extends SchemaConfigured implements HeapSize,
   private StoreFile internalFlushCache(final SortedSet<KeyValue> snapshot,
       final long logCacheFlushId,
       TimeRangeTracker snapshotTimeRangeTracker,
-      MonitoredTask status) throws IOException {
+      MonitoredTask status,
+      CacheFlushInfo info) throws IOException {
     StoreFile.Writer writer;
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = region.getSmallestReadPoint();
@@ -770,6 +772,7 @@ public class Store extends SchemaConfigured implements HeapSize,
         status.setStatus("Flushing " + this + ": creating writer");
         // A. Write the map out to the disk
         writer = createWriterInTmp(snapshot.size(), this.compression, false);
+        info.tmpPath = writer.getPath();
         writer.setTimeRangeTracker(snapshotTimeRangeTracker);
         fileName = writer.getPath().getName();
         try {
@@ -801,6 +804,7 @@ public class Store extends SchemaConfigured implements HeapSize,
           writer.appendMetadata(EnvironmentEdgeManager.currentTimeMillis(), logCacheFlushId, false);
           status.setStatus("Flushing " + this + ": closing flushed file");
           writer.close();
+          InjectionHandler.processEventIO(InjectionEvent.STOREFILE_AFTER_WRITE_CLOSE, writer.getPath());
         }
       }
     } finally {
@@ -814,28 +818,58 @@ public class Store extends SchemaConfigured implements HeapSize,
     // Write-out finished successfully, move into the right spot
     LOG.info("Renaming flushed file at " + writer.getPath() + " to " + dstPath);
     fs.rename(writer.getPath(), dstPath);
+    InjectionHandler.processEventIO(InjectionEvent.STOREFILE_AFTER_RENAME, writer.getPath(), dstPath);
+    info.dstPath = dstPath;
 
     StoreFile sf = new StoreFile(this.fs, dstPath, this.conf, this.cacheConf,
         this.family.getBloomFilterType(), this.dataBlockEncoder);
     passSchemaMetricsTo(sf);
 
     StoreFile.Reader r = sf.createReader();
-    this.storeSize += r.length();
+    info.sequenceId = logCacheFlushId;
+    info.entries = r.getEntries();
+    info.memSize = flushed;
+    info.fileSize = r.length();
+    return sf;
+  }
+
+  private boolean commit(StoreFile storeFile, SortedSet<KeyValue> snapshot, CacheFlushInfo info)
+    throws IOException {
+    this.storeSize += info.fileSize;
     // This increments the metrics associated with total flushed bytes for this
     // family. The overall flush count is stored in the static metrics and
     // retrieved from HRegion.recentFlushes, which is set within
     // HRegion.internalFlushcache, which indirectly calls this to actually do
     // the flushing through the StoreFlusherImpl class
     getSchemaMetrics().updatePersistentStoreMetric(
-        SchemaMetrics.StoreMetricType.FLUSH_SIZE, flushed);
+        SchemaMetrics.StoreMetricType.FLUSH_SIZE, info.memSize);
     if (LOG.isInfoEnabled()) {
-      LOG.info("Added " + sf + ", entries=" + r.getEntries() +
-        ", sequenceid=" + logCacheFlushId +
-        ", memsize=" + StringUtils.humanReadableInt(flushed) +
-        ", filesize=" + StringUtils.humanReadableInt(r.length()) +
+      LOG.info("Added " + storeFile + ", entries=" + info.entries +
+        ", sequenceid=" + info.sequenceId +
+        ", memsize=" + StringUtils.humanReadableInt(info.memSize) +
+        ", filesize=" + StringUtils.humanReadableInt(info.fileSize) +
         " to " + this.region.regionInfo.getRegionNameAsString());
     }
-    return sf;
+    // Add new file to store files.  Clear snapshot too while we have
+    // the Store write lock.
+    return updateStorefiles(storeFile, snapshot);
+  }
+
+  private void cancel(CacheFlushInfo info) {
+    if (info.tmpPath != null) {
+      try {
+        fs.delete(info.tmpPath, false);
+      } catch (IOException e) {
+        // that's ok
+      }
+    }
+    if (info.dstPath != null) {
+      try {
+        fs.delete(info.dstPath, false);
+      } catch (IOException e) {
+        // that's ok
+      }
+    }
   }
 
   /*
@@ -1949,12 +1983,24 @@ public class Store extends SchemaConfigured implements HeapSize,
     return new StoreFlusherImpl(cacheFlushId);
   }
 
+  private class CacheFlushInfo {
+    Path tmpPath;
+    Path dstPath;
+
+    long entries;
+    long sequenceId;
+    long memSize;
+    long fileSize;
+  }
+
   private class StoreFlusherImpl implements StoreFlusher {
 
     private long cacheFlushId;
     private SortedSet<KeyValue> snapshot;
     private StoreFile storeFile;
     private TimeRangeTracker snapshotTimeRangeTracker;
+
+    CacheFlushInfo cacheFlushInfo;
 
     private StoreFlusherImpl(long cacheFlushId) {
       this.cacheFlushId = cacheFlushId;
@@ -1965,12 +2011,13 @@ public class Store extends SchemaConfigured implements HeapSize,
       memstore.snapshot();
       this.snapshot = memstore.getSnapshot();
       this.snapshotTimeRangeTracker = memstore.getSnapshotTimeRangeTracker();
+      this.cacheFlushInfo = new CacheFlushInfo();
     }
 
     @Override
     public void flushCache(MonitoredTask status) throws IOException {
       storeFile = Store.this.flushCache(cacheFlushId, snapshot,
-          snapshotTimeRangeTracker, status);
+          snapshotTimeRangeTracker, status, cacheFlushInfo);
     }
 
     @Override
@@ -1978,9 +2025,12 @@ public class Store extends SchemaConfigured implements HeapSize,
       if (storeFile == null) {
         return false;
       }
-      // Add new file to store files.  Clear snapshot too while we have
-      // the Store write lock.
-      return Store.this.updateStorefiles(storeFile, snapshot);
+      return Store.this.commit(storeFile, snapshot, cacheFlushInfo);
+    }
+
+    @Override
+    public void cancel() {
+      Store.this.cancel(cacheFlushInfo);
     }
   }
 

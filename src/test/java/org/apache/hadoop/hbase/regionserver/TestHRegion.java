@@ -23,8 +23,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -66,6 +68,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
+import org.apache.hadoop.hbase.util.InjectionEvent;
+import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -1468,7 +1472,7 @@ public class TestHRegion extends HBaseTestCase {
     // Setting up region
     String method = this.getName();
     byte[] tableName = Bytes.toBytes("testtableNextRows");
-    byte[][] rows = {Bytes.toBytes("row1"), Bytes.toBytes("row2"), 
+    byte[][] rows = {Bytes.toBytes("row1"), Bytes.toBytes("row2"),
                     Bytes.toBytes("rows3")};
     byte[][] families = { Bytes.toBytes("fam1"), Bytes.toBytes("fam2"),
         Bytes.toBytes("fam3"), Bytes.toBytes("fam4") };
@@ -1478,8 +1482,8 @@ public class TestHRegion extends HBaseTestCase {
     List<KeyValue> expected = new ArrayList<KeyValue>();
     fillTable(rows, families, 2, expected);
     /**
-     * in this case we know kv size = 28 
-     * KLEN VLEN ROWLEN ROWNAME CFLEN CFNAME TS TYPE 
+     * in this case we know kv size = 28
+     * KLEN VLEN ROWLEN ROWNAME CFLEN CFNAME TS TYPE
      * --4-|--4-|--2---|---4---|--1--|--4---|-8-|--1-- ===> 28 bytes
      */
     Scan scan = new Scan();
@@ -1488,23 +1492,23 @@ public class TestHRegion extends HBaseTestCase {
     scan.addFamily(families[3]);
 
     // fetch one kv even when responseSize = 0, oh well, this's the semantic
-    // that users should be aware of  
+    // that users should be aware of
     compareNextRows(scan, 0, true, Integer.MAX_VALUE, expected.subList(0, 1));
     // fetch the last kv pair if the responseSize is not big enough
     compareNextRows(scan, 1, true, Integer.MAX_VALUE, expected.subList(0, 1));
-    // maxResponseSize perfectly fits one kv 
+    // maxResponseSize perfectly fits one kv
     compareNextRows(scan, 28, true, Integer.MAX_VALUE, expected.subList(0, 1));
 
-    // if partialRow == true, fetch as much as  maxResponseSize allows 
+    // if partialRow == true, fetch as much as  maxResponseSize allows
     compareNextRows(scan, 29, true, Integer.MAX_VALUE, expected.subList(0, 2));
-    // if partialRow == false, fetch the entire row  
+    // if partialRow == false, fetch the entire row
     compareNextRows(scan, 29, false, Integer.MAX_VALUE, expected.subList(0, 6));
-    
+
     // fetch everything in the table as long as responseSize is big enough
     compareNextRows(scan, 10000, true, Integer.MAX_VALUE, expected);
     compareNextRows(scan, 10000, false, Integer.MAX_VALUE, expected);
-   
-    // check nbRows 
+
+    // check nbRows
     // fetch two rows, each has two columns and each column has 3 kvs
     compareNextRows(scan, 10000, true, 2, expected.subList(0, 12));
     compareNextRows(scan, 10000, false, 2, expected.subList(0, 12));
@@ -2975,6 +2979,72 @@ public class TestHRegion extends HBaseTestCase {
 
     KeyValue[] keyValues = region.get(get, null).raw();
     assertTrue(keyValues.length == 0);
+  }
+
+  public void testRemoveStoreFilesOnWriteFailure()
+    throws IOException {
+    byte[] table = Bytes.toBytes("table");
+    byte[][] families = new byte[][] {
+        Bytes.toBytes("family1"),
+        Bytes.toBytes("family2"),
+        Bytes.toBytes("family3")
+    };
+    initHRegion(table, getName(), families);
+
+    Put put = new Put(Bytes.toBytes("row"));
+    put.add(families[0], null, null);
+    put.add(families[1], null, null);
+    put.add(families[2], null, null);
+    region.put(put);
+
+    class InjectionHandlerImpl extends InjectionHandler {
+
+      private Set<Path> paths = new HashSet<Path>();
+
+      private int writeCount = 0;
+
+      protected void _processEventIO(InjectionEvent event, Object... args)
+        throws IOException {
+        switch (event) {
+          case STOREFILE_AFTER_WRITE_CLOSE:
+          {
+            paths.add((Path) args[0]);
+            if (++writeCount == 2) {
+              throw new IOException();
+            }
+            break;
+          }
+          case STOREFILE_AFTER_RENAME:
+          {
+            paths.add((Path) args[1]);
+            break;
+          }
+        }
+      }
+
+      public void validate()
+        throws IOException {
+        for (Path path : paths) {
+          assertFalse("file should not exist: " + path, region.fs.exists(path));
+        }
+      }
+
+    }
+
+    InjectionHandlerImpl ih = new InjectionHandlerImpl();
+    InjectionHandler.set(ih);
+
+    try {
+      region.flushcache();
+      fail();
+    }
+    catch (IOException e) {
+      // that's expected
+    }
+
+    ih.validate();
+
+    InjectionHandler.clear();
   }
 
   private void putData(int startRow, int numRows, byte [] qf,

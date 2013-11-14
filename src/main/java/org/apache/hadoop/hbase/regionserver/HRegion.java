@@ -177,10 +177,10 @@ public class HRegion implements HeapSize {
   // private byte [] name = null;
 
   protected final AtomicLong memstoreSize = new AtomicLong(0);
-  
+
   // The number of rows are read
   protected final AtomicInteger rowReadCnt = new AtomicInteger(0);
-  
+
   // The number of rows are updated
   protected final AtomicInteger rowUpdateCnt = new AtomicInteger(0);
 
@@ -1576,6 +1576,9 @@ public class HRegion implements HeapSize {
       status.abort("Flush failed: " + StringUtils.stringifyException(ioe));
       // The caller can recover from this IOException. No harm done if
       // memstore flush fails.
+      for (StoreFlusher flusher : storeFlushers) {
+        flusher.cancel();
+      }
       throw ioe;
     }
 
@@ -1917,7 +1920,7 @@ public class HRegion implements HeapSize {
   public void delete(Map<byte[], List<KeyValue>> familyMap, boolean writeToWAL)
   throws IOException {
     long now = EnvironmentEdgeManager.currentTimeMillis();
-    
+
     byte [] byteNow = Bytes.toBytes(now);
     boolean flush = false;
 
@@ -2484,9 +2487,9 @@ public class HRegion implements HeapSize {
                  long seqNum) {
     // Increment the rowUpdatedCnt
     this.rowUpdateCnt.incrementAndGet();
-    
+
     long start = EnvironmentEdgeManager.currentTimeMillis();
-    
+
     MultiVersionConsistencyControl.WriteEntry w = null;
     long size = 0;
     try {
