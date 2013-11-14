@@ -55,7 +55,8 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
         new CompactTableAction(tableName, 0.5f),
         new CompactRandomRegionOfTableAction(tableName, 0.6f),
         new FlushTableAction(tableName),
-        new FlushRandomRegionOfTableAction(tableName)
+        new FlushRandomRegionOfTableAction(tableName),
+        new MoveRandomRegionOfTableAction(tableName)
     };
 
     // Actions such as split/merge/snapshot.
@@ -64,18 +65,22 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
     Action[] actions2 = new Action[] {
         new SplitRandomRegionOfTableAction(tableName),
         new MergeRandomAdjacentRegionsOfTableAction(tableName),
-        new SnapshotTableAction(tableName)
+        new SnapshotTableAction(tableName),
+        new AddColumnAction(tableName),
+        new RemoveColumnAction(tableName, columnFamilies),
+        new ChangeEncodingAction(tableName),
+        new ChangeVersionsAction(tableName)
     };
 
     // Destructive actions to mess things around.
     Action[] actions3 = new Action[] {
-        new MoveRegionsOfTableAction(20000, tableName),
-        new MoveRandomRegionOfTableAction(20000, tableName),
+        new MoveRegionsOfTableAction(800, tableName),
+        new MoveRandomRegionOfTableAction(800, tableName),
         new RestartRandomRsAction(60000),
-        new BatchRestartRsAction(60000, 0.5f),
+        new BatchRestartRsAction(5000, 0.5f),
         new RestartActiveMasterAction(5000),
         new RollingBatchRestartRsAction(5000, 1.0f),
-        new RestartRsHoldingMetaAction(35000),
+        new RestartRsHoldingMetaAction(35000)
     };
 
     // Action to log more info for debugging
