@@ -40,7 +40,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
@@ -49,7 +48,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.KeyValueSkipListSet;
 import org.apache.hadoop.hbase.regionserver.MemStore;
-import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.BeforeClass;
@@ -305,14 +303,12 @@ public class TestHeapSize  {
     // MemStore Deep Overhead
     actual = MemStore.DEEP_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
-    expected += ClassSize.estimateBase(ReentrantReadWriteLock.class, false);
     expected += ClassSize.estimateBase(AtomicLong.class, false);
     expected += (2 * ClassSize.estimateBase(KeyValueSkipListSet.class, false));
     expected += (2 * ClassSize.estimateBase(ConcurrentSkipListMap.class, false));
     expected += (2 * ClassSize.estimateBase(TimeRangeTracker.class, false));
     if(expected != actual) {
       ClassSize.estimateBase(cl, true);
-      ClassSize.estimateBase(ReentrantReadWriteLock.class, true);
       ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(KeyValueSkipListSet.class, true);
       ClassSize.estimateBase(KeyValueSkipListSet.class, true);

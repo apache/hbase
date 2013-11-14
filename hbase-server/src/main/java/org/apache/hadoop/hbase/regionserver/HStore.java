@@ -671,7 +671,12 @@ public class HStore implements Store {
    *  so it has some work to do.
    */
   void snapshot() {
-    this.memstore.snapshot();
+    this.lock.writeLock().lock();
+    try {
+      this.memstore.snapshot();
+    } finally {
+      this.lock.writeLock().unlock();
+    }
   }
 
   /**

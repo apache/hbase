@@ -37,7 +37,7 @@ import java.util.Map;
 
 /**
  * Used to communicate with a single HBase table.
- * Obtain an instance from an {@ink HConnection}.
+ * Obtain an instance from an {@link HConnection}.
  *
  * @since 0.21.0
  */
