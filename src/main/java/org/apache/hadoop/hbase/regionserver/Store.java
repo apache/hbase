@@ -32,7 +32,6 @@ import java.util.SortedSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
@@ -758,7 +757,12 @@ public class Store extends SchemaConfigured implements HeapSize {
    * {@link #flushCache(long, SortedSet<KeyValue>)} so it has some work to do.
    */
   void snapshot() {
-    this.memstore.snapshot();
+    this.lock.writeLock().lock();
+    try {
+      this.memstore.snapshot();
+    } finally {
+      this.lock.writeLock().unlock();
+    }
   }
 
   /**

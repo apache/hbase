@@ -298,14 +298,12 @@ public class TestHeapSize extends TestCase {
     // MemStore Deep Overhead
     actual = MemStore.DEEP_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
-    expected += ClassSize.estimateBase(ReentrantReadWriteLock.class, false);
     expected += ClassSize.estimateBase(AtomicLong.class, false);
     expected += (2 * ClassSize.estimateBase(KeyValueSkipListSet.class, false));
     expected += (2 * ClassSize.estimateBase(ConcurrentSkipListMap.class, false));
     expected += (2 * ClassSize.estimateBase(TimeRangeTracker.class, false));
     if(expected != actual) {
       ClassSize.estimateBase(cl, true);
-      ClassSize.estimateBase(ReentrantReadWriteLock.class, true);
       ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(KeyValueSkipListSet.class, true);
       ClassSize.estimateBase(KeyValueSkipListSet.class, true);
