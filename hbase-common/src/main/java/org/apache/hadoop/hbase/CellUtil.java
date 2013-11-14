@@ -385,7 +385,7 @@ public final class CellUtil {
    * @param tags
    * @param offset
    * @param length
-   * @return
+   * @return iterator for the tags
    */
   public static Iterator<Tag> tagsIterator(final byte[] tags, final int offset, final short length) {
     return new Iterator<Tag>() {
