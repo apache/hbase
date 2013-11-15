@@ -552,25 +552,44 @@ public static void initCredentials(Job job) throws IOException {
   }
 
   /**
+   * Add HBase and its dependencies (only) to the job configuration.
+   * <p>
+   * This is intended as a low-level API, facilitating code reuse between this
+   * class and its mapred counterpart. It also of use to extenral tools that
+   * need to build a MapReduce job that interacts with HBase but want
+   * fine-grained control over the jars shipped to the cluster.
+   * </p>
+   * @param conf The Configuration object to extend with dependencies.
+   * @see org.apache.hadoop.hbase.mapred.TableMapReduceUtil
+   * @see <a href="https://issues.apache.org/jira/browse/PIG-3285">PIG-3285</a>
+   */
+  public static void addHBaseDependencyJars(Configuration conf) throws IOException {
+    addDependencyJars(conf,
+      org.apache.zookeeper.ZooKeeper.class,
+      com.google.protobuf.Message.class,
+      com.google.common.base.Function.class,
+      com.google.common.collect.ImmutableSet.class,
+      org.apache.hadoop.hbase.util.Bytes.class); //one class from hbase.jar
+  }
+
+  /**
    * Add the HBase dependency jars as well as jars for any of the configured
    * job classes to the job configuration, so that JobClient will ship them
    * to the cluster and add them to the DistributedCache.
    */
   public static void addDependencyJars(Job job) throws IOException {
+    addHBaseDependencyJars(job.getConfiguration());
     try {
       addDependencyJars(job.getConfiguration(),
-          org.apache.zookeeper.ZooKeeper.class,
-          com.google.protobuf.Message.class,
-          com.google.common.collect.ImmutableSet.class,
-          org.apache.hadoop.hbase.util.Bytes.class, //one class from hbase.jar
-          job.getMapOutputKeyClass(),
-          job.getMapOutputValueClass(),
-          job.getInputFormatClass(),
-          job.getOutputKeyClass(),
-          job.getOutputValueClass(),
-          job.getOutputFormatClass(),
-          job.getPartitionerClass(),
-          job.getCombinerClass());
+        // when making changes here, consider also mapred.TableMapReduceUtil
+        job.getMapOutputKeyClass(),
+        job.getMapOutputValueClass(),
+        job.getInputFormatClass(),
+        job.getOutputKeyClass(),
+        job.getOutputValueClass(),
+        job.getOutputFormatClass(),
+        job.getPartitionerClass(),
+        job.getCombinerClass());
     } catch (ClassNotFoundException e) {
       throw new IOException(e);
     }    
@@ -612,8 +631,7 @@ public static void initCredentials(Job job) throws IOException {
     }
     if (jars.isEmpty()) return;
 
-    conf.set("tmpjars",
-             StringUtils.arrayToString(jars.toArray(new String[0])));
+    conf.set("tmpjars", StringUtils.arrayToString(jars.toArray(new String[0])));
   }
 
   /**

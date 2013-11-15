@@ -294,14 +294,13 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * @see org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil#addDependencyJars(Job)
+   * @see org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil#addDependencyJars(org.apache.hadoop.mapreduce.Job)
    */
   public static void addDependencyJars(JobConf job) throws IOException {
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addHBaseDependencyJars(job);
     org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addDependencyJars(
       job,
-      org.apache.zookeeper.ZooKeeper.class,
-      com.google.common.base.Function.class,
-      com.google.protobuf.Message.class,
+      // when making changes here, consider also mapreduce.TableMapReduceUtil
       job.getMapOutputKeyClass(),
       job.getMapOutputValueClass(),
       job.getOutputKeyClass(),
