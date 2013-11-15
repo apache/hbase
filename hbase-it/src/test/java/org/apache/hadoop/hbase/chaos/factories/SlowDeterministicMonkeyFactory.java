@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.chaos.factories;
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.chaos.actions.AddColumnAction;
 import org.apache.hadoop.hbase.chaos.actions.BatchRestartRsAction;
+import org.apache.hadoop.hbase.chaos.actions.ChangeCompressionAction;
 import org.apache.hadoop.hbase.chaos.actions.ChangeEncodingAction;
 import org.apache.hadoop.hbase.chaos.actions.ChangeVersionsAction;
 import org.apache.hadoop.hbase.chaos.actions.CompactRandomRegionOfTableAction;
@@ -69,6 +70,7 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
         new AddColumnAction(tableName),
         new RemoveColumnAction(tableName, columnFamilies),
         new ChangeEncodingAction(tableName),
+        new ChangeCompressionAction(tableName),
         new ChangeVersionsAction(tableName)
     };
 
