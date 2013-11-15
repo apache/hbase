@@ -296,7 +296,7 @@ public final class HConstants {
    * The directory from which co-processor/custom filter jars can be loaded
    * dynamically by the region servers. This value can be overridden by the
    * hbase.dynamic.jars.dir config.
-   */ 
+   */
   public static final String LIB_DIR = "lib";
 
   /** Used to construct the name of the compaction directory during compaction */
@@ -907,6 +907,14 @@ public final class HConstants {
    */
   public static final String STATUS_MULTICAST_ADDRESS = "hbase.status.multicast.address.ip";
   public static final String DEFAULT_STATUS_MULTICAST_ADDRESS = "226.1.1.3";
+
+  /**
+   * The address to use for binding the local socket for receiving multicast. Defaults to
+   * 0.0.0.0.
+   * @see https://issues.apache.org/jira/browse/HBASE-9961
+   */
+  public static final String STATUS_MULTICAST_BIND_ADDRESS = "hbase.status.multicast.bind.address.ip";
+  public static final String DEFAULT_STATUS_MULTICAST_BIND_ADDRESS = "0.0.0.0";
 
   /**
    * The port to use for the multicast messages.
