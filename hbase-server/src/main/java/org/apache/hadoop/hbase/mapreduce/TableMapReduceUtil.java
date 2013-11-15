@@ -71,7 +71,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
  */
-@SuppressWarnings("unchecked")
+@SuppressWarnings({ "rawtypes", "unchecked" })
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TableMapReduceUtil {
@@ -558,24 +558,44 @@ public class TableMapReduceUtil {
   }
 
   /**
+   * Add HBase and its dependencies (only) to the job configuration.
+   * <p>
+   * This is intended as a low-level API, facilitating code reuse between this
+   * class and its mapred counterpart. It also of use to extenral tools that
+   * need to build a MapReduce job that interacts with HBase but want
+   * fine-grained control over the jars shipped to the cluster.
+   * </p>
+   * @param conf The Configuration object to extend with dependencies.
+   * @see org.apache.hadoop.hbase.mapred.TableMapReduceUtil
+   * @see <a href="https://issues.apache.org/jira/browse/PIG-3285">PIG-3285</a>
+   */
+  public static void addHBaseDependencyJars(Configuration conf) throws IOException {
+    addDependencyJars(conf,
+      // explicitly pull a class from each module
+      org.apache.hadoop.hbase.HConstants.class,                      // hbase-common
+      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.class, // hbase-protocol
+      org.apache.hadoop.hbase.client.Put.class,                      // hbase-client
+      org.apache.hadoop.hbase.CompatibilityFactory.class,            // hbase-hadoop-compat
+      org.apache.hadoop.hbase.mapreduce.TableMapper.class,           // hbase-server
+      // pull necessary dependencies
+      org.apache.zookeeper.ZooKeeper.class,
+      org.jboss.netty.channel.ChannelFactory.class,
+      com.google.protobuf.Message.class,
+      com.google.common.collect.Lists.class,
+      org.cloudera.htrace.Trace.class);
+  }
+
+
+  /**
    * Add the HBase dependency jars as well as jars for any of the configured
    * job classes to the job configuration, so that JobClient will ship them
    * to the cluster and add them to the DistributedCache.
    */
   public static void addDependencyJars(Job job) throws IOException {
+    addHBaseDependencyJars(job.getConfiguration());
     try {
       addDependencyJars(job.getConfiguration(),
-          // explicitly pull a class from each module
-          org.apache.hadoop.hbase.HConstants.class,                      // hbase-common
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.class, // hbase-protocol
-          org.apache.hadoop.hbase.client.Put.class,                      // hbase-client
-          org.apache.hadoop.hbase.CompatibilityFactory.class,            // hbase-hadoop-compat
-          // pull necessary dependencies
-          org.apache.zookeeper.ZooKeeper.class,
-          org.jboss.netty.channel.ChannelFactory.class,
-          com.google.protobuf.Message.class,
-          com.google.common.collect.Lists.class,
-          org.cloudera.htrace.Trace.class,
+          // when making changes here, consider also mapred.TableMapReduceUtil
           // pull job classes
           job.getMapOutputKeyClass(),
           job.getMapOutputValueClass(),
