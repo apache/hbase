@@ -189,7 +189,7 @@ public class TestImportTsv implements Configurable {
   @Test
   public void testJobConfigurationsWithTsvImporterTextMapper() throws Exception {
     String table = "test-" + UUID.randomUUID();
-    Path bulkOutputPath = new Path(util.getDataTestDir(table),"hfiles");
+    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table),"hfiles");
     String INPUT_FILE = "InputFile1.csv";
     // Prepare the arguments required for the test.
     String[] args =
@@ -209,12 +209,12 @@ public class TestImportTsv implements Configurable {
     assertTrue(job.getReducerClass().equals(TextSortReducer.class));
     assertTrue(job.getMapOutputValueClass().equals(Text.class));
   }
-  
+
   @Test
   public void testBulkOutputWithTsvImporterTextMapper() throws Exception {
     String table = "test-" + UUID.randomUUID();
     String FAMILY = "FAM";
-    Path bulkOutputPath = new Path(util.getDataTestDir(table),"hfiles");
+    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table),"hfiles");
     // Prepare the arguments required for the test.
     String[] args =
         new String[] {
