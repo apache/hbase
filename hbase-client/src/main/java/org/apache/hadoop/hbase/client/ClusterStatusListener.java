@@ -20,6 +20,18 @@
 package org.apache.hadoop.hbase.client;
 
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -39,18 +51,6 @@ import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
 import org.jboss.netty.handler.codec.protobuf.ProtobufDecoder;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 
 /**
@@ -185,6 +185,7 @@ class ClusterStatusListener implements Closeable {
     public MulticastListener() {
     }
 
+    @Override
     public void connect(Configuration conf) throws IOException {
       // Can't be NiO with Netty today => not implemented in Netty.
       DatagramChannelFactory f = new OioDatagramChannelFactory(service);
@@ -196,9 +197,12 @@ class ClusterStatusListener implements Closeable {
 
       String mcAddress = conf.get(HConstants.STATUS_MULTICAST_ADDRESS,
           HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
+      String bindAddress = conf.get(HConstants.STATUS_MULTICAST_BIND_ADDRESS,
+        HConstants.DEFAULT_STATUS_MULTICAST_BIND_ADDRESS);
       int port = conf.getInt(HConstants.STATUS_MULTICAST_PORT,
           HConstants.DEFAULT_STATUS_MULTICAST_PORT);
-      channel = (DatagramChannel) b.bind(new InetSocketAddress(mcAddress, port));
+
+      channel = (DatagramChannel) b.bind(new InetSocketAddress(bindAddress, port));
 
       channel.getConfig().setReuseAddress(true);
 
