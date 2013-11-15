@@ -73,7 +73,6 @@ import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.RpcEngine;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1104,38 +1103,38 @@ public class HConnectionManager {
             getHRegionConnection(metaLocation.getHostname(), metaLocation.getPort());
 
           Result regionInfoRow = null;
-          // This block guards against two threads trying to load the meta
-          // region at the same time. The first will load the meta region and
-          // the second will use the value that the first one found.
-          synchronized (regionLockObject) {
-            // Check the cache again for a hit in case some other thread made the
-            // same query while we were waiting on the lock.
-            if (useCache) {
-              location = getCachedLocation(tableName, row);
-              if (location != null) {
-                return location;
-              }
-              // If the parent table is META, we may want to pre-fetch some
-              // region info into the global region cache for this table.
-              if (Bytes.equals(parentTable, HConstants.META_TABLE_NAME)
-                  && (getRegionCachePrefetch(tableName))) {
+          if (useCache) {
+            if (Bytes.equals(parentTable, HConstants.META_TABLE_NAME)
+                && (getRegionCachePrefetch(tableName))) {
+              // This block guards against two threads trying to load the meta
+              // region at the same time. The first will load the meta region and
+              // the second will use the value that the first one found.
+              synchronized (regionLockObject) {
+                // Check the cache again for a hit in case some other thread made the
+                // same query while we were waiting on the lock.
+                location = getCachedLocation(tableName, row);
+                if (location != null) {
+                  return location;
+                }
+                // If the parent table is META, we may want to pre-fetch some
+                // region info into the global region cache for this table.
                 prefetchRegionCache(tableName, row);
               }
-              location = getCachedLocation(tableName, row);
-              if (location != null) {
-                return location;
-              }
-            } else {
-              // If we are not supposed to be using the cache, delete any existing cached location
-              // so it won't interfere.
-              deleteCachedLocation(tableName, row);
             }
-
-            // Query the root or meta region for the location of the meta region
-            regionInfoRow = server.getClosestRowBefore(
-            metaLocation.getRegionInfo().getRegionName(), metaKey,
-            HConstants.CATALOG_FAMILY);
+            location = getCachedLocation(tableName, row);
+            if (location != null) {
+              return location;
+            }
+          } else {
+            // If we are not supposed to be using the cache, delete any existing cached location
+            // so it won't interfere.
+            deleteCachedLocation(tableName, row);
           }
+
+          // Query the root or meta region for the location of the meta region
+          regionInfoRow = server.getClosestRowBefore(
+          metaLocation.getRegionInfo().getRegionName(), metaKey,
+          HConstants.CATALOG_FAMILY);
           if (regionInfoRow == null) {
             throw new TableNotFoundException(Bytes.toString(tableName));
           }
