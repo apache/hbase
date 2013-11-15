@@ -15,8 +15,11 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
@@ -24,19 +27,15 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import static org.junit.Assert.*;
 
 /**
- * Test class TableMapReduceUtil
+ * Test different variants of initTableMapperJob method
  */
-
-@Category(LargeTests.class)
+@Category(SmallTests.class)
 public class TestTableMapReduceUtil {
-  /**
-   * Test different variants ofinitTableMapperJob method
-   */
-  @Test (timeout=600000)
-  public void testInitTableMapperJob() throws Exception {
+
+  @Test
+  public void testInitTableMapperJob1() throws Exception {
     Configuration configuration = new Configuration();
     Job job = new Job(configuration, "tableName");
     // test 
@@ -48,9 +47,12 @@ public class TestTableMapReduceUtil {
     assertEquals(Text.class, job.getOutputValueClass());
     assertNull(job.getCombinerClass());
     assertEquals("Table", job.getConfiguration().get(TableInputFormat.INPUT_TABLE));
+  }
 
-    configuration = new Configuration();
-    job = new Job(configuration, "tableName");
+  @Test
+  public void testInitTableMapperJob2() throws Exception {
+    Configuration configuration = new Configuration();
+    Job job = new Job(configuration, "tableName");
     TableMapReduceUtil.initTableMapperJob(Bytes.toBytes("Table"), new Scan(),
         Import.Importer.class, Text.class, Text.class, job, false, HLogInputFormat.class);
     assertEquals(HLogInputFormat.class, job.getInputFormatClass());
@@ -59,9 +61,12 @@ public class TestTableMapReduceUtil {
     assertEquals(Text.class, job.getOutputValueClass());
     assertNull(job.getCombinerClass());
     assertEquals("Table", job.getConfiguration().get(TableInputFormat.INPUT_TABLE));
+  }
 
-    configuration = new Configuration();
-    job = new Job(configuration, "tableName");
+  @Test
+  public void testInitTableMapperJob3() throws Exception {
+    Configuration configuration = new Configuration();
+    Job job = new Job(configuration, "tableName");
     TableMapReduceUtil.initTableMapperJob(Bytes.toBytes("Table"), new Scan(),
         Import.Importer.class, Text.class, Text.class, job);
     assertEquals(TableInputFormat.class, job.getInputFormatClass());
@@ -70,9 +75,12 @@ public class TestTableMapReduceUtil {
     assertEquals(Text.class, job.getOutputValueClass());
     assertNull(job.getCombinerClass());
     assertEquals("Table", job.getConfiguration().get(TableInputFormat.INPUT_TABLE));
+  }
 
-    configuration = new Configuration();
-    job = new Job(configuration, "tableName");
+  @Test
+  public void testInitTableMapperJob4() throws Exception {
+    Configuration configuration = new Configuration();
+    Job job = new Job(configuration, "tableName");
     TableMapReduceUtil.initTableMapperJob(Bytes.toBytes("Table"), new Scan(),
         Import.Importer.class, Text.class, Text.class, job, false);
     assertEquals(TableInputFormat.class, job.getInputFormatClass());

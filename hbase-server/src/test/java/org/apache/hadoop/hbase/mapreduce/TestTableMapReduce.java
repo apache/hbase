@@ -58,34 +58,15 @@ import org.junit.experimental.categories.Category;
  * a particular cell, and write it back to the table.
  */
 @Category(LargeTests.class)
-public class TestTableMapReduce {
+public class TestTableMapReduce extends TestTableMapReduceBase {
   private static final Log LOG = LogFactory.getLog(TestTableMapReduce.class);
-  private static final HBaseTestingUtility UTIL =
-    new HBaseTestingUtility();
-  static final byte[] MULTI_REGION_TABLE_NAME = Bytes.toBytes("mrtest");
-  static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
-  static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
 
-  @BeforeClass
-  public static void beforeClass() throws Exception {
-    UTIL.startMiniCluster();
-    HTable table = UTIL.createTable(MULTI_REGION_TABLE_NAME, new byte[][] {INPUT_FAMILY, OUTPUT_FAMILY});
-    UTIL.createMultiRegions(table, INPUT_FAMILY);
-    UTIL.loadTable(table, INPUT_FAMILY);
-    UTIL.startMiniMapReduceCluster();
-  }
-
-  @AfterClass
-  public static void afterClass() throws Exception {
-    UTIL.shutdownMiniMapReduceCluster();
-    UTIL.shutdownMiniCluster();
-  }
+  protected Log getLog() { return LOG; }
 
   /**
    * Pass the given key and processed record reduce
    */
-  public static class ProcessContentsMapper
-  extends TableMapper<ImmutableBytesWritable, Put> {
+  static class ProcessContentsMapper extends TableMapper<ImmutableBytesWritable, Put> {
 
     /**
      * Pass the key, and reversed value to reduce
@@ -119,30 +100,7 @@ public class TestTableMapReduce {
     }
   }
 
-  /**
-   * Test a map/reduce against a multi-region table
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testMultiRegionTable()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    runTestOnTable(new HTable(new Configuration(UTIL.getConfiguration()),
-      MULTI_REGION_TABLE_NAME));
-  }
-
-  @Test
-  public void testCombiner()
-      throws IOException, InterruptedException, ClassNotFoundException {
-    Configuration conf = new Configuration(UTIL.getConfiguration());
-    // force use of combiner for testing purposes
-    conf.setInt("min.num.spills.for.combine", 1);
-    runTestOnTable(new HTable(conf, MULTI_REGION_TABLE_NAME));
-  }
-
-  private void runTestOnTable(HTable table)
-  throws IOException, InterruptedException, ClassNotFoundException {
+  protected void runTestOnTable(HTable table) throws IOException {
     Job job = null;
     try {
       LOG.info("Before map/reduce startup");
@@ -164,6 +122,10 @@ public class TestTableMapReduce {
 
       // verify map-reduce results
       verify(Bytes.toString(table.getTableName()));
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    } catch (ClassNotFoundException e) {
+      throw new IOException(e);
     } finally {
       table.close();
       if (job != null) {
@@ -172,123 +134,4 @@ public class TestTableMapReduce {
       }
     }
   }
-
-  private void verify(String tableName) throws IOException {
-    HTable table = new HTable(new Configuration(UTIL.getConfiguration()), tableName);
-    boolean verified = false;
-    long pause = UTIL.getConfiguration().getLong("hbase.client.pause", 5 * 1000);
-    int numRetries = UTIL.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
-    for (int i = 0; i < numRetries; i++) {
-      try {
-        LOG.info("Verification attempt #" + i);
-        verifyAttempt(table);
-        verified = true;
-        break;
-      } catch (NullPointerException e) {
-        // If here, a cell was empty.  Presume its because updates came in
-        // after the scanner had been opened.  Wait a while and retry.
-        LOG.debug("Verification attempt failed: " + e.getMessage());
-      }
-      try {
-        Thread.sleep(pause);
-      } catch (InterruptedException e) {
-        // continue
-      }
-    }
-    assertTrue(verified);
-    table.close();
-  }
-
-  /**
-   * Looks at every value of the mapreduce output and verifies that indeed
-   * the values have been reversed.
-   *
-   * @param table Table to scan.
-   * @throws IOException
-   * @throws NullPointerException if we failed to find a cell value
-   */
-  private void verifyAttempt(final HTable table) throws IOException, NullPointerException {
-    Scan scan = new Scan();
-    scan.addFamily(INPUT_FAMILY);
-    scan.addFamily(OUTPUT_FAMILY);
-    ResultScanner scanner = table.getScanner(scan);
-    try {
-      Iterator<Result> itr = scanner.iterator();
-      assertTrue(itr.hasNext());
-      while(itr.hasNext()) {
-        Result r = itr.next();
-        if (LOG.isDebugEnabled()) {
-          if (r.size() > 2 ) {
-            throw new IOException("Too many results, expected 2 got " +
-              r.size());
-          }
-        }
-        byte[] firstValue = null;
-        byte[] secondValue = null;
-        int count = 0;
-        for(Cell kv : r.listCells()) {
-          if (count == 0) {
-            firstValue = CellUtil.cloneValue(kv);
-          }
-          if (count == 1) {
-            secondValue = CellUtil.cloneValue(kv);
-          }
-          count++;
-          if (count == 2) {
-            break;
-          }
-        }
-
-        String first = "";
-        if (firstValue == null) {
-          throw new NullPointerException(Bytes.toString(r.getRow()) +
-            ": first value is null");
-        }
-        first = Bytes.toString(firstValue);
-
-        String second = "";
-        if (secondValue == null) {
-          throw new NullPointerException(Bytes.toString(r.getRow()) +
-            ": second value is null");
-        }
-        byte[] secondReversed = new byte[secondValue.length];
-        for (int i = 0, j = secondValue.length - 1; j >= 0; j--, i++) {
-          secondReversed[i] = secondValue[j];
-        }
-        second = Bytes.toString(secondReversed);
-
-        if (first.compareTo(second) != 0) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("second key is not the reverse of first. row=" +
-                Bytes.toStringBinary(r.getRow()) + ", first value=" + first +
-                ", second value=" + second);
-          }
-          fail();
-        }
-      }
-    } finally {
-      scanner.close();
-    }
-  }
-
-  /**
-   * Test that we add tmpjars correctly including the ZK jar.
-   */
-  public void testAddDependencyJars() throws Exception {
-    Job job = new Job();
-    TableMapReduceUtil.addDependencyJars(job);
-    String tmpjars = job.getConfiguration().get("tmpjars");
-
-    System.err.println("tmpjars: " + tmpjars);
-    assertTrue(tmpjars.contains("zookeeper"));
-    assertFalse(tmpjars.contains("guava"));
-
-    System.err.println("appending guava jar");
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), 
-        com.google.common.base.Function.class);
-    tmpjars = job.getConfiguration().get("tmpjars");
-    assertTrue(tmpjars.contains("guava"));
-  }
-
 }
-

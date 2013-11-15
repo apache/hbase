@@ -37,12 +37,11 @@ import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
-import org.apache.hadoop.mapred.jobcontrol.Job;
 import org.apache.hadoop.security.token.Token;
 import org.apache.zookeeper.KeeperException;
 
@@ -52,7 +51,7 @@ import org.apache.zookeeper.KeeperException;
 @Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-@SuppressWarnings("unchecked")
+@SuppressWarnings({ "rawtypes", "unchecked" })
 public class TableMapReduceUtil {
 
   /**
@@ -297,15 +296,14 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * @see org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil#addDependencyJars(Job)
+   * @see org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil#addDependencyJars(org.apache.hadoop.mapreduce.Job)
    */
   public static void addDependencyJars(JobConf job) throws IOException {
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addHBaseDependencyJars(job);
     org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addDependencyJars(
       job,
-      org.apache.zookeeper.ZooKeeper.class,
-      org.jboss.netty.channel.ChannelFactory.class,
-      com.google.common.base.Function.class,
-      com.google.protobuf.Message.class,
+      // when making changes here, consider also mapreduce.TableMapReduceUtil
+      // pull job classes
       job.getMapOutputKeyClass(),
       job.getMapOutputValueClass(),
       job.getOutputKeyClass(),

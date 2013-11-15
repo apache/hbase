@@ -45,7 +45,7 @@ extends TableMapper<ImmutableBytesWritable, Result> {
    * @param job  The job configuration.
    * @throws IOException When setting up the job fails.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   public static void initJob(String table, Scan scan,
     Class<? extends TableMapper> mapper, Job job) throws IOException {
     TableMapReduceUtil.initTableMapperJob(table, scan, mapper,
