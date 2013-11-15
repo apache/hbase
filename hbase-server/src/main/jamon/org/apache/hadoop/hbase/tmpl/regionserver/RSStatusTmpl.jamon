@@ -149,7 +149,7 @@ org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
                 <%else>
                 <%java>
                 String host = regionServer.getMasterAddressManager().getMasterAddress().getHostname() + ":" + masterInfoPort;
-                String url = "http://" + host + "/";
+                String url = "//" + host + "/";
                 </%java>
                 <a href="<% url %>"><% host %></a>
                 </%if>
