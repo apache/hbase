@@ -200,7 +200,7 @@
   HRegionInfo meta = HRegionInfo.FIRST_META_REGIONINFO;
   ServerName metaLocation = master.getCatalogTracker().waitForMeta(1);
   for (int i = 0; i < 1; i++) {
-    String url = "http://" + metaLocation.getHostname() + ":" + infoPort + "/";
+    String url = "//" + metaLocation.getHostname() + ":" + infoPort + "/";
 %>
 <tr>
   <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
@@ -273,7 +273,7 @@
         }
         // This port might be wrong if RS actually ended up using something else.
         urlRegionServer =
-            "http://" + addr.getHostname().toString() + ":" + infoPort + "/";
+            addr.getHostname().toString() + ":" + infoPort;
         Integer i = regDistribution.get(urlRegionServer);
         if (null == i) i = Integer.valueOf(0);
         regDistribution.put(urlRegionServer, i+1);
@@ -286,7 +286,7 @@
   if (urlRegionServer != null) {
   %>
   <td>
-    <a href="<%= urlRegionServer %>"><%= addr.getHostname().toString() + ":" + infoPort %></a>
+    <a href="<%= "//" + urlRegionServer + "/" %>"><%= urlRegionServer %></a>
   </td>
   <%
   } else {
@@ -307,7 +307,7 @@
   for (Map.Entry<String, Integer> rdEntry : regDistribution.entrySet()) {
 %>
 <tr>
-  <td><a href="<%= rdEntry.getKey()%>"><%= rdEntry.getKey()%></a></td>
+  <td><a href="<%= "//" + rdEntry.getKey() + "/" %>"><%= rdEntry.getKey()%></a></td>
   <td><%= rdEntry.getValue()%></td>
 </tr>
 <% } %>
