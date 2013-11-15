@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -38,6 +39,8 @@ public final class MultiAction<R> {
   // map of regions to lists of puts/gets/deletes for that region.
   public Map<byte[], List<Action<R>>> actions =
     new TreeMap<byte[], List<Action<R>>>(Bytes.BYTES_COMPARATOR);
+
+  private long nonceGroup = HConstants.NO_NONCE;
 
   public MultiAction() {
     super();
@@ -73,6 +76,10 @@ public final class MultiAction<R> {
     rsActions.add(a);
   }
 
+  public void setNonceGroup(long nonceGroup) {
+    this.nonceGroup = nonceGroup;
+  }
+
   public Set<byte[]> getRegions() {
     return actions.keySet();
   }
@@ -86,5 +93,13 @@ public final class MultiAction<R> {
       res.addAll(lst);
     }
     return res;
+  }
+
+  public boolean hasNonceGroup() {
+    return nonceGroup != HConstants.NO_NONCE;
+  }
+
+  public long getNonceGroup() {
+    return this.nonceGroup;
   }
 }

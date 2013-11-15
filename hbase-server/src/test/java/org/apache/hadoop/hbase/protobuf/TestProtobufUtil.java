@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -220,7 +221,7 @@ public class TestProtobufUtil {
 
     Increment increment = ProtobufUtil.toIncrement(proto, null);
     assertEquals(mutateBuilder.build(),
-      ProtobufUtil.toMutation(increment, MutationProto.newBuilder()));
+      ProtobufUtil.toMutation(increment, MutationProto.newBuilder(), HConstants.NO_NONCE));
   }
 
   /**

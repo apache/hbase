@@ -22,6 +22,8 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -172,9 +174,9 @@ public final class RequestConverter {
    * @param durability
    * @return a mutate request
    */
-  public static MutateRequest buildMutateRequest(
-      final byte[] regionName, final byte[] row, final byte[] family,
-      final byte [] qualifier, final long amount, final Durability durability) {
+  public static MutateRequest buildIncrementRequest(
+      final byte[] regionName, final byte[] row, final byte[] family, final byte[] qualifier,
+      final long amount, final Durability durability, long nonceGroup, long nonce) {
     MutateRequest.Builder builder = MutateRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
@@ -191,7 +193,13 @@ public final class RequestConverter {
     valueBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(qualifier));
     columnBuilder.addQualifierValue(valueBuilder.build());
     mutateBuilder.addColumnValue(columnBuilder.build());
+    if (nonce != HConstants.NO_NONCE) {
+      mutateBuilder.setNonce(nonce);
+    }
     builder.setMutation(mutateBuilder.build());
+    if (nonceGroup != HConstants.NO_NONCE) {
+      builder.setNonceGroup(nonceGroup);
+    }
     return builder.build();
   }
 
@@ -278,14 +286,17 @@ public final class RequestConverter {
    * @return a mutate request
    * @throws IOException
    */
-  public static MutateRequest buildMutateRequest(
-      final byte[] regionName, final Append append) throws IOException {
+  public static MutateRequest buildMutateRequest(final byte[] regionName,
+      final Append append, long nonceGroup, long nonce) throws IOException {
     MutateRequest.Builder builder = MutateRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
+    if (nonce != HConstants.NO_NONCE && nonceGroup != HConstants.NO_NONCE) {
+      builder.setNonceGroup(nonceGroup);
+    }
     builder.setMutation(ProtobufUtil.toMutation(MutationType.APPEND, append,
-      MutationProto.newBuilder()));
+      MutationProto.newBuilder(), nonce));
     return builder.build();
   }
 
@@ -296,13 +307,16 @@ public final class RequestConverter {
    * @param increment
    * @return a mutate request
    */
-  public static MutateRequest buildMutateRequest(
-      final byte[] regionName, final Increment increment) {
+  public static MutateRequest buildMutateRequest(final byte[] regionName,
+      final Increment increment, final long nonceGroup, final long nonce) {
     MutateRequest.Builder builder = MutateRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutation(ProtobufUtil.toMutation(increment, MutationProto.newBuilder()));
+    if (nonce != HConstants.NO_NONCE && nonceGroup != HConstants.NO_NONCE) {
+      builder.setNonceGroup(nonceGroup);
+    }
+    builder.setMutation(ProtobufUtil.toMutation(increment, MutationProto.newBuilder(), nonce));
     return builder.build();
   }
 
@@ -499,8 +513,7 @@ public final class RequestConverter {
   public static <R> RegionAction.Builder buildRegionAction(final byte[] regionName,
       final List<Action<R>> actions, final RegionAction.Builder regionActionBuilder,
       final ClientProtos.Action.Builder actionBuilder,
-      final MutationProto.Builder mutationBuilder)
-  throws IOException {
+      final MutationProto.Builder mutationBuilder) throws IOException {
     for (Action<R> action: actions) {
       Row row = action.getAction();
       actionBuilder.clear();
@@ -516,11 +529,11 @@ public final class RequestConverter {
         regionActionBuilder.addAction(actionBuilder.
           setMutation(ProtobufUtil.toMutation(MutationType.DELETE, (Delete)row, mutationBuilder)));
       } else if (row instanceof Append) {
-        regionActionBuilder.addAction(actionBuilder.
-          setMutation(ProtobufUtil.toMutation(MutationType.APPEND, (Append)row, mutationBuilder)));
+        regionActionBuilder.addAction(actionBuilder.setMutation(ProtobufUtil.toMutation(
+            MutationType.APPEND, (Append)row, mutationBuilder, action.getNonce())));
       } else if (row instanceof Increment) {
-        regionActionBuilder.addAction(actionBuilder.
-          setMutation(ProtobufUtil.toMutation((Increment)row, mutationBuilder)));
+        regionActionBuilder.addAction(actionBuilder.setMutation(
+            ProtobufUtil.toMutation((Increment)row, mutationBuilder, action.getNonce())));
       } else if (row instanceof RowMutations) {
         throw new UnsupportedOperationException("No RowMutations in multi calls; use mutateRow");
       } else {
@@ -550,10 +563,9 @@ public final class RequestConverter {
       final List<Action<R>> actions, final List<CellScannable> cells,
       final RegionAction.Builder regionActionBuilder,
       final ClientProtos.Action.Builder actionBuilder,
-      final MutationProto.Builder mutationBuilder)
-  throws IOException {
-    RegionAction.Builder builder =
-      getRegionActionBuilderWithRegion(RegionAction.newBuilder(), regionName);
+      final MutationProto.Builder mutationBuilder) throws IOException {
+    RegionAction.Builder builder = getRegionActionBuilderWithRegion(
+      RegionAction.newBuilder(), regionName);
     for (Action<R> action: actions) {
       Row row = action.getAction();
       actionBuilder.clear();
@@ -586,13 +598,13 @@ public final class RequestConverter {
       } else if (row instanceof Append) {
         Append a = (Append)row;
         cells.add(a);
-        builder.addAction(actionBuilder.
-          setMutation(ProtobufUtil.toMutationNoData(MutationType.APPEND, a, mutationBuilder)));
+        builder.addAction(actionBuilder.setMutation(ProtobufUtil.toMutationNoData(
+          MutationType.APPEND, a, mutationBuilder, action.getNonce())));
       } else if (row instanceof Increment) {
         Increment i = (Increment)row;
         cells.add(i);
-        builder.addAction(actionBuilder.
-          setMutation(ProtobufUtil.toMutationNoData(MutationType.INCREMENT, i, mutationBuilder)));
+        builder.addAction(actionBuilder.setMutation(ProtobufUtil.toMutationNoData(
+          MutationType.INCREMENT, i, mutationBuilder, action.getNonce())));
       } else if (row instanceof RowMutations) {
         continue; // ignore RowMutations
       } else {

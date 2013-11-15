@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -80,7 +81,7 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
 CoprocessorService, Coprocessor {
   private RegionCoprocessorEnvironment env;
   @Override
-  public void mutateRows(RpcController controller, MutateRowsRequest request, 
+  public void mutateRows(RpcController controller, MutateRowsRequest request,
       RpcCallback<MutateRowsResponse> done) {
     MutateRowsResponse response = MutateRowsResponse.getDefaultInstance();
     try {
@@ -110,7 +111,9 @@ CoprocessorService, Coprocessor {
         rowsToLock.add(m.getRow());
       }
       // call utility method on region
-      env.getRegion().mutateRowsWithLocks(mutations, rowsToLock);
+      long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
+      long nonce = request.hasNonce() ? request.getNonce() : HConstants.NO_NONCE;
+      env.getRegion().mutateRowsWithLocks(mutations, rowsToLock, nonceGroup, nonce);
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
     }

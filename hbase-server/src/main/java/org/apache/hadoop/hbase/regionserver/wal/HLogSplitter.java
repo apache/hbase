@@ -1836,6 +1836,21 @@ public class HLogSplitter {
     }
   }
 
+  /** A struct used by getMutationsFromWALEntry */
+  public static class MutationReplay {
+    public MutationReplay(MutationType type, Mutation mutation, long nonceGroup, long nonce) {
+      this.type = type;
+      this.mutation = mutation;
+      this.nonceGroup = nonceGroup;
+      this.nonce = nonce;
+    }
+
+    public final MutationType type;
+    public final Mutation mutation;
+    public final long nonceGroup;
+    public final long nonce;
+  }
+
   /**
    * This function is used to construct mutations from a WALEntry. It also reconstructs HLogKey &
    * WALEdit from the passed in WALEntry
@@ -1846,16 +1861,16 @@ public class HLogSplitter {
    * @return list of Pair<MutationType, Mutation> to be replayed
    * @throws IOException
    */
-  public static List<Pair<MutationType, Mutation>> getMutationsFromWALEntry(WALEntry entry,
+  public static List<MutationReplay> getMutationsFromWALEntry(WALEntry entry,
       CellScanner cells, Pair<HLogKey, WALEdit> logEntry) throws IOException {
 
     if (entry == null) {
       // return an empty array
-      return new ArrayList<Pair<MutationType, Mutation>>();
+      return new ArrayList<MutationReplay>();
     }
 
     int count = entry.getAssociatedCellCount();
-    List<Pair<MutationType, Mutation>> mutations = new ArrayList<Pair<MutationType, Mutation>>();
+    List<MutationReplay> mutations = new ArrayList<MutationReplay>();
     Cell previousCell = null;
     Mutation m = null;
     HLogKey key = null;
@@ -1877,10 +1892,16 @@ public class HLogSplitter {
         // Create new mutation
         if (CellUtil.isDelete(cell)) {
           m = new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-          mutations.add(new Pair<MutationType, Mutation>(MutationType.DELETE, m));
+          // Deletes don't have nonces.
+          mutations.add(new MutationReplay(
+              MutationType.DELETE, m, HConstants.NO_NONCE, HConstants.NO_NONCE));
         } else {
           m = new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-          mutations.add(new Pair<MutationType, Mutation>(MutationType.PUT, m));
+          // Puts might come from increment or append, thus we need nonces.
+          long nonceGroup = entry.getKey().hasNonceGroup()
+              ? entry.getKey().getNonceGroup() : HConstants.NO_NONCE;
+          long nonce = entry.getKey().hasNonce() ? entry.getKey().getNonce() : HConstants.NO_NONCE;
+          mutations.add(new MutationReplay(MutationType.PUT, m, nonceGroup, nonce));
         }
       }
       if (CellUtil.isDelete(cell)) {
@@ -1900,7 +1921,7 @@ public class HLogSplitter {
       }
       key = new HLogKey(walKey.getEncodedRegionName().toByteArray(), TableName.valueOf(walKey
               .getTableName().toByteArray()), walKey.getLogSequenceNumber(), walKey.getWriteTime(),
-              clusterIds);
+              clusterIds, walKey.getNonceGroup(), walKey.getNonce());
       logEntry.setFirst(key);
       logEntry.setSecond(val);
     }

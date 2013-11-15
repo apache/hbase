@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -93,6 +94,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
+import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -441,6 +443,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   /** The health check chore. */
   private HealthCheckChore healthCheckChore;
 
+  /** The nonce manager chore. */
+  private Chore nonceManagerChore;
+
   /**
    * The server name the Master sees us as.  Its made from the hostname the
    * master passes us, port, and server startcode. Gets set after registration
@@ -490,6 +495,26 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   // Table level lock manager for locking for region operations
   private TableLockManager tableLockManager;
 
+  /**
+   * Nonce manager. Nonces are used to make operations like increment and append idempotent
+   * in the case where client doesn't receive the response from a successful operation and
+   * retries. We track the successful ops for some time via a nonce sent by client and handle
+   * duplicate operations (currently, by failing them; in future we might use MVCC to return
+   * result). Nonces are also recovered from WAL during, recovery; however, the caveats (from
+   * HBASE-3787) are:
+   * - WAL recovery is optimized, and under high load we won't read nearly nonce-timeout worth
+   *   of past records. If we don't read the records, we don't read and recover the nonces.
+   *   Some WALs within nonce-timeout at recovery may not even be present due to rolling/cleanup.
+   * - There's no WAL recovery during normal region move, so nonces will not be transfered.
+   * We can have separate additional "Nonce WAL". It will just contain bunch of numbers and
+   * won't be flushed on main path - because WAL itself also contains nonces, if we only flush
+   * it before memstore flush, for a given nonce we will either see it in the WAL (if it was
+   * never flushed to disk, it will be part of recovery), or we'll see it as part of the nonce
+   * log (or both occasionally, which doesn't matter). Nonce log file can be deleted after the
+   * latest nonce in it expired. It can also be recovered during move.
+   */
+  private final ServerNonceManager nonceManager;
+
   private UserProvider userProvider;
 
   /**
@@ -528,6 +553,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
 
     this.sleeper = new Sleeper(this.msgInterval, this);
+
+    boolean isNoncesEnabled = conf.getBoolean(HConstants.HBASE_RS_NONCES_ENABLED, true);
+    this.nonceManager = isNoncesEnabled ? new ServerNonceManager(this.conf) : null;
 
     this.maxScannerResultSize = conf.getLong(
       HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
@@ -789,6 +817,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // Create the thread to clean the moved regions list
     movedRegionsCleaner = MovedRegionsCleaner.createAndStart(this);
 
+    if (this.nonceManager != null) {
+      // Create the chore that cleans up nonces.
+      nonceManagerChore = this.nonceManager.createCleanupChore(this);
+    }
+
     // Setup RPC client for master communication
     rpcClient = new RpcClient(conf, clusterId, new InetSocketAddress(
         this.isa.getAddress(), 0));
@@ -909,6 +942,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       this.compactionChecker.interrupt();
     if (this.healthCheckChore != null) {
       this.healthCheckChore.interrupt();
+    }
+    if (this.nonceManagerChore != null) {
+      this.nonceManagerChore.interrupt();
     }
 
     // Stop the snapshot handler, forcefully killing all running tasks
@@ -1556,8 +1592,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     Threads.setDaemonThreadRunning(this.periodicFlusher.getThread(), n +
         ".periodicFlusher", uncaughtExceptionHandler);
     if (this.healthCheckChore != null) {
-    Threads
-        .setDaemonThreadRunning(this.healthCheckChore.getThread(), n + ".healthChecker",
+      Threads.setDaemonThreadRunning(this.healthCheckChore.getThread(), n + ".healthChecker",
+            uncaughtExceptionHandler);
+    }
+    if (this.nonceManagerChore != null) {
+      Threads.setDaemonThreadRunning(this.nonceManagerChore.getThread(), n + ".nonceCleaner",
             uncaughtExceptionHandler);
     }
 
@@ -1811,6 +1850,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * have already been called.
    */
   protected void join() {
+    if (this.nonceManagerChore != null) {
+      Threads.shutdown(this.nonceManagerChore.getThread());
+    }
     Threads.shutdown(this.compactionChecker.getThread());
     Threads.shutdown(this.periodicFlusher.getThread());
     this.cacheFlusher.join();
@@ -2826,15 +2868,19 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       if (!region.getRegionInfo().isMetaTable()) {
         cacheFlusher.reclaimMemStoreMemory();
       }
+      long nonceGroup = request.hasNonceGroup()
+          ? request.getNonceGroup() : HConstants.NO_NONCE;
       Result r = null;
       Boolean processed = null;
       MutationType type = mutation.getMutateType();
       switch (type) {
       case APPEND:
-        r = append(region, mutation, cellScanner);
+        // TODO: this doesn't actually check anything.
+        r = append(region, mutation, cellScanner, nonceGroup);
         break;
       case INCREMENT:
-        r = increment(region, mutation, cellScanner);
+        // TODO: this doesn't actually check anything.
+        r = increment(region, mutation, cellScanner, nonceGroup);
         break;
       case PUT:
         Put put = ProtobufUtil.toPut(mutation, cellScanner);
@@ -3251,6 +3297,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     CellScanner cellScanner = controller != null ? controller.cellScanner(): null;
     if (controller != null) controller.setCellScanner(null);
 
+    long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
+
     // this will contain all the cells that we need to return. It's created later, if needed.
     List<CellScannable> cellsToReturn = null;
     MultiResponse.Builder responseBuilder = MultiResponse.newBuilder();
@@ -3279,7 +3327,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       } else {
         // doNonAtomicRegionMutation manages the exception internally
         cellsToReturn = doNonAtomicRegionMutation(region, regionAction, cellScanner,
-            regionActionResultBuilder, cellsToReturn);
+            regionActionResultBuilder, cellsToReturn, nonceGroup);
       }
       responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
     }
@@ -3303,7 +3351,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    */
   private List<CellScannable> doNonAtomicRegionMutation(final HRegion region,
       final RegionAction actions, final CellScanner cellScanner,
-      final RegionActionResult.Builder builder, List<CellScannable> cellsToReturn) {
+      final RegionActionResult.Builder builder, List<CellScannable> cellsToReturn, long nonceGroup) {
     // Gather up CONTIGUOUS Puts and Deletes in this mutations List.  Idea is that rather than do
     // one at a time, we instead pass them in batch.  Be aware that the corresponding
     // ResultOrException instance that matches each Put or Delete is then added down in the
@@ -3326,10 +3374,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           }
           switch (type) {
           case APPEND:
-            r = append(region, action.getMutation(), cellScanner);
+            r = append(region, action.getMutation(), cellScanner, nonceGroup);
             break;
           case INCREMENT:
-            r = increment(region, action.getMutation(), cellScanner);
+            r = increment(region, action.getMutation(), cellScanner,  nonceGroup);
             break;
           case PUT:
           case DELETE:
@@ -3862,12 +3910,18 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         entries.get(0).getKey().getEncodedRegionName().toStringUtf8());
       RegionCoprocessorHost coprocessorHost = region.getCoprocessorHost();
       List<Pair<HLogKey, WALEdit>> walEntries = new ArrayList<Pair<HLogKey, WALEdit>>();
-      List<Pair<MutationType, Mutation>> mutations = new ArrayList<Pair<MutationType, Mutation>>();
+      List<HLogSplitter.MutationReplay> mutations = new ArrayList<HLogSplitter.MutationReplay>();
       for (WALEntry entry : entries) {
+        if (nonceManager != null) {
+          long nonceGroup = entry.getKey().hasNonceGroup()
+              ? entry.getKey().getNonceGroup() : HConstants.NO_NONCE;
+          long nonce = entry.getKey().hasNonce() ? entry.getKey().getNonce() : HConstants.NO_NONCE;
+          nonceManager.reportOperationFromWal(nonceGroup, nonce, entry.getKey().getWriteTime());
+        }
         Pair<HLogKey, WALEdit> walEntry = (coprocessorHost == null) ? null :
           new Pair<HLogKey, WALEdit>();
-        List<Pair<MutationType, Mutation>> edits = HLogSplitter.getMutationsFromWALEntry(entry,
-          cells, walEntry);
+        List<HLogSplitter.MutationReplay> edits =
+            HLogSplitter.getMutationsFromWALEntry(entry, cells, walEntry);
         if (coprocessorHost != null) {
           // Start coprocessor replay here. The coprocessor is for each WALEdit instead of a
           // KeyValue.
@@ -3882,7 +3936,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       }
 
       if (!mutations.isEmpty()) {
-        OperationStatus[] result = doBatchOp(region, mutations, true);
+        OperationStatus[] result = doReplayBatchOp(region, mutations);
         // check if it's a partial success
         for (int i = 0; result != null && i < result.length; i++) {
           if (result[i] != OperationStatus.SUCCESS) {
@@ -3987,7 +4041,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * @throws IOException
    */
   protected Result append(final HRegion region,
-      final MutationProto m, final CellScanner cellScanner) throws IOException {
+      final MutationProto m, final CellScanner cellScanner, long nonceGroup) throws IOException {
     long before = EnvironmentEdgeManager.currentTimeMillis();
     Append append = ProtobufUtil.toAppend(m, cellScanner);
     Result r = null;
@@ -3995,7 +4049,14 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       r = region.getCoprocessorHost().preAppend(append);
     }
     if (r == null) {
-      r = region.append(append);
+      long nonce = startNonceOperation(m, nonceGroup);
+      boolean success = false;
+      try {
+        r = region.append(append, nonceGroup, nonce);
+        success = true;
+      } finally {
+        endNonceOperation(m, nonceGroup, success);
+      }
       if (region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postAppend(append, r);
       }
@@ -4013,8 +4074,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * @throws IOException
    */
   protected Result increment(final HRegion region, final MutationProto mutation,
-      final CellScanner cells)
-  throws IOException {
+      final CellScanner cells, long nonceGroup) throws IOException {
     long before = EnvironmentEdgeManager.currentTimeMillis();
     Increment increment = ProtobufUtil.toIncrement(mutation, cells);
     Result r = null;
@@ -4022,13 +4082,63 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       r = region.getCoprocessorHost().preIncrement(increment);
     }
     if (r == null) {
-      r = region.increment(increment);
+      long nonce = startNonceOperation(mutation, nonceGroup);
+      boolean success = false;
+      try {
+        r = region.increment(increment, nonceGroup, nonce);
+        success = true;
+      } finally {
+        endNonceOperation(mutation, nonceGroup, success);
+      }
       if (region.getCoprocessorHost() != null) {
         r = region.getCoprocessorHost().postIncrement(increment, r);
       }
     }
     metricsRegionServer.updateIncrement(EnvironmentEdgeManager.currentTimeMillis() - before);
     return r;
+  }
+
+  /**
+   * Starts the nonce operation for a mutation, if needed.
+   * @param mutation Mutation.
+   * @param nonceGroup Nonce group from the request.
+   * @returns Nonce used (can be NO_NONCE).
+   */
+  private long startNonceOperation(final MutationProto mutation, long nonceGroup)
+      throws IOException, OperationConflictException {
+    if (nonceManager == null || !mutation.hasNonce()) return HConstants.NO_NONCE;
+    boolean canProceed = false;
+    try {
+      canProceed = nonceManager.startOperation(nonceGroup, mutation.getNonce(), this);
+    } catch (InterruptedException ex) {
+      // Probably should not happen.
+      throw new InterruptedIOException("Nonce start operation interrupted");
+    }
+    if (!canProceed) {
+      // TODO: instead, we could convert append/increment to get w/mvcc
+      String message = "The operation with nonce {" + nonceGroup + ", " + mutation.getNonce()
+          + "} on row [" + Bytes.toString(mutation.getRow().toByteArray())
+          + "] may have already completed";
+      throw new OperationConflictException(message);
+    }
+    return mutation.getNonce();
+  }
+
+  /**
+   * Ends nonce operation for a mutation, if needed.
+   * @param mutation Mutation.
+   * @param nonceGroup Nonce group from the request. Always 0 in initial implementation.
+   * @param success Whether the operation for this nonce has succeeded.
+   */
+  private void endNonceOperation(final MutationProto mutation, long nonceGroup,
+      boolean success) {
+    if (nonceManager == null || !mutation.hasNonce()) return;
+    nonceManager.endOperation(nonceGroup, mutation.getNonce(), success);
+  }
+
+  @Override
+  public ServerNonceManager getNonceManager() {
+    return this.nonceManager;
   }
 
   /**
@@ -4063,7 +4173,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         cacheFlusher.reclaimMemStoreMemory();
       }
 
-      OperationStatus codes[] = region.batchMutate(mArray, false);
+      OperationStatus codes[] = region.batchMutate(mArray);
       for (i = 0; i < codes.length; i++) {
         int index = mutations.get(i).getIndex();
         Exception e = null;
@@ -4119,32 +4229,31 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * constructing MultiResponse to save a possible loop if caller doesn't need MultiResponse.
    * @param region
    * @param mutations
-   * @param isReplay
    * @return an array of OperationStatus which internally contains the OperationStatusCode and the
    *         exceptionMessage if any
    * @throws IOException
    */
-  protected OperationStatus [] doBatchOp(final HRegion region,
-      final List<Pair<MutationType, Mutation>> mutations, boolean isReplay)
-  throws IOException {
-    Mutation[] mArray = new Mutation[mutations.size()];
+  protected OperationStatus [] doReplayBatchOp(final HRegion region,
+      final List<HLogSplitter.MutationReplay> mutations) throws IOException {
+    HLogSplitter.MutationReplay[] mArray = new HLogSplitter.MutationReplay[mutations.size()];
+
     long before = EnvironmentEdgeManager.currentTimeMillis();
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
       int i = 0;
-      for (Pair<MutationType, Mutation> m : mutations) {
-        if (m.getFirst() == MutationType.PUT) {
+      for (HLogSplitter.MutationReplay m : mutations) {
+        if (m.type == MutationType.PUT) {
           batchContainsPuts = true;
         } else {
           batchContainsDelete = true;
         }
-        mArray[i++] = m.getSecond();
+        mArray[i++] = m;
       }
       requestCount.add(mutations.size());
       if (!region.getRegionInfo().isMetaTable()) {
         cacheFlusher.reclaimMemStoreMemory();
       }
-      return region.batchMutate(mArray, isReplay);
+      return region.batchReplay(mArray);
     } finally {
       long after = EnvironmentEdgeManager.currentTimeMillis();
       if (batchContainsPuts) {

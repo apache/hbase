@@ -986,12 +986,15 @@ public class HTable implements HTableInterface {
       throw new IOException(
           "Invalid arguments to append, no columns specified");
     }
+
+    NonceGenerator ng = this.connection.getNonceGenerator();
+    final long nonceGroup = ng.getNonceGroup(), nonce = ng.newNonce();
     RegionServerCallable<Result> callable =
       new RegionServerCallable<Result>(this.connection, getName(), append.getRow()) {
         public Result call() throws IOException {
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
-              getLocation().getRegionInfo().getRegionName(), append);
+              getLocation().getRegionInfo().getRegionName(), append, nonceGroup, nonce);
             PayloadCarryingRpcController rpcController = new PayloadCarryingRpcController();
             rpcController.setPriority(getTableName());
             MutateResponse response = getStub().mutate(rpcController, request);
@@ -1014,19 +1017,21 @@ public class HTable implements HTableInterface {
       throw new IOException(
           "Invalid arguments to increment, no columns specified");
     }
+    NonceGenerator ng = this.connection.getNonceGenerator();
+    final long nonceGroup = ng.getNonceGroup(), nonce = ng.newNonce();
     RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
         getName(), increment.getRow()) {
       public Result call() throws IOException {
         try {
           MutateRequest request = RequestConverter.buildMutateRequest(
-            getLocation().getRegionInfo().getRegionName(), increment);
-            PayloadCarryingRpcController rpcController = new PayloadCarryingRpcController();
-            rpcController.setPriority(getTableName());
-            MutateResponse response = getStub().mutate(rpcController, request);
-            return ProtobufUtil.toResult(response.getResult(), rpcController.cellScanner());
-          } catch (ServiceException se) {
-            throw ProtobufUtil.getRemoteException(se);
-          }
+            getLocation().getRegionInfo().getRegionName(), increment, nonceGroup, nonce);
+          PayloadCarryingRpcController rpcController = new PayloadCarryingRpcController();
+          rpcController.setPriority(getTableName());
+          MutateResponse response = getStub().mutate(rpcController, request);
+          return ProtobufUtil.toResult(response.getResult(), rpcController.cellScanner());
+        } catch (ServiceException se) {
+          throw ProtobufUtil.getRemoteException(se);
+        }
         }
       };
     return rpcCallerFactory.<Result> newCaller().callWithRetries(callable, this.operationTimeout);
@@ -1074,13 +1079,15 @@ public class HTable implements HTableInterface {
           "Invalid arguments to incrementColumnValue", npe);
     }
 
+    NonceGenerator ng = this.connection.getNonceGenerator();
+    final long nonceGroup = ng.getNonceGroup(), nonce = ng.newNonce();
     RegionServerCallable<Long> callable =
       new RegionServerCallable<Long>(connection, getName(), row) {
         public Long call() throws IOException {
           try {
-            MutateRequest request = RequestConverter.buildMutateRequest(
+            MutateRequest request = RequestConverter.buildIncrementRequest(
               getLocation().getRegionInfo().getRegionName(), row, family,
-              qualifier, amount, durability);
+              qualifier, amount, durability, nonceGroup, nonce);
             PayloadCarryingRpcController rpcController = new PayloadCarryingRpcController();
             rpcController.setPriority(getTableName());
             MutateResponse response = getStub().mutate(rpcController, request);

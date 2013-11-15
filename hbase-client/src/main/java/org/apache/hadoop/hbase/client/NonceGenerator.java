@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,29 +16,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import "Client.proto";
-option java_package = "org.apache.hadoop.hbase.protobuf.generated";
-option java_outer_classname = "MultiRowMutationProtos";
-option java_generate_equals_and_hash = true;
-option java_generic_services = true;
-option optimize_for = SPEED;
+package org.apache.hadoop.hbase.client;
 
-message MultiRowMutationProcessorRequest{
-}
+import org.apache.hadoop.classification.InterfaceAudience;
 
-message MultiRowMutationProcessorResponse{
-}
+/**
+ * NonceGenerator interface.
+ * In general, nonce group is an ID (one per client, or region+client, or whatever) that
+ * could be used to reduce collision potential, or be used by compatible server nonce manager
+ * to optimize nonce storage and removal. See HBASE-3787.
+ */
+@InterfaceAudience.Private
+public interface NonceGenerator {
 
-message MutateRowsRequest {
-  repeated MutationProto mutation_request = 1;
-  optional uint64 nonce_group = 2;
-  optional uint64 nonce = 3;
-}
+  /** @return the nonce group (client ID) of this client manager. */
+  public long getNonceGroup();
 
-message MutateRowsResponse {
-}
-
-service MultiRowMutationService {
-  rpc MutateRows(MutateRowsRequest)
-      returns(MutateRowsResponse);
+  /** @return New nonce. */
+  public long newNonce();
 }

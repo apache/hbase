@@ -68,6 +68,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -122,6 +123,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
+import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.MutationReplay;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -1897,7 +1900,7 @@ public class HRegion implements HeapSize { // , Writable{
    * accumulating status codes and tracking the index at which processing
    * is proceeding.
    */
-  private static class BatchOperationInProgress<T> {
+  private abstract static class BatchOperationInProgress<T> {
     T[] operations;
     int nextIndexToProcess = 0;
     OperationStatus[] retCodeDetails;
@@ -1910,8 +1913,81 @@ public class HRegion implements HeapSize { // , Writable{
       Arrays.fill(this.retCodeDetails, OperationStatus.NOT_RUN);
     }
 
+    public abstract Mutation getMutation(int index);
+    public abstract long getNonceGroup(int index);
+    public abstract long getNonce(int index);
+    /** This method is potentially expensive and should only be used for non-replay CP path. */
+    public abstract Mutation[] getMutationsForCoprocs();
+    public abstract boolean isInReplay();
+
     public boolean isDone() {
       return nextIndexToProcess == operations.length;
+    }
+  }
+
+  private static class MutationBatch extends BatchOperationInProgress<Mutation> {
+    private long nonceGroup;
+    private long nonce;
+    public MutationBatch(Mutation[] operations, long nonceGroup, long nonce) {
+      super(operations);
+      this.nonceGroup = nonceGroup;
+      this.nonce = nonce;
+    }
+
+    public Mutation getMutation(int index) {
+      return this.operations[index];
+    }
+
+    @Override
+    public long getNonceGroup(int index) {
+      return nonceGroup;
+    }
+
+    @Override
+    public long getNonce(int index) {
+      return nonce;
+    }
+
+    @Override
+    public Mutation[] getMutationsForCoprocs() {
+      return this.operations;
+    }
+
+    @Override
+    public boolean isInReplay() {
+      return false;
+    }
+  }
+
+  private static class ReplayBatch extends BatchOperationInProgress<HLogSplitter.MutationReplay> {
+    public ReplayBatch(MutationReplay[] operations) {
+      super(operations);
+    }
+
+    @Override
+    public Mutation getMutation(int index) {
+      return this.operations[index].mutation;
+    }
+
+    @Override
+    public long getNonceGroup(int index) {
+      return this.operations[index].nonceGroup;
+    }
+
+    @Override
+    public long getNonce(int index) {
+      return this.operations[index].nonce;
+    }
+
+    @Override
+    public Mutation[] getMutationsForCoprocs() {
+      assert false;
+      throw new RuntimeException("Should not be called for replay batch");
+    }
+
+    @Override
+    public boolean isInReplay() {
+      return true;
     }
   }
 
@@ -1923,8 +1999,28 @@ public class HRegion implements HeapSize { // , Writable{
    *         OperationStatusCode and the exceptionMessage if any.
    * @throws IOException
    */
+  public OperationStatus[] batchMutate(
+      Mutation[] mutations, long nonceGroup, long nonce) throws IOException {
+    // As it stands, this is used for 3 things
+    //  * batchMutate with single mutation - put/delete, separate or from checkAndMutate.
+    //  * coprocessor calls (see ex. BulkDeleteEndpoint).
+    // So nonces are not really ever used by HBase. They could be by coprocs, and checkAnd...
+    return batchMutate(new MutationBatch(mutations, nonceGroup, nonce));
+  }
+
   public OperationStatus[] batchMutate(Mutation[] mutations) throws IOException {
-    return batchMutate(mutations, false);
+    return batchMutate(mutations, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
+
+  /**
+   * Replay a batch of mutations.
+   * @param mutations mutations to replay.
+   * @return
+   * @throws IOException
+   */
+  public OperationStatus[] batchReplay(HLogSplitter.MutationReplay[] mutations)
+      throws IOException {
+    return batchMutate(new ReplayBatch(mutations));
   }
 
   /**
@@ -1935,21 +2031,16 @@ public class HRegion implements HeapSize { // , Writable{
    *         OperationStatusCode and the exceptionMessage if any.
    * @throws IOException
    */
-  OperationStatus[] batchMutate(Mutation[] mutations, boolean isReplay)
-      throws IOException {
-    BatchOperationInProgress<Mutation> batchOp =
-      new BatchOperationInProgress<Mutation>(mutations);
-
+  OperationStatus[] batchMutate(BatchOperationInProgress<?> batchOp) throws IOException {
     boolean initialized = false;
-
     while (!batchOp.isDone()) {
-      if (!isReplay) {
+      if (!batchOp.isInReplay()) {
         checkReadOnly();
       }
       checkResources();
 
       long newSize;
-      if (isReplay) {
+      if (batchOp.isInReplay()) {
         startRegionOperation(Operation.REPLAY_BATCH_MUTATE);
       } else {
         startRegionOperation(Operation.BATCH_MUTATE);
@@ -1957,13 +2048,13 @@ public class HRegion implements HeapSize { // , Writable{
 
       try {
         if (!initialized) {
-          if (!isReplay) {
+          if (!batchOp.isInReplay()) {
             this.writeRequestsCount.increment();
             doPreMutationHook(batchOp);
           }
           initialized = true;
         }
-        long addedSize = doMiniBatchMutation(batchOp, isReplay);
+        long addedSize = doMiniBatchMutation(batchOp);
         newSize = this.addAndGetGlobalMemstoreSize(addedSize);
       } finally {
         closeRegionOperation();
@@ -1976,13 +2067,13 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
 
-  private void doPreMutationHook(BatchOperationInProgress<Mutation> batchOp)
+  private void doPreMutationHook(BatchOperationInProgress<?> batchOp)
       throws IOException {
     /* Run coprocessor pre hook outside of locks to avoid deadlock */
     WALEdit walEdit = new WALEdit();
     if (coprocessorHost != null) {
       for (int i = 0 ; i < batchOp.operations.length; i++) {
-        Mutation m = batchOp.operations[i];
+        Mutation m = batchOp.getMutation(i);
         if (m instanceof Put) {
           if (coprocessorHost.prePut((Put) m, walEdit, m.getDurability())) {
             // pre hook says skip this Put
@@ -2011,9 +2102,8 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   @SuppressWarnings("unchecked")
-  private long doMiniBatchMutation(BatchOperationInProgress<Mutation> batchOp,
-      boolean isInReplay) throws IOException {
-
+  private long doMiniBatchMutation(BatchOperationInProgress<?> batchOp) throws IOException {
+    boolean isInReplay = batchOp.isInReplay();
     // variable to note if all Put items are for the same CF -- metrics related
     boolean putsCfSetConsistent = true;
     //The set of columnFamilies first seen for Put.
@@ -2023,6 +2113,7 @@ public class HRegion implements HeapSize { // , Writable{
     //The set of columnFamilies first seen for Delete.
     Set<byte[]> deletesCfSet = null;
 
+    long currentNonceGroup = HConstants.NO_NONCE, currentNonce = HConstants.NO_NONCE;
     WALEdit walEdit = new WALEdit(isInReplay);
     MultiVersionConsistencyControl.WriteEntry w = null;
     long txid = 0;
@@ -2046,7 +2137,7 @@ public class HRegion implements HeapSize { // , Writable{
       int numReadyToWrite = 0;
       long now = EnvironmentEdgeManager.currentTimeMillis();
       while (lastIndexExclusive < batchOp.operations.length) {
-        Mutation mutation = batchOp.operations[lastIndexExclusive];
+        Mutation mutation = batchOp.getMutation(lastIndexExclusive);
         boolean isPutMutation = mutation instanceof Put;
 
         Map<byte[], List<Cell>> familyMap = mutation.getFamilyCellMap();
@@ -2145,7 +2236,7 @@ public class HRegion implements HeapSize { // , Writable{
         if (batchOp.retCodeDetails[i].getOperationStatusCode()
             != OperationStatusCode.NOT_RUN) continue;
 
-        Mutation mutation = batchOp.operations[i];
+        Mutation mutation = batchOp.getMutation(i);
         if (mutation instanceof Put) {
           updateKVTimestamps(familyMaps[i].values(), byteNow);
           noOfPuts++;
@@ -2167,7 +2258,7 @@ public class HRegion implements HeapSize { // , Writable{
       // calling the pre CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
         MiniBatchOperationInProgress<Mutation> miniBatchOp =
-          new MiniBatchOperationInProgress<Mutation>(batchOp.operations,
+          new MiniBatchOperationInProgress<Mutation>(batchOp.getMutationsForCoprocs(),
           batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
         if (coprocessorHost.preBatchMutate(miniBatchOp)) return 0L;
       }
@@ -2193,6 +2284,7 @@ public class HRegion implements HeapSize { // , Writable{
       // ------------------------------------
       // STEP 4. Build WAL edit
       // ----------------------------------
+      boolean hasWalAppends = false;
       Durability durability = Durability.USE_DEFAULT;
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         // Skip puts that were determined to be invalid during preprocessing
@@ -2202,7 +2294,7 @@ public class HRegion implements HeapSize { // , Writable{
         }
         batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
 
-        Mutation m = batchOp.operations[i];
+        Mutation m = batchOp.getMutation(i);
         Durability tmpDur = getEffectiveDurability(m.getDurability());
         if (tmpDur.ordinal() > durability.ordinal()) {
           durability = tmpDur;
@@ -2210,6 +2302,22 @@ public class HRegion implements HeapSize { // , Writable{
         if (tmpDur == Durability.SKIP_WAL) {
           recordMutationWithoutWal(m.getFamilyCellMap());
           continue;
+        }
+
+        long nonceGroup = batchOp.getNonceGroup(i), nonce = batchOp.getNonce(i);
+        // In replay, the batch may contain multiple nonces. If so, write WALEdit for each.
+        // Given how nonces are originally written, these should be contiguous.
+        // txid should always increase, so having the last one is ok.
+        if (nonceGroup != currentNonceGroup || nonce != currentNonce) {
+          if (walEdit.size() > 0) {
+            assert isInReplay;
+            txid = this.log.appendNoSync(this.getRegionInfo(), htableDescriptor.getTableName(),
+                  walEdit, m.getClusterIds(), now, htableDescriptor, this.sequenceId, true,
+                  currentNonceGroup, currentNonce);
+            hasWalAppends = true;
+          }
+          currentNonceGroup = nonceGroup;
+          currentNonce = nonce;
         }
 
         // Add WAL edits by CP
@@ -2223,12 +2331,14 @@ public class HRegion implements HeapSize { // , Writable{
       }
 
       // -------------------------
-      // STEP 5. Append the edit to WAL. Do not sync wal.
+      // STEP 5. Append the final edit to WAL. Do not sync wal.
       // -------------------------
-      Mutation mutation = batchOp.operations[firstIndex];
+      Mutation mutation = batchOp.getMutation(firstIndex);
       if (walEdit.size() > 0) {
         txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
-              walEdit, mutation.getClusterIds(), now, this.htableDescriptor, this.sequenceId);
+              walEdit, mutation.getClusterIds(), now, this.htableDescriptor, this.sequenceId,
+              true, currentNonceGroup, currentNonce);
+        hasWalAppends = true;
       }
 
       // -------------------------------
@@ -2243,14 +2353,14 @@ public class HRegion implements HeapSize { // , Writable{
       // -------------------------
       // STEP 7. Sync wal.
       // -------------------------
-      if (walEdit.size() > 0) {
+      if (hasWalAppends) {
         syncOrDefer(txid, durability);
       }
       walSyncSuccessful = true;
       // calling the post CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
         MiniBatchOperationInProgress<Mutation> miniBatchOp =
-          new MiniBatchOperationInProgress<Mutation>(batchOp.operations,
+          new MiniBatchOperationInProgress<Mutation>(batchOp.getMutationsForCoprocs(),
           batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
         coprocessorHost.postBatchMutate(miniBatchOp);
       }
@@ -2274,7 +2384,7 @@ public class HRegion implements HeapSize { // , Writable{
               != OperationStatusCode.SUCCESS) {
             continue;
           }
-          Mutation m = batchOp.operations[i];
+          Mutation m = batchOp.getMutation(i);
           if (m instanceof Put) {
             coprocessorHost.postPut((Put) m, walEdit, m.getDurability());
           } else {
@@ -2362,10 +2472,10 @@ public class HRegion implements HeapSize { // , Writable{
     boolean isPut = w instanceof Put;
     if (!isPut && !(w instanceof Delete))
       throw new org.apache.hadoop.hbase.DoNotRetryIOException("Action must " +
-      		"be Put or Delete");
+          "be Put or Delete");
     if (!Bytes.equals(row, w.getRow())) {
       throw new org.apache.hadoop.hbase.DoNotRetryIOException("Action's " +
-      		"getRow must match the passed row");
+          "getRow must match the passed row");
     }
 
     startRegionOperation();
@@ -2435,9 +2545,10 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
-  private void doBatchMutate(Mutation mutation) throws IOException,
-      org.apache.hadoop.hbase.DoNotRetryIOException {
-    OperationStatus[] batchMutate = this.batchMutate(new Mutation[] { mutation });
+  private void doBatchMutate(Mutation mutation) throws IOException, DoNotRetryIOException {
+    // Currently this is only called for puts and deletes, so no nonces.
+    OperationStatus[] batchMutate = this.batchMutate(new Mutation[] { mutation },
+        HConstants.NO_NONCE, HConstants.NO_NONCE);
     if (batchMutate[0].getOperationStatusCode().equals(OperationStatusCode.SANITY_CHECK_FAILURE)) {
       throw new FailedSanityCheckException(batchMutate[0].getExceptionMsg());
     } else if (batchMutate[0].getOperationStatusCode().equals(OperationStatusCode.BAD_FAMILY)) {
@@ -2628,7 +2739,7 @@ public class HRegion implements HeapSize { // , Writable{
    * called when a Put/Delete has updated memstore but subequently fails to update
    * the wal. This method is then invoked to rollback the memstore.
    */
-  private void rollbackMemstore(BatchOperationInProgress<Mutation> batchOp,
+  private void rollbackMemstore(BatchOperationInProgress<?> batchOp,
                                 Map<byte[], List<Cell>>[] familyMaps,
                                 int start, int end) {
     int kvsRolledback = 0;
@@ -2901,6 +3012,7 @@ public class HRegion implements HeapSize { // , Writable{
       HLog.Entry entry;
       Store store = null;
       boolean reported_once = false;
+      ServerNonceManager ng = this.rsServices == null ? null : this.rsServices.getNonceManager();
 
       try {
         // How many edits seen before we check elapsed time
@@ -2915,6 +3027,10 @@ public class HRegion implements HeapSize { // , Writable{
         while ((entry = reader.next()) != null) {
           HLogKey key = entry.getKey();
           WALEdit val = entry.getEdit();
+
+          if (ng != null) { // some test, or nonces disabled
+            ng.reportOperationFromWal(key.getNonceGroup(), key.getNonce(), key.getWriteTime());
+          }
 
           if (reporter != null) {
             intervalEdits += val.size();
@@ -4395,7 +4511,17 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   public void mutateRow(RowMutations rm) throws IOException {
+    // Don't need nonces here - RowMutations only supports puts and deletes
     mutateRowsWithLocks(rm.getMutations(), Collections.singleton(rm.getRow()));
+  }
+
+  /**
+   * Perform atomic mutations within the region w/o nonces.
+   * See {@link #mutateRowsWithLocks(Collection, Collection, long, long)}
+   */
+  public void mutateRowsWithLocks(Collection<Mutation> mutations,
+      Collection<byte[]> rowsToLock) throws IOException {
+    mutateRowsWithLocks(mutations, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   /**
@@ -4404,26 +4530,28 @@ public class HRegion implements HeapSize { // , Writable{
    * <code>mutations</code> can contain operations for multiple rows.
    * Caller has to ensure that all rows are contained in this region.
    * @param rowsToLock Rows to lock
+   * @param nonceGroup Optional nonce group of the operation (client Id)
+   * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
    * If multiple rows are locked care should be taken that
    * <code>rowsToLock</code> is sorted in order to avoid deadlocks.
    * @throws IOException
    */
   public void mutateRowsWithLocks(Collection<Mutation> mutations,
-      Collection<byte[]> rowsToLock) throws IOException {
-
-    MultiRowMutationProcessor proc =
-        new MultiRowMutationProcessor(mutations, rowsToLock);
-    processRowsWithLocks(proc, -1);
+      Collection<byte[]> rowsToLock, long nonceGroup, long nonce) throws IOException {
+    MultiRowMutationProcessor proc = new MultiRowMutationProcessor(mutations, rowsToLock);
+    processRowsWithLocks(proc, -1, nonceGroup, nonce);
   }
 
   /**
    * Performs atomic multiple reads and writes on a given row.
    *
    * @param processor The object defines the reads and writes to a row.
+   * @param nonceGroup Optional nonce group of the operation (client Id)
+   * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
    */
-  public void processRowsWithLocks(RowProcessor<?,?> processor)
+  public void processRowsWithLocks(RowProcessor<?,?> processor, long nonceGroup, long nonce)
       throws IOException {
-    processRowsWithLocks(processor, rowProcessorTimeout);
+    processRowsWithLocks(processor, rowProcessorTimeout, nonceGroup, nonce);
   }
 
   /**
@@ -4432,9 +4560,11 @@ public class HRegion implements HeapSize { // , Writable{
    * @param processor The object defines the reads and writes to a row.
    * @param timeout The timeout of the processor.process() execution
    *                Use a negative number to switch off the time bound
+   * @param nonceGroup Optional nonce group of the operation (client Id)
+   * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
    */
-  public void processRowsWithLocks(RowProcessor<?,?> processor, long timeout)
-      throws IOException {
+  public void processRowsWithLocks(RowProcessor<?,?> processor, long timeout,
+      long nonceGroup, long nonce) throws IOException {
 
     for (byte[] row : processor.getRowsToLock()) {
       checkRow(row, "processRowsWithLocks");
@@ -4506,7 +4636,7 @@ public class HRegion implements HeapSize { // , Writable{
           if (!walEdit.isEmpty()) {
             txid = this.log.appendNoSync(this.getRegionInfo(),
               this.htableDescriptor.getTableName(), walEdit, processor.getClusterIds(), now,
-              this.htableDescriptor, this.sequenceId);
+              this.htableDescriptor, this.sequenceId, true, nonceGroup, nonce);
           }
           // 8. Release region lock
           if (locked) {
@@ -4609,6 +4739,10 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
+  public Result append(Append append) throws IOException {
+    return append(append, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
+
   // TODO: There's a lot of boiler plate code identical
   // to increment... See how to better unify that.
   /**
@@ -4618,7 +4752,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return new keyvalues after increment
    * @throws IOException
    */
-  public Result append(Append append)
+  public Result append(Append append, long nonceGroup, long nonce)
       throws IOException {
     byte[] row = append.getRow();
     checkRow(row, "append");
@@ -4749,7 +4883,8 @@ public class HRegion implements HeapSize { // , Writable{
             // as a Put.
             txid = this.log.appendNoSync(this.getRegionInfo(),
               this.htableDescriptor.getTableName(), walEdits, new ArrayList<UUID>(),
-              EnvironmentEdgeManager.currentTimeMillis(), this.htableDescriptor, this.sequenceId);
+              EnvironmentEdgeManager.currentTimeMillis(), this.htableDescriptor, this.sequenceId,
+              true, nonceGroup, nonce);
           } else {
             recordMutationWithoutWal(append.getFamilyCellMap());
           }
@@ -4801,13 +4936,17 @@ public class HRegion implements HeapSize { // , Writable{
     return append.isReturnResults() ? Result.create(allKVs) : null;
   }
 
+  public Result increment(Increment increment) throws IOException {
+    return increment(increment, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
+
   /**
    * Perform one or more increment operations on a row.
    * @param increment
    * @return new keyvalues after increment
    * @throws IOException
    */
-  public Result increment(Increment increment)
+  public Result increment(Increment increment, long nonceGroup, long nonce)
   throws IOException {
     byte [] row = increment.getRow();
     checkRow(row, "increment");
@@ -4923,7 +5062,8 @@ public class HRegion implements HeapSize { // , Writable{
             // as a Put.
             txid = this.log.appendNoSync(this.getRegionInfo(),
               this.htableDescriptor.getTableName(), walEdits, new ArrayList<UUID>(),
-              EnvironmentEdgeManager.currentTimeMillis(), this.htableDescriptor, this.sequenceId);
+              EnvironmentEdgeManager.currentTimeMillis(), this.htableDescriptor, this.sequenceId,
+              true, nonceGroup, nonce);
           } else {
             recordMutationWithoutWal(increment.getFamilyCellMap());
           }

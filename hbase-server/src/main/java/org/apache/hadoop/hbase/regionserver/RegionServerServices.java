@@ -115,4 +115,10 @@ public interface RegionServerServices
    * @return set of recovering regions on the hosting region server
    */
   Map<String, HRegion> getRecoveringRegions();
+
+  /**
+   * Only required for "old" log replay; if it's removed, remove this.
+   * @return The RegionServer's NonceManager
+   */
+  public ServerNonceManager getNonceManager();
 }

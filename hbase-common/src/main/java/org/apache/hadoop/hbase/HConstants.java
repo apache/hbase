@@ -743,6 +743,9 @@ public final class HConstants {
   public static final String HBASE_REGION_SPLIT_POLICY_KEY =
     "hbase.regionserver.region.split.policy";
 
+  /** Whether nonces are enabled; default is true. */
+  public static String HBASE_RS_NONCES_ENABLED = "hbase.regionserver.nonces.enabled";
+
   /**
    * Configuration key for the size of the block cache
    */
@@ -933,6 +936,8 @@ public final class HConstants {
    */
   public static final String STATUS_MULTICAST_PORT = "hbase.status.multicast.port";
   public static final int DEFAULT_STATUS_MULTICAST_PORT = 60100;
+
+  public static final long NO_NONCE = 0;
 
   private HConstants() {
     // Can't be instantiated with this ctor.

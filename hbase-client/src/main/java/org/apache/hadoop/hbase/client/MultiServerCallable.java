@@ -19,12 +19,14 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
@@ -71,6 +73,10 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
     MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
     List<CellScannable> cells = null;
     // The multi object is a list of Actions by region.  Iterate by region.
+    long nonceGroup = multiAction.getNonceGroup();
+    if (nonceGroup != HConstants.NO_NONCE) {
+      multiRequestBuilder.setNonceGroup(nonceGroup);
+    }
     for (Map.Entry<byte[], List<Action<R>>> e: this.multiAction.actions.entrySet()) {
       final byte [] regionName = e.getKey();
       final List<Action<R>> actions = e.getValue();
@@ -92,6 +98,7 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
       }
       multiRequestBuilder.addRegionAction(regionActionBuilder.build());
     }
+
     // Controller optionally carries cell data over the proxy/service boundary and also
     // optionally ferries cell response data back out again.
     PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cells);

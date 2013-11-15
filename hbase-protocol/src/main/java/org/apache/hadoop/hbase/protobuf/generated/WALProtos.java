@@ -694,6 +694,26 @@ public final class WALProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdsOrBuilder(
         int index);
+
+    // optional uint64 nonceGroup = 9;
+    /**
+     * <code>optional uint64 nonceGroup = 9;</code>
+     */
+    boolean hasNonceGroup();
+    /**
+     * <code>optional uint64 nonceGroup = 9;</code>
+     */
+    long getNonceGroup();
+
+    // optional uint64 nonce = 10;
+    /**
+     * <code>optional uint64 nonce = 10;</code>
+     */
+    boolean hasNonce();
+    /**
+     * <code>optional uint64 nonce = 10;</code>
+     */
+    long getNonce();
   }
   /**
    * Protobuf type {@code WALKey}
@@ -802,6 +822,16 @@ public final class WALProtos {
                 mutable_bitField0_ |= 0x00000080;
               }
               clusterIds_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.PARSER, extensionRegistry));
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000040;
+              nonceGroup_ = input.readUInt64();
+              break;
+            }
+            case 80: {
+              bitField0_ |= 0x00000080;
+              nonce_ = input.readUInt64();
               break;
             }
           }
@@ -1078,6 +1108,38 @@ public final class WALProtos {
       return clusterIds_.get(index);
     }
 
+    // optional uint64 nonceGroup = 9;
+    public static final int NONCEGROUP_FIELD_NUMBER = 9;
+    private long nonceGroup_;
+    /**
+     * <code>optional uint64 nonceGroup = 9;</code>
+     */
+    public boolean hasNonceGroup() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>optional uint64 nonceGroup = 9;</code>
+     */
+    public long getNonceGroup() {
+      return nonceGroup_;
+    }
+
+    // optional uint64 nonce = 10;
+    public static final int NONCE_FIELD_NUMBER = 10;
+    private long nonce_;
+    /**
+     * <code>optional uint64 nonce = 10;</code>
+     */
+    public boolean hasNonce() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>optional uint64 nonce = 10;</code>
+     */
+    public long getNonce() {
+      return nonce_;
+    }
+
     private void initFields() {
       encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
       tableName_ = com.google.protobuf.ByteString.EMPTY;
@@ -1087,6 +1149,8 @@ public final class WALProtos {
       scopes_ = java.util.Collections.emptyList();
       followingKvCount_ = 0;
       clusterIds_ = java.util.Collections.emptyList();
+      nonceGroup_ = 0L;
+      nonce_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1158,6 +1222,12 @@ public final class WALProtos {
       for (int i = 0; i < clusterIds_.size(); i++) {
         output.writeMessage(8, clusterIds_.get(i));
       }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeUInt64(9, nonceGroup_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeUInt64(10, nonce_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -1198,6 +1268,14 @@ public final class WALProtos {
       for (int i = 0; i < clusterIds_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(8, clusterIds_.get(i));
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(9, nonceGroup_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(10, nonce_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1256,6 +1334,16 @@ public final class WALProtos {
       }
       result = result && getClusterIdsList()
           .equals(other.getClusterIdsList());
+      result = result && (hasNonceGroup() == other.hasNonceGroup());
+      if (hasNonceGroup()) {
+        result = result && (getNonceGroup()
+            == other.getNonceGroup());
+      }
+      result = result && (hasNonce() == other.hasNonce());
+      if (hasNonce()) {
+        result = result && (getNonce()
+            == other.getNonce());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -1300,6 +1388,14 @@ public final class WALProtos {
       if (getClusterIdsCount() > 0) {
         hash = (37 * hash) + CLUSTER_IDS_FIELD_NUMBER;
         hash = (53 * hash) + getClusterIdsList().hashCode();
+      }
+      if (hasNonceGroup()) {
+        hash = (37 * hash) + NONCEGROUP_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getNonceGroup());
+      }
+      if (hasNonce()) {
+        hash = (37 * hash) + NONCE_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getNonce());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -1445,6 +1541,10 @@ public final class WALProtos {
         } else {
           clusterIdsBuilder_.clear();
         }
+        nonceGroup_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000100);
+        nonce_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
 
@@ -1519,6 +1619,14 @@ public final class WALProtos {
         } else {
           result.clusterIds_ = clusterIdsBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.nonceGroup_ = nonceGroup_;
+        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.nonce_ = nonce_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1604,6 +1712,12 @@ public final class WALProtos {
               clusterIdsBuilder_.addAllMessages(other.clusterIds_);
             }
           }
+        }
+        if (other.hasNonceGroup()) {
+          setNonceGroup(other.getNonceGroup());
+        }
+        if (other.hasNonce()) {
+          setNonce(other.getNonce());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -2612,6 +2726,72 @@ public final class WALProtos {
           clusterIds_ = null;
         }
         return clusterIdsBuilder_;
+      }
+
+      // optional uint64 nonceGroup = 9;
+      private long nonceGroup_ ;
+      /**
+       * <code>optional uint64 nonceGroup = 9;</code>
+       */
+      public boolean hasNonceGroup() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      /**
+       * <code>optional uint64 nonceGroup = 9;</code>
+       */
+      public long getNonceGroup() {
+        return nonceGroup_;
+      }
+      /**
+       * <code>optional uint64 nonceGroup = 9;</code>
+       */
+      public Builder setNonceGroup(long value) {
+        bitField0_ |= 0x00000100;
+        nonceGroup_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 nonceGroup = 9;</code>
+       */
+      public Builder clearNonceGroup() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        nonceGroup_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // optional uint64 nonce = 10;
+      private long nonce_ ;
+      /**
+       * <code>optional uint64 nonce = 10;</code>
+       */
+      public boolean hasNonce() {
+        return ((bitField0_ & 0x00000200) == 0x00000200);
+      }
+      /**
+       * <code>optional uint64 nonce = 10;</code>
+       */
+      public long getNonce() {
+        return nonce_;
+      }
+      /**
+       * <code>optional uint64 nonce = 10;</code>
+       */
+      public Builder setNonce(long value) {
+        bitField0_ |= 0x00000200;
+        nonce_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 nonce = 10;</code>
+       */
+      public Builder clearNonce() {
+        bitField0_ = (bitField0_ & ~0x00000200);
+        nonce_ = 0L;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:WALKey)
@@ -4812,22 +4992,23 @@ public final class WALProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\tWAL.proto\032\013HBase.proto\"$\n\tWALHeader\022\027\n" +
-      "\017has_compression\030\001 \001(\010\"\337\001\n\006WALKey\022\033\n\023enc" +
+      "\017has_compression\030\001 \001(\010\"\202\002\n\006WALKey\022\033\n\023enc" +
       "oded_region_name\030\001 \002(\014\022\022\n\ntable_name\030\002 \002" +
       "(\014\022\033\n\023log_sequence_number\030\003 \002(\004\022\022\n\nwrite" +
       "_time\030\004 \002(\004\022\035\n\ncluster_id\030\005 \001(\0132\005.UUIDB\002" +
       "\030\001\022\034\n\006scopes\030\006 \003(\0132\014.FamilyScope\022\032\n\022foll" +
       "owing_kv_count\030\007 \001(\r\022\032\n\013cluster_ids\030\010 \003(" +
-      "\0132\005.UUID\"=\n\013FamilyScope\022\016\n\006family\030\001 \002(\014\022" +
-      "\036\n\nscope_type\030\002 \002(\0162\n.ScopeType\"\251\001\n\024Comp" +
-      "actionDescriptor\022\022\n\ntable_name\030\001 \002(\014\022\033\n\023",
-      "encoded_region_name\030\002 \002(\014\022\023\n\013family_name" +
-      "\030\003 \002(\014\022\030\n\020compaction_input\030\004 \003(\t\022\031\n\021comp" +
-      "action_output\030\005 \003(\t\022\026\n\016store_home_dir\030\006 " +
-      "\002(\t\"\014\n\nWALTrailer*F\n\tScopeType\022\033\n\027REPLIC" +
-      "ATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE" +
-      "_GLOBAL\020\001B?\n*org.apache.hadoop.hbase.pro" +
-      "tobuf.generatedB\tWALProtosH\001\210\001\000\240\001\001"
+      "\0132\005.UUID\022\022\n\nnonceGroup\030\t \001(\004\022\r\n\005nonce\030\n " +
+      "\001(\004\"=\n\013FamilyScope\022\016\n\006family\030\001 \002(\014\022\036\n\nsc" +
+      "ope_type\030\002 \002(\0162\n.ScopeType\"\251\001\n\024Compactio",
+      "nDescriptor\022\022\n\ntable_name\030\001 \002(\014\022\033\n\023encod" +
+      "ed_region_name\030\002 \002(\014\022\023\n\013family_name\030\003 \002(" +
+      "\014\022\030\n\020compaction_input\030\004 \003(\t\022\031\n\021compactio" +
+      "n_output\030\005 \003(\t\022\026\n\016store_home_dir\030\006 \002(\t\"\014" +
+      "\n\nWALTrailer*F\n\tScopeType\022\033\n\027REPLICATION" +
+      "_SCOPE_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE_GLOB" +
+      "AL\020\001B?\n*org.apache.hadoop.hbase.protobuf" +
+      ".generatedB\tWALProtosH\001\210\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4845,7 +5026,7 @@ public final class WALProtos {
           internal_static_WALKey_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_WALKey_descriptor,
-              new java.lang.String[] { "EncodedRegionName", "TableName", "LogSequenceNumber", "WriteTime", "ClusterId", "Scopes", "FollowingKvCount", "ClusterIds", });
+              new java.lang.String[] { "EncodedRegionName", "TableName", "LogSequenceNumber", "WriteTime", "ClusterId", "Scopes", "FollowingKvCount", "ClusterIds", "NonceGroup", "Nonce", });
           internal_static_FamilyScope_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_FamilyScope_fieldAccessorTable = new

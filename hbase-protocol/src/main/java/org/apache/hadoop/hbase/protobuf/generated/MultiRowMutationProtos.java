@@ -711,6 +711,26 @@ public final class MultiRowMutationProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder getMutationRequestOrBuilder(
         int index);
+
+    // optional uint64 nonce_group = 2;
+    /**
+     * <code>optional uint64 nonce_group = 2;</code>
+     */
+    boolean hasNonceGroup();
+    /**
+     * <code>optional uint64 nonce_group = 2;</code>
+     */
+    long getNonceGroup();
+
+    // optional uint64 nonce = 3;
+    /**
+     * <code>optional uint64 nonce = 3;</code>
+     */
+    boolean hasNonce();
+    /**
+     * <code>optional uint64 nonce = 3;</code>
+     */
+    long getNonce();
   }
   /**
    * Protobuf type {@code MutateRowsRequest}
@@ -771,6 +791,16 @@ public final class MultiRowMutationProtos {
               mutationRequest_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.PARSER, extensionRegistry));
               break;
             }
+            case 16: {
+              bitField0_ |= 0x00000001;
+              nonceGroup_ = input.readUInt64();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000002;
+              nonce_ = input.readUInt64();
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -813,6 +843,7 @@ public final class MultiRowMutationProtos {
       return PARSER;
     }
 
+    private int bitField0_;
     // repeated .MutationProto mutation_request = 1;
     public static final int MUTATION_REQUEST_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto> mutationRequest_;
@@ -849,8 +880,42 @@ public final class MultiRowMutationProtos {
       return mutationRequest_.get(index);
     }
 
+    // optional uint64 nonce_group = 2;
+    public static final int NONCE_GROUP_FIELD_NUMBER = 2;
+    private long nonceGroup_;
+    /**
+     * <code>optional uint64 nonce_group = 2;</code>
+     */
+    public boolean hasNonceGroup() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional uint64 nonce_group = 2;</code>
+     */
+    public long getNonceGroup() {
+      return nonceGroup_;
+    }
+
+    // optional uint64 nonce = 3;
+    public static final int NONCE_FIELD_NUMBER = 3;
+    private long nonce_;
+    /**
+     * <code>optional uint64 nonce = 3;</code>
+     */
+    public boolean hasNonce() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional uint64 nonce = 3;</code>
+     */
+    public long getNonce() {
+      return nonce_;
+    }
+
     private void initFields() {
       mutationRequest_ = java.util.Collections.emptyList();
+      nonceGroup_ = 0L;
+      nonce_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -873,6 +938,12 @@ public final class MultiRowMutationProtos {
       for (int i = 0; i < mutationRequest_.size(); i++) {
         output.writeMessage(1, mutationRequest_.get(i));
       }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt64(2, nonceGroup_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt64(3, nonce_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -885,6 +956,14 @@ public final class MultiRowMutationProtos {
       for (int i = 0; i < mutationRequest_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, mutationRequest_.get(i));
+      }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(2, nonceGroup_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(3, nonce_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -911,6 +990,16 @@ public final class MultiRowMutationProtos {
       boolean result = true;
       result = result && getMutationRequestList()
           .equals(other.getMutationRequestList());
+      result = result && (hasNonceGroup() == other.hasNonceGroup());
+      if (hasNonceGroup()) {
+        result = result && (getNonceGroup()
+            == other.getNonceGroup());
+      }
+      result = result && (hasNonce() == other.hasNonce());
+      if (hasNonce()) {
+        result = result && (getNonce()
+            == other.getNonce());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -927,6 +1016,14 @@ public final class MultiRowMutationProtos {
       if (getMutationRequestCount() > 0) {
         hash = (37 * hash) + MUTATION_REQUEST_FIELD_NUMBER;
         hash = (53 * hash) + getMutationRequestList().hashCode();
+      }
+      if (hasNonceGroup()) {
+        hash = (37 * hash) + NONCE_GROUP_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getNonceGroup());
+      }
+      if (hasNonce()) {
+        hash = (37 * hash) + NONCE_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getNonce());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -1044,6 +1141,10 @@ public final class MultiRowMutationProtos {
         } else {
           mutationRequestBuilder_.clear();
         }
+        nonceGroup_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        nonce_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -1071,6 +1172,7 @@ public final class MultiRowMutationProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest result = new org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest(this);
         int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
         if (mutationRequestBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
             mutationRequest_ = java.util.Collections.unmodifiableList(mutationRequest_);
@@ -1080,6 +1182,15 @@ public final class MultiRowMutationProtos {
         } else {
           result.mutationRequest_ = mutationRequestBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.nonceGroup_ = nonceGroup_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.nonce_ = nonce_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -1120,6 +1231,12 @@ public final class MultiRowMutationProtos {
               mutationRequestBuilder_.addAllMessages(other.mutationRequest_);
             }
           }
+        }
+        if (other.hasNonceGroup()) {
+          setNonceGroup(other.getNonceGroup());
+        }
+        if (other.hasNonce()) {
+          setNonce(other.getNonce());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1392,6 +1509,72 @@ public final class MultiRowMutationProtos {
           mutationRequest_ = null;
         }
         return mutationRequestBuilder_;
+      }
+
+      // optional uint64 nonce_group = 2;
+      private long nonceGroup_ ;
+      /**
+       * <code>optional uint64 nonce_group = 2;</code>
+       */
+      public boolean hasNonceGroup() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional uint64 nonce_group = 2;</code>
+       */
+      public long getNonceGroup() {
+        return nonceGroup_;
+      }
+      /**
+       * <code>optional uint64 nonce_group = 2;</code>
+       */
+      public Builder setNonceGroup(long value) {
+        bitField0_ |= 0x00000002;
+        nonceGroup_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 nonce_group = 2;</code>
+       */
+      public Builder clearNonceGroup() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        nonceGroup_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // optional uint64 nonce = 3;
+      private long nonce_ ;
+      /**
+       * <code>optional uint64 nonce = 3;</code>
+       */
+      public boolean hasNonce() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional uint64 nonce = 3;</code>
+       */
+      public long getNonce() {
+        return nonce_;
+      }
+      /**
+       * <code>optional uint64 nonce = 3;</code>
+       */
+      public Builder setNonce(long value) {
+        bitField0_ |= 0x00000004;
+        nonce_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 nonce = 3;</code>
+       */
+      public Builder clearNonce() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        nonce_ = 0L;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:MutateRowsRequest)
@@ -2006,13 +2189,14 @@ public final class MultiRowMutationProtos {
     java.lang.String[] descriptorData = {
       "\n\026MultiRowMutation.proto\032\014Client.proto\"\"" +
       "\n MultiRowMutationProcessorRequest\"#\n!Mu" +
-      "ltiRowMutationProcessorResponse\"=\n\021Mutat" +
+      "ltiRowMutationProcessorResponse\"a\n\021Mutat" +
       "eRowsRequest\022(\n\020mutation_request\030\001 \003(\0132\016" +
-      ".MutationProto\"\024\n\022MutateRowsResponse2P\n\027" +
-      "MultiRowMutationService\0225\n\nMutateRows\022\022." +
-      "MutateRowsRequest\032\023.MutateRowsResponseBL" +
-      "\n*org.apache.hadoop.hbase.protobuf.gener" +
-      "atedB\026MultiRowMutationProtosH\001\210\001\001\240\001\001"
+      ".MutationProto\022\023\n\013nonce_group\030\002 \001(\004\022\r\n\005n" +
+      "once\030\003 \001(\004\"\024\n\022MutateRowsResponse2P\n\027Mult" +
+      "iRowMutationService\0225\n\nMutateRows\022\022.Muta" +
+      "teRowsRequest\032\023.MutateRowsResponseBL\n*or" +
+      "g.apache.hadoop.hbase.protobuf.generated" +
+      "B\026MultiRowMutationProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -2036,7 +2220,7 @@ public final class MultiRowMutationProtos {
           internal_static_MutateRowsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MutateRowsRequest_descriptor,
-              new java.lang.String[] { "MutationRequest", });
+              new java.lang.String[] { "MutationRequest", "NonceGroup", "Nonce", });
           internal_static_MutateRowsResponse_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_MutateRowsResponse_fieldAccessorTable = new

@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse;
@@ -68,7 +69,9 @@ extends RowProcessorService implements CoprocessorService, Coprocessor {
     try {
       RowProcessor<S,T> processor = constructRowProcessorFromRequest(request);
       HRegion region = env.getRegion();
-      region.processRowsWithLocks(processor);
+      long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
+      long nonce = request.hasNonce() ? request.getNonce() : HConstants.NO_NONCE;
+      region.processRowsWithLocks(processor, nonceGroup, nonce);
       T result = processor.getResult();
       ProcessResponse.Builder b = ProcessResponse.newBuilder();
       b.setRowProcessorResult(result.toByteString());

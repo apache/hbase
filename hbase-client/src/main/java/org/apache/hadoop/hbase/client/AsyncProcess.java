@@ -275,6 +275,7 @@ class AsyncProcess<CResult> {
     long currentTaskCnt = tasksDone.get();
     boolean alreadyLooped = false;
 
+    NonceGenerator ng = this.hConnection.getNonceGenerator();
     do {
       if (alreadyLooped){
         // if, for whatever reason, we looped, we want to be sure that something has changed.
@@ -302,12 +303,12 @@ class AsyncProcess<CResult> {
           it.remove();
         } else if (canTakeOperation(loc, regionIncluded, serverIncluded)) {
           Action<Row> action = new Action<Row>(r, ++posInList);
+          setNonce(ng, r, action);
           retainedActions.add(action);
-          addAction(loc, action, actionsByServer);
+          addAction(loc, action, actionsByServer, ng);
           it.remove();
         }
       }
-
     } while (retainedActions.isEmpty() && atLeastOne && !hasError());
 
     HConnectionManager.ServerErrorTracker errorsByServer = createServerErrorTracker();
@@ -320,14 +321,20 @@ class AsyncProcess<CResult> {
    * @param loc - the destination. Must not be null.
    * @param action - the action to add to the multiaction
    * @param actionsByServer the multiaction per server
+   * @param ng Nonce generator, or null if no nonces are needed.
    */
   private void addAction(HRegionLocation loc, Action<Row> action, Map<HRegionLocation,
-      MultiAction<Row>> actionsByServer) {
+      MultiAction<Row>> actionsByServer, NonceGenerator ng) {
     final byte[] regionName = loc.getRegionInfo().getRegionName();
     MultiAction<Row> multiAction = actionsByServer.get(loc);
     if (multiAction == null) {
       multiAction = new MultiAction<Row>();
       actionsByServer.put(loc, multiAction);
+    }
+    if (action.hasNonce() && !multiAction.hasNonceGroup()) {
+      // TODO: this code executes for every (re)try, and calls getNonceGroup again
+      //       for the same action. It must return the same value across calls.
+      multiAction.setNonceGroup(ng.getNonceGroup());
     }
 
     multiAction.add(regionName, action);
@@ -443,13 +450,20 @@ class AsyncProcess<CResult> {
 
     // The position will be used by the processBatch to match the object array returned.
     int posInList = -1;
+    NonceGenerator ng = this.hConnection.getNonceGenerator();
     for (Row r : rows) {
       posInList++;
       Action<Row> action = new Action<Row>(r, posInList);
+      setNonce(ng, r, action);
       actions.add(action);
     }
     HConnectionManager.ServerErrorTracker errorsByServer = createServerErrorTracker();
     submit(actions, actions, 1, errorsByServer);
+  }
+
+  private void setNonce(NonceGenerator ng, Row r, Action<Row> action) {
+    if (!(r instanceof Append) && !(r instanceof Increment)) return;
+    action.setNonce(ng.newNonce()); // Action handles NO_NONCE, so it's ok if ng is disabled.
   }
 
 
@@ -473,10 +487,11 @@ class AsyncProcess<CResult> {
     final Map<HRegionLocation, MultiAction<Row>> actionsByServer =
         new HashMap<HRegionLocation, MultiAction<Row>>();
 
+    NonceGenerator ng = this.hConnection.getNonceGenerator();
     for (Action<Row> action : currentActions) {
       HRegionLocation loc = findDestLocation(action.getAction(), action.getOriginalIndex());
       if (loc != null) {
-        addAction(loc, action, actionsByServer);
+        addAction(loc, action, actionsByServer, ng);
       }
     }
 

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -62,7 +63,7 @@ class MockRegionServerServices implements RegionServerServices {
   MockRegionServerServices(ZooKeeperWatcher zkw) {
     this.zkw = zkw;
   }
-  
+
   MockRegionServerServices(ZooKeeperWatcher zkw, ServerName serverName) {
     this.zkw = zkw;
     this.serverName = serverName;
@@ -192,7 +193,6 @@ class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public HLog getWAL(HRegionInfo regionInfo) throws IOException {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -220,5 +220,11 @@ class MockRegionServerServices implements RegionServerServices {
   @Override
   public int getPriority(RPCProtos.RequestHeader header, Message param) {
     return 0;
+  }
+
+  @Override
+  public ServerNonceManager getNonceManager() {
+    // TODO Auto-generated method stub
+    return null;
   }
 }

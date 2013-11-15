@@ -31,6 +31,7 @@ import java.util.UUID;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
@@ -86,6 +87,7 @@ public class ReplicationProtbufUtil {
     HBaseProtos.UUID.Builder uuidBuilder = HBaseProtos.UUID.newBuilder();
     for (HLog.Entry entry: entries) {
       entryBuilder.clear();
+      // TODO: this duplicates a lot in HLogKey#getBuilder
       WALProtos.WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
       HLogKey key = entry.getKey();
       keyBuilder.setEncodedRegionName(
@@ -93,6 +95,12 @@ public class ReplicationProtbufUtil {
       keyBuilder.setTableName(ZeroCopyLiteralByteString.wrap(key.getTablename().getName()));
       keyBuilder.setLogSequenceNumber(key.getLogSeqNum());
       keyBuilder.setWriteTime(key.getWriteTime());
+      if (key.getNonce() != HConstants.NO_NONCE) {
+        keyBuilder.setNonce(key.getNonce());
+      }
+      if (key.getNonceGroup() != HConstants.NO_NONCE) {
+        keyBuilder.setNonceGroup(key.getNonceGroup());
+      }
       for(UUID clusterId : key.getClusterIds()) {
         uuidBuilder.setLeastSigBits(clusterId.getLeastSignificantBits());
         uuidBuilder.setMostSigBits(clusterId.getMostSignificantBits());

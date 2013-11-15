@@ -988,11 +988,14 @@ public final class ProtobufUtil {
    * @param increment
    * @return the converted mutate
    */
-  public static MutationProto toMutation(final Increment increment,
-      final MutationProto.Builder builder) {
+  public static MutationProto toMutation(
+    final Increment increment, final MutationProto.Builder builder, long nonce) {
     builder.setRow(ZeroCopyLiteralByteString.wrap(increment.getRow()));
     builder.setMutateType(MutationType.INCREMENT);
     builder.setDurability(toDurability(increment.getDurability()));
+    if (nonce != HConstants.NO_NONCE) {
+      builder.setNonce(nonce);
+    }
     TimeRange timeRange = increment.getTimeRange();
     if (!timeRange.isAllTime()) {
       HBaseProtos.TimeRange.Builder timeRangeBuilder =
@@ -1035,6 +1038,11 @@ public final class ProtobufUtil {
     return builder.build();
   }
 
+  public static MutationProto toMutation(final MutationType type, final Mutation mutation)
+    throws IOException {
+    return toMutation(type, mutation, HConstants.NO_NONCE);
+  }
+
   /**
    * Create a protocol buffer Mutate based on a client Mutation
    *
@@ -1043,15 +1051,23 @@ public final class ProtobufUtil {
    * @return a protobuf'd Mutation
    * @throws IOException
    */
-  public static MutationProto toMutation(final MutationType type, final Mutation mutation)
-  throws IOException {
-    return toMutation(type, mutation, MutationProto.newBuilder());
+  public static MutationProto toMutation(final MutationType type, final Mutation mutation,
+    final long nonce) throws IOException {
+    return toMutation(type, mutation, MutationProto.newBuilder(), nonce);
   }
 
   public static MutationProto toMutation(final MutationType type, final Mutation mutation,
-      MutationProto.Builder builder)
+      MutationProto.Builder builder) throws IOException {
+    return toMutation(type, mutation, builder, HConstants.NO_NONCE);
+  }
+
+  public static MutationProto toMutation(final MutationType type, final Mutation mutation,
+      MutationProto.Builder builder, long nonce)
   throws IOException {
     builder = getMutationBuilderAndSetCommonFields(type, mutation, builder);
+    if (nonce != HConstants.NO_NONCE) {
+      builder.setNonce(nonce);
+    }
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
     for (Map.Entry<byte[],List<Cell>> family: mutation.getFamilyCellMap().entrySet()) {
@@ -1078,6 +1094,11 @@ public final class ProtobufUtil {
     return builder.build();
   }
 
+  public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation,
+      final MutationProto.Builder builder)  throws IOException {
+    return toMutationNoData(type, mutation, builder, HConstants.NO_NONCE);
+  }
+
   /**
    * Create a protocol buffer MutationProto based on a client Mutation.  Does NOT include data.
    * Understanding is that the Cell will be transported other than via protobuf.
@@ -1087,10 +1108,12 @@ public final class ProtobufUtil {
    * @throws IOException
    */
   public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation,
-      final MutationProto.Builder builder)
-  throws IOException {
+      final MutationProto.Builder builder, long nonce) throws IOException {
     getMutationBuilderAndSetCommonFields(type, mutation, builder);
     builder.setAssociatedCellCount(mutation.size());
+    if (nonce != HConstants.NO_NONCE) {
+      builder.setNonce(nonce);
+    }
     return builder.build();
   }
 

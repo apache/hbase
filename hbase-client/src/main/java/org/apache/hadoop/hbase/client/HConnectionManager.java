@@ -124,6 +124,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -197,6 +198,7 @@ public class HConnectionManager {
   static final Log LOG = LogFactory.getLog(HConnectionManager.class);
 
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
+  private static final String CLIENT_NONCES_ENABLED_KEY = "hbase.client.nonces.enabled";
 
   // An LRU Map of HConnectionKey -> HConnection (TableServer).  All
   // access must be synchronized.  This map is not private because tests
@@ -204,6 +206,14 @@ public class HConnectionManager {
   static final Map<HConnectionKey, HConnectionImplementation> CONNECTION_INSTANCES;
 
   public static final int MAX_CACHED_CONNECTION_INSTANCES;
+
+  /**
+   * Global nonceGenerator shared per client.Currently there's no reason to limit its scope.
+   * Once it's set under nonceGeneratorCreateLock, it is never unset or changed.
+   */
+  private static volatile NonceGenerator nonceGenerator = null;
+  /** The nonce generator lock. Only taken when creating HConnection, which gets a private copy. */
+  private static Object nonceGeneratorCreateLock = new Object();
 
   static {
     // We set instances to one more than the value specified for {@link
@@ -227,6 +237,20 @@ public class HConnectionManager {
    */
   private HConnectionManager() {
     super();
+  }
+
+  /**
+   * @param conn The connection for which to replace the generator.
+   * @param cnm Replaces the nonce generator used, for testing.
+   * @return old nonce generator.
+   */
+  @VisibleForTesting
+  public static NonceGenerator injectNonceGeneratorForTesting(
+      HConnection conn, NonceGenerator cnm) {
+    NonceGenerator ng = conn.getNonceGenerator();
+    LOG.warn("Nonce generator is being replaced by test code for " + cnm.getClass().getName());
+    ((HConnectionImplementation)conn).nonceGenerator = cnm;
+    return ng;
   }
 
   /**
@@ -547,6 +571,7 @@ public class HConnectionManager {
     private final long pause;
     private final int numTries;
     final int rpcTimeout;
+    private NonceGenerator nonceGenerator = null;
     private final int prefetchRegionLimit;
 
     private volatile boolean closed;
@@ -661,6 +686,17 @@ public class HConnectionManager {
       }
     }
 
+    /** Dummy nonce generator for disabled nonces. */
+    private static class NoNonceGenerator implements NonceGenerator {
+      @Override
+      public long getNonceGroup() {
+        return HConstants.NO_NONCE;
+      }
+      @Override
+      public long newNonce() {
+        return HConstants.NO_NONCE;
+      }
+    }
 
     /**
      * For tests.
@@ -675,6 +711,17 @@ public class HConnectionManager {
       this.rpcTimeout = conf.getInt(
           HConstants.HBASE_RPC_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+      if (conf.getBoolean(CLIENT_NONCES_ENABLED_KEY, true)) {
+        synchronized (HConnectionManager.nonceGeneratorCreateLock) {
+          if (HConnectionManager.nonceGenerator == null) {
+            HConnectionManager.nonceGenerator = new PerClientRandomNonceGenerator();
+          }
+          this.nonceGenerator = HConnectionManager.nonceGenerator;
+        }
+      } else {
+        this.nonceGenerator = new NoNonceGenerator();
+      }
+
       this.prefetchRegionLimit = conf.getInt(
           HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
@@ -2615,6 +2662,11 @@ public class HConnectionManager {
       }
 
       return getHTableDescriptorsByTableName(tableNames);
+    }
+
+    @Override
+    public NonceGenerator getNonceGenerator() {
+      return this.nonceGenerator;
     }
 
     /**

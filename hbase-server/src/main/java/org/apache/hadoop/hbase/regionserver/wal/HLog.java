@@ -40,6 +40,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.io.Writable;
 
+import com.google.common.annotations.VisibleForTesting;
+
 
 @InterfaceAudience.Private
 // TODO: Rename interface to WAL
@@ -260,23 +262,9 @@ public interface HLog {
    * except it causes a sync on the log
    * @param sequenceId of the region.
    */
+  @VisibleForTesting
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
       final long now, HTableDescriptor htd, AtomicLong sequenceId) throws IOException;
-
-  /**
-   * Append a set of edits to the log. Log edits are keyed by (encoded)
-   * regionName, row name, and log-sequence-id. The HLog is flushed after this
-   * transaction is written to the log.
-   * @param info
-   * @param tableName
-   * @param edits
-   * @param now
-   * @param htd
-   * @param isInMemstore Whether the record is in memstore. False for system records.
-   * @param sequenceId of the region.
-   */
-  public void append(HRegionInfo info, TableName tableName, WALEdit edits, final long now,
-      HTableDescriptor htd, boolean isInMemstore, AtomicLong sequenceId) throws IOException;
 
   /**
    * Append a set of edits to the log. Log edits are keyed by (encoded) regionName, rowname, and
@@ -291,8 +279,9 @@ public interface HLog {
    * @return txid of this transaction
    * @throws IOException
    */
-  public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
-      List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId) throws IOException;
+  long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
+      List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId,
+      boolean isInMemstore, long nonceGroup, long nonce) throws IOException;
 
   // TODO: Do we need all these versions of sync?
   void hsync() throws IOException;

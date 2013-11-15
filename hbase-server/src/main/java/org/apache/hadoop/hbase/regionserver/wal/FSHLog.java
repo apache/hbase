@@ -66,6 +66,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.cloudera.htrace.Trace;
 import org.cloudera.htrace.TraceScope;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * HLog stores all the edits to the HStore.  Its the hbase write-ahead-log
  * implementation.
@@ -898,21 +900,16 @@ class FSHLog implements HLog, Syncable {
    * @return New log key.
    */
   protected HLogKey makeKey(byte[] encodedRegionName, TableName tableName, long seqnum,
-      long now, List<UUID> clusterIds) {
-    return new HLogKey(encodedRegionName, tableName, seqnum, now, clusterIds);
+      long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
+    return new HLogKey(encodedRegionName, tableName, seqnum, now, clusterIds, nonceGroup, nonce);
   }
 
   @Override
+  @VisibleForTesting
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
-    final long now, HTableDescriptor htd, AtomicLong sequenceId)
-  throws IOException {
-    append(info, tableName, edits, now, htd, true, sequenceId);
-  }
-
-  @Override
-  public void append(HRegionInfo info, TableName tableName, WALEdit edits, final long now,
-      HTableDescriptor htd, boolean isInMemstore, AtomicLong sequenceId) throws IOException {
-    append(info, tableName, edits, new ArrayList<UUID>(), now, htd, true, isInMemstore, sequenceId);
+    final long now, HTableDescriptor htd, AtomicLong sequenceId) throws IOException {
+    append(info, tableName, edits, new ArrayList<UUID>(), now, htd, true, true, sequenceId,
+        HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   /**
@@ -944,8 +941,8 @@ class FSHLog implements HLog, Syncable {
    */
   @SuppressWarnings("deprecation")
   private long append(HRegionInfo info, TableName tableName, WALEdit edits, List<UUID> clusterIds,
-      final long now, HTableDescriptor htd, boolean doSync, boolean isInMemstore, AtomicLong sequenceId)
-    throws IOException {
+      final long now, HTableDescriptor htd, boolean doSync, boolean isInMemstore, 
+      AtomicLong sequenceId, long nonceGroup, long nonce) throws IOException {
       if (edits.isEmpty()) return this.unflushedEntries.get();
       if (this.closed) {
         throw new IOException("Cannot append; log is closed");
@@ -966,7 +963,8 @@ class FSHLog implements HLog, Syncable {
           // actual  name.
           byte [] encodedRegionName = info.getEncodedNameAsBytes();
           if (isInMemstore) this.oldestUnflushedSeqNums.putIfAbsent(encodedRegionName, seqNum);
-          HLogKey logKey = makeKey(encodedRegionName, tableName, seqNum, now, clusterIds);
+          HLogKey logKey = makeKey(
+            encodedRegionName, tableName, seqNum, now, clusterIds, nonceGroup, nonce);
           doWrite(info, logKey, edits, htd);
           this.numEntries.incrementAndGet();
           txid = this.unflushedEntries.incrementAndGet();
@@ -975,6 +973,8 @@ class FSHLog implements HLog, Syncable {
           }
           this.latestSequenceNums.put(encodedRegionName, seqNum);
         }
+        // TODO: note that only tests currently call append w/sync.
+        //       Therefore, this code here is not actually used by anything.
         // Sync if catalog region, and if not then check if that table supports
         // deferred log flushing
         if (doSync &&
@@ -991,9 +991,10 @@ class FSHLog implements HLog, Syncable {
 
   @Override
   public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
-      List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId)
-    throws IOException {
-    return append(info, tableName, edits, clusterIds, now, htd, false, true, sequenceId);
+      List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId,
+      boolean isInMemstore, long nonceGroup, long nonce) throws IOException {
+    return append(info, tableName, edits, clusterIds,
+        now, htd, false, isInMemstore, sequenceId, nonceGroup, nonce);
   }
 
   /**

@@ -515,4 +515,9 @@ public interface HConnection extends Abortable, Closeable {
    * @return true if the server is known as dead, false otherwise.
    */
   boolean isDeadServer(ServerName serverName);
+
+  /**
+   * @return Nonce generator for this HConnection; may be null if disabled in configuration.
+   */
+  public NonceGenerator getNonceGenerator();
 }

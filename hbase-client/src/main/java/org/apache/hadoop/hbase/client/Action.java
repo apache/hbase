@@ -19,9 +19,10 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 
 /**
- * A Get, Put or Delete associated with it's region.  Used internally by  
+ * A Get, Put, Increment, Append, or Delete associated with it's region.  Used internally by  
  * {@link HTable#batch} to associate the action with it's region and maintain
  * the index from the original request. 
  */
@@ -30,6 +31,7 @@ public class Action<R> implements Comparable<R> {
   // TODO: This class should not be visible outside of the client package.
   private Row action;
   private int originalIndex;
+  private long nonce = HConstants.NO_NONCE;
 
   public Action(Row action, int originalIndex) {
     super();
@@ -37,6 +39,13 @@ public class Action<R> implements Comparable<R> {
     this.originalIndex = originalIndex;    
   }
 
+  public void setNonce(long nonce) {
+    this.nonce = nonce;
+  }
+
+  public boolean hasNonce() {
+    return nonce != HConstants.NO_NONCE;
+  }
 
   public Row getAction() {
     return action;
@@ -63,5 +72,9 @@ public class Action<R> implements Comparable<R> {
     if (obj == null || getClass() != obj.getClass()) return false;
     Action<?> other = (Action<?>) obj;
     return compareTo(other) == 0;
+  }
+
+  public long getNonce() {
+    return nonce;
   }
 }

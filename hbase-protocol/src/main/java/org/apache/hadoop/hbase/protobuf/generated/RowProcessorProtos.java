@@ -50,6 +50,26 @@ public final class RowProcessorProtos {
      * <code>optional bytes row_processor_initializer_message = 3;</code>
      */
     com.google.protobuf.ByteString getRowProcessorInitializerMessage();
+
+    // optional uint64 nonce_group = 4;
+    /**
+     * <code>optional uint64 nonce_group = 4;</code>
+     */
+    boolean hasNonceGroup();
+    /**
+     * <code>optional uint64 nonce_group = 4;</code>
+     */
+    long getNonceGroup();
+
+    // optional uint64 nonce = 5;
+    /**
+     * <code>optional uint64 nonce = 5;</code>
+     */
+    boolean hasNonce();
+    /**
+     * <code>optional uint64 nonce = 5;</code>
+     */
+    long getNonce();
   }
   /**
    * Protobuf type {@code ProcessRequest}
@@ -115,6 +135,16 @@ public final class RowProcessorProtos {
             case 26: {
               bitField0_ |= 0x00000004;
               rowProcessorInitializerMessage_ = input.readBytes();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              nonceGroup_ = input.readUInt64();
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              nonce_ = input.readUInt64();
               break;
             }
           }
@@ -259,10 +289,44 @@ public final class RowProcessorProtos {
       return rowProcessorInitializerMessage_;
     }
 
+    // optional uint64 nonce_group = 4;
+    public static final int NONCE_GROUP_FIELD_NUMBER = 4;
+    private long nonceGroup_;
+    /**
+     * <code>optional uint64 nonce_group = 4;</code>
+     */
+    public boolean hasNonceGroup() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional uint64 nonce_group = 4;</code>
+     */
+    public long getNonceGroup() {
+      return nonceGroup_;
+    }
+
+    // optional uint64 nonce = 5;
+    public static final int NONCE_FIELD_NUMBER = 5;
+    private long nonce_;
+    /**
+     * <code>optional uint64 nonce = 5;</code>
+     */
+    public boolean hasNonce() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional uint64 nonce = 5;</code>
+     */
+    public long getNonce() {
+      return nonce_;
+    }
+
     private void initFields() {
       rowProcessorClassName_ = "";
       rowProcessorInitializerMessageName_ = "";
       rowProcessorInitializerMessage_ = com.google.protobuf.ByteString.EMPTY;
+      nonceGroup_ = 0L;
+      nonce_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -289,6 +353,12 @@ public final class RowProcessorProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBytes(3, rowProcessorInitializerMessage_);
       }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeUInt64(4, nonceGroup_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeUInt64(5, nonce_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -309,6 +379,14 @@ public final class RowProcessorProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(3, rowProcessorInitializerMessage_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(4, nonceGroup_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(5, nonce_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -348,6 +426,16 @@ public final class RowProcessorProtos {
         result = result && getRowProcessorInitializerMessage()
             .equals(other.getRowProcessorInitializerMessage());
       }
+      result = result && (hasNonceGroup() == other.hasNonceGroup());
+      if (hasNonceGroup()) {
+        result = result && (getNonceGroup()
+            == other.getNonceGroup());
+      }
+      result = result && (hasNonce() == other.hasNonce());
+      if (hasNonce()) {
+        result = result && (getNonce()
+            == other.getNonce());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -372,6 +460,14 @@ public final class RowProcessorProtos {
       if (hasRowProcessorInitializerMessage()) {
         hash = (37 * hash) + ROW_PROCESSOR_INITIALIZER_MESSAGE_FIELD_NUMBER;
         hash = (53 * hash) + getRowProcessorInitializerMessage().hashCode();
+      }
+      if (hasNonceGroup()) {
+        hash = (37 * hash) + NONCE_GROUP_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getNonceGroup());
+      }
+      if (hasNonce()) {
+        hash = (37 * hash) + NONCE_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getNonce());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -488,6 +584,10 @@ public final class RowProcessorProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         rowProcessorInitializerMessage_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000004);
+        nonceGroup_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        nonce_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
 
@@ -528,6 +628,14 @@ public final class RowProcessorProtos {
           to_bitField0_ |= 0x00000004;
         }
         result.rowProcessorInitializerMessage_ = rowProcessorInitializerMessage_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.nonceGroup_ = nonceGroup_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.nonce_ = nonce_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -556,6 +664,12 @@ public final class RowProcessorProtos {
         }
         if (other.hasRowProcessorInitializerMessage()) {
           setRowProcessorInitializerMessage(other.getRowProcessorInitializerMessage());
+        }
+        if (other.hasNonceGroup()) {
+          setNonceGroup(other.getNonceGroup());
+        }
+        if (other.hasNonce()) {
+          setNonce(other.getNonce());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -768,6 +882,72 @@ public final class RowProcessorProtos {
       public Builder clearRowProcessorInitializerMessage() {
         bitField0_ = (bitField0_ & ~0x00000004);
         rowProcessorInitializerMessage_ = getDefaultInstance().getRowProcessorInitializerMessage();
+        onChanged();
+        return this;
+      }
+
+      // optional uint64 nonce_group = 4;
+      private long nonceGroup_ ;
+      /**
+       * <code>optional uint64 nonce_group = 4;</code>
+       */
+      public boolean hasNonceGroup() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional uint64 nonce_group = 4;</code>
+       */
+      public long getNonceGroup() {
+        return nonceGroup_;
+      }
+      /**
+       * <code>optional uint64 nonce_group = 4;</code>
+       */
+      public Builder setNonceGroup(long value) {
+        bitField0_ |= 0x00000008;
+        nonceGroup_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 nonce_group = 4;</code>
+       */
+      public Builder clearNonceGroup() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        nonceGroup_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // optional uint64 nonce = 5;
+      private long nonce_ ;
+      /**
+       * <code>optional uint64 nonce = 5;</code>
+       */
+      public boolean hasNonce() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional uint64 nonce = 5;</code>
+       */
+      public long getNonce() {
+        return nonce_;
+      }
+      /**
+       * <code>optional uint64 nonce = 5;</code>
+       */
+      public Builder setNonce(long value) {
+        bitField0_ |= 0x00000010;
+        nonce_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 nonce = 5;</code>
+       */
+      public Builder clearNonce() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        nonce_ = 0L;
         onChanged();
         return this;
       }
@@ -1479,15 +1659,16 @@ public final class RowProcessorProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\022RowProcessor.proto\"\215\001\n\016ProcessRequest\022" +
+      "\n\022RowProcessor.proto\"\261\001\n\016ProcessRequest\022" +
       " \n\030row_processor_class_name\030\001 \002(\t\022.\n&row" +
       "_processor_initializer_message_name\030\002 \001(" +
       "\t\022)\n!row_processor_initializer_message\030\003" +
-      " \001(\014\"/\n\017ProcessResponse\022\034\n\024row_processor" +
-      "_result\030\001 \002(\0142C\n\023RowProcessorService\022,\n\007" +
-      "Process\022\017.ProcessRequest\032\020.ProcessRespon" +
-      "seBH\n*org.apache.hadoop.hbase.protobuf.g" +
-      "eneratedB\022RowProcessorProtosH\001\210\001\001\240\001\001"
+      " \001(\014\022\023\n\013nonce_group\030\004 \001(\004\022\r\n\005nonce\030\005 \001(\004" +
+      "\"/\n\017ProcessResponse\022\034\n\024row_processor_res" +
+      "ult\030\001 \002(\0142C\n\023RowProcessorService\022,\n\007Proc" +
+      "ess\022\017.ProcessRequest\032\020.ProcessResponseBH" +
+      "\n*org.apache.hadoop.hbase.protobuf.gener" +
+      "atedB\022RowProcessorProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1499,7 +1680,7 @@ public final class RowProcessorProtos {
           internal_static_ProcessRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ProcessRequest_descriptor,
-              new java.lang.String[] { "RowProcessorClassName", "RowProcessorInitializerMessageName", "RowProcessorInitializerMessage", });
+              new java.lang.String[] { "RowProcessorClassName", "RowProcessorInitializerMessageName", "RowProcessorInitializerMessage", "NonceGroup", "Nonce", });
           internal_static_ProcessResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_ProcessResponse_fieldAccessorTable = new

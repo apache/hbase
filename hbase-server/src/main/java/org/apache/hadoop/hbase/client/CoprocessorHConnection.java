@@ -380,4 +380,9 @@ public class CoprocessorHConnection implements HConnection {
   public boolean isDeadServer(ServerName serverName) {
     return delegate.isDeadServer(serverName);
   }
+
+  @Override
+  public NonceGenerator getNonceGenerator() {
+    return null; // don't use nonces for coprocessor connection
+  }
 }

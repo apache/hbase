@@ -20,8 +20,10 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.NavigableSet;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -262,8 +264,12 @@ public class HLogUtil {
   public static void writeCompactionMarker(HLog log, HTableDescriptor htd, HRegionInfo info,
       final CompactionDescriptor c, AtomicLong sequenceId) throws IOException {
     WALEdit e = WALEdit.createCompaction(c);
-    log.append(info, TableName.valueOf(c.getTableName().toByteArray()), e,
-        EnvironmentEdgeManager.currentTimeMillis(), htd, false, sequenceId);
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    TableName tn = TableName.valueOf(c.getTableName().toByteArray());
+    long txid = log.appendNoSync(info, tn, e, new ArrayList<UUID>(), now, htd, sequenceId,
+        false, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    log.sync(txid);
+
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));
     }

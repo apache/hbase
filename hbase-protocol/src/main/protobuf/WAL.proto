@@ -43,14 +43,19 @@ message WALKey {
 
   repeated FamilyScope scopes = 6;
   optional uint32 following_kv_count = 7;
+
   /*
   This field contains the list of clusters that have
   consumed the change
   */
   repeated UUID cluster_ids = 8;
+
+  optional uint64 nonceGroup = 9;
+  optional uint64 nonce = 10;
+
 /*
   optional CustomEntryType custom_entry_type = 9;
-  
+
   enum CustomEntryType {
     COMPACTION = 0;
   }

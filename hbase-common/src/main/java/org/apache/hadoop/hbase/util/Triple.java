@@ -35,6 +35,11 @@ public class Triple<A, B, C> {
     this.third = third;
   }
 
+  // ctor cannot infer types w/o warning but a method can.
+  public static <A, B, C> Triple<A, B, C> create(A first, B second, C third) {
+    return new Triple<A, B, C>(first, second, third);
+  }
+
   public int hashCode() {
     int hashFirst = (first != null ? first.hashCode() : 0);
     int hashSecond = (second != null ? second.hashCode() : 0);

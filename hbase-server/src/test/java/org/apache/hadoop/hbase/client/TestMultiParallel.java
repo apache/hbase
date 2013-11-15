@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
@@ -37,11 +38,13 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -482,6 +485,96 @@ public class TestMultiParallel {
   }
 
   @Test(timeout=300000)
+  public void testNonceCollision() throws Exception {
+    LOG.info("test=testNonceCollision");
+    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Put put = new Put(ONE_ROW);
+    put.add(BYTES_FAMILY, QUALIFIER, Bytes.toBytes(0L));
+
+    // Replace nonce manager with the one that returns each nonce twice.
+    NonceGenerator cnm = new PerClientRandomNonceGenerator() {
+      long lastNonce = -1;
+      @Override
+      public synchronized long newNonce() {
+        long nonce = 0;
+        if (lastNonce == -1) {
+          lastNonce = nonce = super.newNonce();
+        } else {
+          nonce = lastNonce;
+          lastNonce = -1L;
+        }
+        return nonce;
+      }
+    };
+    NonceGenerator oldCnm =
+        HConnectionManager.injectNonceGeneratorForTesting(table.getConnection(), cnm);
+
+    // First test sequential requests.
+    try {
+      Increment inc = new Increment(ONE_ROW);
+      inc.addColumn(BYTES_FAMILY, QUALIFIER, 1L);
+      table.increment(inc);
+      inc = new Increment(ONE_ROW);
+      inc.addColumn(BYTES_FAMILY, QUALIFIER, 1L);
+      try {
+        table.increment(inc);
+        fail("Should have thrown an exception");
+      } catch (OperationConflictException ex) {
+      }
+      Get get = new Get(ONE_ROW);
+      get.addColumn(BYTES_FAMILY, QUALIFIER);
+      Result result = table.get(get);
+      validateResult(result, QUALIFIER, Bytes.toBytes(1L));
+
+      // Now run a bunch of requests in parallel, exactly half should succeed.
+      int numRequests = 40;
+      final CountDownLatch startedLatch = new CountDownLatch(numRequests);
+      final CountDownLatch startLatch = new CountDownLatch(1);
+      final CountDownLatch doneLatch = new CountDownLatch(numRequests);
+      for (int i = 0; i < numRequests; ++i) {
+        Runnable r = new Runnable() {
+          @Override
+          public void run() {
+            HTable table = null;
+            try {
+              table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+            } catch (IOException e) {
+              fail("Not expected");
+            }
+            Increment inc = new Increment(ONE_ROW);
+            inc.addColumn(BYTES_FAMILY, QUALIFIER, 1L);
+            startedLatch.countDown();
+            try {
+              startLatch.await();
+            } catch (InterruptedException e) {
+              fail("Not expected");
+            }
+            try {
+              table.increment(inc);
+            } catch (OperationConflictException ex) { // Some threads are expected to fail.
+            } catch (IOException ioEx) {
+              fail("Not expected");
+            }
+            doneLatch.countDown();
+          }
+        };
+        Threads.setDaemonThreadRunning(new Thread(r));
+      }
+      startedLatch.await(); // Wait until all threads are ready...
+      startLatch.countDown(); // ...and unleash the herd!
+      doneLatch.await();
+      // Now verify
+      get = new Get(ONE_ROW);
+      get.addColumn(BYTES_FAMILY, QUALIFIER);
+      result = table.get(get);
+      validateResult(result, QUALIFIER, Bytes.toBytes((numRequests / 2) + 1L));
+      table.close();
+    } finally {
+      HConnectionManager.injectNonceGeneratorForTesting(table.getConnection(), oldCnm);
+    }
+  }
+
+  @Test(timeout=300000)
   public void testBatchWithMixedActions() throws Exception {
     LOG.info("test=testBatchWithMixedActions");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
@@ -558,10 +651,13 @@ public class TestMultiParallel {
   }
 
   private void validateResult(Object r1, byte[] qual, byte[] val) {
-    // TODO provide nice assert here or something.
     Result r = (Result)r1;
     Assert.assertTrue(r.containsColumn(BYTES_FAMILY, qual));
-    Assert.assertEquals(0, Bytes.compareTo(val, r.getValue(BYTES_FAMILY, qual)));
+    byte[] value = r.getValue(BYTES_FAMILY, qual);
+    if (0 != Bytes.compareTo(val, value)) {
+      fail("Expected [" + Bytes.toStringBinary(val)
+          + "] but got [" + Bytes.toStringBinary(value) + "]");
+    }
   }
 
   private List<Row> constructPutRequests() {

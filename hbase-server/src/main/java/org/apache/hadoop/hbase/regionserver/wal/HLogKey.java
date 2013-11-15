@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ZeroCopyLiteralByteString;
 
@@ -119,18 +120,23 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   private NavigableMap<byte[], Integer> scopes;
 
+  private long nonceGroup = HConstants.NO_NONCE;
+  private long nonce = HConstants.NO_NONCE;
+
   private CompressionContext compressionContext;
 
   public HLogKey() {
     init(null, null, 0L, HConstants.LATEST_TIMESTAMP,
-        new ArrayList<UUID>());
+        new ArrayList<UUID>(), HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
+  @VisibleForTesting
   public HLogKey(final byte[] encodedRegionName, final TableName tablename, long logSeqNum,
       final long now, UUID clusterId) {
     List<UUID> clusterIds = new ArrayList<UUID>();
     clusterIds.add(clusterId);
-    init(encodedRegionName, tablename, logSeqNum, now, clusterIds);
+    init(encodedRegionName, tablename, logSeqNum, now, clusterIds,
+        HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   /**
@@ -146,17 +152,19 @@ public class HLogKey implements WritableComparable<HLogKey> {
    * @param clusterIds the clusters that have consumed the change(used in Replication)
    */
   public HLogKey(final byte [] encodedRegionName, final TableName tablename,
-      long logSeqNum, final long now, List<UUID> clusterIds){
-    init(encodedRegionName, tablename, logSeqNum, now, clusterIds);
+      long logSeqNum, final long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
+    init(encodedRegionName, tablename, logSeqNum, now, clusterIds, nonceGroup, nonce);
   }
 
   protected void init(final byte [] encodedRegionName, final TableName tablename,
-      long logSeqNum, final long now, List<UUID> clusterIds) {
+      long logSeqNum, final long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
     this.logSeqNum = logSeqNum;
     this.writeTime = now;
     this.clusterIds = clusterIds;
     this.encodedRegionName = encodedRegionName;
     this.tablename = tablename;
+    this.nonceGroup = nonceGroup;
+    this.nonce = nonce;
   }
 
   /**
@@ -190,6 +198,16 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   public NavigableMap<byte[], Integer> getScopes() {
     return scopes;
+  }
+
+  /** @return The nonce group */
+  public long getNonceGroup() {
+    return nonceGroup;
+  }
+
+  /** @return The nonce */
+  public long getNonce() {
+    return nonce;
   }
 
   public void setScopes(NavigableMap<byte[], Integer> scopes) {
@@ -435,6 +453,12 @@ public class HLogKey implements WritableComparable<HLogKey> {
     }
     builder.setLogSequenceNumber(this.logSeqNum);
     builder.setWriteTime(writeTime);
+    if (this.nonce != HConstants.NO_NONCE) {
+      builder.setNonce(nonce);
+    }
+    if (this.nonceGroup != HConstants.NO_NONCE) {
+      builder.setNonceGroup(nonceGroup);
+    }
     HBaseProtos.UUID.Builder uuidBuilder = HBaseProtos.UUID.newBuilder();
     for (UUID clusterId : clusterIds) {
       uuidBuilder.setLeastSigBits(clusterId.getLeastSignificantBits());
@@ -473,6 +497,12 @@ public class HLogKey implements WritableComparable<HLogKey> {
     }
     for (HBaseProtos.UUID clusterId : walKey.getClusterIdsList()) {
       clusterIds.add(new UUID(clusterId.getMostSigBits(), clusterId.getLeastSigBits()));
+    }
+    if (walKey.hasNonceGroup()) {
+      this.nonceGroup = walKey.getNonceGroup();
+    }
+    if (walKey.hasNonce()) {
+      this.nonce = walKey.getNonce();
     }
     this.scopes = null;
     if (walKey.getScopesCount() > 0) {

@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_acquired;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_done;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_err;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_resigned;
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -35,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -68,9 +70,14 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.NonceGenerator;
+import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -172,7 +179,7 @@ public class TestDistributedLogSplitting {
     try {
       if (TEST_UTIL.getHBaseCluster() != null) {
         for (MasterThread mt : TEST_UTIL.getHBaseCluster().getLiveMasterThreads()) {
-          mt.getMaster().abort("closing...", new Exception("Trace info"));
+          mt.getMaster().abort("closing...", null);
         }
       }
       TEST_UTIL.shutdownMiniHBaseCluster();
@@ -271,6 +278,80 @@ public class TestDistributedLogSplitting {
     this.abortRSAndVerifyRecovery(hrs, ht, zkw, NUM_REGIONS_TO_CREATE, NUM_LOG_LINES);
     ht.close();
     zkw.close();
+  }
+
+  private static class NonceGeneratorWithDups extends PerClientRandomNonceGenerator {
+    private boolean isDups = false;
+    private LinkedList<Long> nonces = new LinkedList<Long>();
+
+    public void startDups() {
+      isDups = true;
+    }
+
+    @Override
+    public long newNonce() {
+      long nonce = isDups ? nonces.removeFirst() : super.newNonce();
+      if (!isDups) {
+        nonces.add(nonce);
+      }
+      return nonce;
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testNonceRecovery() throws Exception {
+    LOG.info("testNonceRecovery");
+    final String TABLE_NAME = "table";
+    final String FAMILY_NAME = "family";
+    final int NUM_REGIONS_TO_CREATE = 40;
+
+    conf.setLong("hbase.regionserver.hlog.blocksize", 100*1024);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    startCluster(NUM_RS);
+    master.balanceSwitch(false);
+
+    final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
+    HTable ht = installTable(zkw, TABLE_NAME, FAMILY_NAME, NUM_REGIONS_TO_CREATE);
+    NonceGeneratorWithDups ng = new NonceGeneratorWithDups();
+    NonceGenerator oldNg =
+        HConnectionManager.injectNonceGeneratorForTesting(ht.getConnection(), ng);
+
+    try {
+      List<Increment> reqs = new ArrayList<Increment>();
+      for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
+        HRegionServer hrs = rst.getRegionServer();
+        List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs);
+        for (HRegionInfo hri : hris) {
+          if (TABLE_NAME.equalsIgnoreCase(hri.getTable().getNameAsString())) {
+            byte[] key = hri.getStartKey();
+            if (key == null || key.length == 0) {
+              key = Bytes.copy(hri.getEndKey());
+              --(key[key.length - 1]);
+            }
+            Increment incr = new Increment(key);
+            incr.addColumn(Bytes.toBytes(FAMILY_NAME), Bytes.toBytes("q"), 1);
+            ht.increment(incr);
+            reqs.add(incr);
+          }
+        }
+      }
+
+      HRegionServer hrs = findRSToKill(false, "table");
+      abortRSAndWaitForRecovery(hrs, zkw, NUM_REGIONS_TO_CREATE);
+      ng.startDups();
+      for (Increment incr : reqs) {
+        try {
+          ht.increment(incr);
+          fail("should have thrown");
+        } catch (OperationConflictException ope) {
+          LOG.debug("Caught as expected: " + ope.getMessage());
+        }
+      }
+    } finally {
+      HConnectionManager.injectNonceGeneratorForTesting(ht.getConnection(), oldNg);
+      ht.close();
+      zkw.close();
+    }
   }
 
   @Test(timeout = 300000)

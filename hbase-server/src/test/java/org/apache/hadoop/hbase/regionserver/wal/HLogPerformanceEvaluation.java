@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -104,6 +105,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       byte[] value = new byte[valueSize];
       Random rand = new Random(Thread.currentThread().getId());
       HLog hlog = region.getLog();
+      ArrayList<UUID> clusters = new ArrayList<UUID>();
+      long nonce = HConstants.NO_NONCE;
 
       try {
         long startTime = System.currentTimeMillis();
@@ -114,8 +117,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
           HRegionInfo hri = region.getRegionInfo();
           if (this.noSync) {
-            hlog.appendNoSync(hri, hri.getTable(), walEdit, new ArrayList<UUID>(), now, htd,
-              region.getSequenceId());
+            hlog.appendNoSync(hri, hri.getTable(), walEdit, clusters, now, htd,
+              region.getSequenceId(), true, nonce, nonce);
           } else {
             hlog.append(hri, hri.getTable(), walEdit, now, htd, region.getSequenceId());
           }

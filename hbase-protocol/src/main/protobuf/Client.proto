@@ -133,6 +133,8 @@ message MutationProto {
   // 'cell' field above which is non-null when the cells are pb'd.
   optional int32 associated_cell_count = 8;
 
+  optional uint64 nonce = 9;
+
   enum Durability {
     USE_DEFAULT  = 0;
     SKIP_WAL     = 1;
@@ -182,6 +184,7 @@ message MutateRequest {
   required RegionSpecifier region = 1;
   required MutationProto mutation = 2;
   optional Condition condition = 3;
+  optional uint64 nonce_group = 4;
 }
 
 message MutateResponse {
@@ -345,6 +348,7 @@ message RegionActionResult {
  */
 message MultiRequest {
   repeated RegionAction regionAction = 1;
+  optional uint64 nonceGroup = 2;
 }
 
 message MultiResponse {
