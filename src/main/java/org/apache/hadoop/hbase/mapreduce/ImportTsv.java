@@ -301,7 +301,8 @@ public class ImportTsv {
     String columns[] = conf.getStrings(COLUMNS_CONF_KEY);
     Set<String> cfSet = new HashSet<String>();
     for (String aColumn : columns) {
-      if (TsvParser.ROWKEY_COLUMN_SPEC.equals(aColumn)) continue;
+      if (TsvParser.ROWKEY_COLUMN_SPEC.equals(aColumn)
+          || TsvParser.TIMESTAMPKEY_COLUMN_SPEC.equals(aColumn)) continue;
       // we are only concerned with the first one (in case this is a cf:cq)
       cfSet.add(aColumn.split(":", 2)[0]);
     }
