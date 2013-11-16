@@ -1713,10 +1713,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (this.replicationSourceHandler == this.replicationSinkHandler &&
         this.replicationSourceHandler != null) {
       this.replicationSourceHandler.startReplicationService();
-    } else if (this.replicationSourceHandler != null) {
-      this.replicationSourceHandler.startReplicationService();
-    } else if (this.replicationSinkHandler != null) {
-      this.replicationSinkHandler.startReplicationService();
+    } else {
+      if (this.replicationSourceHandler != null) {
+        this.replicationSourceHandler.startReplicationService();
+      }
+      if (this.replicationSinkHandler != null) {
+        this.replicationSinkHandler.startReplicationService();
+      }
     }
 
     // Start Server.  This service is like leases in that it internally runs
