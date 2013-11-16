@@ -220,7 +220,7 @@ public class ReplicationSink {
    * @param rows list of actions
    * @throws IOException
    */
-  private void batch(TableName tableName, Collection<List<Row>> allRows) throws IOException {
+  protected void batch(TableName tableName, Collection<List<Row>> allRows) throws IOException {
     if (allRows.isEmpty()) {
       return;
     }
