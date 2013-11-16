@@ -37,11 +37,10 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.InjectionEvent;
-import org.apache.hadoop.hbase.util.InjectionHandler;
 
 /**
  * Scanner scans both the memstore and the Store. Coalesce KeyValue stream
@@ -97,13 +96,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
   // A flag whether use pread for scan
   private boolean scanUsePread = false;
 
-  // used by the injection framework to test race between StoreScanner construction and compaction
-  enum StoreScannerCompactionRace {
-    BEFORE_SEEK,
-    AFTER_SEEK,
-    COMPACT_COMPLETE
-  }
-  
   /** An internal constructor. */
   protected StoreScanner(Store store, boolean cacheBlocks, Scan scan,
       final NavigableSet<byte[]> columns, long ttl, int minVersions) {
@@ -157,8 +149,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
         ScanType.USER_SCAN, Long.MAX_VALUE, HConstants.LATEST_TIMESTAMP,
         oldestUnexpiredTS);
 
-    this.store.addChangedReaderObserver(this);
-
     // Pass columns to try to filter out unnecessary StoreFiles.
     List<KeyValueScanner> scanners = getScannersNoCompaction();
 
@@ -166,8 +156,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
     // key does not exist, then to the start of the next matching Row).
     // Always check bloom filter to optimize the top row seek for delete
     // family marker.
-    InjectionHandler.processEvent(InjectionEvent.STORESCANNER_COMPACTION_RACE, new Object[] {
-        StoreScannerCompactionRace.BEFORE_SEEK.ordinal()});
     if (explicitColumnQuery && lazySeekEnabledGlobally) {
       for (KeyValueScanner scanner : scanners) {
         scanner.requestSeek(matcher.getStartKey(), false, true);
@@ -190,8 +178,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
     // Combine all seeked scanners with a heap
     heap = new KeyValueHeap(scanners, store.getComparator());
-    InjectionHandler.processEvent(InjectionEvent.STORESCANNER_COMPACTION_RACE, new Object[] {
-        StoreScannerCompactionRace.AFTER_SEEK.ordinal()});
+
+    this.store.addChangedReaderObserver(this);
   }
 
   /**
@@ -241,13 +229,9 @@ public class StoreScanner extends NonLazyKeyValueScanner
           earliestPutTs, oldestUnexpiredTS, dropDeletesFromRow, dropDeletesToRow);
     }
 
-    this.store.addChangedReaderObserver(this);
-
     // Filter the list of scanners using Bloom filters, time range, TTL, etc.
     scanners = selectScannersFrom(scanners);
 
-    InjectionHandler.processEvent(InjectionEvent.STORESCANNER_COMPACTION_RACE, new Object[] {
-        StoreScannerCompactionRace.BEFORE_SEEK.ordinal()});
     // Seek all scanners to the initial key
     if (!isParallelSeekEnabled) {
       for (KeyValueScanner scanner : scanners) {
@@ -259,8 +243,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
     // Combine all seeked scanners with a heap
     heap = new KeyValueHeap(scanners, store.getComparator());
-    InjectionHandler.processEvent(InjectionEvent.STORESCANNER_COMPACTION_RACE, new Object[] {
-        StoreScannerCompactionRace.AFTER_SEEK.ordinal()});
   }
 
   /** Constructor for testing. */
@@ -281,10 +263,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
     this.matcher = new ScanQueryMatcher(scan, scanInfo, columns, scanType,
         Long.MAX_VALUE, earliestPutTs, oldestUnexpiredTS);
 
-    // In unit tests, the store could be null
-    if (this.store != null) {
-      this.store.addChangedReaderObserver(this);
-    }
     // Seek all scanners to the initial key
     if (!isParallelSeekEnabled) {
       for (KeyValueScanner scanner : scanners) {
