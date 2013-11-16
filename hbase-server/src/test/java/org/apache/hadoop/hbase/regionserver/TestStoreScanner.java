@@ -606,7 +606,7 @@ public class TestStoreScanner extends TestCase {
     Scan scanSpec = new Scan();
     scanSpec.setStartRow(Bytes.toBytes("hjfsd"));
     scanSpec.setStartRow(Bytes.toBytes("zjfsd"));
-    KeyValueScanner scanner = s.getScanner(scanSpec, set, s.getSmallestReadPoint());
+    KeyValueScanner scanner = s.getScanner(scanSpec, set);
     ih.f.get();
 
     // Clear injection handling and shutdown the minicluster.
