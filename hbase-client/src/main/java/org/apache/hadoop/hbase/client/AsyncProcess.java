@@ -179,7 +179,7 @@ class AsyncProcess<CResult> {
 
       throwables.add(ex);
       actions.add(row);
-      addresses.add(location != null ? location.getHostnamePort() : "null location");
+      addresses.add(location != null ? location.getServerName().toString() : "null location");
     }
 
     private synchronized RetriesExhaustedWithDetailsException makeException() {

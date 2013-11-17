@@ -28,6 +28,10 @@ import org.apache.hadoop.hbase.util.Addressing;
  * i.e. the hostname and port, and *not* the regioninfo.  This means two
  * instances are the same if they refer to the same 'location' (the same
  * hostname and port), though they may be carrying different regions.
+ *
+ * On a big cluster, each client will have thousands of instances of this object, often
+ *  100 000 of them if not million. It's important to keep the object size as small
+ *  as possible.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -35,10 +39,6 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   private final HRegionInfo regionInfo;
   private final ServerName serverName;
   private final long seqNum;
-  // Cache of the 'toString' result.
-  private String cachedString = null;
-  // Cache of the hostname + port
-  private String cachedHostnamePort;
 
   public HRegionLocation(HRegionInfo regionInfo, ServerName serverName) {
     this(regionInfo, serverName, HConstants.NO_SEQNUM);
@@ -54,12 +54,9 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
    * @see java.lang.Object#toString()
    */
   @Override
-  public synchronized String toString() {
-    if (this.cachedString == null) {
-      this.cachedString = "region=" + this.regionInfo.getRegionNameAsString() +
-      ", hostname=" + this.serverName + ", seqNum=" + seqNum;
-    }
-    return this.cachedString;
+  public String toString() {
+    return "region=" + this.regionInfo.getRegionNameAsString() +
+        ", hostname=" + this.serverName + ", seqNum=" + seqNum;
   }
 
   /**
@@ -107,12 +104,8 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   /**
    * @return String made of hostname and port formatted as per {@link Addressing#createHostAndPortStr(String, int)}
    */
-  public synchronized String getHostnamePort() {
-    if (this.cachedHostnamePort == null) {
-      this.cachedHostnamePort =
-        Addressing.createHostAndPortStr(this.getHostname(), this.getPort());
-    }
-    return this.cachedHostnamePort;
+  public String getHostnamePort() {
+    return Addressing.createHostAndPortStr(this.getHostname(), this.getPort());
   }
 
   public ServerName getServerName() {
