@@ -52,6 +52,10 @@ import com.google.protobuf.ZeroCopyLiteralByteString;
 /**
  * HRegion information.
  * Contains HRegion id, start and end keys, a reference to this HRegions' table descriptor, etc.
+ *
+ * On a big cluster, each client will have thousands of instances of this object, often
+ *  100 000 of them if not million. It's important to keep the object size as small
+ *  as possible.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -179,13 +183,12 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   private boolean offLine = false;
   private long regionId = -1;
   private transient byte [] regionName = HConstants.EMPTY_BYTE_ARRAY;
-  private String regionNameStr = "";
   private boolean split = false;
   private byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
   private int hashCode = -1;
   //TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
   public static final String NO_HASH = null;
-  private volatile String encodedName = NO_HASH;
+  private String encodedName = null;
   private byte [] encodedNameAsBytes = null;
 
   // Current TableName
@@ -217,7 +220,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     // Note: First Meta regions names are still in old format
     this.regionName = createRegionName(tableName, null,
                                        regionId, false);
-    this.regionNameStr = Bytes.toStringBinary(this.regionName);
     setHashCode();
   }
 
@@ -289,7 +291,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
     this.regionName = createRegionName(this.tableName, startKey, regionId, true);
 
-    this.regionNameStr = Bytes.toStringBinary(this.regionName);
     this.split = split;
     this.endKey = endKey == null? HConstants.EMPTY_END_ROW: endKey.clone();
     this.startKey = startKey == null?
@@ -309,7 +310,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     this.offLine = other.isOffline();
     this.regionId = other.getRegionId();
     this.regionName = other.getRegionName();
-    this.regionNameStr = Bytes.toStringBinary(this.regionName);
     this.split = other.isSplit();
     this.startKey = other.getStartKey();
     this.hashCode = other.hashCode();
@@ -499,18 +499,18 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   public String getRegionNameAsString() {
     if (hasEncodedName(this.regionName)) {
       // new format region names already have their encoded name.
-      return this.regionNameStr;
+      return Bytes.toStringBinary(this.regionName);
     }
 
     // old format. regionNameStr doesn't have the region name.
     //
     //
-    return this.regionNameStr + "." + this.getEncodedName();
+    return Bytes.toStringBinary(this.regionName) + "." + this.getEncodedName();
   }
 
   /** @return the encoded region name */
   public synchronized String getEncodedName() {
-    if (this.encodedName == NO_HASH) {
+    if (this.encodedName == null) {
       this.encodedName = encodeRegionName(this.regionName);
     }
     return this.encodedName;
@@ -648,7 +648,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   @Override
   public String toString() {
     return "{ENCODED => " + getEncodedName() + ", " +
-      HConstants.NAME + " => '" + this.regionNameStr
+      HConstants.NAME + " => '" + Bytes.toStringBinary(this.regionName)
       + "', STARTKEY => '" +
       Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" +
       Bytes.toStringBinary(this.endKey) + "'" +
@@ -722,7 +722,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       this.offLine = in.readBoolean();
       this.regionId = in.readLong();
       this.regionName = Bytes.readByteArray(in);
-      this.regionNameStr = Bytes.toStringBinary(this.regionName);
       this.split = in.readBoolean();
       this.startKey = Bytes.readByteArray(in);
       try {
@@ -738,7 +737,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       this.offLine = in.readBoolean();
       this.regionId = in.readLong();
       this.regionName = Bytes.readByteArray(in);
-      this.regionNameStr = Bytes.toStringBinary(this.regionName);
       this.split = in.readBoolean();
       this.startKey = Bytes.readByteArray(in);
       this.tableName = TableName.valueOf(Bytes.readByteArray(in));
