@@ -137,22 +137,19 @@ public class Delete extends Mutation
   }
 
   /**
-   * Advanced use only.
-   * Add an existing delete marker to this Delete object.
-   * @param kv An existing KeyValue of type "delete".
+   * Advanced use only. Add an existing delete marker to this Delete object.
+   * @param kv An existing 'delete' tpye KeyValue - can be family, column, or point delete
    * @return this for invocation chaining
    * @throws IOException
    */
   public Delete addDeleteMarker(KeyValue kv) throws IOException {
-    if (!kv.isDelete()) {
+    if (!(kv.isDelete() || kv.isDeleteColumnOrFamily())) {
       throw new IOException("The recently added KeyValue is not of type "
           + "delete. Rowkey: " + Bytes.toStringBinary(this.row));
     }
-    if (Bytes.compareTo(this.row, 0, row.length, kv.getBuffer(),
-        kv.getRowOffset(), kv.getRowLength()) != 0) {
+    if (!kv.matchingRow(row)) {
       throw new IOException("The row in the recently added KeyValue "
-          + Bytes.toStringBinary(kv.getBuffer(), kv.getRowOffset(),
-              kv.getRowLength()) + " doesn't match the original one "
+          + Bytes.toStringBinary(kv.getRow()) + " doesn't match the original one "
           + Bytes.toStringBinary(this.row));
     }
     byte [] family = kv.getFamily();
@@ -299,9 +296,9 @@ public class Delete extends Mutation
       int numColumns = in.readInt();
       List<KeyValue> list = new ArrayList<KeyValue>(numColumns);
       for(int j=0;j<numColumns;j++) {
-    	KeyValue kv = new KeyValue();
-    	kv.readFields(in);
-    	list.add(kv);
+       KeyValue kv = new KeyValue();
+       kv.readFields(in);
+       list.add(kv);
       }
       this.familyMap.put(family, list);
     }

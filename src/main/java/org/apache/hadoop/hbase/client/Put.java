@@ -157,13 +157,10 @@ public class Put extends Mutation
     byte [] family = kv.getFamily();
     List<KeyValue> list = getKeyValueList(family);
     //Checking that the row of the kv is the same as the put
-    int res = Bytes.compareTo(this.row, 0, row.length,
-        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
-    if(res != 0) {
-      throw new IOException("The row in the recently added KeyValue " +
-          Bytes.toStringBinary(kv.getBuffer(), kv.getRowOffset(),
-        kv.getRowLength()) + " doesn't match the original one " +
-        Bytes.toStringBinary(this.row));
+    if (!kv.matchingRow(row)) {
+      throw new IOException("The row in the recently added KeyValue "
+          + Bytes.toStringBinary(kv.getRow()) + " doesn't match the original one "
+          + Bytes.toStringBinary(this.row));
     }
     list.add(kv);
     familyMap.put(family, list);
@@ -415,8 +412,7 @@ public class Put extends Mutation
       }
       out.writeInt(totalLen);
       for(KeyValue kv : keys) {
-        out.writeInt(kv.getLength());
-        out.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
+        kv.write(out);
       }
     }
     writeAttributes(out);

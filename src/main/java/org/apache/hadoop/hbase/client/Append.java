@@ -27,7 +27,6 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
 
 /**
  * Performs Append operations on a single row.
@@ -144,10 +143,38 @@ public class Append extends Mutation {
       }
       out.writeInt(totalLen);
       for(KeyValue kv : keys) {
-        out.writeInt(kv.getLength());
-        out.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
+        kv.write(out);
       }
     }
     writeAttributes(out);
+  }
+
+  /**
+   * Add the specified {@link KeyValue} to this operation.
+   * @param kv whose value should be to appended to the specified column
+   * @return <tt?this</tt>
+   * @throws IllegalArgumentException if the row or type does not match <tt>this</tt>
+   */
+  public Append add(KeyValue kv) {
+    if(!(kv.getType() == KeyValue.Type.Put.getCode())){
+      throw new IllegalArgumentException("Added type " + KeyValue.Type.codeToType(kv.getType())
+          + ", but appends can only be of type " + KeyValue.Type.Put + ". Rowkey:"
+          + Bytes.toStringBinary(kv.getRow()));
+    }
+
+    if (!kv.matchingRow(row)) {
+      throw new IllegalArgumentException("The row in the recently added KeyValue "
+          + Bytes.toStringBinary(kv.getRow()) + " doesn't match the original one "
+          + Bytes.toStringBinary(this.row));
+    }
+
+    byte[] family = kv.getFamily();
+    List<KeyValue> list = familyMap.get(family);
+    if (list == null) {
+      list = new ArrayList<KeyValue>();
+      familyMap.put(family, list);
+    }
+    list.add(kv);
+    return this;
   }
 }
