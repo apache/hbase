@@ -269,7 +269,6 @@ public class TestTableMapReduce {
     TableMapReduceUtil.addDependencyJars(job);
     String tmpjars = job.getConfiguration().get("tmpjars");
 
-    assertTrue(tmpjars.contains("hbase"));
     assertTrue(tmpjars.contains("zookeeper"));
     assertTrue(tmpjars.contains("protobuf"));
     assertTrue(tmpjars.contains("guava"));
