@@ -23,6 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -570,6 +571,29 @@ public static void initCredentials(Job job) throws IOException {
       com.google.common.base.Function.class,
       com.google.common.collect.ImmutableSet.class,
       org.apache.hadoop.hbase.util.Bytes.class); //one class from hbase.jar
+  }
+
+   /**
+    * Returns a classpath string built from the content of the "tmpjars" value in {@code conf}.
+    * Also exposed to shell scripts via `bin/hbase mapredcp`.
+    */
+  public static String buildDependencyClasspath(Configuration conf) {
+    if (conf == null) {
+      throw new IllegalArgumentException("Must provide a configuration object.");
+    }
+    Set<String> paths = new HashSet<String>(conf.getStringCollection("tmpjars"));
+    if (paths.size() == 0) {
+      throw new IllegalArgumentException("Configuration contains no tmpjars.");
+    }
+    StringBuilder sb = new StringBuilder();
+    for (String s : paths) {
+      // entries can take the form 'file:/path/to/file.jar'.
+      int idx = s.indexOf(":");
+      if (idx != -1) s = s.substring(idx + 1);
+      if (sb.length() > 0) sb.append(File.pathSeparator);
+      sb.append(s);
+    }
+    return sb.toString();
   }
 
   /**

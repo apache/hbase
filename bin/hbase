@@ -94,6 +94,7 @@ if [ $# = 0 ]; then
   echo ""
   echo "PACKAGE MANAGEMENT"
   echo "  classpath        dump hbase CLASSPATH"
+  echo "  mapredcp         dump CLASSPATH entries required by mapreduce"
   echo "  version          print the version"
   echo ""
   echo " or"
@@ -325,7 +326,8 @@ elif [ "$COMMAND" = "zookeeper" ] ; then
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_ZOOKEEPER_OPTS"
   fi
-
+elif [ "$COMMAND" = "mapredcp" ] ; then
+  CLASS='org.apache.hadoop.hbase.util.MapreduceDependencyClasspathTool'
 elif [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH
   exit 0
