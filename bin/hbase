@@ -92,6 +92,7 @@ if [ $# = 0 ]; then
   echo "  thrift2         Run the HBase Thrift2 server"
   echo "  clean           Run the HBase clean up script"
   echo "  classpath       Dump hbase CLASSPATH"
+  echo "  mapredcp        Dump CLASSPATH entries required by mapreduce"
   echo "  version         Print the version"
   echo "  CLASSNAME       Run the class named CLASSNAME"
   exit 1
@@ -324,7 +325,8 @@ elif [ "$COMMAND" = "clean" ] ; then
   fi
   "$bin"/hbase-cleanup.sh --config ${HBASE_CONF_DIR} $@
   exit $?
-
+elif [ "$COMMAND" = "mapredcp" ] ; then
+  CLASS='org.apache.hadoop.hbase.util.MapreduceDependencyClasspathTool'
 elif [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH
   exit 0
