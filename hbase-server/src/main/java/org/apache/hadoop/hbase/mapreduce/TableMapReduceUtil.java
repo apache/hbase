@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -98,7 +99,6 @@ public class TableMapReduceUtil {
     initTableMapperJob(table, scan, mapper, outputKeyClass, outputValueClass,
         job, true);
   }
-
 
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
@@ -585,6 +585,28 @@ public class TableMapReduceUtil {
       org.cloudera.htrace.Trace.class);
   }
 
+  /**
+   * Returns a classpath string built from the content of the "tmpjars" value in {@code conf}.
+   * Also exposed to shell scripts via `bin/hbase mapredcp`.
+   */
+  public static String buildDependencyClasspath(Configuration conf) {
+    if (conf == null) {
+      throw new IllegalArgumentException("Must provide a configuration object.");
+    }
+    Set<String> paths = new HashSet<String>(conf.getStringCollection("tmpjars"));
+    if (paths.size() == 0) {
+      throw new IllegalArgumentException("Configuration contains no tmpjars.");
+    }
+    StringBuilder sb = new StringBuilder();
+    for (String s : paths) {
+      // entries can take the form 'file:/path/to/file.jar'.
+      int idx = s.indexOf(":");
+      if (idx != -1) s = s.substring(idx + 1);
+      if (sb.length() > 0) sb.append(File.pathSeparator);
+      sb.append(s);
+    }
+    return sb.toString();
+  }
 
   /**
    * Add the HBase dependency jars as well as jars for any of the configured
@@ -646,8 +668,7 @@ public class TableMapReduceUtil {
     }
     if (jars.isEmpty()) return;
 
-    conf.set("tmpjars",
-             StringUtils.arrayToString(jars.toArray(new String[0])));
+    conf.set("tmpjars", StringUtils.arrayToString(jars.toArray(new String[jars.size()])));
   }
 
   /**
