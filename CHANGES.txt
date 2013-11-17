@@ -1,5 +1,48 @@
 HBase Change Log
 
+Release 0.94.14 - 11/17/2013
+Sub-task
+
+    [HBASE-9165] - Improvements to addDependencyJars
+
+Bug
+
+    [HBASE-9138] - getHaseIntegrationTestingUtility() is misspelled
+    [HBASE-9799] - Change Hadoop 1.2 dependency to 1.2.1
+    [HBASE-9809] - RegionTooBusyException should provide region name which was too busy
+    [HBASE-9834] - Minimize byte[] copies for 'smart' clients
+    [HBASE-9849] - [REST] Forbidden schema delete in read only mode
+    [HBASE-9850] - Issues with UI for table compact/split operation completion. After split/compaction operation using UI, the page is not automatically redirecting back using IE8/Firefox.
+    [HBASE-9865] - Reused WALEdits in replication may cause RegionServers to go OOM
+    [HBASE-9872] - ModifyTable does not modify the attributes of a newly modified/changed ColumnDescriptor
+    [HBASE-9890] - MR jobs are not working if started by a delegated user
+    [HBASE-9902] - Region Server is starting normally even if clock skew is more than default 30 seconds(or any configured). -> Regionserver node time is greater than master node time
+    [HBASE-9906] - Restore snapshot fails to restore the meta edits sporadically
+    [HBASE-9915] - Performance: isSeeked() in EncodedScannerV2 always returns false
+    [HBASE-9952] - Snapshot restore may fail due to NullPointerException
+    [HBASE-9956] - Remove keyLength cache from KeyValue
+    [HBASE-9970] - HBase BulkLoad, table is creating with the timestamp key also as a column to the table.
+    [HBASE-9971] - Port part of HBASE-9958 to 0.94 - change lock scope in locateRegion
+    [HBASE-9975] - Not starting ReplicationSink when using custom implementation for the ReplicationSink.
+
+Improvement
+
+    [HBASE-4654] - [replication] Add a check to make sure we don't replicate to ourselves
+    [HBASE-8438] - Extend bin/hbase to print a "mapreduce classpath"
+    [HBASE-9715] - Backport -in_memory option support for LoadTestTool from trunk
+    [HBASE-9894] - remove the inappropriate assert statement in Store.getSplitPoint()
+    [HBASE-9963] - Remove the ReentrantReadWriteLock in the MemStore
+
+Test
+
+    [HBASE-8397] - improve unit-test coverage of package org.apache.hadoop.hbase.master.metrics (0.94)
+    [HBASE-8543] - fix coverage org.apache.hadoop.hbase.rest.client
+    [HBASE-8552] - fix coverage org.apache.hadoop.hbase.rest.filter
+    [HBASE-8556] - fix coverage org.apache.hadoop.hbase.metrics.histogram
+    [HBASE-8557] - fix coverage org.apache.hadoop.hbase.rest.metrics
+    [HBASE-8559] - increase unit-test coverage of package org.apache.hadoop.hbase.coprocessor
+
+
 Release 0.94.13 - 10/29/2013
 Sub-task
 
