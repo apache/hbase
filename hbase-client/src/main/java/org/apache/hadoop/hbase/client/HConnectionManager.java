@@ -35,6 +35,7 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -116,7 +117,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -580,9 +580,9 @@ public class HConnectionManager {
     /**
       * Map of table to table {@link HRegionLocation}s.
       */
-    private final Map<TableName, SoftValueSortedMap<byte[], HRegionLocation>>
+    private final Map<TableName, ConcurrentSkipListMap<byte[], HRegionLocation>>
         cachedRegionLocations =
-      new HashMap<TableName, SoftValueSortedMap<byte[], HRegionLocation>>();
+      new HashMap<TableName, ConcurrentSkipListMap<byte[], HRegionLocation>>();
 
     // The presence of a server in the map implies it's likely that there is an
     // entry in cachedRegionLocations that map to this server; but the absence
@@ -1262,10 +1262,7 @@ public class HConnectionManager {
 
     /*
      * Search the cache for a location that fits our table and row key.
-     * Return null if no suitable region is located. TODO: synchronization note
-     *
-     * <p>TODO: This method during writing consumes 15% of CPU doing lookup
-     * into the Soft Reference SortedMap.  Improve.
+     * Return null if no suitable region is located.
      *
      * @param tableName
      * @param row
@@ -1273,24 +1270,14 @@ public class HConnectionManager {
      */
     HRegionLocation getCachedLocation(final TableName tableName,
         final byte [] row) {
-      SoftValueSortedMap<byte[], HRegionLocation> tableLocations =
+      ConcurrentSkipListMap<byte[], HRegionLocation> tableLocations =
         getTableLocations(tableName);
 
-      // start to examine the cache. we can only do cache actions
-      // if there's something in the cache for this table.
-      if (tableLocations.isEmpty()) {
+      Entry<byte[], HRegionLocation> e = tableLocations.floorEntry(row);
+      if (e == null) {
         return null;
       }
-
-      HRegionLocation possibleRegion = tableLocations.get(row);
-      if (possibleRegion != null) {
-        return possibleRegion;
-      }
-
-      possibleRegion = tableLocations.lowerValueByKey(row);
-      if (possibleRegion == null) {
-        return null;
-      }
+      HRegionLocation possibleRegion = e.getValue();
 
       // make sure that the end key is greater than the row we're looking
       // for, otherwise the row actually belongs in the next region, not
@@ -1319,11 +1306,9 @@ public class HConnectionManager {
         Map<byte[], HRegionLocation> tableLocations = getTableLocations(tableName);
         // start to examine the cache. we can only do cache actions
         // if there's something in the cache for this table.
-        if (!tableLocations.isEmpty()) {
-          rl = getCachedLocation(tableName, row);
-          if (rl != null) {
-            tableLocations.remove(rl.getRegionInfo().getStartKey());
-          }
+        rl = getCachedLocation(tableName, row);
+        if (rl != null) {
+          tableLocations.remove(rl.getRegionInfo().getStartKey());
         }
       }
       if ((rl != null) && LOG.isDebugEnabled()) {
@@ -1365,15 +1350,15 @@ public class HConnectionManager {
      * @param tableName
      * @return Map of cached locations for passed <code>tableName</code>
      */
-    private SoftValueSortedMap<byte[], HRegionLocation> getTableLocations(
+    private ConcurrentSkipListMap<byte[], HRegionLocation> getTableLocations(
         final TableName tableName) {
       // find the map of cached locations for this table
-      SoftValueSortedMap<byte[], HRegionLocation> result;
+      ConcurrentSkipListMap<byte[], HRegionLocation> result;
       synchronized (this.cachedRegionLocations) {
         result = this.cachedRegionLocations.get(tableName);
         // if tableLocations for this table isn't built yet, make one
         if (result == null) {
-          result = new SoftValueSortedMap<byte[], HRegionLocation>(Bytes.BYTES_COMPARATOR);
+          result = new ConcurrentSkipListMap<byte[], HRegionLocation>(Bytes.BYTES_COMPARATOR);
           this.cachedRegionLocations.put(tableName, result);
         }
       }
@@ -1410,17 +1395,23 @@ public class HConnectionManager {
         final HRegionLocation location) {
       boolean isFromMeta = (source == null);
       byte [] startKey = location.getRegionInfo().getStartKey();
-      Map<byte[], HRegionLocation> tableLocations =
+      ConcurrentMap<byte[], HRegionLocation> tableLocations =
         getTableLocations(tableName);
       boolean isNewCacheEntry = false;
       boolean isStaleUpdate = false;
       HRegionLocation oldLocation = null;
       synchronized (this.cachedRegionLocations) {
-        cachedServers.add(location.getServerName());
-        oldLocation = tableLocations.get(startKey);
+        oldLocation = tableLocations.putIfAbsent(startKey, location);
         isNewCacheEntry = (oldLocation == null);
+        if (isNewCacheEntry){
+          cachedServers.add(location.getServerName());
+          return;
+        }
+        boolean updateCache;
         // If the server in cache sends us a redirect, assume it's always valid.
-        if (!isNewCacheEntry && !oldLocation.equals(source)) {
+        if (oldLocation.equals(source)) {
+          updateCache = true;
+        } else {
           long newLocationSeqNum = location.getSeqNum();
           // Meta record is stale - some (probably the same) server has closed the region
           // with later seqNum and told us about the new location.
@@ -1432,23 +1423,11 @@ public class HConnectionManager {
           // an additional counter on top of seqNum would be necessary to handle them all.
           boolean isStaleRedirect = !isFromMeta && (oldLocation.getSeqNum() >= newLocationSeqNum);
           isStaleUpdate = (isStaleMetaRecord || isStaleRedirect);
+          updateCache = (!isStaleUpdate);
         }
-        if (!isStaleUpdate) {
+        if (updateCache) {
           tableLocations.put(startKey, location);
-        }
-      }
-      if (isNewCacheEntry) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Cached location for " +
-            location.getRegionInfo().getRegionNameAsString() +
-            " is " + location.getHostnamePort());
-        }
-      } else if (isStaleUpdate && !location.equals(oldLocation)) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Ignoring stale location update for "
-            + location.getRegionInfo().getRegionNameAsString() + ": "
-            + location.getHostnamePort() + " at " + location.getSeqNum() + "; local "
-            + oldLocation.getHostnamePort() + " at " + oldLocation.getSeqNum());
+          cachedServers.add(location.getServerName());
         }
       }
     }
@@ -2157,9 +2136,7 @@ public class HConnectionManager {
     void updateCachedLocation(HRegionInfo hri, HRegionLocation source,
                               ServerName serverName, long seqNum) {
       HRegionLocation newHrl = new HRegionLocation(hri, serverName, seqNum);
-      synchronized (this.cachedRegionLocations) {
-        cacheLocation(hri.getTable(), source, newHrl);
-      }
+      cacheLocation(hri.getTable(), source, newHrl);
     }
 
    /**
@@ -2168,18 +2145,9 @@ public class HConnectionManager {
     * @param source The source of the error that prompts us to invalidate cache.
     */
     void deleteCachedLocation(HRegionInfo hri, HRegionLocation source) {
-      boolean isStaleDelete = false;
-      HRegionLocation oldLocation;
       synchronized (this.cachedRegionLocations) {
-        Map<byte[], HRegionLocation> tableLocations = getTableLocations(hri.getTable());
-        oldLocation = tableLocations.get(hri.getStartKey());
-        if (oldLocation != null) {
-           // Do not delete the cache entry if it's not for the same server that gave us the error.
-          isStaleDelete = (source != null) && !oldLocation.equals(source);
-          if (!isStaleDelete) {
-            tableLocations.remove(hri.getStartKey());
-          }
-        }
+        ConcurrentMap<byte[], HRegionLocation> tableLocations = getTableLocations(hri.getTable());
+        tableLocations.remove(hri.getStartKey(), source);
       }
     }
 
@@ -2188,21 +2156,18 @@ public class HConnectionManager {
       if (location == null) {
         return;
       }
+
+      HRegionLocation removedLocation;
+      TableName tableName = location.getRegionInfo().getTable();
       synchronized (this.cachedRegionLocations) {
-        TableName tableName = location.getRegionInfo().getTable();
-        Map<byte[], HRegionLocation> tableLocations =
-            getTableLocations(tableName);
-        if (!tableLocations.isEmpty()) {
-          // Delete if there's something in the cache for this region.
-          HRegionLocation removedLocation =
-          tableLocations.remove(location.getRegionInfo().getStartKey());
-          if (LOG.isDebugEnabled() && removedLocation != null) {
-            LOG.debug("Removed " +
-                location.getRegionInfo().getRegionNameAsString() +
-                " for tableName=" + tableName +
-                " from cache");
-          }
-        }
+        Map<byte[], HRegionLocation> tableLocations = getTableLocations(tableName);
+        removedLocation = tableLocations.remove(location.getRegionInfo().getStartKey());
+      }
+      if (LOG.isDebugEnabled() && removedLocation != null) {
+        LOG.debug("Removed " +
+            location.getRegionInfo().getRegionNameAsString() +
+            " for tableName=" + tableName +
+            " from cache");
       }
     }
 
