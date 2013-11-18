@@ -662,7 +662,8 @@ public class ReplicationSource extends Thread
    * @param edit The KV to check for replication
    */
   protected void removeNonReplicableEdits(WALEdit edit) {
-    ArrayList<KeyValue> kvs = edit.getKeyValues();
+    // for backward compatibility WALEdit returns a List
+    ArrayList<KeyValue> kvs = (ArrayList<KeyValue>)edit.getKeyValues();
     int size = edit.size();
     for (int i = size-1; i >= 0; i--) {
       KeyValue kv = kvs.get(i);

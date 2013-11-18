@@ -132,7 +132,7 @@ public class WALEdit implements Writable, HeapSize {
     return kvs.size();
   }
 
-  public ArrayList<KeyValue> getKeyValues() {
+  public List<KeyValue> getKeyValues() {
     return kvs;
   }
 
