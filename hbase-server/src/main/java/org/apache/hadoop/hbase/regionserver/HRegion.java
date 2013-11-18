@@ -759,8 +759,23 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public static HDFSBlocksDistribution computeHDFSBlocksDistribution(final Configuration conf,
       final HTableDescriptor tableDescriptor, final HRegionInfo regionInfo) throws IOException {
-    HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
     Path tablePath = FSUtils.getTableDir(FSUtils.getRootDir(conf), tableDescriptor.getTableName());
+    return computeHDFSBlocksDistribution(conf, tableDescriptor, regionInfo, tablePath);
+  }
+
+  /**
+   * This is a helper function to compute HDFS block distribution on demand
+   * @param conf configuration
+   * @param tableDescriptor HTableDescriptor of the table
+   * @param regionInfo encoded name of the region
+   * @param tablePath the table directory
+   * @return The HDFS blocks distribution for the given region.
+   * @throws IOException
+   */
+  public static HDFSBlocksDistribution computeHDFSBlocksDistribution(final Configuration conf,
+      final HTableDescriptor tableDescriptor, final HRegionInfo regionInfo,  Path tablePath)
+      throws IOException {
+    HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
     FileSystem fs = tablePath.getFileSystem(conf);
 
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tablePath, regionInfo);
@@ -4014,11 +4029,36 @@ public class HRegion implements HeapSize { // , Writable{
                                       final HLog hlog,
                                       final boolean initialize, final boolean ignoreHLog)
       throws IOException {
+      Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
+      return createHRegion(info, rootDir, tableDir, conf, hTableDescriptor, hlog, initialize, ignoreHLog);
+  }
+
+  /**
+   * Convenience method creating new HRegions. Used by createTable.
+   * The {@link HLog} for the created region needs to be closed
+   * explicitly, if it is not null.
+   * Use {@link HRegion#getLog()} to get access.
+   *
+   * @param info Info for region to create.
+   * @param rootDir Root directory for HBase instance
+   * @param tableDir table directory
+   * @param conf
+   * @param hTableDescriptor
+   * @param hlog shared HLog
+   * @param initialize - true to initialize the region
+   * @param ignoreHLog - true to skip generate new hlog if it is null, mostly for createTable
+   * @return new HRegion
+   * @throws IOException
+   */
+  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir, final Path tableDir,
+                                      final Configuration conf,
+                                      final HTableDescriptor hTableDescriptor,
+                                      final HLog hlog,
+                                      final boolean initialize, final boolean ignoreHLog)
+      throws IOException {
     LOG.info("creating HRegion " + info.getTable().getNameAsString()
         + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
         " Table name == " + info.getTable().getNameAsString());
-
-    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
     FileSystem fs = FileSystem.get(conf);
     HRegionFileSystem rfs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, info);
     HLog effectiveHLog = hlog;
@@ -4176,14 +4216,38 @@ public class HRegion implements HeapSize { // , Writable{
       final Path rootDir, final HRegionInfo info, final HTableDescriptor htd, final HLog wal,
       final RegionServerServices rsServices, final CancelableProgressable reporter)
       throws IOException {
+    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
+    return openHRegion(conf, fs, rootDir, tableDir, info, htd, wal, rsServices, reporter);
+  }
+
+  /**
+   * Open a Region.
+   * @param conf The Configuration object to use.
+   * @param fs Filesystem to use
+   * @param rootDir Root directory for HBase instance
+   * @param info Info for region to be opened.
+   * @param htd the table descriptor
+   * @param wal HLog for region to use. This method will call
+   * HLog#setSequenceNumber(long) passing the result of the call to
+   * HRegion#getMinSequenceId() to ensure the log id is properly kept
+   * up.  HRegionStore does this every time it opens a new region.
+   * @param rsServices An interface we can request flushes against.
+   * @param reporter An interface we can report progress against.
+   * @return new HRegion
+   * @throws IOException
+   */
+  public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
+      final Path rootDir, final Path tableDir, final HRegionInfo info, final HTableDescriptor htd, final HLog wal,
+      final RegionServerServices rsServices, final CancelableProgressable reporter)
+      throws IOException {
     if (info == null) throw new NullPointerException("Passed region info is null");
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
     }
-    Path dir = FSUtils.getTableDir(rootDir, info.getTable());
-    HRegion r = HRegion.newHRegion(dir, wal, fs, conf, info, htd, rsServices);
+    HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, rsServices);
     return r.openHRegion(reporter);
   }
+
 
   /**
    * Useful when reopening a closed region (normally for unit tests)

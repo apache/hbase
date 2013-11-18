@@ -664,7 +664,7 @@ public class TestRegionPlacement {
 
   /**
    * Create a table with specified table name and region number.
-   * @param table
+   * @param tablename
    * @param regionNum
    * @return
    * @throws IOException

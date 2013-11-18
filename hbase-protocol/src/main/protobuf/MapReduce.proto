@@ -18,15 +18,18 @@
 
  //This file includes protocol buffers used in MapReduce only.
 
- option java_package = "org.apache.hadoop.hbase.protobuf.generated";
- option java_outer_classname = "MapReduceProtos";
- option java_generate_equals_and_hash = true;
- option optimize_for = SPEED;
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "MapReduceProtos";
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
 
- import "HBase.proto";
+import "HBase.proto";
 
- message ScanMetrics {
+message ScanMetrics {
+  repeated NameInt64Pair metrics = 1;
+}
 
-    repeated NameInt64Pair metrics = 1;
-
- }
+message TableSnapshotRegionSplit {
+  optional RegionSpecifier region = 1;
+  repeated string locations = 2;
+}

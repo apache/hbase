@@ -18,15 +18,61 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Helper class for custom client scanners.
  */
 @InterfaceAudience.Private
 public abstract class AbstractClientScanner implements ResultScanner {
+
+  protected ScanMetrics scanMetrics;
+
+  /**
+   * Check and initialize if application wants to collect scan metrics
+   */
+  protected void initScanMetrics(Scan scan) {
+    // check if application wants to collect scan metrics
+    byte[] enableMetrics = scan.getAttribute(
+      Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
+    if (enableMetrics != null && Bytes.toBoolean(enableMetrics)) {
+      scanMetrics = new ScanMetrics();
+    }
+  }
+
+  // TODO: should this be at ResultScanner? ScanMetrics is not public API it seems.
+  public ScanMetrics getScanMetrics() {
+    return scanMetrics;
+  }
+
+  /**
+   * Get <param>nbRows</param> rows.
+   * How many RPCs are made is determined by the {@link Scan#setCaching(int)}
+   * setting (or hbase.client.scanner.caching in hbase-site.xml).
+   * @param nbRows number of rows to return
+   * @return Between zero and <param>nbRows</param> RowResults.  Scan is done
+   * if returned array is of zero-length (We never return null).
+   * @throws IOException
+   */
+  @Override
+  public Result [] next(int nbRows) throws IOException {
+    // Collect values to be returned here
+    ArrayList<Result> resultSets = new ArrayList<Result>(nbRows);
+    for(int i = 0; i < nbRows; i++) {
+      Result next = next();
+      if (next != null) {
+        resultSets.add(next);
+      } else {
+        break;
+      }
+    }
+    return resultSets.toArray(new Result[resultSets.size()]);
+  }
 
   @Override
   public Iterator<Result> iterator() {
@@ -38,6 +84,7 @@ public abstract class AbstractClientScanner implements ResultScanner {
       // this method is where the actual advancing takes place, but you need
       // to call next() to consume it. hasNext() will only advance if there
       // isn't a pending next().
+      @Override
       public boolean hasNext() {
         if (next == null) {
           try {
@@ -52,6 +99,7 @@ public abstract class AbstractClientScanner implements ResultScanner {
 
       // get the pending next item and advance the iterator. returns null if
       // there is no next item.
+      @Override
       public Result next() {
         // since hasNext() does the real advancing, we call this to determine
         // if there is a next before proceeding.
@@ -67,6 +115,7 @@ public abstract class AbstractClientScanner implements ResultScanner {
         return temp;
       }
 
+      @Override
       public void remove() {
         throw new UnsupportedOperationException();
       }

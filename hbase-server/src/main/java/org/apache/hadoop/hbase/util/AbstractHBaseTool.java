@@ -54,7 +54,7 @@ public abstract class AbstractHBaseTool implements Tool {
   protected Configuration conf = null;
 
   private static final Set<String> requiredOptions = new TreeSet<String>();
-  
+
   protected String[] cmdLineArgs = null;
 
   /**
@@ -149,6 +149,11 @@ public abstract class AbstractHBaseTool implements Tool {
   protected void addRequiredOptWithArg(String opt, String description) {
     requiredOptions.add(opt);
     addOptWithArg(opt, description);
+  }
+
+  protected void addRequiredOptWithArg(String shortOpt, String longOpt, String description) {
+    requiredOptions.add(longOpt);
+    addOptWithArg(shortOpt, longOpt, description);
   }
 
   protected void addOptNoArg(String opt, String description) {

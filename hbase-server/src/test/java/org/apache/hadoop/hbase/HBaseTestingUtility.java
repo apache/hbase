@@ -162,6 +162,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    *  mini dfs.
    *  @deprecated can be used only with mini dfs
    */
+  @Deprecated
   private static final String TEST_DIRECTORY_KEY = "test.build.data";
 
   /** Filesystem URI used for map-reduce mini-cluster setup */
@@ -1625,24 +1626,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException
    */
   public int loadTable(final HTable t, final byte[] f) throws IOException {
-    t.setAutoFlush(false, true);
-    byte[] k = new byte[3];
-    int rowCount = 0;
-    for (byte b1 = 'a'; b1 <= 'z'; b1++) {
-      for (byte b2 = 'a'; b2 <= 'z'; b2++) {
-        for (byte b3 = 'a'; b3 <= 'z'; b3++) {
-          k[0] = b1;
-          k[1] = b2;
-          k[2] = b3;
-          Put put = new Put(k);
-          put.add(f, null, k);
-          t.put(put);
-          rowCount++;
-        }
-      }
-    }
-    t.flushCommits();
-    return rowCount;
+    return loadTable(t, new byte[][] {f});
   }
 
   /**
@@ -1653,26 +1637,81 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException
    */
   public int loadTable(final HTable t, final byte[][] f) throws IOException {
-    t.setAutoFlush(false, true);
-    byte[] k = new byte[3];
+    return loadTable(t, f, null);
+  }
+
+  /**
+   * Load table of multiple column families with rows from 'aaa' to 'zzz'.
+   * @param t Table
+   * @param f Array of Families to load
+   * @param value the values of the cells. If null is passed, the row key is used as value
+   * @return Count of rows loaded.
+   * @throws IOException
+   */
+  public int loadTable(final HTable t, final byte[][] f, byte[] value) throws IOException {
+    t.setAutoFlush(false);
     int rowCount = 0;
-    for (byte b1 = 'a'; b1 <= 'z'; b1++) {
-      for (byte b2 = 'a'; b2 <= 'z'; b2++) {
-        for (byte b3 = 'a'; b3 <= 'z'; b3++) {
-          k[0] = b1;
-          k[1] = b2;
-          k[2] = b3;
-          Put put = new Put(k);
-          for (int i = 0; i < f.length; i++) {
-            put.add(f[i], null, k);
-          }
-          t.put(put);
-          rowCount++;
-        }
+    for (byte[] row : HBaseTestingUtility.ROWS) {
+      Put put = new Put(row);
+      for (int i = 0; i < f.length; i++) {
+        put.add(f[i], null, value != null ? value : row);
       }
+      t.put(put);
+      rowCount++;
     }
     t.flushCommits();
     return rowCount;
+  }
+
+  /** A tracker for tracking and validating table rows
+   * generated with {@link HBaseTestingUtility#loadTable(HTable, byte[])}
+   */
+  public static class SeenRowTracker {
+    int dim = 'z' - 'a' + 1;
+    int[][][] seenRows = new int[dim][dim][dim]; //count of how many times the row is seen
+    byte[] startRow;
+    byte[] stopRow;
+
+    public SeenRowTracker(byte[] startRow, byte[] stopRow) {
+      this.startRow = startRow;
+      this.stopRow = stopRow;
+    }
+
+    void reset() {
+      for (byte[] row : ROWS) {
+        seenRows[i(row[0])][i(row[1])][i(row[2])] = 0;
+      }
+    }
+
+    int i(byte b) {
+      return b - 'a';
+    }
+
+    public void addRow(byte[] row) {
+      seenRows[i(row[0])][i(row[1])][i(row[2])]++;
+    }
+
+    /** Validate that all the rows between startRow and stopRow are seen exactly once, and
+     * all other rows none
+     */
+    public void validate() {
+      for (byte b1 = 'a'; b1 <= 'z'; b1++) {
+        for (byte b2 = 'a'; b2 <= 'z'; b2++) {
+          for (byte b3 = 'a'; b3 <= 'z'; b3++) {
+            int count = seenRows[i(b1)][i(b2)][i(b3)];
+            int expectedCount = 0;
+            if (Bytes.compareTo(new byte[] {b1,b2,b3}, startRow) >= 0
+                && Bytes.compareTo(new byte[] {b1,b2,b3}, stopRow) < 0) {
+              expectedCount = 1;
+            }
+            if (count != expectedCount) {
+              String row = new String(new byte[] {b1,b2,b3});
+              throw new RuntimeException("Row:" + row + " has a seen count of " + count + " instead of " + expectedCount);
+            }
+          }
+        }
+      }
+    }
   }
 
   public int loadRegion(final HRegion r, final byte[] f) throws IOException {
@@ -1784,6 +1823,22 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public int createMultiRegions(HTable table, byte[] columnFamily)
   throws IOException {
     return createMultiRegions(getConfiguration(), table, columnFamily);
+  }
+
+  /** All the row values for the data loaded by {@link #loadTable(HTable, byte[])} */
+  public static final byte[][] ROWS = new byte[(int) Math.pow('z' - 'a' + 1, 3)][3]; // ~52KB
+  static {
+    int i = 0;
+    for (byte b1 = 'a'; b1 <= 'z'; b1++) {
+      for (byte b2 = 'a'; b2 <= 'z'; b2++) {
+        for (byte b3 = 'a'; b3 <= 'z'; b3++) {
+          ROWS[i][0] = b1;
+          ROWS[i][1] = b2;
+          ROWS[i][2] = b3;
+          i++;
+        }
+      }
+    }
   }
 
   public static final byte[][] KEYS = {
@@ -3214,6 +3269,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         final RegionStates regionStates = getMiniHBaseCluster().getMaster()
             .getAssignmentManager().getRegionStates();
         return !regionStates.isRegionsInTransition();
+      }
+    };
+  }
+
+  /**
+   * Returns a {@link Predicate} for checking that table is enabled
+   */
+  public Waiter.Predicate<Exception> predicateTableEnabled(final TableName tableName) {
+    return new Waiter.Predicate<Exception>() {
+     @Override
+     public boolean evaluate() throws Exception {
+       return getHBaseAdmin().isTableEnabled(tableName);
       }
     };
   }

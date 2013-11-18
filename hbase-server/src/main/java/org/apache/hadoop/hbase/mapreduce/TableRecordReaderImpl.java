@@ -35,11 +35,9 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -97,7 +95,7 @@ public class TableRecordReaderImpl {
    * @return The getCounter method or null if not available.
    * @throws IOException
    */
-  private Method retrieveGetCounterWithStringsParams(TaskAttemptContext context)
+  protected static Method retrieveGetCounterWithStringsParams(TaskAttemptContext context)
   throws IOException {
     Method m = null;
     try {
@@ -253,11 +251,6 @@ public class TableRecordReaderImpl {
    * @throws IOException
    */
   private void updateCounters() throws IOException {
-    // we can get access to counters only if hbase uses new mapreduce APIs
-    if (this.getCounter == null) {
-      return;
-    }
-
     byte[] serializedMetrics = currentScan.getAttribute(
         Scan.SCAN_ATTRIBUTES_METRICS_DATA);
     if (serializedMetrics == null || serializedMetrics.length == 0 ) {
@@ -266,16 +259,25 @@ public class TableRecordReaderImpl {
 
     ScanMetrics scanMetrics = ProtobufUtil.toScanMetrics(serializedMetrics);
 
+    updateCounters(scanMetrics, numRestarts, getCounter, context);
+  }
+
+  protected static void updateCounters(ScanMetrics scanMetrics, long numScannerRestarts,
+      Method getCounter, TaskAttemptContext context) {
+    // we can get access to counters only if hbase uses new mapreduce APIs
+    if (getCounter == null) {
+      return;
+    }
+
     try {
       for (Map.Entry<String, Long> entry:scanMetrics.getMetricsMap().entrySet()) {
-        Counter ct = (Counter)this.getCounter.invoke(context,
+        Counter ct = (Counter)getCounter.invoke(context,
             HBASE_COUNTER_GROUP_NAME, entry.getKey());
 
         ct.increment(entry.getValue());
       }
-
-      ((Counter) this.getCounter.invoke(context, HBASE_COUNTER_GROUP_NAME,
-          "NUM_SCANNER_RESTARTS")).increment(numRestarts);
+      ((Counter) getCounter.invoke(context, HBASE_COUNTER_GROUP_NAME,
+          "NUM_SCANNER_RESTARTS")).increment(numScannerRestarts);
     } catch (Exception e) {
       LOG.debug("can't update counter." + StringUtils.stringifyException(e));
     }

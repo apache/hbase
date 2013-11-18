@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 
 import org.apache.commons.logging.Log;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
@@ -62,7 +60,6 @@ public class ClientScanner extends AbstractClientScanner {
     protected long lastNext;
     // Keep lastResult returned successfully in case we have to reset scanner.
     protected Result lastResult = null;
-    protected ScanMetrics scanMetrics = null;
     protected final long maxScannerResultSize;
     private final HConnection connection;
     private final TableName tableName;
@@ -151,11 +148,7 @@ public class ClientScanner extends AbstractClientScanner {
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
 
       // check if application wants to collect scan metrics
-      byte[] enableMetrics = scan.getAttribute(
-        Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
-      if (enableMetrics != null && Bytes.toBoolean(enableMetrics)) {
-        scanMetrics = new ScanMetrics();
-      }
+      initScanMetrics(scan);
 
       // Use the caching from the Scan.  If not set, use the default cache setting for this table.
       if (this.scan.getCaching() > 0) {
@@ -170,7 +163,7 @@ public class ClientScanner extends AbstractClientScanner {
 
       initializeScannerInConstruction();
     }
-  
+
     protected void initializeScannerInConstruction() throws IOException{
       // initialize the scanner
       nextScanner(this.caching, false);
@@ -427,30 +420,6 @@ public class ClientScanner extends AbstractClientScanner {
       // if we exhausted this scanner before calling close, write out the scan metrics
       writeScanMetrics();
       return null;
-    }
-
-    /**
-     * Get <param>nbRows</param> rows.
-     * How many RPCs are made is determined by the {@link Scan#setCaching(int)}
-     * setting (or hbase.client.scanner.caching in hbase-site.xml).
-     * @param nbRows number of rows to return
-     * @return Between zero and <param>nbRows</param> RowResults.  Scan is done
-     * if returned array is of zero-length (We never return null).
-     * @throws IOException
-     */
-    @Override
-    public Result [] next(int nbRows) throws IOException {
-      // Collect values to be returned here
-      ArrayList<Result> resultSets = new ArrayList<Result>(nbRows);
-      for(int i = 0; i < nbRows; i++) {
-        Result next = next();
-        if (next != null) {
-          resultSets.add(next);
-        } else {
-          break;
-        }
-      }
-      return resultSets.toArray(new Result[resultSets.size()]);
     }
 
     @Override

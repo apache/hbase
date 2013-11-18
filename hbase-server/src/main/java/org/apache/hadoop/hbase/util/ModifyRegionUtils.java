@@ -84,6 +84,26 @@ public abstract class ModifyRegionUtils {
   public static List<HRegionInfo> createRegions(final Configuration conf, final Path rootDir,
       final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions,
       final RegionFillTask task) throws IOException {
+
+      Path tableDir = FSUtils.getTableDir(rootDir, hTableDescriptor.getTableName());
+      return createRegions(conf, rootDir, tableDir, hTableDescriptor, newRegions, task);
+  }
+
+  /**
+   * Create new set of regions on the specified file-system.
+   * NOTE: that you should add the regions to hbase:meta after this operation.
+   *
+   * @param conf {@link Configuration}
+   * @param rootDir Root directory for HBase instance
+   * @param tableDir table directory
+   * @param hTableDescriptor description of the table
+   * @param newRegions {@link HRegionInfo} that describes the regions to create
+   * @param task {@link RegionFillTask} custom code to populate region after creation
+   * @throws IOException
+   */
+  public static List<HRegionInfo> createRegions(final Configuration conf, final Path rootDir,
+      final Path tableDir, final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions,
+      final RegionFillTask task) throws IOException {
     if (newRegions == null) return null;
     int regionNumber = newRegions.length;
     ThreadPoolExecutor regionOpenAndInitThreadPool = getRegionOpenAndInitThreadPool(conf,
@@ -93,26 +113,14 @@ public abstract class ModifyRegionUtils {
     List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
     for (final HRegionInfo newRegion : newRegions) {
       completionService.submit(new Callable<HRegionInfo>() {
+        @Override
         public HRegionInfo call() throws IOException {
-          // 1. Create HRegion
-          HRegion region = HRegion.createHRegion(newRegion,
-              rootDir, conf, hTableDescriptor, null,
-              false, true);
-          try {
-            // 2. Custom user code to interact with the created region
-            if (task != null) {
-              task.fillRegion(region);
-            }
-          } finally {
-            // 3. Close the new region to flush to disk. Close log file too.
-            region.close();
-          }
-          return region.getRegionInfo();
+          return createRegion(conf, rootDir, tableDir, hTableDescriptor, newRegion, task);
         }
       });
     }
     try {
-      // 4. wait for all regions to finish creation
+      // wait for all regions to finish creation
       for (int i = 0; i < regionNumber; i++) {
         Future<HRegionInfo> future = completionService.take();
         HRegionInfo regionInfo = future.get();
@@ -129,6 +137,35 @@ public abstract class ModifyRegionUtils {
     return regionInfos;
   }
 
+  /**
+   * Create new set of regions on the specified file-system.
+   * @param conf {@link Configuration}
+   * @param rootDir Root directory for HBase instance
+   * @param tableDir table directory
+   * @param hTableDescriptor description of the table
+   * @param newRegion {@link HRegionInfo} that describes the region to create
+   * @param task {@link RegionFillTask} custom code to populate region after creation
+   * @throws IOException
+   */
+  public static HRegionInfo createRegion(final Configuration conf, final Path rootDir,
+      final Path tableDir, final HTableDescriptor hTableDescriptor, final HRegionInfo newRegion,
+      final RegionFillTask task) throws IOException {
+    // 1. Create HRegion
+    HRegion region = HRegion.createHRegion(newRegion,
+      rootDir, tableDir, conf, hTableDescriptor, null,
+      false, true);
+    try {
+      // 2. Custom user code to interact with the created region
+      if (task != null) {
+        task.fillRegion(region);
+      }
+    } finally {
+      // 3. Close the new region to flush to disk. Close log file too.
+      region.close();
+    }
+    return region.getRegionInfo();
+  }
+
   /*
    * used by createRegions() to get the thread pool executor based on the
    * "hbase.hregion.open.and.init.threads.max" property.
@@ -142,6 +179,7 @@ public abstract class ModifyRegionUtils {
         new ThreadFactory() {
           private int count = 1;
 
+          @Override
           public Thread newThread(Runnable r) {
             Thread t = new Thread(r, threadNamePrefix + "-" + count++);
             return t;

@@ -82,7 +82,7 @@ public final class CellUtil {
     copyValueTo(cell, output, 0);
     return output;
   }
-  
+
   public static byte[] getTagArray(Cell cell){
     byte[] output = new byte[cell.getTagsLength()];
     copyTagTo(cell, output, 0);
@@ -413,5 +413,17 @@ public final class CellUtil {
         throw new UnsupportedOperationException();
       }
     };
+  }
+
+  /**
+   * Returns true if the first range start1...end1 overlaps with the second range
+   * start2...end2, assuming the byte arrays represent row keys
+   */
+  public static boolean overlappingKeys(final byte[] start1, final byte[] end1,
+      final byte[] start2, final byte[] end2) {
+    return (end2.length == 0 || start1.length == 0 || Bytes.compareTo(start1,
+        end2) < 0)
+        && (end1.length == 0 || start2.length == 0 || Bytes.compareTo(start2,
+            end1) < 0);
   }
 }

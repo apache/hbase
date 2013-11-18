@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -37,23 +37,24 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -471,8 +472,9 @@ public class RestoreSnapshotHelper {
     }
 
     // create the regions on disk
-    ModifyRegionUtils.createRegions(conf, rootDir,
+    ModifyRegionUtils.createRegions(conf, rootDir, tableDir,
       tableDesc, clonedRegionsInfo, new ModifyRegionUtils.RegionFillTask() {
+        @Override
         public void fillRegion(final HRegion region) throws IOException {
           cloneRegion(region, snapshotRegions.get(region.getRegionInfo().getEncodedName()));
         }
@@ -499,6 +501,7 @@ public class RestoreSnapshotHelper {
     final String tableName = tableDesc.getTableName().getNameAsString();
     SnapshotReferenceUtil.visitRegionStoreFiles(fs, snapshotRegionDir,
       new FSVisitor.StoreFileVisitor() {
+        @Override
         public void storeFile (final String region, final String family, final String hfile)
             throws IOException {
           LOG.info("Adding HFileLink " + hfile + " to table=" + tableName);
@@ -627,10 +630,13 @@ public class RestoreSnapshotHelper {
   private void restoreWALs() throws IOException {
     final SnapshotLogSplitter logSplitter = new SnapshotLogSplitter(conf, fs, tableDir,
         snapshotTable, regionsMap);
+    // TODO: use executors to parallelize splitting
+    // TODO: once split, we do not need to split again for other restores
     try {
       // Recover.Edits
       SnapshotReferenceUtil.visitRecoveredEdits(fs, snapshotDir,
           new FSVisitor.RecoveredEditsVisitor() {
+        @Override
         public void recoveredEdits (final String region, final String logfile) throws IOException {
           Path path = SnapshotReferenceUtil.getRecoveredEdits(snapshotDir, region, logfile);
           logSplitter.splitRecoveredEdit(path);
@@ -639,6 +645,7 @@ public class RestoreSnapshotHelper {
 
       // Region Server Logs
       SnapshotReferenceUtil.visitLogFiles(fs, snapshotDir, new FSVisitor.LogFileVisitor() {
+        @Override
         public void logFile (final String server, final String logfile) throws IOException {
           logSplitter.splitLog(server, logfile);
         }
@@ -688,5 +695,46 @@ public class RestoreSnapshotHelper {
       htd.setConfiguration(e.getKey(), e.getValue());
     }
     return htd;
+  }
+
+  /**
+   * Copy the snapshot files for a snapshot scanner, discards meta changes.
+   * @param conf
+   * @param fs
+   * @param rootDir
+   * @param restoreDir
+   * @param snapshotName
+   * @throws IOException
+   */
+  public static void copySnapshotForScanner(Configuration conf, FileSystem fs, Path rootDir,
+      Path restoreDir, String snapshotName) throws IOException {
+    // ensure that restore dir is not under root dir
+    if (!restoreDir.getFileSystem(conf).getUri().equals(rootDir.getFileSystem(conf).getUri())) {
+      throw new IllegalArgumentException("Filesystems for restore directory and HBase root directory " +
+          "should be the same");
+    }
+    if (restoreDir.toUri().getPath().startsWith(rootDir.toUri().getPath())) {
+      throw new IllegalArgumentException("Restore directory cannot be a sub directory of HBase " +
+          "root directory. RootDir: " + rootDir + ", restoreDir: " + restoreDir);
+    }
+
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
+    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+
+    //load table descriptor
+    HTableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, snapshotDir);
+
+    MonitoredTask status = TaskMonitor.get().createStatus(
+        "Restoring  snapshot '" + snapshotName + "' to directory " + restoreDir);
+    ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher();
+
+    RestoreSnapshotHelper helper = new RestoreSnapshotHelper(conf, fs, snapshotDesc,
+        snapshotDir, htd, restoreDir, monitor, status);
+    helper.restoreHdfsRegions(); // TODO: parallelize.
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Restored table dir:" + restoreDir);
+      FSUtils.logFileSystemState(fs, restoreDir, LOG);
+    }
   }
 }
