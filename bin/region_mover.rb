@@ -413,7 +413,7 @@ end
 def getFilename(options, targetServer)
   filename = options[:file]
   if not filename
-    filename = "/tmp/" + targetServer
+    filename = "/tmp/" + ENV['USER'] + targetServer
   end
   return filename
 end
