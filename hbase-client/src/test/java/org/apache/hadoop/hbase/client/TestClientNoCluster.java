@@ -25,6 +25,7 @@ import java.net.SocketTimeoutException;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
@@ -269,7 +270,7 @@ public class TestClientNoCluster extends Configured implements Tool {
           thenReturn(ClientProtos.ScanResponse.newBuilder().setScannerId(sid).build()).
           thenThrow(new ServiceException(new RegionServerStoppedException("From Mockito"))).
           thenReturn(ClientProtos.ScanResponse.newBuilder().setScannerId(sid).
-            setMoreResults(false).build());
+              setMoreResults(false).build());
       } catch (ServiceException e) {
         throw new IOException(e);
       }
@@ -301,7 +302,7 @@ public class TestClientNoCluster extends Configured implements Tool {
           thenReturn(ClientProtos.ScanResponse.newBuilder().setScannerId(sid).build()).
           thenThrow(new ServiceException(new RegionServerStoppedException("From Mockito"))).
           thenReturn(ClientProtos.ScanResponse.newBuilder().setScannerId(sid).
-            setMoreResults(false).build());
+              setMoreResults(false).build());
       } catch (ServiceException e) {
         throw new IOException(e);
       }
@@ -658,8 +659,6 @@ public class TestClientNoCluster extends Configured implements Tool {
   /**
    * Create up a map that is keyed by meta row name and whose value is the HRegionInfo and
    * ServerName to return for this row.
-   * @param hris
-   * @param serverNames
    * @return Map with faked hbase:meta content in it.
    */
   static SortedMap<byte [], Pair<HRegionInfo, ServerName>> makeMeta(final byte [] tableName,
@@ -681,21 +680,24 @@ public class TestClientNoCluster extends Configured implements Tool {
 
   /**
    * Code for each 'client' to run.
+   *
+   * @param id
    * @param c
    * @param sharedConnection
    * @throws IOException
    */
-  static void cycle(final Configuration c, final HConnection sharedConnection) throws IOException {
+  static void cycle(int id, final Configuration c, final HConnection sharedConnection) throws IOException {
     HTableInterface table = sharedConnection.getTable(BIG_USER_TABLE);
     table.setAutoFlushTo(false);
     long namespaceSpan = c.getLong("hbase.test.namespace.span", 1000000);
     long startTime = System.currentTimeMillis();
     final int printInterval = 100000;
+    Random rd = new Random(id);
     try {
       Stopwatch stopWatch = new Stopwatch();
       stopWatch.start();
       for (int i = 0; i < namespaceSpan; i++) {
-        byte [] b = format(i);
+        byte [] b = format(rd.nextLong());
         Put p = new Put(b);
         p.add(HConstants.CATALOG_FAMILY, b, b);
         if (i % printInterval == 0) {
@@ -721,7 +723,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     // How many regions to put on the faked servers.
     final int regions = 100000;
     // How many 'keys' in the faked regions.
-    final long namespaceSpan = 1000000;
+    final long namespaceSpan = 50000000;
     // How long to take to pause after doing a put; make this long if you want to fake a struggling
     // server.
     final long multiPause = 0;
@@ -749,7 +751,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     getConf().setLong("hbase.test.multi.pause.when.done", multiPause);
     // Let there be ten outstanding requests at a time before we throw RegionBusyException.
     getConf().setInt("hbase.test.multi.too.many", 10);
-    final int clients = 20;
+    final int clients = 2;
 
     // Have them all share the same connection so they all share the same instance of
     // ManyServersManyRegionsConnection so I can keep an eye on how many requests by server.
@@ -760,13 +762,14 @@ public class TestClientNoCluster extends Configured implements Tool {
     try {
       Thread [] ts = new Thread[clients];
       for (int j = 0; j < ts.length; j++) {
+        final int id = j;
         ts[j] = new Thread("" + j) {
           final Configuration c = getConf();
 
           @Override
           public void run() {
             try {
-              cycle(c, sharedConnection);
+              cycle(id, c, sharedConnection);
             } catch (IOException e) {
               e.printStackTrace();
             }
