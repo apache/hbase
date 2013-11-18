@@ -267,8 +267,7 @@ public class HBaseFsck extends Configured implements Tool {
     super(conf);
     errors = getErrorReporter(conf);
 
-    int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
-    executor = new ScheduledThreadPoolExecutor(numThreads, Threads.newDaemonThreadFactory("hbasefsck"));
+    initialPoolNumThreads();
   }
 
   /**
@@ -297,6 +296,18 @@ public class HBaseFsck extends Configured implements Tool {
     meta = new HTable(getConf(), TableName.META_TABLE_NAME);
     status = admin.getClusterStatus();
     connection = admin.getConnection();
+  }
+
+  /**
+   * Initial numThreads for {@link #executor}
+   */
+  private void initialPoolNumThreads() {
+    if (executor != null) {
+      executor.shutdown();
+    }
+  
+    int numThreads = getConf().getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
+    executor = new ScheduledThreadPoolExecutor(numThreads, Threads.newDaemonThreadFactory("hbasefsck"));
   }
 
   /**
@@ -3596,6 +3607,9 @@ public class HBaseFsck extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
+    // reset the numThreads due to user may set it via generic options
+    initialPoolNumThreads();
+
     exec(executor, args);
     return getRetCode();
   }
