@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -39,6 +41,10 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -400,10 +406,9 @@ public class NamespaceUpgrade implements Tool {
                 oldDesc,
                 null);
         region.initialize();
-        //Run major compaction to archive old stores
-        //to keep any snapshots to _acl_ unbroken
-        region.compactStores(true);
-        region.waitForFlushesAndCompactions();
+        updateAcls(region);
+        // closing the region would flush it so we don't need an explicit flush to save
+        // acl changes.
         region.close();
 
         //Create new region dir
@@ -441,6 +446,28 @@ public class NamespaceUpgrade implements Tool {
     if(!fs.rename(oldTablePath, backupDir)) {
       throw new IllegalStateException("Failed to old data: "+oldTablePath+" to "+backupDir);
     }
+  }
+
+  /**
+   * Deletes the old _acl_ entry, and inserts a new one using namespace.
+   * @param region
+   * @throws IOException
+   */
+  private void updateAcls(HRegion region) throws IOException {
+    byte[] rowKey = Bytes.toBytes(NamespaceUpgrade.OLD_ACL);
+    // get the old _acl_ entry, if present.
+    Get g = new Get(rowKey);
+    Result r = region.get(g);
+    if (r == null || r.size() == 0) return;
+    // create a put for new _acl_ entry with rowkey as hbase:acl
+    Put p = new Put(AccessControlLists.ACL_GLOBAL_NAME);
+    for (Cell c : r.rawCells()) {
+      p.add(CellUtil.cloneFamily(c), CellUtil.cloneQualifier(c), CellUtil.cloneValue(c));
+    }
+    region.put(p);
+    // delete the old entry
+    Delete del = new Delete(rowKey);
+    region.delete(del);
   }
 
   //Culled from FSTableDescriptors
