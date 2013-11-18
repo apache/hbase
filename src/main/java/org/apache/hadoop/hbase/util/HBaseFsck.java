@@ -96,7 +96,6 @@ import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -252,8 +251,7 @@ public class HBaseFsck extends Configured implements Tool {
     super(conf);
     errors = getErrorReporter(conf);
 
-    int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
-    executor = new ScheduledThreadPoolExecutor(numThreads);
+    initialPoolNumThreads();
   }
 
   /**
@@ -282,6 +280,18 @@ public class HBaseFsck extends Configured implements Tool {
     meta = new HTable(getConf(), HConstants.META_TABLE_NAME);
     status = admin.getMaster().getClusterStatus();
     connection = admin.getConnection();
+  }
+
+  /**
+   * Initial numThreads for {@link #executor}
+   */
+  private void initialPoolNumThreads() {
+    if (executor != null) {
+      executor.shutdown();
+    }
+
+    int numThreads = getConf().getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
+    executor = new ScheduledThreadPoolExecutor(numThreads);
   }
 
   /**
@@ -3486,6 +3496,9 @@ public class HBaseFsck extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
+    // reset the numThreads due to user may set it via generic options
+    initialPoolNumThreads();
+    
     exec(executor, args);
     return getRetCode();
   }
