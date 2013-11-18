@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.14 - 11/17/2013
+Release 0.94.14 - 11/18/2013
 Sub-task
 
     [HBASE-9165] - Improvements to addDependencyJars
@@ -24,12 +24,14 @@ Bug
     [HBASE-9970] - HBase BulkLoad, table is creating with the timestamp key also as a column to the table.
     [HBASE-9971] - Port part of HBASE-9958 to 0.94 - change lock scope in locateRegion
     [HBASE-9975] - Not starting ReplicationSink when using custom implementation for the ReplicationSink.
+    [HBASE-9993] - 0.94: HBASE-9865 breaks coprocessor compatibility with WALEdit.
 
 Improvement
 
     [HBASE-4654] - [replication] Add a check to make sure we don't replicate to ourselves
     [HBASE-8438] - Extend bin/hbase to print a "mapreduce classpath"
     [HBASE-9715] - Backport -in_memory option support for LoadTestTool from trunk
+    [HBASE-9831] - 'hbasefsck.numthreads' property isn't passed to hbck via cmdline -D option
     [HBASE-9894] - remove the inappropriate assert statement in Store.getSplitPoint()
     [HBASE-9963] - Remove the ReentrantReadWriteLock in the MemStore
 
