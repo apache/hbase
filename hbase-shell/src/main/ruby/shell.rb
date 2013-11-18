@@ -304,6 +304,7 @@ Shell.load_command_group(
     catalogjanitor_run
     catalogjanitor_switch
     catalogjanitor_enabled
+    trace
   ]
 )
 
