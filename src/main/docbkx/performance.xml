@@ -136,6 +136,9 @@
         an extreme case cause you to OOME.  Disable MSLAB in this case, or
         lower the amount of memory it uses or float less regions per server.
         </para>
+        <para>If you have a write-heavy workload, check out
+            <link xlink:href="https://issues.apache.org/jira/browse/HBASE-8163">HBASE-8163 MemStoreChunkPool: An improvement for JAVA GC when using MSLAB</link>.
+        It describes configurations to lower the amount of young GC during write-heavy loadings.</para>
         <para>For more information about GC logs, see <xref linkend="trouble.log.gc" />.
         </para>
       </section>
