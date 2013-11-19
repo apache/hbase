@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Get extends OperationWithAttributes
+public class Get extends Query
   implements Row, Comparable<Row> {
 
   private byte [] row = null;

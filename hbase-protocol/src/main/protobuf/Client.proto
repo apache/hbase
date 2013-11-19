@@ -30,6 +30,20 @@ import "Cell.proto";
 import "Comparator.proto";
 
 /**
+ * The protocol buffer version of Authorizations.
+ */
+message Authorizations {
+  repeated string label = 1;
+}
+
+/**
+ * The protocol buffer version of CellVisibility.
+ */
+message CellVisibility {
+  required string expression = 1;
+}
+
+/**
  * Container for a list of column qualifier names of a family.
  */
 message Column {

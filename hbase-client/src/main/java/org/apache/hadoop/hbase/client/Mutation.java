@@ -36,7 +36,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.security.visibility.CellVisibility;
+import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -287,6 +291,26 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       }
     }
     return clusterIds;
+  }
+
+  /**
+   * Sets the visibility expression associated with cells in this Mutation.
+   * It is illegal to set <code>CellVisibility</code> on <code>Delete</code> mutation.
+   * @param expression
+   */
+  public void setCellVisibility(CellVisibility expression) {
+    this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY, ProtobufUtil
+        .toCellVisibility(expression).toByteArray());
+  }
+
+  /**
+   * @return CellVisibility associated with cells in this Mutation.
+   * @throws DeserializationException
+   */
+  public CellVisibility getCellVisibility() throws DeserializationException {
+    byte[] cellVisibilityBytes = this.getAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY);
+    if (cellVisibilityBytes == null) return null;
+    return ProtobufUtil.toCellVisibility(cellVisibilityBytes);
   }
 
   /**

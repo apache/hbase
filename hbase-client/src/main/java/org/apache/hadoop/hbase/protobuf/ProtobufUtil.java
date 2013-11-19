@@ -119,6 +119,8 @@ import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
+import org.apache.hadoop.hbase.security.visibility.Authorizations;
+import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.Methods;
@@ -2464,4 +2466,89 @@ public final class ProtobufUtil {
     return tableNames;
   }
 
+  /**
+   * Convert a protocol buffer CellVisibility to a client CellVisibility
+   * 
+   * @param proto
+   * @return the converted client CellVisibility
+   */
+  public static CellVisibility toCellVisibility(ClientProtos.CellVisibility proto) {
+    if (proto == null) return null;
+    return new CellVisibility(proto.getExpression());
+  }
+
+  /**
+   * Convert a protocol buffer CellVisibility bytes to a client CellVisibility
+   * 
+   * @param protoBytes
+   * @return the converted client CellVisibility
+   * @throws DeserializationException
+   */
+  public static CellVisibility toCellVisibility(byte[] protoBytes) throws DeserializationException {
+    if (protoBytes == null) return null;
+    ClientProtos.CellVisibility.Builder builder = ClientProtos.CellVisibility.newBuilder();
+    ClientProtos.CellVisibility proto = null;
+    try {
+      proto = builder.mergeFrom(protoBytes).build();
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return toCellVisibility(proto);
+  }
+
+  /**
+   * Create a protocol buffer CellVisibility based on a client CellVisibility.
+   * 
+   * @param cellVisibility
+   * @return a protocol buffer CellVisibility
+   */
+  public static ClientProtos.CellVisibility toCellVisibility(CellVisibility cellVisibility) {
+    ClientProtos.CellVisibility.Builder builder = ClientProtos.CellVisibility.newBuilder();
+    builder.setExpression(cellVisibility.getExpression());
+    return builder.build();
+  }
+
+  /**
+   * Convert a protocol buffer Authorizations to a client Authorizations
+   * 
+   * @param proto
+   * @return the converted client Authorizations
+   */
+  public static Authorizations toAuthorizations(ClientProtos.Authorizations proto) {
+    if (proto == null) return null;
+    return new Authorizations(proto.getLabelList());
+  }
+
+  /**
+   * Convert a protocol buffer Authorizations bytes to a client Authorizations
+   * 
+   * @param protoBytes
+   * @return the converted client Authorizations
+   * @throws DeserializationException
+   */
+  public static Authorizations toAuthorizations(byte[] protoBytes) throws DeserializationException {
+    if (protoBytes == null) return null;
+    ClientProtos.Authorizations.Builder builder = ClientProtos.Authorizations.newBuilder();
+    ClientProtos.Authorizations proto = null;
+    try {
+      proto = builder.mergeFrom(protoBytes).build();
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return toAuthorizations(proto);
+  }
+
+  /**
+   * Create a protocol buffer Authorizations based on a client Authorizations.
+   * 
+   * @param authorizations
+   * @return a protocol buffer Authorizations
+   */
+  public static ClientProtos.Authorizations toAuthorizations(Authorizations authorizations) {
+    ClientProtos.Authorizations.Builder builder = ClientProtos.Authorizations.newBuilder();
+    for (String label : authorizations.getLabels()) {
+      builder.addLabel(label);
+    }
+    return builder.build();
+  }
 }

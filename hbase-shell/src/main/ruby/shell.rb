@@ -90,6 +90,10 @@ module Shell
       @hbase_security_admin ||= hbase.security_admin(formatter)
     end
 
+    def hbase_visibility_labels_admin
+      @hbase_visibility_labels_admin ||= hbase.visibility_labels_admin(formatter)
+    end
+
     def export_commands(where)
       ::Shell.commands.keys.each do |cmd|
         # here where is the IRB namespace
@@ -346,3 +350,14 @@ Shell.load_command_group(
   ]
 )
 
+Shell.load_command_group(
+  'visibility labels',
+  :full_name => 'VISIBILITY LABEL TOOLS',
+  :comment => "NOTE: Above commands are only applicable if running with the VisibilityController coprocessor",
+  :commands => %w[
+    add_labels
+    set_auths
+    get_auths
+    clear_auths
+  ]
+)

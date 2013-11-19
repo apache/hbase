@@ -8,6 +8,1075 @@ public final class ClientProtos {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
+  public interface AuthorizationsOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // repeated string label = 1;
+    /**
+     * <code>repeated string label = 1;</code>
+     */
+    java.util.List<java.lang.String>
+    getLabelList();
+    /**
+     * <code>repeated string label = 1;</code>
+     */
+    int getLabelCount();
+    /**
+     * <code>repeated string label = 1;</code>
+     */
+    java.lang.String getLabel(int index);
+    /**
+     * <code>repeated string label = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getLabelBytes(int index);
+  }
+  /**
+   * Protobuf type {@code Authorizations}
+   *
+   * <pre>
+   **
+   * The protocol buffer version of Authorizations.
+   * </pre>
+   */
+  public static final class Authorizations extends
+      com.google.protobuf.GeneratedMessage
+      implements AuthorizationsOrBuilder {
+    // Use Authorizations.newBuilder() to construct.
+    private Authorizations(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private Authorizations(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final Authorizations defaultInstance;
+    public static Authorizations getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public Authorizations getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private Authorizations(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                label_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              label_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          label_ = new com.google.protobuf.UnmodifiableLazyStringList(label_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Authorizations_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Authorizations_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations.class, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<Authorizations> PARSER =
+        new com.google.protobuf.AbstractParser<Authorizations>() {
+      public Authorizations parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new Authorizations(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Authorizations> getParserForType() {
+      return PARSER;
+    }
+
+    // repeated string label = 1;
+    public static final int LABEL_FIELD_NUMBER = 1;
+    private com.google.protobuf.LazyStringList label_;
+    /**
+     * <code>repeated string label = 1;</code>
+     */
+    public java.util.List<java.lang.String>
+        getLabelList() {
+      return label_;
+    }
+    /**
+     * <code>repeated string label = 1;</code>
+     */
+    public int getLabelCount() {
+      return label_.size();
+    }
+    /**
+     * <code>repeated string label = 1;</code>
+     */
+    public java.lang.String getLabel(int index) {
+      return label_.get(index);
+    }
+    /**
+     * <code>repeated string label = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getLabelBytes(int index) {
+      return label_.getByteString(index);
+    }
+
+    private void initFields() {
+      label_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < label_.size(); i++) {
+        output.writeBytes(1, label_.getByteString(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      {
+        int dataSize = 0;
+        for (int i = 0; i < label_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(label_.getByteString(i));
+        }
+        size += dataSize;
+        size += 1 * getLabelList().size();
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations) obj;
+
+      boolean result = true;
+      result = result && getLabelList()
+          .equals(other.getLabelList());
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (getLabelCount() > 0) {
+        hash = (37 * hash) + LABEL_FIELD_NUMBER;
+        hash = (53 * hash) + getLabelList().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code Authorizations}
+     *
+     * <pre>
+     **
+     * The protocol buffer version of Authorizations.
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.ClientProtos.AuthorizationsOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Authorizations_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Authorizations_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations.class, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        label_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Authorizations_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations build() {
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations(this);
+        int from_bitField0_ = bitField0_;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          label_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              label_);
+          bitField0_ = (bitField0_ & ~0x00000001);
+        }
+        result.label_ = label_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations.getDefaultInstance()) return this;
+        if (!other.label_.isEmpty()) {
+          if (label_.isEmpty()) {
+            label_ = other.label_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureLabelIsMutable();
+            label_.addAll(other.label_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Authorizations) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // repeated string label = 1;
+      private com.google.protobuf.LazyStringList label_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureLabelIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          label_ = new com.google.protobuf.LazyStringArrayList(label_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+      /**
+       * <code>repeated string label = 1;</code>
+       */
+      public java.util.List<java.lang.String>
+          getLabelList() {
+        return java.util.Collections.unmodifiableList(label_);
+      }
+      /**
+       * <code>repeated string label = 1;</code>
+       */
+      public int getLabelCount() {
+        return label_.size();
+      }
+      /**
+       * <code>repeated string label = 1;</code>
+       */
+      public java.lang.String getLabel(int index) {
+        return label_.get(index);
+      }
+      /**
+       * <code>repeated string label = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getLabelBytes(int index) {
+        return label_.getByteString(index);
+      }
+      /**
+       * <code>repeated string label = 1;</code>
+       */
+      public Builder setLabel(
+          int index, java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureLabelIsMutable();
+        label_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string label = 1;</code>
+       */
+      public Builder addLabel(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureLabelIsMutable();
+        label_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string label = 1;</code>
+       */
+      public Builder addAllLabel(
+          java.lang.Iterable<java.lang.String> values) {
+        ensureLabelIsMutable();
+        super.addAll(values, label_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string label = 1;</code>
+       */
+      public Builder clearLabel() {
+        label_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string label = 1;</code>
+       */
+      public Builder addLabelBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureLabelIsMutable();
+        label_.add(value);
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:Authorizations)
+    }
+
+    static {
+      defaultInstance = new Authorizations(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:Authorizations)
+  }
+
+  public interface CellVisibilityOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required string expression = 1;
+    /**
+     * <code>required string expression = 1;</code>
+     */
+    boolean hasExpression();
+    /**
+     * <code>required string expression = 1;</code>
+     */
+    java.lang.String getExpression();
+    /**
+     * <code>required string expression = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getExpressionBytes();
+  }
+  /**
+   * Protobuf type {@code CellVisibility}
+   *
+   * <pre>
+   **
+   * The protocol buffer version of CellVisibility.
+   * </pre>
+   */
+  public static final class CellVisibility extends
+      com.google.protobuf.GeneratedMessage
+      implements CellVisibilityOrBuilder {
+    // Use CellVisibility.newBuilder() to construct.
+    private CellVisibility(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private CellVisibility(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final CellVisibility defaultInstance;
+    public static CellVisibility getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public CellVisibility getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private CellVisibility(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              expression_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_CellVisibility_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_CellVisibility_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility.class, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<CellVisibility> PARSER =
+        new com.google.protobuf.AbstractParser<CellVisibility>() {
+      public CellVisibility parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new CellVisibility(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<CellVisibility> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required string expression = 1;
+    public static final int EXPRESSION_FIELD_NUMBER = 1;
+    private java.lang.Object expression_;
+    /**
+     * <code>required string expression = 1;</code>
+     */
+    public boolean hasExpression() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string expression = 1;</code>
+     */
+    public java.lang.String getExpression() {
+      java.lang.Object ref = expression_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          expression_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string expression = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getExpressionBytes() {
+      java.lang.Object ref = expression_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        expression_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private void initFields() {
+      expression_ = "";
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasExpression()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getExpressionBytes());
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getExpressionBytes());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility) obj;
+
+      boolean result = true;
+      result = result && (hasExpression() == other.hasExpression());
+      if (hasExpression()) {
+        result = result && getExpression()
+            .equals(other.getExpression());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasExpression()) {
+        hash = (37 * hash) + EXPRESSION_FIELD_NUMBER;
+        hash = (53 * hash) + getExpression().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code CellVisibility}
+     *
+     * <pre>
+     **
+     * The protocol buffer version of CellVisibility.
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibilityOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_CellVisibility_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_CellVisibility_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility.class, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        expression_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_CellVisibility_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility build() {
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.expression_ = expression_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility.getDefaultInstance()) return this;
+        if (other.hasExpression()) {
+          bitField0_ |= 0x00000001;
+          expression_ = other.expression_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasExpression()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CellVisibility) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required string expression = 1;
+      private java.lang.Object expression_ = "";
+      /**
+       * <code>required string expression = 1;</code>
+       */
+      public boolean hasExpression() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string expression = 1;</code>
+       */
+      public java.lang.String getExpression() {
+        java.lang.Object ref = expression_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          expression_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string expression = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getExpressionBytes() {
+        java.lang.Object ref = expression_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          expression_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string expression = 1;</code>
+       */
+      public Builder setExpression(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        expression_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string expression = 1;</code>
+       */
+      public Builder clearExpression() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        expression_ = getDefaultInstance().getExpression();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string expression = 1;</code>
+       */
+      public Builder setExpressionBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        expression_ = value;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:CellVisibility)
+    }
+
+    static {
+      defaultInstance = new CellVisibility(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:CellVisibility)
+  }
+
   public interface ColumnOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -27744,6 +28813,16 @@ public final class ClientProtos {
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_Authorizations_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_Authorizations_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_CellVisibility_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_CellVisibility_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_Column_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -27883,145 +28962,158 @@ public final class ClientProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\014Client.proto\032\013HBase.proto\032\014Filter.prot" +
-      "o\032\nCell.proto\032\020Comparator.proto\"+\n\006Colum" +
-      "n\022\016\n\006family\030\001 \002(\014\022\021\n\tqualifier\030\002 \003(\014\"\251\002\n" +
-      "\003Get\022\013\n\003row\030\001 \002(\014\022\027\n\006column\030\002 \003(\0132\007.Colu" +
-      "mn\022!\n\tattribute\030\003 \003(\0132\016.NameBytesPair\022\027\n" +
-      "\006filter\030\004 \001(\0132\007.Filter\022\036\n\ntime_range\030\005 \001" +
-      "(\0132\n.TimeRange\022\027\n\014max_versions\030\006 \001(\r:\0011\022" +
-      "\032\n\014cache_blocks\030\007 \001(\010:\004true\022\023\n\013store_lim" +
-      "it\030\010 \001(\r\022\024\n\014store_offset\030\t \001(\r\022\035\n\016existe" +
-      "nce_only\030\n \001(\010:\005false\022!\n\022closest_row_bef",
-      "ore\030\013 \001(\010:\005false\"L\n\006Result\022\023\n\004cell\030\001 \003(\013" +
-      "2\005.Cell\022\035\n\025associated_cell_count\030\002 \001(\005\022\016" +
-      "\n\006exists\030\003 \001(\010\"A\n\nGetRequest\022 \n\006region\030\001" +
-      " \002(\0132\020.RegionSpecifier\022\021\n\003get\030\002 \002(\0132\004.Ge" +
-      "t\"&\n\013GetResponse\022\027\n\006result\030\001 \001(\0132\007.Resul" +
-      "t\"\200\001\n\tCondition\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002" +
-      " \002(\014\022\021\n\tqualifier\030\003 \002(\014\022\"\n\014compare_type\030" +
-      "\004 \002(\0162\014.CompareType\022\037\n\ncomparator\030\005 \002(\0132" +
-      "\013.Comparator\"\265\006\n\rMutationProto\022\013\n\003row\030\001 " +
-      "\001(\014\0220\n\013mutate_type\030\002 \001(\0162\033.MutationProto",
-      ".MutationType\0220\n\014column_value\030\003 \003(\0132\032.Mu" +
-      "tationProto.ColumnValue\022\021\n\ttimestamp\030\004 \001" +
-      "(\004\022!\n\tattribute\030\005 \003(\0132\016.NameBytesPair\022:\n" +
-      "\ndurability\030\006 \001(\0162\031.MutationProto.Durabi" +
-      "lity:\013USE_DEFAULT\022\036\n\ntime_range\030\007 \001(\0132\n." +
-      "TimeRange\022\035\n\025associated_cell_count\030\010 \001(\005" +
-      "\022\r\n\005nonce\030\t \001(\004\032\347\001\n\013ColumnValue\022\016\n\006famil" +
-      "y\030\001 \002(\014\022B\n\017qualifier_value\030\002 \003(\0132).Mutat" +
-      "ionProto.ColumnValue.QualifierValue\032\203\001\n\016" +
-      "QualifierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005val",
-      "ue\030\002 \001(\014\022\021\n\ttimestamp\030\003 \001(\004\022.\n\013delete_ty" +
-      "pe\030\004 \001(\0162\031.MutationProto.DeleteType\022\014\n\004t" +
-      "ags\030\005 \001(\014\"W\n\nDurability\022\017\n\013USE_DEFAULT\020\000" +
-      "\022\014\n\010SKIP_WAL\020\001\022\r\n\tASYNC_WAL\020\002\022\014\n\010SYNC_WA" +
-      "L\020\003\022\r\n\tFSYNC_WAL\020\004\">\n\014MutationType\022\n\n\006AP" +
-      "PEND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE" +
-      "\020\003\"p\n\nDeleteType\022\026\n\022DELETE_ONE_VERSION\020\000" +
-      "\022\034\n\030DELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rDELETE" +
-      "_FAMILY\020\002\022\031\n\025DELETE_FAMILY_VERSION\020\003\"\207\001\n" +
-      "\rMutateRequest\022 \n\006region\030\001 \002(\0132\020.RegionS",
-      "pecifier\022 \n\010mutation\030\002 \002(\0132\016.MutationPro" +
-      "to\022\035\n\tcondition\030\003 \001(\0132\n.Condition\022\023\n\013non" +
-      "ce_group\030\004 \001(\004\"<\n\016MutateResponse\022\027\n\006resu" +
-      "lt\030\001 \001(\0132\007.Result\022\021\n\tprocessed\030\002 \001(\010\"\344\002\n" +
-      "\004Scan\022\027\n\006column\030\001 \003(\0132\007.Column\022!\n\tattrib" +
-      "ute\030\002 \003(\0132\016.NameBytesPair\022\021\n\tstart_row\030\003" +
-      " \001(\014\022\020\n\010stop_row\030\004 \001(\014\022\027\n\006filter\030\005 \001(\0132\007" +
-      ".Filter\022\036\n\ntime_range\030\006 \001(\0132\n.TimeRange\022" +
-      "\027\n\014max_versions\030\007 \001(\r:\0011\022\032\n\014cache_blocks" +
-      "\030\010 \001(\010:\004true\022\022\n\nbatch_size\030\t \001(\r\022\027\n\017max_",
-      "result_size\030\n \001(\004\022\023\n\013store_limit\030\013 \001(\r\022\024" +
-      "\n\014store_offset\030\014 \001(\r\022&\n\036load_column_fami" +
-      "lies_on_demand\030\r \001(\010\022\r\n\005small\030\016 \001(\010\"\236\001\n\013" +
-      "ScanRequest\022 \n\006region\030\001 \001(\0132\020.RegionSpec" +
-      "ifier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\022\n\nscanner_id" +
-      "\030\003 \001(\004\022\026\n\016number_of_rows\030\004 \001(\r\022\025\n\rclose_" +
-      "scanner\030\005 \001(\010\022\025\n\rnext_call_seq\030\006 \001(\004\"y\n\014" +
-      "ScanResponse\022\030\n\020cells_per_result\030\001 \003(\r\022\022" +
-      "\n\nscanner_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(\010" +
-      "\022\013\n\003ttl\030\004 \001(\r\022\030\n\007results\030\005 \003(\0132\007.Result\"",
-      "\263\001\n\024BulkLoadHFileRequest\022 \n\006region\030\001 \002(\013" +
-      "2\020.RegionSpecifier\0225\n\013family_path\030\002 \003(\0132" +
-      " .BulkLoadHFileRequest.FamilyPath\022\026\n\016ass" +
-      "ign_seq_num\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006famil" +
-      "y\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFileRe" +
-      "sponse\022\016\n\006loaded\030\001 \002(\010\"a\n\026CoprocessorSer" +
-      "viceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014service_name\030\002 " +
-      "\002(\t\022\023\n\013method_name\030\003 \002(\t\022\017\n\007request\030\004 \002(" +
-      "\014\"d\n\031CoprocessorServiceRequest\022 \n\006region" +
-      "\030\001 \002(\0132\020.RegionSpecifier\022%\n\004call\030\002 \002(\0132\027",
-      ".CoprocessorServiceCall\"]\n\032CoprocessorSe" +
-      "rviceResponse\022 \n\006region\030\001 \002(\0132\020.RegionSp" +
-      "ecifier\022\035\n\005value\030\002 \002(\0132\016.NameBytesPair\"L" +
-      "\n\006Action\022\r\n\005index\030\001 \001(\r\022 \n\010mutation\030\002 \001(" +
-      "\0132\016.MutationProto\022\021\n\003get\030\003 \001(\0132\004.Get\"Y\n\014" +
-      "RegionAction\022 \n\006region\030\001 \002(\0132\020.RegionSpe" +
-      "cifier\022\016\n\006atomic\030\002 \001(\010\022\027\n\006action\030\003 \003(\0132\007" +
-      ".Action\"^\n\021ResultOrException\022\r\n\005index\030\001 " +
-      "\001(\r\022\027\n\006result\030\002 \001(\0132\007.Result\022!\n\texceptio" +
-      "n\030\003 \001(\0132\016.NameBytesPair\"f\n\022RegionActionR",
-      "esult\022-\n\021resultOrException\030\001 \003(\0132\022.Resul" +
-      "tOrException\022!\n\texception\030\002 \001(\0132\016.NameBy" +
-      "tesPair\"G\n\014MultiRequest\022#\n\014regionAction\030" +
-      "\001 \003(\0132\r.RegionAction\022\022\n\nnonceGroup\030\002 \001(\004" +
-      "\"@\n\rMultiResponse\022/\n\022regionActionResult\030" +
-      "\001 \003(\0132\023.RegionActionResult2\261\002\n\rClientSer" +
-      "vice\022 \n\003Get\022\013.GetRequest\032\014.GetResponse\022)" +
-      "\n\006Mutate\022\016.MutateRequest\032\017.MutateRespons" +
-      "e\022#\n\004Scan\022\014.ScanRequest\032\r.ScanResponse\022>" +
-      "\n\rBulkLoadHFile\022\025.BulkLoadHFileRequest\032\026",
-      ".BulkLoadHFileResponse\022F\n\013ExecService\022\032." +
-      "CoprocessorServiceRequest\032\033.CoprocessorS" +
-      "erviceResponse\022&\n\005Multi\022\r.MultiRequest\032\016" +
-      ".MultiResponseBB\n*org.apache.hadoop.hbas" +
-      "e.protobuf.generatedB\014ClientProtosH\001\210\001\001\240" +
-      "\001\001"
+      "o\032\nCell.proto\032\020Comparator.proto\"\037\n\016Autho" +
+      "rizations\022\r\n\005label\030\001 \003(\t\"$\n\016CellVisibili" +
+      "ty\022\022\n\nexpression\030\001 \002(\t\"+\n\006Column\022\016\n\006fami" +
+      "ly\030\001 \002(\014\022\021\n\tqualifier\030\002 \003(\014\"\251\002\n\003Get\022\013\n\003r" +
+      "ow\030\001 \002(\014\022\027\n\006column\030\002 \003(\0132\007.Column\022!\n\tatt" +
+      "ribute\030\003 \003(\0132\016.NameBytesPair\022\027\n\006filter\030\004" +
+      " \001(\0132\007.Filter\022\036\n\ntime_range\030\005 \001(\0132\n.Time" +
+      "Range\022\027\n\014max_versions\030\006 \001(\r:\0011\022\032\n\014cache_" +
+      "blocks\030\007 \001(\010:\004true\022\023\n\013store_limit\030\010 \001(\r\022",
+      "\024\n\014store_offset\030\t \001(\r\022\035\n\016existence_only\030" +
+      "\n \001(\010:\005false\022!\n\022closest_row_before\030\013 \001(\010" +
+      ":\005false\"L\n\006Result\022\023\n\004cell\030\001 \003(\0132\005.Cell\022\035" +
+      "\n\025associated_cell_count\030\002 \001(\005\022\016\n\006exists\030" +
+      "\003 \001(\010\"A\n\nGetRequest\022 \n\006region\030\001 \002(\0132\020.Re" +
+      "gionSpecifier\022\021\n\003get\030\002 \002(\0132\004.Get\"&\n\013GetR" +
+      "esponse\022\027\n\006result\030\001 \001(\0132\007.Result\"\200\001\n\tCon" +
+      "dition\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n\tq" +
+      "ualifier\030\003 \002(\014\022\"\n\014compare_type\030\004 \002(\0162\014.C" +
+      "ompareType\022\037\n\ncomparator\030\005 \002(\0132\013.Compara",
+      "tor\"\265\006\n\rMutationProto\022\013\n\003row\030\001 \001(\014\0220\n\013mu" +
+      "tate_type\030\002 \001(\0162\033.MutationProto.Mutation" +
+      "Type\0220\n\014column_value\030\003 \003(\0132\032.MutationPro" +
+      "to.ColumnValue\022\021\n\ttimestamp\030\004 \001(\004\022!\n\tatt" +
+      "ribute\030\005 \003(\0132\016.NameBytesPair\022:\n\ndurabili" +
+      "ty\030\006 \001(\0162\031.MutationProto.Durability:\013USE" +
+      "_DEFAULT\022\036\n\ntime_range\030\007 \001(\0132\n.TimeRange" +
+      "\022\035\n\025associated_cell_count\030\010 \001(\005\022\r\n\005nonce" +
+      "\030\t \001(\004\032\347\001\n\013ColumnValue\022\016\n\006family\030\001 \002(\014\022B" +
+      "\n\017qualifier_value\030\002 \003(\0132).MutationProto.",
+      "ColumnValue.QualifierValue\032\203\001\n\016Qualifier" +
+      "Value\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 \001(\014\022" +
+      "\021\n\ttimestamp\030\003 \001(\004\022.\n\013delete_type\030\004 \001(\0162" +
+      "\031.MutationProto.DeleteType\022\014\n\004tags\030\005 \001(\014" +
+      "\"W\n\nDurability\022\017\n\013USE_DEFAULT\020\000\022\014\n\010SKIP_" +
+      "WAL\020\001\022\r\n\tASYNC_WAL\020\002\022\014\n\010SYNC_WAL\020\003\022\r\n\tFS" +
+      "YNC_WAL\020\004\">\n\014MutationType\022\n\n\006APPEND\020\000\022\r\n" +
+      "\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE\020\003\"p\n\nDel" +
+      "eteType\022\026\n\022DELETE_ONE_VERSION\020\000\022\034\n\030DELET" +
+      "E_MULTIPLE_VERSIONS\020\001\022\021\n\rDELETE_FAMILY\020\002",
+      "\022\031\n\025DELETE_FAMILY_VERSION\020\003\"\207\001\n\rMutateRe" +
+      "quest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022" +
+      " \n\010mutation\030\002 \002(\0132\016.MutationProto\022\035\n\tcon" +
+      "dition\030\003 \001(\0132\n.Condition\022\023\n\013nonce_group\030" +
+      "\004 \001(\004\"<\n\016MutateResponse\022\027\n\006result\030\001 \001(\0132" +
+      "\007.Result\022\021\n\tprocessed\030\002 \001(\010\"\344\002\n\004Scan\022\027\n\006" +
+      "column\030\001 \003(\0132\007.Column\022!\n\tattribute\030\002 \003(\013" +
+      "2\016.NameBytesPair\022\021\n\tstart_row\030\003 \001(\014\022\020\n\010s" +
+      "top_row\030\004 \001(\014\022\027\n\006filter\030\005 \001(\0132\007.Filter\022\036" +
+      "\n\ntime_range\030\006 \001(\0132\n.TimeRange\022\027\n\014max_ve",
+      "rsions\030\007 \001(\r:\0011\022\032\n\014cache_blocks\030\010 \001(\010:\004t" +
+      "rue\022\022\n\nbatch_size\030\t \001(\r\022\027\n\017max_result_si" +
+      "ze\030\n \001(\004\022\023\n\013store_limit\030\013 \001(\r\022\024\n\014store_o" +
+      "ffset\030\014 \001(\r\022&\n\036load_column_families_on_d" +
+      "emand\030\r \001(\010\022\r\n\005small\030\016 \001(\010\"\236\001\n\013ScanReque" +
+      "st\022 \n\006region\030\001 \001(\0132\020.RegionSpecifier\022\023\n\004" +
+      "scan\030\002 \001(\0132\005.Scan\022\022\n\nscanner_id\030\003 \001(\004\022\026\n" +
+      "\016number_of_rows\030\004 \001(\r\022\025\n\rclose_scanner\030\005" +
+      " \001(\010\022\025\n\rnext_call_seq\030\006 \001(\004\"y\n\014ScanRespo" +
+      "nse\022\030\n\020cells_per_result\030\001 \003(\r\022\022\n\nscanner",
+      "_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(\010\022\013\n\003ttl\030\004" +
+      " \001(\r\022\030\n\007results\030\005 \003(\0132\007.Result\"\263\001\n\024BulkL" +
+      "oadHFileRequest\022 \n\006region\030\001 \002(\0132\020.Region" +
+      "Specifier\0225\n\013family_path\030\002 \003(\0132 .BulkLoa" +
+      "dHFileRequest.FamilyPath\022\026\n\016assign_seq_n" +
+      "um\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006family\030\001 \002(\014\022\014" +
+      "\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFileResponse\022\016\n" +
+      "\006loaded\030\001 \002(\010\"a\n\026CoprocessorServiceCall\022" +
+      "\013\n\003row\030\001 \002(\014\022\024\n\014service_name\030\002 \002(\t\022\023\n\013me" +
+      "thod_name\030\003 \002(\t\022\017\n\007request\030\004 \002(\014\"d\n\031Copr",
+      "ocessorServiceRequest\022 \n\006region\030\001 \002(\0132\020." +
+      "RegionSpecifier\022%\n\004call\030\002 \002(\0132\027.Coproces" +
+      "sorServiceCall\"]\n\032CoprocessorServiceResp" +
+      "onse\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\035" +
+      "\n\005value\030\002 \002(\0132\016.NameBytesPair\"L\n\006Action\022" +
+      "\r\n\005index\030\001 \001(\r\022 \n\010mutation\030\002 \001(\0132\016.Mutat" +
+      "ionProto\022\021\n\003get\030\003 \001(\0132\004.Get\"Y\n\014RegionAct" +
+      "ion\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\016\n" +
+      "\006atomic\030\002 \001(\010\022\027\n\006action\030\003 \003(\0132\007.Action\"^" +
+      "\n\021ResultOrException\022\r\n\005index\030\001 \001(\r\022\027\n\006re",
+      "sult\030\002 \001(\0132\007.Result\022!\n\texception\030\003 \001(\0132\016" +
+      ".NameBytesPair\"f\n\022RegionActionResult\022-\n\021" +
+      "resultOrException\030\001 \003(\0132\022.ResultOrExcept" +
+      "ion\022!\n\texception\030\002 \001(\0132\016.NameBytesPair\"G" +
+      "\n\014MultiRequest\022#\n\014regionAction\030\001 \003(\0132\r.R" +
+      "egionAction\022\022\n\nnonceGroup\030\002 \001(\004\"@\n\rMulti" +
+      "Response\022/\n\022regionActionResult\030\001 \003(\0132\023.R" +
+      "egionActionResult2\261\002\n\rClientService\022 \n\003G" +
+      "et\022\013.GetRequest\032\014.GetResponse\022)\n\006Mutate\022" +
+      "\016.MutateRequest\032\017.MutateResponse\022#\n\004Scan",
+      "\022\014.ScanRequest\032\r.ScanResponse\022>\n\rBulkLoa" +
+      "dHFile\022\025.BulkLoadHFileRequest\032\026.BulkLoad" +
+      "HFileResponse\022F\n\013ExecService\022\032.Coprocess" +
+      "orServiceRequest\032\033.CoprocessorServiceRes" +
+      "ponse\022&\n\005Multi\022\r.MultiRequest\032\016.MultiRes" +
+      "ponseBB\n*org.apache.hadoop.hbase.protobu" +
+      "f.generatedB\014ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_Column_descriptor =
+          internal_static_Authorizations_descriptor =
             getDescriptor().getMessageTypes().get(0);
+          internal_static_Authorizations_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_Authorizations_descriptor,
+              new java.lang.String[] { "Label", });
+          internal_static_CellVisibility_descriptor =
+            getDescriptor().getMessageTypes().get(1);
+          internal_static_CellVisibility_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_CellVisibility_descriptor,
+              new java.lang.String[] { "Expression", });
+          internal_static_Column_descriptor =
+            getDescriptor().getMessageTypes().get(2);
           internal_static_Column_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Column_descriptor,
               new java.lang.String[] { "Family", "Qualifier", });
           internal_static_Get_descriptor =
-            getDescriptor().getMessageTypes().get(1);
+            getDescriptor().getMessageTypes().get(3);
           internal_static_Get_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Get_descriptor,
               new java.lang.String[] { "Row", "Column", "Attribute", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "StoreLimit", "StoreOffset", "ExistenceOnly", "ClosestRowBefore", });
           internal_static_Result_descriptor =
-            getDescriptor().getMessageTypes().get(2);
+            getDescriptor().getMessageTypes().get(4);
           internal_static_Result_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Result_descriptor,
               new java.lang.String[] { "Cell", "AssociatedCellCount", "Exists", });
           internal_static_GetRequest_descriptor =
-            getDescriptor().getMessageTypes().get(3);
+            getDescriptor().getMessageTypes().get(5);
           internal_static_GetRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetRequest_descriptor,
               new java.lang.String[] { "Region", "Get", });
           internal_static_GetResponse_descriptor =
-            getDescriptor().getMessageTypes().get(4);
+            getDescriptor().getMessageTypes().get(6);
           internal_static_GetResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetResponse_descriptor,
               new java.lang.String[] { "Result", });
           internal_static_Condition_descriptor =
-            getDescriptor().getMessageTypes().get(5);
+            getDescriptor().getMessageTypes().get(7);
           internal_static_Condition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Condition_descriptor,
               new java.lang.String[] { "Row", "Family", "Qualifier", "CompareType", "Comparator", });
           internal_static_MutationProto_descriptor =
-            getDescriptor().getMessageTypes().get(6);
+            getDescriptor().getMessageTypes().get(8);
           internal_static_MutationProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MutationProto_descriptor,
@@ -28039,37 +29131,37 @@ public final class ClientProtos {
               internal_static_MutationProto_ColumnValue_QualifierValue_descriptor,
               new java.lang.String[] { "Qualifier", "Value", "Timestamp", "DeleteType", "Tags", });
           internal_static_MutateRequest_descriptor =
-            getDescriptor().getMessageTypes().get(7);
+            getDescriptor().getMessageTypes().get(9);
           internal_static_MutateRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MutateRequest_descriptor,
               new java.lang.String[] { "Region", "Mutation", "Condition", "NonceGroup", });
           internal_static_MutateResponse_descriptor =
-            getDescriptor().getMessageTypes().get(8);
+            getDescriptor().getMessageTypes().get(10);
           internal_static_MutateResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MutateResponse_descriptor,
               new java.lang.String[] { "Result", "Processed", });
           internal_static_Scan_descriptor =
-            getDescriptor().getMessageTypes().get(9);
+            getDescriptor().getMessageTypes().get(11);
           internal_static_Scan_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Scan_descriptor,
               new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", "StoreLimit", "StoreOffset", "LoadColumnFamiliesOnDemand", "Small", });
           internal_static_ScanRequest_descriptor =
-            getDescriptor().getMessageTypes().get(10);
+            getDescriptor().getMessageTypes().get(12);
           internal_static_ScanRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ScanRequest_descriptor,
               new java.lang.String[] { "Region", "Scan", "ScannerId", "NumberOfRows", "CloseScanner", "NextCallSeq", });
           internal_static_ScanResponse_descriptor =
-            getDescriptor().getMessageTypes().get(11);
+            getDescriptor().getMessageTypes().get(13);
           internal_static_ScanResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ScanResponse_descriptor,
               new java.lang.String[] { "CellsPerResult", "ScannerId", "MoreResults", "Ttl", "Results", });
           internal_static_BulkLoadHFileRequest_descriptor =
-            getDescriptor().getMessageTypes().get(12);
+            getDescriptor().getMessageTypes().get(14);
           internal_static_BulkLoadHFileRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_BulkLoadHFileRequest_descriptor,
@@ -28081,61 +29173,61 @@ public final class ClientProtos {
               internal_static_BulkLoadHFileRequest_FamilyPath_descriptor,
               new java.lang.String[] { "Family", "Path", });
           internal_static_BulkLoadHFileResponse_descriptor =
-            getDescriptor().getMessageTypes().get(13);
+            getDescriptor().getMessageTypes().get(15);
           internal_static_BulkLoadHFileResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_BulkLoadHFileResponse_descriptor,
               new java.lang.String[] { "Loaded", });
           internal_static_CoprocessorServiceCall_descriptor =
-            getDescriptor().getMessageTypes().get(14);
+            getDescriptor().getMessageTypes().get(16);
           internal_static_CoprocessorServiceCall_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CoprocessorServiceCall_descriptor,
               new java.lang.String[] { "Row", "ServiceName", "MethodName", "Request", });
           internal_static_CoprocessorServiceRequest_descriptor =
-            getDescriptor().getMessageTypes().get(15);
+            getDescriptor().getMessageTypes().get(17);
           internal_static_CoprocessorServiceRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CoprocessorServiceRequest_descriptor,
               new java.lang.String[] { "Region", "Call", });
           internal_static_CoprocessorServiceResponse_descriptor =
-            getDescriptor().getMessageTypes().get(16);
+            getDescriptor().getMessageTypes().get(18);
           internal_static_CoprocessorServiceResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CoprocessorServiceResponse_descriptor,
               new java.lang.String[] { "Region", "Value", });
           internal_static_Action_descriptor =
-            getDescriptor().getMessageTypes().get(17);
+            getDescriptor().getMessageTypes().get(19);
           internal_static_Action_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Action_descriptor,
               new java.lang.String[] { "Index", "Mutation", "Get", });
           internal_static_RegionAction_descriptor =
-            getDescriptor().getMessageTypes().get(18);
+            getDescriptor().getMessageTypes().get(20);
           internal_static_RegionAction_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionAction_descriptor,
               new java.lang.String[] { "Region", "Atomic", "Action", });
           internal_static_ResultOrException_descriptor =
-            getDescriptor().getMessageTypes().get(19);
+            getDescriptor().getMessageTypes().get(21);
           internal_static_ResultOrException_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ResultOrException_descriptor,
               new java.lang.String[] { "Index", "Result", "Exception", });
           internal_static_RegionActionResult_descriptor =
-            getDescriptor().getMessageTypes().get(20);
+            getDescriptor().getMessageTypes().get(22);
           internal_static_RegionActionResult_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionActionResult_descriptor,
               new java.lang.String[] { "ResultOrException", "Exception", });
           internal_static_MultiRequest_descriptor =
-            getDescriptor().getMessageTypes().get(21);
+            getDescriptor().getMessageTypes().get(23);
           internal_static_MultiRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MultiRequest_descriptor,
               new java.lang.String[] { "RegionAction", "NonceGroup", });
           internal_static_MultiResponse_descriptor =
-            getDescriptor().getMessageTypes().get(22);
+            getDescriptor().getMessageTypes().get(24);
           internal_static_MultiResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MultiResponse_descriptor,

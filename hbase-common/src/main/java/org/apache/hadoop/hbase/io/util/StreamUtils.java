@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.base.Preconditions;
 
@@ -38,7 +39,6 @@ import com.google.common.base.Preconditions;
 public class StreamUtils {
 
   public static void writeRawVInt32(OutputStream output, int value) throws IOException {
-    assert value >= 0;
     while (true) {
       if ((value & ~0x7F) == 0) {
         output.write(value);
@@ -116,6 +116,57 @@ public class StreamUtils {
       }
     }
     return result;
+  }
+
+  /**
+   * Reads a varInt value stored in an array.
+   * 
+   * @param input
+   *          Input array where the varInt is available
+   * @param offset
+   *          Offset in the input array where varInt is available
+   * @return A pair of integers in which first value is the actual decoded varInt value and second
+   *         value as number of bytes taken by this varInt for it's storage in the input array.
+   * @throws IOException
+   */
+  public static Pair<Integer, Integer> readRawVarint32(byte[] input, int offset) throws IOException {
+    int newOffset = offset;
+    byte tmp = input[newOffset++];
+    if (tmp >= 0) {
+      return new Pair<Integer, Integer>((int) tmp, newOffset - offset);
+    }
+    int result = tmp & 0x7f;
+    tmp = input[newOffset++];
+    if (tmp >= 0) {
+      result |= tmp << 7;
+    } else {
+      result |= (tmp & 0x7f) << 7;
+      tmp = input[newOffset++];
+      if (tmp >= 0) {
+        result |= tmp << 14;
+      } else {
+        result |= (tmp & 0x7f) << 14;
+        tmp = input[newOffset++];
+        if (tmp >= 0) {
+          result |= tmp << 21;
+        } else {
+          result |= (tmp & 0x7f) << 21;
+          tmp = input[newOffset++];
+          result |= tmp << 28;
+          if (tmp < 0) {
+            // Discard upper 32 bits.
+            for (int i = 0; i < 5; i++) {
+              tmp = input[newOffset++];
+              if (tmp >= 0) {
+                return new Pair<Integer, Integer>(result, newOffset - offset);
+              }
+            }
+            throw new IOException("Malformed varint");
+          }
+        }
+      }
+    }
+    return new Pair<Integer, Integer>(result, newOffset - offset);
   }
 
   public static short toShort(byte hi, byte lo) {

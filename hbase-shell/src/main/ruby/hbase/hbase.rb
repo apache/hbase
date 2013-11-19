@@ -22,6 +22,7 @@ include Java
 require 'hbase/admin'
 require 'hbase/table'
 require 'hbase/security'
+require 'hbase/visibility_labels'
 
 module Hbase
   class Hbase
@@ -54,6 +55,10 @@ module Hbase
 
     def security_admin(formatter)
       ::Hbase::SecurityAdmin.new(configuration, formatter)
+    end
+
+    def visibility_labels_admin(formatter)
+      ::Hbase::VisibilityLabelsAdmin.new(configuration, formatter)
     end
   end
 end

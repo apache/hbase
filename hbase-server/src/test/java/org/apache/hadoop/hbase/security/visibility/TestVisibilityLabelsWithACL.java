@@ -1,0 +1,273 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.security.visibility;
+
+import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessControlLists;
+import org.apache.hadoop.hbase.security.access.AccessController;
+import org.apache.hadoop.hbase.security.access.SecureTestUtil;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+
+import com.google.protobuf.ByteString;
+
+@Category(MediumTests.class)
+public class TestVisibilityLabelsWithACL {
+
+  private static final String PRIVATE = "private";
+  private static final String CONFIDENTIAL = "confidential";
+  private static final String SECRET = "secret";
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final byte[] row1 = Bytes.toBytes("row1");
+  private final static byte[] fam = Bytes.toBytes("info");
+  private final static byte[] qual = Bytes.toBytes("qual");
+  private final static byte[] value = Bytes.toBytes("value");
+  private static Configuration conf;
+
+  @Rule
+  public final TestName TEST_NAME = new TestName();
+  private static User SUPERUSER;
+  private static User NORMAL_USER;
+
+  @BeforeClass
+  public static void setupBeforeClass() throws Exception {
+    // setup configuration
+    conf = TEST_UTIL.getConfiguration();
+    conf.setInt("hfile.format.version", 3);
+    SecureTestUtil.enableSecurity(conf);
+    conf.set("hbase.coprocessor.master.classes", AccessController.class.getName() + ","
+        + VisibilityController.class.getName());
+    conf.set("hbase.coprocessor.region.classes", AccessController.class.getName() + ","
+        + VisibilityController.class.getName());
+    TEST_UTIL.startMiniCluster(2);
+
+    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName(), 50000);
+    // Wait for the labels table to become available
+    TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
+    SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
+    NORMAL_USER = User.createUserForTesting(conf, "user1", new String[] {});
+    addLabels();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testScanForUserWithFewerLabelAuthsThanLabelsInScanAuthorizations() throws Throwable {
+    String[] auths = { SECRET };
+    String user = "admin";
+    VisibilityClient.setAuths(conf, auths, user);
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    final HTable table = createTableAndWriteDataWithLabels(tableName, SECRET + "&" + CONFIDENTIAL
+        + "&!" + PRIVATE, SECRET + "&!" + PRIVATE);
+    PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
+      public Void run() throws Exception {
+        Scan s = new Scan();
+        s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
+        HTable t = new HTable(conf, table.getTableName());
+        try {
+          ResultScanner scanner = t.getScanner(s);
+          Result result = scanner.next();
+          assertTrue(!result.isEmpty());
+          assertTrue(Bytes.equals(Bytes.toBytes("row2"), result.getRow()));
+          result = scanner.next();
+          assertNull(result);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    };
+    SUPERUSER.runAs(scanAction);
+  }
+
+  @Test
+  public void testVisibilityLabelsForUserWithNoAuths() throws Throwable {
+    String user = "admin";
+    String[] auths = { SECRET };
+    VisibilityClient.clearAuths(conf, auths, user); // Removing all auths if any.
+    VisibilityClient.setAuths(conf, auths, "user1");
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    final HTable table = createTableAndWriteDataWithLabels(tableName, SECRET);
+    PrivilegedExceptionAction<Void> getAction = new PrivilegedExceptionAction<Void>() {
+      public Void run() throws Exception {
+        Get g = new Get(row1);
+        g.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
+        HTable t = new HTable(conf, table.getTableName());
+        try {
+          Result result = t.get(g);
+          assertTrue(result.isEmpty());
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    };
+    SUPERUSER.runAs(getAction);
+  }
+
+  @Test
+  public void testLabelsTableOpsWithDifferentUsers() throws Throwable {
+    PrivilegedExceptionAction<VisibilityLabelsResponse> action = 
+        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      public VisibilityLabelsResponse run() throws Exception {
+        try {
+          return VisibilityClient.addLabels(conf, new String[] { "l1", "l2" });
+        } catch (Throwable e) {
+        }
+        return null;
+      }
+    };
+    VisibilityLabelsResponse response = NORMAL_USER.runAs(action);
+    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response
+        .getResult(0).getException().getName());
+    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response
+        .getResult(1).getException().getName());
+
+    action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      public VisibilityLabelsResponse run() throws Exception {
+        try {
+          return VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
+        } catch (Throwable e) {
+        }
+        return null;
+      }
+    };
+    response = NORMAL_USER.runAs(action);
+    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response
+        .getResult(0).getException().getName());
+    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response
+        .getResult(1).getException().getName());
+
+    action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      public VisibilityLabelsResponse run() throws Exception {
+        try {
+          return VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
+        } catch (Throwable e) {
+        }
+        return null;
+      }
+    };
+    response = SUPERUSER.runAs(action);
+    assertTrue(response.getResult(0).getException().getValue().isEmpty());
+    assertTrue(response.getResult(1).getException().getValue().isEmpty());
+
+    action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      public VisibilityLabelsResponse run() throws Exception {
+        try {
+          return VisibilityClient.clearAuths(conf, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
+        } catch (Throwable e) {
+        }
+        return null;
+      }
+    };
+    response = NORMAL_USER.runAs(action);
+    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response.getResult(0)
+        .getException().getName());
+    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response.getResult(1)
+        .getException().getName());
+
+    response = VisibilityClient.clearAuths(conf, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
+    assertTrue(response.getResult(0).getException().getValue().isEmpty());
+    assertTrue(response.getResult(1).getException().getValue().isEmpty());
+
+    VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE }, "user2");
+    PrivilegedExceptionAction<GetAuthsResponse> action1 = 
+        new PrivilegedExceptionAction<GetAuthsResponse>() {
+      public GetAuthsResponse run() throws Exception {
+        try {
+          return VisibilityClient.getAuths(conf, "user2");
+        } catch (Throwable e) {
+        }
+        return null;
+      }
+    };
+    GetAuthsResponse authsResponse = NORMAL_USER.runAs(action1);
+    assertNull(authsResponse);
+    authsResponse = SUPERUSER.runAs(action1);
+    List<String> authsList = new ArrayList<String>();
+    for (ByteString authBS : authsResponse.getAuthList()) {
+      authsList.add(Bytes.toString(authBS.toByteArray()));
+    }
+    assertEquals(2, authsList.size());
+    assertTrue(authsList.contains(CONFIDENTIAL));
+    assertTrue(authsList.contains(PRIVATE));
+  }
+
+  private static HTable createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
+      throws Exception {
+    HTable table = null;
+    try {
+      table = TEST_UTIL.createTable(tableName, fam);
+      int i = 1;
+      List<Put> puts = new ArrayList<Put>();
+      for (String labelExp : labelExps) {
+        Put put = new Put(Bytes.toBytes("row" + i));
+        put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
+        put.setCellVisibility(new CellVisibility(labelExp));
+        puts.add(put);
+        i++;
+      }
+      table.put(puts);
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+    }
+    return table;
+  }
+
+  private static void addLabels() throws IOException {
+    String[] labels = { SECRET, CONFIDENTIAL, PRIVATE };
+    try {
+      VisibilityClient.addLabels(conf, labels);
+    } catch (Throwable t) {
+      throw new IOException(t);
+    }
+  }
+}

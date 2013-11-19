@@ -62,6 +62,10 @@ module Shell
         @shell.hbase_security_admin
       end
 
+      def visibility_labels_admin
+        @shell.hbase_visibility_labels_admin
+      end
+
       #----------------------------------------------------------------------
 
       def formatter

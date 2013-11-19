@@ -81,7 +81,7 @@ import java.util.TreeSet;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Scan extends OperationWithAttributes {
+public class Scan extends Query {
   private static final String RAW_ATTR = "_raw_";
   private static final String ISOLATION_LEVEL = "_isolationlevel_";
 
