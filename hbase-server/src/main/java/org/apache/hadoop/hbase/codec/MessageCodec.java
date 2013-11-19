@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Codec that just writes out Cell as a protobuf Cell Message.  Does not write the mvcc stamp.
@@ -45,15 +46,15 @@ public class MessageCodec implements Codec {
       CellProtos.Cell.Builder builder = CellProtos.Cell.newBuilder();
       // This copies bytes from Cell to ByteString.  I don't see anyway around the copy.
       // ByteString is final.
-      builder.setRow(ByteString.copyFrom(cell.getRowArray(), cell.getRowOffset(),
+      builder.setRow(ZeroCopyLiteralByteString.wrap(cell.getRowArray(), cell.getRowOffset(),
           cell.getRowLength()));
-      builder.setFamily(ByteString.copyFrom(cell.getFamilyArray(), cell.getFamilyOffset(),
+      builder.setFamily(ZeroCopyLiteralByteString.wrap(cell.getFamilyArray(), cell.getFamilyOffset(),
           cell.getFamilyLength()));
-      builder.setQualifier(ByteString.copyFrom(cell.getQualifierArray(), cell.getQualifierOffset(),
-          cell.getQualifierLength()));
+      builder.setQualifier(ZeroCopyLiteralByteString.wrap(cell.getQualifierArray(),
+        cell.getQualifierOffset(), cell.getQualifierLength()));
       builder.setTimestamp(cell.getTimestamp());
       builder.setCellType(CellProtos.CellType.valueOf(cell.getTypeByte()));
-      builder.setValue(ByteString.copyFrom(cell.getValueArray(), cell.getValueOffset(),
+      builder.setValue(ZeroCopyLiteralByteString.wrap(cell.getValueArray(), cell.getValueOffset(),
           cell.getValueLength()));
       CellProtos.Cell pbcell = builder.build();
       pbcell.writeDelimitedTo(this.out);
