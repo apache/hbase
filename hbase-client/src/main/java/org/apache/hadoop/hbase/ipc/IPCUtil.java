@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -44,7 +43,6 @@ import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
 
@@ -117,10 +115,15 @@ class IPCUtil {
         os = compressor.createOutputStream(os, poolCompressor);
       }
       Codec.Encoder encoder = codec.getEncoder(os);
+      int count = 0;
       while (cellScanner.advance()) {
         encoder.write(cellScanner.current());
+        count++;
       }
       encoder.flush();
+      // If no cells, don't mess around.  Just return null (could be a bunch of existence checking
+      // gets or something -- stuff that does not return a cell).
+      if (count == 0) return null;
     } finally {
       os.close();
       if (poolCompressor != null) CodecPool.returnCompressor(poolCompressor);
@@ -187,24 +190,23 @@ class IPCUtil {
   }
 
   /**
-   * Write out header, param, and cell block if there to a {@link ByteBufferOutputStream} sized
-   * to hold these elements.
-   * @param header
-   * @param param
-   * @param cellBlock
-   * @return A {@link ByteBufferOutputStream} filled with the content of the passed in
-   * <code>header</code>, <code>param</code>, and <code>cellBlock</code>.
+   * @param m Message to serialize delimited; i.e. w/ a vint of its size preceeding its
+   * serialization.
+   * @return The passed in Message serialized with delimiter.  Return null if <code>m</code> is null
    * @throws IOException
    */
-  static ByteBufferOutputStream write(final Message header, final Message param,
-      final ByteBuffer cellBlock)
-  throws IOException {
-    int totalSize = getTotalSizeWhenWrittenDelimited(header, param);
-    if (cellBlock != null) totalSize += cellBlock.limit();
-    ByteBufferOutputStream bbos = new ByteBufferOutputStream(totalSize);
-    write(bbos, header, param, cellBlock, totalSize);
-    bbos.close();
-    return bbos;
+  static ByteBuffer getDelimitedMessageAsByteBuffer(final Message m) throws IOException {
+    if (m == null) return null;
+    int serializedSize = m.getSerializedSize();
+    int vintSize = CodedOutputStream.computeRawVarint32Size(serializedSize);
+    byte [] buffer = new byte[serializedSize + vintSize];
+    // Passing in a byte array saves COS creating a buffer which it does when using streams.
+    CodedOutputStream cos = CodedOutputStream.newInstance(buffer);
+    // This will write out the vint preamble and the message serialized.
+    cos.writeMessageNoTag(m);
+    cos.flush();
+    cos.checkNoSpaceLeft();
+    return ByteBuffer.wrap(buffer);
   }
 
   /**
@@ -230,27 +232,14 @@ class IPCUtil {
   private static int write(final OutputStream dos, final Message header, final Message param,
     final ByteBuffer cellBlock, final int totalSize)
   throws IOException {
-    // I confirmed toBytes does same as say DataOutputStream#writeInt.
+    // I confirmed toBytes does same as DataOutputStream#writeInt.
     dos.write(Bytes.toBytes(totalSize));
+    // This allocates a buffer that is the size of the message internally.
     header.writeDelimitedTo(dos);
     if (param != null) param.writeDelimitedTo(dos);
     if (cellBlock != null) dos.write(cellBlock.array(), 0, cellBlock.remaining());
     dos.flush();
     return totalSize;
-  }
-
-  /**
-   * @param in Stream cue'd up just before a delimited message
-   * @return Bytes that hold the bytes that make up the message read from <code>in</code>
-   * @throws IOException
-   */
-  static byte [] getDelimitedMessageBytes(final DataInputStream in) throws IOException {
-    byte b = in.readByte();
-    int size = CodedInputStream.readRawVarint32(b, in);
-    // Allocate right-sized buffer rather than let pb allocate its default minimum 4k.
-    byte [] bytes = new byte[size];
-    IOUtils.readFully(in, bytes);
-    return bytes;
   }
 
   /**

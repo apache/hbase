@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
@@ -59,6 +60,8 @@ import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -72,6 +75,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.protobuf.BlockingService;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
@@ -87,6 +91,8 @@ public class TestIPC {
   public static final Log LOG = LogFactory.getLog(TestIPC.class);
   static byte [] CELL_BYTES =  Bytes.toBytes("xyz");
   static Cell CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, CELL_BYTES);
+  static byte [] BIG_CELL_BYTES = new byte [10 * 1024];
+  static Cell BIG_CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, BIG_CELL_BYTES);
   // We are using the test TestRpcServiceProtos generated classes and Service because they are
   // available and basic with methods like 'echo', and ping.  Below we make a blocking service
   // by passing in implementation of blocking interface.  We use this service in all tests that
@@ -273,8 +279,10 @@ public class TestIPC {
     int cellcount = Integer.parseInt(args[1]);
     Configuration conf = HBaseConfiguration.create();
     TestRpcServer rpcServer = new TestRpcServer();
+    MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
+    EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
     RpcClient client = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT);
-    KeyValue kv = KeyValueUtil.ensureKeyValue(CELL);
+    KeyValue kv = KeyValueUtil.ensureKeyValue(BIG_CELL);
     Put p = new Put(kv.getRow());
     for (int i = 0; i < cellcount; i++) {
       p.add(kv);
@@ -294,15 +302,17 @@ public class TestIPC {
           RegionAction.newBuilder(),
           ClientProtos.Action.newBuilder(),
           MutationProto.newBuilder());
-        CellScanner cellScanner = CellUtil.createCellScanner(cells);
-        if (i % 1000 == 0) {
+        builder.setRegion(RegionSpecifier.newBuilder().setType(RegionSpecifierType.REGION_NAME).
+          setValue(ByteString.copyFrom(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes())));
+        if (i % 100000 == 0) {
           LOG.info("" + i);
           // Uncomment this for a thread dump every so often.
           // ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
           //  "Thread dump " + Thread.currentThread().getName());
         }
+        CellScanner cellScanner = CellUtil.createCellScanner(cells);
         Pair<Message, CellScanner> response =
-          client.call(null, builder.build(), cellScanner, null, user, address, 0);
+          client.call(md, builder.build(), cellScanner, param, user, address, 0);
         /*
         int count = 0;
         while (p.getSecond().advance()) {

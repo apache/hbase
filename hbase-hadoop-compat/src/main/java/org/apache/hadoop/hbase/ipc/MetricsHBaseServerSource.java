@@ -62,7 +62,7 @@ public interface MetricsHBaseServerSource extends BaseSource {
 
   void authenticationFailure();
 
-  void sentBytes(int count);
+  void sentBytes(long count);
 
   void receivedBytes(int count);
 

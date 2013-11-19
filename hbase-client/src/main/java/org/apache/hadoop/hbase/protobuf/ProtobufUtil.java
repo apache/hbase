@@ -172,10 +172,13 @@ public final class ProtobufUtil {
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
 
     builder.setExists(true);
+    builder.setAssociatedCellCount(0);
     EMPTY_RESULT_PB_EXISTS_TRUE =  builder.build();
 
     builder.clear();
+
     builder.setExists(false);
+    builder.setAssociatedCellCount(0);
     EMPTY_RESULT_PB_EXISTS_FALSE =  builder.build();
 
     builder.clear();
@@ -1144,19 +1147,11 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResultNoData(final Result result) {
-    if (result.getExists() != null){
-      return result.getExists() ? EMPTY_RESULT_PB_EXISTS_TRUE : EMPTY_RESULT_PB_EXISTS_FALSE;
-    }
-
+    if (result.getExists() != null) return toResult(result.getExists());
     int size = result.size();
-
-    if (size == 0){
-      return EMPTY_RESULT_PB;
-    }
-
+    if (size == 0) return EMPTY_RESULT_PB;
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
     builder.setAssociatedCellCount(size);
-
     return builder.build();
   }
 
