@@ -200,7 +200,7 @@ public class ReplicationSink {
   /**
    * Do the changes and handle the pool
    * @param tableName table to insert into
-   * @param rows list of actions
+   * @param allRows list of actions
    * @throws IOException
    */
   protected void batch(byte[] tableName, Collection<List<Row>> allRows) throws IOException {
