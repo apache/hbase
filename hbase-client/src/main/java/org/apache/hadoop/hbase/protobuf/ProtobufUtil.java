@@ -27,6 +27,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -478,7 +479,6 @@ public final class ProtobufUtil {
     // TODO: Server-side at least why do we convert back to the Client types?  Why not just pb it?
     MutationType type = proto.getMutateType();
     assert type == MutationType.PUT: type.name();
-    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
     long timestamp = proto.hasTimestamp()? proto.getTimestamp(): HConstants.LATEST_TIMESTAMP;
     Put put = null;
     int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
@@ -500,17 +500,23 @@ public final class ProtobufUtil {
         put.add(KeyValueUtil.ensureKeyValue(cell));
       }
     } else {
-      put = new Put(row, timestamp);
+      if (proto.hasRow()) {
+        put = new Put(proto.getRow().asReadOnlyByteBuffer(), timestamp);
+      } else {
+        throw new IllegalArgumentException("row cannot be null");
+      }
       // The proto has the metadata and the data itself
       for (ColumnValue column: proto.getColumnValueList()) {
         byte[] family = column.getFamily().toByteArray();
         for (QualifierValue qv: column.getQualifierValueList()) {
-          byte[] qualifier = qv.getQualifier().toByteArray();
           if (!qv.hasValue()) {
             throw new DoNotRetryIOException(
-                "Missing required field: qualifer value");
+                "Missing required field: qualifier value");
           }
-          byte[] value = qv.getValue().toByteArray();
+          ByteBuffer qualifier =
+              qv.hasQualifier() ? qv.getQualifier().asReadOnlyByteBuffer() : null;
+          ByteBuffer value =
+              qv.hasValue() ? qv.getValue().asReadOnlyByteBuffer() : null;
           long ts = timestamp;
           if (qv.hasTimestamp()) {
             ts = qv.getTimestamp();

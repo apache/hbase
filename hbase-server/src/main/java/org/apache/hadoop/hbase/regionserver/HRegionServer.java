@@ -3234,11 +3234,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     CellScanner cellScanner = controller != null? controller.cellScanner(): null;
     if (controller != null) controller.setCellScanner(null);
     List<CellScannable> cellsToReturn = null;
-     MultiResponse.Builder responseBuilder = MultiResponse.newBuilder();
+    MultiResponse.Builder responseBuilder = MultiResponse.newBuilder();
+    RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
 
-     for (RegionAction regionAction : request.getRegionActionList()) {
+    for (RegionAction regionAction : request.getRegionActionList()) {
        this.requestCount.add(regionAction.getActionCount());
-       RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
+      regionActionResultBuilder.clear();
        HRegion region;
        try {
          region = getRegion(regionAction.getRegion());

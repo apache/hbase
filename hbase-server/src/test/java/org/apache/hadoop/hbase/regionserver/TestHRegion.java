@@ -1930,17 +1930,17 @@ public class TestHRegion {
       // Putting data in Region
       Put put = null;
       put = new Put(row1);
-      put.add(fam1, null, ts, null);
-      put.add(fam2, null, ts, null);
-      put.add(fam3, null, ts, null);
-      put.add(fam4, null, ts, null);
+      put.add(fam1, (byte[]) null, ts, null);
+      put.add(fam2, (byte[]) null, ts, null);
+      put.add(fam3, (byte[]) null, ts, null);
+      put.add(fam4, (byte[]) null, ts, null);
       region.put(put);
 
       put = new Put(row2);
-      put.add(fam1, null, ts, null);
-      put.add(fam2, null, ts, null);
-      put.add(fam3, null, ts, null);
-      put.add(fam4, null, ts, null);
+      put.add(fam1, (byte[]) null, ts, null);
+      put.add(fam2, (byte[]) null, ts, null);
+      put.add(fam3, (byte[]) null, ts, null);
+      put.add(fam4, (byte[]) null, ts, null);
       region.put(put);
 
       Scan scan = new Scan();

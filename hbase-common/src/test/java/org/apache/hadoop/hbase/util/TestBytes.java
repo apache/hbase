@@ -463,5 +463,15 @@ public class TestBytes extends TestCase {
       assertFalse(array[i] == 0);
     }
   }
+
+  public void testPutBuffer() {
+    byte[] b = new byte[100];
+    for (byte i = 0; i < 100; i++) {
+      Bytes.putByteBuffer(b, i, ByteBuffer.wrap(new byte[]{i}));
+    }
+    for (byte i = 0; i < 100; i++) {
+      Assert.assertEquals(i, b[i]);
+    }
+  }
 }
 

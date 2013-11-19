@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -102,6 +103,17 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts, byte[] value) {
     return new KeyValue(this.row, family, qualifier, ts, KeyValue.Type.Put, value);
+  }
+
+  /*
+   * Create a KeyValue with this objects row key and the Put identifier.
+   *
+   * @return a KeyValue with this objects row key and the Put identifier.
+   */
+  KeyValue createPutKeyValue(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value) {
+    return new KeyValue(this.row, 0, this.row == null ? 0 : this.row.length,
+        family, 0, family == null ? 0 : family.length,
+        qualifier, ts, KeyValue.Type.Put, value);
   }
 
   /**
@@ -417,5 +429,18 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
         HConstants.MAX_ROW_LENGTH);
     }
     return row;
+  }
+
+  static void checkRow(ByteBuffer row) {
+    if (row == null) {
+      throw new IllegalArgumentException("Row buffer is null");
+    }
+    if (row.remaining() == 0) {
+      throw new IllegalArgumentException("Row length is 0");
+    }
+    if (row.remaining() > HConstants.MAX_ROW_LENGTH) {
+      throw new IllegalArgumentException("Row length " + row.remaining() + " is > " +
+          HConstants.MAX_ROW_LENGTH);
+    }
   }
 }
