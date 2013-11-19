@@ -35,6 +35,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.Channels;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -84,12 +85,11 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslDigestCallbackHandler;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.hbase.security.SaslStatus;
 import org.apache.hadoop.hbase.security.SaslUtil;
-import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -276,7 +276,10 @@ public class RpcServer implements RpcServerInterface {
     protected Connection connection;              // connection to client
     protected long timestamp;      // the time received when response is null
                                    // the time served when response is not null
-    protected ByteBuffer response;                // the response for this call
+    /**
+     * Chain of buffers to send as response.
+     */
+    protected BufferChain response;
     protected boolean delayResponse;
     protected Responder responder;
     protected boolean delayReturnValue;           // if the return value should be
@@ -341,14 +344,14 @@ public class RpcServer implements RpcServerInterface {
     }
 
     protected synchronized void setSaslTokenResponse(ByteBuffer response) {
-      this.response = response;
+      this.response = new BufferChain(response);
     }
 
     protected synchronized void setResponse(Object m, final CellScanner cells,
         Throwable t, String errorMsg) {
       if (this.isError) return;
       if (t != null) this.isError = true;
-      ByteBufferOutputStream bbos = null;
+      BufferChain bc = null;
       try {
         ResponseHeader.Builder headerBuilder = ResponseHeader.newBuilder();
         // Presume it a pb Message.  Could be null.
@@ -380,42 +383,44 @@ public class RpcServer implements RpcServerInterface {
           headerBuilder.setCellBlockMeta(cellBlockBuilder.build());
         }
         Message header = headerBuilder.build();
-        bbos = IPCUtil.write(header, result, cellBlock);
+
+        // Organize the response as a set of bytebuffers rather than collect it all together inside
+        // one big byte array; save on allocations.
+        ByteBuffer bbHeader = IPCUtil.getDelimitedMessageAsByteBuffer(header);
+        ByteBuffer bbResult = IPCUtil.getDelimitedMessageAsByteBuffer(result);
+        int totalSize = bbHeader.capacity() + (bbResult == null? 0: bbResult.limit()) +
+          (cellBlock == null? 0: cellBlock.limit());
+        ByteBuffer bbTotalSize = ByteBuffer.wrap(Bytes.toBytes(totalSize));
+        bc = new BufferChain(bbTotalSize, bbHeader, bbResult, cellBlock);
         if (connection.useWrap) {
-          wrapWithSasl(bbos);
+          bc = wrapWithSasl(bc);
         }
       } catch (IOException e) {
         LOG.warn("Exception while creating response " + e);
       }
-      ByteBuffer bb = null;
-      if (bbos != null) {
-        // TODO: If SASL, maybe buffer already been flipped and written?
-        bb = bbos.getByteBuffer();
-        bb.position(0);
-      }
-      this.response = bb;
+      this.response = bc;
     }
 
-    private void wrapWithSasl(ByteBufferOutputStream response)
-    throws IOException {
-      if (connection.useSasl) {
-        // getByteBuffer calls flip()
-        ByteBuffer buf = response.getByteBuffer();
-        byte[] token;
-        // synchronization may be needed since there can be multiple Handler
-        // threads using saslServer to wrap responses.
-        synchronized (connection.saslServer) {
-          token = connection.saslServer.wrap(buf.array(),
-              buf.arrayOffset(), buf.remaining());
-        }
-        if (LOG.isDebugEnabled())
-          LOG.debug("Adding saslServer wrapped token of size " + token.length
-              + " as call response.");
-        buf.clear();
-        DataOutputStream saslOut = new DataOutputStream(response);
-        saslOut.writeInt(token.length);
-        saslOut.write(token, 0, token.length);
+    private BufferChain wrapWithSasl(BufferChain bc)
+        throws IOException {
+      if (bc == null) return bc;
+      if (!this.connection.useSasl) return bc;
+      // Looks like no way around this; saslserver wants a byte array.  I have to make it one.
+      // THIS IS A BIG UGLY COPY.
+      byte [] responseBytes = bc.getBytes();
+      byte [] token;
+      // synchronization may be needed since there can be multiple Handler
+      // threads using saslServer to wrap responses.
+      synchronized (connection.saslServer) {
+        token = connection.saslServer.wrap(responseBytes, 0, responseBytes.length);
       }
+      if (LOG.isDebugEnabled())
+        LOG.debug("Adding saslServer wrapped token of size " + token.length
+            + " as call response.");
+
+      ByteBuffer bbTokenLength = ByteBuffer.wrap(Bytes.toBytes(token.length));
+      ByteBuffer bbTokenBytes = ByteBuffer.wrap(token);
+      return new BufferChain(bbTokenLength, bbTokenBytes);
     }
 
     @Override
@@ -994,7 +999,7 @@ public class RpcServer implements RpcServerInterface {
           //
           // Send as much data as we can in the non-blocking fashion
           //
-          int numBytes = channelWrite(channel, call.response);
+          long numBytes = channelWrite(channel, call.response);
           if (numBytes < 0) {
             return true;
           }
@@ -1347,6 +1352,7 @@ public class RpcServer implements RpcServerInterface {
         }
       }
     }
+
     /**
      * No protobuf encoding of raw sasl messages
      */
@@ -2169,19 +2175,15 @@ public class RpcServer implements RpcServerInterface {
    * buffer.
    *
    * @param channel writable byte channel to write to
-   * @param buffer buffer to write
+   * @param bufferChain Chain of buffers to write
    * @return number of bytes written
    * @throws java.io.IOException e
    * @see java.nio.channels.WritableByteChannel#write(java.nio.ByteBuffer)
    */
-  protected int channelWrite(WritableByteChannel channel,
-                                    ByteBuffer buffer) throws IOException {
-
-    int count =  (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
-           channel.write(buffer) : channelIO(null, channel, buffer);
-    if (count > 0) {
-      metrics.sentBytes(count);
-    }
+  protected long channelWrite(GatheringByteChannel channel, BufferChain bufferChain)
+  throws IOException {
+    long count =  bufferChain.write(channel, NIO_BUFFER_LIMIT);
+    if (count > 0) this.metrics.sentBytes(count);
     return count;
   }
 

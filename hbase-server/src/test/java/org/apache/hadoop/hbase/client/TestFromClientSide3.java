@@ -64,7 +64,6 @@ public class TestFromClientSide3 {
   private final static byte[] VAL_BYTES = Bytes.toBytes("v1");
   private final static byte[] ROW_BYTES = Bytes.toBytes("r1");
 
-
   /**
    * @throws java.lang.Exception
    */
@@ -345,6 +344,7 @@ public class TestFromClientSide3 {
     gets.add(new Get(ROW));
     gets.add(new Get(Bytes.add(ANOTHERROW, new byte[] { 0x00 })));
 
+    LOG.info("Calling exists");
     Boolean[] results = table.exists(gets);
     assertEquals(results[0], false);
     assertEquals(results[1], false);

@@ -2834,7 +2834,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       if (existence != null){
         ClientProtos.Result pbr = ProtobufUtil.toResult(existence);
         builder.setResult(pbr);
-      }else  if (r != null) {
+      } else  if (r != null) {
         ClientProtos.Result pbr = ProtobufUtil.toResult(r);
         builder.setResult(pbr);
       }
@@ -3294,6 +3294,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   @Override
   public MultiResponse multi(final RpcController rpcc, final MultiRequest request)
   throws ServiceException {
+    
     // rpc controller is how we bring in data via the back door;  it is unprotobuf'ed data.
     // It is also the conduit via which we pass back data.
     PayloadCarryingRpcController controller = (PayloadCarryingRpcController)rpcc;

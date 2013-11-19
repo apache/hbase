@@ -47,7 +47,7 @@ public class MetricsHBaseServer {
     source.authenticationSuccess();
   }
 
-  void sentBytes(int count) {
+  void sentBytes(long count) {
     source.sentBytes(count);
   }
 

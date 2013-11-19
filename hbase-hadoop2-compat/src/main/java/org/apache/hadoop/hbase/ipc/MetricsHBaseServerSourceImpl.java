@@ -89,7 +89,7 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   }
 
   @Override
-  public void sentBytes(int count) {
+  public void sentBytes(long count) {
     this.sentBytes.incr(count);
   }
 

@@ -82,8 +82,7 @@ import org.junit.experimental.categories.Category;
 public class TestRegionObserverInterface {
   static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
 
-  public static final TableName TEST_TABLE =
-      TableName.valueOf("TestTable");
+  public static final TableName TEST_TABLE = TableName.valueOf("TestTable");
   public final static byte[] A = Bytes.toBytes("a");
   public final static byte[] B = Bytes.toBytes("b");
   public final static byte[] C = Bytes.toBytes("c");
@@ -111,126 +110,132 @@ public class TestRegionObserverInterface {
 
   @Test
   public void testRegionObserver() throws IOException {
-    TableName tableName = TEST_TABLE;
+    TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testRegionObserver");
     // recreate table every time in order to reset the status of the
     // coprocessor.
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
-            "hadDelete"},
-        TEST_TABLE,
-        new Boolean[] {false, false, false, false, false});
+    try {
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+      "hadDelete"},
+      tableName,
+      new Boolean[] {false, false, false, false, false});
 
-    Put put = new Put(ROW);
-    put.add(A, A, A);
-    put.add(B, B, B);
-    put.add(C, C, C);
-    table.put(put);
+      Put put = new Put(ROW);
+      put.add(A, A, A);
+      put.add(B, B, B);
+      put.add(C, C, C);
+      table.put(put);
 
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
-            "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
-        TEST_TABLE,
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+        "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
+        tableName,
         new Boolean[] {false, false, true, true, true, true, false}
-    );
+          );
 
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[] {"getCtPreOpen", "getCtPostOpen", "getCtPreClose", "getCtPostClose"},
-        TEST_TABLE,
-        new Integer[] {1, 1, 0, 0});
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"getCtPreOpen", "getCtPostOpen", "getCtPreClose", "getCtPostClose"},
+          tableName,
+          new Integer[] {1, 1, 0, 0});
 
-    Get get = new Get(ROW);
-    get.addColumn(A, A);
-    get.addColumn(B, B);
-    get.addColumn(C, C);
-    table.get(get);
+      Get get = new Get(ROW);
+      get.addColumn(A, A);
+      get.addColumn(B, B);
+      get.addColumn(C, C);
+      table.get(get);
 
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
-            "hadDelete"},
-        TEST_TABLE,
-        new Boolean[] {true, true, true, true, false}
-    );
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+      "hadDelete"},
+      tableName,
+      new Boolean[] {true, true, true, true, false}
+          );
 
-    Delete delete = new Delete(ROW);
-    delete.deleteColumn(A, A);
-    delete.deleteColumn(B, B);
-    delete.deleteColumn(C, C);
-    table.delete(delete);
+      Delete delete = new Delete(ROW);
+      delete.deleteColumn(A, A);
+      delete.deleteColumn(B, B);
+      delete.deleteColumn(C, C);
+      table.delete(delete);
 
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
-            "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
-        TEST_TABLE,
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+        "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
+        tableName,
         new Boolean[] {true, true, true, true, true, true, true}
-    );
-    util.deleteTable(tableName);
-    table.close();
-
+          );
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
     verifyMethodResult(SimpleRegionObserver.class,
         new String[] {"getCtPreOpen", "getCtPostOpen", "getCtPreClose", "getCtPostClose"},
-        TEST_TABLE,
+        tableName,
         new Integer[] {1, 1, 1, 1});
   }
 
   @Test
   public void testRowMutation() throws IOException {
-    TableName tableName = TEST_TABLE;
+    TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testRowMutation");
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
-    verifyMethodResult(SimpleRegionObserver.class,
+    try {
+      verifyMethodResult(SimpleRegionObserver.class,
         new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
             "hadDeleted"},
-        TEST_TABLE,
+        tableName,
         new Boolean[] {false, false, false, false, false});
+      Put put = new Put(ROW);
+      put.add(A, A, A);
+      put.add(B, B, B);
+      put.add(C, C, C);
 
-    Put put = new Put(ROW);
-    put.add(A, A, A);
-    put.add(B, B, B);
-    put.add(C, C, C);
+      Delete delete = new Delete(ROW);
+      delete.deleteColumn(A, A);
+      delete.deleteColumn(B, B);
+      delete.deleteColumn(C, C);
 
-    Delete delete = new Delete(ROW);
-    delete.deleteColumn(A, A);
-    delete.deleteColumn(B, B);
-    delete.deleteColumn(C, C);
+      RowMutations arm = new RowMutations(ROW);
+      arm.add(put);
+      arm.add(delete);
+      table.mutateRow(arm);
 
-    RowMutations arm = new RowMutations(ROW);
-    arm.add(put);
-    arm.add(delete);
-    table.mutateRow(arm);
-
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
-            "hadDeleted"},
-        TEST_TABLE,
-        new Boolean[] {false, false, true, true, true}
-    );
-    util.deleteTable(tableName);
-    table.close();
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+      "hadDeleted"},
+      tableName,
+      new Boolean[] {false, false, true, true, true}
+          );
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
   }
 
   @Test
   public void testIncrementHook() throws IOException {
-    TableName tableName = TEST_TABLE;
-
+    TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testIncrementHook");
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
-    Increment inc = new Increment(Bytes.toBytes(0));
-    inc.addColumn(A, A, 1);
+    try {
+      Increment inc = new Increment(Bytes.toBytes(0));
+      inc.addColumn(A, A, 1);
 
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[] {"hadPreIncrement", "hadPostIncrement"},
-        tableName,
-        new Boolean[] {false, false}
-    );
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreIncrement", "hadPostIncrement"},
+          tableName,
+          new Boolean[] {false, false}
+          );
 
-    table.increment(inc);
+      table.increment(inc);
 
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[] {"hadPreIncrement", "hadPostIncrement"},
-        tableName,
-        new Boolean[] {true, true}
-    );
-    util.deleteTable(tableName);
-    table.close();
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreIncrement", "hadPostIncrement"},
+          tableName,
+          new Boolean[] {true, true}
+          );
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
   }
 
   @Test
@@ -464,84 +469,82 @@ public class TestRegionObserverInterface {
   @Test
   public void bulkLoadHFileTest() throws Exception {
     String testName = TestRegionObserverInterface.class.getName()+".bulkLoadHFileTest";
-    TableName tableName = TEST_TABLE;
+    TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".bulkLoadHFileTest");
     Configuration conf = util.getConfiguration();
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    try {
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreBulkLoadHFile", "hadPostBulkLoadHFile"},
+          tableName,
+          new Boolean[] {false, false}
+          );
 
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[] {"hadPreBulkLoadHFile", "hadPostBulkLoadHFile"},
-        tableName,
-        new Boolean[] {false, false}
-    );
+      FileSystem fs = util.getTestFileSystem();
+      final Path dir = util.getDataTestDirOnTestFS(testName).makeQualified(fs);
+      Path familyDir = new Path(dir, Bytes.toString(A));
 
-    FileSystem fs = util.getTestFileSystem();
-    final Path dir = util.getDataTestDirOnTestFS(testName).makeQualified(fs);
-    Path familyDir = new Path(dir, Bytes.toString(A));
+      createHFile(util.getConfiguration(), fs, new Path(familyDir,Bytes.toString(A)), A, A);
 
-    createHFile(util.getConfiguration(), fs, new Path(familyDir,Bytes.toString(A)), A, A);
+      //Bulk load
+      new LoadIncrementalHFiles(conf).doBulkLoad(dir, new HTable(conf, tableName));
 
-    //Bulk load
-    new LoadIncrementalHFiles(conf).doBulkLoad(dir, new HTable(conf, tableName));
-
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[] {"hadPreBulkLoadHFile", "hadPostBulkLoadHFile"},
-        tableName,
-        new Boolean[] {true, true}
-    );
-    util.deleteTable(tableName);
-    table.close();
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreBulkLoadHFile", "hadPostBulkLoadHFile"},
+          tableName,
+          new Boolean[] {true, true}
+          );
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
   }
 
   @Test
   public void testRecovery() throws Exception {
-    LOG.info(TestRegionObserverInterface.class.getName()+".testRecovery");
-    TableName tableName = TEST_TABLE;
-
+    LOG.info(TestRegionObserverInterface.class.getName() +".testRecovery");
+    TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testRecovery");
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    try {
+      JVMClusterUtil.RegionServerThread rs1 = cluster.startRegionServer();
+      ServerName sn2 = rs1.getRegionServer().getServerName();
+      String regEN = table.getRegionLocations().firstEntry().getKey().getEncodedName();
 
-    JVMClusterUtil.RegionServerThread rs1 = cluster.startRegionServer();
-    ServerName sn2 = rs1.getRegionServer().getServerName();
-    String regEN = table.getRegionLocations().firstEntry().getKey().getEncodedName();
+      util.getHBaseAdmin().move(regEN.getBytes(), sn2.getServerName().getBytes());
+      while (!sn2.equals(table.getRegionLocations().firstEntry().getValue() )){
+        Thread.sleep(100);
+      }
 
-    util.getHBaseAdmin().move(regEN.getBytes(), sn2.getServerName().getBytes());
-    while (!sn2.equals(table.getRegionLocations().firstEntry().getValue() )){
-      Thread.sleep(100);
-    }
+      Put put = new Put(ROW);
+      put.add(A, A, A);
+      put.add(B, B, B);
+      put.add(C, C, C);
+      table.put(put);
 
-    Put put = new Put(ROW);
-    put.add(A, A, A);
-    put.add(B, B, B);
-    put.add(C, C, C);
-    table.put(put);
-
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
-            "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
-        TEST_TABLE,
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+        "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
+        tableName,
         new Boolean[] {false, false, true, true, true, true, false}
-    );
+          );
 
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[] {"getCtPreWALRestore", "getCtPostWALRestore", "getCtPrePut", "getCtPostPut"},
-        TEST_TABLE,
-        new Integer[] {0, 0, 1, 1});
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"getCtPreWALRestore", "getCtPostWALRestore", "getCtPrePut", "getCtPostPut"},
+          tableName,
+          new Integer[] {0, 0, 1, 1});
 
-    cluster.killRegionServer(rs1.getRegionServer().getServerName());
-    Threads.sleep(20000); // just to be sure that the kill has fully started.
-    util.waitUntilAllRegionsAssigned(tableName);
+      cluster.killRegionServer(rs1.getRegionServer().getServerName());
+      Threads.sleep(1000); // Let the kill soak in.
+      util.waitUntilAllRegionsAssigned(tableName);
+      LOG.info("All regions assigned");
 
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[]{"getCtPreWALRestore", "getCtPostWALRestore"},
-        TEST_TABLE,
-        new Integer[]{1, 1});
-
-    verifyMethodResult(SimpleRegionObserver.class,
-        new String[]{"getCtPrePut", "getCtPostPut"},
-        TEST_TABLE,
-        new Integer[]{0, 0});
-
-    util.deleteTable(tableName);
-    table.close();
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[]{"getCtPrePut", "getCtPostPut"},
+          tableName,
+          new Integer[]{0, 0});
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
   }
 
   @Test
