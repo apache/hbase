@@ -1878,10 +1878,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     if (this.replicationSourceHandler != null &&
         this.replicationSourceHandler == this.replicationSinkHandler) {
       this.replicationSourceHandler.stopReplicationService();
-    } else if (this.replicationSourceHandler != null) {
-      this.replicationSourceHandler.stopReplicationService();
-    } else if (this.replicationSinkHandler != null) {
-      this.replicationSinkHandler.stopReplicationService();
+    } else {
+      if (this.replicationSourceHandler != null) {
+        this.replicationSourceHandler.stopReplicationService();
+      }
+      if (this.replicationSinkHandler != null) {
+        this.replicationSinkHandler.stopReplicationService();
+      }
     }
   }
 
