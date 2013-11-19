@@ -437,8 +437,19 @@ public class TestClientNoCluster extends Configured implements Tool {
     throws ServiceException {
       boolean metaRegion = isMetaRegion(request.getRegion().getValue().toByteArray(),
         request.getRegion().getType());
-      if (!metaRegion) throw new UnsupportedOperationException();
+      if (!metaRegion) {
+        return doGetResponse(request);
+      }
       return doMetaGetResponse(meta, request);
+    }
+
+    private GetResponse doGetResponse(GetRequest request) {
+      ClientProtos.Result.Builder resultBuilder = ClientProtos.Result.newBuilder();
+      ByteString row = request.getGet().getRow();
+      resultBuilder.addCell(getStartCode(row));
+      GetResponse.Builder builder = GetResponse.newBuilder();
+      builder.setResult(resultBuilder.build());
+      return builder.build();
     }
 
     @Override
@@ -693,19 +704,25 @@ public class TestClientNoCluster extends Configured implements Tool {
     long startTime = System.currentTimeMillis();
     final int printInterval = 100000;
     Random rd = new Random(id);
+    boolean get = c.getBoolean("hbase.test.do.gets", false);
     try {
       Stopwatch stopWatch = new Stopwatch();
       stopWatch.start();
       for (int i = 0; i < namespaceSpan; i++) {
         byte [] b = format(rd.nextLong());
-        Put p = new Put(b);
-        p.add(HConstants.CATALOG_FAMILY, b, b);
+        if (get){
+          Get g = new Get(b);
+          table.get(g);
+        } else {
+          Put p = new Put(b);
+          p.add(HConstants.CATALOG_FAMILY, b, b);
+          table.put(p);
+        }
         if (i % printInterval == 0) {
           LOG.info("Put " + printInterval + "/" + stopWatch.elapsedMillis());
           stopWatch.reset();
           stopWatch.start();
         }
-        table.put(p);
       }
       LOG.info("Finished a cycle putting " + namespaceSpan + " in " +
           (System.currentTimeMillis() - startTime) + "ms");
