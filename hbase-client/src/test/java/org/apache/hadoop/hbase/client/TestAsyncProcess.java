@@ -60,11 +60,12 @@ public class TestAsyncProcess {
 
   private static ServerName sn = new ServerName("localhost:10,1254");
   private static ServerName sn2 = new ServerName("localhost:140,12540");
-  private static HRegionInfo hri1 = new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_1, DUMMY_BYTES_2);
+  private static HRegionInfo hri1 =
+      new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_1, DUMMY_BYTES_2, false, 1);
   private static HRegionInfo hri2 =
-      new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_2, HConstants.EMPTY_END_ROW);
+      new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_2, HConstants.EMPTY_END_ROW, false, 2);
   private static HRegionInfo hri3 =
-      new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_3, HConstants.EMPTY_END_ROW);
+      new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_3, HConstants.EMPTY_END_ROW, false, 3);
   private static HRegionLocation loc1 = new HRegionLocation(hri1, sn);
   private static HRegionLocation loc2 = new HRegionLocation(hri2, sn);
   private static HRegionLocation loc3 = new HRegionLocation(hri3, sn2);
@@ -264,7 +265,7 @@ public class TestAsyncProcess {
     puts.add(createPut(2, true)); // <== new region, but the rs is ok
 
     ap.submit(puts, false);
-    Assert.assertEquals(1, puts.size());
+    Assert.assertEquals(" puts=" + puts, 1, puts.size());
 
     ap.taskCounterPerServer.put(sn2, new AtomicInteger(ap.maxConcurrentTasksPerServer - 1));
     ap.submit(puts, false);
@@ -338,7 +339,7 @@ public class TestAsyncProcess {
     final AsyncProcess<Object> ap = new MyAsyncProcess<Object>(hc, mcb, conf);
     ap.tasksSent.incrementAndGet();
     final AtomicInteger ai = new AtomicInteger(1);
-    ap.taskCounterPerRegion.put(hri1.getEncodedName(), ai);
+    ap.taskCounterPerRegion.put(hri1.getRegionName(), ai);
 
     final AtomicBoolean checkPoint = new AtomicBoolean(false);
     final AtomicBoolean checkPoint2 = new AtomicBoolean(false);
@@ -716,7 +717,7 @@ public class TestAsyncProcess {
     List<Get> gets = new ArrayList<Get>(NB_REGS);
     for (int i = 0; i < NB_REGS; i++) {
       HRegionInfo hri = new HRegionInfo(
-          DUMMY_TABLE, Bytes.toBytes(i * 10L), Bytes.toBytes(i * 10L + 9L));
+          DUMMY_TABLE, Bytes.toBytes(i * 10L), Bytes.toBytes(i * 10L + 9L), false, i);
       HRegionLocation hrl = new HRegionLocation(hri, i % 2 == 0 ? sn : sn2);
       hrls.add(hrl);
 

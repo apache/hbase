@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.cloudera.htrace.Trace;
@@ -95,13 +97,12 @@ class AsyncProcess<CResult> {
   protected final ExecutorService pool;
   protected final AsyncProcessCallback<CResult> callback;
   protected final BatchErrors errors = new BatchErrors();
-  protected final BatchErrors retriedErrors = new BatchErrors();
   protected final AtomicBoolean hasError = new AtomicBoolean(false);
   protected final AtomicLong tasksSent = new AtomicLong(0);
   protected final AtomicLong tasksDone = new AtomicLong(0);
   protected final AtomicLong retriesCnt = new AtomicLong(0);
-  protected final ConcurrentMap<String, AtomicInteger> taskCounterPerRegion =
-      new ConcurrentHashMap<String, AtomicInteger>();
+  protected final ConcurrentMap<byte[], AtomicInteger> taskCounterPerRegion =
+      new ConcurrentSkipListMap<byte[], AtomicInteger>(Bytes.BYTES_COMPARATOR);
   protected final ConcurrentMap<ServerName, AtomicInteger> taskCounterPerServer =
       new ConcurrentHashMap<ServerName, AtomicInteger>();
 
@@ -290,7 +291,7 @@ class AsyncProcess<CResult> {
 
       // Remember the previous decisions about regions or region servers we put in the
       //  final multi.
-      Map<String, Boolean> regionIncluded = new HashMap<String, Boolean>();
+      Map<Long, Boolean> regionIncluded = new HashMap<Long, Boolean>();
       Map<ServerName, Boolean> serverIncluded = new HashMap<ServerName, Boolean>();
 
       int posInList = -1;
@@ -376,15 +377,14 @@ class AsyncProcess<CResult> {
    * We're taking into account the past decision; if we have already accepted
    * operation on a given region, we accept all operations for this region.
    *
-   *
    * @param loc; the region and the server name we want to use.
    * @return true if this region is considered as busy.
    */
   protected boolean canTakeOperation(HRegionLocation loc,
-                                     Map<String, Boolean> regionsIncluded,
+                                     Map<Long, Boolean> regionsIncluded,
                                      Map<ServerName, Boolean> serversIncluded) {
-    String encodedRegionName = loc.getRegionInfo().getEncodedName();
-    Boolean regionPrevious = regionsIncluded.get(encodedRegionName);
+    long regionId = loc.getRegionInfo().getRegionId();
+    Boolean regionPrevious = regionsIncluded.get(regionId);
 
     if (regionPrevious != null) {
       // We already know what to do with this region.
@@ -394,14 +394,14 @@ class AsyncProcess<CResult> {
     Boolean serverPrevious = serversIncluded.get(loc.getServerName());
     if (Boolean.FALSE.equals(serverPrevious)) {
       // It's a new region, on a region server that we have already excluded.
-      regionsIncluded.put(encodedRegionName, Boolean.FALSE);
+      regionsIncluded.put(regionId, Boolean.FALSE);
       return false;
     }
 
-    AtomicInteger regionCnt = taskCounterPerRegion.get(encodedRegionName);
+    AtomicInteger regionCnt = taskCounterPerRegion.get(loc.getRegionInfo().getRegionName());
     if (regionCnt != null && regionCnt.get() >= maxConcurrentTasksPerRegion) {
       // Too many tasks on this region already.
-      regionsIncluded.put(encodedRegionName, Boolean.FALSE);
+      regionsIncluded.put(regionId, Boolean.FALSE);
       return false;
     }
 
@@ -424,7 +424,7 @@ class AsyncProcess<CResult> {
       }
 
       if (!ok) {
-        regionsIncluded.put(encodedRegionName, Boolean.FALSE);
+        regionsIncluded.put(regionId, Boolean.FALSE);
         serversIncluded.put(loc.getServerName(), Boolean.FALSE);
         return false;
       }
@@ -434,7 +434,7 @@ class AsyncProcess<CResult> {
       assert serverPrevious.equals(Boolean.TRUE);
     }
 
-    regionsIncluded.put(encodedRegionName, Boolean.TRUE);
+    regionsIncluded.put(regionId, Boolean.TRUE);
 
     return true;
   }
@@ -597,18 +597,18 @@ class AsyncProcess<CResult> {
     if (canRetry && throwable != null && throwable instanceof DoNotRetryIOException) {
       canRetry = false;
     }
-    byte[] region = location == null ? null : location.getRegionInfo().getEncodedNameAsBytes();
 
+    byte[] region = null;
     if (canRetry && callback != null) {
+      region = location == null ? null : location.getRegionInfo().getEncodedNameAsBytes();
       canRetry = callback.retriableFailure(originalIndex, row, region, throwable);
     }
 
-    if (canRetry) {
-      if (LOG.isTraceEnabled()) {
-        retriedErrors.add(throwable, row, location);
-      }
-    } else {
+    if (!canRetry) {
       if (callback != null) {
+        if (region == null && location != null) {
+          region = location.getRegionInfo().getEncodedNameAsBytes();
+        }
         callback.failure(originalIndex, region, row, throwable);
       }
       errors.add(throwable, row, location);
@@ -890,7 +890,6 @@ class AsyncProcess<CResult> {
    */
   public void clearErrors() {
     errors.clear();
-    retriedErrors.clear();
     hasError.set(false);
   }
 
@@ -912,11 +911,13 @@ class AsyncProcess<CResult> {
     serverCnt.incrementAndGet();
 
     for (byte[] regBytes : regions) {
-      String encodedRegionName = HRegionInfo.encodeRegionName(regBytes);
-      AtomicInteger regionCnt = taskCounterPerRegion.get(encodedRegionName);
+      AtomicInteger regionCnt = taskCounterPerRegion.get(regBytes);
       if (regionCnt == null) {
-        taskCounterPerRegion.putIfAbsent(encodedRegionName, new AtomicInteger());
-        regionCnt = taskCounterPerRegion.get(encodedRegionName);
+        regionCnt = new AtomicInteger();
+        AtomicInteger oldCnt = taskCounterPerRegion.putIfAbsent(regBytes, regionCnt);
+        if (oldCnt != null) {
+          regionCnt = oldCnt;
+        }
       }
       regionCnt.incrementAndGet();
     }
@@ -927,8 +928,7 @@ class AsyncProcess<CResult> {
    */
   protected void decTaskCounters(Collection<byte[]> regions, ServerName sn) {
     for (byte[] regBytes : regions) {
-      String encodedRegionName = HRegionInfo.encodeRegionName(regBytes);
-      AtomicInteger regionCnt = taskCounterPerRegion.get(encodedRegionName);
+      AtomicInteger regionCnt = taskCounterPerRegion.get(regBytes);
       regionCnt.decrementAndGet();
     }
 
