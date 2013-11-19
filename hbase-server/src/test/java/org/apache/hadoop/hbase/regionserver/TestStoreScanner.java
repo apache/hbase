@@ -42,12 +42,9 @@ import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.StoreScanner.StoreScannerCompactionRace;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.apache.hadoop.hbase.util.InjectionEvent;
-import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.experimental.categories.Category;
 
@@ -509,110 +506,6 @@ public class TestStoreScanner extends TestCase {
     results.clear();
 
     assertEquals(false, scanner.next(results));
-  }
-
-  private class StoreScannerCompactionRaceCondition extends InjectionHandler {
-    final Store store;
-    Boolean beforeSeek = false;
-    Boolean afterSeek = false;
-    Boolean compactionComplete = false;
-    final int waitTime;
-    boolean doneSeeking = false;
-    public Future<Void> f;
-    StoreScannerCompactionRaceCondition(Store s, int waitTime) {
-      this.store = s;
-      this.waitTime = waitTime;
-    }
-
-    protected void _processEvent(InjectionEvent event, Object... args) {
-      if (event == InjectionEvent.STORESCANNER_COMPACTION_RACE) {
-        // To prevent other scanners which are not supposed to be tested from taking this code path.
-        if ((args instanceof Object[]) && (args.length == 1)
-            && (args[0] instanceof Integer)) {
-          StoreScannerCompactionRace sscr = StoreScannerCompactionRace.values()[(Integer)args[0]];
-          switch (sscr) {
-          case BEFORE_SEEK :
-            // Inside StoreScanner ctor before seek.
-            synchronized (beforeSeek) {
-              if (!beforeSeek) {
-                beforeSeek = true;
-                f = Executors.newSingleThreadExecutor().submit(new Callable<Void>() {
-                  @Override
-                  public Void call() throws Exception {
-                    StoreScanner.enableLazySeekGlobally(false);
-                    ((HStore)store).compactRecentForTestingAssumingDefaultPolicy(
-                      store.getStorefiles().size() / 2);
-                    StoreScanner.enableLazySeekGlobally(true);
-                    return null;
-                  }
-                });
-                Threads.sleep(waitTime);
-              }
-            }
-            break;
-          case AFTER_SEEK:
-            // Inside StoreScanner ctor after seek.
-            synchronized (afterSeek) {
-              if (!afterSeek) {
-                afterSeek = true;
-                this.doneSeeking = true;
-              }
-            }
-            break;
-          case COMPACT_COMPLETE:
-            // Inside HStore.completeCompaction
-            synchronized (compactionComplete) {
-              if (!compactionComplete) {
-                compactionComplete = true;
-                assertTrue(doneSeeking);
-              }
-            }
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  /*
-   *  Verifies that there is no race condition between StoreScanner construction and compaction.
-   *  This is done through 3 injection points:
-   *  1. before seek operation in StoreScanner ctor
-   *  2. after seek operation in StoreScanner ctor
-   *  3. after compaction completion
-   */
-  public void testCompactionRaceCondition() throws Exception {
-    HBaseTestingUtility util = new HBaseTestingUtility();
-    util.startMiniCluster(1);
-    byte[] t = Bytes.toBytes("tbl"), cf = Bytes.toBytes("cf");
-    HTable table = util.createTable(t, cf);
-    util.loadTable(table, cf);
-    util.flush();
-    util.loadTable(table, cf);
-    util.flush();
-    List<HRegion> regions = util.getHBaseCluster().getRegions(t);
-    assertTrue(regions.size() == 1);
-    HRegion r = regions.get(0);
-    Store s = r.getStore(cf);
-
-    // Setup the injection handler.
-    StoreScannerCompactionRaceCondition ih =
-        new StoreScannerCompactionRaceCondition(s, 5);
-    InjectionHandler.set(ih);
-
-    // Create a StoreScanner
-    TreeSet<byte[]> set = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    set.add(cf);
-    Scan scanSpec = new Scan();
-    scanSpec.setStartRow(Bytes.toBytes("hjfsd"));
-    scanSpec.setStartRow(Bytes.toBytes("zjfsd"));
-    KeyValueScanner scanner = s.getScanner(scanSpec, set, s.getSmallestReadPoint());
-    ih.f.get();
-
-    // Clear injection handling and shutdown the minicluster.
-    InjectionHandler.clear();
-    scanner.close();
-    util.shutdownMiniCluster();
   }
 
   public void testDeleteMarkerLongevity() throws Exception {
