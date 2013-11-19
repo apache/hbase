@@ -3305,11 +3305,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // this will contain all the cells that we need to return. It's created later, if needed.
     List<CellScannable> cellsToReturn = null;
     MultiResponse.Builder responseBuilder = MultiResponse.newBuilder();
+    RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
 
     for (RegionAction regionAction : request.getRegionActionList()) {
       this.requestCount.add(regionAction.getActionCount());
-      RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
       HRegion region;
+      regionActionResultBuilder.clear();
       try {
         region = getRegion(regionAction.getRegion());
       } catch (IOException e) {

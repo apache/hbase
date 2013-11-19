@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +72,27 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    */
   public Put(byte [] rowArray, int rowOffset, int rowLength) {
     this(rowArray, rowOffset, rowLength, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * @param row row key; we make a copy of what we are passed to keep local.
+   * @param ts  timestamp
+   */
+  public Put(ByteBuffer row, long ts) {
+    if (ts < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
+    }
+    checkRow(row);
+    this.row = new byte[row.remaining()];
+    row.get(this.row);
+    this.ts = ts;
+  }
+
+  /**
+   * @param row row key; we make a copy of what we are passed to keep local.
+   */
+  public Put(ByteBuffer row) {
+    this(row, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
@@ -147,6 +169,47 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   public Put add(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag) {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
+    list.add(kv);
+    familyMap.put(kv.getFamily(), list);
+    return this;
+  }
+
+  /**
+   * Add the specified column and value, with the specified timestamp as
+   * its version to this Put operation.
+   * @param family family name
+   * @param qualifier column qualifier
+   * @param ts version timestamp
+   * @param value column value
+   * @param tag the tags
+   * @return this
+   */
+  public Put add(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value, Tag[] tag) {
+    if (ts < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
+    }
+    List<Cell> list = getCellList(family);
+    KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
+    list.add(kv);
+    familyMap.put(kv.getFamily(), list);
+    return this;
+  }
+
+  /**
+   * Add the specified column and value, with the specified timestamp as
+   * its version to this Put operation.
+   * @param family family name
+   * @param qualifier column qualifier
+   * @param ts version timestamp
+   * @param value column value
+   * @return this
+   */
+  public Put add(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value) {
+    if (ts < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
+    }
+    List<Cell> list = getCellList(family);
+    KeyValue kv = createPutKeyValue(family, qualifier, ts, value, null);
     list.add(kv);
     familyMap.put(kv.getFamily(), list);
     return this;

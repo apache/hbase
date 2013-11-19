@@ -21,10 +21,16 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -367,6 +373,52 @@ public class TestOperation {
     assertEquals("Qualifier incorrect in Delete.toJSON()", 
         Bytes.toStringBinary(QUALIFIER), kvMap.get("qualifier"));
   }
+
+  @Test
+  public void testPutCreationWithByteBuffer() {
+    Put p = new Put(ROW);
+    List<Cell> c = p.get(FAMILY, QUALIFIER);
+    Assert.assertEquals(0, c.size());
+    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimeStamp());
+
+    p.add(FAMILY, ByteBuffer.wrap(QUALIFIER), 1984L, ByteBuffer.wrap(VALUE));
+    c = p.get(FAMILY, QUALIFIER);
+    Assert.assertEquals(1, c.size());
+    Assert.assertEquals(1984L, c.get(0).getTimestamp());
+    Assert.assertArrayEquals(VALUE, CellUtil.cloneValue(c.get(0)));
+    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimeStamp());
+    Assert.assertEquals(0, KeyValue.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
+
+    p = new Put(ROW);
+    p.add(FAMILY, ByteBuffer.wrap(QUALIFIER), 2013L, null);
+    c = p.get(FAMILY, QUALIFIER);
+    Assert.assertEquals(1, c.size());
+    Assert.assertEquals(2013L, c.get(0).getTimestamp());
+    Assert.assertArrayEquals(new byte[]{}, CellUtil.cloneValue(c.get(0)));
+    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimeStamp());
+    Assert.assertEquals(0, KeyValue.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
+
+    p = new Put(ByteBuffer.wrap(ROW));
+    p.add(FAMILY, ByteBuffer.wrap(QUALIFIER), 2001L, null);
+    c = p.get(FAMILY, QUALIFIER);
+    Assert.assertEquals(1, c.size());
+    Assert.assertEquals(2001L, c.get(0).getTimestamp());
+    Assert.assertArrayEquals(new byte[]{}, CellUtil.cloneValue(c.get(0)));
+    Assert.assertArrayEquals(ROW, CellUtil.cloneRow(c.get(0)));
+    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimeStamp());
+    Assert.assertEquals(0, KeyValue.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
+
+    p = new Put(ByteBuffer.wrap(ROW), 1970L);
+    p.add(FAMILY, ByteBuffer.wrap(QUALIFIER), 2001L, null);
+    c = p.get(FAMILY, QUALIFIER);
+    Assert.assertEquals(1, c.size());
+    Assert.assertEquals(2001L, c.get(0).getTimestamp());
+    Assert.assertArrayEquals(new byte[]{}, CellUtil.cloneValue(c.get(0)));
+    Assert.assertArrayEquals(ROW, CellUtil.cloneRow(c.get(0)));
+    Assert.assertEquals(1970L, p.getTimeStamp());
+    Assert.assertEquals(0, KeyValue.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
+  }
+
 
 }
 

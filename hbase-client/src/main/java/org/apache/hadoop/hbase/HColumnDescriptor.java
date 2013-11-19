@@ -93,6 +93,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String BLOOMFILTER = "BLOOMFILTER";
   public static final String FOREVER = "FOREVER";
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
+  public static final byte[] REPLICATION_SCOPE_BYTES = Bytes.toBytes(REPLICATION_SCOPE);
   public static final String MIN_VERSIONS = "MIN_VERSIONS";
   public static final String KEEP_DELETED_CELLS = "KEEP_DELETED_CELLS";
   public static final String COMPRESS_TAGS = "COMPRESS_TAGS";
@@ -823,9 +824,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     * @return the scope tag
     */
   public int getScope() {
-    String value = getValue(REPLICATION_SCOPE);
+    byte[] value = getValue(REPLICATION_SCOPE_BYTES);
     if (value != null) {
-      return Integer.valueOf(value).intValue();
+      return Integer.valueOf(Bytes.toString(value));
     }
     return DEFAULT_REPLICATION_SCOPE;
   }

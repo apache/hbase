@@ -306,6 +306,19 @@ public class Bytes {
   }
 
   /**
+   * Add the whole content of the ByteBuffer to the bytes arrays. The ByteBuffer is modified.
+   * @param bytes the byte array
+   * @param offset position in the array
+   * @param buf ByteBuffer to write out
+   * @return incremented offset
+   */
+  public static int putByteBuffer(byte[] bytes, int offset, ByteBuffer buf) {
+    int len = buf.remaining();
+    buf.get(bytes, offset, len);
+    return offset + len;
+  }
+
+  /**
    * Returns a new byte array, copied from the given {@code buf},
    * from the index 0 (inclusive) to the limit (exclusive),
    * regardless of the current position.
