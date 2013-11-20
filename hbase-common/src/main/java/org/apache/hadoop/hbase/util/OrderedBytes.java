@@ -1109,6 +1109,9 @@ public class OrderedBytes {
       if (s == 7) {
         ret.put((byte) (t | (ord.apply(a[offset + i]) & 0x7f)));
         i++;
+               // explicitly reset t -- clean up overflow buffer after decoding
+               // a full cycle and retain assertion condition below. This happens
+        t = 0; // when the LSB in the last encoded byte is 1. (HBASE-9893)
       } else {
         ret.put((byte) (t | ((ord.apply(a[offset + i]) & 0x7f) >>> s)));
       }
