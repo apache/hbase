@@ -872,9 +872,19 @@ public class TestOrderedBytes {
     byte[][] vals =
         { "".getBytes(), "foo".getBytes(), "foobarbazbub".getBytes(),
           { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
+            (byte) 0xaa, /* 7 bytes of alternating bits; testing around HBASE-9893 */ },
+          { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
             (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa },
+          { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
+            (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
+            (byte) 0xaa, (byte) 0xaa, /* 14 bytes of alternating bits; testing around HBASE-9893 */ },
+          { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
+            (byte) 0x55, /* 7 bytes of alternating bits; testing around HBASE-9893 */ },
           { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
             (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55 },
+          { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
+            (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
+            (byte) 0x55, (byte) 0x55, /* 14 bytes of alternating bits; testing around HBASE-9893 */ },
           "1".getBytes(), "22".getBytes(), "333".getBytes(), "4444".getBytes(),
           "55555".getBytes(), "666666".getBytes(), "7777777".getBytes(), "88888888".getBytes()
         };
