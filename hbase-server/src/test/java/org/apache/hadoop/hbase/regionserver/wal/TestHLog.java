@@ -1090,14 +1090,14 @@ public class TestHLog  {
       // get the regions to flush; since there is only one region in the oldest wal, it should
       // return only one region.
       byte[][] regionsToFlush = ((FSHLog) hlog).findRegionsToForceFlush();
-      assertEquals(regionsToFlush.length, 1);
-      assertEquals(regionsToFlush[0], hri1.getEncodedNameAsBytes());
+      assertEquals(1, regionsToFlush.length);
+      assertEquals(hri1.getEncodedNameAsBytes(), regionsToFlush[0]);
       // insert edits in second region
       addEdits(hlog, hri2, t2, 2, sequenceId2);
       // get the regions to flush, it should still read region1.
       regionsToFlush = ((FSHLog) hlog).findRegionsToForceFlush();
       assertEquals(regionsToFlush.length, 1);
-      assertEquals(regionsToFlush[0], hri1.getEncodedNameAsBytes());
+      assertEquals(hri1.getEncodedNameAsBytes(), regionsToFlush[0]);
       // flush region 1, and roll the wal file. Only last wal which has entries for region1 should
       // remain.
       flushRegion(hlog, hri1.getEncodedNameAsBytes());
@@ -1120,7 +1120,7 @@ public class TestHLog  {
       // it should return two regions to flush, as the oldest wal file has entries
       // for both regions.
       regionsToFlush = ((FSHLog) hlog).findRegionsToForceFlush();
-      assertEquals(regionsToFlush.length, 2);
+      assertEquals(2, regionsToFlush.length);
       // flush both regions
       flushRegion(hlog, hri1.getEncodedNameAsBytes());
       flushRegion(hlog, hri2.getEncodedNameAsBytes());
@@ -1147,6 +1147,7 @@ public class TestHLog  {
   */
   @Test
   public void testAllRegionsFlushed() {
+    LOG.debug("testAllRegionsFlushed");
     Map<byte[], Long> oldestFlushingSeqNo = new HashMap<byte[], Long>();
     Map<byte[], Long> oldestUnFlushedSeqNo = new HashMap<byte[], Long>();
     Map<byte[], Long> seqNo = new HashMap<byte[], Long>();

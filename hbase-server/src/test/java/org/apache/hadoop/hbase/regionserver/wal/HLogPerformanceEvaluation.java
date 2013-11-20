@@ -289,9 +289,9 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
                 + sequenceIds.get(Bytes.toString(e.getKey().getEncodedRegionName()))
                 + ", current seqid = " + seqid);
           }
-        } else {
-          sequenceIds.put(Bytes.toString(e.getKey().getEncodedRegionName()), seqid);
         }
+        // update the sequence Id.
+        sequenceIds.put(Bytes.toString(e.getKey().getEncodedRegionName()), seqid);
         if (verbose) LOG.info("seqid=" + seqid);
       }
     } finally {
