@@ -1324,7 +1324,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         if (pair == null || pair.getFirst() == null) {
           throw new UnknownRegionException(Bytes.toStringBinary(regionname));
         } else {
-          closeRegion(new ServerName(serverName), pair.getFirst());
+          closeRegion(ServerName.valueOf(serverName), pair.getFirst());
         }
       } else {
         Pair<HRegionInfo, ServerName> pair = MetaReader.getRegion(ct, regionname);
@@ -1368,7 +1368,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       throw new IllegalArgumentException(
           "The servername cannot be null or empty.");
     }
-    ServerName sn = new ServerName(serverName);
+    ServerName sn = ServerName.valueOf(serverName);
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     // Close the region without updating zk state.
     CloseRegionRequest request =
@@ -2126,7 +2126,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     String hostname = Addressing.parseHostname(hostnamePort);
     int port = Addressing.parsePort(hostnamePort);
     AdminService.BlockingInterface admin =
-      this.connection.getAdmin(new ServerName(hostname, port, 0));
+      this.connection.getAdmin(ServerName.valueOf(hostname, port, 0));
     StopServerRequest request = RequestConverter.buildStopServerRequest(
       "Called by admin client " + this.connection.toString());
     try {
@@ -2426,7 +2426,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
  public synchronized  byte[][] rollHLogWriter(String serverName)
       throws IOException, FailedLogCloseException {
-    ServerName sn = new ServerName(serverName);
+    ServerName sn = ServerName.valueOf(serverName);
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     RollWALWriterRequest request = RequestConverter.buildRollWALWriterRequest();
     try {

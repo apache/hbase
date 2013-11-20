@@ -274,7 +274,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     Mockito.doNothing().when(c).close();
     // Make it so we return a particular location when asked.
     final HRegionLocation loc = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO,
-        new ServerName("example.org", 1234, 0));
+        ServerName.valueOf("example.org", 1234, 0));
     Mockito.when(c.getRegionLocation((TableName) Mockito.any(),
         (byte[]) Mockito.any(), Mockito.anyBoolean())).
       thenReturn(loc);

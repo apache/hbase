@@ -378,7 +378,7 @@ public class NamespaceUpgrade implements Tool {
     }
 
 
-    ServerName fakeServer = new ServerName("nsupgrade",96,123);
+    ServerName fakeServer = ServerName.valueOf("nsupgrade", 96, 123);
     String metaLogName = HLogUtil.getHLogDirectoryName(fakeServer.toString());
     HLog metaHLog = HLogFactory.createMetaHLog(fs, rootDir,
         metaLogName, conf, null,

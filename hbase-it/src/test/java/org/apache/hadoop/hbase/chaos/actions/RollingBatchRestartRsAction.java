@@ -99,7 +99,7 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
         final int count = 4;
         List<ServerName> serverNames = new ArrayList<ServerName>(count);
         for (int i = 0; i < 4; i++) {
-          serverNames.add(new ServerName(i + ".example.org", i, i));
+          serverNames.add(ServerName.valueOf(i + ".example.org", i, i));
         }
         return serverNames.toArray(new ServerName [] {});
       }

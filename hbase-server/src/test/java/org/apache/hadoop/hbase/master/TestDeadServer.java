@@ -34,10 +34,10 @@ import static org.junit.Assert.assertTrue;
 
 @Category(MediumTests.class)
 public class TestDeadServer {
-  final ServerName hostname123 = new ServerName("127.0.0.1", 123, 3L);
-  final ServerName hostname123_2 = new ServerName("127.0.0.1", 123, 4L);
-  final ServerName hostname1234 = new ServerName("127.0.0.2", 1234, 4L);
-  final ServerName hostname12345 = new ServerName("127.0.0.2", 12345, 4L);
+  final ServerName hostname123 = ServerName.valueOf("127.0.0.1", 123, 3L);
+  final ServerName hostname123_2 = ServerName.valueOf("127.0.0.1", 123, 4L);
+  final ServerName hostname1234 = ServerName.valueOf("127.0.0.2", 1234, 4L);
+  final ServerName hostname12345 = ServerName.valueOf("127.0.0.2", 12345, 4L);
 
   @Test public void testIsDead() {
     DeadServer ds = new DeadServer();
@@ -59,7 +59,7 @@ public class TestDeadServer {
     // Already dead =       127.0.0.1,9090,112321
     // Coming back alive =  127.0.0.1,9090,223341
 
-    final ServerName deadServer = new ServerName("127.0.0.1", 9090, 112321L);
+    final ServerName deadServer = ServerName.valueOf("127.0.0.1", 9090, 112321L);
     assertFalse(ds.cleanPreviousInstance(deadServer));
     ds.add(deadServer);
     assertTrue(ds.isDeadServer(deadServer));
@@ -68,7 +68,7 @@ public class TestDeadServer {
       Assert.assertNotNull(ds.getTimeOfDeath(eachDeadServer));
     }
     final ServerName deadServerHostComingAlive =
-      new ServerName("127.0.0.1", 9090, 223341L);
+        ServerName.valueOf("127.0.0.1", 9090, 223341L);
     assertTrue(ds.cleanPreviousInstance(deadServerHostComingAlive));
     assertFalse(ds.isDeadServer(deadServer));
     assertFalse(ds.cleanPreviousInstance(deadServerHostComingAlive));

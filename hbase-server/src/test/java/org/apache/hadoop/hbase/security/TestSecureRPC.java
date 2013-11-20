@@ -101,7 +101,7 @@ public class TestSecureRPC {
     RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
-          new ServerName(rpcServer.getListenerAddress().getHostName(),
+          ServerName.valueOf(rpcServer.getListenerAddress().getHostName(),
               rpcServer.getListenerAddress().getPort(), System.currentTimeMillis()),
           User.getCurrent(), 1000);
       TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub =

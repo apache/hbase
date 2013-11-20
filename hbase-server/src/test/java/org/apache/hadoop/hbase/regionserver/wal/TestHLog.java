@@ -23,11 +23,8 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.BindException;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.TreeMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -63,9 +60,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /** JUnit test case for HLog */
 @Category(LargeTests.class)
@@ -716,7 +710,7 @@ public class TestHLog  {
 
   @Test
   public void testGetServerNameFromHLogDirectoryName() throws IOException {
-    ServerName sn = new ServerName("hn", 450, 1398);
+    ServerName sn = ServerName.valueOf("hn", 450, 1398);
     String hl = FSUtils.getRootDir(conf) + "/" + HLogUtil.getHLogDirectoryName(sn.toString());
 
     // Must not throw exception

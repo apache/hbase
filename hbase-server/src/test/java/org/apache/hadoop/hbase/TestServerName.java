@@ -41,17 +41,17 @@ public class TestServerName {
     assertEquals("x", ServerName.getHostNameMinusDomain("x"));
     assertEquals("x", ServerName.getHostNameMinusDomain("x.y.z"));
     assertEquals("asf000", ServerName.getHostNameMinusDomain("asf000.sp2.ygridcore.net"));
-    ServerName sn = new ServerName("asf000.sp2.ygridcore.net", 1, 1);
+    ServerName sn = ServerName.valueOf("asf000.sp2.ygridcore.net", 1, 1);
     assertEquals("asf000.sp2.ygridcore.net,1,1", sn.toString());
   }
 
   @Test
   public void testShortString() {
-    ServerName sn = new ServerName("asf000.sp2.ygridcore.net", 1, 1);
+    ServerName sn = ServerName.valueOf("asf000.sp2.ygridcore.net", 1, 1);
     assertEquals("asf000:1", sn.toShortString());
-    sn = new ServerName("2607:f0d0:1002:0051:0000:0000:0000:0004", 1, 1);
+    sn = ServerName.valueOf("2607:f0d0:1002:0051:0000:0000:0000:0004", 1, 1);
     assertEquals("2607:f0d0:1002:0051:0000:0000:0000:0004:1", sn.toShortString());
-    sn = new ServerName("1.1.1.1", 1, 1);
+    sn = ServerName.valueOf("1.1.1.1", 1, 1);
     assertEquals("1.1.1.1:1", sn.toShortString());
   }
 
@@ -68,7 +68,7 @@ public class TestServerName {
 
   @Test public void testParseOfBytes() {
     final String snStr = "www.example.org,1234,5678";
-    ServerName sn = new ServerName(snStr);
+    ServerName sn = ServerName.valueOf(snStr);
     byte [] versionedBytes = sn.getVersionedBytes();
     assertEquals(sn.toString(), ServerName.parseVersionedServerName(versionedBytes).toString());
     final String hostnamePortStr = sn.getHostAndPort();
@@ -81,9 +81,9 @@ public class TestServerName {
 
   @Test
   public void testServerName() {
-    ServerName sn = new ServerName("www.example.org", 1234, 5678);
-    ServerName sn2 = new ServerName("www.example.org", 1234, 5678);
-    ServerName sn3 = new ServerName("www.example.org", 1234, 56789);
+    ServerName sn = ServerName.valueOf("www.example.org", 1234, 5678);
+    ServerName sn2 = ServerName.valueOf("www.example.org", 1234, 5678);
+    ServerName sn3 = ServerName.valueOf("www.example.org", 1234, 56789);
     assertTrue(sn.equals(sn2));
     assertFalse(sn.equals(sn3));
     assertEquals(sn.hashCode(), sn2.hashCode());
@@ -99,7 +99,7 @@ public class TestServerName {
 
   @Test
   public void getServerStartcodeFromServerName() {
-    ServerName sn = new ServerName("www.example.org", 1234, 5678);
+    ServerName sn = ServerName.valueOf("www.example.org", 1234, 5678);
     assertEquals(5678,
       ServerName.getServerStartcodeFromServerName(sn.toString()));
     assertNotSame(5677,

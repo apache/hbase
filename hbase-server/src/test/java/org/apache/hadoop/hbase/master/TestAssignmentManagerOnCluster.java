@@ -158,8 +158,8 @@ public class TestAssignmentManagerOnCluster {
       ServerName destServer = onlineServers.iterator().next();
 
       // Created faked dead server
-      deadServer = new ServerName(destServer.getHostname(),
-        destServer.getPort(), destServer.getStartcode() - 100L);
+      deadServer = ServerName.valueOf(destServer.getHostname(),
+          destServer.getPort(), destServer.getStartcode() - 100L);
       master.serverManager.recordNewServer(deadServer, ServerLoad.EMPTY_SERVERLOAD);
 
       AssignmentManager am = master.getAssignmentManager();

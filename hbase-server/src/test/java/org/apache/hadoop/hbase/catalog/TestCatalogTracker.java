@@ -72,7 +72,7 @@ public class TestCatalogTracker {
   private static final Log LOG = LogFactory.getLog(TestCatalogTracker.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final ServerName SN =
-    new ServerName("example.org", 1234, System.currentTimeMillis());
+      ServerName.valueOf("example.org", 1234, System.currentTimeMillis());
   private ZooKeeperWatcher watcher;
   private Abortable abortable;
 
@@ -137,7 +137,7 @@ public class TestCatalogTracker {
     constructAndStartCatalogTracker(connection);
 
     MetaRegionTracker.setMetaLocation(this.watcher,
-        new ServerName("example.com", 1234, System.currentTimeMillis()));
+        ServerName.valueOf("example.com", 1234, System.currentTimeMillis()));
   }
 
   /**
@@ -251,7 +251,7 @@ public class TestCatalogTracker {
     final CatalogTracker ct = constructAndStartCatalogTracker(connection);
 
     MetaRegionTracker.setMetaLocation(this.watcher,
-        new ServerName("example.com", 1234, System.currentTimeMillis()));
+        ServerName.valueOf("example.com", 1234, System.currentTimeMillis()));
     Assert.assertFalse(ct.verifyMetaRegionLocation(100));
   }
 

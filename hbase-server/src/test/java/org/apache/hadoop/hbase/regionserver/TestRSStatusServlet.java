@@ -56,12 +56,12 @@ public class TestRSStatusServlet {
   static final int FAKE_WEB_PORT = 1586;
   
   private final ServerName fakeServerName =
-    new ServerName("localhost", FAKE_IPC_PORT, 11111);
+      ServerName.valueOf("localhost", FAKE_IPC_PORT, 11111);
   private final GetServerInfoResponse fakeResponse =
     ResponseConverter.buildGetServerInfoResponse(fakeServerName, FAKE_WEB_PORT);
 
   private final ServerName fakeMasterAddress =
-    new ServerName("localhost", 60010, 1212121212);
+      ServerName.valueOf("localhost", 60010, 1212121212);
 
   @Before
   public void setupBasicMocks() throws IOException, ServiceException {

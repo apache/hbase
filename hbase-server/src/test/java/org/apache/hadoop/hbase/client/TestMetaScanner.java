@@ -169,7 +169,7 @@ public class TestMetaScanner {
               Bytes.toBytes(midKey),
               end);
 
-            MetaEditor.splitRegion(catalogTracker, parent, splita, splitb, new ServerName("fooserver", 1, 0));
+            MetaEditor.splitRegion(catalogTracker, parent, splita, splitb, ServerName.valueOf("fooserver", 1, 0));
 
             Threads.sleep(random.nextInt(200));
           } catch (Throwable e) {

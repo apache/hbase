@@ -149,7 +149,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
       // The old server would have had same host and port, but different
       // start code!
       ServerName snWithOldStartCode =
-          new ServerName(sn.getHostname(), sn.getPort(), sn.getStartcode() - 10);
+          ServerName.valueOf(sn.getHostname(), sn.getPort(), sn.getStartcode() - 10);
       existing.put(regions.get(i), snWithOldStartCode);
     }
     List<ServerName> listOfServerNames = getListOfServerNames(servers);

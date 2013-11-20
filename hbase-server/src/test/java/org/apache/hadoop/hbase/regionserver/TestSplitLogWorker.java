@@ -48,7 +48,7 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestSplitLogWorker {
   private static final Log LOG = LogFactory.getLog(TestSplitLogWorker.class);
-  private final ServerName MANAGER = new ServerName("manager,1,1");
+  private final ServerName MANAGER = ServerName.valueOf("manager,1,1");
   static {
     Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
   }
@@ -131,9 +131,9 @@ public class TestSplitLogWorker {
     LOG.info("testAcquireTaskAtStartup");
     SplitLogCounters.resetCounters();
     final String TATAS = "tatas";
-    final ServerName RS = new ServerName("rs,1,1");
+    final ServerName RS = ServerName.valueOf("rs,1,1");
     zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, TATAS),
-      new SplitLogTask.Unassigned(new ServerName("mgr,1,1")).toByteArray(), Ids.OPEN_ACL_UNSAFE,
+      new SplitLogTask.Unassigned(ServerName.valueOf("mgr,1,1")).toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
     SplitLogWorker slw = new SplitLogWorker(zkw, TEST_UTIL.getConfiguration(), RS, neverEndingTask);
@@ -164,8 +164,8 @@ public class TestSplitLogWorker {
     LOG.info("testRaceForTask");
     SplitLogCounters.resetCounters();
     final String TRFT = "trft";
-    final ServerName SVR1 = new ServerName("svr1,1,1");
-    final ServerName SVR2 = new ServerName("svr2,1,1");
+    final ServerName SVR1 = ServerName.valueOf("svr1,1,1");
+    final ServerName SVR2 = ServerName.valueOf("svr2,1,1");
     zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, TRFT),
       new SplitLogTask.Unassigned(MANAGER).toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
@@ -193,7 +193,7 @@ public class TestSplitLogWorker {
   public void testPreemptTask() throws Exception {
     LOG.info("testPreemptTask");
     SplitLogCounters.resetCounters();
-    final ServerName SRV = new ServerName("tpt_svr,1,1");
+    final ServerName SRV = ServerName.valueOf("tpt_svr,1,1");
     final String PATH = ZKSplitLog.getEncodedNodeName(zkw, "tpt_task");
     SplitLogWorker slw = new SplitLogWorker(zkw, TEST_UTIL.getConfiguration(), SRV, neverEndingTask);
     slw.start();
@@ -224,7 +224,7 @@ public class TestSplitLogWorker {
   public void testMultipleTasks() throws Exception {
     LOG.info("testMultipleTasks");
     SplitLogCounters.resetCounters();
-    final ServerName SRV = new ServerName("tmt_svr,1,1");
+    final ServerName SRV = ServerName.valueOf("tmt_svr,1,1");
     final String PATH1 = ZKSplitLog.getEncodedNodeName(zkw, "tmt_task");
     SplitLogWorker slw = new SplitLogWorker(zkw, TEST_UTIL.getConfiguration(), SRV, neverEndingTask);
     slw.start();
@@ -246,7 +246,7 @@ public class TestSplitLogWorker {
         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
       // preempt the first task, have it owned by another worker
-      final ServerName anotherWorker = new ServerName("another-worker,1,1");
+      final ServerName anotherWorker = ServerName.valueOf("another-worker,1,1");
       SplitLogTask slt = new SplitLogTask.Owned(anotherWorker);
       ZKUtil.setData(zkw, PATH1, slt.toByteArray());
       waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 0, 1, 1500);
@@ -265,7 +265,7 @@ public class TestSplitLogWorker {
   public void testRescan() throws Exception {
     LOG.info("testRescan");
     SplitLogCounters.resetCounters();
-    final ServerName SRV = new ServerName("svr,1,1");
+    final ServerName SRV = ServerName.valueOf("svr,1,1");
     slw = new SplitLogWorker(zkw, TEST_UTIL.getConfiguration(), SRV, neverEndingTask);
     slw.start();
     Thread.yield(); // let the worker start

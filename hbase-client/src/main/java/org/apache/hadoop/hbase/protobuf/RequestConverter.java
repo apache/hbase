@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -996,7 +995,7 @@ public final class RequestConverter {
       buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME,encodedRegionName));
     if (destServerName != null) {
       builder.setDestServerName(
-        ProtobufUtil.toServerName(new ServerName(Bytes.toString(destServerName))));
+        ProtobufUtil.toServerName(ServerName.valueOf(Bytes.toString(destServerName))));
     }
     return builder.build();
   }

@@ -66,7 +66,7 @@ public class TestRestartCluster {
     String unassignedZNode = zooKeeper.assignmentZNode;
     ZKUtil.createAndFailSilent(zooKeeper, unassignedZNode);
 
-    ServerName sn = new ServerName(HMaster.MASTER, -1, System.currentTimeMillis());
+    ServerName sn = ServerName.valueOf(HMaster.MASTER, -1, System.currentTimeMillis());
 
     ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.FIRST_META_REGIONINFO, sn);
 

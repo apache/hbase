@@ -63,7 +63,7 @@ public class TestClusterStatusPublisher {
         List<Pair<ServerName, Long>> res = new ArrayList<Pair<ServerName, Long>>();
         switch ((int) EnvironmentEdgeManager.currentTimeMillis()) {
           case 2:
-            res.add(new Pair<ServerName, Long>(new ServerName("hn", 10, 10), 1L));
+            res.add(new Pair<ServerName, Long>(ServerName.valueOf("hn", 10, 10), 1L));
             break;
           case 1000:
             break;
@@ -88,7 +88,7 @@ public class TestClusterStatusPublisher {
       protected List<Pair<ServerName, Long>> getDeadServers(long since) {
         List<Pair<ServerName, Long>> res = new ArrayList<Pair<ServerName, Long>>();
         for (int i = 0; i < 25; i++) {
-          res.add(new Pair<ServerName, Long>(new ServerName("hn" + i, 10, 10), 20L));
+          res.add(new Pair<ServerName, Long>(ServerName.valueOf("hn" + i, 10, 10), 20L));
         }
 
         return res;

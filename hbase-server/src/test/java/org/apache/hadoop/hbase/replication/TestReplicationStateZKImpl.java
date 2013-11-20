@@ -148,7 +148,7 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
 
     @Override
     public ServerName getServerName() {
-      return new ServerName(this.serverName);
+      return ServerName.valueOf(this.serverName);
     }
 
     @Override

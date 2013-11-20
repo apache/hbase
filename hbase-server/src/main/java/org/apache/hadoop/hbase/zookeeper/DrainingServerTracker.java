@@ -77,7 +77,7 @@ public class DrainingServerTracker extends ZooKeeperListener {
     synchronized(this.drainingServers) {
       this.drainingServers.clear();
       for (String n: servers) {
-        final ServerName sn = new ServerName(ZKUtil.getNodeName(n));
+        final ServerName sn = ServerName.valueOf(ZKUtil.getNodeName(n));
         this.drainingServers.add(sn);
         this.serverManager.addServerToDrainList(sn);
         LOG.info("Draining RS node created, adding to list [" +
@@ -97,7 +97,7 @@ public class DrainingServerTracker extends ZooKeeperListener {
   @Override
   public void nodeDeleted(final String path) {
     if(path.startsWith(watcher.drainingZNode)) {
-      final ServerName sn = new ServerName(ZKUtil.getNodeName(path));
+      final ServerName sn = ServerName.valueOf(ZKUtil.getNodeName(path));
       LOG.info("Draining RS node deleted, removing from list [" +
           sn + "]");
       remove(sn);

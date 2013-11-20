@@ -52,7 +52,7 @@ public class TestFavoredNodeAssignmentHelper {
     // Set up some server -> rack mappings
     // Have three racks in the cluster with 10 hosts each.
     for (int i = 0; i < 40; i++) {
-      ServerName server = new ServerName("foo"+i+":1234",-1);
+      ServerName server = ServerName.valueOf("foo" + i + ":1234", -1);
       if (i < 10) {
         Mockito.when(rackManager.getRack(server)).thenReturn("rack1");
         if (rackToServers.get("rack1") == null) {

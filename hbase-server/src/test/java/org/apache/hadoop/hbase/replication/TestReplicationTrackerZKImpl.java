@@ -224,7 +224,7 @@ public class TestReplicationTrackerZKImpl {
 
     @Override
     public ServerName getServerName() {
-      return new ServerName(this.serverName);
+      return ServerName.valueOf(this.serverName);
     }
 
     @Override

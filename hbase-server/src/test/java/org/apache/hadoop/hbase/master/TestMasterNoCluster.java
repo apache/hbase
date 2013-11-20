@@ -144,9 +144,9 @@ public class TestMasterNoCluster {
     final long now = System.currentTimeMillis();
     // Names for our three servers.  Make the port numbers match hostname.
     // Will come in use down in the server when we need to figure how to respond.
-    final ServerName sn0 = new ServerName("0.example.org", 0, now);
-    final ServerName sn1 = new ServerName("1.example.org", 1, now);
-    final ServerName sn2 = new ServerName("2.example.org", 2, now);
+    final ServerName sn0 = ServerName.valueOf("0.example.org", 0, now);
+    final ServerName sn1 = ServerName.valueOf("1.example.org", 1, now);
+    final ServerName sn2 = ServerName.valueOf("2.example.org", 2, now);
     final ServerName [] sns = new ServerName [] {sn0, sn1, sn2};
     // Put up the mock servers
     final Configuration conf = TESTUTIL.getConfiguration();
@@ -256,7 +256,7 @@ public class TestMasterNoCluster {
 
     final long now = System.currentTimeMillis();
     // Name for our single mocked up regionserver.
-    final ServerName sn = new ServerName("0.example.org", 0, now);
+    final ServerName sn = ServerName.valueOf("0.example.org", 0, now);
     // Here is our mocked up regionserver.  Create it now.  Need it setting up
     // master next.
     final MockRegionServer rs0 = new MockRegionServer(conf, sn);
@@ -357,8 +357,8 @@ public class TestMasterNoCluster {
   public void testNotPullingDeadRegionServerFromZK()
       throws IOException, KeeperException, InterruptedException {
     final Configuration conf = TESTUTIL.getConfiguration();
-    final ServerName newServer = new ServerName("test.sample", 1, 101);
-    final ServerName deadServer = new ServerName("test.sample", 1, 100);
+    final ServerName newServer = ServerName.valueOf("test.sample", 1, 101);
+    final ServerName deadServer = ServerName.valueOf("test.sample", 1, 100);
     final MockRegionServer rs0 = new MockRegionServer(conf, newServer);
 
     HMaster master = new HMaster(conf) {

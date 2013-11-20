@@ -100,9 +100,9 @@ import com.google.protobuf.ServiceException;
 public class TestAssignmentManager {
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final ServerName SERVERNAME_A =
-    new ServerName("example.org", 1234, 5678);
+      ServerName.valueOf("example.org", 1234, 5678);
   private static final ServerName SERVERNAME_B =
-    new ServerName("example.org", 0, 5678);
+      ServerName.valueOf("example.org", 0, 5678);
   private static final HRegionInfo REGIONINFO =
     new HRegionInfo(TableName.valueOf("t"),
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_START_ROW);
@@ -135,7 +135,7 @@ public class TestAssignmentManager {
     // If abort is called, be sure to fail the test (don't just swallow it
     // silently as is mockito default).
     this.server = Mockito.mock(Server.class);
-    Mockito.when(server.getServerName()).thenReturn(new ServerName("master,1,1"));
+    Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("master,1,1"));
     Mockito.when(server.getConfiguration()).thenReturn(HTU.getConfiguration());
     this.watcher =
       new ZooKeeperWatcher(HTU.getConfiguration(), "mockedServer", this.server, true);

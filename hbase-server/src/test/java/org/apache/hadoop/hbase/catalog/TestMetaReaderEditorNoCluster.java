@@ -137,7 +137,7 @@ public class TestMetaReaderEditorNoCluster {
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(UTIL.getConfiguration(),
       this.getClass().getSimpleName(), ABORTABLE, true);
     // This is a servername we use in a few places below.
-    ServerName sn = new ServerName("example.com", 1234, System.currentTimeMillis());
+    ServerName sn = ServerName.valueOf("example.com", 1234, System.currentTimeMillis());
 
     HConnection connection;
     CatalogTracker ct = null;

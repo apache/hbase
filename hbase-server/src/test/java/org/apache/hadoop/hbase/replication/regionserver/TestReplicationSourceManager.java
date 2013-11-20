@@ -397,7 +397,7 @@ public class TestReplicationSourceManager {
 
     @Override
     public ServerName getServerName() {
-      return new ServerName(hostname, 1234, 1L);
+      return ServerName.valueOf(hostname, 1234, 1L);
     }
 
     @Override
