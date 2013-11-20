@@ -911,7 +911,7 @@ public final class HConstants {
   /**
    * The address to use for binding the local socket for receiving multicast. Defaults to
    * 0.0.0.0.
-   * see https://issues.apache.org/jira/browse/HBASE-9961
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-9961">HBASE-9961</a>
    */
   public static final String STATUS_MULTICAST_BIND_ADDRESS = "hbase.status.multicast.bind.address.ip";
   public static final String DEFAULT_STATUS_MULTICAST_BIND_ADDRESS = "0.0.0.0";
