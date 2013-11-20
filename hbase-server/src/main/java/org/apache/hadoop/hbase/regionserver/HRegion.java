@@ -2030,7 +2030,8 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Replay a batch of mutations.
    * @param mutations mutations to replay.
-   * @return
+   * @return an array of OperationStatus which internally contains the
+   *         OperationStatusCode and the exceptionMessage if any.
    * @throws IOException
    */
   public OperationStatus[] batchReplay(HLogSplitter.MutationReplay[] mutations)
