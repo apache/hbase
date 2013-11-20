@@ -732,7 +732,7 @@ public class TestHLog  {
 
   @Test
   public void testGetServerNameFromHLogDirectoryName() throws IOException {
-    ServerName sn = new ServerName("hn", 450, 1398);
+    ServerName sn = ServerName.valueOf("hn", 450, 1398);
     String hl = FSUtils.getRootDir(conf) + "/" + HLogUtil.getHLogDirectoryName(sn.toString());
 
     // Must not throw exception

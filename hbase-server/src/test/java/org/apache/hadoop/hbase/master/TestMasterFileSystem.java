@@ -26,13 +26,11 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -89,8 +87,8 @@ public class TestMasterFileSystem {
 
     String failedRegion = "failedRegoin1";
     String staleRegion = "staleRegion";
-    ServerName inRecoveryServerName = new ServerName("mgr,1,1");
-    ServerName previouselyFaildServerName = new ServerName("previous,1,1");
+    ServerName inRecoveryServerName = ServerName.valueOf("mgr,1,1");
+    ServerName previouselyFaildServerName = ServerName.valueOf("previous,1,1");
     String walPath = "/hbase/data/.logs/" + inRecoveryServerName.getServerName()
         + "-splitting/test";
     // Create a ZKW to use in the test

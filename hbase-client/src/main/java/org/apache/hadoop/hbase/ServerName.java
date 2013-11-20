@@ -94,7 +94,7 @@ public class ServerName implements Comparable<ServerName> {
   private byte [] bytes;
   public static final List<ServerName> EMPTY_SERVER_LIST = new ArrayList<ServerName>(0);
 
-  public ServerName(final String hostname, final int port, final long startcode) {
+  private ServerName(final String hostname, final int port, final long startcode) {
     // Drop the domain is there is one; no need of it in a local cluster.  With it, we get long
     // unwieldy names.
     this.hostnameOnly = hostname;
@@ -114,12 +114,12 @@ public class ServerName implements Comparable<ServerName> {
     return parts[0];
   }
 
-  public ServerName(final String serverName) {
+  private ServerName(final String serverName) {
     this(parseHostname(serverName), parsePort(serverName),
       parseStartcode(serverName));
   }
 
-  public ServerName(final String hostAndPort, final long startCode) {
+  private ServerName(final String hostAndPort, final long startCode) {
     this(Addressing.parseHostname(hostAndPort),
       Addressing.parsePort(hostAndPort), startCode);
   }
@@ -143,6 +143,18 @@ public class ServerName implements Comparable<ServerName> {
   public static long parseStartcode(final String serverName) {
     int index = serverName.lastIndexOf(SERVERNAME_SEPARATOR);
     return Long.parseLong(serverName.substring(index + 1));
+  }
+
+  public static ServerName valueOf(final String hostAndPort, final long startCode) {
+    return new ServerName(hostAndPort, startCode);
+  }
+
+  public static ServerName valueOf(final String serverName) {
+    return new ServerName(serverName);
+  }
+
+  public static ServerName valueOf(final String hostname, final int port, final long startcode) {
+    return new ServerName(hostname, port, startcode);
   }
 
   @Override
@@ -299,11 +311,11 @@ public class ServerName implements Comparable<ServerName> {
     short version = Bytes.toShort(versionedBytes);
     if (version == VERSION) {
       int length = versionedBytes.length - Bytes.SIZEOF_SHORT;
-      return new ServerName(Bytes.toString(versionedBytes, Bytes.SIZEOF_SHORT, length));
+      return valueOf(Bytes.toString(versionedBytes, Bytes.SIZEOF_SHORT, length));
     }
     // Presume the bytes were written with an old version of hbase and that the
     // bytes are actually a String of the form "'<hostname>' ':' '<port>'".
-    return new ServerName(Bytes.toString(versionedBytes), NON_STARTCODE);
+    return valueOf(Bytes.toString(versionedBytes), NON_STARTCODE);
   }
 
   /**
@@ -312,8 +324,8 @@ public class ServerName implements Comparable<ServerName> {
    * @return A ServerName instance.
    */
   public static ServerName parseServerName(final String str) {
-    return SERVERNAME_PATTERN.matcher(str).matches()? new ServerName(str):
-      new ServerName(str, NON_STARTCODE);
+    return SERVERNAME_PATTERN.matcher(str).matches()? valueOf(str) :
+        valueOf(str, NON_STARTCODE);
   }
 
 
@@ -344,7 +356,7 @@ public class ServerName implements Comparable<ServerName> {
         MetaRegionServer rss =
           MetaRegionServer.PARSER.parseFrom(data, prefixLen, data.length - prefixLen);
         org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName sn = rss.getServer();
-        return new ServerName(sn.getHostName(), sn.getPort(), sn.getStartCode());
+        return valueOf(sn.getHostName(), sn.getPort(), sn.getStartCode());
       } catch (InvalidProtocolBufferException e) {
         // A failed parse of the znode is pretty catastrophic. Rather than loop
         // retrying hoping the bad bytes will changes, and rather than change
@@ -366,6 +378,6 @@ public class ServerName implements Comparable<ServerName> {
     // Presume it a hostname:port format.
     String hostname = Addressing.parseHostname(str);
     int port = Addressing.parsePort(str);
-    return new ServerName(hostname, port, -1L);
+    return valueOf(hostname, port, -1L);
   }
 }

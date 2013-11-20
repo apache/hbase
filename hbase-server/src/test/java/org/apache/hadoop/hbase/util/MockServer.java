@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  */
 public class MockServer implements Server {
   static final Log LOG = LogFactory.getLog(MockServer.class);
-  final static ServerName NAME = new ServerName("MockServer", 123, -1);
+  final static ServerName NAME = ServerName.valueOf("MockServer", 123, -1);
   
   boolean stopped;
   boolean aborted;

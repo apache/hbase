@@ -75,7 +75,7 @@ public class TestMasterAddressManager {
     // Create the master node with a dummy address
     String host = "localhost";
     int port = 1234;
-    ServerName sn = new ServerName(host, port, System.currentTimeMillis());
+    ServerName sn = ServerName.valueOf(host, port, System.currentTimeMillis());
     LOG.info("Creating master node");
     MasterAddressTracker.setMasterAddress(zk, zk.getMasterAddressZNode(), sn);
 

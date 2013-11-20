@@ -77,7 +77,7 @@ public class TestSerialization {
   
   @Test
   public void testSplitLogTask() throws DeserializationException {
-    SplitLogTask slt = new SplitLogTask.Unassigned(new ServerName("mgr,1,1"));
+    SplitLogTask slt = new SplitLogTask.Unassigned(ServerName.valueOf("mgr,1,1"));
     byte [] bytes = slt.toByteArray();
     SplitLogTask sltDeserialized = SplitLogTask.parseFrom(bytes);
     assertTrue(slt.equals(sltDeserialized));

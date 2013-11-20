@@ -89,7 +89,7 @@ public class TestDelayedRpc {
     RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
-          new ServerName(rpcServer.getListenerAddress().getHostName(),
+          ServerName.valueOf(rpcServer.getListenerAddress().getHostName(),
               rpcServer.getListenerAddress().getPort(), System.currentTimeMillis()),
           User.getCurrent(), RPC_CLIENT_TIMEOUT);
       TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub =
@@ -168,7 +168,7 @@ public class TestDelayedRpc {
     RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
-          new ServerName(rpcServer.getListenerAddress().getHostName(),
+          ServerName.valueOf(rpcServer.getListenerAddress().getHostName(),
               rpcServer.getListenerAddress().getPort(), System.currentTimeMillis()),
           User.getCurrent(), RPC_CLIENT_TIMEOUT);
       TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub =
@@ -288,8 +288,8 @@ public class TestDelayedRpc {
     RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
-        new ServerName(rpcServer.getListenerAddress().getHostName(),
-          rpcServer.getListenerAddress().getPort(), System.currentTimeMillis()),
+          ServerName.valueOf(rpcServer.getListenerAddress().getHostName(),
+              rpcServer.getListenerAddress().getPort(), System.currentTimeMillis()),
         User.getCurrent(), 1000);
       TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub =
         TestDelayedRpcProtos.TestDelayedService.newBlockingStub(channel);

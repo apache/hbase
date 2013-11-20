@@ -77,7 +77,7 @@ import org.mockito.Mockito;
 @Category(MediumTests.class)
 public class TestSplitLogManager {
   private static final Log LOG = LogFactory.getLog(TestSplitLogManager.class);
-  private final ServerName DUMMY_MASTER = new ServerName("dummy-master,1,1");
+  private final ServerName DUMMY_MASTER = ServerName.valueOf("dummy-master,1,1");
   private final ServerManager sm = Mockito.mock(ServerManager.class);
   private final MasterServices master =  Mockito.mock(MasterServices.class);
 
@@ -271,9 +271,9 @@ public class TestSplitLogManager {
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
     int version = ZKUtil.checkExists(zkw, tasknode);
-    final ServerName worker1 = new ServerName("worker1,1,1");
-    final ServerName worker2 = new ServerName("worker2,1,1");
-    final ServerName worker3 = new ServerName("worker3,1,1");
+    final ServerName worker1 = ServerName.valueOf("worker1,1,1");
+    final ServerName worker2 = ServerName.valueOf("worker2,1,1");
+    final ServerName worker3 = ServerName.valueOf("worker3,1,1");
     SplitLogTask slt = new SplitLogTask.Owned(worker1);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
@@ -303,7 +303,7 @@ public class TestSplitLogManager {
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
     int version = ZKUtil.checkExists(zkw, tasknode);
-    final ServerName worker1 = new ServerName("worker1,1,1");
+    final ServerName worker1 = ServerName.valueOf("worker1,1,1");
     SplitLogTask slt = new SplitLogTask.Owned(worker1);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
@@ -330,7 +330,7 @@ public class TestSplitLogManager {
     slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     TaskBatch batch = new TaskBatch();
     String tasknode = submitTaskAndWait(batch, "foo/1");
-    final ServerName worker1 = new ServerName("worker1,1,1");
+    final ServerName worker1 = ServerName.valueOf("worker1,1,1");
     SplitLogTask slt = new SplitLogTask.Done(worker1);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     synchronized (batch) {
@@ -351,7 +351,7 @@ public class TestSplitLogManager {
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
-    final ServerName worker1 = new ServerName("worker1,1,1");
+    final ServerName worker1 = ServerName.valueOf("worker1,1,1");
     SplitLogTask slt = new SplitLogTask.Err(worker1);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
 
@@ -374,7 +374,7 @@ public class TestSplitLogManager {
     TaskBatch batch = new TaskBatch();
     String tasknode = submitTaskAndWait(batch, "foo/1");
     assertEquals(tot_mgr_resubmit.get(), 0);
-    final ServerName worker1 = new ServerName("worker1,1,1");
+    final ServerName worker1 = ServerName.valueOf("worker1,1,1");
     assertEquals(tot_mgr_resubmit.get(), 0);
     SplitLogTask slt = new SplitLogTask.Resigned(worker1);
     assertEquals(tot_mgr_resubmit.get(), 0);
@@ -398,7 +398,7 @@ public class TestSplitLogManager {
 
     // create an orphan task in OWNED state
     String tasknode1 = ZKSplitLog.getEncodedNodeName(zkw, "orphan/1");
-    final ServerName worker1 = new ServerName("worker1,1,1");
+    final ServerName worker1 = ServerName.valueOf("worker1,1,1");
     SplitLogTask slt = new SplitLogTask.Owned(worker1);
     zkw.getRecoverableZooKeeper().create(tasknode1, slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
@@ -413,7 +413,7 @@ public class TestSplitLogManager {
     // keep updating the orphan owned node every to/2 seconds
     for (int i = 0; i < (3 * to)/100; i++) {
       Thread.sleep(100);
-      final ServerName worker2 = new ServerName("worker1,1,1");
+      final ServerName worker2 = ServerName.valueOf("worker1,1,1");
       slt = new SplitLogTask.Owned(worker2);
       ZKUtil.setData(zkw, tasknode1, slt.toByteArray());
     }
@@ -437,7 +437,7 @@ public class TestSplitLogManager {
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
     int version = ZKUtil.checkExists(zkw, tasknode);
-    final ServerName worker1 = new ServerName("worker1,1,1");
+    final ServerName worker1 = ServerName.valueOf("worker1,1,1");
     SplitLogTask slt = new SplitLogTask.Owned(worker1);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     if (tot_mgr_heartbeat.get() == 0) waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
@@ -461,7 +461,7 @@ public class TestSplitLogManager {
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
-    final ServerName worker1 = new ServerName("worker1,1,1");
+    final ServerName worker1 = ServerName.valueOf("worker1,1,1");
 
     SplitLogTask slt = new SplitLogTask.Owned(worker1);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());

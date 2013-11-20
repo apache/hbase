@@ -151,7 +151,7 @@ public class TestHFileLinkCleaner {
 
     @Override
     public ServerName getServerName() {
-      return new ServerName("regionserver,60020,000000");
+      return ServerName.valueOf("regionserver,60020,000000");
     }
 
     @Override

@@ -113,7 +113,7 @@ public class TestProtoBufRpc {
     RpcClient rpcClient = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
-        new ServerName(this.isa.getHostName(), this.isa.getPort(), System.currentTimeMillis()),
+          ServerName.valueOf(this.isa.getHostName(), this.isa.getPort(), System.currentTimeMillis()),
         User.getCurrent(), 0);
       TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub =
         TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(channel);

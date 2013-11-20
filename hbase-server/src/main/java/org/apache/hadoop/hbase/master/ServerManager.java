@@ -211,7 +211,7 @@ public class ServerManager {
     // is, reject the server and trigger its expiration. The next time it comes
     // in, it should have been removed from serverAddressToServerInfo and queued
     // for processing by ProcessServerShutdown.
-    ServerName sn = new ServerName(ia.getHostName(), port, serverStartcode);
+    ServerName sn = ServerName.valueOf(ia.getHostName(), port, serverStartcode);
     checkClockSkew(sn, serverCurrentTime);
     checkIsDead(sn, "STARTUP");
     if (!checkAlreadySameHostPortAndRecordNewServer(

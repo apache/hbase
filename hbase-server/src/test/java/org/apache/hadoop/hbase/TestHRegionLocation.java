@@ -35,7 +35,7 @@ public class TestHRegionLocation {
    */
   @Test
   public void testHashAndEqualsCode() {
-    ServerName hsa1 = new ServerName("localhost", 1234, -1L);
+    ServerName hsa1 = ServerName.valueOf("localhost", 1234, -1L);
     HRegionLocation hrl1 = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa1);
     HRegionLocation hrl2 = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa1);
     assertEquals(hrl1.hashCode(), hrl2.hashCode());
@@ -45,7 +45,7 @@ public class TestHRegionLocation {
     // They are equal because they have same location even though they are
     // carrying different regions or timestamp.
     assertTrue(hrl1.equals(hrl3));
-    ServerName hsa2 = new ServerName("localhost", 12345, -1L);
+    ServerName hsa2 = ServerName.valueOf("localhost", 12345, -1L);
     HRegionLocation hrl4 = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa2);
     // These have same HRI but different locations so should be different.
     assertFalse(hrl3.equals(hrl4));
@@ -56,17 +56,17 @@ public class TestHRegionLocation {
 
   @Test
   public void testToString() {
-    ServerName hsa1 = new ServerName("localhost", 1234, -1L);
+    ServerName hsa1 = ServerName.valueOf("localhost", 1234, -1L);
     HRegionLocation hrl1 = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa1);
     System.out.println(hrl1.toString());
   }
 
   @Test
   public void testCompareTo() {
-    ServerName hsa1 = new ServerName("localhost", 1234, -1L);
+    ServerName hsa1 = ServerName.valueOf("localhost", 1234, -1L);
     HRegionLocation hsl1 =
       new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa1);
-    ServerName hsa2 = new ServerName("localhost", 1235, -1L);
+    ServerName hsa2 = ServerName.valueOf("localhost", 1235, -1L);
     HRegionLocation hsl2 =
       new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa2);
     assertTrue(hsl1.compareTo(hsl1) == 0);

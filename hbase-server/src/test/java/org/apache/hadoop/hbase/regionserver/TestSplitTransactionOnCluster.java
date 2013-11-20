@@ -351,7 +351,7 @@ public class TestSplitTransactionOnCluster {
       int regionCount = ProtobufUtil.getOnlineRegions(server).size();
       // Insert into zk a blocking znode, a znode of same name as region
       // so it gets in way of our splitting.
-      ServerName fakedServer = new ServerName("any.old.server", 1234, -1);
+      ServerName fakedServer = ServerName.valueOf("any.old.server", 1234, -1);
       ZKAssign.createNodeClosing(TESTING_UTIL.getZooKeeperWatcher(),
         hri, fakedServer);
       // Now try splitting.... should fail.  And each should successfully

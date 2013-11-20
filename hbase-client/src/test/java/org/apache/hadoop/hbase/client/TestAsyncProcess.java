@@ -58,8 +58,8 @@ public class TestAsyncProcess {
   private static final byte[] FAILS = "FAILS".getBytes();
   private static final Configuration conf = new Configuration();
 
-  private static ServerName sn = new ServerName("localhost:10,1254");
-  private static ServerName sn2 = new ServerName("localhost:140,12540");
+  private static ServerName sn = ServerName.valueOf("localhost:10,1254");
+  private static ServerName sn2 = ServerName.valueOf("localhost:140,12540");
   private static HRegionInfo hri1 =
       new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_1, DUMMY_BYTES_2, false, 1);
   private static HRegionInfo hri2 =

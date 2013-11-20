@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.*;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -29,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.zookeeper.KeeperException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -43,9 +41,9 @@ public abstract class TestReplicationStateBasic {
   protected ReplicationQueues rq2;
   protected ReplicationQueues rq3;
   protected ReplicationQueuesClient rqc;
-  protected String server1 = new ServerName("hostname1.example.org", 1234, -1L).toString();
-  protected String server2 = new ServerName("hostname2.example.org", 1234, -1L).toString();
-  protected String server3 = new ServerName("hostname3.example.org", 1234, -1L).toString();
+  protected String server1 = ServerName.valueOf("hostname1.example.org", 1234, -1L).toString();
+  protected String server2 = ServerName.valueOf("hostname2.example.org", 1234, -1L).toString();
+  protected String server3 = ServerName.valueOf("hostname3.example.org", 1234, -1L).toString();
   protected ReplicationPeers rp;
   protected static final String ID_ONE = "1";
   protected static final String ID_TWO = "2";
@@ -124,7 +122,7 @@ public abstract class TestReplicationStateBasic {
     assertNull(rq1.getAllQueues());
     assertEquals(0, rq1.getLogPosition("bogus", "bogus"));
     assertNull(rq1.getLogsInQueue("bogus"));
-    assertEquals(0, rq1.claimQueues(new ServerName("bogus", 1234, -1L).toString()).size());
+    assertEquals(0, rq1.claimQueues(ServerName.valueOf("bogus", 1234, -1L).toString()).size());
 
     rq1.setLogPosition("bogus", "bogus", 5L);
 

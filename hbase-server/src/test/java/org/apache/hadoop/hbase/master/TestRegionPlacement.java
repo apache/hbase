@@ -622,7 +622,7 @@ public class TestRegionPlacement {
             totalRegionNum.incrementAndGet();
             if (server != null) {
               ServerName serverName =
-                  new ServerName(Bytes.toString(server), -1);
+                  ServerName.valueOf(Bytes.toString(server), -1);
               if (favoredNodes != null) {
                 String placement = "[NOT FAVORED NODE]";
                 for (int i = 0; i < favoredServerList.length; i++) {

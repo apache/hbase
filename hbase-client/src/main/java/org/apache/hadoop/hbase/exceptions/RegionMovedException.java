@@ -24,7 +24,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * Subclass if the server knows the region is now on another server.
@@ -63,7 +62,7 @@ public class RegionMovedException extends NotServingRegionException {
   }
 
   public ServerName getServerName(){
-    return new ServerName(hostname, port, startCode);
+    return ServerName.valueOf(hostname, port, startCode);
   }
 
   public long getLocationSeqNum() {

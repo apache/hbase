@@ -121,7 +121,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   @Test
   public void testKeepRegionLoad() throws Exception {
 
-    ServerName sn = new ServerName("test:8080", 100);
+    ServerName sn = ServerName.valueOf("test:8080", 100);
     int numClusterStatusToAdd = 20000;
     for (int i = 0; i < numClusterStatusToAdd; i++) {
       ServerLoad sl = mock(ServerLoad.class);
@@ -267,7 +267,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
     ServerName sn = serverMap.keySet().toArray(new ServerName[serverMap.size()])[0];
 
-    ServerName deadSn = new ServerName(sn.getHostname(), sn.getPort(), sn.getStartcode() -100);
+    ServerName deadSn = ServerName.valueOf(sn.getHostname(), sn.getPort(), sn.getStartcode() - 100);
 
     serverMap.put(deadSn, new ArrayList<HRegionInfo>(0));
 

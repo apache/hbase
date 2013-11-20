@@ -89,8 +89,8 @@ public class TestDrainingServer {
     final HMaster master = Mockito.mock(HMaster.class);
     final Server server = Mockito.mock(Server.class);
     final ServerManager serverManager = Mockito.mock(ServerManager.class);
-    final ServerName SERVERNAME_A = new ServerName("mockserver_a.org", 1000, 8000);
-    final ServerName SERVERNAME_B = new ServerName("mockserver_b.org", 1001, 8000);
+    final ServerName SERVERNAME_A = ServerName.valueOf("mockserver_a.org", 1000, 8000);
+    final ServerName SERVERNAME_B = ServerName.valueOf("mockserver_b.org", 1001, 8000);
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(conf);
     CatalogTracker catalogTracker = Mockito.mock(CatalogTracker.class);
     final HRegionInfo REGIONINFO = new HRegionInfo(TableName.valueOf("table_test"),
@@ -105,7 +105,7 @@ public class TestDrainingServer {
     onlineServers.put(SERVERNAME_B, ServerLoad.EMPTY_SERVERLOAD);
 
     Mockito.when(server.getConfiguration()).thenReturn(conf);
-    Mockito.when(server.getServerName()).thenReturn(new ServerName("masterMock,1,1"));
+    Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("masterMock,1,1"));
     Mockito.when(server.getZooKeeper()).thenReturn(zkWatcher);
 
     Mockito.when(serverManager.getOnlineServers()).thenReturn(onlineServers);
@@ -163,11 +163,11 @@ public class TestDrainingServer {
     final HMaster master = Mockito.mock(HMaster.class);
     final Server server = Mockito.mock(Server.class);
     final ServerManager serverManager = Mockito.mock(ServerManager.class);
-    final ServerName SERVERNAME_A = new ServerName("mockserverbulk_a.org", 1000, 8000);
-    final ServerName SERVERNAME_B = new ServerName("mockserverbulk_b.org", 1001, 8000);
-    final ServerName SERVERNAME_C = new ServerName("mockserverbulk_c.org", 1002, 8000);
-    final ServerName SERVERNAME_D = new ServerName("mockserverbulk_d.org", 1003, 8000);
-    final ServerName SERVERNAME_E = new ServerName("mockserverbulk_e.org", 1004, 8000);
+    final ServerName SERVERNAME_A = ServerName.valueOf("mockserverbulk_a.org", 1000, 8000);
+    final ServerName SERVERNAME_B = ServerName.valueOf("mockserverbulk_b.org", 1001, 8000);
+    final ServerName SERVERNAME_C = ServerName.valueOf("mockserverbulk_c.org", 1002, 8000);
+    final ServerName SERVERNAME_D = ServerName.valueOf("mockserverbulk_d.org", 1003, 8000);
+    final ServerName SERVERNAME_E = ServerName.valueOf("mockserverbulk_e.org", 1004, 8000);
     final Map<HRegionInfo, ServerName> bulk = new HashMap<HRegionInfo, ServerName>();
 
     Set<ServerName> bunchServersAssigned = new HashSet<ServerName>();
@@ -202,7 +202,7 @@ public class TestDrainingServer {
         "zkWatcher-BulkAssignTest", abortable, true);
 
     Mockito.when(server.getConfiguration()).thenReturn(conf);
-    Mockito.when(server.getServerName()).thenReturn(new ServerName("masterMock,1,1"));
+    Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("masterMock,1,1"));
     Mockito.when(server.getZooKeeper()).thenReturn(zkWatcher);
 
     Mockito.when(serverManager.getOnlineServers()).thenReturn(onlineServers);

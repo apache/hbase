@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
@@ -401,15 +400,15 @@ public class RegionPlacementMaintainer {
           List<ServerName> favoredServers =
             new ArrayList<ServerName>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
           ServerName s = servers.get(primaryAssignment[i] / slotsPerServer);
-          favoredServers.add(new ServerName(s.getHostname(), s.getPort(),
+          favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
               ServerName.NON_STARTCODE));
 
           s = servers.get(secondaryAssignment[i] / slotsPerServer);
-          favoredServers.add(new ServerName(s.getHostname(), s.getPort(),
+          favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
               ServerName.NON_STARTCODE));
 
           s = servers.get(tertiaryAssignment[i] / slotsPerServer);
-          favoredServers.add(new ServerName(s.getHostname(), s.getPort(),
+          favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
               ServerName.NON_STARTCODE));
           // Update the assignment plan
           plan.updateAssignmentPlan(regions.get(i), favoredServers);
@@ -434,17 +433,17 @@ public class RegionPlacementMaintainer {
             new ArrayList<ServerName>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
           HRegionInfo currentRegion = regions.get(i);
           ServerName s = primaryRSMap.get(currentRegion);
-          favoredServers.add(new ServerName(s.getHostname(), s.getPort(),
+          favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
               ServerName.NON_STARTCODE));
 
           ServerName[] secondaryAndTertiary =
               secondaryAndTertiaryMap.get(currentRegion);
           s = secondaryAndTertiary[0];
-          favoredServers.add(new ServerName(s.getHostname(), s.getPort(),
+          favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
               ServerName.NON_STARTCODE));
 
           s = secondaryAndTertiary[1];
-          favoredServers.add(new ServerName(s.getHostname(), s.getPort(),
+          favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
               ServerName.NON_STARTCODE));
           // Update the assignment plan
           plan.updateAssignmentPlan(regions.get(i), favoredServers);
@@ -943,7 +942,7 @@ public class RegionPlacementMaintainer {
 
     List<ServerName> serverList = new ArrayList<ServerName>();
     for (String hostNameAndPort : favoredNodesArray) {
-      serverList.add(new ServerName(hostNameAndPort, ServerName.NON_STARTCODE));
+      serverList.add(ServerName.valueOf(hostNameAndPort, ServerName.NON_STARTCODE));
     }
     return serverList;
   }

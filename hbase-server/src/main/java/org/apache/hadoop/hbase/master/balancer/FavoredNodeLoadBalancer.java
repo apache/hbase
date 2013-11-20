@@ -88,14 +88,14 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
         new HashMap<ServerName, ServerName>();
     ServerManager serverMgr = super.services.getServerManager();
     for (ServerName sn: serverMgr.getOnlineServersList()) {
-      ServerName s = new ServerName(sn.getHostname(), sn.getPort(), ServerName.NON_STARTCODE);
+      ServerName s = ServerName.valueOf(sn.getHostname(), sn.getPort(), ServerName.NON_STARTCODE);
       serverNameToServerNameWithoutCode.put(sn, s);
       serverNameWithoutCodeToServerName.put(s, sn);
     }
     for (Map.Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
       ServerName currentServer = entry.getKey();
       //get a server without the startcode for the currentServer
-      ServerName currentServerWithoutStartCode = new ServerName(currentServer.getHostname(),
+      ServerName currentServerWithoutStartCode = ServerName.valueOf(currentServer.getHostname(),
           currentServer.getPort(), ServerName.NON_STARTCODE);
       List<HRegionInfo> list = entry.getValue();
       for (HRegionInfo region : list) {
@@ -332,13 +332,13 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
       // We don't care about the startcode; but only the hostname really
       List<ServerName> favoredNodesForRegion = new ArrayList<ServerName>(3);
       ServerName sn = primaryRSMap.get(region);
-      favoredNodesForRegion.add(new ServerName(sn.getHostname(), sn.getPort(),
+      favoredNodesForRegion.add(ServerName.valueOf(sn.getHostname(), sn.getPort(),
           ServerName.NON_STARTCODE));
       ServerName[] secondaryAndTertiaryNodes = secondaryAndTertiaryRSMap.get(region);
       if (secondaryAndTertiaryNodes != null) {
-        favoredNodesForRegion.add(new ServerName(secondaryAndTertiaryNodes[0].getHostname(),
+        favoredNodesForRegion.add(ServerName.valueOf(secondaryAndTertiaryNodes[0].getHostname(),
             secondaryAndTertiaryNodes[0].getPort(), ServerName.NON_STARTCODE));
-        favoredNodesForRegion.add(new ServerName(secondaryAndTertiaryNodes[1].getHostname(),
+        favoredNodesForRegion.add(ServerName.valueOf(secondaryAndTertiaryNodes[1].getHostname(),
             secondaryAndTertiaryNodes[1].getPort(), ServerName.NON_STARTCODE));
       }
       globalFavoredNodesAssignmentPlan.updateFavoredNodesMap(region, favoredNodesForRegion);

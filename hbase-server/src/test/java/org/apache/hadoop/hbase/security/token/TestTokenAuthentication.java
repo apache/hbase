@@ -158,7 +158,7 @@ public class TestTokenAuthentication {
 
     @Override
     public ServerName getServerName() {
-      return new ServerName(isa.getHostName(), isa.getPort(), startcode);
+      return ServerName.valueOf(isa.getHostName(), isa.getPort(), startcode);
     }
 
     @Override
@@ -381,8 +381,8 @@ public class TestTokenAuthentication {
         Configuration c = server.getConfiguration();
         RpcClient rpcClient = new RpcClient(c, clusterId.toString());
         ServerName sn =
-          new ServerName(server.getAddress().getHostName(), server.getAddress().getPort(),
-            System.currentTimeMillis());
+            ServerName.valueOf(server.getAddress().getHostName(), server.getAddress().getPort(),
+                System.currentTimeMillis());
         try {
           BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn,
             User.getCurrent(), HConstants.DEFAULT_HBASE_RPC_TIMEOUT);

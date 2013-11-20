@@ -441,7 +441,7 @@ MasterServices, Server {
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
     // We don't want to pass isa's hostname here since it could be 0.0.0.0
-    this.serverName = new ServerName(hostname, this.isa.getPort(), System.currentTimeMillis());
+    this.serverName = ServerName.valueOf(hostname, this.isa.getPort(), System.currentTimeMillis());
     this.rsFatals = new MemoryBoundedLogMessageBuffer(
       conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 
@@ -1700,7 +1700,7 @@ MasterServices, Server {
         regionState.getServerName());
       dest = balancer.randomAssignment(hri, destServers);
     } else {
-      dest = new ServerName(Bytes.toString(destServerName));
+      dest = ServerName.valueOf(Bytes.toString(destServerName));
       if (dest.equals(regionState.getServerName())) {
         LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
           + " because region already assigned to the same server " + dest + ".");

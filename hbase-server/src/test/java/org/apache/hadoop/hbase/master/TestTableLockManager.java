@@ -268,7 +268,7 @@ public class TestTableLockManager {
   @Test(timeout = 600000)
   public void testReapAllTableLocks() throws Exception {
     prepareMiniZkCluster();
-    ServerName serverName = new ServerName("localhost:10000", 0);
+    ServerName serverName = ServerName.valueOf("localhost:10000", 0);
     final TableLockManager lockManager = TableLockManager.createTableLockManager(
         TEST_UTIL.getConfiguration(), TEST_UTIL.getZooKeeperWatcher(), serverName);
 

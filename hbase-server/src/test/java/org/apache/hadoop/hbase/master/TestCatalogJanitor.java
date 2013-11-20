@@ -111,7 +111,7 @@ public class TestCatalogJanitor {
       this.connection =
         HConnectionTestingUtility.getMockedConnectionAndDecorate(this.c,
           Mockito.mock(AdminProtos.AdminService.BlockingInterface.class), ri,
-          new ServerName("example.org,12345,6789"),
+            ServerName.valueOf("example.org,12345,6789"),
           HRegionInfo.FIRST_META_REGIONINFO);
       // Set hbase.rootdir into test dir.
       FileSystem fs = FileSystem.get(this.c);
@@ -136,7 +136,7 @@ public class TestCatalogJanitor {
 
     @Override
     public ServerName getServerName() {
-      return new ServerName("mockserver.example.org", 1234, -1L);
+      return ServerName.valueOf("mockserver.example.org", 1234, -1L);
     }
 
     @Override
