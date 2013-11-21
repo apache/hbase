@@ -188,7 +188,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
   @Override
   public String toString() {
-    return this.identifier;
+    return this.identifier + ", quorum=" + quorum + ", baseZNode=" + baseZNode;
   }
 
   /**
