@@ -83,7 +83,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TestNamespace).build());
 
     // Wait for the ACL table to become available
-    UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME.getName(), 8000);
+    UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME.getName(), 30 * 1000);
 
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     MasterCoprocessorHost cpHost = UTIL.getMiniHBaseCluster().getMaster().getCoprocessorHost();
