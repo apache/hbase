@@ -2240,7 +2240,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     MultiVersionConsistencyControl.WriteEntry w = null;
     long txid = 0;
-    boolean walSyncSuccessful = false;
+    boolean doRollBackMemstore = false;
     boolean locked = false;
 
     /** Keep track of the locks we hold so we can release them in finally clause */
@@ -2409,6 +2409,7 @@ public class HRegion implements HeapSize { // , Writable{
             != OperationStatusCode.NOT_RUN) {
           continue;
         }
+        doRollBackMemstore = true;
         addedSize += applyFamilyMapToMemstore(familyMaps[i], w);
       }
 
@@ -2475,7 +2476,7 @@ public class HRegion implements HeapSize { // , Writable{
       if (walEdit.size() > 0) {
         syncOrDefer(txid, durability);
       }
-      walSyncSuccessful = true;
+      doRollBackMemstore = false;
       // calling the post CP hook for batch mutation
       if (coprocessorHost != null) {
         MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp = 
@@ -2516,7 +2517,7 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
 
       // if the wal sync was unsuccessful, remove keys from memstore
-      if (!walSyncSuccessful) {
+      if (doRollBackMemstore) {
         rollbackMemstore(batchOp, familyMaps, firstIndex, lastIndexExclusive);
       }
       if (w != null) mvcc.completeMemstoreInsert(w);
