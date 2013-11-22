@@ -138,7 +138,13 @@
         </para>
         <para>If you have a write-heavy workload, check out
             <link xlink:href="https://issues.apache.org/jira/browse/HBASE-8163">HBASE-8163 MemStoreChunkPool: An improvement for JAVA GC when using MSLAB</link>.
-        It describes configurations to lower the amount of young GC during write-heavy loadings.</para>
+            It describes configurations to lower the amount of young GC during write-heavy loadings.  If you do not have HBASE-8163 installed, and you are
+            trying to improve your young GC times, one trick to consider -- courtesy of our Liang Xie -- is to set the GC config <varname>-XX:PretenureSizeThreshold</varname> in <filename>hbase-env.sh</filename>
+            to be just smaller than the size of <varname>hbase.hregion.memstore.mslab.chunksize</varname> so MSLAB allocations happen in the
+            tenured space directly rather than first in the young gen.  You'd do this because these MSLAB allocations are going to likely make it
+            to the old gen anyways and rather than pay the price of a copies between s0 and s1 in eden space followed by the copy up from
+            young to old gen after the MSLABs have achieved sufficient tenure, save a bit of YGC churn and allocate in the old gen directly.
+            </para>
         <para>For more information about GC logs, see <xref linkend="trouble.log.gc" />.
         </para>
       </section>
