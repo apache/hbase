@@ -164,7 +164,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class HBaseFsck extends Configured implements Tool {
+public class HBaseFsck extends Configured {
   public static final long DEFAULT_TIME_LAG = 60000; // default value of 1 minute
   public static final long DEFAULT_SLEEP_BEFORE_RERUN = 10000;
   private static final int MAX_NUM_THREADS = 50; // #threads to contact regions
@@ -267,7 +267,8 @@ public class HBaseFsck extends Configured implements Tool {
     super(conf);
     errors = getErrorReporter(conf);
 
-    initialPoolNumThreads();
+    int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
+    executor = new ScheduledThreadPoolExecutor(numThreads, Threads.newDaemonThreadFactory("hbasefsck"));
   }
 
   /**
@@ -296,18 +297,6 @@ public class HBaseFsck extends Configured implements Tool {
     meta = new HTable(getConf(), TableName.META_TABLE_NAME);
     status = admin.getClusterStatus();
     connection = admin.getConnection();
-  }
-
-  /**
-   * Initial numThreads for {@link #executor}
-   */
-  private void initialPoolNumThreads() {
-    if (executor != null) {
-      executor.shutdown();
-    }
-  
-    int numThreads = getConf().getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
-    executor = new ScheduledThreadPoolExecutor(numThreads, Threads.newDaemonThreadFactory("hbasefsck"));
   }
 
   /**
@@ -3601,18 +3590,23 @@ public class HBaseFsck extends Configured implements Tool {
     URI defaultFs = hbasedir.getFileSystem(conf).getUri();
     FSUtils.setFsDefault(conf, new Path(defaultFs));
 
-    int ret = ToolRunner.run(new HBaseFsck(conf), args);
+    int ret = ToolRunner.run(new HBaseFsckTool(conf), args);
     System.exit(ret);
   }
 
-  @Override
-  public int run(String[] args) throws Exception {
-    // reset the numThreads due to user may set it via generic options
-    initialPoolNumThreads();
-
-    exec(executor, args);
-    return getRetCode();
-  }
+  /**
+   * This is a Tool wrapper that gathers -Dxxx=yyy configuration settings from the command line.
+   */
+  static class HBaseFsckTool extends Configured implements Tool {
+    HBaseFsckTool(Configuration conf) { super(conf); }
+    @Override
+    public int run(String[] args) throws Exception {
+      HBaseFsck hbck = new HBaseFsck(getConf());
+      hbck.exec(hbck.executor, args);
+      return hbck.getRetCode();
+    }
+  };
+  
 
   public HBaseFsck exec(ExecutorService exec, String[] args) throws KeeperException, IOException,
     ServiceException, InterruptedException {
