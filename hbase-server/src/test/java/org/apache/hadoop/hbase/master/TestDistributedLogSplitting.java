@@ -148,6 +148,7 @@ public class TestDistributedLogSplitting {
     conf.setInt("zookeeper.recovery.retry", 0);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, (float) 100.0); // no load balancing
+    conf.setInt("hbase.regionserver.wal.max.splitters", 3);
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.setDFSCluster(dfsCluster);
     TEST_UTIL.setZkCluster(zkCluster);
@@ -185,6 +186,7 @@ public class TestDistributedLogSplitting {
   @Test (timeout=300000)
   public void testRecoveredEdits() throws Exception {
     LOG.info("testRecoveredEdits");
+    conf.setLong("hbase.regionserver.hlog.blocksize", 30 * 1024); // create more than one wal
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     startCluster(NUM_RS);
 
@@ -241,10 +243,12 @@ public class TestDistributedLogSplitting {
         HLogUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
       LOG.debug("checking edits dir " + editsdir);
       FileStatus[] files = fs.listStatus(editsdir);
-      assertEquals(1, files.length);
-      int c = countHLog(files[0].getPath(), fs, conf);
-      count += c;
-      LOG.info(c + " edits in " + files[0].getPath());
+      assertTrue(files.length > 1);
+      for (int i = 0; i < files.length; i++) {
+        int c = countHLog(files[i].getPath(), fs, conf);
+        count += c;
+      }
+      LOG.info(count + " edits in " + files.length + " recovered edits files.");
     }
     assertEquals(NUM_LOG_LINES, count);
   }
@@ -252,6 +256,7 @@ public class TestDistributedLogSplitting {
   @Test(timeout = 300000)
   public void testLogReplayWithNonMetaRSDown() throws Exception {
     LOG.info("testLogReplayWithNonMetaRSDown");
+    conf.setLong("hbase.regionserver.hlog.blocksize", 30 * 1024); // create more than one wal
     conf.setLong("hbase.regionserver.hlog.blocksize", 100*1024);
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
     startCluster(NUM_RS);
