@@ -798,7 +798,7 @@ public class HLogSplitter {
     private OutputSink outputSink = null;
 
     WriterThread(OutputSink sink, int i) {
-      super("WriterThread-" + i);
+      super(Thread.currentThread().getName() + "-Writer-" + i);
       outputSink = sink;
     }
 

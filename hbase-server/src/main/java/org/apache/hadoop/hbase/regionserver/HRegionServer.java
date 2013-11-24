@@ -1583,6 +1583,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       this.service.startExecutorService(ExecutorType.RS_PARALLEL_SEEK,
         conf.getInt("hbase.storescanner.parallel.seek.threads", 10));
     }
+    this.service.startExecutorService(ExecutorType.RS_LOG_REPLAY_OPS,
+      conf.getInt("hbase.regionserver.wal.max.splitters", SplitLogWorker.DEFAULT_MAX_SPLITTERS));
 
     Threads.setDaemonThreadRunning(this.hlogRoller.getThread(), n + ".logRoller",
         uncaughtExceptionHandler);
