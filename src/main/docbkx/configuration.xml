@@ -250,7 +250,35 @@ needed for servers to pick up changes (caveat dynamic config. to be described la
          <row><entry>Hadoop-0.23.x  </entry><entry>X</entry>          <entry>S</entry>           <entry>NT</entry></row>
          <row><entry>Hadoop-2.0.x-alpha     </entry><entry>X</entry>          <entry>NT</entry>           <entry>X</entry></row>
          <row><entry>Hadoop-2.1.0-beta     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry></row>
-         <row><entry>Hadoop-2.2.0     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry></row>
+         <row><entry>Hadoop-2.2.0     </entry><entry>X</entry>          <entry>NT<footnote><para>To get 0.94.x to run on hadoop 2.2.0,
+                         you need to change the hadoop 2 and protobuf versions in the <filename>pom.xml</filename> and then
+                         build against the hadoop 2 profile by running something like the following command:
+                         <programlisting>$  mvn clean install assembly:single -Dhadoop.profile=2.0 -DskipTests</programlisting>
+                         Here is a diff with pom.xml changes:
+                         <programlisting><![CDATA[$ svn diff pom.xml
+Index: pom.xml
+===================================================================
+--- pom.xml     (revision 1545157)
++++ pom.xml     (working copy)
+@@ -1034,7 +1034,7 @@
+     <slf4j.version>1.4.3</slf4j.version>
+     <log4j.version>1.2.16</log4j.version>
+     <mockito-all.version>1.8.5</mockito-all.version>
+-    <protobuf.version>2.4.0a</protobuf.version>
++    <protobuf.version>2.5.0</protobuf.version>
+     <stax-api.version>1.0.1</stax-api.version>
+     <thrift.version>0.8.0</thrift.version>
+     <zookeeper.version>3.4.5</zookeeper.version>
+@@ -2241,7 +2241,7 @@
+         </property>
+       </activation>
+       <properties>
+-        <hadoop.version>2.0.0-alpha</hadoop.version>
++        <hadoop.version>2.2.0</hadoop.version>
+         <slf4j.version>1.6.1</slf4j.version>
+       </properties>
+       <dependencies>]]></programlisting>
+         </para></footnote></entry>           <entry>S</entry></row>
          <row><entry>Hadoop-2.x     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry></row>
 		 </tbody></tgroup></table>
 
