@@ -954,6 +954,20 @@ possible configurations would overwhelm and obscure the important.
     <description>Set to true to allow snapshots to be taken / restored / cloned.</description>
   </property>
   <property>
+    <name>hbase.snapshot.restore.take.failsafe.snapshot</name>
+    <value>true</value>
+    <description>Set to true to take a snapshot before the restore operation.
+      The snapshot taken will be used in case of failure, to restore the previous state.
+      At the end of the restore operation this snapshot will be deleted</description>
+  </property>
+  <property>
+    <name>hbase.snapshot.restore.failsafe.name</name>
+    <value>hbase-failsafe-{snapshot.name}-{restore.timestamp}</value>
+    <description>Name of the failsafe snapshot taken by the restore operation.
+      You can use the {snapshot.name}, {table.name} and {restore.timestamp} variables
+      to create a name based on what you are restoring.</description>
+  </property>
+  <property>
     <name>hbase.server.compactchecker.interval.multiplier</name>
     <value>1000</value>
     <description>The number that determines how often we scan to see if compaction is necessary.
