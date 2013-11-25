@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -95,6 +96,11 @@ public class RowMutations implements Row {
       return compareTo(other) == 0;
     }
     return false;
+  }
+
+  @Override
+  public int hashCode(){
+    return Arrays.hashCode(row);
   }
 
   @Override

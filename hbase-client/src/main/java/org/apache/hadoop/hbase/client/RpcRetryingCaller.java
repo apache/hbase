@@ -44,6 +44,8 @@ import com.google.protobuf.ServiceException;
  * Dynamic rather than static so can set the generic appropriately.
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings
+    (value = "IS2_INCONSISTENT_SYNC", justification = "na")
 public class RpcRetryingCaller<T> {
   static final Log LOG = LogFactory.getLog(RpcRetryingCaller.class);
   /**
@@ -102,6 +104,8 @@ public class RpcRetryingCaller<T> {
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings
+      (value = "SWL_SLEEP_WITH_LOCK_HELD", justification = "na")
   public synchronized T callWithRetries(RetryingCallable<T> callable, int callTimeout)
   throws IOException, RuntimeException {
     this.callTimeout = callTimeout;

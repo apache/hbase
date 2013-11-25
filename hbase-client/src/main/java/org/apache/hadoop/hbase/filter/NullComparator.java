@@ -44,6 +44,7 @@ public class NullComparator extends ByteArrayComparable {
   }
 
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings (value="EQ_UNUSUAL", justification="")
   public boolean equals(Object obj) {
     return obj == null;
   }

@@ -1944,8 +1944,9 @@ public class ZKUtil {
     ZooKeeperProtos.StoreSequenceId.Builder storeSequenceIdBuilder =
         ZooKeeperProtos.StoreSequenceId.newBuilder();
     if (storeSequenceIds != null) {
-      for (byte[] columnFamilyName : storeSequenceIds.keySet()) {
-        Long curSeqId = storeSequenceIds.get(columnFamilyName);
+      for (Map.Entry<byte[], Long> e : storeSequenceIds.entrySet()){
+        byte[] columnFamilyName = e.getKey();
+        Long curSeqId = e.getValue();
         storeSequenceIdBuilder.setFamilyName(ZeroCopyLiteralByteString.wrap(columnFamilyName));
         storeSequenceIdBuilder.setSequenceId(curSeqId);
         regionSequenceIdsBuilder.addStoreSequenceId(storeSequenceIdBuilder.build());

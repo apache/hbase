@@ -125,7 +125,7 @@ public class Result implements CellScannable {
     if (exists != null){
       return new Result(null, exists);
     }
-    return new Result(cells.toArray(new Cell[cells.size()]), exists);
+    return new Result(cells.toArray(new Cell[cells.size()]), null);
   }
 
   /**
