@@ -163,6 +163,11 @@ public class TestRestoreSnapshotFromClient {
     admin.restoreSnapshot(snapshotName1);
     admin.enableTable(tableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
+
+    // Restore from snapshot-1
+    TEST_UTIL.deleteTable(tableName);
+    admin.restoreSnapshot(snapshotName1);
+    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
   }
 
   @Test
