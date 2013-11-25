@@ -463,6 +463,8 @@ public class HTableMultiplexer {
     }
 
     @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings
+        (value = "REC_CATCH_EXCEPTION", justification = "na")
     public void run() {
       List<PutStatus> processingList = new ArrayList<PutStatus>();
       /** 

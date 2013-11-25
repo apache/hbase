@@ -166,40 +166,40 @@ public class RegionLoad {
   @Override
   public String toString() {
     StringBuilder sb = Strings.appendKeyValue(new StringBuilder(), "numberOfStores",
-      Integer.valueOf(this.getStores()));
+        this.getStores());
     sb = Strings.appendKeyValue(sb, "numberOfStorefiles",
-      Integer.valueOf(this.getStorefiles()));
+        this.getStorefiles());
     sb = Strings.appendKeyValue(sb, "storefileUncompressedSizeMB",
-      Integer.valueOf(this.getStoreUncompressedSizeMB()));
+        this.getStoreUncompressedSizeMB());
     sb = Strings.appendKeyValue(sb, "storefileSizeMB",
-        Integer.valueOf(this.getStorefileSizeMB()));
+        this.getStorefileSizeMB());
     if (this.getStoreUncompressedSizeMB() != 0) {
       sb = Strings.appendKeyValue(sb, "compressionRatio",
-          String.format("%.4f", (float)this.getStorefileSizeMB()/
-              (float)this.getStoreUncompressedSizeMB()));
+          String.format("%.4f", (float) this.getStorefileSizeMB() /
+              (float) this.getStoreUncompressedSizeMB()));
     }
     sb = Strings.appendKeyValue(sb, "memstoreSizeMB",
-      Integer.valueOf(this.getMemStoreSizeMB()));
+        this.getMemStoreSizeMB());
     sb = Strings.appendKeyValue(sb, "storefileIndexSizeMB",
-      Integer.valueOf(this.getStorefileIndexSizeMB()));
+        this.getStorefileIndexSizeMB());
     sb = Strings.appendKeyValue(sb, "readRequestsCount",
-        Long.valueOf(this.getReadRequestsCount()));
+        this.getReadRequestsCount());
     sb = Strings.appendKeyValue(sb, "writeRequestsCount",
-        Long.valueOf(this.getWriteRequestsCount()));
+        this.getWriteRequestsCount());
     sb = Strings.appendKeyValue(sb, "rootIndexSizeKB",
-        Integer.valueOf(this.getRootIndexSizeKB()));
+        this.getRootIndexSizeKB());
     sb = Strings.appendKeyValue(sb, "totalStaticIndexSizeKB",
-        Integer.valueOf(this.getTotalStaticIndexSizeKB()));
+        this.getTotalStaticIndexSizeKB());
     sb = Strings.appendKeyValue(sb, "totalStaticBloomSizeKB",
-      Integer.valueOf(this.getTotalStaticBloomSizeKB()));
+        this.getTotalStaticBloomSizeKB());
     sb = Strings.appendKeyValue(sb, "totalCompactingKVs",
-        Long.valueOf(this.getTotalCompactingKVs()));
+        this.getTotalCompactingKVs());
     sb = Strings.appendKeyValue(sb, "currentCompactedKVs",
-        Long.valueOf(this.getCurrentCompactedKVs()));
+        this.getCurrentCompactedKVs());
     float compactionProgressPct = Float.NaN;
-    if( this.getTotalCompactingKVs() > 0 ) {
-      compactionProgressPct = Float.valueOf(
-          this.getCurrentCompactedKVs() / this.getTotalCompactingKVs());
+    if (this.getTotalCompactingKVs() > 0) {
+      compactionProgressPct = ((float) this.getCurrentCompactedKVs() /
+          (float) this.getTotalCompactingKVs());
     }
     sb = Strings.appendKeyValue(sb, "compactionProgressPct",
         compactionProgressPct);
