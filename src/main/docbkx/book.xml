@@ -2080,6 +2080,94 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           will be targeted for compaction and the resulting files may still be under the min-size and require further compaction, etc.
           </para>
         </section>
+<section xml:id="ops.stripe"><title>Experimental: stripe compactions</title>
+<para>
+Stripe compactions is an experimental feature added in HBase 0.98 which aims to improve compactions for large regions or non-uniformly distributed row keys. In order to achieve smaller and/or more granular compactions, the store files within a region are maintained separately for several row-key sub-ranges, or "stripes", of the region. The division is not visible to the higher levels of the system, so externally each region functions as before.
+</para><para>
+This feature is fully compatible with default compactions - it can be enabled for existing tables, and the table will continue to operate normally if it's disabled later.
+</para>
+</section><section xml:id="ops.stripe.when"><title>When to use</title>
+<para>You might want to consider using this feature if you have:
+<itemizedlist>
+<listitem>
+large regions (in that case, you can get the positive effect of much smaller regions without additional memstore and region management overhead); or
+</listitem><listitem>
+non-uniform row keys, e.g. time dimension in a key (in that case, only the stripes receiving the new keys will keep compacting - old data will not compact as much, or at all).
+</listitem>
+</itemizedlist>
+</para><para>
+According to perf testing performed, in these case the read performance can improve somewhat, and the read and write performance variability due to compactions is greatly reduced. There's overall perf improvement on large, non-uniform row key regions (hash-prefixed timestamp key) over long term. All of these performance gains are best realized when table is already large. In future, the perf improvement might also extend to region splits.
+</para>
+<section xml:id="ops.stripe.enable"><title>How to enable</title>
+<para>
+To use stripe compactions for a table or a column family, you should set its  <varname>hbase.hstore.engine.class</varname> to <varname>org.apache.hadoop.hbase.regionserver.StripeStoreEngine</varname>. Due to the nature of compactions, you also need to set the blocking file count to a high number (100 is a good default, which is 10 times the normal default of 10). If changing the existing table, you should do it when it is disabled. Examples:
+<programlisting>
+alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
+
+alter 'orders_table', {NAME => 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}}
+
+create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
+</programlisting>
+</para><para>
+Then, you can configure the other options if needed (see below) and enable the table.
+To switch back to default compactions, set <varname>hbase.hstore.engine.class</varname> to nil to unset it; or set it explicitly to "<varname>org.apache.hadoop.hbase.regionserver.DefaultStoreEngine</varname>" (this also needs to be done on a disabled table).
+</para><para>
+When you enable a large table after changing the store engine either way, a major compaction will likely be performed on most regions. This is not a problem with new tables.
+</para>
+</section><section xml:id="ops.stripe.config"><title>How to configure</title>
+<para>
+All of the settings described below are best set on table/cf level (with the table disabled first, for the settings to apply), similar to the above, e.g.
+<programlisting>
+alter 'orders_table', CONFIGURATION => {'key' => 'value', ..., 'key' => 'value'}}
+</programlisting>
+</para>
+<section xml:id="ops.stripe.config.sizing"><title>Region and stripe sizing</title>
+<para>
+Based on your region sizing, you might want to also change your stripe sizing. By default, your new regions will start with one stripe. When the stripe is too big (16 memstore flushes size), on next compaction it will be split into two stripes. Stripe splitting will continue in a similar manner as the region grows, until the region itself is big enough to split (region split will work the same as with default compactions).
+</para><para>
+You can improve this pattern for your data. You should generally aim at stripe size of at least 1Gb, and about 8-12 stripes for uniform row keys - so, for example if your regions are 30 Gb, 12x2.5Gb stripes might be a good idea.
+</para><para>
+The settings are as follows:
+<table frame='all'><tgroup cols='2' align='left' colsep='1' rowsep='1'><colspec colname='c1'/><colspec colname='c2'/>
+<thead><row><entry>Setting</entry><entry>Notes</entry></row></thead>
+<tbody>
+<row><entry>
+<varname>hbase.store.stripe.initialStripeCount</varname>
+</entry><entry>
+Initial stripe count to create. You can use it as follows:
+<itemizedlist>
+<listitem>
+for relatively uniform row keys, if you know the approximate target number of stripes from the above, you can avoid some splitting overhead by starting w/several stripes (2, 5, 10...). Note that if the early data is not representative of overall row key distribution, this will not be as efficient.
+</listitem><listitem>
+for existing tables with lots of data, you can use this to pre-split stripes. 
+</listitem><listitem>
+for e.g. hash-prefixed sequential keys, with more than one hash prefix per region, you know that some pre-splitting makes sense.
+</listitem>
+</itemizedlist>
+</entry></row><row><entry>
+<varname>hbase.store.stripe.sizeToSplit</varname>
+</entry><entry>
+Maximum stripe size before it's split. You can use this in conjunction with the next setting to control target stripe size (sizeToSplit = splitPartsCount * target stripe size), according to the above sizing considerations.
+</entry></row><row><entry>
+<varname>hbase.store.stripe.splitPartCount</varname>
+</entry><entry>
+The number of new stripes to create when splitting one. The default is 2, and is good for most cases. For non-uniform row keys, you might experiment with increasing the number somewhat (3-4), to isolate the arriving updates into narrower slice of the region with just one split instead of several.
+</entry></row>
+</tbody>
+</tgroup></table>
+</para>
+</section><section xml:id="ops.stripe.config.memstore"><title>Memstore sizing</title>
+<para>
+By default, the flush creates several files from one memstore, according to existing stripe boundaries and row keys to flush. This approach minimizes write amplification, but can be undesirable if memstore is small and there are many stripes (the files will be too small).
+</para><para>
+In such cases, you can set <varname>hbase.store.stripe.compaction.flushToL0</varname> to true. This will cause  flush to create a single file instead; when at least <varname>hbase.store.stripe.compaction.minFilesL0</varname> such files (by default, 4) accumulate, they will be compacted into striped files.</para>
+</section><section xml:id="ops.stripe.config.compact"><title>Normal compaction configuration</title>
+<para>
+All the settings that apply to normal compactions (file size limits, etc.) apply to stripe compactions. The exception are min and max number of files, which are set to higher values by default because the files in stripes are smaller. To control these for stripe compactions, use <varname>hbase.store.stripe.compaction.minFiles</varname> and <varname>.maxFiles</varname>.
+</para>
+</section>
+</section>
+</section>
       </section>  <!--  compaction -->
 
      </section>  <!--  store -->
