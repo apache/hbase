@@ -158,6 +158,11 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     return compareTo((MetricsRegionSourceImpl)obj) == 0;
   }
 
+  @Override
+  public int hashCode() {
+    return this.regionWrapper.getRegionName().hashCode();
+  }
+
   void snapshot(MetricsRecordBuilder mrb, boolean ignored) {
     if (closed) return;
 
