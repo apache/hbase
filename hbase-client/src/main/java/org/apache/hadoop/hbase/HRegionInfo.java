@@ -418,6 +418,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     return buff;
   }
 
+
   /**
    * Gets the table name from the specified region name.
    * Like {@link #getTableName(byte[])} only returns a {@link TableName} rather than a byte array.
