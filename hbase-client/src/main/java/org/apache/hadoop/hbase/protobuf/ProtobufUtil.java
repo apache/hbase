@@ -2446,8 +2446,8 @@ public final class ProtobufUtil {
   }
 
   public static TableName toTableName(HBaseProtos.TableName tableNamePB) {
-    return TableName.valueOf(tableNamePB.getNamespace().toByteArray(),
-        tableNamePB.getQualifier().toByteArray());
+    return TableName.valueOf(tableNamePB.getNamespace().asReadOnlyByteBuffer(),
+        tableNamePB.getQualifier().asReadOnlyByteBuffer());
   }
 
   public static HBaseProtos.TableName toProtoTableName(TableName tableName) {

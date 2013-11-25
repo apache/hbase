@@ -1277,6 +1277,28 @@ public class Bytes {
 
 
   /**
+   * @param a left operand
+   * @param b right operand
+   * @return True if equal
+   */
+  public static boolean equals(byte[] a, ByteBuffer b) {
+    if (a == null) return b == null;
+    if (b == null) return false;
+    if (a.length != b.remaining()) return false;
+
+    b.mark();
+    for (byte anA : a) {
+      if (anA != b.get()) {
+        b.reset();
+        return false;
+      }
+    }
+    b.reset();
+    return true;
+  }
+
+
+  /**
    * Return true if the byte array on the right is a prefix of the byte
    * array on the left.
    */

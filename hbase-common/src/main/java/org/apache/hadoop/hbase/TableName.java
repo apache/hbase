@@ -23,6 +23,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
+
 /**
  * Immutable POJO class for representing a table name.
  * Which is of the form:
@@ -40,10 +45,19 @@ import org.apache.hadoop.hbase.util.Bytes;
  * b) bar, means namespace=default and qualifier=bar
  * c) default:bar, means namespace=default and qualifier=bar
  *
+ *  <p>
+ * Internally, in this class, we cache the instances to limit the number of objects and
+ *  make the "equals" faster. We try to minimize the number of objects created of
+ *  the number of array copy to check if we already have an instance of this TableName. The code
+ *  is not optimize for a new instance creation but is optimized to check for existence.
+ * </p>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class TableName implements Comparable<TableName> {
+
+  /** See {@link #createTableNameIfNecessary(ByteBuffer, ByteBuffer)} */
+  private static final Set<TableName> tableCache = new CopyOnWriteArraySet<TableName>();
 
   /** Namespace delimiter */
   //this should always be only 1 byte long
@@ -75,6 +89,8 @@ public final class TableName implements Comparable<TableName> {
   public static final String OLD_META_STR = ".META.";
   public static final String OLD_ROOT_STR = "-ROOT-";
 
+
+
   /**
    * TableName for old -ROOT- table. It is used to read/process old WALs which have
    * ROOT edits.
@@ -85,15 +101,14 @@ public final class TableName implements Comparable<TableName> {
    */
   public static final TableName OLD_META_TABLE_NAME = getADummyTableName(OLD_META_STR);
 
-  private byte[] name;
-  private String nameAsString;
-  private byte[] namespace;
-  private String namespaceAsString;
-  private byte[] qualifier;
-  private String qualifierAsString;
-  private boolean systemTable;
-
-  private TableName() {}
+  private final byte[] name;
+  private final String nameAsString;
+  private final byte[] namespace;
+  private final String namespaceAsString;
+  private final byte[] qualifier;
+  private final String qualifierAsString;
+  private final boolean systemTable;
+  private final int hashCode;
 
   /**
    * Check passed byte array, "tableName", is legal user-space table name.
@@ -118,6 +133,7 @@ public final class TableName implements Comparable<TableName> {
     if (tableName == null || tableName.length <= 0) {
       throw new IllegalArgumentException("Name is null or empty");
     }
+
     int namespaceDelimIndex = com.google.common.primitives.Bytes.lastIndexOf(tableName,
         (byte) NAMESPACE_DELIM);
     if (namespaceDelimIndex == 0 || namespaceDelimIndex == -1){
@@ -149,6 +165,7 @@ public final class TableName implements Comparable<TableName> {
     if(end - start < 1) {
       throw new IllegalArgumentException("Table qualifier must not be empty");
     }
+
     if (qualifierName[start] == '.' || qualifierName[start] == '-') {
       throw new IllegalArgumentException("Illegal first character <" + qualifierName[0] +
           "> at 0. Namespaces can only start with alphanumeric " +
@@ -161,8 +178,9 @@ public final class TableName implements Comparable<TableName> {
           qualifierName[i] == '.') {
         continue;
       }
-      throw new IllegalArgumentException("Illegal character <" + qualifierName[i] +
-        "> at " + i + ". User-space table qualifiers can only contain " +
+      throw new IllegalArgumentException("Illegal character code:" + qualifierName[i] +
+        ", <" + (char) qualifierName[i] + "> at " + i +
+          ". User-space table qualifiers can only contain " +
         "'alphanumeric characters': i.e. [a-zA-Z_0-9-.]: " +
           Bytes.toString(qualifierName, start, end));
     }
@@ -174,9 +192,6 @@ public final class TableName implements Comparable<TableName> {
 
   /**
    * Valid namespace characters are [a-zA-Z_0-9]
-   * @param namespaceName
-   * @param offset
-   * @param length
    */
   public static void isLegalNamespaceName(byte[] namespaceName, int offset, int length) {
     for (int i = offset; i < length; i++) {
@@ -227,85 +242,208 @@ public final class TableName implements Comparable<TableName> {
     return nameAsString;
   }
 
-  public static TableName valueOf(byte[] namespace, byte[] qualifier) {
-    TableName ret = new TableName();
-    if(namespace == null || namespace.length < 1) {
-      namespace = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME;
+  /**
+   *
+   * @throws IllegalArgumentException See {@link #valueOf(byte[])}
+   */
+  private TableName(ByteBuffer namespace, ByteBuffer qualifier) throws IllegalArgumentException {
+    this.qualifier = new byte[qualifier.remaining()];
+    qualifier.get(this.qualifier);
+    this.qualifierAsString = Bytes.toString(this.qualifier);
+
+    if (qualifierAsString.equals(OLD_ROOT_STR)) {
+      throw new IllegalArgumentException(OLD_ROOT_STR + " has been deprecated.");
     }
-    ret.namespace = namespace;
-    ret.namespaceAsString = Bytes.toString(namespace);
-    ret.qualifier = qualifier;
-    ret.qualifierAsString = Bytes.toString(qualifier);
+    if (qualifierAsString.equals(OLD_META_STR)) {
+      throw new IllegalArgumentException(OLD_META_STR + " no longer exists. The table has been " +
+          "renamed to " + META_TABLE_NAME);
+    }
 
-    finishValueOf(ret);
+    if (Bytes.equals(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME, namespace)) {
+      // Using the same objects: this will make the comparison faster later
+      this.namespace = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME;
+      this.namespaceAsString = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR;
+      this.systemTable = false;
 
-    return ret;
+      // The name does not include the namespace when it's the default one.
+      this.nameAsString = qualifierAsString;
+      this.name = this.qualifier;
+    } else {
+      if (Bytes.equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME, namespace)) {
+        this.namespace = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME;
+        this.namespaceAsString = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
+        this.systemTable = true;
+      } else {
+        this.namespace = new byte[namespace.remaining()];
+        namespace.get(this.namespace);
+        this.namespaceAsString = Bytes.toString(this.namespace);
+        this.systemTable = false;
+      }
+      this.nameAsString = namespaceAsString + NAMESPACE_DELIM + qualifierAsString;
+      this.name = Bytes.toBytes(nameAsString);
+    }
+
+    this.hashCode = nameAsString.hashCode();
+
+    isLegalNamespaceName(this.namespace);
+    isLegalTableQualifierName(this.qualifier);
   }
 
   /**
+   * This is only for the old and meta tables.
+   */
+  private TableName(String qualifier) {
+    this.qualifier = Bytes.toBytes(qualifier);
+    this.qualifierAsString = qualifier;
+
+    this.namespace = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME;
+    this.namespaceAsString = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
+    this.systemTable = true;
+
+    // WARNING: nameAsString is different than name for old meta & root!
+    // This is by design.
+    this.nameAsString = namespaceAsString + NAMESPACE_DELIM + qualifierAsString;
+    this.name = this.qualifier;
+
+    this.hashCode = nameAsString.hashCode();
+  }
+
+
+  /**
+   * Check that the object does not exist already. There are two reasons for creating the objects
+   * only once:
+   * 1) With 100K regions, the table names take ~20MB.
+   * 2) Equals becomes much faster as it's resolved with a reference and an int comparison.
+   */
+  private static TableName createTableNameIfNecessary(ByteBuffer bns, ByteBuffer qns) {
+    for (TableName tn : tableCache) {
+      if (Bytes.equals(tn.getQualifier(), qns) && Bytes.equals(tn.getNamespace(), bns)) {
+        return tn;
+      }
+    }
+
+    TableName newTable = new TableName(bns, qns);
+    if (tableCache.add(newTable)) {  // Adds the specified element if it is not already present
+      return newTable;
+    } else {
+      // Someone else added it. Let's find it.
+      for (TableName tn : tableCache) {
+        if (Bytes.equals(tn.getQualifier(), qns) && Bytes.equals(tn.getNamespace(), bns)) {
+          return tn;
+        }
+      }
+    }
+
+    throw new IllegalStateException(newTable + " was supposed to be in the cache");
+  }
+
+
+  /**
    * It is used to create table names for old META, and ROOT table.
+   * These tables are not really legal tables. They are not added into the cache.
    * @return a dummy TableName instance (with no validation) for the passed qualifier
    */
   private static TableName getADummyTableName(String qualifier) {
-    TableName ret = new TableName();
-    ret.namespaceAsString = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
-    ret.qualifierAsString = qualifier;
-    ret.nameAsString = createFullyQualified(ret.namespaceAsString, ret.qualifierAsString);
-    ret.name = Bytes.toBytes(qualifier);
-    return ret;
+    return new TableName(qualifier);
   }
+
+
   public static TableName valueOf(String namespaceAsString, String qualifierAsString) {
-    TableName ret = new TableName();
-    if(namespaceAsString == null || namespaceAsString.length() < 1) {
+    if (namespaceAsString == null || namespaceAsString.length() < 1) {
       namespaceAsString = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR;
     }
-    ret.namespaceAsString = namespaceAsString;
-    ret.namespace = Bytes.toBytes(namespaceAsString);
-    ret.qualifier = Bytes.toBytes(qualifierAsString);
-    ret.qualifierAsString = qualifierAsString;
 
-    finishValueOf(ret);
+    for (TableName tn : tableCache) {
+      if (qualifierAsString.equals(tn.getQualifierAsString()) &&
+          namespaceAsString.equals(tn.getNameAsString())) {
+        return tn;
+      }
+    }
 
-    return ret;
+    return createTableNameIfNecessary(
+        ByteBuffer.wrap(Bytes.toBytes(namespaceAsString)),
+        ByteBuffer.wrap(Bytes.toBytes(qualifierAsString)));
   }
 
-  private static void finishValueOf(TableName tableName) {
-    isLegalNamespaceName(tableName.namespace);
-    isLegalTableQualifierName(tableName.qualifier);
 
-    tableName.nameAsString =
-        createFullyQualified(tableName.namespaceAsString, tableName.qualifierAsString);
-    tableName.name = Bytes.toBytes(tableName.nameAsString);
-    tableName.systemTable = Bytes.equals(
-      tableName.namespace, NamespaceDescriptor.SYSTEM_NAMESPACE_NAME);
+  /**
+   * @throws IllegalArgumentException if fullName equals old root or old meta. Some code
+   *  depends on this. The test is buried in the table creation to save on array comparison
+   *  when we're creating a standard table object that will be in the cache.
+   */
+  public static TableName valueOf(byte[] fullName) throws IllegalArgumentException{
+    for (TableName tn : tableCache) {
+      if (Arrays.equals(tn.getName(), fullName)) {
+        return tn;
+      }
+    }
+
+    int namespaceDelimIndex = com.google.common.primitives.Bytes.lastIndexOf(fullName,
+        (byte) NAMESPACE_DELIM);
+
+    if (namespaceDelimIndex < 0) {
+      return createTableNameIfNecessary(
+          ByteBuffer.wrap(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME),
+          ByteBuffer.wrap(fullName));
+    } else {
+      return createTableNameIfNecessary(
+          ByteBuffer.wrap(fullName, 0, namespaceDelimIndex),
+          ByteBuffer.wrap(fullName, namespaceDelimIndex + 1,
+              fullName.length - (namespaceDelimIndex + 1)));
+    }
   }
 
-  public static TableName valueOf(byte[] name) {
-    return valueOf(Bytes.toString(name));
-  }
 
+  /**
+   * @throws IllegalArgumentException if fullName equals old root or old meta. Some code
+   *  depends on this.
+   */
   public static TableName valueOf(String name) {
-    if(name.equals(OLD_ROOT_STR)) {
-      throw new IllegalArgumentException(OLD_ROOT_STR + " has been deprecated.");
-    }
-    if(name.equals(OLD_META_STR)) {
-      throw new IllegalArgumentException(OLD_META_STR + " no longer exists. The table has been " +
-          "renamed to "+META_TABLE_NAME);
+    for (TableName tn : tableCache) {
+      if (name.equals(tn.getNameAsString())) {
+        return tn;
+      }
     }
 
-    isLegalFullyQualifiedTableName(Bytes.toBytes(name));
-    int index = name.indexOf(NAMESPACE_DELIM);
-    if (index != -1) {
-      return TableName.valueOf(name.substring(0, index), name.substring(index + 1));
+    int namespaceDelimIndex = name.indexOf(NAMESPACE_DELIM);
+    byte[] nameB = Bytes.toBytes(name);
+
+    if (namespaceDelimIndex < 0) {
+      return createTableNameIfNecessary(
+          ByteBuffer.wrap(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME),
+          ByteBuffer.wrap(nameB));
+    } else {
+      return createTableNameIfNecessary(
+          ByteBuffer.wrap(nameB, 0, namespaceDelimIndex),
+          ByteBuffer.wrap(nameB, namespaceDelimIndex + 1,
+              nameB.length - (namespaceDelimIndex + 1)));
     }
-    return TableName.valueOf(NamespaceDescriptor.DEFAULT_NAMESPACE.getName(), name);
   }
 
-  private static String createFullyQualified(String namespace, String tableQualifier) {
-    if (namespace.equals(NamespaceDescriptor.DEFAULT_NAMESPACE.getName())) {
-      return tableQualifier;
+
+  public static TableName valueOf(byte[] namespace, byte[] qualifier) {
+    if (namespace == null || namespace.length < 1) {
+      namespace = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME;
     }
-    return namespace+NAMESPACE_DELIM+tableQualifier;
+
+    for (TableName tn : tableCache) {
+      if (Arrays.equals(tn.getQualifier(), namespace) &&
+          Arrays.equals(tn.getNamespace(), namespace)) {
+        return tn;
+      }
+    }
+
+    return createTableNameIfNecessary(
+        ByteBuffer.wrap(namespace), ByteBuffer.wrap(qualifier));
+  }
+
+  public static TableName valueOf(ByteBuffer namespace, ByteBuffer qualifier) {
+    if (namespace == null || namespace.remaining() < 1) {
+      return createTableNameIfNecessary(
+          ByteBuffer.wrap(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME), qualifier);
+    }
+
+    return createTableNameIfNecessary(namespace, qualifier);
   }
 
   @Override
@@ -315,20 +453,26 @@ public final class TableName implements Comparable<TableName> {
 
     TableName tableName = (TableName) o;
 
-    if (!nameAsString.equals(tableName.nameAsString)) return false;
-
-    return true;
+    return o.hashCode() == hashCode && nameAsString.equals(tableName.nameAsString);
   }
 
   @Override
   public int hashCode() {
-    int result = nameAsString.hashCode();
-    return result;
+    return hashCode;
   }
 
+  /**
+   * For performance reasons, the ordering is not lexicographic.
+   */
   @Override
   public int compareTo(TableName tableName) {
     if (this == tableName) return 0;
+    if (this.hashCode < tableName.hashCode()) {
+      return -1;
+    }
+    if (this.hashCode > tableName.hashCode()) {
+      return 1;
+    }
     return this.nameAsString.compareTo(tableName.getNameAsString());
   }
 

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.RackManager;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -104,7 +106,7 @@ public class TestFavoredNodeAssignmentHelper {
     List<ServerName> servers = getServersFromRack(rackToServerCount);
     FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers,
         new Configuration());
-    assertTrue(helper.canPlaceFavoredNodes() == false);
+    assertFalse(helper.canPlaceFavoredNodes());
   }
 
   @Test
@@ -263,16 +265,15 @@ public class TestFavoredNodeAssignmentHelper {
       int regionCount, Map<String, Integer> rackToServerCount) {
     Map<HRegionInfo, ServerName> primaryRSMap = new HashMap<HRegionInfo, ServerName>();
     List<ServerName> servers = getServersFromRack(rackToServerCount);
-    FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers,
-        new Configuration());
-    helper = new FavoredNodeAssignmentHelper(servers, rackManager);
+    FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers, rackManager);
     Map<ServerName, List<HRegionInfo>> assignmentMap =
         new HashMap<ServerName, List<HRegionInfo>>();
     helper.initialize();
     // create regions
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(regionCount);
     for (int i = 0; i < regionCount; i++) {
-      HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar" + i));
+      HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar"),
+          Bytes.toBytes(i), Bytes.toBytes(i + 1));
       regions.add(region);
     }
     // place the regions
@@ -300,7 +301,8 @@ public class TestFavoredNodeAssignmentHelper {
     // create some regions
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(regionCount);
     for (int i = 0; i < regionCount; i++) {
-      HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar" + i));
+      HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar"),
+          Bytes.toBytes(i), Bytes.toBytes(i + 1));
       regions.add(region);
     }
     // place those regions in primary RSs
@@ -353,7 +355,7 @@ public class TestFavoredNodeAssignmentHelper {
 
   private String printProportions(int firstRackSize, int secondRackSize,
       int thirdRackSize, int regionsOnRack1, int regionsOnRack2, int regionsOnRack3) {
-    return "The rack sizes" + firstRackSize + " " + secondRackSize
+    return "The rack sizes " + firstRackSize + " " + secondRackSize
         + " " + thirdRackSize + " " + regionsOnRack1 + " " + regionsOnRack2 +
         " " + regionsOnRack3;
   }
