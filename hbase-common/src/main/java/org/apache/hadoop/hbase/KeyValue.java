@@ -2055,7 +2055,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
 
       // compare Mvcc Version
       // Negate this comparison so later edits show up first
-      return -Longs.compare(left.getMvccVersion(), right.getMvccVersion());
+      return Longs.compare(right.getMvccVersion(), left.getMvccVersion());
     }
 
     public int compareTimestamps(final KeyValue left, final KeyValue right) {

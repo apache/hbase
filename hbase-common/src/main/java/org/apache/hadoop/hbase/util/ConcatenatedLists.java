@@ -129,6 +129,9 @@ public class ConcatenatedLists<T> implements Collection<T> {
     return new Iterator();
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
+    justification="nextWasCalled is using by StripeStoreFileManager")
   public class Iterator implements java.util.Iterator<T> {
     protected int currentComponent = 0;
     protected int indexWithinComponent = -1;

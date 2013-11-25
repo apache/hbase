@@ -82,7 +82,7 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     if (c != 0) return c;
 
     //timestamp: later sorts first
-    c = -Longs.compare(a.getTimestamp(), b.getTimestamp());
+    c = Longs.compare(b.getTimestamp(), a.getTimestamp());
     if (c != 0) return c;
 
     //type
@@ -90,7 +90,7 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     if (c != 0) return c;
 
     //mvccVersion: later sorts first
-    return -Longs.compare(a.getMvccVersion(), b.getMvccVersion());
+    return Longs.compare(b.getMvccVersion(), a.getMvccVersion());
   }
 
 
@@ -197,7 +197,7 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     if (c != 0) return c;
 
     //timestamp: later sorts first
-    c = -Longs.compare(a.getTimestamp(), b.getTimestamp());
+    c = Longs.compare(b.getTimestamp(), a.getTimestamp());
     if (c != 0) return c;
 
     //type

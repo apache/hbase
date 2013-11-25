@@ -190,14 +190,12 @@ public class Bytes {
   /**
    * Pass this to TreeMaps where byte [] are keys.
    */
-  public static Comparator<byte []> BYTES_COMPARATOR =
-    new ByteArrayComparator();
+  public final static Comparator<byte []> BYTES_COMPARATOR = new ByteArrayComparator();
 
   /**
    * Use comparing byte arrays, byte-by-byte
    */
-  public static RawComparator<byte []> BYTES_RAWCOMPARATOR =
-    new ByteArrayComparator();
+  public final static RawComparator<byte []> BYTES_RAWCOMPARATOR = new ByteArrayComparator();
 
   /**
    * Read byte-array written with a WritableableUtils.vint prefix.

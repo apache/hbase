@@ -117,7 +117,7 @@ public class KeyLocker<K extends Comparable<? super K>> {
   static class KeyLock<K extends Comparable<? super K>> extends ReentrantLock {
     private static final long serialVersionUID = -12432857283423584L;
 
-    private final KeyLocker<K> locker;
+    private final transient KeyLocker<K> locker;
     private final K lockId;
 
     private KeyLock(KeyLocker<K> locker, K lockId) {

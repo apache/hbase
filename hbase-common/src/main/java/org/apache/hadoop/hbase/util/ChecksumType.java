@@ -49,7 +49,7 @@ public enum ChecksumType {
   },
 
   CRC32((byte)1) {
-    private volatile Constructor<?> ctor;
+    private transient Constructor<?> ctor;
 
     @Override
     public String getName() {

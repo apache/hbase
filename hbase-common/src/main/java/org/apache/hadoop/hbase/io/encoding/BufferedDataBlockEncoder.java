@@ -156,11 +156,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     public BufferedEncodedSeeker(KVComparator comparator,
         HFileBlockDecodingContext decodingCtx) {
       this.comparator = comparator;
-      if (comparator instanceof SamePrefixComparator) {
-        this.samePrefixComparator = (SamePrefixComparator<byte[]>) comparator;
-      } else {
-        this.samePrefixComparator = null;
-      }
+      this.samePrefixComparator = comparator;
       this.decodingCtx = decodingCtx;
       if (decodingCtx.getHFileContext().isCompressTags()) {
         try {
@@ -468,9 +464,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     HFileBlockDefaultEncodingContext encodingCtx =
         (HFileBlockDefaultEncodingContext) blkEncodingCtx;
     encodingCtx.prepareEncoding();
-    DataOutputStream dataOut =
-        ((HFileBlockDefaultEncodingContext) encodingCtx)
-        .getOutputStreamForEncoder();
+    DataOutputStream dataOut = encodingCtx.getOutputStreamForEncoder();
     if (encodingCtx.getHFileContext().isCompressTags()) {
       try {
         TagCompressionContext tagCompressionContext = new TagCompressionContext(LRUDictionary.class);

@@ -184,6 +184,9 @@ public class JVM {
    * Workaround to get the current number of process running. Approach is the one described here:
    * http://stackoverflow.com/questions/54686/how-to-get-a-list-of-current-open-windows-process-with-java
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value="RV_DONT_JUST_NULL_CHECK_READLINE",
+    justification="used by testing")
   public int getNumberOfRunningProcess(){
     if (!isUnix()){
       return 0;

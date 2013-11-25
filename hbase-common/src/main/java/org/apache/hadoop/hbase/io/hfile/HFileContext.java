@@ -155,16 +155,10 @@ public class HFileContext implements HeapSize, Cloneable {
 
   @Override
   public HFileContext clone() {
-    HFileContext clonnedCtx = new HFileContext();
-    clonnedCtx.usesHBaseChecksum = this.usesHBaseChecksum;
-    clonnedCtx.includesMvcc = this.includesMvcc;
-    clonnedCtx.includesTags = this.includesTags;
-    clonnedCtx.compressAlgo = this.compressAlgo;
-    clonnedCtx.compressTags = this.compressTags;
-    clonnedCtx.checksumType = this.checksumType;
-    clonnedCtx.bytesPerChecksum = this.bytesPerChecksum;
-    clonnedCtx.blocksize = this.blocksize;
-    clonnedCtx.encoding = this.encoding;
-    return clonnedCtx;
+    try {
+      return (HFileContext)(super.clone());
+    } catch (CloneNotSupportedException e) {
+      throw new AssertionError(); // Won't happen
+    }
   }
 }
