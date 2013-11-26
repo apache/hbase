@@ -112,7 +112,7 @@ public abstract class Cipher {
   /**
    * Create a decrypting output stream given an initialized decryptor
    * @param in the input stream to wrap
-   * @param encryptor the decryptor
+   * @param decryptor the decryptor
    * @return the decrypting wrapper
    * @throws IOException
    */
