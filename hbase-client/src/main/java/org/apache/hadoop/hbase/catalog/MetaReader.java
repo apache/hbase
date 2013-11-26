@@ -533,8 +533,9 @@ public class MetaReader {
     }
     scan.addFamily(HConstants.CATALOG_FAMILY);
     HTable metaTable = getMetaHTable(catalogTracker);
-    ResultScanner scanner = metaTable.getScanner(scan);
+    ResultScanner scanner = null;
     try {
+      scanner = metaTable.getScanner(scan);
       Result data;
       while((data = scanner.next()) != null) {
         if (data.isEmpty()) continue;
@@ -542,7 +543,7 @@ public class MetaReader {
         if (!visitor.visit(data)) break;
       }
     } finally {
-      scanner.close();
+      if (scanner != null) scanner.close();
       metaTable.close();
     }
     return;
