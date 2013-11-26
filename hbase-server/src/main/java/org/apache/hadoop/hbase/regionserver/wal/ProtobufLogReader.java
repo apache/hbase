@@ -28,10 +28,12 @@ import java.util.Arrays;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.LimitInputStream;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.Builder;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -55,10 +57,10 @@ public class ProtobufLogReader extends ReaderBase {
   private static final Log LOG = LogFactory.getLog(ProtobufLogReader.class);
   static final byte[] PB_WAL_MAGIC = Bytes.toBytes("PWAL");
   static final byte[] PB_WAL_COMPLETE_MAGIC = Bytes.toBytes("LAWP");
-  private FSDataInputStream inputStream;
-  private Codec.Decoder cellDecoder;
-  private WALCellCodec.ByteStringUncompressor byteStringUncompressor;
-  private boolean hasCompression = false;
+  protected FSDataInputStream inputStream;
+  protected Codec.Decoder cellDecoder;
+  protected WALCellCodec.ByteStringUncompressor byteStringUncompressor;
+  protected boolean hasCompression = false;
   // walEditsStopOffset is the position of the last byte to read. After reading the last WALEdit entry
   // in the hlog, the inputstream's position is equal to walEditsStopOffset.
   private long walEditsStopOffset;
@@ -92,6 +94,10 @@ public class ProtobufLogReader extends ReaderBase {
     initInternal(stream, true);
   }
 
+  protected boolean readHeader(Builder builder, FSDataInputStream stream) throws IOException {
+    return builder.mergeDelimitedFrom(stream);
+  }
+
   private void initInternal(FSDataInputStream stream, boolean isFirst) throws IOException {
     close();
     long expectedPos = PB_WAL_MAGIC.length;
@@ -104,7 +110,7 @@ public class ProtobufLogReader extends ReaderBase {
     }
     // Initialize metadata or, when we reset, just skip the header.
     WALProtos.WALHeader.Builder builder = WALProtos.WALHeader.newBuilder();
-    boolean hasHeader = builder.mergeDelimitedFrom(stream);
+    boolean hasHeader = readHeader(builder, stream);
     if (!hasHeader) {
       throw new EOFException("Couldn't read WAL PB header");
     }
@@ -176,9 +182,14 @@ public class ProtobufLogReader extends ReaderBase {
     return false;
   }
 
+  protected WALCellCodec getCodec(Configuration conf, CompressionContext compressionContext)
+      throws IOException {
+    return WALCellCodec.create(conf, compressionContext);
+  }
+
   @Override
   protected void initAfterCompression() throws IOException {
-    WALCellCodec codec = WALCellCodec.create(this.conf, this.compressionContext);
+    WALCellCodec codec = getCodec(this.conf, this.compressionContext);
     this.cellDecoder = codec.getDecoder(this.inputStream);
     if (this.hasCompression) {
       this.byteStringUncompressor = codec.getByteStringUncompressor();

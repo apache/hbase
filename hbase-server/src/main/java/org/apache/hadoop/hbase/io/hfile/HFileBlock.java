@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
@@ -1491,11 +1492,17 @@ public class HFileBlock implements Cacheable {
               - hdrSize, true, offset + hdrSize, pread);
         onDiskSizeWithHeader = b.onDiskSizeWithoutHeader + hdrSize;
       }
+
       Algorithm compressAlgo = fileContext.getCompression();
       boolean isCompressed =
         compressAlgo != null
             && compressAlgo != Compression.Algorithm.NONE;
-      if (!isCompressed) {
+
+      Encryption.Context cryptoContext = fileContext.getEncryptionContext();
+      boolean isEncrypted = cryptoContext != null
+          && cryptoContext != Encryption.Context.NONE;
+
+      if (!isCompressed && !isEncrypted) {
         b.assumeUncompressed();
       }
 
@@ -1504,7 +1511,7 @@ public class HFileBlock implements Cacheable {
         return null;             // checksum mismatch
       }
 
-      if (isCompressed) {
+      if (isCompressed || isEncrypted) {
         // This will allocate a new buffer but keep header bytes.
         b.allocateBuffer(nextBlockOnDiskSize > 0);
         if (b.blockType == BlockType.ENCODED_DATA) {

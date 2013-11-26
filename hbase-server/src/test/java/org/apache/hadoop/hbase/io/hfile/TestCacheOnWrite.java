@@ -219,9 +219,9 @@ public class TestCacheOnWrite {
   private void readStoreFile(boolean useTags) throws IOException {
     AbstractHFileReader reader;
     if (useTags) {
-      reader = (HFileReaderV3) HFile.createReader(fs, storeFilePath, cacheConf);
+        reader = (HFileReaderV3) HFile.createReader(fs, storeFilePath, cacheConf, conf);
     } else {
-      reader = (HFileReaderV2) HFile.createReader(fs, storeFilePath, cacheConf);
+        reader = (HFileReaderV2) HFile.createReader(fs, storeFilePath, cacheConf, conf);
     }
     LOG.info("HFile information: " + reader);
     final boolean cacheBlocks = false;

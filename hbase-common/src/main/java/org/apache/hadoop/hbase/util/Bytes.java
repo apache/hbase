@@ -1984,4 +1984,32 @@ public class Bytes {
     RNG.nextBytes(buf);
     System.arraycopy(buf, 0, b, offset, length);
   }
+
+  /**
+   * Convert a byte array into a hex string
+   * @param b
+   */
+  public static String toHex(byte[] b) {
+    checkArgument(b.length > 0, "length must be greater than 0");
+    return String.format("%x", new BigInteger(1, b));
+  }
+
+  /**
+   * Create a byte array from a string of hash digits. The length of the
+   * string must be a multiple of 2
+   * @param hex
+   */
+  public static byte[] fromHex(String hex) {
+    checkArgument(hex.length() > 0, "length must be greater than 0");
+    checkArgument(hex.length() % 2 == 0, "length must be a multiple of 2");
+    // Make sure letters are upper case
+    hex = hex.toUpperCase();
+    byte[] b = new byte[hex.length() / 2];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = (byte)((toBinaryFromHex((byte)hex.charAt(2 * i)) << 4) +
+        toBinaryFromHex((byte)hex.charAt((2 * i + 1))));
+    }
+    return b;
+  }
+
 }

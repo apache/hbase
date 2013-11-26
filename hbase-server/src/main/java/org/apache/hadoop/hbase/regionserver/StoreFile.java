@@ -1012,14 +1012,15 @@ public class StoreFile {
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
 
-    public Reader(FileSystem fs, Path path, CacheConfig cacheConf) throws IOException {
-      reader = HFile.createReader(fs, path, cacheConf);
+    public Reader(FileSystem fs, Path path, CacheConfig cacheConf, Configuration conf)
+        throws IOException {
+      reader = HFile.createReader(fs, path, cacheConf, conf);
       bloomFilterType = BloomType.NONE;
     }
 
     public Reader(FileSystem fs, Path path, FSDataInputStreamWrapper in, long size,
-        CacheConfig cacheConf) throws IOException {
-      reader = HFile.createReader(fs, path, in, size, cacheConf);
+        CacheConfig cacheConf, Configuration conf) throws IOException {
+      reader = HFile.createReader(fs, path, in, size, cacheConf, conf);
       bloomFilterType = BloomType.NONE;
     }
 

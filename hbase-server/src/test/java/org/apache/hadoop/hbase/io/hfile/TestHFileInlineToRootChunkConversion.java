@@ -77,7 +77,7 @@ public class TestHFileInlineToRootChunkConversion {
     }
     hfw.close();
 
-    HFileReaderV2 reader = (HFileReaderV2) HFile.createReader(fs, hfPath, cacheConf);
+    HFileReaderV2 reader = (HFileReaderV2) HFile.createReader(fs, hfPath, cacheConf, conf);
     HFileScanner scanner = reader.getScanner(true, true);
     for (int i = 0; i < keys.size(); ++i) {
       scanner.seekTo(keys.get(i));

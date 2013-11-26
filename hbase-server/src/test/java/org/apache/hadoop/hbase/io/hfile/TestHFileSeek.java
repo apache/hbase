@@ -180,7 +180,7 @@ public class TestHFileSeek extends TestCase {
     long totalBytes = 0;
     FSDataInputStream fsdis = fs.open(path);
     Reader reader = HFile.createReaderFromStream(path, fsdis,
-        fs.getFileStatus(path).getLen(), new CacheConfig(conf));
+        fs.getFileStatus(path).getLen(), new CacheConfig(conf), conf);
     reader.loadFileInfo();
     KeySampler kSampler =
         new KeySampler(rng, reader.getFirstKey(), reader.getLastKey(),

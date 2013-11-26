@@ -1,0 +1,222 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.regionserver.wal;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.security.SecureRandom;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.codec.KeyValueCodec;
+import org.apache.hadoop.hbase.io.crypto.Decryptor;
+import org.apache.hadoop.hbase.io.crypto.Encryptor;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.util.Bytes;
+
+/**
+ * A WALCellCodec that encrypts the WALedits.
+ */
+public class SecureWALCellCodec extends WALCellCodec {
+
+  private static final SecureRandom RNG = new SecureRandom();
+
+  private Encryptor encryptor;
+  private Decryptor decryptor;
+
+  public SecureWALCellCodec(Configuration conf, Encryptor encryptor) {
+    super(conf, null);
+    this.encryptor = encryptor;
+  }
+
+  public SecureWALCellCodec(Configuration conf, Decryptor decryptor) {
+    super(conf, null);
+    this.decryptor = decryptor;
+  }
+
+  static class EncryptedKvDecoder extends KeyValueCodec.KeyValueDecoder {
+
+    private Decryptor decryptor;
+    private byte[] iv;
+
+    public EncryptedKvDecoder(InputStream in) {
+      super(in);
+    }
+
+    public EncryptedKvDecoder(InputStream in, Decryptor decryptor) {
+      super(in);
+      this.decryptor = decryptor;
+      this.iv = new byte[decryptor.getIvLength()];
+    }
+
+    @Override
+    protected Cell parseCell() throws IOException {
+      int ivLength = 0;
+      try {
+        ivLength = StreamUtils.readRawVarint32(in);
+      } catch (EOFException e) {
+        // EOF at start is OK
+        return null;
+      }
+
+      // TODO: An IV length of 0 could signify an unwrapped cell, when the
+      // encoder supports that just read the remainder in directly
+
+      if (ivLength != this.iv.length) {
+        throw new IOException("Incorrect IV length: expected=" + iv.length + " have=" +
+          ivLength);
+      }
+      IOUtils.readFully(in, this.iv);
+
+      int codedLength = StreamUtils.readRawVarint32(in);
+      byte[] codedBytes = new byte[codedLength];
+      IOUtils.readFully(in, codedBytes);
+
+      decryptor.setIv(iv);
+      decryptor.reset();
+
+      InputStream cin = decryptor.createDecryptionStream(new ByteArrayInputStream(codedBytes));
+
+      // TODO: Add support for WAL compression
+
+      int keylength = StreamUtils.readRawVarint32(cin);
+      int vlength = StreamUtils.readRawVarint32(cin);
+      int tagsLength = StreamUtils.readRawVarint32(cin);
+      int length = 0;
+      if (tagsLength == 0) {
+        length = KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + keylength + vlength;
+      } else {
+        length = KeyValue.KEYVALUE_WITH_TAGS_INFRASTRUCTURE_SIZE + keylength + vlength + tagsLength;
+      }
+
+      byte[] backingArray = new byte[length];
+      int pos = 0;
+      pos = Bytes.putInt(backingArray, pos, keylength);
+      pos = Bytes.putInt(backingArray, pos, vlength);
+
+      // Row
+      int elemLen = StreamUtils.readRawVarint32(cin);
+      pos = Bytes.putShort(backingArray, pos, (short)elemLen);
+      IOUtils.readFully(cin, backingArray, pos, elemLen);
+      pos += elemLen;
+      // Family
+      elemLen = StreamUtils.readRawVarint32(cin);
+      pos = Bytes.putByte(backingArray, pos, (byte)elemLen);
+      IOUtils.readFully(cin, backingArray, pos, elemLen);
+      pos += elemLen;
+      // Qualifier
+      elemLen = StreamUtils.readRawVarint32(cin);
+      IOUtils.readFully(cin, backingArray, pos, elemLen);
+      pos += elemLen;
+      // Remainder
+      IOUtils.readFully(cin, backingArray, pos, length - pos);
+      return new KeyValue(backingArray, 0, length);
+    }
+
+  }
+
+  static class EncryptedKvEncoder extends KeyValueCodec.KeyValueEncoder {
+
+    private Encryptor encryptor;
+    private byte[] iv;
+
+    public EncryptedKvEncoder(OutputStream os) {
+      super(os);
+    }
+
+    public EncryptedKvEncoder(OutputStream os, Encryptor encryptor) {
+      super(os);
+      this.encryptor = encryptor;
+      iv = new byte[encryptor.getIvLength()];
+    }
+
+    @Override
+    public void write(Cell cell) throws IOException {
+      if (!(cell instanceof KeyValue)) throw new IOException("Cannot write non-KV cells to WAL");
+
+      KeyValue kv = (KeyValue)cell;
+      byte[] kvBuffer = kv.getBuffer();
+      int offset = kv.getOffset();
+
+      RNG.nextBytes(iv);
+      encryptor.setIv(iv);
+      encryptor.reset();
+
+      // TODO: Check if this is a cell for an encrypted CF. If not, we can
+      // write a 0 here to signal an unwrapped cell and just dump the KV bytes
+      // afterward
+
+      StreamUtils.writeRawVInt32(out, iv.length);
+      out.write(iv);
+
+      // TODO: Add support for WAL compression
+
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      OutputStream cout = encryptor.createEncryptionStream(baos);
+
+      // Write the KeyValue infrastructure as VInts.
+      StreamUtils.writeRawVInt32(cout, kv.getKeyLength());
+      StreamUtils.writeRawVInt32(cout, kv.getValueLength());
+      // To support tags
+      StreamUtils.writeRawVInt32(cout, kv.getTagsLength());
+
+      // Write row, qualifier, and family
+      StreamUtils.writeRawVInt32(cout, kv.getRowLength());
+      cout.write(kvBuffer, kv.getRowOffset(), kv.getRowLength());
+      StreamUtils.writeRawVInt32(cout, kv.getFamilyLength());
+      cout.write(kvBuffer, kv.getFamilyOffset(), kv.getFamilyLength());
+      StreamUtils.writeRawVInt32(cout, kv.getQualifierLength());
+      cout.write(kvBuffer, kv.getQualifierOffset(), kv.getQualifierLength());
+      // Write the rest
+      int pos = kv.getTimestampOffset();
+      int remainingLength = kv.getLength() + offset - pos;
+      cout.write(kvBuffer, pos, remainingLength);
+      cout.close();
+
+      byte[] codedBytes = baos.toByteArray();
+      StreamUtils.writeRawVInt32(out, codedBytes.length);
+      out.write(codedBytes);
+    }
+
+  }
+
+  @Override
+  public Decoder getDecoder(InputStream is) {
+    return new EncryptedKvDecoder(is, decryptor);
+  }
+
+  @Override
+  public Encoder getEncoder(OutputStream os) {
+    return new EncryptedKvEncoder(os, encryptor);
+  }
+
+  public static WALCellCodec getCodec(Configuration conf, Encryptor encryptor) {
+    return new SecureWALCellCodec(conf, encryptor);
+  }
+
+  public static WALCellCodec getCodec(Configuration conf, Decryptor decryptor) {
+    return new SecureWALCellCodec(conf, decryptor);
+  }
+
+}

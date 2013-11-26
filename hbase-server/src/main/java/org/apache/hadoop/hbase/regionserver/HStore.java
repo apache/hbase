@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
+import java.security.Key;
+import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -56,6 +58,8 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.crypto.Cipher;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -73,6 +77,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -174,6 +180,8 @@ public class HStore implements Store {
   private long blockingFileCount;
   private int compactionCheckMultiplier;
 
+  private Encryption.Context cryptoContext = Encryption.Context.NONE;
+
   /**
    * Constructor
    * @param region
@@ -253,6 +261,63 @@ public class HStore implements Store {
       throw new IllegalArgumentException(
           "hbase.hstore.flush.retries.number must be > 0, not "
               + flushRetriesNumber);
+    }
+
+    // Crypto context for new store files
+    String cipherName = family.getEncryptionType();
+    if (cipherName != null) {
+      Cipher cipher;
+      Key key;
+      byte[] keyBytes = family.getEncryptionKey();
+      if (keyBytes != null) {
+        // Family provides specific key material
+        String masterKeyName = conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
+          User.getCurrent().getShortName());
+        try {
+          // First try the master key
+          key = EncryptionUtil.unwrapKey(conf, masterKeyName, keyBytes);
+        } catch (KeyException e) {
+          // If the current master key fails to unwrap, try the alternate, if
+          // one is configured
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Unable to unwrap key with current master key '" + masterKeyName + "'");
+          }
+          String alternateKeyName =
+            conf.get(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY);
+          if (alternateKeyName != null) {
+            try {
+              key = EncryptionUtil.unwrapKey(conf, alternateKeyName, keyBytes);
+            } catch (KeyException ex) {
+              throw new IOException(ex);
+            }
+          } else {
+            throw new IOException(e);
+          }
+        }
+        // Use the algorithm the key wants
+        cipher = Encryption.getCipher(conf, key.getAlgorithm());
+        if (cipher == null) {
+          throw new RuntimeException("Cipher '" + cipher + "' is not available");
+        }
+        // Fail if misconfigured
+        // We use the encryption type specified in the column schema as a sanity check on
+        // what the wrapped key is telling us
+        if (!cipher.getName().equalsIgnoreCase(cipherName)) {
+          throw new RuntimeException("Encryption for family '" + family.getNameAsString() +
+            "' configured with type '" + cipherName +
+            "' but key specifies algorithm '" + cipher.getName() + "'");
+        }
+      } else {
+        // Family does not provide key material, create a random key
+        cipher = Encryption.getCipher(conf, cipherName);
+        if (cipher == null) {
+          throw new RuntimeException("Cipher '" + cipher + "' is not available");
+        }
+        key = cipher.getRandomKey();
+      }
+      cryptoContext = Encryption.newContext(conf);
+      cryptoContext.setCipher(cipher);
+      cryptoContext.setKey(key);
     }
   }
 
@@ -534,7 +599,7 @@ public class HStore implements Store {
       LOG.info("Validating hfile at " + srcPath + " for inclusion in "
           + "store " + this + " region " + this.getRegionInfo().getRegionNameAsString());
       reader = HFile.createReader(srcPath.getFileSystem(conf),
-          srcPath, cacheConf);
+          srcPath, cacheConf, conf);
       reader.loadFileInfo();
 
       byte[] firstKey = reader.getFirstRowKey();
@@ -805,7 +870,8 @@ public class HStore implements Store {
       favoredNodes = region.getRegionServerServices().getFavoredNodesForRegion(
           region.getRegionInfo().getEncodedName());
     }
-    HFileContext hFileContext = createFileContext(compression, includeMVCCReadpoint, includesTag);
+    HFileContext hFileContext = createFileContext(compression, includeMVCCReadpoint, includesTag,
+      cryptoContext);
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, writerCacheConf,
         this.getFileSystem())
             .withFilePath(fs.createTempName())
@@ -819,7 +885,7 @@ public class HStore implements Store {
   }
 
   private HFileContext createFileContext(Compression.Algorithm compression,
-      boolean includeMVCCReadpoint, boolean includesTag) {
+      boolean includeMVCCReadpoint, boolean includesTag, Encryption.Context cryptoContext) {
     if (compression == null) {
       compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
     }
@@ -833,6 +899,7 @@ public class HStore implements Store {
                                 .withBlockSize(blocksize)
                                 .withHBaseCheckSum(true)
                                 .withDataBlockEncoding(family.getDataBlockEncoding())
+                                .withEncryptionContext(cryptoContext)
                                 .build();
     return hFileContext;
   }
@@ -1916,7 +1983,7 @@ public class HStore implements Store {
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align(ClassSize.OBJECT + (15 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
+      ClassSize.align(ClassSize.OBJECT + (16 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
               + (5 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD

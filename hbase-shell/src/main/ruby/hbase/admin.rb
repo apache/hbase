@@ -635,6 +635,16 @@ module Hbase
           family.setCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
         end
       end
+      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION)
+        algorithm = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION).upcase
+        family.setEncryptionType(algorithm)
+        if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION_KEY)
+          key = org.apache.hadoop.hbase.io.crypto.Encryption.hash128(
+            arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION_KEY))
+          family.setEncryptionKey(org.apache.hadoop.hbase.security.EncryptionUtil.wrapKey(@conf, key,
+            algorithm))
+        end
+      end
 
       set_user_metadata(family, arg.delete(METADATA)) if arg[METADATA]
       set_descriptor_config(family, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]

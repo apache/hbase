@@ -87,7 +87,7 @@ public class TestHFile extends HBaseTestCase {
     Writer w =
         HFile.getWriterFactory(conf, cacheConf).withPath(fs, f).withFileContext(context).create();
     w.close();
-    Reader r = HFile.createReader(fs, f, cacheConf);
+    Reader r = HFile.createReader(fs, f, cacheConf, conf);
     r.loadFileInfo();
     assertNull(r.getFirstKey());
     assertNull(r.getLastKey());
@@ -103,7 +103,7 @@ public class TestHFile extends HBaseTestCase {
     fsos.close();
 
     try {
-      Reader r = HFile.createReader(fs, f, cacheConf);
+      Reader r = HFile.createReader(fs, f, cacheConf, conf);
     } catch (CorruptHFileException che) {
       // Expected failure
       return;
@@ -142,7 +142,7 @@ public class TestHFile extends HBaseTestCase {
     truncateFile(fs, w.getPath(), trunc);
 
     try {
-      Reader r = HFile.createReader(fs, trunc, cacheConf);
+      Reader r = HFile.createReader(fs, trunc, cacheConf, conf);
     } catch (CorruptHFileException che) {
       // Expected failure
       return;
@@ -238,7 +238,7 @@ public class TestHFile extends HBaseTestCase {
     fout.close();
     FSDataInputStream fin = fs.open(ncTFile);
     Reader reader = HFile.createReaderFromStream(ncTFile, fs.open(ncTFile),
-      fs.getFileStatus(ncTFile).getLen(), cacheConf);
+      fs.getFileStatus(ncTFile).getLen(), cacheConf, conf);
     System.out.println(cacheConf.toString());
     // Load up the index.
     reader.loadFileInfo();
@@ -325,7 +325,7 @@ public class TestHFile extends HBaseTestCase {
     fout.close();
     FSDataInputStream fin = fs.open(mFile);
     Reader reader = HFile.createReaderFromStream(mFile, fs.open(mFile),
-        this.fs.getFileStatus(mFile).getLen(), cacheConf);
+        this.fs.getFileStatus(mFile).getLen(), cacheConf, conf);
     reader.loadFileInfo();
     // No data -- this should return false.
     assertFalse(reader.getScanner(false, false).seekTo());
@@ -356,7 +356,7 @@ public class TestHFile extends HBaseTestCase {
       writer.append("foo".getBytes(), "value".getBytes());
       writer.close();
       fout.close();
-      Reader reader = HFile.createReader(fs, mFile, cacheConf);
+      Reader reader = HFile.createReader(fs, mFile, cacheConf, conf);
       reader.loadFileInfo();
       assertNull(reader.getMetaBlock("non-existant", false));
     }

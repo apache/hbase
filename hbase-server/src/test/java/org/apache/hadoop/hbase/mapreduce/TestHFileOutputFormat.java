@@ -268,7 +268,7 @@ public class TestHFileOutputFormat  {
 
       // open as HFile Reader and pull out TIMERANGE FileInfo.
       HFile.Reader rd = HFile.createReader(fs, file[0].getPath(),
-          new CacheConfig(conf));
+          new CacheConfig(conf), conf);
       Map<byte[],byte[]> finfo = rd.loadFileInfo();
       byte[] range = finfo.get("TIMERANGE".getBytes());
       assertNotNull(range);
@@ -602,7 +602,7 @@ public class TestHFileOutputFormat  {
         // verify that the compression on this file matches the configured
         // compression
         Path dataFilePath = fs.listStatus(f.getPath())[0].getPath();
-        Reader reader = HFile.createReader(fs, dataFilePath, new CacheConfig(conf));
+        Reader reader = HFile.createReader(fs, dataFilePath, new CacheConfig(conf), conf);
         Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
 
         byte[] bloomFilter = fileInfo.get(StoreFile.BLOOM_FILTER_TYPE_KEY);
@@ -611,7 +611,7 @@ public class TestHFileOutputFormat  {
           "(reader: " + reader + ")",
           hcd.getBloomFilterType(), BloomType.valueOf(Bytes.toString(bloomFilter)));
         assertEquals("Incorrect compression used for column family " + familyStr +
-          "(reader: " + reader + ")", hcd.getCompression(), reader.getCompressionAlgorithm());
+          "(reader: " + reader + ")", hcd.getCompression(), reader.getFileContext().getCompression());
       }
     } finally {
       dir.getFileSystem(conf).delete(dir, true);

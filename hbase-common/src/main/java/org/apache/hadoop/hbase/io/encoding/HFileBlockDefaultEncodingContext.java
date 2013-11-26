@@ -18,15 +18,22 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.security.SecureRandom;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.crypto.Cipher;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
+import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 
@@ -42,28 +49,34 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class HFileBlockDefaultEncodingContext implements
     HFileBlockEncodingContext {
-
   private byte[] onDiskBytesWithHeader;
   private byte[] uncompressedBytesWithHeader;
   private BlockType blockType;
   private final DataBlockEncoding encodingAlgo;
-
-  /** Compressor, which is also reused between consecutive blocks. */
-  private Compressor compressor;
-
-  /** Compression output stream */
-  private CompressionOutputStream compressionStream;
-
-  /** Underlying stream to write compressed bytes to */
-  private ByteArrayOutputStream compressedByteStream;
 
   private ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
   private DataOutputStream dataOut = new DataOutputStream(encodedStream);
 
   private byte[] dummyHeader;
 
+  // Compression state
+
+  /** Compressor, which is also reused between consecutive blocks. */
+  private Compressor compressor;
+  /** Compression output stream */
+  private CompressionOutputStream compressionStream;
+  /** Underlying stream to write compressed bytes to */
+  private ByteArrayOutputStream compressedByteStream;
+
   private HFileContext fileContext;
   private TagCompressionContext tagCompressionContext;
+
+  // Encryption state
+
+  /** Underlying stream to write encrypted bytes to */
+  private ByteArrayOutputStream cryptoByteStream;
+  /** Initialization vector */
+  private byte[] iv;
 
   /**
    * @param encoding encoding used
@@ -73,9 +86,9 @@ public class HFileBlockDefaultEncodingContext implements
   public HFileBlockDefaultEncodingContext(DataBlockEncoding encoding, byte[] headerBytes,
       HFileContext fileContext) {
     this.encodingAlgo = encoding;
+    this.fileContext = fileContext;
     Compression.Algorithm compressionAlgorithm =
         fileContext.getCompression() == null ? NONE : fileContext.getCompression();
-    this.fileContext = fileContext;
     if (compressionAlgorithm != NONE) {
       compressor = compressionAlgorithm.getCompressor();
       compressedByteStream = new ByteArrayOutputStream();
@@ -89,6 +102,14 @@ public class HFileBlockDefaultEncodingContext implements
                 + compressionAlgorithm, e);
       }
     }
+
+    Encryption.Context cryptoContext = fileContext.getEncryptionContext();
+    if (cryptoContext != Encryption.Context.NONE) {
+      cryptoByteStream = new ByteArrayOutputStream();
+      iv = new byte[cryptoContext.getCipher().getIvLength()];
+      new SecureRandom().nextBytes(iv);
+    }
+
     dummyHeader = Preconditions.checkNotNull(headerBytes,
       "Please pass HConstants.HFILEBLOCK_DUMMY_HEADER instead of null for param headerBytes");
   }
@@ -138,20 +159,91 @@ public class HFileBlockDefaultEncodingContext implements
   protected void compressAfterEncoding(byte[] uncompressedBytesWithHeader,
       BlockType blockType, byte[] headerBytes) throws IOException {
     this.uncompressedBytesWithHeader = uncompressedBytesWithHeader;
-    if (this.fileContext.getCompression() != NONE) {
-      compressedByteStream.reset();
-      compressedByteStream.write(headerBytes);
-      compressionStream.resetState();
-      compressionStream.write(uncompressedBytesWithHeader,
+
+    Encryption.Context cryptoContext = fileContext.getEncryptionContext();
+    if (cryptoContext != Encryption.Context.NONE) {
+
+      // Encrypted block format:
+      // +--------------------------+
+      // | vint plaintext length    |
+      // +--------------------------+
+      // | vint iv length           |
+      // +--------------------------+
+      // | iv data ...              |
+      // +--------------------------+
+      // | encrypted block data ... |
+      // +--------------------------+
+
+      cryptoByteStream.reset();
+      // Write the block header (plaintext)
+      cryptoByteStream.write(headerBytes);
+
+      InputStream in;
+      int plaintextLength;
+      // Run any compression before encryption
+      if (fileContext.getCompression() != Compression.Algorithm.NONE) {
+        compressedByteStream.reset();
+        compressionStream.resetState();
+        compressionStream.write(uncompressedBytesWithHeader,
+            headerBytes.length, uncompressedBytesWithHeader.length - headerBytes.length);
+        compressionStream.flush();
+        compressionStream.finish();
+        byte[] plaintext = compressedByteStream.toByteArray();
+        plaintextLength = plaintext.length;
+        in = new ByteArrayInputStream(plaintext);
+      } else {
+        plaintextLength = uncompressedBytesWithHeader.length - headerBytes.length;
+        in = new ByteArrayInputStream(uncompressedBytesWithHeader,
+          headerBytes.length, plaintextLength);
+      }
+
+      if (plaintextLength > 0) {
+
+        Cipher cipher = cryptoContext.getCipher();
+        Encryptor encryptor = cipher.getEncryptor();
+        encryptor.setKey(cryptoContext.getKey());
+
+        // Write the encryption header and IV (plaintext)
+        int ivLength = iv.length;
+        StreamUtils.writeRawVInt32(cryptoByteStream, plaintextLength);
+        StreamUtils.writeRawVInt32(cryptoByteStream, ivLength);
+        if (ivLength > 0) {
+          Encryption.incrementIv(iv);
+          encryptor.setIv(iv);
+          cryptoByteStream.write(iv);
+        }
+
+        // Write the block contents (ciphertext)
+        Encryption.encrypt(cryptoByteStream, in, encryptor);
+
+        onDiskBytesWithHeader = cryptoByteStream.toByteArray();
+
+      } else {
+
+        StreamUtils.writeRawVInt32(cryptoByteStream, 0);
+        StreamUtils.writeRawVInt32(cryptoByteStream, 0);
+        onDiskBytesWithHeader = cryptoByteStream.toByteArray();
+
+      }
+
+    } else {
+
+      if (this.fileContext.getCompression() != NONE) {
+        compressedByteStream.reset();
+        compressedByteStream.write(headerBytes);
+        compressionStream.resetState();
+        compressionStream.write(uncompressedBytesWithHeader,
           headerBytes.length, uncompressedBytesWithHeader.length
               - headerBytes.length);
+        compressionStream.flush();
+        compressionStream.finish();
+        onDiskBytesWithHeader = compressedByteStream.toByteArray();
+      } else {
+        onDiskBytesWithHeader = uncompressedBytesWithHeader;
+      }
 
-      compressionStream.flush();
-      compressionStream.finish();
-      onDiskBytesWithHeader = compressedByteStream.toByteArray();
-    } else {
-      onDiskBytesWithHeader = uncompressedBytesWithHeader;
     }
+
     this.blockType = blockType;
   }
 

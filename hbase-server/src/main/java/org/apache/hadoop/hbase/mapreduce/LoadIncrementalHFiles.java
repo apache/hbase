@@ -474,7 +474,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     final Path hfilePath = item.hfilePath;
     final FileSystem fs = hfilePath.getFileSystem(getConf());
     HFile.Reader hfr = HFile.createReader(fs, hfilePath,
-        new CacheConfig(getConf()));
+        new CacheConfig(getConf()), getConf());
     final byte[] first, last;
     try {
       hfr.loadFileInfo();
@@ -651,7 +651,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     HalfStoreFileReader halfReader = null;
     StoreFile.Writer halfWriter = null;
     try {
-      halfReader = new HalfStoreFileReader(fs, inFile, cacheConf, reference);
+      halfReader = new HalfStoreFileReader(fs, inFile, cacheConf, reference, conf);
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
       int blocksize = familyDescriptor.getBlocksize();
@@ -769,11 +769,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       for (Path hfile : hfiles) {
         if (hfile.getName().startsWith("_")) continue;
         HFile.Reader reader = HFile.createReader(fs, hfile,
-            new CacheConfig(getConf()));
+            new CacheConfig(getConf()), getConf());
         final byte[] first, last;
         try {
-          if (hcd.getCompressionType() != reader.getCompressionAlgorithm()) {
-            hcd.setCompressionType(reader.getCompressionAlgorithm());
+          if (hcd.getCompressionType() != reader.getFileContext().getCompression()) {
+            hcd.setCompressionType(reader.getFileContext().getCompression());
             LOG.info("Setting compression " + hcd.getCompressionType().name() +
                      " for family " + hcd.toString());
           }

@@ -19,7 +19,8 @@ package org.apache.hadoop.hbase.io.hfile;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -43,7 +44,7 @@ public class HFileContext implements HeapSize, Cloneable {
   /**Whether tags are to be included in the Read/Write**/
   private boolean includesTags;
   /**Compression algorithm used**/
-  private Algorithm compressAlgo = Algorithm.NONE;
+  private Compression.Algorithm compressAlgo = Compression.Algorithm.NONE;
   /** Whether tags to be compressed or not**/
   private boolean compressTags;
   /** the checksum type **/
@@ -53,10 +54,13 @@ public class HFileContext implements HeapSize, Cloneable {
   /** Number of uncompressed bytes we allow per block. */
   private int blocksize = HConstants.DEFAULT_BLOCKSIZE;
   private DataBlockEncoding encoding = DataBlockEncoding.NONE;
+  /** Encryption algorithm and key used */
+  private Encryption.Context cryptoContext = Encryption.Context.NONE;
 
   //Empty constructor.  Go with setters
   public HFileContext() {
   }
+
   /**
    * Copy constructor
    * @param context
@@ -71,11 +75,13 @@ public class HFileContext implements HeapSize, Cloneable {
     this.bytesPerChecksum = context.bytesPerChecksum;
     this.blocksize = context.blocksize;
     this.encoding = context.encoding;
+    this.cryptoContext = context.cryptoContext;
   }
 
   public HFileContext(boolean useHBaseChecksum, boolean includesMvcc, boolean includesTags,
-      Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
-      int bytesPerChecksum, int blockSize, DataBlockEncoding encoding) {
+      Compression.Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
+      int bytesPerChecksum, int blockSize, DataBlockEncoding encoding,
+      Encryption.Context cryptoContext) {
     this.usesHBaseChecksum = useHBaseChecksum;
     this.includesMvcc =  includesMvcc;
     this.includesTags = includesTags;
@@ -87,10 +93,15 @@ public class HFileContext implements HeapSize, Cloneable {
     if (encoding != null) {
       this.encoding = encoding;
     }
+    this.cryptoContext = cryptoContext;
   }
 
-  public Algorithm getCompression() {
+  public Compression.Algorithm getCompression() {
     return compressAlgo;
+  }
+
+  public void setCompresssion(Compression.Algorithm compressAlgo) {
+    this.compressAlgo = compressAlgo;
   }
 
   public boolean isUseHBaseChecksum() {
@@ -137,6 +148,18 @@ public class HFileContext implements HeapSize, Cloneable {
     return encoding;
   }
 
+  public void setDataBlockEncoding(DataBlockEncoding encoding) {
+    this.encoding = encoding;
+  }
+
+  public Encryption.Context getEncryptionContext() {
+    return cryptoContext;
+  }
+
+  public void setEncryptionContext(Encryption.Context cryptoContext) {
+    this.cryptoContext = cryptoContext;
+  }
+
   /**
    * HeapSize implementation
    * NOTE : The heapsize should be altered as and when new state variable are added
@@ -145,8 +168,8 @@ public class HFileContext implements HeapSize, Cloneable {
   @Override
   public long heapSize() {
     long size = ClassSize.align(ClassSize.OBJECT +
-        // Algorithm reference, encoding, checksumtype
-        3 * ClassSize.REFERENCE +
+        // Algorithm reference, encodingon, checksumtype, Encryption.Context reference
+        4 * ClassSize.REFERENCE +
         2 * Bytes.SIZEOF_INT +
         // usesHBaseChecksum, includesMvcc, includesTags and compressTags
         4 * Bytes.SIZEOF_BOOLEAN);
@@ -161,4 +184,23 @@ public class HFileContext implements HeapSize, Cloneable {
       throw new AssertionError(); // Won't happen
     }
   }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("HFileContext [");
+    sb.append(" usesHBaseChecksum="); sb.append(usesHBaseChecksum);
+    sb.append(" checksumType=");      sb.append(checksumType);
+    sb.append(" bytesPerChecksum=");  sb.append(bytesPerChecksum);
+    sb.append(" blocksize=");         sb.append(blocksize);
+    sb.append(" encoding=");          sb.append(encoding);
+    sb.append(" includesMvcc=");      sb.append(includesMvcc);
+    sb.append(" includesTags=");      sb.append(includesTags);
+    sb.append(" compressAlgo=");      sb.append(compressAlgo);
+    sb.append(" compressTags=");      sb.append(compressTags);
+    sb.append(" cryptoContext=[ ");   sb.append(cryptoContext);      sb.append(" ]");
+    sb.append(" ]");
+    return sb.toString();
+  }
+
 }

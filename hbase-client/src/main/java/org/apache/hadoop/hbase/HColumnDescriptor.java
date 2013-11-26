@@ -98,6 +98,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String KEEP_DELETED_CELLS = "KEEP_DELETED_CELLS";
   public static final String COMPRESS_TAGS = "COMPRESS_TAGS";
 
+  public static final String ENCRYPTION = "ENCRYPTION";
+  public static final String ENCRYPTION_KEY = "ENCRYPTION_KEY";
+
   /**
    * Default compression type.
    */
@@ -218,6 +221,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       for (String s : DEFAULT_VALUES.keySet()) {
         RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
       }
+      RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(ENCRYPTION)));
+      RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(ENCRYPTION_KEY)));
   }
 
   private static final int UNINITIALIZED = -1;
@@ -960,7 +965,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         continue;
       }
       String key = Bytes.toString(k.get());
-      String value = Bytes.toString(values.get(k).get());
+      String value = Bytes.toStringBinary(values.get(k).get());
       if (printDefaults
           || !DEFAULT_VALUES.containsKey(key)
           || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)) {
@@ -982,7 +987,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
           continue;
         }
         String key = Bytes.toString(k.get());
-        String value = Bytes.toString(values.get(k).get());
+        String value = Bytes.toStringBinary(values.get(k).get());
         if (printComma) {
           s.append(", ");
         }
@@ -1269,5 +1274,32 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public void removeConfiguration(final String key) {
     configuration.remove(key);
+  }
+
+  /**
+   * Return the encryption algorithm in use by this family
+   */
+  public String getEncryptionType() {
+    return getValue(ENCRYPTION);
+  }
+
+  /**
+   * Set the encryption algorithm for use with this family
+   * @param algorithm
+   */
+  public HColumnDescriptor setEncryptionType(String algorithm) {
+    setValue(ENCRYPTION, algorithm);
+    return this;
+  }
+
+  /** Return the raw crypto key attribute for the family, or null if not set  */
+  public byte[] getEncryptionKey() {
+    return getValue(Bytes.toBytes(ENCRYPTION_KEY));
+  }
+
+  /** Set the raw crypto key attribute for the family */
+  public HColumnDescriptor setEncryptionKey(byte[] keyBytes) {
+    setValue(Bytes.toBytes(ENCRYPTION_KEY), keyBytes);
+    return this;
   }
 }

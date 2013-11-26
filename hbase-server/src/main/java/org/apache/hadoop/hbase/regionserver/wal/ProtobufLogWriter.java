@@ -40,9 +40,9 @@ import org.apache.hadoop.hbase.util.FSUtils;
 @InterfaceAudience.Private
 public class ProtobufLogWriter extends WriterBase {
   private final Log LOG = LogFactory.getLog(this.getClass());
-  private FSDataOutputStream output;
-  private Codec.Encoder cellEncoder;
-  private WALCellCodec.ByteStringCompressor compressor;
+  protected FSDataOutputStream output;
+  protected Codec.Encoder cellEncoder;
+  protected WALCellCodec.ByteStringCompressor compressor;
   private boolean trailerWritten;
   private WALTrailer trailer;
   // maximum size of the wal Trailer in bytes. If a user writes/reads a trailer with size larger
@@ -53,9 +53,19 @@ public class ProtobufLogWriter extends WriterBase {
     super();
   }
 
+  protected WALCellCodec getCodec(Configuration conf, CompressionContext compressionContext)
+      throws IOException {
+    return WALCellCodec.create(conf, compressionContext);
+  }
+
+  protected WALHeader buildWALHeader(WALHeader.Builder builder) throws IOException {
+    return builder.build();
+  }
+
   @Override
   @SuppressWarnings("deprecation")
   public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable) throws IOException {
+    super.init(fs, path, conf, overwritable);
     assert this.output == null;
     boolean doCompress = initializeCompressionContext(conf, path);
     this.trailerWarnSize = conf.getInt(HLog.WAL_TRAILER_WARN_SIZE,
@@ -67,17 +77,22 @@ public class ProtobufLogWriter extends WriterBase {
         FSUtils.getDefaultBlockSize(fs, path));
     output = fs.createNonRecursive(path, overwritable, bufferSize, replication, blockSize, null);
     output.write(ProtobufLogReader.PB_WAL_MAGIC);
-    WALHeader.newBuilder().setHasCompression(doCompress).build().writeDelimitedTo(output);
+    buildWALHeader(WALHeader.newBuilder().setHasCompression(doCompress)).writeDelimitedTo(output);
 
-    WALCellCodec codec = WALCellCodec.create(conf, this.compressionContext);
-    this.cellEncoder = codec.getEncoder(this.output);
-    if (doCompress) {
-      this.compressor = codec.getByteStringCompressor();
-    }
+    initAfterHeader(doCompress);
+
     // instantiate trailer to default value.
     trailer = WALTrailer.newBuilder().build();
     if (LOG.isTraceEnabled()) {
       LOG.trace("Initialized protobuf WAL=" + path + ", compression=" + doCompress);
+    }
+  }
+
+  protected void initAfterHeader(boolean doCompress) throws IOException {
+    WALCellCodec codec = getCodec(conf, this.compressionContext);
+    this.cellEncoder = codec.getEncoder(this.output);
+    if (doCompress) {
+      this.compressor = codec.getByteStringCompressor();
     }
   }
 
@@ -106,13 +121,17 @@ public class ProtobufLogWriter extends WriterBase {
     }
   }
 
+  protected WALTrailer buildWALTrailer(WALTrailer.Builder builder) {
+    return builder.build();
+  }
+
   private void writeWALTrailer() {
     try {
       int trailerSize = 0;
       if (this.trailer == null) {
         // use default trailer.
         LOG.warn("WALTrailer is null. Continuing with default.");
-        this.trailer = WALTrailer.newBuilder().build();
+        this.trailer = buildWALTrailer(WALTrailer.newBuilder());
         trailerSize = this.trailer.getSerializedSize();
       } else if ((trailerSize = this.trailer.getSerializedSize()) > this.trailerWarnSize) {
         // continue writing after warning the user.
@@ -120,8 +139,8 @@ public class ProtobufLogWriter extends WriterBase {
           trailerSize + " > " + this.trailerWarnSize);
       }
       this.trailer.writeTo(output);
-      this.output.writeInt(trailerSize);
-      this.output.write(ProtobufLogReader.PB_WAL_COMPLETE_MAGIC);
+      output.writeInt(trailerSize);
+      output.write(ProtobufLogReader.PB_WAL_COMPLETE_MAGIC);
       this.trailerWritten = true;
     } catch (IOException ioe) {
       LOG.error("Got IOException while writing trailer", ioe);

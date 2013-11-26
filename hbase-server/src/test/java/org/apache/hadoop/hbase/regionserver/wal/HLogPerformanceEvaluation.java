@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -143,6 +143,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     boolean cleanup = true;
     boolean noclosefs = false;
     long roll = Long.MAX_VALUE;
+    boolean compress = false;
+    String cipher = null;
     // Process command line args
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
@@ -173,6 +175,10 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           noclosefs = true;
         } else if (cmd.equals("-roll")) {
           roll = Long.parseLong(args[++i]);
+        } else if (cmd.equals("-compress")) {
+          compress = true;
+        } else if (cmd.equals("-encryption")) {
+          cipher = args[++i];
         } else if (cmd.equals("-h")) {
           printUsageAndExit();
         } else if (cmd.equals("--help")) {
@@ -184,6 +190,24 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       } catch (Exception e) {
         printUsageAndExit();
       }
+    }
+
+    if (compress) {
+      Configuration conf = getConf();
+      conf.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
+    }
+
+    if (cipher != null) {
+      // Set up HLog for encryption
+      Configuration conf = getConf();
+      conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+      conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
+      conf.setClass("hbase.regionserver.hlog.reader.impl", SecureProtobufLogReader.class,
+        HLog.Reader.class);
+      conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
+        HLog.Writer.class);
+      conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
+      conf.set(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, cipher);
     }
 
     // Run HLog Performance Evaluation
@@ -322,6 +346,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     System.err.println("  -verify          Verify edits written in sequence");
     System.err.println("  -verbose         Output extra info; e.g. all edit seq ids when verifying");
     System.err.println("  -roll <N>        Roll the way every N appends");
+    System.err.println("  -encryption <A>  Encrypt the WAL with algorithm A, e.g. AES");
     System.err.println("");
     System.err.println("Examples:");
     System.err.println("");

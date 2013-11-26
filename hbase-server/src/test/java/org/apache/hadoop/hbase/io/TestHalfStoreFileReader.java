@@ -96,7 +96,7 @@ public class TestHalfStoreFileReader {
     }
     w.close();
 
-    HFile.Reader r = HFile.createReader(fs, p, cacheConf);
+    HFile.Reader r = HFile.createReader(fs, p, cacheConf, conf);
     r.loadFileInfo();
     byte [] midkey = r.midkey();
     KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);
@@ -117,7 +117,7 @@ public class TestHalfStoreFileReader {
       CacheConfig cacheConf)
       throws IOException {
     final HalfStoreFileReader halfreader = new HalfStoreFileReader(fs, p,
-      cacheConf, bottom);
+      cacheConf, bottom, TEST_UTIL.getConfiguration());
     halfreader.loadFileInfo();
     final HFileScanner scanner = halfreader.getScanner(false, false);
 
@@ -162,7 +162,7 @@ public class TestHalfStoreFileReader {
       w.close();
 
 
-      HFile.Reader r = HFile.createReader(fs, p, cacheConf);
+      HFile.Reader r = HFile.createReader(fs, p, cacheConf, conf);
       r.loadFileInfo();
       byte[] midkey = r.midkey();
       KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);
@@ -218,7 +218,7 @@ public class TestHalfStoreFileReader {
                                         CacheConfig cacheConfig)
             throws IOException {
       final HalfStoreFileReader halfreader = new HalfStoreFileReader(fs, p,
-              cacheConfig, bottom);
+              cacheConfig, bottom, TEST_UTIL.getConfiguration());
       halfreader.loadFileInfo();
       final HFileScanner scanner = halfreader.getScanner(false, false);
       scanner.seekBefore(seekBefore.getKey());

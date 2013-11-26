@@ -458,7 +458,7 @@ public class TestStoreFile extends HBaseTestCase {
     }
     writer.close();
 
-    StoreFile.Reader reader = new StoreFile.Reader(fs, f, cacheConf);
+    StoreFile.Reader reader = new StoreFile.Reader(fs, f, cacheConf, conf);
     reader.loadFileInfo();
     reader.loadBloomfilter();
     StoreFileScanner scanner = reader.getStoreFileScanner(false, false);
@@ -539,7 +539,7 @@ public class TestStoreFile extends HBaseTestCase {
     }
     writer.close();
 
-    StoreFile.Reader reader = new StoreFile.Reader(fs, f, cacheConf);
+    StoreFile.Reader reader = new StoreFile.Reader(fs, f, cacheConf, conf);
     reader.loadFileInfo();
     reader.loadBloomfilter();
 
@@ -584,7 +584,7 @@ public class TestStoreFile extends HBaseTestCase {
     writeStoreFile(writer);
     writer.close();
 
-    StoreFile.Reader reader = new StoreFile.Reader(fs, f, cacheConf);
+    StoreFile.Reader reader = new StoreFile.Reader(fs, f, cacheConf, conf);
 
     // Now do reseek with empty KV to position to the beginning of the file
 
@@ -643,7 +643,7 @@ public class TestStoreFile extends HBaseTestCase {
       }
       writer.close();
 
-      StoreFile.Reader reader = new StoreFile.Reader(fs, f, cacheConf);
+      StoreFile.Reader reader = new StoreFile.Reader(fs, f, cacheConf, conf);
       reader.loadFileInfo();
       reader.loadBloomfilter();
       StoreFileScanner scanner = reader.getStoreFileScanner(false, false);

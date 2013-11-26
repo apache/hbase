@@ -18,11 +18,14 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
+
+import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
@@ -36,8 +39,12 @@ import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.crypto.Cipher;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -123,6 +130,11 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_BATCHUPDATE = "batchupdate";
   protected static final String OPT_UPDATE = "update";
 
+  protected static final String OPT_ENCRYPTION = "encryption";
+  protected static final String OPT_ENCRYPTION_USAGE =
+    "Enables transparent encryption on the test table, one of " +
+    Arrays.toString(Encryption.getSupportedCiphers());
+
   protected static final long DEFAULT_START_KEY = 0;
 
   /** This will be removed as we factor out the dependency on command line */
@@ -168,6 +180,8 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected boolean isSkipInit = false;
   protected boolean isInitOnly = false;
 
+  protected Cipher cipher = null;
+
   protected String[] splitColonSeparated(String option,
       int minNumCols, int maxNumCols) {
     String optVal = cmd.getOptionValue(option);
@@ -212,6 +226,14 @@ public class LoadTestTool extends AbstractHBaseTool {
       }
       if (inMemoryCF) {
         columnDesc.setInMemory(inMemoryCF);
+      }
+      if (cipher != null) {
+        byte[] keyBytes = new byte[cipher.getKeyLength()];
+        new SecureRandom().nextBytes(keyBytes);
+        columnDesc.setEncryptionType(cipher.getName());
+        columnDesc.setEncryptionKey(EncryptionUtil.wrapKey(conf,
+          User.getCurrent().getShortName(),
+          new SecretKeySpec(keyBytes, cipher.getName())));
       }
       if (isNewCf) {
         admin.addColumn(tableName, columnDesc);
@@ -261,6 +283,8 @@ public class LoadTestTool extends AbstractHBaseTool {
       "A positive integer number. When a number n is speicfied, load test "
           + "tool  will load n table parallely. -tn parameter value becomes "
           + "table name prefix. Each table name is in format <tn>_1...<tn>_n");
+
+    addOptWithArg(OPT_ENCRYPTION, OPT_ENCRYPTION_USAGE);
   }
 
   @Override
@@ -394,6 +418,10 @@ public class LoadTestTool extends AbstractHBaseTool {
       }
       System.out.println("Using tags, number of tags per KV: min=" + minNumTags + ", max="
           + maxNumTags);
+    }
+
+    if (cmd.hasOption(OPT_ENCRYPTION)) {
+      cipher = Encryption.getCipher(conf, cmd.getOptionValue(OPT_ENCRYPTION));
     }
 
   }

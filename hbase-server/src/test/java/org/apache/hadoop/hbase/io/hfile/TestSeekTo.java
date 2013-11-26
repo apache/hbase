@@ -104,7 +104,7 @@ public class TestSeekTo extends HBaseTestCase {
 
   protected void testSeekBeforeInternals(TagUsage tagUsage) throws IOException {
     Path p = makeNewFile(tagUsage);
-    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf));
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
     assertEquals(false, scanner.seekBefore(toKV("a", tagUsage).getKey()));
@@ -145,7 +145,7 @@ public class TestSeekTo extends HBaseTestCase {
 
   protected void testSeekBeforeWithReSeekToInternals(TagUsage tagUsage) throws IOException {
     Path p = makeNewFile(tagUsage);
-    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf));
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
     assertEquals(false, scanner.seekBefore(toKV("a", tagUsage).getKey()));
@@ -234,7 +234,7 @@ public class TestSeekTo extends HBaseTestCase {
 
   protected void testSeekToInternals(TagUsage tagUsage) throws IOException {
     Path p = makeNewFile(tagUsage);
-    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf));
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
     reader.loadFileInfo();
     assertEquals(2, reader.getDataBlockIndexReader().getRootBlockCount());
     HFileScanner scanner = reader.getScanner(false, true);
@@ -261,7 +261,7 @@ public class TestSeekTo extends HBaseTestCase {
 
   protected void testBlockContainingKeyInternals(TagUsage tagUsage) throws IOException {
     Path p = makeNewFile(tagUsage);
-    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf));
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
     reader.loadFileInfo();
     HFileBlockIndex.BlockIndexReader blockIndexReader = 
       reader.getDataBlockIndexReader();

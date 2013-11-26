@@ -18,25 +18,36 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
+import java.security.Key;
+import java.security.KeyException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.crypto.Cipher;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
  * {@link HFile} reader for version 3.
- * This Reader is aware of Tags.
  */
 @InterfaceAudience.Private
 public class HFileReaderV3 extends HFileReaderV2 {
 
+  private static final Log LOG = LogFactory.getLog(HFileReaderV3.class);
+
   public static final int MAX_MINOR_VERSION = 0;
+
   /**
    * Opens a HFile. You must load the index before you can use it by calling
    * {@link #loadFileInfo()}.
@@ -50,11 +61,15 @@ public class HFileReaderV3 extends HFileReaderV2 {
    *          Length of the stream.
    * @param cacheConf
    *          Cache configuration.
+   * @param hfs
+   *          The file system.
+   * @param conf
+   *          Configuration
    */
   public HFileReaderV3(Path path, FixedFileTrailer trailer, final FSDataInputStreamWrapper fsdis,
-      final long size, final CacheConfig cacheConf,
-      final HFileSystem hfs) throws IOException {
-    super(path, trailer, fsdis, size, cacheConf, hfs);
+      final long size, final CacheConfig cacheConf, final HFileSystem hfs,
+      final Configuration conf) throws IOException {
+    super(path, trailer, fsdis, size, cacheConf, hfs, conf);
     byte[] tmp = fileInfo.get(FileInfo.MAX_TAGS_LEN);
     // max tag length is not present in the HFile means tags were not at all written to file.
     if (tmp != null) {
@@ -67,13 +82,62 @@ public class HFileReaderV3 extends HFileReaderV2 {
   }
 
   @Override
-  protected HFileContext createHFileContext(FixedFileTrailer trailer) {
-    HFileContext hfileContext = new HFileContextBuilder()
-                                .withIncludesMvcc(this.includesMemstoreTS)
-                                .withHBaseCheckSum(true)
-                                .withCompression(this.compressAlgo)
-                                .build();
-    return hfileContext;
+  protected HFileContext createHFileContext(FSDataInputStreamWrapper fsdis, long fileSize,
+      HFileSystem hfs, Path path, FixedFileTrailer trailer) throws IOException {
+    trailer.expectMajorVersion(3);
+    HFileContextBuilder builder = new HFileContextBuilder()
+      .withIncludesMvcc(this.includesMemstoreTS)
+      .withHBaseCheckSum(true)
+      .withCompression(this.compressAlgo);
+
+    // Check for any key material available
+    byte[] keyBytes = trailer.getEncryptionKey();
+    if (keyBytes != null) {
+      Encryption.Context cryptoContext = Encryption.newContext(conf);
+      Key key;
+      String masterKeyName = conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
+        User.getCurrent().getShortName());
+      try {
+        // First try the master key
+        key = EncryptionUtil.unwrapKey(conf, masterKeyName, keyBytes);
+      } catch (KeyException e) {
+        // If the current master key fails to unwrap, try the alternate, if
+        // one is configured
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Unable to unwrap key with current master key '" + masterKeyName + "'");
+        }
+        String alternateKeyName =
+          conf.get(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY);
+        if (alternateKeyName != null) {
+          try {
+            key = EncryptionUtil.unwrapKey(conf, alternateKeyName, keyBytes);
+          } catch (KeyException ex) {
+            throw new IOException(ex);
+          }
+        } else {
+          throw new IOException(e);
+        }
+      }
+      // Use the algorithm the key wants
+      Cipher cipher = Encryption.getCipher(conf, key.getAlgorithm());
+      if (cipher == null) {
+        throw new IOException("Cipher '" + key.getAlgorithm() + "' is not available");
+      }
+      cryptoContext.setCipher(cipher);
+      cryptoContext.setKey(key);
+      builder.withEncryptionContext(cryptoContext);
+    }
+
+    HFileContext context = builder.build();
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Reader" + (path != null ? " for " + path : "" ) +
+        " initialized with cacheConf: " + cacheConf +
+        " comparator: " + comparator.getClass().getSimpleName() +
+        " fileContext: " + context);
+    }
+
+    return context;
   }
 
   /**
@@ -140,19 +204,24 @@ public class HFileReaderV3 extends HFileReaderV2 {
       blockBuffer.mark();
       currKeyLen = blockBuffer.getInt();
       currValueLen = blockBuffer.getInt();
-      ByteBufferUtils.skip(blockBuffer, currKeyLen + currValueLen);
-      if (reader.hfileContext.isIncludesTags()) {
-        currTagsLen = blockBuffer.getShort();
-        ByteBufferUtils.skip(blockBuffer, currTagsLen);
-      }
-      readMvccVersion();
-      if (currKeyLen < 0 || currValueLen < 0 || currTagsLen < 0 || currKeyLen > blockBuffer.limit()
-          || currValueLen > blockBuffer.limit() || currTagsLen > blockBuffer.limit()) {
+      if (currKeyLen < 0 || currValueLen < 0 || currKeyLen > blockBuffer.limit()
+          || currValueLen > blockBuffer.limit()) {
         throw new IllegalStateException("Invalid currKeyLen " + currKeyLen + " or currValueLen "
-            + currValueLen + " or currTagLen " + currTagsLen + ". Block offset: "
+            + currValueLen + ". Block offset: "
             + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
             + blockBuffer.position() + " (without header).");
       }
+      ByteBufferUtils.skip(blockBuffer, currKeyLen + currValueLen);
+      if (reader.hfileContext.isIncludesTags()) {
+        currTagsLen = blockBuffer.getShort();
+        if (currTagsLen < 0 || currTagsLen > blockBuffer.limit()) {
+          throw new IllegalStateException("Invalid currTagsLen " + currTagsLen + ". Block offset: "
+              + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
+              + blockBuffer.position() + " (without header).");
+        }
+        ByteBufferUtils.skip(blockBuffer, currTagsLen);
+      }
+      readMvccVersion();
       blockBuffer.reset();
     }
 
@@ -184,9 +253,21 @@ public class HFileReaderV3 extends HFileReaderV2 {
         blockBuffer.mark();
         klen = blockBuffer.getInt();
         vlen = blockBuffer.getInt();
+        if (klen < 0 || vlen < 0 || klen > blockBuffer.limit()
+            || vlen > blockBuffer.limit()) {
+          throw new IllegalStateException("Invalid klen " + klen + " or vlen "
+              + vlen + ". Block offset: "
+              + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
+              + blockBuffer.position() + " (without header).");
+        }
         ByteBufferUtils.skip(blockBuffer, klen + vlen);
         if (reader.hfileContext.isIncludesTags()) {
           tlen = blockBuffer.getShort();
+          if (tlen < 0 || tlen > blockBuffer.limit()) {
+            throw new IllegalStateException("Invalid tlen " + tlen + ". Block offset: "
+                + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
+                + blockBuffer.position() + " (without header).");
+          }
           ByteBufferUtils.skip(blockBuffer, tlen);
         }
         if (this.reader.shouldIncludeMemstoreTS()) {
@@ -262,8 +343,8 @@ public class HFileReaderV3 extends HFileReaderV2 {
    */
   protected static class EncodedScannerV3 extends EncodedScannerV2 {
     public EncodedScannerV3(HFileReaderV3 reader, boolean cacheBlocks, boolean pread,
-        boolean isCompaction, HFileContext meta) {
-      super(reader, cacheBlocks, pread, isCompaction, meta);
+        boolean isCompaction, HFileContext context) {
+      super(reader, cacheBlocks, pread, isCompaction, context);
     }
   }
 

@@ -459,4 +459,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   protected int getMinorVersion() {
     return HFileReaderV2.MAX_MINOR_VERSION;
   }
+
+  @Override
+  public HFileContext getFileContext() {
+    return hFileContext;
+  }
 }

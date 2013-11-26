@@ -94,7 +94,7 @@ public class TestReseekTo {
     fout.close();
 
     HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(),
-        ncTFile, cacheConf);
+        ncTFile, cacheConf, TEST_UTIL.getConfiguration());
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
 

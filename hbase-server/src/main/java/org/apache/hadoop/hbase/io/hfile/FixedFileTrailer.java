@@ -26,8 +26,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.KeyValue;
@@ -35,6 +33,8 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * The {@link HFile} has a fixed trailer which contains offsets to other
@@ -110,6 +110,9 @@ public class FixedFileTrailer {
   /** Raw key comparator class name in version 3 */
   private String comparatorClassName = KeyValue.COMPARATOR.getLegacyKeyComparatorName();
 
+  /** The encryption key */
+  private byte[] encryptionKey;
+
   /** The {@link HFile} format major version. */
   private final int majorVersion;
 
@@ -127,10 +130,10 @@ public class FixedFileTrailer {
     // We support only 2 major versions now. ie. V2, V3
     versionToSize[2] = 212;
     for (int version = 3; version <= HFile.MAX_FORMAT_VERSION; version++) {
-      // Max FFT size for V3 and above is taken as 1KB for future enhancements
+      // Max FFT size for V3 and above is taken as 4KB for future enhancements
       // if any.
-      // Unless the trailer size exceeds 1024 this can continue
-      versionToSize[version] = 1024;
+      // Unless the trailer size exceeds 4K this can continue
+      versionToSize[version] = 1024 * 4;
     }
     return versionToSize;
   }
@@ -187,7 +190,7 @@ public class FixedFileTrailer {
    */
   void serializeAsPB(DataOutputStream output) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    HFileProtos.FileTrailerProto.newBuilder()
+    HFileProtos.FileTrailerProto.Builder builder = HFileProtos.FileTrailerProto.newBuilder()
       .setFileInfoOffset(fileInfoOffset)
       .setLoadOnOpenDataOffset(loadOnOpenDataOffset)
       .setUncompressedDataIndexSize(uncompressedDataIndexSize)
@@ -201,8 +204,11 @@ public class FixedFileTrailer {
       // TODO this is a classname encoded into an  HFile's trailer. We are going to need to have 
       // some compat code here.
       .setComparatorClassName(comparatorClassName)
-      .setCompressionCodec(compressionCodec.ordinal())
-      .build().writeDelimitedTo(baos);
+      .setCompressionCodec(compressionCodec.ordinal());
+    if (encryptionKey != null) {
+      builder.setEncryptionKey(ZeroCopyLiteralByteString.wrap(encryptionKey));
+    }
+    builder.build().writeDelimitedTo(baos);
     output.write(baos.toByteArray());
     // Pad to make up the difference between variable PB encoding length and the
     // length when encoded as writable under earlier V2 formats. Failure to pad
@@ -251,51 +257,54 @@ public class FixedFileTrailer {
   void deserializeFromPB(DataInputStream inputStream) throws IOException {
     // read PB and skip padding
     int start = inputStream.available();
-    HFileProtos.FileTrailerProto.Builder builder = HFileProtos.FileTrailerProto.newBuilder();
-    builder.mergeDelimitedFrom(inputStream);
+    HFileProtos.FileTrailerProto trailerProto =
+        HFileProtos.FileTrailerProto.PARSER.parseDelimitedFrom(inputStream);
     int size = start - inputStream.available();
     inputStream.skip(getTrailerSize() - NOT_PB_SIZE - size);
 
     // process the PB
-    if (builder.hasFileInfoOffset()) {
-      fileInfoOffset = builder.getFileInfoOffset();
+    if (trailerProto.hasFileInfoOffset()) {
+      fileInfoOffset = trailerProto.getFileInfoOffset();
     }
-    if (builder.hasLoadOnOpenDataOffset()) {
-      loadOnOpenDataOffset = builder.getLoadOnOpenDataOffset();
+    if (trailerProto.hasLoadOnOpenDataOffset()) {
+      loadOnOpenDataOffset = trailerProto.getLoadOnOpenDataOffset();
     }
-    if (builder.hasUncompressedDataIndexSize()) {
-      uncompressedDataIndexSize = builder.getUncompressedDataIndexSize();
+    if (trailerProto.hasUncompressedDataIndexSize()) {
+      uncompressedDataIndexSize = trailerProto.getUncompressedDataIndexSize();
     }
-    if (builder.hasTotalUncompressedBytes()) {
-      totalUncompressedBytes = builder.getTotalUncompressedBytes();
+    if (trailerProto.hasTotalUncompressedBytes()) {
+      totalUncompressedBytes = trailerProto.getTotalUncompressedBytes();
     }
-    if (builder.hasDataIndexCount()) {
-      dataIndexCount = builder.getDataIndexCount();
+    if (trailerProto.hasDataIndexCount()) {
+      dataIndexCount = trailerProto.getDataIndexCount();
     }
-    if (builder.hasMetaIndexCount()) {
-      metaIndexCount = builder.getMetaIndexCount();
+    if (trailerProto.hasMetaIndexCount()) {
+      metaIndexCount = trailerProto.getMetaIndexCount();
     }
-    if (builder.hasEntryCount()) {
-      entryCount = builder.getEntryCount();
+    if (trailerProto.hasEntryCount()) {
+      entryCount = trailerProto.getEntryCount();
     }
-    if (builder.hasNumDataIndexLevels()) {
-      numDataIndexLevels = builder.getNumDataIndexLevels();
+    if (trailerProto.hasNumDataIndexLevels()) {
+      numDataIndexLevels = trailerProto.getNumDataIndexLevels();
     }
-    if (builder.hasFirstDataBlockOffset()) {
-      firstDataBlockOffset = builder.getFirstDataBlockOffset();
+    if (trailerProto.hasFirstDataBlockOffset()) {
+      firstDataBlockOffset = trailerProto.getFirstDataBlockOffset();
     }
-    if (builder.hasLastDataBlockOffset()) {
-      lastDataBlockOffset = builder.getLastDataBlockOffset();
+    if (trailerProto.hasLastDataBlockOffset()) {
+      lastDataBlockOffset = trailerProto.getLastDataBlockOffset();
     }
-    if (builder.hasComparatorClassName()) {
+    if (trailerProto.hasComparatorClassName()) {
       // TODO this is a classname encoded into an  HFile's trailer. We are going to need to have 
       // some compat code here.
-      setComparatorClass(getComparatorClass(builder.getComparatorClassName()));
+      setComparatorClass(getComparatorClass(trailerProto.getComparatorClassName()));
     }
-    if (builder.hasCompressionCodec()) {
-      compressionCodec = Compression.Algorithm.values()[builder.getCompressionCodec()];
+    if (trailerProto.hasCompressionCodec()) {
+      compressionCodec = Compression.Algorithm.values()[trailerProto.getCompressionCodec()];
     } else {
       compressionCodec = Compression.Algorithm.NONE;
+    }
+    if (trailerProto.hasEncryptionKey()) {
+      encryptionKey = trailerProto.getEncryptionKey().toByteArray();
     }
   }
 
@@ -344,6 +353,9 @@ public class FixedFileTrailer {
     append(sb, "firstDataBlockOffset=" + firstDataBlockOffset);
     append(sb, "lastDataBlockOffset=" + lastDataBlockOffset);
     append(sb, "comparatorClassName=" + comparatorClassName);
+    if (majorVersion >= 3) {
+      append(sb, "encryptionKey=" + (encryptionKey != null ? "PRESENT" : "NONE"));
+    }
     append(sb, "majorVersion=" + majorVersion);
     append(sb, "minorVersion=" + minorVersion);
 
@@ -595,6 +607,15 @@ public class FixedFileTrailer {
       long uncompressedDataIndexSize) {
     expectAtLeastMajorVersion(2);
     this.uncompressedDataIndexSize = uncompressedDataIndexSize;
+  }
+
+  public byte[] getEncryptionKey() {
+    expectAtLeastMajorVersion(3);
+    return encryptionKey;
+  }
+
+  public void setEncryptionKey(byte[] keyBytes) {
+    this.encryptionKey = keyBytes;
   }
 
   /**

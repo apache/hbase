@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.SecureRandom;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Random;
@@ -31,7 +32,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
+import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -63,6 +69,8 @@ public class TestHFilePerformance extends AbstractHBaseTool {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     TEST_UTIL = new HBaseTestingUtility(conf);
     ROOT_DIR = TEST_UTIL.getDataTestDir("TestHFilePerformance").toString();
@@ -138,6 +146,7 @@ public class TestHFilePerformance extends AbstractHBaseTool {
    * @param keyLength
    * @param valueLength
    * @param codecName "none", "lzo", "gz", "snappy"
+   * @param cipherName "none", "aes"
    * @param rows number of rows to be written.
    * @param writeMethod used for HFile only.
    * @param minBlockSize used for HFile only.
@@ -145,10 +154,11 @@ public class TestHFilePerformance extends AbstractHBaseTool {
    */
    //TODO writeMethod: implement multiple ways of writing e.g. A) known length (no chunk) B) using a buffer and streaming (for many chunks).
   public void timeWrite(String fileType, int keyLength, int valueLength,
-    String codecName, long rows, String writeMethod, int minBlockSize)
+    String codecName, String cipherName, long rows, String writeMethod, int minBlockSize)
   throws IOException {
     System.out.println("File Type: " + fileType);
-    System.out.println("Writing " + fileType + " with codecName: " + codecName);
+    System.out.println("Writing " + fileType + " with codecName: " + codecName +
+      " cipherName: " + cipherName);
     long totalBytesWritten = 0;
 
 
@@ -164,13 +174,22 @@ public class TestHFilePerformance extends AbstractHBaseTool {
     FSDataOutputStream fout =  createFSOutput(path);
 
     if ("HFile".equals(fileType)){
-        HFileContext meta = new HFileContextBuilder()
-                            .withCompression(AbstractHFileWriter.compressionByName(codecName))
-                            .withBlockSize(minBlockSize).build();
+        HFileContextBuilder builder = new HFileContextBuilder()
+	    .withCompression(AbstractHFileWriter.compressionByName(codecName))
+	    .withBlockSize(minBlockSize);
+        if (cipherName != "none") {
+          byte[] cipherKey = new byte[AES.KEY_LENGTH];
+          new SecureRandom().nextBytes(cipherKey);
+          builder.withEncryptionContext(
+            Encryption.newContext(conf)
+              .setCipher(Encryption.getCipher(conf, cipherName))
+              .setKey(cipherKey));
+        }
+        HFileContext context = builder.build();
         System.out.println("HFile write method: ");
         HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
             .withOutputStream(fout)
-            .withFileContext(meta)
+            .withFileContext(context)
             .withComparator(new KeyValue.RawBytesComparator())
             .create();
 
@@ -251,7 +270,7 @@ public class TestHFilePerformance extends AbstractHBaseTool {
 
     if ("HFile".equals(fileType)){
         HFile.Reader reader = HFile.createReaderFromStream(path, fs.open(path),
-          fs.getFileStatus(path).getLen(), new CacheConfig(conf));
+          fs.getFileStatus(path).getLen(), new CacheConfig(conf), conf);
         reader.loadFileInfo();
         switch (method) {
 
@@ -326,7 +345,7 @@ public class TestHFilePerformance extends AbstractHBaseTool {
 
     System.out.println("****************************** Sequence File *****************************");
 
-    timeWrite("SequenceFile", keyLength, valueLength, "none", rows, null, minBlockSize);
+    timeWrite("SequenceFile", keyLength, valueLength, "none", "none", rows, null, minBlockSize);
     System.out.println("\n+++++++\n");
     timeReading("SequenceFile", keyLength, valueLength, rows, -1);
 
@@ -346,7 +365,7 @@ public class TestHFilePerformance extends AbstractHBaseTool {
     /* Sequence file can only use native hadoop libs gzipping so commenting out.
      */
     try {
-      timeWrite("SequenceFile", keyLength, valueLength, "gz", rows, null,
+      timeWrite("SequenceFile", keyLength, valueLength, "gz", "none", rows, null,
         minBlockSize);
       System.out.println("\n+++++++\n");
       timeReading("SequenceFile", keyLength, valueLength, rows, -1);
@@ -358,13 +377,22 @@ public class TestHFilePerformance extends AbstractHBaseTool {
     System.out.println("\n\n\n");
     System.out.println("****************************** HFile *****************************");
 
-    timeWrite("HFile", keyLength, valueLength, "none", rows, null, minBlockSize);
+    timeWrite("HFile", keyLength, valueLength, "none", "none", rows, null, minBlockSize);
     System.out.println("\n+++++++\n");
     timeReading("HFile", keyLength, valueLength, rows, 0 );
 
     System.out.println("");
     System.out.println("----------------------");
     System.out.println("");
+
+    timeWrite("HFile", keyLength, valueLength, "none", "aes", rows, null, minBlockSize);
+    System.out.println("\n+++++++\n");
+    timeReading("HFile", keyLength, valueLength, rows, 0 );
+
+    System.out.println("");
+    System.out.println("----------------------");
+    System.out.println("");
+
 /* DISABLED LZO
     timeWrite("HFile", keyLength, valueLength, "lzo", rows, null, minBlockSize);
     System.out.println("\n+++++++\n");
@@ -378,7 +406,16 @@ public class TestHFilePerformance extends AbstractHBaseTool {
     System.out.println("----------------------");
     System.out.println("");
 */
-    timeWrite("HFile", keyLength, valueLength, "gz", rows, null, minBlockSize);
+
+    timeWrite("HFile", keyLength, valueLength, "gz", "none", rows, null, minBlockSize);
+    System.out.println("\n+++++++\n");
+    timeReading("HFile", keyLength, valueLength, rows, 0 );
+
+    System.out.println("");
+    System.out.println("----------------------");
+    System.out.println("");
+
+    timeWrite("HFile", keyLength, valueLength, "gz", "aes", rows, null, minBlockSize);
     System.out.println("\n+++++++\n");
     timeReading("HFile", keyLength, valueLength, rows, 0 );
 

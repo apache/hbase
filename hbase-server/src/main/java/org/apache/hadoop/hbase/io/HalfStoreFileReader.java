@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -65,11 +66,13 @@ public class HalfStoreFileReader extends StoreFile.Reader {
    * @param p path to hfile
    * @param cacheConf
    * @param r original reference file (contains top or bottom)
+   * @param conf Configuration
    * @throws IOException
    */
   public HalfStoreFileReader(final FileSystem fs, final Path p,
-      final CacheConfig cacheConf, final Reference r) throws IOException {
-    super(fs, p, cacheConf);
+      final CacheConfig cacheConf, final Reference r, final Configuration conf)
+      throws IOException {
+    super(fs, p, cacheConf, conf);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't
@@ -88,11 +91,13 @@ public class HalfStoreFileReader extends StoreFile.Reader {
    * @param size Full size of the hfile file
    * @param cacheConf
    * @param r original reference file (contains top or bottom)
+   * @param conf Configuration
    * @throws IOException
    */
   public HalfStoreFileReader(final FileSystem fs, final Path p, final FSDataInputStreamWrapper in,
-      long size, final CacheConfig cacheConf,  final Reference r) throws IOException {
-    super(fs, p, in, size, cacheConf);
+      long size, final CacheConfig cacheConf,  final Reference r, final Configuration conf)
+      throws IOException {
+    super(fs, p, in, size, cacheConf, conf);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't

@@ -46,8 +46,8 @@ public class WALCellCodec implements Codec {
   /** Configuration key for the class to use when encoding cells in the WAL */
   public static final String WAL_CELL_CODEC_CLASS_KEY = "hbase.regionserver.wal.codec";
 
-  private final CompressionContext compression;
-  private final ByteStringUncompressor statelessUncompressor = new ByteStringUncompressor() {
+  protected final CompressionContext compression;
+  protected final ByteStringUncompressor statelessUncompressor = new ByteStringUncompressor() {
     @Override
     public byte[] uncompress(ByteString data, Dictionary dict) throws IOException {
       return WALCellCodec.uncompressByteString(data, dict);

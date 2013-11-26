@@ -320,6 +320,11 @@ public class HFile {
      * HFile V2.
      */
     void addDeleteFamilyBloomFilter(BloomFilterWriter bfw) throws IOException;
+
+    /**
+     * Return the file context for the HFile this writer belongs to
+     */
+    HFileContext getFileContext();
   }
 
   /**
@@ -499,6 +504,11 @@ public class HFile {
     DataBlockEncoding getDataBlockEncoding();
 
     boolean hasMVCCInfo();
+
+    /**
+     * Return the file context of the HFile this reader belongs to
+     */
+    HFileContext getFileContext();
   }
 
   /**
@@ -514,8 +524,7 @@ public class HFile {
    * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
    */
   private static Reader pickReaderVersion(Path path, FSDataInputStreamWrapper fsdis,
-      long size, CacheConfig cacheConf,
-      HFileSystem hfs) throws IOException {
+      long size, CacheConfig cacheConf, HFileSystem hfs, Configuration conf) throws IOException {
     FixedFileTrailer trailer = null;
     try {
       boolean isHBaseChecksum = fsdis.shouldUseHBaseChecksum();
@@ -523,11 +532,9 @@ public class HFile {
       trailer = FixedFileTrailer.readFromStream(fsdis.getStream(isHBaseChecksum), size);
       switch (trailer.getMajorVersion()) {
       case 2:
-        return new HFileReaderV2(
-            path, trailer, fsdis, size, cacheConf, hfs);
+        return new HFileReaderV2(path, trailer, fsdis, size, cacheConf, hfs, conf);
       case 3 :
-        return new HFileReaderV3(
-            path, trailer, fsdis, size, cacheConf, hfs);
+        return new HFileReaderV3(path, trailer, fsdis, size, cacheConf, hfs, conf);
       default:
         throw new IllegalArgumentException("Invalid HFile version " + trailer.getMajorVersion());
       }
@@ -547,11 +554,13 @@ public class HFile {
    * @param fsdis a stream of path's file
    * @param size max size of the trailer.
    * @param cacheConf Cache configuration for hfile's contents
+   * @param conf Configuration
    * @return A version specific Hfile Reader
    * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
    */
   public static Reader createReader(FileSystem fs, Path path,
-      FSDataInputStreamWrapper fsdis, long size, CacheConfig cacheConf) throws IOException {
+      FSDataInputStreamWrapper fsdis, long size, CacheConfig cacheConf, Configuration conf)
+      throws IOException {
     HFileSystem hfs = null;
 
     // If the fs is not an instance of HFileSystem, then create an
@@ -563,7 +572,7 @@ public class HFile {
     } else {
       hfs = (HFileSystem)fs;
     }
-    return pickReaderVersion(path, fsdis, size, cacheConf, hfs);
+    return pickReaderVersion(path, fsdis, size, cacheConf, hfs, conf);
   }
 
   /**
@@ -575,21 +584,21 @@ public class HFile {
    * @throws IOException Will throw a CorruptHFileException (DoNotRetryIOException subtype) if hfile is corrupt/invalid.
    */
   public static Reader createReader(
-      FileSystem fs, Path path, CacheConfig cacheConf) throws IOException {
+      FileSystem fs, Path path, CacheConfig cacheConf, Configuration conf) throws IOException {
     Preconditions.checkNotNull(cacheConf, "Cannot create Reader with null CacheConf");
     FSDataInputStreamWrapper stream = new FSDataInputStreamWrapper(fs, path);
     return pickReaderVersion(path, stream, fs.getFileStatus(path).getLen(),
-      cacheConf, stream.getHfs());
+      cacheConf, stream.getHfs(), conf);
   }
 
   /**
    * This factory method is used only by unit tests
    */
   static Reader createReaderFromStream(Path path,
-      FSDataInputStream fsdis, long size, CacheConfig cacheConf)
+      FSDataInputStream fsdis, long size, CacheConfig cacheConf, Configuration conf)
       throws IOException {
     FSDataInputStreamWrapper wrapper = new FSDataInputStreamWrapper(fsdis);
-    return pickReaderVersion(path, wrapper, size, cacheConf, null);
+    return pickReaderVersion(path, wrapper, size, cacheConf, null, conf);
   }
 
   /**

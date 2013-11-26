@@ -20,8 +20,10 @@ package org.apache.hadoop.hbase.io.hfile;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.ChecksumType;
+
 /**
  * A builder that helps in building up the HFileContext 
  */
@@ -48,6 +50,8 @@ public class HFileContextBuilder {
   /** Number of uncompressed bytes we allow per block. */
   private int blocksize = HConstants.DEFAULT_BLOCKSIZE;
   private DataBlockEncoding encoding = DataBlockEncoding.NONE;
+  /** Crypto context */
+  private Encryption.Context cryptoContext = Encryption.Context.NONE;
 
   public HFileContextBuilder withHBaseCheckSum(boolean useHBaseCheckSum) {
     this.usesHBaseChecksum = useHBaseCheckSum;
@@ -94,8 +98,13 @@ public class HFileContextBuilder {
     return this;
   }
 
+  public HFileContextBuilder withEncryptionContext(Encryption.Context cryptoContext) {
+    this.cryptoContext = cryptoContext;
+    return this;
+  }
+
   public HFileContext build() {
     return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
-      compressTags, checksumType, bytesPerChecksum, blocksize, encoding);
+      compressTags, checksumType, bytesPerChecksum, blocksize, encoding, cryptoContext);
   }
 }

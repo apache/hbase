@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -98,6 +99,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
   /** Minor versions starting with this number have faked index key */
   static final int MINOR_VERSION_WITH_FAKED_KEY = 3;
+
   protected HFileContext hfileContext;
 
   /**
@@ -110,15 +112,16 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * @param size Length of the stream.
    * @param cacheConf Cache configuration.
    * @param hfs
+   * @param conf
    */
   public HFileReaderV2(Path path, FixedFileTrailer trailer,
       final FSDataInputStreamWrapper fsdis, final long size, final CacheConfig cacheConf,
-      final HFileSystem hfs)
-      throws IOException {
-    super(path, trailer, size, cacheConf, hfs);
+      final HFileSystem hfs, final Configuration conf) throws IOException {
+    super(path, trailer, size, cacheConf, hfs, conf);
+    this.conf = conf;
     trailer.expectMajorVersion(getMajorVersion());
     validateMinorVersion(path, trailer.getMinorVersion());
-    this.hfileContext = createHFileContext(trailer);
+    this.hfileContext = createHFileContext(fsdis, fileSize, hfs, path, trailer);
     HFileBlock.FSReaderV2 fsBlockReaderV2 = new HFileBlock.FSReaderV2(fsdis, fileSize, hfs, path,
         hfileContext);
     this.fsBlockReader = fsBlockReaderV2; // upcast
@@ -174,13 +177,13 @@ public class HFileReaderV2 extends AbstractHFileReader {
     }
   }
 
-  protected HFileContext createHFileContext(FixedFileTrailer trailer) {
-    HFileContext hFileContext  = new HFileContextBuilder()
-                                 .withIncludesMvcc(this.includesMemstoreTS)
-                                 .withCompression(this.compressAlgo)
-                                 .withHBaseCheckSum(trailer.getMinorVersion() >= MINOR_VERSION_WITH_CHECKSUM)
-                                 .build();
-    return hFileContext;
+  protected HFileContext createHFileContext(FSDataInputStreamWrapper fsdis, long fileSize,
+      HFileSystem hfs, Path path, FixedFileTrailer trailer) throws IOException {
+    return new HFileContextBuilder()
+      .withIncludesMvcc(this.includesMemstoreTS)
+      .withCompression(this.compressAlgo)
+      .withHBaseCheckSum(trailer.getMinorVersion() >= MINOR_VERSION_WITH_CHECKSUM)
+      .build();
   }
 
   /**
@@ -1184,5 +1187,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
   @Override
   public int getMajorVersion() {
     return 2;
+  }
+
+  @Override
+  public HFileContext getFileContext() {
+    return hfileContext;
   }
 }

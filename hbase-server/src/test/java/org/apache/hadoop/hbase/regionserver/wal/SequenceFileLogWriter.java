@@ -85,8 +85,8 @@ public class SequenceFileLogWriter extends WriterBase {
   @Override
   public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable)
   throws IOException {
+    super.init(fs, path, conf, overwritable);
     boolean compress = initializeCompressionContext(conf, path);
-
     // Create a SF.Writer instance.
     try {
       // reflection for a version of SequenceFile.createWriter that doesn't

@@ -22,10 +22,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.crypto.Cipher;
+import org.apache.hadoop.hbase.io.crypto.Decryptor;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
 
 /**
  * A default implementation of {@link HFileBlockDecodingContext}. It assumes the
@@ -37,7 +42,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 @InterfaceAudience.Private
 public class HFileBlockDefaultDecodingContext implements
     HFileBlockDecodingContext {
-
   private final HFileContext fileContext;
   private TagCompressionContext tagCompressionContext;
   
@@ -48,12 +52,51 @@ public class HFileBlockDefaultDecodingContext implements
   @Override
   public void prepareDecoding(int onDiskSizeWithoutHeader, int uncompressedSizeWithoutHeader,
       ByteBuffer blockBufferWithoutHeader, byte[] onDiskBlock, int offset) throws IOException {
-    DataInputStream dis = new DataInputStream(new ByteArrayInputStream(onDiskBlock, offset,
-        onDiskSizeWithoutHeader));
+    InputStream in = new DataInputStream(new ByteArrayInputStream(onDiskBlock, offset,
+      onDiskSizeWithoutHeader));
 
-    Compression.decompress(blockBufferWithoutHeader.array(),
-      blockBufferWithoutHeader.arrayOffset(), (InputStream) dis, onDiskSizeWithoutHeader,
-      uncompressedSizeWithoutHeader, this.fileContext.getCompression());
+    Encryption.Context cryptoContext = fileContext.getEncryptionContext();
+    if (cryptoContext != Encryption.Context.NONE) {
+
+      Cipher cipher = cryptoContext.getCipher();
+      Decryptor decryptor = cipher.getDecryptor();
+      decryptor.setKey(cryptoContext.getKey());
+
+      // Encrypted block format:
+      // +--------------------------+
+      // | vint plaintext length    |
+      // +--------------------------+
+      // | vint iv length           |
+      // +--------------------------+
+      // | iv data ...              |
+      // +--------------------------+
+      // | encrypted block data ... |
+      // +--------------------------+
+
+      int plaintextLength = StreamUtils.readRawVarint32(in);
+      int ivLength = StreamUtils.readRawVarint32(in);
+      if (ivLength > 0) {
+        byte[] iv = new byte[ivLength];
+        IOUtils.readFully(in, iv);
+        decryptor.setIv(iv);
+      }
+      if (plaintextLength == 0) {
+        return;
+      }
+      decryptor.reset();
+      in = decryptor.createDecryptionStream(in);
+      onDiskSizeWithoutHeader = plaintextLength;
+    }
+
+    Compression.Algorithm compression = fileContext.getCompression();
+    if (compression != Compression.Algorithm.NONE) {
+      Compression.decompress(blockBufferWithoutHeader.array(),
+        blockBufferWithoutHeader.arrayOffset(), in, onDiskSizeWithoutHeader,
+        uncompressedSizeWithoutHeader, compression);
+    } else {
+      IOUtils.readFully(in, blockBufferWithoutHeader.array(),
+        blockBufferWithoutHeader.arrayOffset(), onDiskSizeWithoutHeader);
+    }
   }
 
   @Override

@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -28,17 +31,22 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
- * This is an extension of HFileWriterV2 that is tags aware.
+ * {@link HFile} writer for version 3.
  */
 @InterfaceAudience.Private
 public class HFileWriterV3 extends HFileWriterV2 {
+
+  private static final Log LOG = LogFactory.getLog(HFileWriterV3.class);
 
   private int maxTagsLength = 0;
 
@@ -60,6 +68,12 @@ public class HFileWriterV3 extends HFileWriterV2 {
       FSDataOutputStream ostream, final KVComparator comparator,
       final HFileContext fileContext) throws IOException {
     super(conf, cacheConf, fs, path, ostream, comparator, fileContext);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Writer" + (path != null ? " for " + path : "") +
+        " initialized with cacheConf: " + cacheConf +
+        " comparator: " + comparator.getClass().getSimpleName() +
+        " fileContext: " + fileContext);
+    }
   }
 
   /**
@@ -194,4 +208,25 @@ public class HFileWriterV3 extends HFileWriterV2 {
   protected int getMinorVersion() {
     return HFileReaderV3.MAX_MINOR_VERSION;
   }
+
+  @Override
+  protected void finishClose(FixedFileTrailer trailer) throws IOException {
+    // Write out encryption metadata before finalizing if we have a valid crypto context
+    Encryption.Context cryptoContext = hFileContext.getEncryptionContext();
+    if (cryptoContext != Encryption.Context.NONE) {
+      // Wrap the context's key and write it as the encryption metadata, the wrapper includes
+      // all information needed for decryption
+      ByteArrayOutputStream os = new ByteArrayOutputStream();
+      os.write(EncryptionUtil.wrapKey(cryptoContext.getConf(),
+        cryptoContext.getConf().get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
+          User.getCurrent().getShortName()),
+        cryptoContext.getKey()));
+      os.close();
+      trailer.setEncryptionKey(os.toByteArray());
+    }
+
+    // Now we can finish the close
+    super.finishClose(trailer);
+  }
+
 }

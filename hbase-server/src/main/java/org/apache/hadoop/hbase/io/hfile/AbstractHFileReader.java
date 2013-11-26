@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
@@ -35,7 +37,8 @@ import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
  * Common functionality needed by all versions of {@link HFile} readers.
  */
 @InterfaceAudience.Private
-public abstract class AbstractHFileReader implements HFile.Reader {
+public abstract class AbstractHFileReader
+    implements HFile.Reader, Configurable {
   /** Stream to read from. Does checksum verifications in file system */
   protected FSDataInputStream istream;
 
@@ -71,7 +74,7 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   protected int avgValueLen = -1;
 
   /** Key comparator */
-  protected KVComparator comparator;
+  protected KVComparator comparator = new KVComparator();
 
   /** Size of this file. */
   protected final long fileSize;
@@ -90,8 +93,11 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   /** The filesystem used for accesing data */
   protected HFileSystem hfs;
 
+  protected Configuration conf;
+
   protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
-      final long fileSize, final CacheConfig cacheConf, final HFileSystem hfs) {
+      final long fileSize, final CacheConfig cacheConf, final HFileSystem hfs,
+      final Configuration conf) {
     this.trailer = trailer;
     this.compressAlgo = trailer.getCompressionCodec();
     this.cacheConf = cacheConf;
@@ -99,6 +105,7 @@ public abstract class AbstractHFileReader implements HFile.Reader {
     this.path = path;
     this.name = path.getName();
     this.hfs = hfs;
+    this.conf = conf;
   }
 
   @SuppressWarnings("serial")
@@ -330,4 +337,14 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   }
 
   public abstract int getMajorVersion();
+
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
 }

@@ -866,7 +866,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       boolean printCommaForAttr = false;
       for (ImmutableBytesWritable k : reservedKeys) {
         String key = Bytes.toString(k.get());
-        String value = Bytes.toString(values.get(k).get());
+        String value = Bytes.toStringBinary(values.get(k).get());
         if (printCommaForAttr) s.append(", ");
         printCommaForAttr = true;
         s.append(key);
@@ -883,7 +883,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
         boolean printCommaForCfg = false;
         for (ImmutableBytesWritable k : userKeys) {
           String key = Bytes.toString(k.get());
-          String value = Bytes.toString(values.get(k).get());
+          String value = Bytes.toStringBinary(values.get(k).get());
           if (printCommaForCfg) s.append(", ");
           printCommaForCfg = true;
           s.append('\'').append(key).append('\'');

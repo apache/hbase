@@ -552,7 +552,7 @@ public class TestHFileBlockIndex {
       }
 
       // Read the HFile
-      HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf);
+      HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, conf);
       assertEquals(expectedNumLevels,
           reader.getTrailer().getNumDataIndexLevels());
 

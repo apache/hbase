@@ -540,7 +540,7 @@ public class HBaseFsck extends Configured {
         HFile.Reader hf = null;
         try {
           CacheConfig cacheConf = new CacheConfig(getConf());
-          hf = HFile.createReader(fs, hfile.getPath(), cacheConf);
+          hf = HFile.createReader(fs, hfile.getPath(), cacheConf, getConf());
           hf.loadFileInfo();
           KeyValue startKv = KeyValue.createKeyValueFromKey(hf.getFirstKey());
           start = startKv.getRow();

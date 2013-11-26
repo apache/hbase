@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
@@ -35,6 +36,12 @@ import org.apache.hadoop.hbase.util.FSUtils;
 public abstract class WriterBase implements HLog.Writer {
 
   protected CompressionContext compressionContext;
+  protected Configuration conf;
+
+  @Override
+  public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable) throws IOException {
+    this.conf = conf;
+  }
 
   public boolean initializeCompressionContext(Configuration conf, Path path) throws IOException {
     boolean doCompress = conf.getBoolean(HConstants.ENABLE_WAL_COMPRESSION, false);
@@ -48,4 +55,5 @@ public abstract class WriterBase implements HLog.Writer {
     }
     return doCompress;
   }
+
 }

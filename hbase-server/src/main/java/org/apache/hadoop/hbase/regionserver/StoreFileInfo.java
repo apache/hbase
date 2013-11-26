@@ -67,6 +67,9 @@ public class StoreFileInfo {
     Pattern.compile(String.format("^(%s|%s)\\.(.+)$",
       HFILE_NAME_REGEX, HFileLink.LINK_NAME_REGEX));
 
+  // Configuration
+  private Configuration conf;
+
   // HDFS blocks distribution information
   private HDFSBlocksDistribution hdfsBlocksDistribution = null;
 
@@ -100,6 +103,7 @@ public class StoreFileInfo {
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus)
       throws IOException {
+    this.conf = conf;
     this.fileStatus = fileStatus;
     Path p = fileStatus.getPath();
     if (HFileLink.isHFileLink(p)) {
@@ -201,9 +205,10 @@ public class StoreFileInfo {
     }
     if (reader == null) {
       if (this.reference != null) {
-        reader = new HalfStoreFileReader(fs, this.getPath(), in, length, cacheConf, reference);
+        reader = new HalfStoreFileReader(fs, this.getPath(), in, length, cacheConf, reference,
+          conf);
       } else {
-        reader = new StoreFile.Reader(fs, this.getPath(), in, length, cacheConf);
+        reader = new StoreFile.Reader(fs, this.getPath(), in, length, cacheConf, conf);
       }
     }
     if (this.coprocessorHost != null) {

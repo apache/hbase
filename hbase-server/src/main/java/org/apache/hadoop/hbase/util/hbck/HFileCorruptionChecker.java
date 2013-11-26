@@ -91,7 +91,7 @@ public class HFileCorruptionChecker {
   protected void checkHFile(Path p) throws IOException {
     HFile.Reader r = null;
     try {
-      r = HFile.createReader(fs, p, cacheConf);
+      r = HFile.createReader(fs, p, cacheConf, conf);
     } catch (CorruptHFileException che) {
       LOG.warn("Found corrupt HFile " + p, che);
       corrupted.add(p);
