@@ -516,7 +516,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           }
         };
         MetaScanner.metaScan(conf, connection, visitor, desc.getTableName());
-        if (actualRegCount.get() != numRegs) {
+        if (actualRegCount.get() < numRegs) {
           if (tries == this.numRetries * this.retryLongerMultiplier - 1) {
             throw new RegionOfflineException("Only " + actualRegCount.get() +
               " of " + numRegs + " regions are online; retries exhausted.");
