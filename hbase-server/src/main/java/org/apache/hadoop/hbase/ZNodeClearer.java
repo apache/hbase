@@ -94,10 +94,14 @@ public class ZNodeClearer {
       throw new FileNotFoundException("No filename; set environment variable HBASE_ZNODE_FILE");
     }
     FileReader znodeFile = new FileReader(fileName);
-    BufferedReader br = new BufferedReader(znodeFile);
-    String file_content = br.readLine();
-    br.close();
-    return file_content;
+    BufferedReader br = null;
+    try {
+      br = new BufferedReader(znodeFile);
+      String file_content = br.readLine();
+      return file_content;
+    } finally {
+      if (br != null) br.close();
+    }
   }
 
   /**
