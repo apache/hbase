@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
@@ -417,6 +419,23 @@ public class ThriftUtilities {
 
     if (in.isSetDurability()) {
       out.setDurability(durabilityFromThrift(in.getDurability()));
+    }
+
+    return out;
+  }
+
+  public static Append appendFromThrift(TAppend append) throws IOException {
+    Append out = new Append(append.getRow());
+    for (TColumnValue column : append.getColumns()) {
+      out.add(column.getFamily(), column.getQualifier(), column.getValue());
+    }
+
+    if (append.isSetAttributes()) {
+      addAttributes(out, append.getAttributes());
+    }
+
+    if (append.isSetDurability()) {
+      out.setDurability(durabilityFromThrift(append.getDurability()));
     }
 
     return out;

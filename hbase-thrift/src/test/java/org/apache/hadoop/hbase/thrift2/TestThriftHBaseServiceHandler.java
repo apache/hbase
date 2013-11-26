@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
+import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
@@ -400,6 +401,33 @@ public class TestThriftHBaseServiceHandler {
     assertEquals(1, result.getColumnValuesSize());
     TColumnValue columnValue = result.getColumnValues().get(0);
     assertArrayEquals(Bytes.toBytes(2L), columnValue.getValue());
+  }
+
+  @Test
+  public void testAppend() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    byte[] rowName = "testAppend".getBytes();
+    ByteBuffer table = wrap(tableAname);
+    byte[] v1 = Bytes.toBytes("42");
+    byte[] v2 = Bytes.toBytes("23");
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(v1)));
+    TPut put = new TPut(wrap(rowName), columnValues);
+    put.setColumnValues(columnValues);
+    handler.put(table, put);
+
+    List<TColumnValue> appendColumns = new ArrayList<TColumnValue>();
+    appendColumns.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(v2)));
+    TAppend append = new TAppend(wrap(rowName), appendColumns);
+    handler.append(table, append);
+
+    TGet get = new TGet(wrap(rowName));
+    TResult result = handler.get(table, get);
+
+    assertArrayEquals(rowName, result.getRow());
+    assertEquals(1, result.getColumnValuesSize());
+    TColumnValue columnValue = result.getColumnValues().get(0);
+    assertArrayEquals(Bytes.add(v1, v2), columnValue.getValue());
   }
 
   /**

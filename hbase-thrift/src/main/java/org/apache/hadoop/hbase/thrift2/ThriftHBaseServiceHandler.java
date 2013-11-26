@@ -285,6 +285,18 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
   }
 
   @Override
+  public TResult append(ByteBuffer table, TAppend append) throws TIOError, TException {
+    HTableInterface htable = getTable(table);
+    try {
+      return resultFromHBase(htable.append(appendFromThrift(append)));
+    } catch (IOException e) {
+      throw getTIOError(e);
+    } finally {
+      closeTable(htable);
+    }
+  }
+
+  @Override
   public int openScanner(ByteBuffer table, TScan scan) throws TIOError, TException {
     HTableInterface htable = getTable(table);
     ResultScanner resultScanner = null;

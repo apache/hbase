@@ -187,6 +187,16 @@ struct TIncrement {
   5: optional TDurability durability
 }
 
+/* 
+ * Used to perform append operation 
+ */
+struct TAppend {
+  1: required binary row,
+  2: required list<TColumnValue> columns,
+  3: optional map<binary, binary> attributes,
+  4: optional TDurability durability
+}
+
 /**
  * Any timestamps in the columns are ignored, use timeRange to select by timestamp.
  * Max versions defaults to 1.
@@ -403,6 +413,14 @@ service THBaseService {
 
     /** the TIncrement to increment */
     2: required TIncrement increment
+  ) throws (1: TIOError io)
+
+  TResult append(
+    /** the table to append the value on */
+    1: required binary table,
+
+    /** the TAppend to append */
+    2: required TAppend append
   ) throws (1: TIOError io)
 
   /**
