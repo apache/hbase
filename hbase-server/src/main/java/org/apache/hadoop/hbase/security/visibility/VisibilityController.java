@@ -568,11 +568,12 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       Map<String, List<Integer>> userAuths) throws IOException {
     if (!labels.containsKey(SYSTEM_LABEL)) {
       Put p = new Put(Bytes.toBytes(SYSTEM_LABEL_ORDINAL));
-      p.add(LABELS_TABLE_FAMILY, LABEL_QUALIFIER, Bytes.toBytes(SYSTEM_LABEL));
+      p.addImmutable(LABELS_TABLE_FAMILY, LABEL_QUALIFIER, Bytes.toBytes(SYSTEM_LABEL));
       // Set auth for "system" label for all super users.
       List<String> superUsers = getSystemAndSuperUsers();
       for (String superUser : superUsers) {
-        p.add(LABELS_TABLE_FAMILY, Bytes.toBytes(superUser), DUMMY_VALUE, LABELS_TABLE_TAGS);
+        p.addImmutable(
+            LABELS_TABLE_FAMILY, Bytes.toBytes(superUser), DUMMY_VALUE, LABELS_TABLE_TAGS);
       }
       region.put(p);
       labels.put(SYSTEM_LABEL, SYSTEM_LABEL_ORDINAL);
@@ -1037,7 +1038,8 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
             response.addResult(failureResultBuilder.build());
           } else {
             Put p = new Put(Bytes.toBytes(ordinalCounter));
-            p.add(LABELS_TABLE_FAMILY, LABEL_QUALIFIER, label, LABELS_TABLE_TAGS);
+            p.addImmutable(
+                LABELS_TABLE_FAMILY, LABEL_QUALIFIER, label, LABELS_TABLE_TAGS);
             puts.add(p);
             ordinalCounter++;
             response.addResult(successResult);
@@ -1127,7 +1129,8 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
           response.addResult(failureResultBuilder.build());
         } else {
           Put p = new Put(Bytes.toBytes(labelOrdinal));
-          p.add(LABELS_TABLE_FAMILY, user, DUMMY_VALUE, LABELS_TABLE_TAGS);
+          p.addImmutable(
+              LABELS_TABLE_FAMILY, user, DUMMY_VALUE, LABELS_TABLE_TAGS);
           puts.add(p);
           response.addResult(successResult);
         }

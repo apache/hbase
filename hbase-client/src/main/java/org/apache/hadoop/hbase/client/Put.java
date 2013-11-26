@@ -138,8 +138,26 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     return add(family, qualifier, this.ts, value);
   }
 
+  /**
+   * See {@link #add(byte[], byte[], byte[])}. This version expects
+   * that the underlying arrays won't change. It's intended
+   * for usage internal HBase to and for advanced client applications.
+   */
+  public Put addImmutable(byte [] family, byte [] qualifier, byte [] value) {
+    return addImmutable(family, qualifier, this.ts, value);
+  }
+
   public Put add(byte[] family, byte [] qualifier, byte [] value, Tag[] tag) {
     return add(family, qualifier, this.ts, value, tag);
+  }
+
+  /**
+   * See {@link #add(byte[], byte[], byte[], Tag[] tag)}. This version expects
+   * that the underlying arrays won't change. It's intended
+   * for usage internal HBase to and for advanced client applications.
+   */
+  public Put addImmutable(byte[] family, byte [] qualifier, byte [] value, Tag[] tag) {
+    return addImmutable(family, qualifier, this.ts, value, tag);
   }
 
   /**
@@ -158,6 +176,22 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
     list.add(kv);
+    familyMap.put(CellUtil.cloneFamily(kv), list);
+    return this;
+  }
+
+  /**
+   * See {@link #add(byte[], byte[], long, byte[])}. This version expects
+   * that the underlying arrays won't change. It's intended
+   * for usage internal HBase to and for advanced client applications.
+   */
+  public Put addImmutable(byte [] family, byte [] qualifier, long ts, byte [] value) {
+    if (ts < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
+    }
+    List<Cell> list = getCellList(family);
+    KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
+    list.add(kv);
     familyMap.put(family, list);
     return this;
   }
@@ -170,7 +204,21 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
     list.add(kv);
-    familyMap.put(kv.getFamily(), list);
+    familyMap.put(CellUtil.cloneFamily(kv), list);
+    return this;
+  }
+
+  /**
+   * See {@link #add(byte[], byte[], long, byte[], Tag[] tag)}. This version expects
+   * that the underlying arrays won't change. It's intended
+   * for usage internal HBase to and for advanced client applications.
+   */
+  @SuppressWarnings("unchecked")
+  public Put addImmutable(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag) {
+    List<Cell> list = getCellList(family);
+    KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
+    list.add(kv);
+    familyMap.put(family, list);
     return this;
   }
 
@@ -191,9 +239,28 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
     list.add(kv);
-    familyMap.put(kv.getFamily(), list);
+    familyMap.put(CellUtil.cloneFamily(kv), list);
     return this;
   }
+
+
+  /**
+   * See {@link #add(byte[], ByteBuffer, long, ByteBuffer, Tag[] tag)}. This version expects
+   * that the underlying arrays won't change. It's intended
+   * for usage internal HBase to and for advanced client applications.
+   */
+  public Put addImmutable(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value,
+                          Tag[] tag) {
+    if (ts < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
+    }
+    List<Cell> list = getCellList(family);
+    KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
+    list.add(kv);
+    familyMap.put(family, list);
+    return this;
+  }
+
 
   /**
    * Add the specified column and value, with the specified timestamp as
@@ -211,7 +278,23 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value, null);
     list.add(kv);
-    familyMap.put(kv.getFamily(), list);
+    familyMap.put(CellUtil.cloneFamily(kv), list);
+    return this;
+  }
+
+  /**
+   * See {@link #add(byte[], ByteBuffer, long, ByteBuffer)}. This version expects
+   * that the underlying arrays won't change. It's intended
+   * for usage internal HBase to and for advanced client applications.
+   */
+  public Put addImmutable(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value) {
+    if (ts < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
+    }
+    List<Cell> list = getCellList(family);
+    KeyValue kv = createPutKeyValue(family, qualifier, ts, value, null);
+    list.add(kv);
+    familyMap.put(family, list);
     return this;
   }
 

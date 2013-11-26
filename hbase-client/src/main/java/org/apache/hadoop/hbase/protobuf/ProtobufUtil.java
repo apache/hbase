@@ -503,7 +503,7 @@ public final class ProtobufUtil {
         if (put == null) {
           put = new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), timestamp);
         }
-        put.add(KeyValueUtil.ensureKeyValue(cell));
+        put.add(cell);
       }
     } else {
       if (proto.hasRow()) {
@@ -535,9 +535,9 @@ public final class ProtobufUtil {
             for(int i = 0; i< array.length; i++) {
               tagArray[i] = (Tag)array[i];
             }
-            put.add(family, qualifier, ts, value, tagArray);
+            put.addImmutable(family, qualifier, ts, value, tagArray);
           } else {
-            put.add(family, qualifier, ts, value);
+            put.addImmutable(family, qualifier, ts, value);
           }
         }
       }

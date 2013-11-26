@@ -91,7 +91,7 @@ public class MetaMigrationConvertingToPB {
       //This will 'migrate' the HRI from 092.x and 0.94.x to 0.96+ by reading the
       //writable serialization
       HRegionInfo hri = parseFrom(hriSplitBytes);
-      p.add(HConstants.CATALOG_FAMILY, which, hri.toByteArray());
+      p.addImmutable(HConstants.CATALOG_FAMILY, which, hri.toByteArray());
     }
   }
 

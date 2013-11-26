@@ -224,7 +224,7 @@ public class RowResource extends ResourceBase {
               .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
               .build();
           }
-          put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
+          put.addImmutable(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
         }
         puts.add(put);
         if (LOG.isDebugEnabled()) {
@@ -293,7 +293,7 @@ public class RowResource extends ResourceBase {
           .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
           .build();
       }
-      put.add(parts[0], parts[1], timestamp, message);
+      put.addImmutable(parts[0], parts[1], timestamp, message);
       table = servlet.getTable(tableResource.getName());
       table.put(put);
       if (LOG.isDebugEnabled()) {
@@ -471,7 +471,7 @@ public class RowResource extends ResourceBase {
           .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
           .build();
       }
-      put.add(valueToPutParts[0], valueToPutParts[1], valueToPutCell
+      put.addImmutable(valueToPutParts[0], valueToPutParts[1], valueToPutCell
         .getTimestamp(), valueToPutCell.getValue());
 
       table = servlet.getTable(this.tableResource.getName());

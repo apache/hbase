@@ -84,10 +84,12 @@ public class MetaEditor {
    */
   public static Put addDaughtersToPut(Put put, HRegionInfo splitA, HRegionInfo splitB) {
     if (splitA != null) {
-      put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER, splitA.toByteArray());
+      put.addImmutable(
+          HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER, splitA.toByteArray());
     }
     if (splitB != null) {
-      put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER, splitB.toByteArray());
+      put.addImmutable(
+          HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER, splitB.toByteArray());
     }
     return put;
   }
@@ -315,9 +317,9 @@ public class MetaEditor {
 
       // Put for parent
       Put putOfMerged = makePutFromRegionInfo(copyOfMerged);
-      putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER,
+      putOfMerged.addImmutable(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER,
           regionA.toByteArray());
-      putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER,
+      putOfMerged.addImmutable(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER,
           regionB.toByteArray());
 
       // Deletes for merging regions
@@ -561,17 +563,17 @@ public class MetaEditor {
 
   private static Put addRegionInfo(final Put p, final HRegionInfo hri)
   throws IOException {
-    p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         hri.toByteArray());
     return p;
   }
 
   private static Put addLocation(final Put p, final ServerName sn, long openSeqNum) {
-    p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
       Bytes.toBytes(sn.getHostAndPort()));
-    p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
       Bytes.toBytes(sn.getStartcode()));
-    p.add(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER,
+    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER,
         Bytes.toBytes(openSeqNum));
     return p;
   }

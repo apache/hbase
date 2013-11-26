@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
@@ -357,7 +356,7 @@ public class TestSplitLogWorker {
     SplitLogWorker slw = new SplitLogWorker(zkw, testConf, mockedRS, neverEndingTask);
     slw.start();
     try {
-      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, maxTasks, 3000);
+      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, maxTasks, 6000);
       for (int i = 0; i < maxTasks; i++) {
         byte[] bytes = ZKUtil.getData(zkw, ZKSplitLog.getEncodedNodeName(zkw, TATAS + i));
         SplitLogTask slt = SplitLogTask.parseFrom(bytes);
@@ -402,7 +401,7 @@ public class TestSplitLogWorker {
     slw.start();
     try {
       int acquiredTasks = 0;
-      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 2, 3000);
+      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 2, 6000);
       for (int i = 0; i < maxTasks; i++) {
         byte[] bytes = ZKUtil.getData(zkw, ZKSplitLog.getEncodedNodeName(zkw, TATAS + i));
         SplitLogTask slt = SplitLogTask.parseFrom(bytes);
