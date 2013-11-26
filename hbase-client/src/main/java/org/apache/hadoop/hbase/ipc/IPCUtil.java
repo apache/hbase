@@ -170,10 +170,11 @@ class IPCUtil {
       CompressionInputStream cis =
         compressor.createInputStream(new ByteArrayInputStream(cellBlock, offset, length),
         poolDecompressor);
+      ByteBufferOutputStream bbos = null;
       try {
         // TODO: This is ugly.  The buffer will be resized on us if we guess wrong.
         // TODO: Reuse buffers.
-        ByteBufferOutputStream bbos = new ByteBufferOutputStream((length - offset) *
+        bbos = new ByteBufferOutputStream((length - offset) *
           this.cellBlockDecompressionMultiplier);
         IOUtils.copy(cis, bbos);
         bbos.close();
@@ -181,6 +182,8 @@ class IPCUtil {
         is = new ByteArrayInputStream(bb.array(), 0, bb.limit());
       } finally {
         if (is != null) is.close();
+        if (bbos != null) bbos.close();
+
         CodecPool.returnDecompressor(poolDecompressor);
       }
     } else {
