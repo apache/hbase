@@ -349,7 +349,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
   protected final Configuration conf;
 
-  private boolean useHBaseChecksum; // verify hbase checksums?
   private Path rootDir;
 
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -501,19 +500,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     checkCodecs(this.conf);
     this.userProvider = UserProvider.instantiate(conf);
 
-    // do we use checksum verification in the hbase? If hbase checksum verification
-    // is enabled, then we automatically switch off hdfs checksum verification.
-    this.useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
-
-    // check that the user has not set the "dfs.client.read.shortcircuit.skip.checksum" property.
-    boolean shortCircuitSkipChecksum = conf.getBoolean(
-        "dfs.client.read.shortcircuit.skip.checksum", false);
-    if (shortCircuitSkipChecksum) {
-      LOG.warn("Configuration \"dfs.client.read.shortcircuit.skip.checksum\" should not " +
-          "be set to true." + (this.useHBaseChecksum ? " HBase checksum doesn't require " +
-          "it, see https://issues.apache.org/jira/browse/HBASE-6868." : ""));
-      assert !shortCircuitSkipChecksum; //this will fail if assertions are on
-    }
+    FSUtils.setupShortCircuitRead(this.conf);
 
     // Config'ed params
     this.numRetries = this.conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
@@ -1183,8 +1170,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       // accessors will be going against wrong filesystem (unless all is set
       // to defaults).
       FSUtils.setFsDefault(this.conf, FSUtils.getRootDir(this.conf));
-      // Get fs instance used by this RS
-      this.fs = new HFileSystem(this.conf, this.useHBaseChecksum);
+      // Get fs instance used by this RS.  Do we use checksum verification in the hbase? If hbase
+      // checksum verification enabled, then automatically switch off hdfs checksum verification.
+      boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
+      this.fs = new HFileSystem(this.conf, useHBaseChecksum);
       this.rootDir = FSUtils.getRootDir(this.conf);
       this.tableDescriptors = new FSTableDescriptors(this.fs, this.rootDir, true);
       this.hlog = setupWALAndReplication();

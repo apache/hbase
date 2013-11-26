@@ -409,6 +409,7 @@ MasterServices, Server {
     this.conf = new Configuration(conf);
     // Disable the block cache on the master
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
+    FSUtils.setupShortCircuitRead(conf);
     // Server to handle client requests.
     String hostname = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
       conf.get("hbase.master.dns.interface", "default"),
