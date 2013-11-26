@@ -2139,7 +2139,7 @@ Initial stripe count to create. You can use it as follows:
 <listitem>
 for relatively uniform row keys, if you know the approximate target number of stripes from the above, you can avoid some splitting overhead by starting w/several stripes (2, 5, 10...). Note that if the early data is not representative of overall row key distribution, this will not be as efficient.
 </listitem><listitem>
-for existing tables with lots of data, you can use this to pre-split stripes. 
+for existing tables with lots of data, you can use this to pre-split stripes.
 </listitem><listitem>
 for e.g. hash-prefixed sequential keys, with more than one hash prefix per region, you know that some pre-splitting makes sense.
 </listitem>
@@ -2188,6 +2188,11 @@ All the settings that apply to normal compactions (file size limits, etc.) apply
         cluster. Using bulk load will use less CPU and network resources than
         simply using the HBase API.
       </para>
+    </section>
+    <section xml:id="arch.bulk.load.limitations"><title>Bulk Load Limitations</title>
+        <para>As bulk loading bypasses the write path, the WAL doesn’t get written to as part of the process.
+            Replication works by reading the WAL files so it won’t see the bulk loaded data – and the same goes for the edits that use Put.setWriteToWAL(true).
+            One way to handle that is to ship the raw files or the HFiles to the other cluster and do the other processing there.</para>
     </section>
     <section xml:id="arch.bulk.load.arch"><title>Bulk Load Architecture</title>
       <para>
@@ -2269,6 +2274,10 @@ All the settings that apply to normal compactions (file size limits, etc.) apply
     </section>
     <section xml:id="arch.bulk.load.also"><title>See Also</title>
       <para>For more information about the referenced utilities, see <xref linkend="importtsv"/> and  <xref linkend="completebulkload"/>.
+      </para>
+      <para>
+          See <link xlink:ref="http://blog.cloudera.com/blog/2013/09/how-to-use-hbase-bulk-loading-and-why/">How-to: Use HBase Bulk Loading, and Why</link>
+          for a recent blog on current state of bulk loading.
       </para>
     </section>
     <section xml:id="arch.bulk.load.adv"><title>Advanced Usage</title>
