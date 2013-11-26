@@ -264,7 +264,7 @@ public class HFileSystem extends FilterFileSystem {
               public Object invoke(Object proxy, Method method,
                                    Object[] args) throws Throwable {
                 try {
-                  if (args.length == 0 && "close".equals(method.getName())) {
+                  if ((args == null || args.length == 0) && "close".equals(method.getName())) {
                     if (cp instanceof Closeable) {
                       ((Closeable)cp).close();
                     } else {
