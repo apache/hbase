@@ -244,12 +244,13 @@ setup () {
   echo "$MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
   # build core and tests
-  $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
+  $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1 >compile.out
   if [[ $? != 0 ]] ; then
-    echo "Trunk compilation is broken?"
+    ERR=`$GREP -A 5 'Compilation failure' compile.out`
+    echo "Trunk compilation is broken?
+    {code}$ERR{code}"
     cleanupAndExit 1
   fi
-
 }
 
 ###############################################################################
@@ -390,11 +391,14 @@ checkHadoop10Compile () {
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
   # build core and tests
-  $MVN clean test help:active-profiles -X -DskipTests -Dhadoop.profile=1.0 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunk1.0JavacWarnings.txt 2>&1
+  $MVN clean test help:active-profiles -X -DskipTests -Dhadoop.profile=1.0 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunk1.0JavacWarnings.txt 2>&1 >compile.out
   if [[ $? != 0 ]] ; then
+    ERR=`$GREP -A 5 'Compilation failure' compile.out`
     JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:red}-1 hadoop1.0{color}.  The patch failed to compile against the hadoop 1.0 profile."
+    {color:red}-1 hadoop1.0{color}.  The patch failed to compile against the hadoop 1.0 profile.
+    Here is snippet of errors:
+    {code}$ERR{code}"
     submitJiraComment 1
     cleanupAndExit 1
   fi
@@ -892,6 +896,7 @@ if [[ $? != 0 ]] ; then
 fi
 
 checkAntiPatterns
+trap "rm compile.out" EXIT
 (( RESULT = RESULT + $? ))
 checkHadoop10Compile
 (( RESULT = RESULT + $? ))
