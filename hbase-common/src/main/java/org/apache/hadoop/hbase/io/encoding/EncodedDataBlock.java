@@ -152,14 +152,19 @@ public class EncodedDataBlock {
     if (compressor != null) {
       compressor.reset();
     }
-    OutputStream compressingStream = algo.createCompressionStream(
-        compressedStream, compressor, 0);
+    OutputStream compressingStream = null;
 
-    compressingStream.write(inputBuffer, offset, length);
-    compressingStream.flush();
-    compressingStream.close();
+    try {
+      compressingStream = algo.createCompressionStream(
+          compressedStream, compressor, 0);
 
-    return compressedStream.size();
+      compressingStream.write(inputBuffer, offset, length);
+      compressingStream.flush();
+
+      return compressedStream.size();
+    } finally {
+      if (compressingStream != null) compressingStream.close();
+    }
   }
 
   /**
