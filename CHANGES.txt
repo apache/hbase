@@ -1,6 +1,9 @@
 HBase Change Log
 
-Release 0.96.0 - Unreleased
+Release 0.96.1 - Release Candidate - Tue Nov 26, 2013
+126 issues closed/resolved.  See http://goo.gl/ZgYBW2 for list.
+
+Release 0.96.0 - Released October 18th, 2013 
 265+ issues resolved/closed.  See http://goo.gl/4zegPr for the list.
 
 Release 0.95.1 -- Release Candidate, May 27th, 2013 
