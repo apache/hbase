@@ -24,9 +24,10 @@ import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -342,42 +343,65 @@ public class TableAuthManager {
     return false;
   }
 
-  public boolean authorize(User user, TableName table, KeyValue kv,
-      Permission.Action action) {
-    PermissionCache<TablePermission> tablePerms = tableCache.get(table);
-    if (tablePerms != null) {
-      List<TablePermission> userPerms = tablePerms.getUser(user.getShortName());
-      if (authorize(userPerms, table, kv, action)) {
-        return true;
+  private boolean checkCellPermissions(User user, Cell cell, Permission.Action action) {
+    try {
+      List<Permission> perms = AccessControlLists.getCellPermissionsForUser(user, cell);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Found perms for user " + user.getShortName() + " in cell " +
+          cell + ": " + perms);
       }
+      for (Permission p: perms) {
+        if (p.implies(action)) {
+          return true;
+        }
+      }
+    } catch (IOException e) {
+      // We failed to parse the KV tag
+      LOG.error("Failed parse of ACL tag in cell " + cell);
+      // Fall through to check with the table and CF perms we were able
+      // to collect regardless
+    }
+    return false;
+  }
 
-      String[] groupNames = user.getGroupNames();
-      if (groupNames != null) {
-        for (String group : groupNames) {
-          List<TablePermission> groupPerms = tablePerms.getGroup(group);
-          if (authorize(groupPerms, table, kv, action)) {
-            return true;
-          }
+  private boolean checkTableColumnPermissions(User user, TableName table, Cell cell,
+      Permission.Action action) {
+    // TODO: Do not clone here
+    byte[] family = CellUtil.cloneFamily(cell);
+    byte[] qualifier = CellUtil.cloneQualifier(cell);
+    // User is authorized at table or CF level
+    if (authorizeUser(user.getShortName(), table, family, qualifier, action)) {
+      return true;
+    }
+    String groupNames[] = user.getGroupNames();
+    if (groupNames != null) {
+      for (String group: groupNames) {
+        // TODO: authorizeGroup should check qualifier too?
+        // Group is authorized at table or CF level
+        if (authorizeGroup(group, table, family, action)) {
+          return true;
         }
       }
     }
     return false;
   }
 
-  private boolean authorize(List<TablePermission> perms, TableName table, KeyValue kv,
+  /**
+   * Authorize a user for a given KV. This is called from AccessControlFilter.
+   */
+  public boolean authorize(User user, TableName table, Cell cell, boolean cellFirstStrategy,
       Permission.Action action) {
-    if (perms != null) {
-      for (TablePermission p : perms) {
-        if (p.implies(table, kv, action)) {
-          return true;
-        }
+    if (cellFirstStrategy) {
+      if (checkCellPermissions(user, cell, action)) {
+        return true;
       }
-    } else if (LOG.isDebugEnabled()) {
-      LOG.debug("No permissions for authorize() check, table=" +
-          table);
+      return checkTableColumnPermissions(user, table, cell, action);
+    } else {
+      if (checkTableColumnPermissions(user, table, cell, action)) {
+        return true;
+      }
+      return checkCellPermissions(user, cell, action);
     }
-
-    return false;
   }
 
   public boolean authorize(User user, String namespace, Permission.Action action) {

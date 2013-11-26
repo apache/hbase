@@ -1813,10 +1813,14 @@ public final class ProtobufUtil {
         AccessControlProtos.NamespacePermission.Builder builder =
             AccessControlProtos.NamespacePermission.newBuilder();
         builder.setNamespaceName(ByteString.copyFromUtf8(tablePerm.getNamespace()));
-        for (Permission.Action a : perm.getActions()) {
-          builder.addAction(toPermissionAction(a));
-        }
+        Permission.Action actions[] = perm.getActions();
+        if (actions != null) {
+          for (Permission.Action a : actions) {
+            builder.addAction(toPermissionAction(a));
+          }
+	}
         ret.setNamespacePermission(builder);
+        return ret.build();
       } else if (tablePerm.hasTable()) {
         ret.setType(AccessControlProtos.Permission.Type.Table);
 
@@ -1829,21 +1833,28 @@ public final class ProtobufUtil {
         if (tablePerm.hasQualifier()) {
           builder.setQualifier(ZeroCopyLiteralByteString.wrap(tablePerm.getQualifier()));
         }
-        for (Permission.Action a : perm.getActions()) {
-          builder.addAction(toPermissionAction(a));
+        Permission.Action actions[] = perm.getActions();
+        if (actions != null) {
+          for (Permission.Action a : actions) {
+            builder.addAction(toPermissionAction(a));
+          }
         }
         ret.setTablePermission(builder);
+        return ret.build();
       }
-    } else {
-      ret.setType(AccessControlProtos.Permission.Type.Global);
+    }
 
-      AccessControlProtos.GlobalPermission.Builder builder =
-          AccessControlProtos.GlobalPermission.newBuilder();
-      for (Permission.Action a : perm.getActions()) {
+    ret.setType(AccessControlProtos.Permission.Type.Global);
+
+    AccessControlProtos.GlobalPermission.Builder builder =
+        AccessControlProtos.GlobalPermission.newBuilder();
+    Permission.Action actions[] = perm.getActions();
+    if (actions != null) {
+      for (Permission.Action a: actions) {
         builder.addAction(toPermissionAction(a));
       }
-      ret.setGlobalPermission(builder);
     }
+    ret.setGlobalPermission(builder);
     return ret.build();
   }
 
@@ -2551,5 +2562,44 @@ public final class ProtobufUtil {
       builder.addLabel(label);
     }
     return builder.build();
+  }
+
+  public static AccessControlProtos.UsersAndPermissions toUsersAndPermissions(String user,
+      Permission perms) {
+    return AccessControlProtos.UsersAndPermissions.newBuilder()
+      .addUserPermissions(AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder()
+        .setUser(ByteString.copyFromUtf8(user))
+        .addPermissions(toPermission(perms))
+        .build())
+      .build();
+  }
+
+  public static AccessControlProtos.UsersAndPermissions toUsersAndPermissions(
+      ListMultimap<String, Permission> perms) {
+    AccessControlProtos.UsersAndPermissions.Builder builder =
+        AccessControlProtos.UsersAndPermissions.newBuilder();
+    for (Map.Entry<String, Collection<Permission>> entry : perms.asMap().entrySet()) {
+      AccessControlProtos.UsersAndPermissions.UserPermissions.Builder userPermBuilder =
+        AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder();
+      userPermBuilder.setUser(ByteString.copyFromUtf8(entry.getKey()));
+      for (Permission perm: entry.getValue()) {
+        userPermBuilder.addPermissions(toPermission(perm));
+      }
+      builder.addUserPermissions(userPermBuilder.build());
+    }
+    return builder.build();
+  }
+
+  public static ListMultimap<String, Permission> toUsersAndPermissions(
+      AccessControlProtos.UsersAndPermissions proto) {
+    ListMultimap<String, Permission> result = ArrayListMultimap.create();
+    for (AccessControlProtos.UsersAndPermissions.UserPermissions userPerms:
+        proto.getUserPermissionsList()) {
+      String user = userPerms.getUser().toStringUtf8();
+      for (AccessControlProtos.Permission perm: userPerms.getPermissionsList()) {
+        result.put(user, toPermission(perm));
+      }
+    }
+    return result;
   }
 }

@@ -41,11 +41,15 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.security.access.AccessControlConstants;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
@@ -379,6 +383,57 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     heapsize += getAttributeSize();
     heapsize += extraHeapSize();
     return ClassSize.align(heapsize);
+  }
+
+  /**
+   * @return The serialized ACL for this operation, or null if none
+   */
+  public byte[] getACL() {
+    return getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
+  }
+
+  /**
+   * @param user User short name
+   * @param perm Permissions for the user
+   */
+  public void setACL(String user, Permission perms) {
+    setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
+      ProtobufUtil.toUsersAndPermissions(user, perms).toByteArray());
+  }
+
+  /**
+   * @param perms A map of permissions for a user or users
+   */
+  public void setACL(Map<String, Permission> perms) {
+    ListMultimap<String, Permission> permMap = ArrayListMultimap.create();
+    for (Map.Entry<String, Permission> entry : perms.entrySet()) {
+      permMap.put(entry.getKey(), entry.getValue());
+    }
+    setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
+      ProtobufUtil.toUsersAndPermissions(permMap).toByteArray());
+  }
+
+  /**
+   * @return true if ACLs should be evaluated on the cell level first
+   */
+  public boolean getACLStrategy() {
+    byte[] bytes = getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL_STRATEGY);
+    if (bytes != null) {
+      return Bytes.equals(bytes, AccessControlConstants.OP_ATTRIBUTE_ACL_STRATEGY_CELL_FIRST);
+    }
+    return false;
+  }
+
+  /**
+   * @param cellFirstStrategy true if ACLs should be evaluated on the cell
+   * level first, false if ACL should first be checked at the CF and table
+   * levels
+   */
+  public void setACLStrategy(boolean cellFirstStrategy) {
+    if (cellFirstStrategy) {
+      setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL_STRATEGY,
+        AccessControlConstants.OP_ATTRIBUTE_ACL_STRATEGY_CELL_FIRST);
+    }
   }
 
   /**

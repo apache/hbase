@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.security.access;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -29,8 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
@@ -42,7 +39,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
-import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -58,7 +54,6 @@ import com.google.protobuf.BlockingRpcChannel;
 @Category(LargeTests.class)
 public class TestAccessControlFilter {
   @Rule public TestName name = new TestName();
-  private static Log LOG = LogFactory.getLog(TestAccessControlFilter.class);
   private static HBaseTestingUtility TEST_UTIL;
 
   private static User ADMIN;
@@ -116,15 +111,19 @@ public class TestAccessControlFilter {
       public Object run() throws Exception {
         HTable aclmeta = new HTable(TEST_UTIL.getConfiguration(),
             AccessControlLists.ACL_TABLE_NAME);
-        byte[] table = Bytes.toBytes(name.getMethodName());
-        BlockingRpcChannel service = aclmeta.coprocessorService(table);
-        AccessControlService.BlockingInterface protocol =
-          AccessControlService.newBlockingStub(service);
-        ProtobufUtil.grant(protocol, READER.getShortName(),
-          TABLE, null, null, Permission.Action.READ);
-        ProtobufUtil.grant(protocol, LIMITED.getShortName(),
-          TABLE, FAMILY, PUBLIC_COL, Permission.Action.READ);
-        return null;
+        try {
+          byte[] table = Bytes.toBytes(name.getMethodName());
+          BlockingRpcChannel service = aclmeta.coprocessorService(table);
+          AccessControlService.BlockingInterface protocol =
+            AccessControlService.newBlockingStub(service);
+          ProtobufUtil.grant(protocol, READER.getShortName(),
+            TABLE, null, null, Permission.Action.READ);
+          ProtobufUtil.grant(protocol, LIMITED.getShortName(),
+            TABLE, FAMILY, PUBLIC_COL, Permission.Action.READ);
+          return null;
+        } finally {
+          aclmeta.close();
+        }
       }
     });
 
@@ -145,18 +144,22 @@ public class TestAccessControlFilter {
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
         HTable t = new HTable(conf, TABLE);
-        ResultScanner rs = t.getScanner(new Scan());
-        int rowcnt = 0;
-        for (Result r : rs) {
-          rowcnt++;
-          int rownum = Bytes.toInt(r.getRow());
-          assertTrue(r.containsColumn(FAMILY, PRIVATE_COL));
-          assertEquals("secret "+rownum, Bytes.toString(r.getValue(FAMILY, PRIVATE_COL)));
-          assertTrue(r.containsColumn(FAMILY, PUBLIC_COL));
-          assertEquals("info "+rownum, Bytes.toString(r.getValue(FAMILY, PUBLIC_COL)));
+        try {
+          ResultScanner rs = t.getScanner(new Scan());
+          int rowcnt = 0;
+          for (Result r : rs) {
+            rowcnt++;
+            int rownum = Bytes.toInt(r.getRow());
+            assertTrue(r.containsColumn(FAMILY, PRIVATE_COL));
+            assertEquals("secret "+rownum, Bytes.toString(r.getValue(FAMILY, PRIVATE_COL)));
+            assertTrue(r.containsColumn(FAMILY, PUBLIC_COL));
+            assertEquals("info "+rownum, Bytes.toString(r.getValue(FAMILY, PUBLIC_COL)));
+          }
+          assertEquals("Expected 100 rows returned", 100, rowcnt);
+          return null;
+        } finally {
+          t.close();
         }
-        assertEquals("Expected 100 rows returned", 100, rowcnt);
-        return null;
       }
     });
 
@@ -167,34 +170,46 @@ public class TestAccessControlFilter {
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
         HTable t = new HTable(conf, TABLE);
-        ResultScanner rs = t.getScanner(new Scan());
-        int rowcnt = 0;
-        for (Result r : rs) {
-          rowcnt++;
-          int rownum = Bytes.toInt(r.getRow());
-          assertFalse(r.containsColumn(FAMILY, PRIVATE_COL));
-          assertTrue(r.containsColumn(FAMILY, PUBLIC_COL));
-          assertEquals("info " + rownum, Bytes.toString(r.getValue(FAMILY, PUBLIC_COL)));
+        try {
+          ResultScanner rs = t.getScanner(new Scan());
+          int rowcnt = 0;
+          for (Result r : rs) {
+            rowcnt++;
+            int rownum = Bytes.toInt(r.getRow());
+            assertFalse(r.containsColumn(FAMILY, PRIVATE_COL));
+            assertTrue(r.containsColumn(FAMILY, PUBLIC_COL));
+            assertEquals("info " + rownum, Bytes.toString(r.getValue(FAMILY, PUBLIC_COL)));
+          }
+          assertEquals("Expected 100 rows returned", 100, rowcnt);
+          return null;
+        } finally {
+          t.close();
         }
-        assertEquals("Expected 100 rows returned", 100, rowcnt);
-        return null;
       }
     });
 
     // test as user with no permission
-    DENIED.runAs(new PrivilegedExceptionAction(){
+    DENIED.runAs(new PrivilegedExceptionAction<Object>(){
       public Object run() throws Exception {
+        Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+        // force a new RS connection
+        conf.set("testkey", UUID.randomUUID().toString());
+        HTable t = new HTable(conf, TABLE);
         try {
-          Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-          // force a new RS connection
-          conf.set("testkey", UUID.randomUUID().toString());
-          HTable t = new HTable(conf, TABLE);
           ResultScanner rs = t.getScanner(new Scan());
-          fail("Attempt to open scanner should have been denied");
-        } catch (AccessDeniedException ade) {
-          // expected
+          int rowcnt = 0;
+          for (Result r : rs) {
+            rowcnt++;
+            int rownum = Bytes.toInt(r.getRow());
+            assertFalse(r.containsColumn(FAMILY, PRIVATE_COL));
+            assertTrue(r.containsColumn(FAMILY, PUBLIC_COL));
+            assertEquals("info " + rownum, Bytes.toString(r.getValue(FAMILY, PUBLIC_COL)));
+          }
+          assertEquals("Expected 0 rows returned", 0, rowcnt);
+          return null;
+        } finally {
+          t.close();
         }
-        return null;
       }
     });
   }

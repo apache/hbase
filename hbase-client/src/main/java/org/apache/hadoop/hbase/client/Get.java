@@ -69,7 +69,6 @@ public class Get extends Query
   private boolean cacheBlocks = true;
   private int storeLimit = -1;
   private int storeOffset = 0;
-  private Filter filter = null;
   private TimeRange tr = new TimeRange();
   private boolean checkExistenceOnly = false;
   private boolean closestRowBefore = false;
@@ -210,26 +209,13 @@ public class Get extends Query
     return this;
   }
 
-  /**
-   * Apply the specified server-side filter when performing the Get.
-   * Only {@link Filter#filterKeyValue(Cell)} is called AFTER all tests
-   * for ttl, column match, deletes and max versions have been run.
-   * @param filter filter to run on the server
-   * @return this for invocation chaining
-   */
+  @Override
   public Get setFilter(Filter filter) {
-    this.filter = filter;
+    super.setFilter(filter);
     return this;
   }
 
   /* Accessors */
-
-  /**
-   * @return Filter
-   */
-  public Filter getFilter() {
-    return this.filter;
-  }
 
   /**
    * Set whether blocks should be cached for this Get.

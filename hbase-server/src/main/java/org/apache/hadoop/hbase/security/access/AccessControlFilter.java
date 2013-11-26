@@ -19,10 +19,8 @@
 package org.apache.hadoop.hbase.security.access;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.security.User;
 
@@ -46,6 +44,8 @@ class AccessControlFilter extends FilterBase {
   private TableAuthManager authManager;
   private TableName table;
   private User user;
+  private boolean isSystemTable;
+  private boolean cellFirstStrategy;
 
   /**
    * For Writable
@@ -53,21 +53,27 @@ class AccessControlFilter extends FilterBase {
   AccessControlFilter() {
   }
 
-  AccessControlFilter(TableAuthManager mgr, User ugi,
-      TableName tableName) {
+  AccessControlFilter(TableAuthManager mgr, User ugi, TableName tableName,
+      boolean cellFirstStrategy) {
     authManager = mgr;
     table = tableName;
     user = ugi;
+    isSystemTable = tableName.isSystemTable();
+    this.cellFirstStrategy = cellFirstStrategy;
   }
 
   @Override
-  public ReturnCode filterKeyValue(Cell c) {
-    // TODO go and redo auth manager to use Cell instead of KV.
-    KeyValue kv = KeyValueUtil.ensureKeyValue(c);
-    if (authManager.authorize(user, table, kv, TablePermission.Action.READ)) {
+  public ReturnCode filterKeyValue(Cell cell) {
+    if (isSystemTable) {
       return ReturnCode.INCLUDE;
     }
-    return ReturnCode.NEXT_COL;
+    if (authManager.authorize(user, table, cell, cellFirstStrategy, Permission.Action.READ)) {
+      return ReturnCode.INCLUDE;
+    }
+    // Before per cell ACLs we used to return the NEXT_COL hint, but we can
+    // no longer do that since, given the possibility of per cell ACLs
+    // anywhere, we now need to examine all KVs with this filter.
+    return ReturnCode.SKIP;
   }
 
   /**

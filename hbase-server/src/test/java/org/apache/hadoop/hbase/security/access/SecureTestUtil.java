@@ -50,6 +50,8 @@ public class SecureTestUtil {
     // add the process running user to superusers
     String currentUser = User.getCurrent().getName();
     conf.set("hbase.superuser", "admin,"+currentUser);
+    // Need HFile V3 for tags for security features
+    conf.setInt("hfile.format.version", 3);
   }
   
   public void verifyAllowed(User user, PrivilegedExceptionAction... actions) throws Exception {

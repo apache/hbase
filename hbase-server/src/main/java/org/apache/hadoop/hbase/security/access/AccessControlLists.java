@@ -24,6 +24,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,9 +39,9 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -60,12 +61,14 @@ import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -99,6 +102,8 @@ public class AccessControlLists {
   /** Column family used to store ACL grants */
   public static final String ACL_LIST_FAMILY_STR = "l";
   public static final byte[] ACL_LIST_FAMILY = Bytes.toBytes(ACL_LIST_FAMILY_STR);
+  /** KV tag to store per cell access control lists */
+  public static final byte ACL_TAG_TYPE = (byte) 1;
 
   public static final char NAMESPACE_PREFIX = '@';
 
@@ -674,5 +679,37 @@ public class AccessControlLists {
            Bytes.toString(namespace));
      }
      return Arrays.copyOfRange(namespace, 1, namespace.length);
+   }
+
+   public static List<Permission> getCellPermissionsForUser(User user, Cell cell)
+       throws IOException {
+     List<Permission> results = Lists.newArrayList();
+     byte[] tags = CellUtil.getTagArray(cell);
+     Iterator<Tag> tagsIterator = CellUtil.tagsIterator(tags, 0, tags.length);
+     while (tagsIterator.hasNext()) {
+       Tag tag = tagsIterator.next();
+       if (tag.getType() == ACL_TAG_TYPE) {
+         // Deserialize the table permissions from the KV
+         ListMultimap<String,Permission> kvPerms = ProtobufUtil.toUsersAndPermissions(
+           AccessControlProtos.UsersAndPermissions.newBuilder().mergeFrom(
+             tag.getBuffer(), tag.getTagOffset(), tag.getTagLength()).build());
+         // Are there permissions for this user?
+         List<Permission> userPerms = kvPerms.get(user.getShortName());
+         if (userPerms != null) {
+           results.addAll(userPerms);
+         }
+         // Are there permissions for any of the groups this user belongs to?
+         String groupNames[] = user.getGroupNames();
+         if (groupNames != null) {
+           for (String group : groupNames) {
+             List<Permission> groupPerms = kvPerms.get(GROUP_PREFIX + group);
+             if (results != null) {
+               results.addAll(groupPerms);
+             }
+           }
+         }
+       }
+     }
+     return results;
    }
 }

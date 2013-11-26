@@ -110,7 +110,6 @@ public class Scan extends Query {
   private int caching = -1;
   private long maxResultSize = -1;
   private boolean cacheBlocks = true;
-  private Filter filter = null;
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
@@ -404,13 +403,9 @@ public class Scan extends Query {
     this.maxResultSize = maxResultSize;
   }
 
-  /**
-   * Apply the specified server-side filter when performing the Scan.
-   * @param filter filter to run on the server
-   * @return this
-   */
+  @Override
   public Scan setFilter(Filter filter) {
-    this.filter = filter;
+    super.setFilter(filter);
     return this;
   }
 
