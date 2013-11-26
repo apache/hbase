@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.util;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -168,7 +169,8 @@ public class ClassSize {
     CONCURRENT_HASHMAP_SEGMENT = align(REFERENCE + OBJECT +
         (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_FLOAT + ARRAY);
 
-    CONCURRENT_SKIPLISTMAP = align(Bytes.SIZEOF_INT + OBJECT + (8 * REFERENCE));
+    // The size changes from jdk7 to jdk8, estimate the size rather than use a conditional
+    CONCURRENT_SKIPLISTMAP = (int) estimateBase(ConcurrentSkipListMap.class, false);
 
     CONCURRENT_SKIPLISTMAP_ENTRY = align(
         align(OBJECT + (3 * REFERENCE)) + /* one node per entry */
