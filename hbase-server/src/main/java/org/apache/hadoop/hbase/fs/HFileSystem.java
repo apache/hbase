@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.io.Closeable;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -262,16 +263,25 @@ public class HFileSystem extends FilterFileSystem {
             new InvocationHandler() {
               public Object invoke(Object proxy, Method method,
                                    Object[] args) throws Throwable {
-                try { 
-                  Object res = method.invoke(cp, args);
-                  if (res != null && args != null && args.length == 3
-                      && "getBlockLocations".equals(method.getName())
-                      && res instanceof LocatedBlocks
-                      && args[0] instanceof String
-                      && args[0] != null) {
-                    lrb.reorderBlocks(conf, (LocatedBlocks) res, (String) args[0]);
+                try {
+                  if (args.length == 0 && "close".equals(method.getName())) {
+                    if (cp instanceof Closeable) {
+                      ((Closeable)cp).close();
+                    } else {
+                      RPC.stopProxy(cp);
+                    }
+                    return null;
+                  } else {
+                    Object res = method.invoke(cp, args);
+                    if (res != null && args != null && args.length == 3
+                        && "getBlockLocations".equals(method.getName())
+                        && res instanceof LocatedBlocks
+                        && args[0] instanceof String
+                        && args[0] != null) {
+                      lrb.reorderBlocks(conf, (LocatedBlocks) res, (String) args[0]);
+                    }
+                    return res;
                   }
-                  return res;
                 } catch  (InvocationTargetException ite) {
                   // We will have this for all the exception, checked on not, sent
                   //  by any layer, including the functional exception
