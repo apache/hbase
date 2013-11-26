@@ -992,6 +992,20 @@ possible configurations would overwhelm and obscure the important.
         dfs.socket.timeout. See the end of HBASE-8389 for more.</description>
   </property>
   <property>
+    <name>hbase.dfs.client.read.shortcircuit.buffer.size</name>
+    <value>131072</value>
+    <description>If the DFSClient configuration
+    dfs.client.read.shortcircuit.buffer.size is unset, we will
+    use what is configured here as the short circuit read default
+    direct byte buffer size. DFSClient native default is 1MB; HBase
+    keeps its HDFS files open so number of file blocks * 1MB soon
+    starts to add up and threaten OOME because of a shortage of
+    direct memory.  So, we set it down from the default.  Make
+    it > the default hbase block size set in the HColumnDescriptor
+    which is usually 64k.
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.checksum.verify</name>
     <value>true</value>
     <description>

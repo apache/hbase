@@ -44,7 +44,6 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -56,12 +55,12 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -1875,5 +1874,41 @@ public abstract class FSUtils {
     String overheadMsg = "Scan DFS for locality info takes " + overhead + " ms";
 
     LOG.info(overheadMsg);
+  }
+
+  /**
+   * Do our short circuit read setup.
+   * Checks buffer size to use and whether to do checksumming in hbase or hdfs.
+   * @param conf
+   */
+  public static void setupShortCircuitRead(final Configuration conf) {
+    // Check that the user has not set the "dfs.client.read.shortcircuit.skip.checksum" property.
+    boolean shortCircuitSkipChecksum =
+      conf.getBoolean("dfs.client.read.shortcircuit.skip.checksum", false);
+    boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
+    if (shortCircuitSkipChecksum) {
+      LOG.warn("Configuration \"dfs.client.read.shortcircuit.skip.checksum\" should not " +
+        "be set to true." + (useHBaseChecksum ? " HBase checksum doesn't require " +
+        "it, see https://issues.apache.org/jira/browse/HBASE-6868." : ""));
+      assert !shortCircuitSkipChecksum; //this will fail if assertions are on
+    }
+    checkShortCircuitReadBufferSize(conf);
+  }
+
+  /**
+   * Check if short circuit read buffer size is set and if not, set it to hbase value.
+   * @param conf
+   */
+  public static void checkShortCircuitReadBufferSize(final Configuration conf) {
+    final int defaultSize = HConstants.DEFAULT_BLOCKSIZE * 2;
+    final int notSet = -1;
+    // DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_KEY is only defined in h2
+    final String dfsKey = "dfs.client.read.shortcircuit.buffer.size";
+    int size = conf.getInt(dfsKey, notSet);
+    // If a size is set, return -- we will use it.
+    if (size != notSet) return;
+    // But short circuit buffer size is normally not set.  Put in place the hbase wanted size.
+    int hbaseSize = conf.getInt("hbase." + dfsKey, defaultSize);
+    conf.setIfUnset(dfsKey, Integer.toString(hbaseSize));
   }
 }
