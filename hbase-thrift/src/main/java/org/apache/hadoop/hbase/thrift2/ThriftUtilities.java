@@ -198,10 +198,12 @@ public class ThriftUtilities {
 
     for (TColumnValue columnValue : in.getColumnValues()) {
       if (columnValue.isSetTimestamp()) {
-        out.add(columnValue.getFamily(), columnValue.getQualifier(), columnValue.getTimestamp(),
+        out.addImmutable(
+            columnValue.getFamily(), columnValue.getQualifier(), columnValue.getTimestamp(),
             columnValue.getValue());
       } else {
-        out.add(columnValue.getFamily(), columnValue.getQualifier(), columnValue.getValue());
+        out.addImmutable(
+            columnValue.getFamily(), columnValue.getQualifier(), columnValue.getValue());
       }
     }
 

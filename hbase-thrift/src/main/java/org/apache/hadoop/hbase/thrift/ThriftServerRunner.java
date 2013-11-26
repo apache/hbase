@@ -1033,7 +1033,7 @@ public class ThriftServerRunner implements Runnable {
               LOG.warn("No column qualifier specified. Delete is the only mutation supported "
                   + "over the whole column family.");
             } else {
-              put.add(famAndQf[0], famAndQf[1],
+              put.addImmutable(famAndQf[0], famAndQf[1],
                   m.value != null ? getBytes(m.value)
                       : HConstants.EMPTY_BYTE_ARRAY);
             }
@@ -1092,7 +1092,7 @@ public class ThriftServerRunner implements Runnable {
                   + "over the whole column family.");
             }
             if (famAndQf.length == 2) {
-              put.add(famAndQf[0], famAndQf[1],
+              put.addImmutable(famAndQf[0], famAndQf[1],
                   m.value != null ? getBytes(m.value)
                       : HConstants.EMPTY_BYTE_ARRAY);
             } else {

@@ -157,7 +157,7 @@ public class AccessControlLists {
     for (int i = 0; i < actions.length; i++) {
       value[i] = actions[i].code();
     }
-    p.add(ACL_LIST_FAMILY, key, value);
+    p.addImmutable(ACL_LIST_FAMILY, key, value);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Writing permission with rowKey "+
           Bytes.toString(rowKey)+" "+

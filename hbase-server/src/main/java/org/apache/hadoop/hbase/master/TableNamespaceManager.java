@@ -154,7 +154,7 @@ public class TableNamespaceManager {
 
   private void upsert(HTable table, NamespaceDescriptor ns) throws IOException {
     Put p = new Put(Bytes.toBytes(ns.getName()));
-    p.add(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
+    p.addImmutable(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
         HTableDescriptor.NAMESPACE_COL_DESC_BYTES,
         ProtobufUtil.toProtoNamespaceDescriptor(ns).toByteArray());
     table.put(p);

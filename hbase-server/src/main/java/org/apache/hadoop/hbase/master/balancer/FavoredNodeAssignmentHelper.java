@@ -143,7 +143,7 @@ public class FavoredNodeAssignmentHelper {
     if (favoredNodeList != null) {
       put = MetaEditor.makePutFromRegionInfo(regionInfo);
       byte[] favoredNodes = getFavoredNodes(favoredNodeList);
-      put.add(HConstants.CATALOG_FAMILY, FAVOREDNODES_QUALIFIER,
+      put.addImmutable(HConstants.CATALOG_FAMILY, FAVOREDNODES_QUALIFIER,
           EnvironmentEdgeManager.currentTimeMillis(), favoredNodes);
       LOG.info("Create the region " + regionInfo.getRegionNameAsString() +
           " with favored nodes " + favoredNodes);

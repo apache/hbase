@@ -500,7 +500,7 @@ public final class ProtobufUtil {
         if (put == null) {
           put = new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), timestamp);
         }
-        put.add(KeyValueUtil.ensureKeyValue(cell));
+        put.add(cell);
       }
     } else {
       if (proto.hasRow()) {
@@ -524,7 +524,7 @@ public final class ProtobufUtil {
           if (qv.hasTimestamp()) {
             ts = qv.getTimestamp();
           }
-          put.add(family, qualifier, ts, value);
+          put.addImmutable(family, qualifier, ts, value);
         }
       }
     }

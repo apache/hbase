@@ -462,7 +462,7 @@ public class NamespaceUpgrade implements Tool {
     // create a put for new _acl_ entry with rowkey as hbase:acl
     Put p = new Put(AccessControlLists.ACL_GLOBAL_NAME);
     for (Cell c : r.rawCells()) {
-      p.add(CellUtil.cloneFamily(c), CellUtil.cloneQualifier(c), CellUtil.cloneValue(c));
+      p.addImmutable(CellUtil.cloneFamily(c), CellUtil.cloneQualifier(c), CellUtil.cloneValue(c));
     }
     region.put(p);
     // delete the old entry
