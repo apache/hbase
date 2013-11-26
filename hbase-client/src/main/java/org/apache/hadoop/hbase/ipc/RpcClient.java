@@ -967,7 +967,7 @@ public class RpcClient {
       // release the resources
       // first thing to do;take the connection out of the connection list
       synchronized (connections) {
-        connections.remove(remoteId, this);
+        connections.removeValue(remoteId, this);
       }
 
       // close the streams and therefore the socket
