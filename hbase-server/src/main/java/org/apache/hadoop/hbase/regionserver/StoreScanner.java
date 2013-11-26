@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -96,6 +97,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
   // A flag whether use pread for scan
   private boolean scanUsePread = false;
+  private ReentrantLock lock = new ReentrantLock();
   
   private final long readPt;
 
@@ -354,11 +356,16 @@ public class StoreScanner extends NonLazyKeyValueScanner
   }
 
   @Override
-  public synchronized KeyValue peek() {
+  public KeyValue peek() {
+    lock.lock();
+    try {
     if (this.heap == null) {
       return this.lastTop;
     }
     return this.heap.peek();
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
@@ -368,7 +375,9 @@ public class StoreScanner extends NonLazyKeyValueScanner
   }
 
   @Override
-  public synchronized void close() {
+  public void close() {
+    lock.lock();
+    try {
     if (this.closing) return;
     this.closing = true;
     // under test, we dont have a this.store
@@ -378,13 +387,21 @@ public class StoreScanner extends NonLazyKeyValueScanner
       this.heap.close();
     this.heap = null; // CLOSED!
     this.lastTop = null; // If both are null, we are closed.
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
-  public synchronized boolean seek(KeyValue key) throws IOException {
+  public boolean seek(KeyValue key) throws IOException {
+    lock.lock();
+    try {
     // reset matcher state, in case that underlying store changed
     checkReseek();
     return this.heap.seek(key);
+    } finally {
+      lock.unlock();
+    }
   }
 
   /**
@@ -394,7 +411,9 @@ public class StoreScanner extends NonLazyKeyValueScanner
    * @return true if there are more rows, false if scanner is done
    */
   @Override
-  public synchronized boolean next(List<Cell> outResult, int limit) throws IOException {
+  public boolean next(List<Cell> outResult, int limit) throws IOException {
+    lock.lock();
+    try {
     if (checkReseek()) {
       return true;
     }
@@ -530,16 +549,21 @@ public class StoreScanner extends NonLazyKeyValueScanner
     // No more keys
     close();
     return false;
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
-  public synchronized boolean next(List<Cell> outResult) throws IOException {
+  public boolean next(List<Cell> outResult) throws IOException {
     return next(outResult, -1);
   }
 
   // Implementation of ChangedReadersObserver
   @Override
-  public synchronized void updateReaders() throws IOException {
+  public void updateReaders() throws IOException {
+    lock.lock();
+    try {
     if (this.closing) return;
 
     // All public synchronized API calls will call 'checkReseek' which will cause
@@ -559,6 +583,9 @@ public class StoreScanner extends NonLazyKeyValueScanner
     this.heap = null; // the re-seeks could be slow (access HDFS) free up memory ASAP
 
     // Let the next() call handle re-creating and seeking
+    } finally {
+      lock.unlock();
+    }
   }
 
   /**
@@ -622,7 +649,9 @@ public class StoreScanner extends NonLazyKeyValueScanner
   }
 
   @Override
-  public synchronized boolean reseek(KeyValue kv) throws IOException {
+  public boolean reseek(KeyValue kv) throws IOException {
+    lock.lock();
+    try {
     //Heap will not be null, if this is called from next() which.
     //If called from RegionScanner.reseek(...) make sure the scanner
     //stack is reset if needed.
@@ -631,6 +660,9 @@ public class StoreScanner extends NonLazyKeyValueScanner
       return heap.requestSeek(kv, true, useRowColBloom);
     }
     return heap.reseek(kv);
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
