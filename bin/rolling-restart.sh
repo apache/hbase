@@ -125,7 +125,7 @@ else
     # Wait until the master has cleaned out regions in transition before
     # giving it a bunch of work to do; master is vulnerable during startup
     zunassigned=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.unassigned`
-    if [ "$zunassigned" == "null" ]; then zunassigned="unassigned"; fi
+    if [ "$zunassigned" == "null" ]; then zunassigned="region-in-transition"; fi
     zunassigned="$zparent/$zunassigned"
     echo -n "Waiting for ${zunassigned} to empty"
     while true ; do
