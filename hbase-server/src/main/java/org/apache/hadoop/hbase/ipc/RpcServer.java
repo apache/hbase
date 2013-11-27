@@ -743,9 +743,14 @@ public class RpcServer implements RpcServerInterface {
 
       SocketChannel channel;
       while ((channel = server.accept()) != null) {
-        channel.configureBlocking(false);
-        channel.socket().setTcpNoDelay(tcpNoDelay);
-        channel.socket().setKeepAlive(tcpKeepAlive);
+        try {
+          channel.configureBlocking(false);
+          channel.socket().setTcpNoDelay(tcpNoDelay);
+          channel.socket().setKeepAlive(tcpKeepAlive);
+        } catch (IOException ioe) {
+          channel.close();
+          throw ioe;
+        }
 
         Reader reader = getReader();
         try {
@@ -1368,20 +1373,31 @@ public class RpcServer implements RpcServerInterface {
      */
     private void doRawSaslReply(SaslStatus status, Writable rv,
         String errorClass, String error) throws IOException {
-      //In my testing, have noticed that sasl messages are usually
-      //in the ballpark of 100-200. That's why the initialcapacity is 256.
-      ByteBufferOutputStream saslResponse = new ByteBufferOutputStream(256);
-      DataOutputStream out = new DataOutputStream(saslResponse);
-      out.writeInt(status.state); // write status
-      if (status == SaslStatus.SUCCESS) {
-        rv.write(out);
-      } else {
-        WritableUtils.writeString(out, errorClass);
-        WritableUtils.writeString(out, error);
+      ByteBufferOutputStream saslResponse = null;
+      DataOutputStream out = null;
+      try {
+        // In my testing, have noticed that sasl messages are usually
+        // in the ballpark of 100-200. That's why the initial capacity is 256.
+        saslResponse = new ByteBufferOutputStream(256);
+        out = new DataOutputStream(saslResponse);
+        out.writeInt(status.state); // write status
+        if (status == SaslStatus.SUCCESS) {
+          rv.write(out);
+        } else {
+          WritableUtils.writeString(out, errorClass);
+          WritableUtils.writeString(out, error);
+        }
+        saslCall.setSaslTokenResponse(saslResponse.getByteBuffer());
+        saslCall.responder = responder;
+        saslCall.sendResponseIfReady();
+      } finally {
+        if (saslResponse != null) {
+          saslResponse.close();
+        }
+        if (out != null) {
+          out.close();
+        }
       }
-      saslCall.setSaslTokenResponse(saslResponse.getByteBuffer());
-      saslCall.responder = responder;
-      saslCall.sendResponseIfReady();
     }
 
     private void disposeSasl() {
