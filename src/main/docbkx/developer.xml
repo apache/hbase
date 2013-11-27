@@ -165,11 +165,21 @@ mvn clean package -DskipTests
        </para>
       </section>
       <section xml:id="build.protobuf"><title>Build Protobuf</title>
-            <para>You may need to change the protobuf definitions that reside in the hbase-protocol module.</para>
+            <para>You may need to change the protobuf definitions that reside in the hbase-protocol module or other modules.</para>
             <para>
               The protobuf files are located in <link xlink:href="https://svn.apache.org/repos/asf/hbase/trunk/hbase-protocol/src/main/protobuf">hbase-protocol/src/main/protobuf</link>.
-              For the change to be effective, you will need to
-              regenerate the classes (read the <link xlink:href="https://svn.apache.org/repos/asf/hbase/trunk/hbase-protocol/README.txt">hbase-protocol/README.txt</link> for more details).
+              For the change to be effective, you will need to regenerate the classes. You can use maven profile compile-protobuf to do this.
+            <programlisting>
+mvn compile -Dcompile-protobuf
+or
+mvn compile -Pcompile-protobuf
+            </programlisting>
+
+You may also want to define protoc.path for the protoc binary
+             <programlisting>
+mvn compile -Dcompile-protobuf -Dprotoc.path=/opt/local/bin/protoc
+             </programlisting>
+ Read the <link xlink:href="https://svn.apache.org/repos/asf/hbase/trunk/hbase-protocol/README.txt">hbase-protocol/README.txt</link> for more details.
            </para>
       </section>
 

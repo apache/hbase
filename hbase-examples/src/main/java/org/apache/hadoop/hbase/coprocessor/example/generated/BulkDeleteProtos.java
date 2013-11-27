@@ -10,68 +10,218 @@ public final class BulkDeleteProtos {
   }
   public interface BulkDeleteRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required .Scan scan = 1;
+    /**
+     * <code>required .Scan scan = 1;</code>
+     */
     boolean hasScan();
+    /**
+     * <code>required .Scan scan = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan getScan();
+    /**
+     * <code>required .Scan scan = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanOrBuilder getScanOrBuilder();
-    
+
     // required .BulkDeleteRequest.DeleteType deleteType = 2;
+    /**
+     * <code>required .BulkDeleteRequest.DeleteType deleteType = 2;</code>
+     */
     boolean hasDeleteType();
+    /**
+     * <code>required .BulkDeleteRequest.DeleteType deleteType = 2;</code>
+     */
     org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType getDeleteType();
-    
+
     // optional uint64 timestamp = 3;
+    /**
+     * <code>optional uint64 timestamp = 3;</code>
+     */
     boolean hasTimestamp();
+    /**
+     * <code>optional uint64 timestamp = 3;</code>
+     */
     long getTimestamp();
-    
+
     // required uint32 rowBatchSize = 4;
+    /**
+     * <code>required uint32 rowBatchSize = 4;</code>
+     */
     boolean hasRowBatchSize();
+    /**
+     * <code>required uint32 rowBatchSize = 4;</code>
+     */
     int getRowBatchSize();
   }
+  /**
+   * Protobuf type {@code BulkDeleteRequest}
+   */
   public static final class BulkDeleteRequest extends
       com.google.protobuf.GeneratedMessage
       implements BulkDeleteRequestOrBuilder {
     // Use BulkDeleteRequest.newBuilder() to construct.
-    private BulkDeleteRequest(Builder builder) {
+    private BulkDeleteRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private BulkDeleteRequest(boolean noInit) {}
-    
+    private BulkDeleteRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final BulkDeleteRequest defaultInstance;
     public static BulkDeleteRequest getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public BulkDeleteRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private BulkDeleteRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = scan_.toBuilder();
+              }
+              scan_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(scan_);
+                scan_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+            case 16: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType value = org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(2, rawValue);
+              } else {
+                bitField0_ |= 0x00000002;
+                deleteType_ = value;
+              }
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              timestamp_ = input.readUInt64();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              rowBatchSize_ = input.readUInt32();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteRequest_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteRequest_fieldAccessorTable;
+      return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.class, org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<BulkDeleteRequest> PARSER =
+        new com.google.protobuf.AbstractParser<BulkDeleteRequest>() {
+      public BulkDeleteRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new BulkDeleteRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<BulkDeleteRequest> getParserForType() {
+      return PARSER;
+    }
+
+    /**
+     * Protobuf enum {@code BulkDeleteRequest.DeleteType}
+     */
     public enum DeleteType
         implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>ROW = 0;</code>
+       */
       ROW(0, 0),
+      /**
+       * <code>FAMILY = 1;</code>
+       */
       FAMILY(1, 1),
+      /**
+       * <code>COLUMN = 2;</code>
+       */
       COLUMN(2, 2),
+      /**
+       * <code>VERSION = 3;</code>
+       */
       VERSION(3, 3),
       ;
-      
+
+      /**
+       * <code>ROW = 0;</code>
+       */
       public static final int ROW_VALUE = 0;
+      /**
+       * <code>FAMILY = 1;</code>
+       */
       public static final int FAMILY_VALUE = 1;
+      /**
+       * <code>COLUMN = 2;</code>
+       */
       public static final int COLUMN_VALUE = 2;
+      /**
+       * <code>VERSION = 3;</code>
+       */
       public static final int VERSION_VALUE = 3;
-      
-      
+
+
       public final int getNumber() { return value; }
-      
+
       public static DeleteType valueOf(int value) {
         switch (value) {
           case 0: return ROW;
@@ -81,7 +231,7 @@ public final class BulkDeleteProtos {
           default: return null;
         }
       }
-      
+
       public static com.google.protobuf.Internal.EnumLiteMap<DeleteType>
           internalGetValueMap() {
         return internalValueMap;
@@ -93,7 +243,7 @@ public final class BulkDeleteProtos {
                 return DeleteType.valueOf(number);
               }
             };
-      
+
       public final com.google.protobuf.Descriptors.EnumValueDescriptor
           getValueDescriptor() {
         return getDescriptor().getValues().get(index);
@@ -106,11 +256,9 @@ public final class BulkDeleteProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.getDescriptor().getEnumTypes().get(0);
       }
-      
-      private static final DeleteType[] VALUES = {
-        ROW, FAMILY, COLUMN, VERSION, 
-      };
-      
+
+      private static final DeleteType[] VALUES = values();
+
       public static DeleteType valueOf(
           com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
         if (desc.getType() != getDescriptor()) {
@@ -119,62 +267,89 @@ public final class BulkDeleteProtos {
         }
         return VALUES[desc.getIndex()];
       }
-      
+
       private final int index;
       private final int value;
-      
+
       private DeleteType(int index, int value) {
         this.index = index;
         this.value = value;
       }
-      
+
       // @@protoc_insertion_point(enum_scope:BulkDeleteRequest.DeleteType)
     }
-    
+
     private int bitField0_;
     // required .Scan scan = 1;
     public static final int SCAN_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan scan_;
+    /**
+     * <code>required .Scan scan = 1;</code>
+     */
     public boolean hasScan() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>required .Scan scan = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan getScan() {
       return scan_;
     }
+    /**
+     * <code>required .Scan scan = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanOrBuilder getScanOrBuilder() {
       return scan_;
     }
-    
+
     // required .BulkDeleteRequest.DeleteType deleteType = 2;
     public static final int DELETETYPE_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType deleteType_;
+    /**
+     * <code>required .BulkDeleteRequest.DeleteType deleteType = 2;</code>
+     */
     public boolean hasDeleteType() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+    /**
+     * <code>required .BulkDeleteRequest.DeleteType deleteType = 2;</code>
+     */
     public org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType getDeleteType() {
       return deleteType_;
     }
-    
+
     // optional uint64 timestamp = 3;
     public static final int TIMESTAMP_FIELD_NUMBER = 3;
     private long timestamp_;
+    /**
+     * <code>optional uint64 timestamp = 3;</code>
+     */
     public boolean hasTimestamp() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
+    /**
+     * <code>optional uint64 timestamp = 3;</code>
+     */
     public long getTimestamp() {
       return timestamp_;
     }
-    
+
     // required uint32 rowBatchSize = 4;
     public static final int ROWBATCHSIZE_FIELD_NUMBER = 4;
     private int rowBatchSize_;
+    /**
+     * <code>required uint32 rowBatchSize = 4;</code>
+     */
     public boolean hasRowBatchSize() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
+    /**
+     * <code>required uint32 rowBatchSize = 4;</code>
+     */
     public int getRowBatchSize() {
       return rowBatchSize_;
     }
-    
+
     private void initFields() {
       scan_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.getDefaultInstance();
       deleteType_ = org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType.ROW;
@@ -185,7 +360,7 @@ public final class BulkDeleteProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasScan()) {
         memoizedIsInitialized = 0;
         return false;
@@ -205,7 +380,7 @@ public final class BulkDeleteProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -223,12 +398,12 @@ public final class BulkDeleteProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -250,14 +425,14 @@ public final class BulkDeleteProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -267,7 +442,7 @@ public final class BulkDeleteProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest other = (org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest) obj;
-      
+
       boolean result = true;
       result = result && (hasScan() == other.hasScan());
       if (hasScan()) {
@@ -293,9 +468,13 @@ public final class BulkDeleteProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasScan()) {
@@ -315,89 +494,79 @@ public final class BulkDeleteProtos {
         hash = (53 * hash) + getRowBatchSize();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code BulkDeleteRequest}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequestOrBuilder {
@@ -405,18 +574,21 @@ public final class BulkDeleteProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteRequest_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteRequest_fieldAccessorTable;
+        return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.class, org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -428,7 +600,7 @@ public final class BulkDeleteProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (scanBuilder_ == null) {
@@ -445,20 +617,20 @@ public final class BulkDeleteProtos {
         bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.getDescriptor();
+        return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteRequest_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest build() {
         org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -466,17 +638,7 @@ public final class BulkDeleteProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest buildPartial() {
         org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest result = new org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest(this);
         int from_bitField0_ = bitField0_;
@@ -505,7 +667,7 @@ public final class BulkDeleteProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest)other);
@@ -514,7 +676,7 @@ public final class BulkDeleteProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest other) {
         if (other == org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.getDefaultInstance()) return this;
         if (other.hasScan()) {
@@ -532,7 +694,7 @@ public final class BulkDeleteProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasScan()) {
           
@@ -552,73 +714,39 @@ public final class BulkDeleteProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.newBuilder();
-              if (hasScan()) {
-                subBuilder.mergeFrom(getScan());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setScan(subBuilder.buildPartial());
-              break;
-            }
-            case 16: {
-              int rawValue = input.readEnum();
-              org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType value = org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType.valueOf(rawValue);
-              if (value == null) {
-                unknownFields.mergeVarintField(2, rawValue);
-              } else {
-                bitField0_ |= 0x00000002;
-                deleteType_ = value;
-              }
-              break;
-            }
-            case 24: {
-              bitField0_ |= 0x00000004;
-              timestamp_ = input.readUInt64();
-              break;
-            }
-            case 32: {
-              bitField0_ |= 0x00000008;
-              rowBatchSize_ = input.readUInt32();
-              break;
-            }
+        org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required .Scan scan = 1;
       private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan scan_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanOrBuilder> scanBuilder_;
+      /**
+       * <code>required .Scan scan = 1;</code>
+       */
       public boolean hasScan() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required .Scan scan = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan getScan() {
         if (scanBuilder_ == null) {
           return scan_;
@@ -626,6 +754,9 @@ public final class BulkDeleteProtos {
           return scanBuilder_.getMessage();
         }
       }
+      /**
+       * <code>required .Scan scan = 1;</code>
+       */
       public Builder setScan(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan value) {
         if (scanBuilder_ == null) {
           if (value == null) {
@@ -639,6 +770,9 @@ public final class BulkDeleteProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .Scan scan = 1;</code>
+       */
       public Builder setScan(
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder builderForValue) {
         if (scanBuilder_ == null) {
@@ -650,6 +784,9 @@ public final class BulkDeleteProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .Scan scan = 1;</code>
+       */
       public Builder mergeScan(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan value) {
         if (scanBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
@@ -666,6 +803,9 @@ public final class BulkDeleteProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .Scan scan = 1;</code>
+       */
       public Builder clearScan() {
         if (scanBuilder_ == null) {
           scan_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.getDefaultInstance();
@@ -676,11 +816,17 @@ public final class BulkDeleteProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
+      /**
+       * <code>required .Scan scan = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder getScanBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
         return getScanFieldBuilder().getBuilder();
       }
+      /**
+       * <code>required .Scan scan = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanOrBuilder getScanOrBuilder() {
         if (scanBuilder_ != null) {
           return scanBuilder_.getMessageOrBuilder();
@@ -688,6 +834,9 @@ public final class BulkDeleteProtos {
           return scan_;
         }
       }
+      /**
+       * <code>required .Scan scan = 1;</code>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanOrBuilder> 
           getScanFieldBuilder() {
@@ -701,15 +850,24 @@ public final class BulkDeleteProtos {
         }
         return scanBuilder_;
       }
-      
+
       // required .BulkDeleteRequest.DeleteType deleteType = 2;
       private org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType deleteType_ = org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType.ROW;
+      /**
+       * <code>required .BulkDeleteRequest.DeleteType deleteType = 2;</code>
+       */
       public boolean hasDeleteType() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>required .BulkDeleteRequest.DeleteType deleteType = 2;</code>
+       */
       public org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType getDeleteType() {
         return deleteType_;
       }
+      /**
+       * <code>required .BulkDeleteRequest.DeleteType deleteType = 2;</code>
+       */
       public Builder setDeleteType(org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType value) {
         if (value == null) {
           throw new NullPointerException();
@@ -719,126 +877,249 @@ public final class BulkDeleteProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required .BulkDeleteRequest.DeleteType deleteType = 2;</code>
+       */
       public Builder clearDeleteType() {
         bitField0_ = (bitField0_ & ~0x00000002);
         deleteType_ = org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType.ROW;
         onChanged();
         return this;
       }
-      
+
       // optional uint64 timestamp = 3;
       private long timestamp_ ;
+      /**
+       * <code>optional uint64 timestamp = 3;</code>
+       */
       public boolean hasTimestamp() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
+      /**
+       * <code>optional uint64 timestamp = 3;</code>
+       */
       public long getTimestamp() {
         return timestamp_;
       }
+      /**
+       * <code>optional uint64 timestamp = 3;</code>
+       */
       public Builder setTimestamp(long value) {
         bitField0_ |= 0x00000004;
         timestamp_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint64 timestamp = 3;</code>
+       */
       public Builder clearTimestamp() {
         bitField0_ = (bitField0_ & ~0x00000004);
         timestamp_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // required uint32 rowBatchSize = 4;
       private int rowBatchSize_ ;
+      /**
+       * <code>required uint32 rowBatchSize = 4;</code>
+       */
       public boolean hasRowBatchSize() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
+      /**
+       * <code>required uint32 rowBatchSize = 4;</code>
+       */
       public int getRowBatchSize() {
         return rowBatchSize_;
       }
+      /**
+       * <code>required uint32 rowBatchSize = 4;</code>
+       */
       public Builder setRowBatchSize(int value) {
         bitField0_ |= 0x00000008;
         rowBatchSize_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>required uint32 rowBatchSize = 4;</code>
+       */
       public Builder clearRowBatchSize() {
         bitField0_ = (bitField0_ & ~0x00000008);
         rowBatchSize_ = 0;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:BulkDeleteRequest)
     }
-    
+
     static {
       defaultInstance = new BulkDeleteRequest(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:BulkDeleteRequest)
   }
-  
+
   public interface BulkDeleteResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required uint64 rowsDeleted = 1;
+    /**
+     * <code>required uint64 rowsDeleted = 1;</code>
+     */
     boolean hasRowsDeleted();
+    /**
+     * <code>required uint64 rowsDeleted = 1;</code>
+     */
     long getRowsDeleted();
-    
+
     // optional uint64 versionsDeleted = 2;
+    /**
+     * <code>optional uint64 versionsDeleted = 2;</code>
+     */
     boolean hasVersionsDeleted();
+    /**
+     * <code>optional uint64 versionsDeleted = 2;</code>
+     */
     long getVersionsDeleted();
   }
+  /**
+   * Protobuf type {@code BulkDeleteResponse}
+   */
   public static final class BulkDeleteResponse extends
       com.google.protobuf.GeneratedMessage
       implements BulkDeleteResponseOrBuilder {
     // Use BulkDeleteResponse.newBuilder() to construct.
-    private BulkDeleteResponse(Builder builder) {
+    private BulkDeleteResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private BulkDeleteResponse(boolean noInit) {}
-    
+    private BulkDeleteResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final BulkDeleteResponse defaultInstance;
     public static BulkDeleteResponse getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public BulkDeleteResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private BulkDeleteResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              rowsDeleted_ = input.readUInt64();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              versionsDeleted_ = input.readUInt64();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteResponse_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteResponse_fieldAccessorTable;
+      return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.class, org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<BulkDeleteResponse> PARSER =
+        new com.google.protobuf.AbstractParser<BulkDeleteResponse>() {
+      public BulkDeleteResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new BulkDeleteResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<BulkDeleteResponse> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required uint64 rowsDeleted = 1;
     public static final int ROWSDELETED_FIELD_NUMBER = 1;
     private long rowsDeleted_;
+    /**
+     * <code>required uint64 rowsDeleted = 1;</code>
+     */
     public boolean hasRowsDeleted() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>required uint64 rowsDeleted = 1;</code>
+     */
     public long getRowsDeleted() {
       return rowsDeleted_;
     }
-    
+
     // optional uint64 versionsDeleted = 2;
     public static final int VERSIONSDELETED_FIELD_NUMBER = 2;
     private long versionsDeleted_;
+    /**
+     * <code>optional uint64 versionsDeleted = 2;</code>
+     */
     public boolean hasVersionsDeleted() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+    /**
+     * <code>optional uint64 versionsDeleted = 2;</code>
+     */
     public long getVersionsDeleted() {
       return versionsDeleted_;
     }
-    
+
     private void initFields() {
       rowsDeleted_ = 0L;
       versionsDeleted_ = 0L;
@@ -847,7 +1128,7 @@ public final class BulkDeleteProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasRowsDeleted()) {
         memoizedIsInitialized = 0;
         return false;
@@ -855,7 +1136,7 @@ public final class BulkDeleteProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -867,12 +1148,12 @@ public final class BulkDeleteProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -886,14 +1167,14 @@ public final class BulkDeleteProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -903,7 +1184,7 @@ public final class BulkDeleteProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse other = (org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse) obj;
-      
+
       boolean result = true;
       result = result && (hasRowsDeleted() == other.hasRowsDeleted());
       if (hasRowsDeleted()) {
@@ -919,9 +1200,13 @@ public final class BulkDeleteProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasRowsDeleted()) {
@@ -933,89 +1218,79 @@ public final class BulkDeleteProtos {
         hash = (53 * hash) + hashLong(getVersionsDeleted());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code BulkDeleteResponse}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponseOrBuilder {
@@ -1023,18 +1298,21 @@ public final class BulkDeleteProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteResponse_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteResponse_fieldAccessorTable;
+        return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.class, org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -1045,7 +1323,7 @@ public final class BulkDeleteProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         rowsDeleted_ = 0L;
@@ -1054,20 +1332,20 @@ public final class BulkDeleteProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.getDescriptor();
+        return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.internal_static_BulkDeleteResponse_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse build() {
         org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -1075,17 +1353,7 @@ public final class BulkDeleteProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse buildPartial() {
         org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse result = new org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse(this);
         int from_bitField0_ = bitField0_;
@@ -1102,7 +1370,7 @@ public final class BulkDeleteProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse)other);
@@ -1111,7 +1379,7 @@ public final class BulkDeleteProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse other) {
         if (other == org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.getDefaultInstance()) return this;
         if (other.hasRowsDeleted()) {
@@ -1123,7 +1391,7 @@ public final class BulkDeleteProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasRowsDeleted()) {
           
@@ -1131,111 +1399,121 @@ public final class BulkDeleteProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              rowsDeleted_ = input.readUInt64();
-              break;
-            }
-            case 16: {
-              bitField0_ |= 0x00000002;
-              versionsDeleted_ = input.readUInt64();
-              break;
-            }
+        org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required uint64 rowsDeleted = 1;
       private long rowsDeleted_ ;
+      /**
+       * <code>required uint64 rowsDeleted = 1;</code>
+       */
       public boolean hasRowsDeleted() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required uint64 rowsDeleted = 1;</code>
+       */
       public long getRowsDeleted() {
         return rowsDeleted_;
       }
+      /**
+       * <code>required uint64 rowsDeleted = 1;</code>
+       */
       public Builder setRowsDeleted(long value) {
         bitField0_ |= 0x00000001;
         rowsDeleted_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>required uint64 rowsDeleted = 1;</code>
+       */
       public Builder clearRowsDeleted() {
         bitField0_ = (bitField0_ & ~0x00000001);
         rowsDeleted_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // optional uint64 versionsDeleted = 2;
       private long versionsDeleted_ ;
+      /**
+       * <code>optional uint64 versionsDeleted = 2;</code>
+       */
       public boolean hasVersionsDeleted() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>optional uint64 versionsDeleted = 2;</code>
+       */
       public long getVersionsDeleted() {
         return versionsDeleted_;
       }
+      /**
+       * <code>optional uint64 versionsDeleted = 2;</code>
+       */
       public Builder setVersionsDeleted(long value) {
         bitField0_ |= 0x00000002;
         versionsDeleted_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint64 versionsDeleted = 2;</code>
+       */
       public Builder clearVersionsDeleted() {
         bitField0_ = (bitField0_ & ~0x00000002);
         versionsDeleted_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:BulkDeleteResponse)
     }
-    
+
     static {
       defaultInstance = new BulkDeleteResponse(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:BulkDeleteResponse)
   }
-  
+
+  /**
+   * Protobuf service {@code BulkDeleteService}
+   */
   public static abstract class BulkDeleteService
       implements com.google.protobuf.Service {
     protected BulkDeleteService() {}
-    
+
     public interface Interface {
+      /**
+       * <code>rpc delete(.BulkDeleteRequest) returns (.BulkDeleteResponse);</code>
+       */
       public abstract void delete(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse> done);
-      
+
     }
-    
+
     public static com.google.protobuf.Service newReflectiveService(
         final Interface impl) {
       return new BulkDeleteService() {
@@ -1246,10 +1524,10 @@ public final class BulkDeleteProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse> done) {
           impl.delete(controller, request, done);
         }
-        
+
       };
     }
-    
+
     public static com.google.protobuf.BlockingService
         newReflectiveBlockingService(final BlockingInterface impl) {
       return new com.google.protobuf.BlockingService() {
@@ -1257,7 +1535,7 @@ public final class BulkDeleteProtos {
             getDescriptorForType() {
           return getDescriptor();
         }
-        
+
         public final com.google.protobuf.Message callBlockingMethod(
             com.google.protobuf.Descriptors.MethodDescriptor method,
             com.google.protobuf.RpcController controller,
@@ -1275,7 +1553,7 @@ public final class BulkDeleteProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-        
+
         public final com.google.protobuf.Message
             getRequestPrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -1291,7 +1569,7 @@ public final class BulkDeleteProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-        
+
         public final com.google.protobuf.Message
             getResponsePrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -1307,15 +1585,18 @@ public final class BulkDeleteProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-        
+
       };
     }
-    
+
+    /**
+     * <code>rpc delete(.BulkDeleteRequest) returns (.BulkDeleteResponse);</code>
+     */
     public abstract void delete(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse> done);
-    
+
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -1325,7 +1606,7 @@ public final class BulkDeleteProtos {
         getDescriptorForType() {
       return getDescriptor();
     }
-    
+
     public final void callMethod(
         com.google.protobuf.Descriptors.MethodDescriptor method,
         com.google.protobuf.RpcController controller,
@@ -1347,7 +1628,7 @@ public final class BulkDeleteProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-    
+
     public final com.google.protobuf.Message
         getRequestPrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -1363,7 +1644,7 @@ public final class BulkDeleteProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-    
+
     public final com.google.protobuf.Message
         getResponsePrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -1379,23 +1660,23 @@ public final class BulkDeleteProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-    
+
     public static Stub newStub(
         com.google.protobuf.RpcChannel channel) {
       return new Stub(channel);
     }
-    
+
     public static final class Stub extends org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteService implements Interface {
       private Stub(com.google.protobuf.RpcChannel channel) {
         this.channel = channel;
       }
-      
+
       private final com.google.protobuf.RpcChannel channel;
-      
+
       public com.google.protobuf.RpcChannel getChannel() {
         return channel;
       }
-      
+
       public  void delete(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest request,
@@ -1411,26 +1692,26 @@ public final class BulkDeleteProtos {
             org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.getDefaultInstance()));
       }
     }
-    
+
     public static BlockingInterface newBlockingStub(
         com.google.protobuf.BlockingRpcChannel channel) {
       return new BlockingStub(channel);
     }
-    
+
     public interface BlockingInterface {
       public org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse delete(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest request)
           throws com.google.protobuf.ServiceException;
     }
-    
+
     private static final class BlockingStub implements BlockingInterface {
       private BlockingStub(com.google.protobuf.BlockingRpcChannel channel) {
         this.channel = channel;
       }
-      
+
       private final com.google.protobuf.BlockingRpcChannel channel;
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse delete(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest request)
@@ -1441,10 +1722,12 @@ public final class BulkDeleteProtos {
           request,
           org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.getDefaultInstance());
       }
-      
+
     }
+
+    // @@protoc_insertion_point(class_scope:BulkDeleteService)
   }
-  
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_BulkDeleteRequest_descriptor;
   private static
@@ -1455,7 +1738,7 @@ public final class BulkDeleteProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_BulkDeleteResponse_fieldAccessorTable;
-  
+
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -1487,17 +1770,13 @@ public final class BulkDeleteProtos {
           internal_static_BulkDeleteRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_BulkDeleteRequest_descriptor,
-              new java.lang.String[] { "Scan", "DeleteType", "Timestamp", "RowBatchSize", },
-              org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.class,
-              org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.Builder.class);
+              new java.lang.String[] { "Scan", "DeleteType", "Timestamp", "RowBatchSize", });
           internal_static_BulkDeleteResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_BulkDeleteResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_BulkDeleteResponse_descriptor,
-              new java.lang.String[] { "RowsDeleted", "VersionsDeleted", },
-              org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.class,
-              org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.Builder.class);
+              new java.lang.String[] { "RowsDeleted", "VersionsDeleted", });
           return null;
         }
       };
@@ -1507,6 +1786,6 @@ public final class BulkDeleteProtos {
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor(),
         }, assigner);
   }
-  
+
   // @@protoc_insertion_point(outer_class_scope)
 }

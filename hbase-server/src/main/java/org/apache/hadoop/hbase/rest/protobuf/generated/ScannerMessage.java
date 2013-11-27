@@ -1113,7 +1113,7 @@ public final class ScannerMessage {
           getFilterBytes() {
         java.lang.Object ref = filter_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           filter_ = b;

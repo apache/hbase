@@ -807,7 +807,7 @@ public final class PingProtos {
           getPongBytes() {
         java.lang.Object ref = pong_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           pong_ = b;
@@ -2980,7 +2980,7 @@ public final class PingProtos {
           getNameBytes() {
         java.lang.Object ref = name_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           name_ = b;
@@ -3489,7 +3489,7 @@ public final class PingProtos {
           getResponseBytes() {
         java.lang.Object ref = response_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           response_ = b;
