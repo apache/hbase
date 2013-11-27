@@ -73,8 +73,9 @@ public class TaskMonitor {
         new Class<?>[] { MonitoredTask.class },
         new PassthroughInvocationHandler<MonitoredTask>(stat));
     TaskAndWeakRefPair pair = new TaskAndWeakRefPair(stat, proxy);
-    synchronized (this) {
-      tasks.add(pair);
+    tasks.add(pair);
+    if (tasks.size() > MAX_TASKS) {
+      purgeExpiredTasks();
     }
     return proxy;
   }
@@ -87,8 +88,9 @@ public class TaskMonitor {
         new Class<?>[] { MonitoredRPCHandler.class },
         new PassthroughInvocationHandler<MonitoredRPCHandler>(stat));
     TaskAndWeakRefPair pair = new TaskAndWeakRefPair(stat, proxy);
-    synchronized (this) {
-      tasks.add(pair);
+    tasks.add(pair);
+    if (tasks.size() > MAX_TASKS) {
+      purgeExpiredTasks();
     }
     return proxy;
   }
