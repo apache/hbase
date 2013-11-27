@@ -56,10 +56,8 @@ do
     --rest)  rest=true; shift;;
     --restart)  restart=true; shift;;
     --reload)   reload=true; shift;;
-    --failfast) ;&
-    -e)  failfast=true; shift;;
-    --debug)  ;&
-    -d)  debug="--debug"; shift;;
+    --failfast | -e)  failfast=true; shift;;
+    --debug | -d)  debug="--debug"; shift;;
     --) shift; break;;
     -*) usage ;;
     *)  break;;	# terminate while loop
