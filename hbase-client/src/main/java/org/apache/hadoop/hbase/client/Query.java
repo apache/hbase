@@ -85,7 +85,7 @@ public abstract class Query extends OperationWithAttributes {
 
   /**
    * @param user User short name
-   * @param perm Permissions for the user
+   * @param perms Permissions for the user
    */
   public void setACL(String user, Permission perms) {
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
