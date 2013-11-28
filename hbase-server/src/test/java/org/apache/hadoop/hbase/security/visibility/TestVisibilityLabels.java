@@ -550,7 +550,7 @@ public class TestVisibilityLabels {
   }
 
   @Test
-  public void testLablesWithCheckAndPut() throws Throwable {
+  public void testLabelsWithCheckAndPut() throws Throwable {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     HTable table = null;
     try {
@@ -582,7 +582,7 @@ public class TestVisibilityLabels {
   }
 
   @Test
-  public void testLablesWithIncrement() throws Throwable {
+  public void testLabelsWithIncrement() throws Throwable {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     HTable table = null;
     try {
@@ -614,7 +614,7 @@ public class TestVisibilityLabels {
   }
 
   @Test
-  public void testLablesWithAppend() throws Throwable {
+  public void testLabelsWithAppend() throws Throwable {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     HTable table = null;
     try {

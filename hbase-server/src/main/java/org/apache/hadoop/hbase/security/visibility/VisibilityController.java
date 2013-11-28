@@ -1166,7 +1166,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     GetAuthsResponse.Builder response = GetAuthsResponse.newBuilder();
     response.setUser(request.getUser());
     try {
-      List<String> labels = getUserAuthsFromLablesTable(user);
+      List<String> labels = getUserAuthsFromLabelsTable(user);
       for (String label : labels) {
         response.addAuth(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(label)));
       }
@@ -1176,7 +1176,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     done.run(response.build());
   }
 
-  private List<String> getUserAuthsFromLablesTable(byte[] user) throws IOException {
+  private List<String> getUserAuthsFromLabelsTable(byte[] user) throws IOException {
     Scan s = new Scan();
     s.addColumn(LABELS_TABLE_FAMILY, user);
     Filter filter = createVisibilityLabelFilter(this.regionEnv.getRegion(), new Authorizations(
@@ -1210,7 +1210,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     byte[] user = request.getUser().toByteArray();
     try {
       checkCallingUserAuth();
-      List<String> currentAuths = this.getUserAuthsFromLablesTable(user);
+      List<String> currentAuths = this.getUserAuthsFromLabelsTable(user);
       List<Mutation> deletes = new ArrayList<Mutation>(auths.size());
       RegionActionResult successResult = RegionActionResult.newBuilder().build();
       for (ByteString authBS : auths) {
