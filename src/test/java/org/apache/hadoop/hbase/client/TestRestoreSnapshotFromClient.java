@@ -29,7 +29,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -107,30 +106,27 @@ public class TestRestoreSnapshotFromClient {
     admin.snapshot(emptySnapshot, tableName);
 
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    try {
-      // enable table and insert data
-      admin.enableTable(tableName);
-      SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
-      snapshot0Rows = TEST_UTIL.countRows(table);
-      admin.disableTable(tableName);
+    // enable table and insert data
+    admin.enableTable(tableName);
+    SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
+    snapshot0Rows = TEST_UTIL.countRows(table);
+    admin.disableTable(tableName);
 
-      // take a snapshot
-      admin.snapshot(snapshotName0, tableName);
+    // take a snapshot
+    admin.snapshot(snapshotName0, tableName);
 
-      // enable table and insert more data
-      admin.enableTable(tableName);
-      SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
-      snapshot1Rows = TEST_UTIL.countRows(table);
-      admin.disableTable(tableName);
+    // enable table and insert more data
+    admin.enableTable(tableName);
+    SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
+    snapshot1Rows = TEST_UTIL.countRows(table);
+    admin.disableTable(tableName);
 
-      // take a snapshot of the updated table
-      admin.snapshot(snapshotName1, tableName);
+    // take a snapshot of the updated table
+    admin.snapshot(snapshotName1, tableName);
 
-      // re-enable table
-      admin.enableTable(tableName);
-    } finally {
-      table.close();
-    }
+    // re-enable table
+    admin.enableTable(tableName);
+    table.close();
   }
 
   @After
