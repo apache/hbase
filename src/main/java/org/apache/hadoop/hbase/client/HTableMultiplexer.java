@@ -19,14 +19,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
-
 import java.io.IOException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
@@ -38,9 +30,19 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * HTableMultiplexer provides a thread-safe non blocking PUT API across all the tables.
@@ -86,7 +88,8 @@ public class HTableMultiplexer {
     this.serverToBufferQueueMap = new ConcurrentHashMap<HServerAddress,
       LinkedBlockingQueue<PutStatus>>();
     this.serverToFlushWorkerMap = new ConcurrentHashMap<HServerAddress, HTableFlushWorker>();
-    this.tableNameToHTableMap = new ConcurrentHashMap<byte[], HTable>();
+    this.tableNameToHTableMap = new ConcurrentSkipListMap<byte[], HTable>(
+            Bytes.BYTES_COMPARATOR);
     this.retryNum = conf.getInt("hbase.client.retries.number", 10);
     this.perRegionServerBufferQueueSize = perRegionServerBufferQueueSize;
   }
@@ -150,7 +153,6 @@ public class HTableMultiplexer {
       return false;
     }
 
-    LinkedBlockingQueue<PutStatus> queue;
     HTable htable = getHTable(table);
     try {
       htable.validatePut(put);
@@ -159,7 +161,7 @@ public class HTableMultiplexer {
         // Get the server location for the put
         HServerAddress addr = loc.getServerAddress();
         // Add the put pair into its corresponding queue.
-        queue = getBufferedQueue(addr);
+        LinkedBlockingQueue<PutStatus> queue = getBufferedQueue(addr);
         // Generate a MultiPutStatus obj and offer it into the queue
         PutStatus s = new PutStatus(loc.getRegionInfo(), put, retry, options);
         
@@ -175,7 +177,8 @@ public class HTableMultiplexer {
    * @return the current HTableMultiplexerStatus
    */
   public HTableMultiplexerStatus getHTableMultiplexerStatus() {
-    return new HTableMultiplexerStatus(serverToFlushWorkerMap);
+    return new HTableMultiplexerStatus(this.serverToFlushWorkerMap,
+        this.tableNameToHTableMap);
   }
 
   private HTable getHTable(final byte[] table) throws IOException {
@@ -306,8 +309,11 @@ public class HTableMultiplexer {
     private MultiPutBatchMetrics metrics;
     private long overallAvgMultiPutSize;
     private Map<HServerAddress, HTableFlushWorker> serverToFlushWorkerMap;
+    private Map<byte[], HTable> tableNameToHTableMap;
 
-    public HTableMultiplexerStatus(Map<HServerAddress, HTableFlushWorker> serverToFlushWorkerMap) {
+    public HTableMultiplexerStatus(
+        Map<HServerAddress, HTableFlushWorker> serverToFlushWorkerMap,
+        Map<byte[], HTable> tableNameToHTableMap) {
       this.totalBufferedPutCounter = 0;
       this.totalFailedPutCounter = 0;
       this.totalSucceededPutCounter = 0;
@@ -321,6 +327,7 @@ public class HTableMultiplexer {
       this.serverToAverageLatencyMap = new HashMap<String, Long>();
       this.serverToMaxLatencyMap = new HashMap<String, Long>();
       this.serverToFlushWorkerMap = serverToFlushWorkerMap;
+      this.tableNameToHTableMap = tableNameToHTableMap;
       this.metrics = new MultiPutBatchMetrics();
       this.initialize();
     }
@@ -457,6 +464,10 @@ public class HTableMultiplexer {
     public MultiPutBatchMetrics getMetrics() {
       return metrics;
     }
+
+    public int getStoredHTableCount() {
+      return this.tableNameToHTableMap.size();
+    }
   }
   
   private static class PutStatus {
@@ -485,6 +496,7 @@ public class HTableMultiplexer {
      * @deprecated Use {@link #getMaxRetryCount()} instead.
      * @return
      */
+    @SuppressWarnings("unused")
     @Deprecated
     public int getRetryCount() {
       return getMaxRetryCount();
@@ -599,6 +611,7 @@ public class HTableMultiplexer {
      * @deprecated Use {@link #getAndResetMaxLatency()} instead.
      * @return
      */
+    @SuppressWarnings("unused")
     @Deprecated
     public long getMaxLatency() {
       return this.maxLatency.getAndSet(0);

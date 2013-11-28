@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.client;
 
 import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -32,11 +33,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class TestHTableMultiplexer {
   final Log LOG = LogFactory.getLog(getClass());
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL =
+      new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte[] VALUE1 = Bytes.toBytes("testValue1");
@@ -68,8 +71,8 @@ public class TestHTableMultiplexer {
     List<Put> failedPuts = null;
     boolean success = false;
     
-    HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConfiguration(), 
-        PER_REGIONSERVER_QUEUE_SIZE);
+    HTableMultiplexer multiplexer = new HTableMultiplexer(
+        TEST_UTIL.getConfiguration(), PER_REGIONSERVER_QUEUE_SIZE);
     HTableMultiplexerStatus status = multiplexer.getHTableMultiplexerStatus();
 
     HTable ht = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY }, VERSION,
@@ -201,4 +204,34 @@ public class TestHTableMultiplexer {
         Bytes.compareTo(value, r.getValue(FAMILY, qualifier)));
     }
   }
+  /**
+   * This test is to verify that different instances of byte-array with same
+   * content as the table names will result in the same HTable instance.
+   */
+  @Test
+  public void testCachedOfHTable() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setLong("hbase.htablemultiplexer.flush.frequency.ms", 100);
+    HTableMultiplexer multiplexer =
+        new HTableMultiplexer(TEST_UTIL.getConfiguration(), 100);
+
+    HTableMultiplexerStatus status = multiplexer.getHTableMultiplexerStatus();
+    Assert.assertEquals("storedHTableCount", 0, status.getStoredHTableCount());
+
+    byte[] TABLE = Bytes.toBytes("testCounters");
+
+    byte[] row = Bytes.toBytes("Row" + 1);
+    byte[] qualifier = Bytes.toBytes("Qualifier" + 1);
+    byte[] value = Bytes.toBytes("Value" + 1);
+    Put put = new Put(row);
+    put.add(FAMILY, qualifier, value);
+    // first put
+    multiplexer.put(TABLE, put, HBaseRPCOptions.DEFAULT);
+    Assert.assertEquals("storedHTableCount", 1, status.getStoredHTableCount());
+    // second put
+    byte[] TABLE1 = Arrays.copyOf(TABLE, TABLE.length);
+    multiplexer.put(TABLE1, put, HBaseRPCOptions.DEFAULT);
+    Assert.assertEquals("storedHTableCount", 1, status.getStoredHTableCount());
+  }
 }
+

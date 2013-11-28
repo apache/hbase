@@ -19,14 +19,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.RawComparator;
-import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.io.WritableUtils;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -35,6 +27,14 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.Iterator;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -1477,5 +1477,4 @@ public class Bytes {
   public static boolean isNonEmpty(ByteBuffer b) {
     return b != null && b.remaining() > 0;
   }
-
 }
