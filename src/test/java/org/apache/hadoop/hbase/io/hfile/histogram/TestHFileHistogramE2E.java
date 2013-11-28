@@ -27,8 +27,6 @@ public class TestHFileHistogramE2E {
   private static final byte[] TABLE =
       Bytes.toBytes("TestHFileHistogramE2ESingleStore");
   private static final byte[] FAMILY = Bytes.toBytes("family");
-  private static final byte[] TABLE2 =
-      Bytes.toBytes("TestHistogramSerDeE2E");
   private static final Log LOG = LogFactory.getLog(TestHFileHistogramE2E.class);
   private HBaseTestingUtility util = new HBaseTestingUtility();
   private final int numBuckets = 100;
@@ -72,6 +70,7 @@ public class TestHFileHistogramE2E {
 
   @Test
   public void testHistogramSerDeE2E() throws IOException {
+    byte[] TABLE2 = Bytes.toBytes("TestHistogramSerDeE2E");
     HTable table = util.createTable(TABLE2, FAMILY);
     util.loadTable(table, FAMILY);
     util.flush(TABLE2);
@@ -123,7 +122,7 @@ public class TestHFileHistogramE2E {
   public void testHistogramError() throws IOException {
     byte[] TABLE3 = Bytes.toBytes("testHistogramError");
     HTable table = util.createTable(TABLE3, FAMILY);
-    util.flush(TABLE2);
+    util.flush(TABLE3);
     Random r = new Random();
     int numEntries = 100000 + r.nextInt(100000);
     int expectedBucketCnt = numEntries/numBuckets;

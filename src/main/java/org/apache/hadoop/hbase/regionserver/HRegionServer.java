@@ -114,6 +114,7 @@ import org.apache.hadoop.hbase.io.hfile.L2BucketCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.PreloadThreadPool;
+import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
@@ -3817,19 +3818,31 @@ public class HRegionServer implements HRegionInterface,
     return 0;
   }
 
+  /**
+   *
+   * Returns null if no data is available.
+   */
   @Override
   public List<Bucket> getHistogram(byte[] regionName) throws IOException {
     checkOpen();
     HRegion region = getRegion(regionName);
-    return region.getHistogram().getUniformBuckets();
+    HFileHistogram hist = region.getHistogram();
+    if (hist == null) return null;
+    return hist.getUniformBuckets();
   }
 
+  /**
+   *
+   * Returns null if no data is available.
+   */
   @Override
   public List<Bucket> getHistogramForStore(byte[] regionName, byte[] family)
       throws IOException {
     checkOpen();
     HRegion region = getRegion(regionName);
-    return region.getStore(family).getHistogram().getUniformBuckets();
+    HFileHistogram hist = region.getStore(family).getHistogram();
+    if (hist == null) return null;
+    return hist.getUniformBuckets();
   }
 }
     boolean origProfiling = enableServerSideProfilingForAllCalls.get();

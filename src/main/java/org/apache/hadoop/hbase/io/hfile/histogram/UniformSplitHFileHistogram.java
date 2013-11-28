@@ -220,6 +220,7 @@ public class UniformSplitHFileHistogram implements HFileHistogram {
 
   @Override
   public HFileHistogram deserialize(ByteBuffer buf) throws IOException {
+    if (buf == null) return null;
     ByteArrayInputStream bais = new ByteArrayInputStream(buf.array(),
         buf.arrayOffset(), buf.limit());
     DataInput in = new DataInputStream(bais);

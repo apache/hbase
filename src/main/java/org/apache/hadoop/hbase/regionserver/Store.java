@@ -1451,14 +1451,21 @@ public class Store extends SchemaConfigured implements HeapSize,
   }
 
   private HFileHistogram hist = null;
-  public HFileHistogram getHistogram() throws IOException {
+  /**
+   *
+   * @return HFileHistogram for this store.
+   * Returns null if no data available.
+   * @throws IOException
+   */
+  public synchronized HFileHistogram getHistogram() throws IOException {
     if (hist != null) return hist;
     List<HFileHistogram> histograms = new ArrayList<HFileHistogram>();
-    if (storefiles.size() == 0) return null;
+    if (storefiles.size() == 0) return hist;
     for (StoreFile file : this.storefiles) {
       HFileHistogram hist = file.getHistogram();
       if (hist != null) histograms.add(hist);
     }
+    if (histograms.size() == 0) return hist;
     HFileHistogram h = histograms.get(0).compose(histograms);
     this.hist = h;
     return hist;

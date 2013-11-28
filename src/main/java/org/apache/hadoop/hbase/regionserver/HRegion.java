@@ -4061,12 +4061,20 @@ public class HRegion implements HeapSize, ConfigurationObserver {
     }
   };
 
+  /**
+   * Returns null is no data is available.
+   * @return
+   * @throws IOException
+   */
   public HFileHistogram getHistogram() throws IOException {
     List<HFileHistogram> histograms = new ArrayList<HFileHistogram>();
     if (stores.size() == 0) return null;
     for (Store s : stores.values()) {
-      histograms.add(s.getHistogram());
+      HFileHistogram hist = s.getHistogram();
+      if (hist != null) histograms.add(hist);
     }
+    // If none of the stores produce a histogram returns null.
+    if (histograms.size() == 0) return null;
     HFileHistogram h = histograms.get(0).compose(histograms);
     return h;
   }
