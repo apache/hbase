@@ -863,7 +863,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
      */
     @Override
     public void close() {
-      LOG.info("Closing HFileScanner for file" + hfileReaderV2.getName());
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Closing HFileScanner for file " + hfileReaderV2.getName());
+      }
       if (preloadBlocks) {
         blockManager.close();
       }
