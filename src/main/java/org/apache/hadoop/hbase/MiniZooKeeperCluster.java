@@ -19,6 +19,13 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.zookeeper.server.NIOServerCnxnFactory;
+import org.apache.zookeeper.server.ZooKeeperServer;
+import org.apache.zookeeper.server.persistence.FileTxnLog;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -29,13 +36,6 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.zookeeper.server.NIOServerCnxn;
-import org.apache.zookeeper.server.ZooKeeperServer;
-import org.apache.zookeeper.server.persistence.FileTxnLog;
 
 /**
  * TODO: Most of the code in this class is ripped from ZooKeeper tests. Instead
@@ -51,7 +51,7 @@ public class MiniZooKeeperCluster {
   private boolean started;
   private int clientPort = 21810; // use non-standard port
 
-  private NIOServerCnxn.Factory standaloneServerFactory;
+  private NIOServerCnxnFactory standaloneServerFactory;
   private int tickTime = 0;
 
   /** Create mini ZooKeeper cluster. */
@@ -112,7 +112,8 @@ public class MiniZooKeeperCluster {
     while (true) {
       try {
         standaloneServerFactory =
-          new NIOServerCnxn.Factory(new InetSocketAddress(clientPort));
+          new NIOServerCnxnFactory();
+        standaloneServerFactory.configure(new InetSocketAddress(clientPort), 100);
       } catch (BindException e) {
         LOG.info("Failed binding ZK Server to client port: " + clientPort);
         clientPort++;

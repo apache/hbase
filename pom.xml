@@ -543,6 +543,25 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <version>1.3.1</version>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>enforce</goal>
+                    </goals>
+                    <configuration>
+                        <rules>
+                            <requireUpperBoundDeps>
+                                <uniqueVersions>true</uniqueVersions>
+                            </requireUpperBoundDeps>
+                        </rules>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
     </plugins>
   </build>
 
@@ -560,22 +579,22 @@
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <netty.version>3.2.2.Final</netty.version>
     <junit.version>4.8.1</junit.version>
-    <mockito-all.version>1.8.4</mockito-all.version>
-    <log4j.version>1.2.15</log4j.version>
-    <zookeeper.version>3.3.3</zookeeper.version>
+    <mockito-all.version>1.9.5</mockito-all.version>
+    <log4j.version>1.2.16</log4j.version>
+    <zookeeper.version>3.4.3</zookeeper.version>
 
     <commons-httpclient.version>3.1</commons-httpclient.version>
     <commons-lang.version>2.5</commons-lang.version>
     <commons-math.version>2.1</commons-math.version>
     <jasper.version>5.5.23</jasper.version>
-    <jaxb-api.version>2.1</jaxb-api.version>
-    <jersey.version>1.1.5.1</jersey.version>
+    <jaxb-api.version>2.2.2 </jaxb-api.version>
+    <jersey.version>1.9.1</jersey.version>
     <jruby.version>1.4.0</jruby.version>
     <jsr311.version>1.1.1</jsr311.version>
     <protobuf.version>2.3.0</protobuf.version>
-    <slf4j.version>1.5.8</slf4j.version>
+    <slf4j.version>1.5.11</slf4j.version>
     <stax-api>1.0.1</stax-api>
-    <thrift.version>0.8.0</thrift.version>
+    <thrift.version>0.9.1</thrift.version>
     <guava.version>r09</guava.version>
   </properties>
 
@@ -663,6 +682,16 @@
         <artifactId>mockito-all</artifactId>
         <version>${mockito-all.version}</version>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>commons-codec</groupId>
+        <artifactId>commons-codec</artifactId>
+        <version>1.6</version>
+      </dependency>
+      <dependency>
+        <groupId>asm</groupId>
+        <artifactId>asm</artifactId>
+        <version>3.2</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -847,7 +876,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-      <version>1.4.3</version>
+      <version>1.6.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -857,17 +886,17 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.4.3</version>
+      <version>1.6.1</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-core-asl</artifactId>
-      <version>1.5.2</version>
+      <version>1.8.3</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-mapper-asl</artifactId>
-      <version>1.5.2</version>
+      <version>1.8.3</version>
     </dependency>
 
     <!-- Test dependencies -->
