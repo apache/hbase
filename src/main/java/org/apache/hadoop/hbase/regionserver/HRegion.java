@@ -275,7 +275,8 @@ public class HRegion implements HeapSize, ConfigurationObserver {
   final long memstoreFlushSize;
   // The maximum size a column family's memstore can grow up to,
   // before being flushed.
-  volatile long columnfamilyMemstoreFlushSize;
+  volatile long columnfamilyMemstoreFlushSize =
+      HTableDescriptor.DEFAULT_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE;
   // Last flush time for each Store. Useful when we are flushing for each column
   private Map<Store, Long> lastStoreFlushTimeMap
     = new ConcurrentHashMap<Store, Long>();
@@ -549,16 +550,22 @@ public class HRegion implements HeapSize, ConfigurationObserver {
     LOG.info("Online configuration changed!");
     this.loadDynamicConf(conf);
   }
+
+  private static void logIfChange(String varName, long orgV, long newV) {
+    if (orgV != newV) {
+      LOG.info(String.format("%s changed from %d to %d", varName, orgV, newV));
+    }
+  }
   /**
    * Load online configurable parameters from a specified Configuration
    */
   private void loadDynamicConf(Configuration conf) {
-    this.columnfamilyMemstoreFlushSize = conf.getLong(
+    long newColumnfamilyMemstoreFlushSize = conf.getLong(
         HConstants.HREGION_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE,
         HTableDescriptor.DEFAULT_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE);
-
-    LOG.info(String.format("columnfamilyMemstoreFlushSize is set to %d",
-        this.columnfamilyMemstoreFlushSize));
+    logIfChange("columnfamilyMemstoreFlushSize",
+        this.columnfamilyMemstoreFlushSize, newColumnfamilyMemstoreFlushSize);
+    this.columnfamilyMemstoreFlushSize = newColumnfamilyMemstoreFlushSize;
   }
 
   /**
