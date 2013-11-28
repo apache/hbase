@@ -1065,10 +1065,11 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Create a protocol buffer MutationProto based on a client Mutation.  Does NOT include data.
+   * Create a protocol buffer MutationProto based on a client Mutation. Does NOT include data.
    * Understanding is that the Cell will be transported other than via protobuf.
    * @param type
    * @param mutation
+   * @param builder
    * @return a protobuf'd Mutation
    * @throws IOException
    */
@@ -1078,6 +1079,20 @@ public final class ProtobufUtil {
     getMutationBuilderAndSetCommonFields(type, mutation, builder);
     builder.setAssociatedCellCount(mutation.size());
     return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer MutationProto based on a client Mutation.  Does NOT include data.
+   * Understanding is that the Cell will be transported other than via protobuf.
+   * @param type
+   * @param mutation
+   * @return a protobuf'd Mutation
+   * @throws IOException
+   */
+  public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation)
+  throws IOException {
+    MutationProto.Builder builder =  MutationProto.newBuilder();
+    return toMutationNoData(type, mutation, builder);
   }
 
   /**
