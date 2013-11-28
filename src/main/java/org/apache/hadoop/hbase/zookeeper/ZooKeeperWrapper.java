@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
@@ -33,8 +35,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -65,6 +69,7 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 
 /**
@@ -124,8 +129,8 @@ public class ZooKeeperWrapper implements Watcher {
 
   /** Specifies the RS hosting root (host, port, start code) */
   private final String rootRegionZNode;
-  
-  /** A znode containing root regionserver host:port only for compatibility with old clients */ 
+
+  /** A znode containing root regionserver host:port only for compatibility with old clients */
   private final String legacyRootRegionZNode;
 
   /**
@@ -174,6 +179,12 @@ public class ZooKeeperWrapper implements Watcher {
    * so we can watch for this in unit tests.
    */
   private static volatile boolean closedUnknownZKWrapper = false;
+
+  private static SimpleDateFormat format = new SimpleDateFormat("yy/MM/dd HH:mm:ss");
+
+  private static String format(long date) {
+    return format.format(new Date(date));
+  }
 
   // return the singleton given the name of the instance
   public static ZooKeeperWrapper getInstance(Configuration conf, String name) {
@@ -259,7 +270,7 @@ public class ZooKeeperWrapper implements Watcher {
 
     String rootServerZNodeName =
         conf.get("zookeeper.znode.rootserver.complete", "root-region-server-complete");
-    String legacyRootServerZNodeName = 
+    String legacyRootServerZNodeName =
         conf.get("zookeeper.znode.rootserver", "root-region-server");
     String rsZNodeName         = conf.get("zookeeper.znode.rs", "rs");
     String masterAddressZNodeName = conf.get("zookeeper.znode.master", "master");
@@ -1044,7 +1055,7 @@ public class ZooKeeperWrapper implements Watcher {
   }
 
   private String joinPath(String parent, String child) {
-    return parent + ZNODE_PATH_SEPARATOR + child;
+    return (parent != "/" ? parent : "") + ZNODE_PATH_SEPARATOR + child;
   }
 
   /**
@@ -1804,7 +1815,7 @@ public class ZooKeeperWrapper implements Watcher {
   throws KeeperException {
     try {
       List<String> children = listChildrenNoWatch(node);
-      if (!children.isEmpty()) {
+      if (children != null && !children.isEmpty()) {
         for (String child : children) {
           deleteNodeRecursively(joinPath(node, child));
         }
@@ -1827,6 +1838,89 @@ public class ZooKeeperWrapper implements Watcher {
     if (children != null && !children.isEmpty()) {
       for (String child : children) {
         deleteNodeRecursively(joinPath(node, child));
+      }
+    }
+  }
+
+  /**
+   * Return the children of the node recursively; the result is sorted
+   */
+  public List<String> getChildrenRecursively(String path)
+    throws KeeperException, InterruptedException {
+    List<String> children = recoverableZK.getChildren(path, false);
+    Collections.sort(children);
+    List<String> result = new LinkedList<String>();
+    for (String child: children) {
+      String childPath = joinPath(path, child);
+      result.add(childPath);
+      List<String> childResult = getChildrenRecursively(childPath);
+      result.addAll(childResult);
+    }
+    return result;
+  }
+
+  /**
+   * Node filter
+   */
+  public static class NodeFilter {
+    private long st;
+    private long en;
+
+    public NodeFilter() {
+      this.st = -1;
+      this.en = -1;
+    }
+
+    public NodeFilter(long st, long en) {
+      this.st = st;
+      this.en = en;
+    }
+
+    public boolean matches(Stat stat) {
+      if (st >= 0 && en >= 0) {
+        return st <= stat.getMtime() && stat.getMtime() < en;
+      }
+      else if (st >= 0) {
+        return st <= stat.getMtime();
+      }
+      else if (en >= 0) {
+        return stat.getMtime() < en;
+      }
+      else {
+        return true;
+      }
+    }
+  }
+
+  /**
+   * Delete the node if it passes the given filter
+   */
+  public void delete(String path, NodeFilter filter)
+    throws InterruptedException, KeeperException {
+    Stat stat = recoverableZK.exists(path, false);
+    if (stat == null) {
+      return;
+    }
+    if (filter != null && !filter.matches(stat)) {
+      return;
+    }
+    LOG.info("Deleting " + path + " Mtime = " + format(stat.getMtime()));
+    recoverableZK.delete(path, -1);
+  }
+
+  /**
+   * Delete all those descendants of the node that pass the filter
+   * (a descendant non-leaf node may be deleted only if all its descendants have been deleted)
+   */
+  public void deleteChildrenRecursively(String path, NodeFilter filter)
+    throws KeeperException, InterruptedException {
+    List<String> children = recoverableZK.getChildren(path, false);
+    for (String child : children) {
+      String childPath = joinPath(path, child);
+      deleteChildrenRecursively(childPath, filter);
+      List<String> childChildren = recoverableZK.getChildren(childPath, false);
+      if (childChildren.isEmpty()) {
+        delete(childPath, filter);
       }
     }
   }
@@ -1956,5 +2050,9 @@ public class ZooKeeperWrapper implements Watcher {
 
   public String getIdentifier() {
     return recoverableZK.getIdentifier();
+  }
+
+  public RecoverableZooKeeper getRecoverableZooKeeper() {
+    return recoverableZK;
   }
 }

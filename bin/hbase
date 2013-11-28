@@ -68,6 +68,7 @@ if [ $# = 0 ]; then
     echo "  shell-tests      run the HBase shell tests"
   fi
   echo "  zkcli            run the ZooKeeper shell"
+  echo "  zkwrap           run the ZooKeeperWrapper shell"
   echo "  master           run an HBase HMaster node"
   echo "  regionserver     run an HBase HRegionServer node"
   echo "  zookeeper        run a Zookeeper server"
@@ -281,6 +282,8 @@ elif [ "$COMMAND" = "zookeeper" ] ; then
   fi
 elif [ "$COMMAND" = "zkcli" ] ; then
   CLASS='org.apache.zookeeper.ZooKeeperMain'
+elif [ "$COMMAND" = "zkwrap" ] ; then
+  CLASS='org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapperMain'
 elif [ "$COMMAND" = "classpath" ] ; then
   # print the computed classpath and exit
   CLASS=
