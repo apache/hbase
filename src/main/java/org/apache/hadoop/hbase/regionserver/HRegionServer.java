@@ -110,6 +110,7 @@ import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.io.hfile.L2BucketCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
@@ -378,6 +379,7 @@ public class HRegionServer implements HRegionInterface,
   private int numRowRequests = 0;
 
   public static boolean runMetrics = true;
+  public static boolean useSeekNextUsingHint;
 
   // This object lets classes register themselves to get notified on
   // Configuration changes.
@@ -443,6 +445,9 @@ public class HRegionServer implements HRegionInterface,
         (long)Integer.MAX_VALUE); // set the max to 2G
     enableServerSideProfilingForAllCalls.set(conf.getBoolean(
         HConstants.HREGIONSERVER_ENABLE_SERVERSIDE_PROFILING, false));
+
+    HRegionServer.useSeekNextUsingHint =
+        conf.getBoolean("hbase.regionserver.scan.timestampfilter.allow_seek_next_using_hint", true);
 
     reinitialize();
     SchemaMetrics.configureGlobally(conf);
@@ -3753,6 +3758,9 @@ public class HRegionServer implements HRegionInterface,
             " with new favored nodes: " + favoredNodes);
         counter++;
       }
+
+    HRegionServer.useSeekNextUsingHint =
+        conf.getBoolean("hbase.regionserver.scan.timestampfilter.allow_seek_next_using_hint", true);
     }
     return counter;
   }

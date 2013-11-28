@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+
 import com.google.common.base.Preconditions;
 
 /**
@@ -73,10 +75,12 @@ public class TimestampsFilter extends FilterBase {
       // to be lesser than all of the other values.
       return ReturnCode.NEXT_COL;
     }
-    // Skip current KeyValue. Cannot use ReturnCode.SEEK_NEXT_USING_HINT
-    // until the problem of missing delete marker in getNextKeyHint(KeyValue)
-    // is resolved.
-    return ReturnCode.SKIP;
+    // Skip current KeyValue.
+    // It may be incorrect to return ReturnCode.SEEK_NEXT_USING_HINT, as it could
+    // skip past some DeleteColumn KV's to cause incorrect behavior. However, not
+    // using ReturnCode.SEEK_NEXT_USING_HINT has a perf penalty. So, we let the
+    // configuration specify decide what the application cares about.
+    return (HRegionServer.useSeekNextUsingHint? ReturnCode.SEEK_NEXT_USING_HINT: ReturnCode.SKIP);
   }
 
   public TreeSet<Long> getTimestamps() {
