@@ -70,14 +70,13 @@ public class ByteBufferIOEngine implements IOEngine {
    */
   @Override
   public void sync() {
-
   }
 
   /**
-   * No operation for the shutdown in the memory IO engine
+   * Shutdown the memory IO engine by de-referencing the buffer array.
    */
   @Override
   public void shutdown() {
-
+    bufferArray = null;
   }
 }

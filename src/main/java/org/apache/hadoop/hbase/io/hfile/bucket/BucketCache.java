@@ -772,6 +772,10 @@ public class BucketCache implements HeapSize {
       writerThreads[i].interrupt();
     this.ramCache.clear();
     this.backingMap.clear();
+    // Reset counters and stats
+    this.blockNumber.set(0);
+    this.realCacheSize.set(0);
+    this.heapSize.set(0);
     this.cacheStats.reset();
   }
 
