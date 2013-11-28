@@ -17,34 +17,22 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -65,7 +53,6 @@ public class TestRestoreFlushSnapshotFromClient {
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private final byte[] FAMILY = Bytes.toBytes("cf");
-  private static final byte[] TEST_QUAL = Bytes.toBytes("q");
 
   private byte[] snapshotName0;
   private byte[] snapshotName1;
@@ -115,33 +102,30 @@ public class TestRestoreFlushSnapshotFromClient {
     // create Table and disable it
     SnapshotTestingUtils.createTable(UTIL, tableName, FAMILY);
     HTable table = new HTable(UTIL.getConfiguration(), tableName);
-    try {
-      SnapshotTestingUtils.loadData(UTIL, table, 500, FAMILY);
-      snapshot0Rows = UTIL.countRows(table);
-      LOG.info("=== before snapshot with 500 rows");
-      logFSTree();
+    SnapshotTestingUtils.loadData(UTIL, table, 500, FAMILY);
+    snapshot0Rows = UTIL.countRows(table);
+    LOG.info("=== before snapshot with 500 rows");
+    logFSTree();
 
-      // take a snapshot
-      admin.snapshot(Bytes.toString(snapshotName0), tableName,
-          SnapshotDescription.Type.FLUSH);
+    // take a snapshot
+    admin.snapshot(Bytes.toString(snapshotName0), tableName,
+        SnapshotDescription.Type.FLUSH);
 
-      LOG.info("=== after snapshot with 500 rows");
-      logFSTree();
+    LOG.info("=== after snapshot with 500 rows");
+    logFSTree();
 
-      // insert more data
-      SnapshotTestingUtils.loadData(UTIL, table, 500, FAMILY);
-      snapshot1Rows = UTIL.countRows(table);
-      LOG.info("=== before snapshot with 1000 rows");
-      logFSTree();
+    // insert more data
+    SnapshotTestingUtils.loadData(UTIL, table, 500, FAMILY);
+    snapshot1Rows = UTIL.countRows(table);
+    LOG.info("=== before snapshot with 1000 rows");
+    logFSTree();
 
-      // take a snapshot of the updated table
-      admin.snapshot(Bytes.toString(snapshotName1), tableName,
-          SnapshotDescription.Type.FLUSH);
-      LOG.info("=== after snapshot with 1000 rows");
-      logFSTree();
-    } finally {
-      table.close();
-    }
+    // take a snapshot of the updated table
+    admin.snapshot(Bytes.toString(snapshotName1), tableName,
+        SnapshotDescription.Type.FLUSH);
+    LOG.info("=== after snapshot with 1000 rows");
+    logFSTree();
+    table.close();
   }
 
   @After
