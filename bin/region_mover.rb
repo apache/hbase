@@ -75,6 +75,17 @@ def getTable(config, name)
   return $TABLES[key]
 end
 
+def closeTables()
+  if not $TABLES
+    return
+  end
+
+  $LOG.info("Close all tables")
+  $TABLES.each do |name, table|
+    $TABLES.delete(name)
+    table.close()
+  end
+end
 
 # Returns true if passed region is still on 'original' when we look at .META.
 def isSameServer(admin, r, original)
@@ -137,7 +148,9 @@ def isSuccessfulScan(admin, r)
     # But if no exception, presume scanning is working.
   ensure
     scanner.close()
-    table.close()
+    # Do not close the htable. It is cached in $TABLES and 
+    # may be reused in moving another region of same table. 
+    # table.close()
   end
 end
 
@@ -150,6 +163,7 @@ def move(admin, r, newServer, original)
   retries = admin.getConfiguration.getInt("hbase.move.retries.max", 5)
   count = 0
   same = true
+  start = Time.now
   while count < retries and same
     if count > 0
       $LOG.info("Retry " + count.to_s + " of maximum " + retries.to_s)
@@ -174,6 +188,8 @@ def move(admin, r, newServer, original)
   raise RuntimeError, "Region stuck on #{original}, newserver=#{newServer}" if same
   # Assert can Scan from new location.
   isSuccessfulScan(admin, r)
+  $LOG.info("Moved region " + r.getRegionNameAsString() + " cost: " + 
+    java.lang.String.format("%.3f", (Time.now - start)))
 end
 
 # Return the hostname portion of a servername (all up to first ',')
@@ -333,8 +349,9 @@ def unloadRegions(options, hostname)
     for r in rs
       # Get a random server to move the region to.
       server = servers[rand(servers.length)]
-      $LOG.info("Moving region " + r.getEncodedName() + " (" + count.to_s +
-        " of " + rs.length.to_s + ") to server=" + server);
+      $LOG.info("Moving region " + r.getRegionNameAsString() + " (" + 
+        count.to_s + " of " + rs.length.to_s + ") from server=" + 
+        servername + " to server=" + server);
       count = count + 1
       # Assert we can scan region in its current location
       isSuccessfulScan(admin, r)
@@ -375,6 +392,8 @@ def loadRegions(options, hostname)
   end
   $LOG.info("Moving " + regions.size().to_s + " regions to " + servername)
   count = 0
+  # sleep 20s to make sure the rs finished initialization.
+  sleep 20
   for r in regions
     exists = false
     begin
@@ -391,8 +410,9 @@ def loadRegions(options, hostname)
         " of " + regions.length.to_s + ") already on target server=" + servername) 
       next
     end
-    $LOG.info("Moving region " + r.getEncodedName() + " (" + count.to_s +
-      " of " + regions.length.to_s + ") to server=" + servername);
+    $LOG.info("Moving region " + r.getRegionNameAsString() + " (" + 
+      count.to_s + " of " + regions.length.to_s + ") from server=" + 
+      currentServer + " to server=" + servername);
     move(admin, r, servername, currentServer)
   end
 end
@@ -473,3 +493,5 @@ case ARGV[0]
     puts optparse
     exit 3
 end
+
+closeTables()
