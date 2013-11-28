@@ -751,7 +751,7 @@ public final class VersionMessage {
           getRestVersionBytes() {
         java.lang.Object ref = restVersion_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           restVersion_ = b;
@@ -825,7 +825,7 @@ public final class VersionMessage {
           getJvmVersionBytes() {
         java.lang.Object ref = jvmVersion_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           jvmVersion_ = b;
@@ -899,7 +899,7 @@ public final class VersionMessage {
           getOsVersionBytes() {
         java.lang.Object ref = osVersion_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           osVersion_ = b;
@@ -973,7 +973,7 @@ public final class VersionMessage {
           getServerVersionBytes() {
         java.lang.Object ref = serverVersion_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           serverVersion_ = b;
@@ -1047,7 +1047,7 @@ public final class VersionMessage {
           getJerseyVersionBytes() {
         java.lang.Object ref = jerseyVersion_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           jerseyVersion_ = b;

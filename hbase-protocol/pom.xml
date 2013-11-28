@@ -69,63 +69,6 @@
                 </execution>
             </executions>
         </plugin>
-<!-- 
-        <plugin>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-maven-plugins</artifactId>
-          <version>2.0.5-alpha</version>
-          <executions>
-            <execution>
-              <id>compile-protoc</id>
-              <phase>generate-sources</phase>
-              <goals>
-                <goal>protoc</goal>
-              </goals>
-              <configuration>
-                <protocVersion>${protobuf.version}</protocVersion>
-                <protocCommand>${protoc.path}</protocCommand>
-                <imports>
-                  <param>${basedir}/src/main/protobuf</param>
-                </imports>
-                <source>
-                  <directory>${basedir}/src/main/protobuf</directory>
-                  <includes>
-                    <include>AccessControl.proto</include>
-                    <include>Admin.proto</include>
-                    <include>Aggregate.proto</include>
-                    <include>Authentication.proto</include>
-                    <include>Cell.proto</include>
-                    <include>Client.proto</include>
-                    <include>ClusterId.proto</include>
-                    <include>ClusterStatus.proto</include>
-                    <include>Comparator.proto</include>
-                    <include>ErrorHandling.proto</include>
-                    <include>Filter.proto</include>
-                    <include>FS.proto</include>
-                    <include>HBase.proto</include>
-                    <include>HFile.proto</include>
-                    <include>LoadBalancer.proto</include>
-                    <include>MapReduce.proto</include>
-                    <include>MasterAdmin.proto</include>
-                    <include>MasterMonitor.proto</include>
-                    <include>Master.proto</include>
-                    <include>MultiRowMutationProcessorMessages.proto</include>
-                    <include>MultiRowMutation.proto</include>
-                    <include>RegionServerStatus.proto</include>
-                    <include>RowProcessor.proto</include>
-                    <include>RPC.proto</include>
-                    <include>SecureBulkLoad.proto</include>
-                    <include>Tracing.proto</include>
-                    <include>WAL.proto</include>
-                    <include>ZooKeeper.proto</include>
-                  </includes>
-                </source>
-                <output>${project.build.directory}/generated-sources/java</output>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
--->
        </plugins>
       <pluginManagement>
         <plugins>
@@ -180,6 +123,67 @@
                 <surefire.skipFirstPart>true</surefire.skipFirstPart>
             </properties>
         </profile>
+        <profile>
+          <id>compile-protobuf</id>
+          <activation>
+            <property>
+              <name>compile-protobuf</name>
+            </property>
+          </activation>
+          <build>
+            <plugins>
+              <plugin>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-maven-plugins</artifactId>
+                <executions>
+                  <execution>
+                    <id>compile-protoc</id>
+                    <phase>generate-sources</phase>
+                    <goals>
+                      <goal>protoc</goal>
+                    </goals>
+                    <configuration>
+                      <imports>
+                        <param>${basedir}/src/main/protobuf</param>
+                      </imports>
+                      <source>
+                        <directory>${basedir}/src/main/protobuf</directory>
+                        <includes>
+                          <include>AccessControl.proto</include>
+                          <include>Admin.proto</include>
+                          <include>Aggregate.proto</include>
+                          <include>Authentication.proto</include>
+                          <include>Cell.proto</include>
+                          <include>Client.proto</include>
+                          <include>ClusterId.proto</include>
+                          <include>ClusterStatus.proto</include>
+                          <include>Comparator.proto</include>
+                          <include>ErrorHandling.proto</include>
+                          <include>Filter.proto</include>
+                          <include>FS.proto</include>
+                          <include>HBase.proto</include>
+                          <include>HFile.proto</include>
+                          <include>LoadBalancer.proto</include>
+                          <include>MapReduce.proto</include>
+                          <include>Master.proto</include>
+                          <include>MultiRowMutation.proto</include>
+                          <include>RegionServerStatus.proto</include>
+                          <include>RowProcessor.proto</include>
+                          <include>RPC.proto</include>
+                          <include>SecureBulkLoad.proto</include>
+                          <include>Tracing.proto</include>
+                          <include>WAL.proto</include>
+                          <include>ZooKeeper.proto</include>
+                        </includes>
+                      </source>
+                      <!--<output>${project.build.directory}/generated-sources/java</output>-->
+                     <output>${basedir}/src/main/java/</output>
+                    </configuration>
+                  </execution>
+                </executions>
+              </plugin>
+            </plugins>
+          </build>
+        </profile>
     </profiles>
-    
 </project>

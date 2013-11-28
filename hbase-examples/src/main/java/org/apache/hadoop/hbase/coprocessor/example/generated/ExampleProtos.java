@@ -11,69 +11,130 @@ public final class ExampleProtos {
   public interface CountRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
+  /**
+   * Protobuf type {@code CountRequest}
+   */
   public static final class CountRequest extends
       com.google.protobuf.GeneratedMessage
       implements CountRequestOrBuilder {
     // Use CountRequest.newBuilder() to construct.
-    private CountRequest(Builder builder) {
+    private CountRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private CountRequest(boolean noInit) {}
-    
+    private CountRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final CountRequest defaultInstance;
     public static CountRequest getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public CountRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private CountRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountRequest_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountRequest_fieldAccessorTable;
+      return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.class, org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<CountRequest> PARSER =
+        new com.google.protobuf.AbstractParser<CountRequest>() {
+      public CountRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new CountRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<CountRequest> getParserForType() {
+      return PARSER;
+    }
+
     private void initFields() {
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -83,101 +144,95 @@ public final class ExampleProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest other = (org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest) obj;
-      
+
       boolean result = true;
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code CountRequest}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequestOrBuilder {
@@ -185,18 +240,21 @@ public final class ExampleProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountRequest_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountRequest_fieldAccessorTable;
+        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.class, org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -207,25 +265,25 @@ public final class ExampleProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.getDescriptor();
+        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountRequest_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest build() {
         org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -233,23 +291,13 @@ public final class ExampleProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest buildPartial() {
         org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest result = new org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest(this);
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest)other);
@@ -258,102 +306,171 @@ public final class ExampleProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest other) {
         if (other == org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
+        org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
-      
+
       // @@protoc_insertion_point(builder_scope:CountRequest)
     }
-    
+
     static {
       defaultInstance = new CountRequest(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:CountRequest)
   }
-  
+
   public interface CountResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required int64 count = 1 [default = 0];
+    /**
+     * <code>required int64 count = 1 [default = 0];</code>
+     */
     boolean hasCount();
+    /**
+     * <code>required int64 count = 1 [default = 0];</code>
+     */
     long getCount();
   }
+  /**
+   * Protobuf type {@code CountResponse}
+   */
   public static final class CountResponse extends
       com.google.protobuf.GeneratedMessage
       implements CountResponseOrBuilder {
     // Use CountResponse.newBuilder() to construct.
-    private CountResponse(Builder builder) {
+    private CountResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private CountResponse(boolean noInit) {}
-    
+    private CountResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final CountResponse defaultInstance;
     public static CountResponse getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public CountResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private CountResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              count_ = input.readInt64();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountResponse_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountResponse_fieldAccessorTable;
+      return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.class, org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<CountResponse> PARSER =
+        new com.google.protobuf.AbstractParser<CountResponse>() {
+      public CountResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new CountResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<CountResponse> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required int64 count = 1 [default = 0];
     public static final int COUNT_FIELD_NUMBER = 1;
     private long count_;
+    /**
+     * <code>required int64 count = 1 [default = 0];</code>
+     */
     public boolean hasCount() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>required int64 count = 1 [default = 0];</code>
+     */
     public long getCount() {
       return count_;
     }
-    
+
     private void initFields() {
       count_ = 0L;
     }
@@ -361,7 +478,7 @@ public final class ExampleProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasCount()) {
         memoizedIsInitialized = 0;
         return false;
@@ -369,7 +486,7 @@ public final class ExampleProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -378,12 +495,12 @@ public final class ExampleProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -393,14 +510,14 @@ public final class ExampleProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -410,7 +527,7 @@ public final class ExampleProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse other = (org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse) obj;
-      
+
       boolean result = true;
       result = result && (hasCount() == other.hasCount());
       if (hasCount()) {
@@ -421,9 +538,13 @@ public final class ExampleProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasCount()) {
@@ -431,89 +552,79 @@ public final class ExampleProtos {
         hash = (53 * hash) + hashLong(getCount());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code CountResponse}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponseOrBuilder {
@@ -521,18 +632,21 @@ public final class ExampleProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountResponse_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountResponse_fieldAccessorTable;
+        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.class, org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -543,27 +657,27 @@ public final class ExampleProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         count_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.getDescriptor();
+        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountResponse_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse build() {
         org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -571,17 +685,7 @@ public final class ExampleProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse buildPartial() {
         org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse result = new org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse(this);
         int from_bitField0_ = bitField0_;
@@ -594,7 +698,7 @@ public final class ExampleProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse)other);
@@ -603,7 +707,7 @@ public final class ExampleProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse other) {
         if (other == org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.getDefaultInstance()) return this;
         if (other.hasCount()) {
@@ -612,7 +716,7 @@ public final class ExampleProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasCount()) {
           
@@ -620,90 +724,96 @@ public final class ExampleProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              count_ = input.readInt64();
-              break;
-            }
+        org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required int64 count = 1 [default = 0];
       private long count_ ;
+      /**
+       * <code>required int64 count = 1 [default = 0];</code>
+       */
       public boolean hasCount() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required int64 count = 1 [default = 0];</code>
+       */
       public long getCount() {
         return count_;
       }
+      /**
+       * <code>required int64 count = 1 [default = 0];</code>
+       */
       public Builder setCount(long value) {
         bitField0_ |= 0x00000001;
         count_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>required int64 count = 1 [default = 0];</code>
+       */
       public Builder clearCount() {
         bitField0_ = (bitField0_ & ~0x00000001);
         count_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:CountResponse)
     }
-    
+
     static {
       defaultInstance = new CountResponse(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:CountResponse)
   }
-  
+
+  /**
+   * Protobuf service {@code RowCountService}
+   */
   public static abstract class RowCountService
       implements com.google.protobuf.Service {
     protected RowCountService() {}
-    
+
     public interface Interface {
+      /**
+       * <code>rpc getRowCount(.CountRequest) returns (.CountResponse);</code>
+       */
       public abstract void getRowCount(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse> done);
-      
+
+      /**
+       * <code>rpc getKeyValueCount(.CountRequest) returns (.CountResponse);</code>
+       */
       public abstract void getKeyValueCount(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse> done);
-      
+
     }
-    
+
     public static com.google.protobuf.Service newReflectiveService(
         final Interface impl) {
       return new RowCountService() {
@@ -714,7 +824,7 @@ public final class ExampleProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse> done) {
           impl.getRowCount(controller, request, done);
         }
-        
+
         @java.lang.Override
         public  void getKeyValueCount(
             com.google.protobuf.RpcController controller,
@@ -722,10 +832,10 @@ public final class ExampleProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse> done) {
           impl.getKeyValueCount(controller, request, done);
         }
-        
+
       };
     }
-    
+
     public static com.google.protobuf.BlockingService
         newReflectiveBlockingService(final BlockingInterface impl) {
       return new com.google.protobuf.BlockingService() {
@@ -733,7 +843,7 @@ public final class ExampleProtos {
             getDescriptorForType() {
           return getDescriptor();
         }
-        
+
         public final com.google.protobuf.Message callBlockingMethod(
             com.google.protobuf.Descriptors.MethodDescriptor method,
             com.google.protobuf.RpcController controller,
@@ -753,7 +863,7 @@ public final class ExampleProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-        
+
         public final com.google.protobuf.Message
             getRequestPrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -771,7 +881,7 @@ public final class ExampleProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-        
+
         public final com.google.protobuf.Message
             getResponsePrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -789,20 +899,26 @@ public final class ExampleProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-        
+
       };
     }
-    
+
+    /**
+     * <code>rpc getRowCount(.CountRequest) returns (.CountResponse);</code>
+     */
     public abstract void getRowCount(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse> done);
-    
+
+    /**
+     * <code>rpc getKeyValueCount(.CountRequest) returns (.CountResponse);</code>
+     */
     public abstract void getKeyValueCount(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse> done);
-    
+
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -812,7 +928,7 @@ public final class ExampleProtos {
         getDescriptorForType() {
       return getDescriptor();
     }
-    
+
     public final void callMethod(
         com.google.protobuf.Descriptors.MethodDescriptor method,
         com.google.protobuf.RpcController controller,
@@ -839,7 +955,7 @@ public final class ExampleProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-    
+
     public final com.google.protobuf.Message
         getRequestPrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -857,7 +973,7 @@ public final class ExampleProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-    
+
     public final com.google.protobuf.Message
         getResponsePrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -875,23 +991,23 @@ public final class ExampleProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-    
+
     public static Stub newStub(
         com.google.protobuf.RpcChannel channel) {
       return new Stub(channel);
     }
-    
+
     public static final class Stub extends org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.RowCountService implements Interface {
       private Stub(com.google.protobuf.RpcChannel channel) {
         this.channel = channel;
       }
-      
+
       private final com.google.protobuf.RpcChannel channel;
-      
+
       public com.google.protobuf.RpcChannel getChannel() {
         return channel;
       }
-      
+
       public  void getRowCount(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request,
@@ -906,7 +1022,7 @@ public final class ExampleProtos {
             org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.class,
             org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.getDefaultInstance()));
       }
-      
+
       public  void getKeyValueCount(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request,
@@ -922,31 +1038,31 @@ public final class ExampleProtos {
             org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.getDefaultInstance()));
       }
     }
-    
+
     public static BlockingInterface newBlockingStub(
         com.google.protobuf.BlockingRpcChannel channel) {
       return new BlockingStub(channel);
     }
-    
+
     public interface BlockingInterface {
       public org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse getRowCount(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request)
           throws com.google.protobuf.ServiceException;
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse getKeyValueCount(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request)
           throws com.google.protobuf.ServiceException;
     }
-    
+
     private static final class BlockingStub implements BlockingInterface {
       private BlockingStub(com.google.protobuf.BlockingRpcChannel channel) {
         this.channel = channel;
       }
-      
+
       private final com.google.protobuf.BlockingRpcChannel channel;
-      
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse getRowCount(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request)
@@ -957,8 +1073,8 @@ public final class ExampleProtos {
           request,
           org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.getDefaultInstance());
       }
-      
-      
+
+
       public org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse getKeyValueCount(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request)
@@ -969,10 +1085,12 @@ public final class ExampleProtos {
           request,
           org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.getDefaultInstance());
       }
-      
+
     }
+
+    // @@protoc_insertion_point(class_scope:RowCountService)
   }
-  
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_CountRequest_descriptor;
   private static
@@ -983,7 +1101,7 @@ public final class ExampleProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_CountResponse_fieldAccessorTable;
-  
+
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -1010,17 +1128,13 @@ public final class ExampleProtos {
           internal_static_CountRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CountRequest_descriptor,
-              new java.lang.String[] { },
-              org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.class,
-              org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.Builder.class);
+              new java.lang.String[] { });
           internal_static_CountResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_CountResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CountResponse_descriptor,
-              new java.lang.String[] { "Count", },
-              org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.class,
-              org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.Builder.class);
+              new java.lang.String[] { "Count", });
           return null;
         }
       };
@@ -1029,6 +1143,6 @@ public final class ExampleProtos {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-  
+
   // @@protoc_insertion_point(outer_class_scope)
 }

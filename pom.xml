@@ -661,6 +661,15 @@
             <attach>false</attach>
           </configuration>
       </plugin>
+      <plugin>
+         <groupId>org.apache.hadoop</groupId>
+         <artifactId>hadoop-maven-plugins</artifactId>
+         <version>${hadoop-two.version}</version>
+         <configuration>
+           <protocVersion>${protobuf.version}</protocVersion>
+           <protocCommand>${protoc.path}</protocCommand>
+         </configuration>
+      </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
