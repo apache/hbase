@@ -26,11 +26,13 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -53,8 +55,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.Date;
-import java.text.SimpleDateFormat;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -72,14 +72,15 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowLock;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -143,7 +144,7 @@ import com.google.common.collect.Lists;
  * regionName is a unique identifier for this HRegion. (startKey, endKey]
  * defines the keyspace for this HRegion.
  */
-public class HRegion implements HeapSize {
+public class HRegion implements HeapSize, ConfigurationObserver {
   public static final Log LOG = LogFactory.getLog(HRegion.class);
   static final String SPLITDIR = "splits";
   static final String MERGEDIR = "merges";
@@ -274,7 +275,7 @@ public class HRegion implements HeapSize {
   final long memstoreFlushSize;
   // The maximum size a column family's memstore can grow up to,
   // before being flushed.
-  final long columnfamilyMemstoreFlushSize;
+  volatile long columnfamilyMemstoreFlushSize;
   // Last flush time for each Store. Useful when we are flushing for each column
   private Map<Store, Long> lastStoreFlushTimeMap
     = new ConcurrentHashMap<Store, Long>();
@@ -534,15 +535,30 @@ public class HRegion implements HeapSize {
     }
     this.disableWAL = regionInfo.getTableDesc().isWALDisabled();
     this.memstoreFlushSize = flushSize;
-    this.columnfamilyMemstoreFlushSize = conf.getLong(
-            HConstants.HREGION_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE,
-            HTableDescriptor.DEFAULT_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE);
     this.blockingMemStoreSize = (long)(this.memstoreFlushSize *
       conf.getFloat(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 2));
     this.waitOnMemstoreBlock =
         conf.getBoolean(HConstants.HREGION_MEMSTORE_WAIT_ON_BLOCK, true);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
+    // initialize dynamic parameters with current configuration
+    this.loadDynamicConf(conf);
+  }
 
+  @Override
+  public void notifyOnChange(Configuration conf) {
+    LOG.info("Online configuration changed!");
+    this.loadDynamicConf(conf);
+  }
+  /**
+   * Load online configurable parameters from a specified Configuration
+   */
+  private void loadDynamicConf(Configuration conf) {
+    this.columnfamilyMemstoreFlushSize = conf.getLong(
+        HConstants.HREGION_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE,
+        HTableDescriptor.DEFAULT_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE);
+
+    LOG.info(String.format("columnfamilyMemstoreFlushSize is set to %d",
+        this.columnfamilyMemstoreFlushSize));
   }
 
   /**
@@ -563,6 +579,8 @@ public class HRegion implements HeapSize {
    */
   public long initialize(final Progressable reporter)
   throws IOException {
+    HRegionServer.configurationManager.registerObserver(this);
+
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Initializing region " + this);
     try {
@@ -813,6 +831,8 @@ public class HRegion implements HeapSize {
    * @throws IOException e
    */
   public List<StoreFile> close(final boolean abort) throws IOException {
+    HRegionServer.configurationManager.deregisterObserver(this);
+
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Closing region " + this + (abort ? " due to abort" : ""));
     if (isClosed()) {
@@ -4094,5 +4114,4 @@ public class HRegion implements HeapSize {
       s.updateConfiguration();
     }
   }
-
 }
