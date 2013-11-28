@@ -58,6 +58,8 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
+import org.apache.hadoop.hbase.io.hfile.histogram.UniformSplitHFileHistogram;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilter;
@@ -215,6 +217,8 @@ public class StoreFile extends SchemaConfigured {
 
   // the last modification time stamp
   private long modificationTimeStamp = 0L;
+
+  private HFileHistogram histogram = null;
 
   /**
    * Constructor, loads a reader and it's indices, etc. May allocate a
@@ -1146,6 +1150,15 @@ public class StoreFile extends SchemaConfigured {
       includeInTimeRangeTracker(kv);
     }
 
+    /**
+     * Appends HFileHistogram to the HFile. This function is to be called only
+     * once with the Histogram that is constructed after compaction.
+     */
+    public void appendHFileHistogram(HFileHistogram histogram) {
+      writer.appendMetaBlock(HFile.HFILEHISTOGRAM_METABLOCK,
+          histogram.serialize());
+    }
+
     public Path getPath() {
       return this.writer.getPath();
     }
@@ -1830,6 +1843,17 @@ public class StoreFile extends SchemaConfigured {
           return sf.getReader().length();
         }
       });
+  }
+
+  public HFileHistogram getHistogram() throws IOException {
+    if (histogram != null) return histogram;
+    ByteBuffer buf = this.reader.reader.getMetaBlock(
+        HFile.HFILEHISTOGRAM_METABLOCK, false);
+    histogram = new UniformSplitHFileHistogram(
+        this.conf.getInt(HFileHistogram.HFILEHISTOGRAM_BINCOUNT,
+            HFileHistogram.DEFAULT_HFILEHISTOGRAM_BINCOUNT));
+    histogram = histogram.deserialize(buf);
+    return histogram;
   }
 
 }

@@ -27,7 +27,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -391,6 +390,8 @@ public class HFile {
 
   /** The configuration key for HFile version to use for new files */
   public static final String FORMAT_VERSION_KEY = "hfile.format.version";
+
+  public static final String HFILEHISTOGRAM_METABLOCK = "hfile.histogram.metaentry";
 
   public static int getFormatVersion(Configuration conf) {
     int version = conf.getInt(FORMAT_VERSION_KEY, MAX_FORMAT_VERSION);

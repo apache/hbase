@@ -114,6 +114,7 @@ import org.apache.hadoop.hbase.io.hfile.L2BucketCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.PreloadThreadPool;
+import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
@@ -3813,6 +3814,21 @@ public class HRegionServer implements HRegionInterface,
       return s.getResponseQueueSize();
     }
     return 0;
+  }
+
+  @Override
+  public List<Bucket> getHistogram(byte[] regionName) throws IOException {
+    checkOpen();
+    HRegion region = getRegion(regionName);
+    return region.getHistogram().getUniformBuckets();
+  }
+
+  @Override
+  public List<Bucket> getHistogramForStore(byte[] regionName, byte[] family)
+      throws IOException {
+    checkOpen();
+    HRegion region = getRegion(regionName);
+    return region.getStore(family).getHistogram().getUniformBuckets();
   }
 }
     boolean origProfiling = enableServerSideProfilingForAllCalls.get();

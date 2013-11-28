@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.L2Cache;
+import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -4033,6 +4034,15 @@ public class HRegion implements HeapSize {
     }
   };
 
+  public HFileHistogram getHistogram() throws IOException {
+    List<HFileHistogram> histograms = new ArrayList<HFileHistogram>();
+    if (stores.size() == 0) return null;
+    for (Store s : stores.values()) {
+      histograms.add(s.getHistogram());
+    }
+    HFileHistogram h = histograms.get(0).compose(histograms);
+    return h;
+  }
 
   /**
    * Facility for dumping and compacting catalog tables.

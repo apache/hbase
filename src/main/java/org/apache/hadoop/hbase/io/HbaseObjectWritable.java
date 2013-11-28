@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
@@ -216,6 +217,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
 
     addToMap(MultiAction.class, code++);
     addToMap(MultiResponse.class, code++);
+    addToMap(HFileHistogram.Bucket.class, code++);
   }
 
   private Class<?> declaredClass;

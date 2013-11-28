@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.io.MapWritable;
@@ -435,4 +436,24 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    *
    */
   public void setHDFSQuorumReadTimeoutMillis(long timeoutMillis);
+
+  /**
+   * Returns the list of buckets which represent the uniform depth histogram
+   * for a given region.
+   * @param regionName
+   * @return
+   * @throws IOException
+   */
+  public List<Bucket> getHistogram(byte[] regionName) throws IOException;
+
+  /**
+   * Returns the list of buckets which represent the uniform depth histogram
+   * for a given store.
+   * @param regionName
+   * @param family
+   * @return
+   * @throws IOException
+   */
+  public List<Bucket> getHistogramForStore(byte[] regionName, byte[] family)
+      throws IOException;
 }

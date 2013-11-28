@@ -1102,9 +1102,22 @@ public class Bytes {
    * @return Value in <code>a</code> plus <code>length</code> appended 0 bytes
    */
   public static byte [] padTail(final byte [] a, final int length) {
+    return appendToTail(a, length, (byte)0);
+  }
+
+  /**
+   * Appends length bytes to the end of the array and returns the new array
+   * Fills byte b in the newly allocated space in the byte[].
+   * @param a array
+   * @param length new array size
+   * @param b byte to write to the tail.
+   * @return Value in <code>a</code> plus <code>length</code> appended 0 bytes
+   */
+  public static byte [] appendToTail(final byte [] a, final int length, byte b)
+  {
     byte [] padding = new byte[length];
     for (int i = 0; i < length; i++) {
-      padding[i] = 0;
+      padding[i] = b;
     }
     return add(a,padding);
   }
@@ -1476,5 +1489,11 @@ public class Bytes {
    */
   public static boolean isNonEmpty(ByteBuffer b) {
     return b != null && b.remaining() > 0;
+  }
+
+  public static byte[] copyOfByteArray(byte[] arr) {
+    byte[] tmp = new byte[arr.length];
+    System.arraycopy(arr, 0, tmp, 0, arr.length);
+    return tmp;
   }
 }

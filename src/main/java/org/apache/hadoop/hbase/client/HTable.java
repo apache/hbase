@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.PreloadThreadPool;
+import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1489,5 +1490,54 @@ public class HTable implements HTableInterface {
    */
   public void endBatchedLoad() throws IOException {
     connection.endBatchedLoad(tableName, this.options);
+  }
+
+  /**
+   * Returns the List of buckets which represent the histogram for the region
+   * the row belongs to.
+   * Some notes regarding the buckets :
+   * The Bucket boundaries may not align with the boundaries of the Region.
+   * The Bucket Boundaries will look as follows :
+   * [0x00,0x00, ... 0x00] -> [some byte array] -> ... -> [some byte array]
+   * -> [0xff, 0xff, ... 0xff]
+   *
+   * @param row
+   * @return will be either null or at least will contain
+   * one element
+   * @throws IOException
+   */
+  public List<Bucket> getHistogram(final byte[] row) throws IOException {
+    return this.getConnectionAndResetOperationContext()
+        .getRegionServerWithRetries(
+        new ServerCallable<List<Bucket>>(connection,
+            tableName, row, this.options) {
+          public List<Bucket> call() throws IOException {
+            return server.getHistogram(
+                location.getRegionInfo().getRegionName());
+          }
+        }
+    );
+  }
+
+  /**
+   * Returns the List of buckets which represent the histogram for the column
+   * family in the region the row belongs to.
+   * Also see {@link #getHistogram(byte[])}
+   * @param row
+   * @return
+   * @throws IOException
+   */
+  public List<Bucket> getHistogramForColumnFamily(final byte[] row,
+      final byte[] cf) throws IOException {
+    return this.getConnectionAndResetOperationContext()
+        .getRegionServerWithRetries(
+            new ServerCallable<List<Bucket>>(connection,
+                tableName, row, this.options) {
+              public List<Bucket> call() throws IOException {
+                return server.getHistogramForStore(
+                    location.getRegionInfo().getRegionName(), cf);
+              }
+        }
+    );
   }
 }

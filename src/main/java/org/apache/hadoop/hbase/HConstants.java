@@ -900,6 +900,8 @@ public final class HConstants {
 
   public static final String CLIENT_SIDE_SCAN = "hbase.client.side.scan";
   public static final boolean DEFAULT_CLIENT_SIDE_SCAN = false;
+  public static final String USE_HFILEHISTOGRAM = "hbase.client.hfilehistogram.enabled";
+  public static final boolean DEFAULT_USE_HFILEHISTOGRAM = true;
 
   private HConstants() {
     // Can't be instantiated with this constructor.

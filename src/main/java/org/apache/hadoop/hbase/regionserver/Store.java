@@ -62,6 +62,8 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
+import org.apache.hadoop.hbase.io.hfile.histogram.UniformSplitHFileHistogram;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.compactionhook.CompactionHook;
@@ -162,6 +164,7 @@ public class Store extends SchemaConfigured implements HeapSize,
   private CompactionHook compactHook = null;
 
   private final HRegionInfo info;
+  private boolean writeHFileHistogram = false;
 
   // This should account for the Store's non static variables. So, when there
   // is an addition to the member variables to Store, this value should be
@@ -274,6 +277,9 @@ public class Store extends SchemaConfigured implements HeapSize,
       Store.closeCheckInterval = conf.getInt(
           "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
     }
+
+    writeHFileHistogram  = conf.getBoolean(HConstants.USE_HFILEHISTOGRAM,
+        HConstants.DEFAULT_USE_HFILEHISTOGRAM);
   }
   /**
    * Constructor
@@ -762,7 +768,9 @@ public class Store extends SchemaConfigured implements HeapSize,
         this.region.getSmallestReadPoint(),
         Long.MIN_VALUE, getAggregator(),
         flashBackQueryLimit); // include all deletes
-
+    HFileHistogram hist = new UniformSplitHFileHistogram(
+        this.conf.getInt(HFileHistogram.HFILEHISTOGRAM_BINCOUNT,
+            HFileHistogram.DEFAULT_HFILEHISTOGRAM_BINCOUNT));
     String fileName;
     try {
       // TODO:  We can fail in the below block before we complete adding this
@@ -776,12 +784,20 @@ public class Store extends SchemaConfigured implements HeapSize,
         writer.setTimeRangeTracker(snapshotTimeRangeTracker);
         fileName = writer.getPath().getName();
         try {
+          byte[] lastRow = new byte[0];
           final List<KeyValue> kvs = new ArrayList<KeyValue>();
           boolean hasMore;
           do {
             hasMore = scanner.next(kvs);
             if (!kvs.isEmpty()) {
               for (KeyValue kv : kvs) {
+                if (writeHFileHistogram) {
+                  byte[] thisRow = kv.getRow();
+                  if (!Bytes.equals(lastRow, thisRow)) {
+                    hist.add(kv);
+                  }
+                  lastRow = thisRow;
+                }
                 // If we know that this KV is going to be included always, then let us
                 // set its memstoreTS to 0. This will help us save space when writing to disk.
                 if (kv.getMemstoreTS() <= smallestReadPoint) {
@@ -802,6 +818,9 @@ public class Store extends SchemaConfigured implements HeapSize,
           // hfile.  The hfile is current up to and including logCacheFlushId.
           status.setStatus("Flushing " + this + ": appending metadata");
           writer.appendMetadata(EnvironmentEdgeManager.currentTimeMillis(), logCacheFlushId, false);
+          if (writeHFileHistogram) {
+            writer.appendHFileHistogram(hist);
+          }
           status.setStatus("Flushing " + this + ": closing flushed file");
           writer.close();
           InjectionHandler.processEventIO(InjectionEvent.STOREFILE_AFTER_WRITE_CLOSE, writer.getPath());
@@ -1331,6 +1350,9 @@ public class Store extends SchemaConfigured implements HeapSize,
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = region.getSmallestReadPoint();
     MultiVersionConsistencyControl.setThreadReadPoint(smallestReadPoint);
+    HFileHistogram hist = new UniformSplitHFileHistogram(
+        this.conf.getInt(HFileHistogram.HFILEHISTOGRAM_BINCOUNT,
+            HFileHistogram.DEFAULT_HFILEHISTOGRAM_BINCOUNT));
     try {
       InternalScanner scanner = null;
       try {
@@ -1356,6 +1378,7 @@ public class Store extends SchemaConfigured implements HeapSize,
         }
         KeyValueContext kvContext = new KeyValueContext();
 
+        byte[] lastRow = new byte[0];
         do {
           hasMore = scanner.next(kvs, 1, kvContext);
           if (!kvs.isEmpty()) {
@@ -1364,6 +1387,13 @@ public class Store extends SchemaConfigured implements HeapSize,
             }
             // output to writer:
             for (KeyValue kv : kvs) {
+              if (writeHFileHistogram) {
+                byte[] thisRow = kv.getRow();
+                if (!Bytes.equals(lastRow, thisRow)) {
+                  hist.add(kv);
+                }
+                lastRow = thisRow;
+              }
               if (kv.getMemstoreTS() <= smallestReadPoint) {
                 kv.setMemstoreTS(0);
               }
@@ -1411,10 +1441,27 @@ public class Store extends SchemaConfigured implements HeapSize,
           minFlushTime = HConstants.NO_MIN_FLUSH_TIME;
         }
         writer.appendMetadata(minFlushTime, maxCompactingSequcenceId, majorCompaction);
+        if (writeHFileHistogram) {
+          writer.appendHFileHistogram(hist);
+        }
         writer.close();
       }
     }
     return writer;
+  }
+
+  private HFileHistogram hist = null;
+  public HFileHistogram getHistogram() throws IOException {
+    if (hist != null) return hist;
+    List<HFileHistogram> histograms = new ArrayList<HFileHistogram>();
+    if (storefiles.size() == 0) return null;
+    for (StoreFile file : this.storefiles) {
+      HFileHistogram hist = file.getHistogram();
+      if (hist != null) histograms.add(hist);
+    }
+    HFileHistogram h = histograms.get(0).compose(histograms);
+    this.hist = h;
+    return hist;
   }
 
   /**
