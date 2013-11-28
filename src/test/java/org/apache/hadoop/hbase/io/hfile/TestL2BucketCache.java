@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.ClientConfigurationUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,9 +45,7 @@ import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Tests L2 bucket cache for correctness
@@ -108,7 +107,6 @@ public class TestL2BucketCache {
         CacheConfig.DEFAULT_L2_BUCKET_CACHE_BUCKET_SIZES,
         conf);
     mockedL2Cache = new MockedL2Cache(underlyingCache);
-
 
     fs = FileSystem.get(conf);
     cacheConf = new CacheConfig.CacheConfigBuilder(conf)
@@ -192,6 +190,42 @@ public class TestL2BucketCache {
     assertTrue("This test must have read > 0 blocks", offset > 0);
   }
 
+  @Test
+  public void testOnlinePolicyChanges() {
+    boolean oldL2CacheDataOnWrite = cacheConf.shouldL2CacheDataOnWrite();
+    boolean oldL2EvictOnPromotion = cacheConf.shouldL2EvictOnPromotion();
+    boolean oldL2EvictOnClose = cacheConf.shouldL2EvictOnClose();
+
+    Configuration newConf = new Configuration(conf);
+    newConf.setBoolean(CacheConfig.L2_CACHE_BLOCKS_ON_FLUSH_KEY,
+            !oldL2CacheDataOnWrite);
+    newConf.setBoolean(CacheConfig.L2_EVICT_ON_PROMOTION_KEY,
+            !oldL2EvictOnPromotion);
+    newConf.setBoolean(CacheConfig.L2_EVICT_ON_CLOSE_KEY,
+            !oldL2EvictOnClose);
+    cacheConf.notifyOnChange(newConf);
+
+    assertNotSame("L2 caching on flush should be negated",
+            oldL2CacheDataOnWrite,
+            cacheConf.shouldL2CacheDataOnWrite());
+    assertNotSame("L2 eviction on promotion should be negated",
+            oldL2EvictOnPromotion,
+            cacheConf.shouldL2EvictOnPromotion());
+    assertNotSame("L2 eviction on close should be negated",
+            oldL2EvictOnClose,
+            cacheConf.shouldL2EvictOnClose());
+  }
+
+  @Test
+  public void testOnlineCacheDisable() {
+    Configuration newConf = new Configuration(conf);
+    newConf.setFloat(CacheConfig.L2_BUCKET_CACHE_SIZE_KEY, 0F);
+
+    assertTrue(cacheConf.isL2CacheEnabled());
+    cacheConf.notifyOnChange(newConf);
+    assertFalse(cacheConf.isL2CacheEnabled());
+  }
+
   private void writeStoreFile() throws IOException {
     Path storeFileParentDir = new Path(TEST_UTIL.getTestDir(),
         "test_cache_on_write");
@@ -261,6 +295,11 @@ public class TestL2BucketCache {
     @Override
     public int evictBlocksByHfileName(String hfileName) {
       return underlying.evictBlocksByHfileName(hfileName);
+    }
+
+    @Override
+    public boolean isShutdown() {
+      return underlying.isShutdown();
     }
 
     @Override

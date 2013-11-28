@@ -53,6 +53,11 @@ public interface L2Cache {
   public int evictBlocksByHfileName(String hfileName);
 
   /**
+   * @return true if the cache has been shutdown
+   */
+  public boolean isShutdown();
+
+  /**
    * Shutdown the cache
    */
   public void shutdown();

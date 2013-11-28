@@ -77,6 +77,11 @@ public class L2BucketCache implements L2Cache {
   }
 
   @Override
+  public boolean isShutdown() {
+    return !bucketCache.isEnabled();
+  }
+
+  @Override
   public void shutdown() {
     bucketCache.shutdown();
   }

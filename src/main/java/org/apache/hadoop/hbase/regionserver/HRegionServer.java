@@ -446,6 +446,7 @@ public class HRegionServer implements HRegionInterface,
     reinitialize();
     SchemaMetrics.configureGlobally(conf);
     cacheConfig = new CacheConfig(conf);
+    configurationManager.registerObserver(cacheConfig);
 
     minCheckFSIntervalMillis =
         conf.getInt("hbase.regionserver.min.check.fs.interval", 30000);

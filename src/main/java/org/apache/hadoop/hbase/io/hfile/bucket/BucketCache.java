@@ -772,6 +772,7 @@ public class BucketCache implements HeapSize {
       writerThreads[i].interrupt();
     this.ramCache.clear();
     this.backingMap.clear();
+    this.cacheStats.reset();
   }
 
   private void join() throws InterruptedException {
@@ -794,6 +795,10 @@ public class BucketCache implements HeapSize {
 
   public long heapSize() {
     return this.heapSize.get();
+  }
+
+  public boolean isEnabled() {
+    return cacheEnabled;
   }
 
   /**

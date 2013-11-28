@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.IOEngine;
 import org.apache.hadoop.hbase.util.Strings;
@@ -28,7 +29,7 @@ import java.util.Arrays;
 /**
  * Stores all of the cache objects and configuration for a single HFile.
  */
-public class CacheConfig {
+public class CacheConfig implements ConfigurationObserver {
   private static final Log LOG = LogFactory.getLog(CacheConfig.class.getName());
 
   /**
@@ -221,20 +222,23 @@ public class CacheConfig {
   /** Threshold for caching hot data blocks during compaction */
   private final float cacheOnCompactionThreshold;
 
+  /** Size of the L2 cache */
+  private volatile float l2CacheSize;
+
   /** Whether to cache all blocks on write in the L2 cache */
-  private final boolean l2CacheDataOnWrite;
+  private volatile boolean l2CacheDataOnWrite;
 
   /**
    * TODO (avf): once implemented, whether to evict blocks from the L2
    *             cache once they have been cached in the L1 cache
    */
-  private final boolean l2EvictOnPromotion;
+  private volatile boolean l2EvictOnPromotion;
 
   /**
    * Whether blocks of a file should be evicted from the L2 cache when the file
    * is closed.
    */
-  private final boolean l2EvictOnClose;
+  private volatile boolean l2EvictOnClose;
 
   /**
    * Parses a comma separated list of bucket sizes and returns a list of
@@ -284,6 +288,7 @@ public class CacheConfig {
                 DEFAULT_CACHE_DATA_BLOCKS_ON_COMPACTION),
             conf.getFloat(CACHE_DATA_BLOCKS_ON_COMPACTION_THRESHOLD,
                 DEFAULT_CACHE_DATA_BLOCKS_ON_COMPACTION_THRESHOLD),
+        conf.getFloat(L2_BUCKET_CACHE_SIZE_KEY, 0F),
         conf.getBoolean(L2_CACHE_BLOCKS_ON_FLUSH_KEY,
             DEFAULT_L2_CACHE_BLOCKS_ON_FLUSH),
         conf.getBoolean(L2_EVICT_ON_PROMOTION_KEY, DEFAULT_L2_EVICT_ON_PROMOTION),
@@ -297,21 +302,26 @@ public class CacheConfig {
    * @param blockCache reference to block cache, null if completely disabled
    * @param cacheDataOnRead whether data blocks should be cached on read
    * @param inMemory whether blocks should be flagged as in-memory
-   * @param cacheDataOnWrite whether data blocks should be cached on write
+   * @param cacheDataOnFlush whether data blocks should be cached on write
    * @param cacheIndexesOnWrite whether index blocks should be cached on write
-   * @param cacheBloomsOnFlush whether blooms should be cached on write
+   * @param cacheBloomsOnWrite whether blooms should be cached on write
    * @param evictOnClose whether blocks should be evicted when HFile is closed
    * @param cacheCompressed whether to store blocks as compressed in the cache
    * @param cacheOnCompaction whether to cache blocks during compaction
    * @param cacheOnCompactionThreshold threshold used of caching of blocks during compaction
+   * @param l2CacheSize size of the L2 cache
+   * @param l2CacheDataOnWrite whether blocks should be cached on write
+   * @param l2EvictOnPromotion whether blocks should be evicted from L2 upon promotion
+   * @param l2EvictOnClose whether blocks should be evicted from L2 when HFile is closed
    */
   CacheConfig(final BlockCache blockCache, final L2Cache l2Cache,
       final boolean cacheDataOnRead, final boolean inMemory,
       final boolean cacheDataOnFlush, final boolean cacheIndexesOnWrite,
       final boolean cacheBloomsOnWrite, final boolean evictOnClose,
       final boolean cacheCompressed, final boolean cacheOnCompaction,
-      final float cacheOnCompactionThreshold, final boolean l2CacheDataOnWrite,
-      final boolean l2EvictOnPromotion, final boolean l2EvictOnClose) {
+      final float cacheOnCompactionThreshold, final float l2CacheSize,
+      final boolean l2CacheDataOnWrite, final boolean l2EvictOnPromotion,
+      final boolean l2EvictOnClose) {
     this.blockCache = blockCache;
     this.l2Cache = l2Cache;
     this.cacheDataOnRead = cacheDataOnRead;
@@ -323,6 +333,7 @@ public class CacheConfig {
     this.cacheCompressed = cacheCompressed;
     this.cacheOnCompaction = cacheOnCompaction;
     this.cacheOnCompactionThreshold = cacheOnCompactionThreshold;
+    this.l2CacheSize = l2CacheSize;
     this.l2CacheDataOnWrite = l2CacheDataOnWrite;
     this.l2EvictOnPromotion = l2EvictOnPromotion;
     this.l2EvictOnClose = l2EvictOnClose;
@@ -338,8 +349,9 @@ public class CacheConfig {
         cacheConf.cacheDataOnFlush, cacheConf.cacheIndexesOnWrite,
         cacheConf.cacheBloomsOnWrite, cacheConf.evictOnClose,
         cacheConf.cacheCompressed, cacheConf.cacheOnCompaction,
-        cacheConf.cacheOnCompactionThreshold, cacheConf.l2CacheDataOnWrite,
-        cacheConf.l2EvictOnPromotion, cacheConf.l2EvictOnClose);
+        cacheConf.cacheOnCompactionThreshold, cacheConf.l2CacheSize,
+        cacheConf.l2CacheDataOnWrite, cacheConf.l2EvictOnPromotion,
+        cacheConf.l2EvictOnClose);
   }
 
   /**
@@ -395,7 +407,7 @@ public class CacheConfig {
 
   /**
    * Only used for testing.
-   * @param cacheDataOnWrite whether data blocks should be written to the cache
+   * @param cacheDataOnFlush whether data blocks should be written to the cache
    *                         when an HFile is written
    */
   public void setCacheDataOnFlush(boolean cacheDataOnFlush) {
@@ -458,6 +470,18 @@ public class CacheConfig {
     return cacheOnCompactionThreshold;
   }
 
+  public void setL2CacheDataOnWrite(final boolean l2CacheDataOnWrite) {
+    this.l2CacheDataOnWrite = l2CacheDataOnWrite;
+  }
+
+  public void setL2EvictOnPromotion(final boolean l2EvictOnPromotion) {
+    this.l2EvictOnPromotion = l2EvictOnPromotion;
+  }
+
+  public void setL2EvictOnClose(final boolean l2EvictOnClose) {
+    this.l2EvictOnClose = l2EvictOnClose;
+  }
+
   public boolean shouldL2CacheDataOnWrite() {
     return l2CacheDataOnWrite;
   }
@@ -502,11 +526,16 @@ public class CacheConfig {
   }
 
   public boolean isL2CacheEnabled() {
-    return l2Cache != null;
+    return l2Cache != null && !l2Cache.isShutdown();
   }
 
   public L2Cache getL2Cache() {
     return l2Cache;
+  }
+
+  @Override
+  public void notifyOnChange(Configuration conf) {
+    new CacheConfigBuilder(conf).update(this);
   }
 
   /**
@@ -529,6 +558,7 @@ public class CacheConfig {
     private boolean cacheCompressed;
     private boolean cacheOnCompaction;
     private float cacheOnCompactionThreshold;
+    private float l2CacheSize;
     private boolean l2CacheDataOnWrite;
     private boolean l2EvictOnPromotion;
     private boolean l2EvictOnClose;
@@ -579,6 +609,7 @@ public class CacheConfig {
       cacheOnCompactionThreshold = conf.getFloat(
           CACHE_DATA_BLOCKS_ON_COMPACTION_THRESHOLD,
           DEFAULT_CACHE_DATA_BLOCKS_ON_COMPACTION_THRESHOLD);
+      l2CacheSize = conf.getFloat(L2_BUCKET_CACHE_SIZE_KEY, 0F);
       l2CacheDataOnWrite = conf.getBoolean(
           L2_CACHE_BLOCKS_ON_FLUSH_KEY, DEFAULT_L2_CACHE_BLOCKS_ON_FLUSH);
       l2EvictOnPromotion = conf.getBoolean(
@@ -678,8 +709,34 @@ public class CacheConfig {
           cacheDataOnFlush, cacheIndexesOnWrite,
           cacheBloomsOnWrite, evictOnClose,
           cacheCompressed, cacheOnCompaction,
-          cacheOnCompactionThreshold, l2CacheDataOnWrite,
-          l2EvictOnPromotion, l2EvictOnClose);
+          cacheOnCompactionThreshold, l2CacheSize,
+          l2CacheDataOnWrite, l2EvictOnPromotion,
+          l2EvictOnClose);
+    }
+
+    public CacheConfig update(CacheConfig cacheConf) {
+      if (l2CacheDataOnWrite != cacheConf.shouldL2CacheDataOnWrite()) {
+        LOG.info("Updating " + CacheConfig.L2_CACHE_BLOCKS_ON_FLUSH_KEY +
+                " from " + cacheConf.shouldL2CacheDataOnWrite() + " to " +
+                l2CacheDataOnWrite);
+        cacheConf.setL2CacheDataOnWrite(l2CacheDataOnWrite);
+      }
+      if (l2EvictOnPromotion != cacheConf.shouldL2EvictOnPromotion()) {
+        LOG.info("Updating " + CacheConfig.L2_EVICT_ON_PROMOTION_KEY +
+                " from " + cacheConf.shouldL2EvictOnPromotion() + " to " +
+                l2EvictOnPromotion);
+        cacheConf.setL2EvictOnPromotion(l2EvictOnPromotion);
+      }
+      if (l2EvictOnClose != cacheConf.shouldL2EvictOnClose()) {
+        LOG.info("Updating " + CacheConfig.L2_EVICT_ON_CLOSE_KEY + " from " +
+                cacheConf.shouldL2EvictOnClose() + " to " + l2EvictOnClose);
+        cacheConf.setL2EvictOnClose(l2EvictOnClose);
+      }
+      if (l2CacheSize == 0F && cacheConf.isL2CacheEnabled()) {
+        cacheConf.getL2Cache().shutdown();
+        LOG.info("L2 cache disabled");
+      }
+      return cacheConf;
     }
   }
 }
