@@ -348,6 +348,12 @@ public class TestVisibilityLabels {
       } catch (InterruptedException e) {
       }
     }
+    while (regionServer.getOnlineRegions(LABELS_TABLE_NAME).isEmpty()) {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+      }
+    }
     HTable table = createTableAndWriteDataWithLabels(tableName, "(" + SECRET + "|" + CONFIDENTIAL
         + ")", PRIVATE);
     try {
@@ -379,6 +385,13 @@ public class TestVisibilityLabels {
       } catch (InterruptedException e) {
       }
     }
+    while (regionServer.getOnlineRegions(LABELS_TABLE_NAME).isEmpty()) {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+      }
+    }
+
     String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, "ABC", "XYZ" };
     try {
       VisibilityClient.addLabels(conf, labels);

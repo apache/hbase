@@ -1078,8 +1078,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     done.run(response.build());
   }
 
-  private void performACLCheck()
-      throws IOException {
+  private void performACLCheck() throws IOException {
     // Do ACL check only when the security is enabled.
     if (this.acOn && !isSystemOrSuperUser()) {
       User user = getActiveUser();
@@ -1166,33 +1165,41 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     byte[] user = request.getUser().toByteArray();
     GetAuthsResponse.Builder response = GetAuthsResponse.newBuilder();
     response.setUser(request.getUser());
-
-    Scan s = new Scan();
-    s.addColumn(LABELS_TABLE_FAMILY, user);
-    Filter filter = createVisibilityLabelFilter(this.regionEnv.getRegion(), new Authorizations(
-        SYSTEM_LABEL));
-    s.setFilter(filter);
     try {
-      // We do ACL check here as we create scanner directly on region. It will not make calls to
-      // AccessController CP methods.
-      performACLCheck();
-      RegionScanner scanner = this.regionEnv.getRegion().getScanner(s);
-      List<Cell> results = new ArrayList<Cell>(1);
-      while (true) {
-        scanner.next(results);
-        if (results.isEmpty()) break;
-        Cell cell = results.get(0);
-        int ordinal = Bytes.toInt(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-        String label = this.visibilityManager.getLabel(ordinal);
-        if (label != null) {
-          response.addAuth(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(label)));
-        }
-        results.clear();
+      List<String> labels = getUserAuthsFromLablesTable(user);
+      for (String label : labels) {
+        response.addAuth(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(label)));
       }
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
     }
     done.run(response.build());
+  }
+
+  private List<String> getUserAuthsFromLablesTable(byte[] user) throws IOException {
+    Scan s = new Scan();
+    s.addColumn(LABELS_TABLE_FAMILY, user);
+    Filter filter = createVisibilityLabelFilter(this.regionEnv.getRegion(), new Authorizations(
+        SYSTEM_LABEL));
+    s.setFilter(filter);
+    List<String> auths = new ArrayList<String>();
+    // We do ACL check here as we create scanner directly on region. It will not make calls to
+    // AccessController CP methods.
+    performACLCheck();
+    RegionScanner scanner = this.regionEnv.getRegion().getScanner(s);
+    List<Cell> results = new ArrayList<Cell>(1);
+    while (true) {
+      scanner.next(results);
+      if (results.isEmpty()) break;
+      Cell cell = results.get(0);
+      int ordinal = Bytes.toInt(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+      String label = this.visibilityManager.getLabel(ordinal);
+      if (label != null) {
+        auths.add(label);
+      }
+      results.clear();
+    }
+    return auths;
   }
 
   @Override
@@ -1203,7 +1210,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     byte[] user = request.getUser().toByteArray();
     try {
       checkCallingUserAuth();
-      List<String> currentAuths = this.visibilityManager.getAuths(Bytes.toString(user));
+      List<String> currentAuths = this.getUserAuthsFromLablesTable(user);
       List<Mutation> deletes = new ArrayList<Mutation>(auths.size());
       RegionActionResult successResult = RegionActionResult.newBuilder().build();
       for (ByteString authBS : auths) {
