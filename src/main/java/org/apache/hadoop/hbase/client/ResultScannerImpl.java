@@ -116,20 +116,21 @@ public abstract class ResultScannerImpl implements ResultScanner {
       CLIENT_LOG.debug("Advancing internal scanner to startKey at '" +
         Bytes.toStringBinary(localStartKey) + "'");
     }
-    return doRealOpenScanners(localStartKey);
+    return doRealOpenScanners(localStartKey, nbRows);
   }
 
   /**
    * This function is intended clean up the previous scanners before opening
    * a new scanner.
+   * @throws IOException
    */
-  protected abstract void cleanUpPreviousScanners();
+  protected abstract void cleanUpPreviousScanners() throws IOException;
 
   /**
    * Opens the scanners once the start key and current region is identified
    */
-  protected abstract boolean doRealOpenScanners(byte[] localStartKey)
-  throws IOException;
+  protected abstract boolean doRealOpenScanners(byte[] localStartKey,
+      int nbRows) throws IOException;
 
   @Override
   public Result next() throws IOException {

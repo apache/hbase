@@ -166,7 +166,7 @@ public class ClientLocalScanner extends ResultScannerImpl {
    * @throws IOException
    * @throws Exception
    */
-  protected boolean doRealOpenScanners(byte[] localStartKey)
+  protected boolean doRealOpenScanners(byte[] localStartKey, int nbRows)
       throws IOException {
     try {
       this.currentRegion =
