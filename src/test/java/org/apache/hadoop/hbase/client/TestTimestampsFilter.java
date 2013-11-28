@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -416,6 +417,9 @@ public class TestTimestampsFilter {
     byte[] FAMILY = Bytes.toBytes("fam");
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, Integer.MAX_VALUE);
     byte[] ROW = Bytes.toBytes("row");
+    // This test assumes that the regionserver will not use
+    // SEEK_NEXT_USING_HINT
+    HRegionServer.useSeekNextUsingHint = false;
 
     // Do 3 puts
     for (int i = 0; i < 3; i++) {
