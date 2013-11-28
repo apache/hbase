@@ -55,6 +55,8 @@ import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.HRegionInfo
 import org.apache.hadoop.hbase.client.MetaScanner
+import org.apache.hadoop.hbase.HTableDescriptor
+import org.apache.hadoop.hbase.client.HConnectionManager
 
 # disable debug logging on this script for clarity
 log_level = org.apache.log4j.Level::ERROR
@@ -98,7 +100,7 @@ table = nil
 iter = nil
 while true
   begin
-    table = HTable.new config, '.META.'.to_java_bytes
+    table = HTable.new config, 'hbase:meta'.to_java_bytes
     scanner = table.getScanner(scan)
     iter = scanner.iterator
     break
@@ -130,13 +132,14 @@ end
 
 # query the master to see how many regions are on region servers
 if not $tablename.nil?
-  $tableq = HTable.new config, $tablename.to_java_bytes
+  $TableName = HTableDescriptor.new($tablename.to_java_bytes).getTableName()
 end
 while true
   if $tablename.nil?
     server_count = admin.getClusterStatus().getRegionsCount()
   else
-    server_count = MetaScanner::allTableRegions(config,$tablename.to_java_bytes,false).size()
+    connection = HConnectionManager::getConnection(config);
+    server_count = MetaScanner::allTableRegions(config, connection, $TableName ,false).size()
   end
   print "Region Status: #{server_count} / #{meta_count}\n"
   if SHOULD_WAIT and server_count < meta_count
