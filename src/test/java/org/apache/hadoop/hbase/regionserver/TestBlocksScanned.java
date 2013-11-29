@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
@@ -39,7 +40,6 @@ import org.junit.experimental.categories.Category;
 @SuppressWarnings("deprecation")
 @Category(SmallTests.class)
 public class TestBlocksScanned extends HBaseTestCase {
-  private static byte [] TABLE = Bytes.toBytes("TestBlocksScanned");
   private static byte [] FAMILY = Bytes.toBytes("family");
   private static byte [] COL = Bytes.toBytes("col");
   private static byte [] START_KEY = Bytes.toBytes("aaa");
@@ -47,34 +47,54 @@ public class TestBlocksScanned extends HBaseTestCase {
   private static int BLOCK_SIZE = 70;
 
   private static HBaseTestingUtility TEST_UTIL = null;
-  private static HTableDescriptor TESTTABLEDESC = null;
 
-   @Override
-   public void setUp() throws Exception {
-     super.setUp();
-     SchemaMetrics.setUseTableNameInTest(true);
-     TEST_UTIL = new HBaseTestingUtility();
-     TESTTABLEDESC = new HTableDescriptor(TABLE);
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
+    SchemaMetrics.setUseTableNameInTest(true);
+    TEST_UTIL = new HBaseTestingUtility();
+  }
 
-     TESTTABLEDESC.addFamily(
-         new HColumnDescriptor(FAMILY)
-         .setMaxVersions(10)
-         .setBlockCacheEnabled(true)
-         .setBlocksize(BLOCK_SIZE)
-         .setCompressionType(Compression.Algorithm.NONE)
-     );
-   }
-
-   @Test
+  @Test
   public void testBlocksScanned() throws Exception {
-    HRegion r = createNewHRegion(TESTTABLEDESC, START_KEY, END_KEY,
+    byte [] tableName = Bytes.toBytes("TestBlocksScanned");
+    HTableDescriptor table = new HTableDescriptor(tableName);
+
+    table.addFamily(
+        new HColumnDescriptor(FAMILY)
+        .setMaxVersions(10)
+        .setBlockCacheEnabled(true)
+        .setBlocksize(BLOCK_SIZE)
+        .setCompressionType(Compression.Algorithm.NONE)
+        );
+    _testBlocksScanned(table);
+  }
+
+  @Test
+  public void testBlocksScannedWithEncoding() throws Exception {
+    byte [] tableName = Bytes.toBytes("TestBlocksScannedWithEncoding");
+    HTableDescriptor table = new HTableDescriptor(tableName);
+
+    table.addFamily(
+        new HColumnDescriptor(FAMILY)
+        .setMaxVersions(10)
+        .setBlockCacheEnabled(true)
+        .setDataBlockEncoding(DataBlockEncoding.FAST_DIFF)
+        .setBlocksize(BLOCK_SIZE)
+        .setCompressionType(Compression.Algorithm.NONE)
+        );
+    _testBlocksScanned(table);
+  }
+
+  private void _testBlocksScanned(HTableDescriptor table) throws Exception {
+    HRegion r = createNewHRegion(table, START_KEY, END_KEY,
         TEST_UTIL.getConfiguration());
     addContent(r, FAMILY, COL);
     r.flushcache();
 
     // Get the per-cf metrics
     SchemaMetrics schemaMetrics =
-      SchemaMetrics.getInstance(Bytes.toString(TABLE), Bytes.toString(FAMILY));
+      SchemaMetrics.getInstance(Bytes.toString(table.getName()), Bytes.toString(FAMILY));
     Map<String, Long> schemaMetricSnapshot = SchemaMetrics.getMetricsSnapshot();
 
     // Do simple test of getting one row only first.
