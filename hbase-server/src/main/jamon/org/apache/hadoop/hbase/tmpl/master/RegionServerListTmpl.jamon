@@ -287,9 +287,9 @@ if  (sl.getTotalCompactingKVs() > 0) {
         </%java>
 
         <%if (infoPort > 0) %>
-            <a href="<% url %>"><% serverName.getHostname() %></a>
+            <a href="<% url %>"><% serverName.getServerName() %></a>
         <%else>
-            <% serverName.getHostname() %>
+            <% serverName.getServerName() %>
         </%if>
 </%def>
 
