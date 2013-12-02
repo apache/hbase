@@ -4239,28 +4239,44 @@ public class TestFromClientSide {
   }
 
   @Test
-  public void testGetClosestRowBefore() throws IOException {
-    final byte [] tableAname = Bytes.toBytes("testGetClosestRowBefore");
-    final byte [] row = Bytes.toBytes("row");
+  public void testGetClosestRowBefore() throws IOException, InterruptedException {
+    final byte[] tableAname = Bytes.toBytes("testGetClosestRowBefore");
+    final byte[] firstRow = Bytes.toBytes("row111");
+    final byte[] secondRow = Bytes.toBytes("row222");
+    final byte[] thirdRow = Bytes.toBytes("row333");
+    final byte[] forthRow = Bytes.toBytes("row444");
+    final byte[] beforeFirstRow = Bytes.toBytes("row");
+    final byte[] beforeSecondRow = Bytes.toBytes("row22");
+    final byte[] beforeThirdRow = Bytes.toBytes("row33");
+    final byte[] beforeForthRow = Bytes.toBytes("row44");
 
+    HTable table =
+        TEST_UTIL.createTable(tableAname,
+          new byte[][] { HConstants.CATALOG_FAMILY, Bytes.toBytes("info2") }, 1, 64);
+    // set block size to 64 to making 2 kvs into one block, bypassing the walkForwardInSingleRow
+    // in Store.rowAtOrBeforeFromStoreFile
+    table.setAutoFlush(true);
+    String regionName = table.getRegionLocations().firstKey().getEncodedName();
+    HRegion region =
+        TEST_UTIL.getRSForFirstRegionInTable(tableAname).getFromOnlineRegions(regionName);
+    Put put1 = new Put(firstRow);
+    Put put2 = new Put(secondRow);
+    Put put3 = new Put(thirdRow);
+    Put put4 = new Put(forthRow);
+    byte[] one = new byte[] { 1 };
+    byte[] two = new byte[] { 2 };
+    byte[] three = new byte[] { 3 };
+    byte[] four = new byte[] { 4 };
 
-    byte[] firstRow = Bytes.toBytes("ro");
-    byte[] beforeFirstRow = Bytes.toBytes("rn");
-    byte[] beforeSecondRow = Bytes.toBytes("rov");
-
-    HTable table = TEST_UTIL.createTable(tableAname,
-      new byte [][] {HConstants.CATALOG_FAMILY, Bytes.toBytes("info2")});
-    Put put = new Put(firstRow);
-    Put put2 = new Put(row);
-    byte[] zero = new byte[]{0};
-    byte[] one = new byte[]{1};
-
-    put.add(HConstants.CATALOG_FAMILY, null, zero);
-    put2.add(HConstants.CATALOG_FAMILY, null, one);
-
-    table.put(put);
+    put1.add(HConstants.CATALOG_FAMILY, null, one);
+    put2.add(HConstants.CATALOG_FAMILY, null, two);
+    put3.add(HConstants.CATALOG_FAMILY, null, three);
+    put4.add(HConstants.CATALOG_FAMILY, null, four);
+    table.put(put1);
     table.put(put2);
-
+    table.put(put3);
+    table.put(put4);
+    region.flushcache();
     Result result = null;
 
     // Test before first that null is returned
@@ -4270,22 +4286,50 @@ public class TestFromClientSide {
     // Test at first that first is returned
     result = table.getRowOrBefore(firstRow, HConstants.CATALOG_FAMILY);
     assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
-    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), zero));
+    assertTrue(Bytes.equals(result.getRow(), firstRow));
+    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
 
     // Test in between first and second that first is returned
     result = table.getRowOrBefore(beforeSecondRow, HConstants.CATALOG_FAMILY);
     assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
-    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), zero));
+    assertTrue(Bytes.equals(result.getRow(), firstRow));
+    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
 
     // Test at second make sure second is returned
-    result = table.getRowOrBefore(row, HConstants.CATALOG_FAMILY);
+    result = table.getRowOrBefore(secondRow, HConstants.CATALOG_FAMILY);
     assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
-    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
+    assertTrue(Bytes.equals(result.getRow(), secondRow));
+    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), two));
 
-    // Test after second, make sure second is returned
-    result = table.getRowOrBefore(Bytes.add(row,one), HConstants.CATALOG_FAMILY);
+    // Test in second and third, make sure second is returned
+    result = table.getRowOrBefore(beforeThirdRow, HConstants.CATALOG_FAMILY);
     assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
-    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
+    assertTrue(Bytes.equals(result.getRow(), secondRow));
+    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), two));
+
+    // Test at third make sure third is returned
+    result = table.getRowOrBefore(thirdRow, HConstants.CATALOG_FAMILY);
+    assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+    assertTrue(Bytes.equals(result.getRow(), thirdRow));
+    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), three));
+
+    // Test in third and forth, make sure third is returned
+    result = table.getRowOrBefore(beforeForthRow, HConstants.CATALOG_FAMILY);
+    assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+    assertTrue(Bytes.equals(result.getRow(), thirdRow));
+    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), three));
+
+    // Test at forth make sure forth is returned
+    result = table.getRowOrBefore(forthRow, HConstants.CATALOG_FAMILY);
+    assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+    assertTrue(Bytes.equals(result.getRow(), forthRow));
+    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), four));
+
+    // Test after forth make sure forth is returned
+    result = table.getRowOrBefore(Bytes.add(forthRow, one), HConstants.CATALOG_FAMILY);
+    assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+    assertTrue(Bytes.equals(result.getRow(), forthRow));
+    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), four));
   }
 
   /**

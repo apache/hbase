@@ -1647,7 +1647,7 @@ public class HStore implements Store {
     if (this.comparator.compareRows(firstKV, firstOnRow) == 0) kv = firstKV;
     int result = scanner.seekTo(kv.getBuffer(), kv.getKeyOffset(),
       kv.getKeyLength());
-    return result >= 0;
+    return result != -1;
   }
 
   /*
