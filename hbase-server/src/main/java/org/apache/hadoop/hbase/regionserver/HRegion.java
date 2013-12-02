@@ -5888,7 +5888,7 @@ public class HRegion implements HeapSize { // , Writable{
    * One thread may acquire multiple locks on the same row simultaneously.
    * The locks must be released by calling release() from the same thread.
    */
-  public class RowLock {
+  public static class RowLock {
     @VisibleForTesting final RowLockContext context;
     private boolean released = false;
 

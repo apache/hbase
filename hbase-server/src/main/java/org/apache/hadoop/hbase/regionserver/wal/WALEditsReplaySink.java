@@ -120,8 +120,9 @@ public class WALEditsReplaySink {
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
     // replaying edits by region
-    for (HRegionInfo curRegion : entriesByRegion.keySet()) {
-      List<HLog.Entry> allActions = entriesByRegion.get(curRegion);
+    for (Map.Entry<HRegionInfo, List<HLog.Entry>> _entry : entriesByRegion.entrySet()) {
+      HRegionInfo curRegion = _entry.getKey();
+      List<HLog.Entry> allActions = _entry.getValue();
       // send edits in chunks
       int totalActions = allActions.size();
       int replayedActions = 0;
