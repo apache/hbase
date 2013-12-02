@@ -2680,26 +2680,34 @@ public class TestFromClientSide {
 
   }
 
-  private void scanTestNull(HTable ht, byte [] row, byte [] family,
-      byte [] value)
-  throws Exception {
+  private void scanTestNull(HTable ht, byte[] row, byte[] family, byte[] value)
+      throws Exception {
+    scanTestNull(ht, row, family, value, false);
+  }
+
+  private void scanTestNull(HTable ht, byte[] row, byte[] family, byte[] value,
+      boolean isReversedScan) throws Exception {
 
     Scan scan = new Scan();
+    scan.setReversed(isReversedScan);
     scan.addColumn(family, null);
     Result result = getSingleScanResult(ht, scan);
     assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
 
     scan = new Scan();
+    scan.setReversed(isReversedScan);
     scan.addColumn(family, HConstants.EMPTY_BYTE_ARRAY);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
 
     scan = new Scan();
+    scan.setReversed(isReversedScan);
     scan.addFamily(family);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
 
     scan = new Scan();
+    scan.setReversed(isReversedScan);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
 
@@ -5270,5 +5278,474 @@ public class TestFromClientSide {
     }
     assertEquals(insertNum, count);
 
+  }
+
+  @Test
+  public void testSuperSimpleWithReverseScan() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testSuperSimpleWithReverseScan");
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    Put put = new Put(Bytes.toBytes("0-b11111-0000000000000000000"));
+    put.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(put);
+    put = new Put(Bytes.toBytes("0-b11111-0000000000000000002"));
+    put.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(put);
+    put = new Put(Bytes.toBytes("0-b11111-0000000000000000004"));
+    put.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(put);
+    put = new Put(Bytes.toBytes("0-b11111-0000000000000000006"));
+    put.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(put);
+    put = new Put(Bytes.toBytes("0-b11111-0000000000000000008"));
+    put.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(put);
+    put = new Put(Bytes.toBytes("0-b22222-0000000000000000001"));
+    put.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(put);
+    put = new Put(Bytes.toBytes("0-b22222-0000000000000000003"));
+    put.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(put);
+    put = new Put(Bytes.toBytes("0-b22222-0000000000000000005"));
+    put.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(put);
+    put = new Put(Bytes.toBytes("0-b22222-0000000000000000007"));
+    put.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(put);
+    put = new Put(Bytes.toBytes("0-b22222-0000000000000000009"));
+    put.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(put);
+    ht.flushCommits();
+    Scan scan = new Scan(Bytes.toBytes("0-b11111-9223372036854775807"),
+        Bytes.toBytes("0-b11111-0000000000000000000"));
+    scan.setReversed(true);
+    ResultScanner scanner = ht.getScanner(scan);
+    Result result = scanner.next();
+    assertTrue(Bytes.equals(result.getRow(),
+        Bytes.toBytes("0-b11111-0000000000000000008")));
+    scanner.close();
+    ht.close();
+  }
+
+  @Test
+  public void testFiltersWithReverseScan() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testFiltersWithReverseScan");
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    byte[][] ROWS = makeN(ROW, 10);
+    byte[][] QUALIFIERS = { Bytes.toBytes("col0-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col1-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col2-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col3-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col4-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col5-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col6-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col7-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col8-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col9-<d2v1>-<d3v2>") };
+    for (int i = 0; i < 10; i++) {
+      Put put = new Put(ROWS[i]);
+      put.add(FAMILY, QUALIFIERS[i], VALUE);
+      ht.put(put);
+    }
+    Scan scan = new Scan();
+    scan.setReversed(true);
+    scan.addFamily(FAMILY);
+    Filter filter = new QualifierFilter(CompareOp.EQUAL,
+        new RegexStringComparator("col[1-5]"));
+    scan.setFilter(filter);
+    ResultScanner scanner = ht.getScanner(scan);
+    int expectedIndex = 5;
+    for (Result result : scanner) {
+      assertEquals(result.size(), 1);
+      assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[expectedIndex]));
+      assertTrue(Bytes.equals(result.raw()[0].getQualifier(),
+          QUALIFIERS[expectedIndex]));
+      expectedIndex--;
+    }
+    assertEquals(expectedIndex, 0);
+    scanner.close();
+    ht.close();
+  }
+
+  @Test
+  public void testKeyOnlyFilterWithReverseScan() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testKeyOnlyFilterWithReverseScan");
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    byte[][] ROWS = makeN(ROW, 10);
+    byte[][] QUALIFIERS = { Bytes.toBytes("col0-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col1-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col2-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col3-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col4-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col5-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col6-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col7-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col8-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col9-<d2v1>-<d3v2>") };
+    for (int i = 0; i < 10; i++) {
+      Put put = new Put(ROWS[i]);
+      put.add(FAMILY, QUALIFIERS[i], VALUE);
+      ht.put(put);
+    }
+    Scan scan = new Scan();
+    scan.setReversed(true);
+    scan.addFamily(FAMILY);
+    Filter filter = new KeyOnlyFilter(true);
+    scan.setFilter(filter);
+    ResultScanner scanner = ht.getScanner(scan);
+    int count = 0;
+    for (Result result : ht.getScanner(scan)) {
+      assertEquals(result.size(), 1);
+      assertEquals(result.raw()[0].getValueLength(), Bytes.SIZEOF_INT);
+      assertEquals(Bytes.toInt(result.raw()[0].getValue()), VALUE.length);
+      count++;
+    }
+    assertEquals(count, 10);
+    scanner.close();
+    ht.close();
+  }
+
+  /**
+   * Test simple table and non-existent row cases.
+   */
+  @Test
+  public void testSimpleMissingWithReverseScan() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testSimpleMissingWithReverseScan");
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    byte[][] ROWS = makeN(ROW, 4);
+
+    // Try to get a row on an empty table
+    Scan scan = new Scan();
+    scan.setReversed(true);
+    Result result = getSingleScanResult(ht, scan);
+    assertNullResult(result);
+
+    scan = new Scan(ROWS[0]);
+    scan.setReversed(true);
+    result = getSingleScanResult(ht, scan);
+    assertNullResult(result);
+
+    scan = new Scan(ROWS[0], ROWS[1]);
+    scan.setReversed(true);
+    result = getSingleScanResult(ht, scan);
+    assertNullResult(result);
+
+    scan = new Scan();
+    scan.setReversed(true);
+    scan.addFamily(FAMILY);
+    result = getSingleScanResult(ht, scan);
+    assertNullResult(result);
+
+    scan = new Scan();
+    scan.setReversed(true);
+    scan.addColumn(FAMILY, QUALIFIER);
+    result = getSingleScanResult(ht, scan);
+    assertNullResult(result);
+
+    // Insert a row
+
+    Put put = new Put(ROWS[2]);
+    put.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(put);
+
+    // Make sure we can scan the row
+    scan = new Scan();
+    scan.setReversed(true);
+    result = getSingleScanResult(ht, scan);
+    assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
+
+    scan = new Scan(ROWS[3], ROWS[0]);
+    scan.setReversed(true);
+    result = getSingleScanResult(ht, scan);
+    assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
+
+    scan = new Scan(ROWS[2], ROWS[1]);
+    scan.setReversed(true);
+    result = getSingleScanResult(ht, scan);
+    assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
+
+    // Try to scan empty rows around it
+    // Introduced MemStore#shouldSeekForReverseScan to fix the following
+    scan = new Scan(ROWS[1]);
+    scan.setReversed(true);
+    result = getSingleScanResult(ht, scan);
+    assertNullResult(result);
+    ht.close();
+  }
+
+  @Test
+  public void testNullWithReverseScan() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testNullWithReverseScan");
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    // Null qualifier (should work)
+    Put put = new Put(ROW);
+    put.add(FAMILY, null, VALUE);
+    ht.put(put);
+    scanTestNull(ht, ROW, FAMILY, VALUE, true);
+    Delete delete = new Delete(ROW);
+    delete.deleteColumns(FAMILY, null);
+    ht.delete(delete);
+    // Use a new table
+    byte[] TABLE2 = Bytes.toBytes("testNull2WithReverseScan");
+    ht = TEST_UTIL.createTable(TABLE2, FAMILY);
+    // Empty qualifier, byte[0] instead of null (should work)
+    put = new Put(ROW);
+    put.add(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
+    ht.put(put);
+    scanTestNull(ht, ROW, FAMILY, VALUE, true);
+    TEST_UTIL.flush();
+    scanTestNull(ht, ROW, FAMILY, VALUE, true);
+    delete = new Delete(ROW);
+    delete.deleteColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
+    ht.delete(delete);
+    // Null value
+    put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER, null);
+    ht.put(put);
+    Scan scan = new Scan();
+    scan.setReversed(true);
+    scan.addColumn(FAMILY, QUALIFIER);
+    Result result = getSingleScanResult(ht, scan);
+    assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
+    ht.close();
+  }
+
+  @Test
+  public void testDeletesWithReverseScan() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testDeletesWithReverseScan");
+    byte[][] ROWS = makeNAscii(ROW, 6);
+    byte[][] FAMILIES = makeNAscii(FAMILY, 3);
+    byte[][] VALUES = makeN(VALUE, 5);
+    long[] ts = { 1000, 2000, 3000, 4000, 5000 };
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES,
+        TEST_UTIL.getConfiguration(), 3);
+
+    Put put = new Put(ROW);
+    put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
+    put.add(FAMILIES[0], QUALIFIER, ts[1], VALUES[1]);
+    ht.put(put);
+
+    Delete delete = new Delete(ROW);
+    delete.deleteFamily(FAMILIES[0], ts[0]);
+    ht.delete(delete);
+
+    Scan scan = new Scan(ROW);
+    scan.setReversed(true);
+    scan.addFamily(FAMILIES[0]);
+    scan.setMaxVersions(Integer.MAX_VALUE);
+    Result result = getSingleScanResult(ht, scan);
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1] },
+        new byte[][] { VALUES[1] }, 0, 0);
+
+    // Test delete latest version
+    put = new Put(ROW);
+    put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
+    put.add(FAMILIES[0], QUALIFIER, ts[2], VALUES[2]);
+    put.add(FAMILIES[0], QUALIFIER, ts[3], VALUES[3]);
+    put.add(FAMILIES[0], null, ts[4], VALUES[4]);
+    put.add(FAMILIES[0], null, ts[2], VALUES[2]);
+    put.add(FAMILIES[0], null, ts[3], VALUES[3]);
+    ht.put(put);
+
+    delete = new Delete(ROW);
+    delete.deleteColumn(FAMILIES[0], QUALIFIER); // ts[4]
+    ht.delete(delete);
+
+    scan = new Scan(ROW);
+    scan.setReversed(true);
+    scan.addColumn(FAMILIES[0], QUALIFIER);
+    scan.setMaxVersions(Integer.MAX_VALUE);
+    result = getSingleScanResult(ht, scan);
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1],
+        ts[2], ts[3] }, new byte[][] { VALUES[1], VALUES[2], VALUES[3] }, 0, 2);
+
+    // Test for HBASE-1847
+    delete = new Delete(ROW);
+    delete.deleteColumn(FAMILIES[0], null);
+    ht.delete(delete);
+
+    // Cleanup null qualifier
+    delete = new Delete(ROW);
+    delete.deleteColumns(FAMILIES[0], null);
+    ht.delete(delete);
+
+    // Expected client behavior might be that you can re-put deleted values
+    // But alas, this is not to be. We can't put them back in either case.
+
+    put = new Put(ROW);
+    put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]); // 1000
+    put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]); // 5000
+    ht.put(put);
+
+    // The Scanner returns the previous values, the expected-naive-unexpected
+    // behavior
+
+    scan = new Scan(ROW);
+    scan.setReversed(true);
+    scan.addFamily(FAMILIES[0]);
+    scan.setMaxVersions(Integer.MAX_VALUE);
+    result = getSingleScanResult(ht, scan);
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1],
+        ts[2], ts[3] }, new byte[][] { VALUES[1], VALUES[2], VALUES[3] }, 0, 2);
+
+    // Test deleting an entire family from one row but not the other various
+    // ways
+
+    put = new Put(ROWS[0]);
+    put.add(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+    put.add(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+    put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+    put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+    ht.put(put);
+
+    put = new Put(ROWS[1]);
+    put.add(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+    put.add(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+    put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+    put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+    ht.put(put);
+
+    put = new Put(ROWS[2]);
+    put.add(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+    put.add(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+    put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+    put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+    ht.put(put);
+
+    delete = new Delete(ROWS[0]);
+    delete.deleteFamily(FAMILIES[2]);
+    ht.delete(delete);
+
+    delete = new Delete(ROWS[1]);
+    delete.deleteColumns(FAMILIES[1], QUALIFIER);
+    ht.delete(delete);
+
+    delete = new Delete(ROWS[2]);
+    delete.deleteColumn(FAMILIES[1], QUALIFIER);
+    delete.deleteColumn(FAMILIES[1], QUALIFIER);
+    delete.deleteColumn(FAMILIES[2], QUALIFIER);
+    ht.delete(delete);
+
+    scan = new Scan(ROWS[0]);
+    scan.setReversed(true);
+    scan.addFamily(FAMILIES[1]);
+    scan.addFamily(FAMILIES[2]);
+    scan.setMaxVersions(Integer.MAX_VALUE);
+    result = getSingleScanResult(ht, scan);
+    assertTrue("Expected 2 keys but received " + result.size(),
+        result.size() == 2);
+    assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER, new long[] { ts[0],
+        ts[1] }, new byte[][] { VALUES[0], VALUES[1] }, 0, 1);
+
+    scan = new Scan(ROWS[1]);
+    scan.setReversed(true);
+    scan.addFamily(FAMILIES[1]);
+    scan.addFamily(FAMILIES[2]);
+    scan.setMaxVersions(Integer.MAX_VALUE);
+    result = getSingleScanResult(ht, scan);
+    assertTrue("Expected 2 keys but received " + result.size(),
+        result.size() == 2);
+
+    scan = new Scan(ROWS[2]);
+    scan.setReversed(true);
+    scan.addFamily(FAMILIES[1]);
+    scan.addFamily(FAMILIES[2]);
+    scan.setMaxVersions(Integer.MAX_VALUE);
+    result = getSingleScanResult(ht, scan);
+    assertEquals(1, result.size());
+    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
+        new long[] { ts[2] }, new byte[][] { VALUES[2] }, 0, 0);
+
+    // Test if we delete the family first in one row (HBASE-1541)
+
+    delete = new Delete(ROWS[3]);
+    delete.deleteFamily(FAMILIES[1]);
+    ht.delete(delete);
+
+    put = new Put(ROWS[3]);
+    put.add(FAMILIES[2], QUALIFIER, VALUES[0]);
+    ht.put(put);
+
+    put = new Put(ROWS[4]);
+    put.add(FAMILIES[1], QUALIFIER, VALUES[1]);
+    put.add(FAMILIES[2], QUALIFIER, VALUES[2]);
+    ht.put(put);
+
+    scan = new Scan(ROWS[4]);
+    scan.setReversed(true);
+    scan.addFamily(FAMILIES[1]);
+    scan.addFamily(FAMILIES[2]);
+    scan.setMaxVersions(Integer.MAX_VALUE);
+    ResultScanner scanner = ht.getScanner(scan);
+    result = scanner.next();
+    assertTrue("Expected 2 keys but received " + result.size(),
+        result.size() == 2);
+    assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[4]));
+    assertTrue(Bytes.equals(result.raw()[1].getRow(), ROWS[4]));
+    assertTrue(Bytes.equals(result.raw()[0].getValue(), VALUES[1]));
+    assertTrue(Bytes.equals(result.raw()[1].getValue(), VALUES[2]));
+    result = scanner.next();
+    assertTrue("Expected 1 key but received " + result.size(),
+        result.size() == 1);
+    assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[3]));
+    assertTrue(Bytes.equals(result.raw()[0].getValue(), VALUES[0]));
+    scanner.close();
+    ht.close();
+  }
+
+  /**
+   * Tests reversed scan under multi regions
+   */
+  @Test
+  public void testReversedScanUnderMultiRegions() throws Exception {
+    // Test Initialization.
+    byte[] TABLE = Bytes.toBytes("testReversedScanUnderMultiRegions");
+    byte[] maxByteArray = ReversedClientScanner.MAX_BYTE_ARRAY;
+    byte[][] splitRows = new byte[][] { Bytes.toBytes("005"),
+        Bytes.add(Bytes.toBytes("005"), Bytes.multiple(maxByteArray, 16)),
+        Bytes.toBytes("006"),
+        Bytes.add(Bytes.toBytes("006"), Bytes.multiple(maxByteArray, 8)),
+        Bytes.toBytes("007"),
+        Bytes.add(Bytes.toBytes("007"), Bytes.multiple(maxByteArray, 4)),
+        Bytes.toBytes("008"), Bytes.multiple(maxByteArray, 2) };
+    HTable table = TEST_UTIL.createTable(TABLE, FAMILY, splitRows);
+    TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
+
+    assertEquals(splitRows.length + 1, table.getRegionLocations().size());
+    // Insert one row each region
+    int insertNum = splitRows.length;
+    for (int i = 0; i < insertNum; i++) {
+      Put put = new Put(splitRows[i]);
+      put.add(FAMILY, QUALIFIER, VALUE);
+      table.put(put);
+    }
+
+    // scan forward
+    ResultScanner scanner = table.getScanner(new Scan());
+    int count = 0;
+    for (Result r : scanner) {
+      assertTrue(!r.isEmpty());
+      count++;
+    }
+    assertEquals(insertNum, count);
+
+    // scan backward
+    Scan scan = new Scan();
+    scan.setReversed(true);
+    scanner = table.getScanner(scan);
+    count = 0;
+    byte[] lastRow = null;
+    for (Result r : scanner) {
+      assertTrue(!r.isEmpty());
+      count++;
+      byte[] thisRow = r.getRow();
+      if (lastRow != null) {
+        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+            + ",this row=" + Bytes.toString(thisRow),
+            Bytes.compareTo(thisRow, lastRow) < 0);
+      }
+      lastRow = thisRow;
+    }
+    assertEquals(insertNum, count);
+    table.close();
   }
 }

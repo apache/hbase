@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -4010,5 +4011,564 @@ public class TestHRegion {
     assertEquals("Timestamp mismatch while checking: " + ctx, ts, kv.getTimestamp());
     assertEquals("Value mismatch while checking: " + ctx, "value-version-" + ts,
         Bytes.toString(CellUtil.cloneValue(kv)));
+  }
+
+  public void testReverseScanner_FromMemStore_SingleCF_Normal()
+      throws IOException {
+    byte[] rowC = Bytes.toBytes("rowC");
+    byte[] rowA = Bytes.toBytes("rowA");
+    byte[] rowB = Bytes.toBytes("rowB");
+    byte[] cf = Bytes.toBytes("CF");
+    byte[][] families = { cf };
+    byte[] col = Bytes.toBytes("C");
+    long ts = 1;
+    String method = this.getName();
+    this.region = initHRegion(tableName, method, families);
+    try {
+      KeyValue kv1 = new KeyValue(rowC, cf, col, ts, KeyValue.Type.Put, null);
+      KeyValue kv11 = new KeyValue(rowC, cf, col, ts + 1, KeyValue.Type.Put,
+          null);
+      KeyValue kv2 = new KeyValue(rowA, cf, col, ts, KeyValue.Type.Put, null);
+      KeyValue kv3 = new KeyValue(rowB, cf, col, ts, KeyValue.Type.Put, null);
+      Put put = null;
+      put = new Put(rowC);
+      put.add(kv1);
+      put.add(kv11);
+      region.put(put);
+      put = new Put(rowA);
+      put.add(kv2);
+      region.put(put);
+      put = new Put(rowB);
+      put.add(kv3);
+      region.put(put);
+
+      Scan scan = new Scan(rowC);
+      scan.setMaxVersions(5);
+      scan.setReversed(true);
+      InternalScanner scanner = region.getScanner(scan);
+      List<Cell> currRow = new ArrayList<Cell>();
+      boolean hasNext = scanner.next(currRow);
+      assertEquals(2, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowA));
+      assertFalse(hasNext);
+      scanner.close();
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  public void testReverseScanner_FromMemStore_SingleCF_LargerKey()
+      throws IOException {
+    byte[] rowC = Bytes.toBytes("rowC");
+    byte[] rowA = Bytes.toBytes("rowA");
+    byte[] rowB = Bytes.toBytes("rowB");
+    byte[] rowD = Bytes.toBytes("rowD");
+    byte[] cf = Bytes.toBytes("CF");
+    byte[][] families = { cf };
+    byte[] col = Bytes.toBytes("C");
+    long ts = 1;
+    String method = this.getName();
+    this.region = initHRegion(tableName, method, families);
+    try {
+      KeyValue kv1 = new KeyValue(rowC, cf, col, ts, KeyValue.Type.Put, null);
+      KeyValue kv11 = new KeyValue(rowC, cf, col, ts + 1, KeyValue.Type.Put,
+          null);
+      KeyValue kv2 = new KeyValue(rowA, cf, col, ts, KeyValue.Type.Put, null);
+      KeyValue kv3 = new KeyValue(rowB, cf, col, ts, KeyValue.Type.Put, null);
+      Put put = null;
+      put = new Put(rowC);
+      put.add(kv1);
+      put.add(kv11);
+      region.put(put);
+      put = new Put(rowA);
+      put.add(kv2);
+      region.put(put);
+      put = new Put(rowB);
+      put.add(kv3);
+      region.put(put);
+
+      Scan scan = new Scan(rowD);
+      List<Cell> currRow = new ArrayList<Cell>();
+      scan.setReversed(true);
+      scan.setMaxVersions(5);
+      InternalScanner scanner = region.getScanner(scan);
+      boolean hasNext = scanner.next(currRow);
+      assertEquals(2, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowA));
+      assertFalse(hasNext);
+      scanner.close();
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  public void testReverseScanner_FromMemStore_SingleCF_FullScan()
+      throws IOException {
+    byte[] rowC = Bytes.toBytes("rowC");
+    byte[] rowA = Bytes.toBytes("rowA");
+    byte[] rowB = Bytes.toBytes("rowB");
+    byte[] cf = Bytes.toBytes("CF");
+    byte[][] families = { cf };
+    byte[] col = Bytes.toBytes("C");
+    long ts = 1;
+    String method = this.getName();
+    this.region = initHRegion(tableName, method, families);
+    try {
+      KeyValue kv1 = new KeyValue(rowC, cf, col, ts, KeyValue.Type.Put, null);
+      KeyValue kv11 = new KeyValue(rowC, cf, col, ts + 1, KeyValue.Type.Put,
+          null);
+      KeyValue kv2 = new KeyValue(rowA, cf, col, ts, KeyValue.Type.Put, null);
+      KeyValue kv3 = new KeyValue(rowB, cf, col, ts, KeyValue.Type.Put, null);
+      Put put = null;
+      put = new Put(rowC);
+      put.add(kv1);
+      put.add(kv11);
+      region.put(put);
+      put = new Put(rowA);
+      put.add(kv2);
+      region.put(put);
+      put = new Put(rowB);
+      put.add(kv3);
+      region.put(put);
+      Scan scan = new Scan();
+      List<Cell> currRow = new ArrayList<Cell>();
+      scan.setReversed(true);
+      InternalScanner scanner = region.getScanner(scan);
+      boolean hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowA));
+      assertFalse(hasNext);
+      scanner.close();
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  public void testReverseScanner_moreRowsMayExistAfter() throws IOException {
+    // case for "INCLUDE_AND_SEEK_NEXT_ROW & SEEK_NEXT_ROW" endless loop
+    byte[] rowA = Bytes.toBytes("rowA");
+    byte[] rowB = Bytes.toBytes("rowB");
+    byte[] rowC = Bytes.toBytes("rowC");
+    byte[] rowD = Bytes.toBytes("rowD");
+    byte[] rowE = Bytes.toBytes("rowE");
+    byte[] cf = Bytes.toBytes("CF");
+    byte[][] families = { cf };
+    byte[] col1 = Bytes.toBytes("col1");
+    byte[] col2 = Bytes.toBytes("col2");
+    long ts = 1;
+    String method = this.getName();
+    this.region = initHRegion(tableName, method, families);
+    try {
+      KeyValue kv1 = new KeyValue(rowA, cf, col1, ts, KeyValue.Type.Put, null);
+      KeyValue kv2 = new KeyValue(rowB, cf, col1, ts, KeyValue.Type.Put, null);
+      KeyValue kv3 = new KeyValue(rowC, cf, col1, ts, KeyValue.Type.Put, null);
+      KeyValue kv4_1 = new KeyValue(rowD, cf, col1, ts, KeyValue.Type.Put, null);
+      KeyValue kv4_2 = new KeyValue(rowD, cf, col2, ts, KeyValue.Type.Put, null);
+      KeyValue kv5 = new KeyValue(rowE, cf, col1, ts, KeyValue.Type.Put, null);
+      Put put = null;
+      put = new Put(rowA);
+      put.add(kv1);
+      region.put(put);
+      put = new Put(rowB);
+      put.add(kv2);
+      region.put(put);
+      put = new Put(rowC);
+      put.add(kv3);
+      region.put(put);
+      put = new Put(rowD);
+      put.add(kv4_1);
+      region.put(put);
+      put = new Put(rowD);
+      put.add(kv4_2);
+      region.put(put);
+      put = new Put(rowE);
+      put.add(kv5);
+      region.put(put);
+      region.flushcache();
+      Scan scan = new Scan(rowD, rowA);
+      scan.addColumn(families[0], col1);
+      scan.setReversed(true);
+      List<Cell> currRow = new ArrayList<Cell>();
+      InternalScanner scanner = region.getScanner(scan);
+      boolean hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
+      assertFalse(hasNext);
+      scanner.close();
+
+      scan = new Scan(rowD, rowA);
+      scan.addColumn(families[0], col2);
+      scan.setReversed(true);
+      currRow.clear();
+      scanner = region.getScanner(scan);
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
+      scanner.close();
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  public void testReverseScanner_smaller_blocksize() throws IOException {
+    // case to ensure no conflict with HFile index optimization
+    byte[] rowA = Bytes.toBytes("rowA");
+    byte[] rowB = Bytes.toBytes("rowB");
+    byte[] rowC = Bytes.toBytes("rowC");
+    byte[] rowD = Bytes.toBytes("rowD");
+    byte[] rowE = Bytes.toBytes("rowE");
+    byte[] cf = Bytes.toBytes("CF");
+    byte[][] families = { cf };
+    byte[] col1 = Bytes.toBytes("col1");
+    byte[] col2 = Bytes.toBytes("col2");
+    long ts = 1;
+    String method = this.getName();
+    HBaseConfiguration config = new HBaseConfiguration();
+    config.setInt("test.block.size", 1);
+    this.region = initHRegion(tableName, method, config, families);
+    try {
+      KeyValue kv1 = new KeyValue(rowA, cf, col1, ts, KeyValue.Type.Put, null);
+      KeyValue kv2 = new KeyValue(rowB, cf, col1, ts, KeyValue.Type.Put, null);
+      KeyValue kv3 = new KeyValue(rowC, cf, col1, ts, KeyValue.Type.Put, null);
+      KeyValue kv4_1 = new KeyValue(rowD, cf, col1, ts, KeyValue.Type.Put, null);
+      KeyValue kv4_2 = new KeyValue(rowD, cf, col2, ts, KeyValue.Type.Put, null);
+      KeyValue kv5 = new KeyValue(rowE, cf, col1, ts, KeyValue.Type.Put, null);
+      Put put = null;
+      put = new Put(rowA);
+      put.add(kv1);
+      region.put(put);
+      put = new Put(rowB);
+      put.add(kv2);
+      region.put(put);
+      put = new Put(rowC);
+      put.add(kv3);
+      region.put(put);
+      put = new Put(rowD);
+      put.add(kv4_1);
+      region.put(put);
+      put = new Put(rowD);
+      put.add(kv4_2);
+      region.put(put);
+      put = new Put(rowE);
+      put.add(kv5);
+      region.put(put);
+      region.flushcache();
+      Scan scan = new Scan(rowD, rowA);
+      scan.addColumn(families[0], col1);
+      scan.setReversed(true);
+      List<Cell> currRow = new ArrayList<Cell>();
+      InternalScanner scanner = region.getScanner(scan);
+      boolean hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
+      assertFalse(hasNext);
+      scanner.close();
+
+      scan = new Scan(rowD, rowA);
+      scan.addColumn(families[0], col2);
+      scan.setReversed(true);
+      currRow.clear();
+      scanner = region.getScanner(scan);
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
+      scanner.close();
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  public void testReverseScanner_FromMemStoreAndHFiles_MultiCFs1()
+      throws IOException {
+    byte[] row0 = Bytes.toBytes("row0"); // 1 kv
+    byte[] row1 = Bytes.toBytes("row1"); // 2 kv
+    byte[] row2 = Bytes.toBytes("row2"); // 4 kv
+    byte[] row3 = Bytes.toBytes("row3"); // 2 kv
+    byte[] row4 = Bytes.toBytes("row4"); // 5 kv
+    byte[] row5 = Bytes.toBytes("row5"); // 2 kv
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[] cf2 = Bytes.toBytes("CF2");
+    byte[] cf3 = Bytes.toBytes("CF3");
+    byte[][] families = { cf1, cf2, cf3 };
+    byte[] col = Bytes.toBytes("C");
+    long ts = 1;
+    String method = this.getName();
+    HBaseConfiguration conf = new HBaseConfiguration();
+    // disable compactions in this test.
+    conf.setInt("hbase.hstore.compactionThreshold", 10000);
+    this.region = initHRegion(tableName, method, conf, families);
+    try {
+      // kv naming style: kv(row number) totalKvCountInThisRow seq no
+      KeyValue kv0_1_1 = new KeyValue(row0, cf1, col, ts, KeyValue.Type.Put,
+          null);
+      KeyValue kv1_2_1 = new KeyValue(row1, cf2, col, ts, KeyValue.Type.Put,
+          null);
+      KeyValue kv1_2_2 = new KeyValue(row1, cf1, col, ts + 1,
+          KeyValue.Type.Put, null);
+      KeyValue kv2_4_1 = new KeyValue(row2, cf2, col, ts, KeyValue.Type.Put,
+          null);
+      KeyValue kv2_4_2 = new KeyValue(row2, cf1, col, ts, KeyValue.Type.Put,
+          null);
+      KeyValue kv2_4_3 = new KeyValue(row2, cf3, col, ts, KeyValue.Type.Put,
+          null);
+      KeyValue kv2_4_4 = new KeyValue(row2, cf1, col, ts + 4,
+          KeyValue.Type.Put, null);
+      KeyValue kv3_2_1 = new KeyValue(row3, cf2, col, ts, KeyValue.Type.Put,
+          null);
+      KeyValue kv3_2_2 = new KeyValue(row3, cf1, col, ts + 4,
+          KeyValue.Type.Put, null);
+      KeyValue kv4_5_1 = new KeyValue(row4, cf1, col, ts, KeyValue.Type.Put,
+          null);
+      KeyValue kv4_5_2 = new KeyValue(row4, cf3, col, ts, KeyValue.Type.Put,
+          null);
+      KeyValue kv4_5_3 = new KeyValue(row4, cf3, col, ts + 5,
+          KeyValue.Type.Put, null);
+      KeyValue kv4_5_4 = new KeyValue(row4, cf2, col, ts, KeyValue.Type.Put,
+          null);
+      KeyValue kv4_5_5 = new KeyValue(row4, cf1, col, ts + 3,
+          KeyValue.Type.Put, null);
+      KeyValue kv5_2_1 = new KeyValue(row5, cf2, col, ts, KeyValue.Type.Put,
+          null);
+      KeyValue kv5_2_2 = new KeyValue(row5, cf3, col, ts, KeyValue.Type.Put,
+          null);
+      // hfiles(cf1/cf2) :"row1"(1 kv) / "row2"(1 kv) / "row4"(2 kv)
+      Put put = null;
+      put = new Put(row1);
+      put.add(kv1_2_1);
+      region.put(put);
+      put = new Put(row2);
+      put.add(kv2_4_1);
+      region.put(put);
+      put = new Put(row4);
+      put.add(kv4_5_4);
+      put.add(kv4_5_5);
+      region.put(put);
+      region.flushcache();
+      // hfiles(cf1/cf3) : "row1" (1 kvs) / "row2" (1 kv) / "row4" (2 kv)
+      put = new Put(row4);
+      put.add(kv4_5_1);
+      put.add(kv4_5_3);
+      region.put(put);
+      put = new Put(row1);
+      put.add(kv1_2_2);
+      region.put(put);
+      put = new Put(row2);
+      put.add(kv2_4_4);
+      region.put(put);
+      region.flushcache();
+      // hfiles(cf1/cf3) : "row2"(2 kv) / "row3"(1 kvs) / "row4" (1 kv)
+      put = new Put(row4);
+      put.add(kv4_5_2);
+      region.put(put);
+      put = new Put(row2);
+      put.add(kv2_4_2);
+      put.add(kv2_4_3);
+      region.put(put);
+      put = new Put(row3);
+      put.add(kv3_2_2);
+      region.put(put);
+      region.flushcache();
+      // memstore(cf1/cf2/cf3) : "row0" (1 kvs) / "row3" ( 1 kv) / "row5" (max)
+      // ( 2 kv)
+      put = new Put(row0);
+      put.add(kv0_1_1);
+      region.put(put);
+      put = new Put(row3);
+      put.add(kv3_2_1);
+      region.put(put);
+      put = new Put(row5);
+      put.add(kv5_2_1);
+      put.add(kv5_2_2);
+      region.put(put);
+      // scan range = ["row4", min), skip the max "row5"
+      Scan scan = new Scan(row4);
+      scan.setMaxVersions(5);
+      scan.setBatch(3);
+      scan.setReversed(true);
+      InternalScanner scanner = region.getScanner(scan);
+      List<Cell> currRow = new ArrayList<Cell>();
+      boolean hasNext = false;
+      // 1. scan out "row4" (5 kvs), "row5" can't be scanned out since not
+      // included in scan range
+      // "row4" takes 2 next() calls since batch=3
+      hasNext = scanner.next(currRow);
+      assertEquals(3, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), row4));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(2, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), row4));
+      assertTrue(hasNext);
+      // 2. scan out "row3" (2 kv)
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(2, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), row3));
+      assertTrue(hasNext);
+      // 3. scan out "row2" (4 kvs)
+      // "row2" takes 2 next() calls since batch=3
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(3, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), row2));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), row2));
+      assertTrue(hasNext);
+      // 4. scan out "row1" (2 kv)
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(2, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), row1));
+      assertTrue(hasNext);
+      // 5. scan out "row0" (1 kv)
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), row0));
+      assertFalse(hasNext);
+
+      scanner.close();
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  public void testReverseScanner_FromMemStoreAndHFiles_MultiCFs2()
+      throws IOException {
+    byte[] row1 = Bytes.toBytes("row1");
+    byte[] row2 = Bytes.toBytes("row2");
+    byte[] row3 = Bytes.toBytes("row3");
+    byte[] row4 = Bytes.toBytes("row4");
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[] cf2 = Bytes.toBytes("CF2");
+    byte[] cf3 = Bytes.toBytes("CF3");
+    byte[] cf4 = Bytes.toBytes("CF4");
+    byte[][] families = { cf1, cf2, cf3, cf4 };
+    byte[] col = Bytes.toBytes("C");
+    long ts = 1;
+    String method = this.getName();
+    HBaseConfiguration conf = new HBaseConfiguration();
+    // disable compactions in this test.
+    conf.setInt("hbase.hstore.compactionThreshold", 10000);
+    this.region = initHRegion(tableName, method, conf, families);
+    try {
+      KeyValue kv1 = new KeyValue(row1, cf1, col, ts, KeyValue.Type.Put, null);
+      KeyValue kv2 = new KeyValue(row2, cf2, col, ts, KeyValue.Type.Put, null);
+      KeyValue kv3 = new KeyValue(row3, cf3, col, ts, KeyValue.Type.Put, null);
+      KeyValue kv4 = new KeyValue(row4, cf4, col, ts, KeyValue.Type.Put, null);
+      // storefile1
+      Put put = new Put(row1);
+      put.add(kv1);
+      region.put(put);
+      region.flushcache();
+      // storefile2
+      put = new Put(row2);
+      put.add(kv2);
+      region.put(put);
+      region.flushcache();
+      // storefile3
+      put = new Put(row3);
+      put.add(kv3);
+      region.put(put);
+      region.flushcache();
+      // memstore
+      put = new Put(row4);
+      put.add(kv4);
+      region.put(put);
+      // scan range = ["row4", min)
+      Scan scan = new Scan(row4);
+      scan.setReversed(true);
+      scan.setBatch(10);
+      InternalScanner scanner = region.getScanner(scan);
+      List<Cell> currRow = new ArrayList<Cell>();
+      boolean hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), row4));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), row3));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), row2));
+      assertTrue(hasNext);
+      currRow.clear();
+      hasNext = scanner.next(currRow);
+      assertEquals(1, currRow.size());
+      assertTrue(Bytes.equals(currRow.get(0).getRow(), row1));
+      assertFalse(hasNext);
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  private static HRegion initHRegion(byte[] tableName, String callingMethod,
+      byte[]... families) throws IOException {
+    return initHRegion(tableName, callingMethod, HBaseConfiguration.create(),
+        families);
   }
 }

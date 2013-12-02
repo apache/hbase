@@ -26,14 +26,14 @@ import java.util.SortedSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.NonLazyKeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.NonReversedNonLazyKeyValueScanner;
 
 /**
  * Utility scanner that wraps a sortable collection and serves
  * as a KeyValueScanner.
  */
 @InterfaceAudience.Private
-public class CollectionBackedScanner extends NonLazyKeyValueScanner {
+public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
   final private Iterable<KeyValue> data;
   final KeyValue.KVComparator comparator;
   private Iterator<KeyValue> iter;

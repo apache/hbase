@@ -1220,6 +1220,13 @@ public class HRegion implements HeapSize { // , Writable{
     return size;
   }
 
+  /**
+   * @return KeyValue Comparator
+   */
+  public KeyValue.KVComparator getComparator() {
+    return this.comparator;
+  }
+
   /*
    * Do preparation for pending compaction.
    * @throws IOException
@@ -1769,6 +1776,12 @@ public class HRegion implements HeapSize { // , Writable{
 
   protected RegionScanner instantiateRegionScanner(Scan scan,
       List<KeyValueScanner> additionalScanners) throws IOException {
+    if (scan.isReversed()) {
+      if (scan.getFilter() != null) {
+        scan.getFilter().setReversed(true);
+      }
+      return new ReversedRegionScannerImpl(scan, additionalScanners, this);
+    }
     return new RegionScannerImpl(scan, additionalScanners, this);
   }
 
@@ -3508,17 +3521,17 @@ public class HRegion implements HeapSize { // , Writable{
     /**
      * If the joined heap data gathering is interrupted due to scan limits, this will
      * contain the row for which we are populating the values.*/
-    private KeyValue joinedContinuationRow = null;
+    protected KeyValue joinedContinuationRow = null;
     // KeyValue indicating that limit is reached when scanning
     private final KeyValue KV_LIMIT = new KeyValue();
-    private final byte [] stopRow;
+    protected final byte[] stopRow;
     private Filter filter;
     private int batch;
-    private int isScan;
+    protected int isScan;
     private boolean filterClosed = false;
     private long readPt;
     private long maxResultSize;
-    private HRegion region;
+    protected HRegion region;
 
     @Override
     public HRegionInfo getRegionInfo() {
@@ -3573,14 +3586,20 @@ public class HRegion implements HeapSize { // , Writable{
           joinedScanners.add(scanner);
         }
       }
-      this.storeHeap = new KeyValueHeap(scanners, comparator);
-      if (!joinedScanners.isEmpty()) {
-        this.joinedHeap = new KeyValueHeap(joinedScanners, comparator);
-      }
+      initializeKVHeap(scanners, joinedScanners, region);
     }
 
     RegionScannerImpl(Scan scan, HRegion region) throws IOException {
       this(scan, null, region);
+    }
+
+    protected void initializeKVHeap(List<KeyValueScanner> scanners,
+        List<KeyValueScanner> joinedScanners, HRegion region)
+        throws IOException {
+      this.storeHeap = new KeyValueHeap(scanners, region.comparator);
+      if (!joinedScanners.isEmpty()) {
+        this.joinedHeap = new KeyValueHeap(joinedScanners, region.comparator);
+      }
     }
 
     @Override
@@ -3854,7 +3873,7 @@ public class HRegion implements HeapSize { // , Writable{
                                                                    currentRow);
     }
 
-    private boolean isStopRow(byte [] currentRow, int offset, short length) {
+    protected boolean isStopRow(byte[] currentRow, int offset, short length) {
       return currentRow == null ||
           (stopRow != null &&
           comparator.compareRows(stopRow, 0, stopRow.length,

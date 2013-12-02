@@ -775,6 +775,47 @@ public class TestCompaction {
     thread.interruptIfNecessary();
   }
 
+  /**
+   * Test that on a major compaction, if all cells are expired or deleted, then we'll end up with no
+   * product. Make sure scanner over region returns right answer in this case - and that it just
+   * basically works.
+   * @throws IOException
+   */
+  public void testMajorCompactingToNoOutputWithReverseScan() throws IOException {
+    createStoreFile(r);
+    for (int i = 0; i < compactionThreshold; i++) {
+      createStoreFile(r);
+    }
+    // Now delete everything.
+    Scan scan = new Scan();
+    scan.setReversed(true);
+    InternalScanner s = r.getScanner(scan);
+    do {
+      List<Cell> results = new ArrayList<Cell>();
+      boolean result = s.next(results);
+      assertTrue(!results.isEmpty());
+      r.delete(new Delete(results.get(0).getRow()));
+      if (!result) break;
+    } while (true);
+    s.close();
+    // Flush
+    r.flushcache();
+    // Major compact.
+    r.compactStores(true);
+    scan = new Scan();
+    scan.setReversed(true);
+    s = r.getScanner(scan);
+    int counter = 0;
+    do {
+      List<Cell> results = new ArrayList<Cell>();
+      boolean result = s.next(results);
+      if (!result) break;
+      counter++;
+    } while (true);
+    s.close();
+    assertEquals(0, counter);
+  }
+
   private class StoreMockMaker extends StatefulStoreMockMaker {
     public ArrayList<StoreFile> compacting = new ArrayList<StoreFile>();
     public ArrayList<StoreFile> notCompacting = new ArrayList<StoreFile>();

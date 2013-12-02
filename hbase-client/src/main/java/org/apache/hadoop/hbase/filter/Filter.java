@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class Filter {
+  protected boolean reversed;
   /**
    * Reset the state of the filter between rows.
    * 
@@ -277,4 +278,16 @@ public abstract class Filter {
    * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
    */
   abstract boolean areSerializedFieldsEqual(Filter other);
+
+  /**
+   * alter the reversed scan flag
+   * @param reversed flag
+   */
+  public void setReversed(boolean reversed) {
+    this.reversed = reversed;
+  }
+
+  public boolean isReversed() {
+    return this.reversed;
+  }
 }

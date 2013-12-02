@@ -159,6 +159,11 @@ final public class FilterList extends Filter {
    * @param filter another filter
    */
   public void addFilter(Filter filter) {
+    if (this.isReversed() != filter.isReversed()) {
+      throw new IllegalArgumentException(
+          "Filters in the list must have the same reversed flag, this.reversed="
+              + this.isReversed());
+    }
     this.filters.add(filter);
   }
 
@@ -461,6 +466,14 @@ final public class FilterList extends Filter {
       }
     }
     return false;
+  }
+
+  @Override
+  public void setReversed(boolean reversed) {
+    for (Filter filter : filters) {
+      filter.setReversed(reversed);
+    }
+    this.reversed = reversed;
   }
 
   @Override

@@ -850,6 +850,9 @@ public final class ProtobufUtil {
     if (scan.getRowOffsetPerColumnFamily() > 0) {
       scanBuilder.setStoreOffset(scan.getRowOffsetPerColumnFamily());
     }
+    if (scan.isReversed()) {
+      scanBuilder.setReversed(scan.isReversed());
+    }
     return scanBuilder.build();
   }
 
@@ -925,6 +928,9 @@ public final class ProtobufUtil {
           scan.addFamily(family);
         }
       }
+    }
+    if (proto.hasReversed()) {
+      scan.setReversed(proto.getReversed());
     }
     return scan;
   }

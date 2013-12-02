@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -314,6 +315,16 @@ public class TestFilter {
     verifyScan(s, expectedRows, expectedKeys);
   }
 
+  public void testPrefixFilterWithReverseScan() throws Exception {
+    // Grab rows from group one (half of total)
+    long expectedRows = this.numRows / 2;
+    long expectedKeys = this.colsPerRow;
+    Scan s = new Scan();
+    s.setReversed(true);
+    s.setFilter(new PrefixFilter(Bytes.toBytes("testRowOne")));
+    verifyScan(s, expectedRows, expectedKeys);
+  }
+
   @Test
   public void testPageFilter() throws Exception {
 
@@ -399,6 +410,140 @@ public class TestFilter {
     s.setFilter(new PageFilter(expectedRows));
     verifyScanFull(s, Arrays.copyOf(expectedKVs, 6));
 
+  }
+
+  public void testPageFilterWithReverseScan() throws Exception {
+    // KVs in first 6 rows
+    KeyValue[] expectedKVs = {
+        // testRowOne-0
+        new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
+        new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[0]),
+        new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
+        new KeyValue(ROWS_ONE[0], FAMILIES[1], QUALIFIERS_ONE[0], VALUES[0]),
+        new KeyValue(ROWS_ONE[0], FAMILIES[1], QUALIFIERS_ONE[2], VALUES[0]),
+        new KeyValue(ROWS_ONE[0], FAMILIES[1], QUALIFIERS_ONE[3], VALUES[0]),
+        // testRowOne-2
+        new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
+        new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[0]),
+        new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
+        new KeyValue(ROWS_ONE[2], FAMILIES[1], QUALIFIERS_ONE[0], VALUES[0]),
+        new KeyValue(ROWS_ONE[2], FAMILIES[1], QUALIFIERS_ONE[2], VALUES[0]),
+        new KeyValue(ROWS_ONE[2], FAMILIES[1], QUALIFIERS_ONE[3], VALUES[0]),
+        // testRowOne-3
+        new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
+        new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[0]),
+        new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
+        new KeyValue(ROWS_ONE[3], FAMILIES[1], QUALIFIERS_ONE[0], VALUES[0]),
+        new KeyValue(ROWS_ONE[3], FAMILIES[1], QUALIFIERS_ONE[2], VALUES[0]),
+        new KeyValue(ROWS_ONE[3], FAMILIES[1], QUALIFIERS_ONE[3], VALUES[0]),
+        // testRowTwo-0
+        new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
+        new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+        new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+        new KeyValue(ROWS_TWO[0], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1]),
+        new KeyValue(ROWS_TWO[0], FAMILIES[1], QUALIFIERS_TWO[2], VALUES[1]),
+        new KeyValue(ROWS_TWO[0], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1]),
+        // testRowTwo-2
+        new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
+        new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+        new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+        new KeyValue(ROWS_TWO[2], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1]),
+        new KeyValue(ROWS_TWO[2], FAMILIES[1], QUALIFIERS_TWO[2], VALUES[1]),
+        new KeyValue(ROWS_TWO[2], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1]),
+        // testRowTwo-3
+        new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
+        new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+        new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+        new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1]),
+        new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[2], VALUES[1]),
+        new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1]) };
+
+    // Grab all 6 rows
+    long expectedRows = 6;
+    long expectedKeys = this.colsPerRow;
+    Scan s = new Scan();
+    s.setReversed(true);
+    s.setFilter(new PageFilter(expectedRows));
+    verifyScan(s, expectedRows, expectedKeys);
+
+    // Grab first 4 rows (6 cols per row)
+    expectedRows = 4;
+    expectedKeys = this.colsPerRow;
+    s = new Scan();
+    s.setReversed(true);
+    s.setFilter(new PageFilter(expectedRows));
+    verifyScan(s, expectedRows, expectedKeys);
+
+    // Grab first 2 rows
+    expectedRows = 2;
+    expectedKeys = this.colsPerRow;
+    s = new Scan();
+    s.setReversed(true);
+    s.setFilter(new PageFilter(expectedRows));
+    verifyScan(s, expectedRows, expectedKeys);
+
+    // Grab first row
+    expectedRows = 1;
+    expectedKeys = this.colsPerRow;
+    s = new Scan();
+    s.setReversed(true);
+    s.setFilter(new PageFilter(expectedRows));
+    verifyScan(s, expectedRows, expectedKeys);
+  }
+
+  public void testWhileMatchFilterWithFilterRowWithReverseScan()
+      throws Exception {
+    final int pageSize = 4;
+
+    Scan s = new Scan();
+    s.setReversed(true);
+    WhileMatchFilter filter = new WhileMatchFilter(new PageFilter(pageSize));
+    s.setFilter(filter);
+
+    InternalScanner scanner = this.region.getScanner(s);
+    int scannerCounter = 0;
+    while (true) {
+      boolean isMoreResults = scanner.next(new ArrayList<Cell>());
+      scannerCounter++;
+
+      if (scannerCounter >= pageSize) {
+        Assert.assertTrue(
+            "The WhileMatchFilter should now filter all remaining",
+            filter.filterAllRemaining());
+      }
+      if (!isMoreResults) {
+        break;
+      }
+    }
+    scanner.close();
+    Assert.assertEquals("The page filter returned more rows than expected",
+        pageSize, scannerCounter);
+  }
+
+  public void testWhileMatchFilterWithFilterRowKeyWithReverseScan()
+      throws Exception {
+    Scan s = new Scan();
+    String prefix = "testRowOne";
+    WhileMatchFilter filter = new WhileMatchFilter(new PrefixFilter(
+        Bytes.toBytes(prefix)));
+    s.setFilter(filter);
+    s.setReversed(true);
+
+    InternalScanner scanner = this.region.getScanner(s);
+    while (true) {
+      ArrayList<Cell> values = new ArrayList<Cell>();
+      boolean isMoreResults = scanner.next(values);
+      if (!isMoreResults
+          || !Bytes.toString(values.get(0).getRow()).startsWith(prefix)) {
+        Assert.assertTrue(
+            "The WhileMatchFilter should now filter all remaining",
+            filter.filterAllRemaining());
+      }
+      if (!isMoreResults) {
+        break;
+      }
+    }
+    scanner.close();
   }
 
   /**

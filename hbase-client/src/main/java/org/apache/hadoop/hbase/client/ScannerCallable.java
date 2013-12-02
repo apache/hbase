@@ -62,11 +62,11 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
 
   public static final Log LOG = LogFactory.getLog(ScannerCallable.class);
   private long scannerId = -1L;
-  private boolean instantiated = false;
+  protected boolean instantiated = false;
   private boolean closed = false;
   private Scan scan;
   private int caching = 1;
-  private ScanMetrics scanMetrics;
+  protected ScanMetrics scanMetrics;
   private boolean logScannerActivity = false;
   private int logCutOffLatency = 1000;
   private static String myAddress;
@@ -79,7 +79,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   }
 
   // indicate if it is a remote server call
-  private boolean isRegionServerRemote = true;
+  protected boolean isRegionServerRemote = true;
   private long nextCallSeq = 0;
   
   /**
@@ -135,7 +135,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    * compare the local machine hostname with region server's hostname
    * to decide if hbase client connects to a remote region server
    */
-  private void checkIfRegionServerIsRemote() {
+  protected void checkIfRegionServerIsRemote() {
     if (getLocation().getHostname().equalsIgnoreCase(myAddress)) {
       isRegionServerRemote = false;
     } else {

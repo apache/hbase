@@ -1986,6 +1986,37 @@ public class Bytes {
   }
 
   /**
+   * Create a max byte array with the specified max byte count
+   * @param maxByteCount the length of returned byte array
+   * @return the created max byte array
+   */
+  public static byte[] createMaxByteArray(int maxByteCount) {
+    byte[] maxByteArray = new byte[maxByteCount];
+    for (int i = 0; i < maxByteArray.length; i++) {
+      maxByteArray[i] = (byte) 0xff;
+    }
+    return maxByteArray;
+  }
+
+  /**
+   * Create a byte array which is multiple given bytes
+   * @param srcBytes
+   * @param multiNum
+   * @return byte array
+   */
+  public static byte[] multiple(byte[] srcBytes, int multiNum) {
+    if (multiNum <= 0) {
+      return new byte[0];
+    }
+    byte[] result = new byte[srcBytes.length * multiNum];
+    for (int i = 0; i < multiNum; i++) {
+      System.arraycopy(srcBytes, 0, result, i * srcBytes.length,
+        srcBytes.length);
+    }
+    return result;
+  }
+  
+  /**
    * Convert a byte array into a hex string
    * @param b
    */

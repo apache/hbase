@@ -132,6 +132,8 @@ public class ScanQueryMatcher {
   
   private final boolean isUserScan;
 
+  private final boolean isReversed;
+
   /**
    * Construct a QueryMatcher for a scan
    * @param scan
@@ -186,6 +188,7 @@ public class ScanQueryMatcher {
       this.columns = new ExplicitColumnTracker(columns,
           scanInfo.getMinVersions(), maxVersions, oldestUnexpiredTS);
     }
+    this.isReversed = scan.isReversed();
   }
 
   /**
@@ -258,14 +261,23 @@ public class ScanQueryMatcher {
 
     int ret = this.rowComparator.compareRows(row, this.rowOffset, this.rowLength,
         bytes, offset, rowLength);
-    if (ret <= -1) {
-      return MatchCode.DONE;
-    } else if (ret >= 1) {
-      // could optimize this, if necessary?
-      // Could also be called SEEK_TO_CURRENT_ROW, but this
-      // should be rare/never happens.
-      return MatchCode.SEEK_NEXT_ROW;
+    if (!this.isReversed) {
+      if (ret <= -1) {
+        return MatchCode.DONE;
+      } else if (ret >= 1) {
+        // could optimize this, if necessary?
+        // Could also be called SEEK_TO_CURRENT_ROW, but this
+        // should be rare/never happens.
+        return MatchCode.SEEK_NEXT_ROW;
+      }
+    } else {
+      if (ret <= -1) {
+        return MatchCode.SEEK_NEXT_ROW;
+      } else if (ret >= 1) {
+        return MatchCode.DONE;
+      }
     }
+
 
     // optimize case.
     if (this.stickyNextRow)
@@ -454,6 +466,14 @@ public class ScanQueryMatcher {
   }
 
   public boolean moreRowsMayExistAfter(KeyValue kv) {
+    if (this.isReversed) {
+      if (rowComparator.compareRows(kv.getBuffer(), kv.getRowOffset(),
+          kv.getRowLength(), stopRow, 0, stopRow.length) <= 0) {
+        return false;
+      } else {
+        return true;
+      }
+    }
     if (!Bytes.equals(stopRow , HConstants.EMPTY_END_ROW) &&
         rowComparator.compareRows(kv.getBuffer(),kv.getRowOffset(),
             kv.getRowLength(), stopRow, 0, stopRow.length) >= 0) {

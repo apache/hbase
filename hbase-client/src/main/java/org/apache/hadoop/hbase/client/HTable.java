@@ -713,8 +713,11 @@ public class HTable implements HTableInterface {
     if (scan.getCaching() <= 0) {
       scan.setCaching(getScannerCaching());
     }
-    if (scan.isSmall()) {
+    if (scan.isSmall() && !scan.isReversed()) {
       return new ClientSmallScanner(getConfiguration(), scan, getName(),
+          this.connection);
+    } else if (scan.isReversed()) {
+      return new ReversedClientScanner(getConfiguration(), scan, getName(),
           this.connection);
     }
     return new ClientScanner(getConfiguration(), scan,

@@ -1750,7 +1750,9 @@ public class HStore implements Store {
         scanner = this.getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols);
       }
       if (scanner == null) {
-        scanner = new StoreScanner(this, getScanInfo(), scan, targetCols, readPt);
+        scanner = scan.isReversed() ? new ReversedStoreScanner(this,
+            getScanInfo(), scan, targetCols, readPt) : new StoreScanner(this,
+            getScanInfo(), scan, targetCols, readPt);
       }
       return scanner;
     } finally {

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * KeyValueScanner adaptor over the Reader.  It also provides hooks into
@@ -54,6 +55,9 @@ public class StoreFileScanner implements KeyValueScanner {
 
   private boolean enforceMVCC = false;
   private boolean hasMVCCInfo = false;
+  // A flag represents whether could stop skipping KeyValues for MVCC
+  // if have encountered the next row. Only used for reversed scan
+  private boolean stopSkippingKVsIfNextRow = false;
 
   private static AtomicLong seekCount;
 
@@ -186,11 +190,18 @@ public class StoreFileScanner implements KeyValueScanner {
   protected boolean skipKVsNewerThanReadpoint() throws IOException {
     // We want to ignore all key-values that are newer than our current
     // readPoint
+    KeyValue startKV = cur;
     while(enforceMVCC
         && cur != null
         && (cur.getMvccVersion() > readPt)) {
       hfs.next();
       cur = hfs.getKeyValue();
+      if (this.stopSkippingKVsIfNextRow
+          && Bytes.compareTo(cur.getBuffer(), cur.getRowOffset(),
+              cur.getRowLength(), startKV.getBuffer(), startKV.getRowOffset(),
+              startKV.getRowLength()) > 0) {
+        return false;
+      }
     }
 
     if (cur == null) {
@@ -388,5 +399,77 @@ public class StoreFileScanner implements KeyValueScanner {
   public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns, long oldestUnexpiredTS) {
     return reader.passesTimerangeFilter(scan, oldestUnexpiredTS)
         && reader.passesKeyRangeFilter(scan) && reader.passesBloomFilter(scan, columns);
+  }
+
+  @Override
+  public boolean seekToPreviousRow(KeyValue key) throws IOException {
+    try {
+      try {
+        KeyValue seekKey = KeyValue.createFirstOnRow(key.getRow());
+        if (seekCount != null) seekCount.incrementAndGet();
+        if (!hfs.seekBefore(seekKey.getBuffer(), seekKey.getKeyOffset(),
+            seekKey.getKeyLength())) {
+          close();
+          return false;
+        }
+        KeyValue firstKeyOfPreviousRow = KeyValue.createFirstOnRow(hfs
+            .getKeyValue().getRow());
+
+        if (seekCount != null) seekCount.incrementAndGet();
+        if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
+          close();
+          return false;
+        }
+
+        cur = hfs.getKeyValue();
+        this.stopSkippingKVsIfNextRow = true;
+        boolean resultOfSkipKVs;
+        try {
+          resultOfSkipKVs = skipKVsNewerThanReadpoint();
+        } finally {
+          this.stopSkippingKVsIfNextRow = false;
+        }
+        if (!resultOfSkipKVs
+            || Bytes.compareTo(cur.getBuffer(), cur.getRowOffset(),
+                cur.getRowLength(), firstKeyOfPreviousRow.getBuffer(),
+                firstKeyOfPreviousRow.getRowOffset(),
+                firstKeyOfPreviousRow.getRowLength()) > 0) {
+          return seekToPreviousRow(firstKeyOfPreviousRow);
+        }
+
+        return true;
+      } finally {
+        realSeekDone = true;
+      }
+    } catch (IOException ioe) {
+      throw new IOException("Could not seekToPreviousRow " + this + " to key "
+          + key, ioe);
+    }
+  }
+
+  @Override
+  public boolean seekToLastRow() throws IOException {
+    byte[] lastRow = reader.getLastRowKey();
+    if (lastRow == null) {
+      return false;
+    }
+    KeyValue seekKey = KeyValue.createFirstOnRow(lastRow);
+    if (seek(seekKey)) {
+      return true;
+    } else {
+      return seekToPreviousRow(seekKey);
+    }
+  }
+
+  @Override
+  public boolean backwardSeek(KeyValue key) throws IOException {
+    seek(key);
+    if (cur == null
+        || Bytes.compareTo(cur.getBuffer(), cur.getRowOffset(),
+            cur.getRowLength(), key.getBuffer(), key.getRowOffset(),
+            key.getRowLength()) > 0) {
+      return seekToPreviousRow(key);
+    }
+    return true;
   }
 }

@@ -59,7 +59,7 @@ public class PrefixFilter extends FilterBase {
     // if we are passed the prefix, set flag
     int cmp = Bytes.compareTo(buffer, offset, this.prefix.length, this.prefix, 0,
         this.prefix.length);
-    if(cmp > 0) {
+    if ((!isReversed() && cmp > 0) || (isReversed() && cmp < 0)) {
       passedPrefix = true;
     }
     filterRow = (cmp != 0);

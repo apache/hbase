@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
@@ -48,7 +49,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  * into List<KeyValue> for a single row.
  */
 @InterfaceAudience.Private
-public class StoreScanner extends NonLazyKeyValueScanner
+public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
   static final Log LOG = LogFactory.getLog(StoreScanner.class);
   protected Store store;
@@ -97,7 +98,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
   // A flag whether use pread for scan
   private boolean scanUsePread = false;
-  private ReentrantLock lock = new ReentrantLock();
+  protected ReentrantLock lock = new ReentrantLock();
   
   private final long readPt;
 
@@ -172,19 +173,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
     // key does not exist, then to the start of the next matching Row).
     // Always check bloom filter to optimize the top row seek for delete
     // family marker.
-    if (explicitColumnQuery && lazySeekEnabledGlobally) {
-      for (KeyValueScanner scanner : scanners) {
-        scanner.requestSeek(matcher.getStartKey(), false, true);
-      }
-    } else {
-      if (!isParallelSeekEnabled) {
-        for (KeyValueScanner scanner : scanners) {
-          scanner.seek(matcher.getStartKey());
-        }
-      } else {
-        parallelSeek(scanners, matcher.getStartKey());
-      }
-    }
+    seekScanners(scanners, matcher.getStartKey(), explicitColumnQuery
+        && lazySeekEnabledGlobally, isParallelSeekEnabled);
 
     // set storeLimit
     this.storeLimit = scan.getMaxResultsPerColumnFamily();
@@ -193,7 +183,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
     this.storeOffset = scan.getRowOffsetPerColumnFamily();
 
     // Combine all seeked scanners with a heap
-    heap = new KeyValueHeap(scanners, store.getComparator());
+    resetKVHeap(scanners, store.getComparator());
   }
 
   /**
@@ -249,16 +239,10 @@ public class StoreScanner extends NonLazyKeyValueScanner
     scanners = selectScannersFrom(scanners);
 
     // Seek all scanners to the initial key
-    if (!isParallelSeekEnabled) {
-      for (KeyValueScanner scanner : scanners) {
-        scanner.seek(matcher.getStartKey());
-      }
-    } else {
-      parallelSeek(scanners, matcher.getStartKey());
-    }
+    seekScanners(scanners, matcher.getStartKey(), false, isParallelSeekEnabled);
 
     // Combine all seeked scanners with a heap
-    heap = new KeyValueHeap(scanners, store.getComparator());
+    resetKVHeap(scanners, store.getComparator());
   }
 
   /** Constructor for testing. */
@@ -295,14 +279,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
       this.store.addChangedReaderObserver(this);
     }
     // Seek all scanners to the initial key
-    if (!isParallelSeekEnabled) {
-      for (KeyValueScanner scanner : scanners) {
-        scanner.seek(matcher.getStartKey());
-      }
-    } else {
-      parallelSeek(scanners, matcher.getStartKey());
-    }
-    heap = new KeyValueHeap(scanners, scanInfo.getComparator());
+    seekScanners(scanners, matcher.getStartKey(), false, isParallelSeekEnabled);
+    resetKVHeap(scanners, scanInfo.getComparator());
   }
 
   /**
@@ -314,6 +292,42 @@ public class StoreScanner extends NonLazyKeyValueScanner
     boolean usePread = isGet || scanUsePread;
     return selectScannersFrom(store.getScanners(cacheBlocks, isGet, usePread,
         isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt));
+  }
+
+  /**
+   * Seek the specified scanners with the given key
+   * @param scanners
+   * @param seekKey
+   * @param isLazy true if using lazy seek
+   * @param isParallelSeek true if using parallel seek
+   * @throws IOException
+   */
+  protected void seekScanners(List<? extends KeyValueScanner> scanners,
+      KeyValue seekKey, boolean isLazy, boolean isParallelSeek)
+      throws IOException {
+    // Seek all scanners to the start of the Row (or if the exact matching row
+    // key does not exist, then to the start of the next matching Row).
+    // Always check bloom filter to optimize the top row seek for delete
+    // family marker.
+    if (isLazy) {
+      for (KeyValueScanner scanner : scanners) {
+        scanner.requestSeek(seekKey, false, true);
+      }
+    } else {
+      if (!isParallelSeek) {
+        for (KeyValueScanner scanner : scanners) {
+          scanner.seek(seekKey);
+        }
+      } else {
+        parallelSeek(scanners, seekKey);
+      }
+    }
+  }
+
+  protected void resetKVHeap(List<? extends KeyValueScanner> scanners,
+      KVComparator comparator) throws IOException {
+    // Combine all seeked scanners with a heap
+    heap = new KeyValueHeap(scanners, comparator);
   }
 
   /**
@@ -451,9 +465,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
     int count = 0;
     LOOP: while((kv = this.heap.peek()) != null) {
       if (prevKV != kv) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
-      // Check that the heap gives us KVs in an increasing order.
-      assert prevKV == null || comparator == null || comparator.compare(prevKV, kv) <= 0 :
-        "Key " + prevKV + " followed by a " + "smaller key " + kv + " in cf " + store;
+      checkScanOrder(prevKV, kv, comparator);
       prevKV = kv;
 
       ScanQueryMatcher.MatchCode qcode = matcher.match(kv);
@@ -475,7 +487,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
             if (!matcher.moreRowsMayExistAfter(kv)) {
               return false;
             }
-            reseek(matcher.getKeyForNextRow(kv));
+            seekToNextRow(kv);
             break LOOP;
           }
 
@@ -490,9 +502,9 @@ public class StoreScanner extends NonLazyKeyValueScanner
             if (!matcher.moreRowsMayExistAfter(kv)) {
               return false;
             }
-            reseek(matcher.getKeyForNextRow(kv));
+            seekToNextRow(kv);
           } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
-            reseek(matcher.getKeyForNextColumn(kv));
+            seekAsDirection(matcher.getKeyForNextColumn(kv));
           } else {
             this.heap.next();
           }
@@ -516,11 +528,11 @@ public class StoreScanner extends NonLazyKeyValueScanner
             return false;
           }
 
-          reseek(matcher.getKeyForNextRow(kv));
+          seekToNextRow(kv);
           break;
 
         case SEEK_NEXT_COL:
-          reseek(matcher.getKeyForNextColumn(kv));
+          seekAsDirection(matcher.getKeyForNextColumn(kv));
           break;
 
         case SKIP:
@@ -531,7 +543,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
           // TODO convert resee to Cell?
           KeyValue nextKV = KeyValueUtil.ensureKeyValue(matcher.getNextKeyHint(kv));
           if (nextKV != null) {
-            reseek(nextKV);
+            seekAsDirection(nextKV);
           } else {
             heap.next();
           }
@@ -619,16 +631,11 @@ public class StoreScanner extends NonLazyKeyValueScanner
      * could have done it now by storing the scan object from the constructor */
     List<KeyValueScanner> scanners = getScannersNoCompaction();
 
-    if (!isParallelSeekEnabled) {
-      for (KeyValueScanner scanner : scanners) {
-        scanner.seek(lastTopKey);
-      }
-    } else {
-      parallelSeek(scanners, lastTopKey);
-    }
+    // Seek all scanners to the initial key
+    seekScanners(scanners, lastTopKey, false, isParallelSeekEnabled);
 
     // Combine all seeked scanners with a heap
-    heap = new KeyValueHeap(scanners, store.getComparator());
+    resetKVHeap(scanners, store.getComparator());
 
     // Reset the state of the Query Matcher and set to top row.
     // Only reset and call setRow if the row changes; avoids confusing the
@@ -646,6 +653,36 @@ public class StoreScanner extends NonLazyKeyValueScanner
       matcher.reset();
       matcher.setRow(row, offset, length);
     }
+  }
+
+  /**
+   * Check whether scan as expected order
+   * @param prevKV
+   * @param kv
+   * @param comparator
+   * @throws IOException
+   */
+  protected void checkScanOrder(KeyValue prevKV, KeyValue kv,
+      KeyValue.KVComparator comparator) throws IOException {
+    // Check that the heap gives us KVs in an increasing order.
+    assert prevKV == null || comparator == null
+        || comparator.compare(prevKV, kv) <= 0 : "Key " + prevKV
+        + " followed by a " + "smaller key " + kv + " in cf " + store;
+  }
+
+  protected boolean seekToNextRow(KeyValue kv) throws IOException {
+    return reseek(matcher.getKeyForNextRow(kv));
+  }
+
+  /**
+   * Do a reseek in a normal StoreScanner(scan forward)
+   * @param kv
+   * @return true if scanner has values left, false if end of scanner
+   * @throws IOException
+   */
+  protected boolean seekAsDirection(KeyValue kv)
+      throws IOException {
+    return reseek(kv);
   }
 
   @Override

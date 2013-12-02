@@ -43,10 +43,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
   // Public because used outside of this package over in ipc.
   static final Log LOG = LogFactory.getLog(RegionServerCallable.class);
-  private final HConnection connection;
-  private final TableName tableName;
-  private final byte [] row;
-  private HRegionLocation location;
+  protected final HConnection connection;
+  protected final TableName tableName;
+  protected final byte[] row;
+  protected HRegionLocation location;
   private ClientService.BlockingInterface stub;
 
   protected final static int MIN_WAIT_DEAD_SERVER = 10000;

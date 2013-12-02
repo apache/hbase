@@ -13330,6 +13330,16 @@ public final class ClientProtos {
      * <code>optional bool small = 14;</code>
      */
     boolean getSmall();
+
+    // optional bool reversed = 15 [default = false];
+    /**
+     * <code>optional bool reversed = 15 [default = false];</code>
+     */
+    boolean hasReversed();
+    /**
+     * <code>optional bool reversed = 15 [default = false];</code>
+     */
+    boolean getReversed();
   }
   /**
    * Protobuf type {@code Scan}
@@ -13483,6 +13493,11 @@ public final class ClientProtos {
             case 112: {
               bitField0_ |= 0x00000800;
               small_ = input.readBool();
+              break;
+            }
+            case 120: {
+              bitField0_ |= 0x00001000;
+              reversed_ = input.readBool();
               break;
             }
           }
@@ -13815,6 +13830,22 @@ public final class ClientProtos {
       return small_;
     }
 
+    // optional bool reversed = 15 [default = false];
+    public static final int REVERSED_FIELD_NUMBER = 15;
+    private boolean reversed_;
+    /**
+     * <code>optional bool reversed = 15 [default = false];</code>
+     */
+    public boolean hasReversed() {
+      return ((bitField0_ & 0x00001000) == 0x00001000);
+    }
+    /**
+     * <code>optional bool reversed = 15 [default = false];</code>
+     */
+    public boolean getReversed() {
+      return reversed_;
+    }
+
     private void initFields() {
       column_ = java.util.Collections.emptyList();
       attribute_ = java.util.Collections.emptyList();
@@ -13830,6 +13861,7 @@ public final class ClientProtos {
       storeOffset_ = 0;
       loadColumnFamiliesOnDemand_ = false;
       small_ = false;
+      reversed_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -13903,6 +13935,9 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000800) == 0x00000800)) {
         output.writeBool(14, small_);
       }
+      if (((bitField0_ & 0x00001000) == 0x00001000)) {
+        output.writeBool(15, reversed_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -13967,6 +14002,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000800) == 0x00000800)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(14, small_);
+      }
+      if (((bitField0_ & 0x00001000) == 0x00001000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(15, reversed_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -14055,6 +14094,11 @@ public final class ClientProtos {
         result = result && (getSmall()
             == other.getSmall());
       }
+      result = result && (hasReversed() == other.hasReversed());
+      if (hasReversed()) {
+        result = result && (getReversed()
+            == other.getReversed());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -14123,6 +14167,10 @@ public final class ClientProtos {
       if (hasSmall()) {
         hash = (37 * hash) + SMALL_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getSmall());
+      }
+      if (hasReversed()) {
+        hash = (37 * hash) + REVERSED_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getReversed());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -14292,6 +14340,8 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00001000);
         small_ = false;
         bitField0_ = (bitField0_ & ~0x00002000);
+        reversed_ = false;
+        bitField0_ = (bitField0_ & ~0x00004000);
         return this;
       }
 
@@ -14394,6 +14444,10 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000800;
         }
         result.small_ = small_;
+        if (((from_bitField0_ & 0x00004000) == 0x00004000)) {
+          to_bitField0_ |= 0x00001000;
+        }
+        result.reversed_ = reversed_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -14497,6 +14551,9 @@ public final class ClientProtos {
         }
         if (other.hasSmall()) {
           setSmall(other.getSmall());
+        }
+        if (other.hasReversed()) {
+          setReversed(other.getReversed());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -15605,6 +15662,39 @@ public final class ClientProtos {
       public Builder clearSmall() {
         bitField0_ = (bitField0_ & ~0x00002000);
         small_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional bool reversed = 15 [default = false];
+      private boolean reversed_ ;
+      /**
+       * <code>optional bool reversed = 15 [default = false];</code>
+       */
+      public boolean hasReversed() {
+        return ((bitField0_ & 0x00004000) == 0x00004000);
+      }
+      /**
+       * <code>optional bool reversed = 15 [default = false];</code>
+       */
+      public boolean getReversed() {
+        return reversed_;
+      }
+      /**
+       * <code>optional bool reversed = 15 [default = false];</code>
+       */
+      public Builder setReversed(boolean value) {
+        bitField0_ |= 0x00004000;
+        reversed_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool reversed = 15 [default = false];</code>
+       */
+      public Builder clearReversed() {
+        bitField0_ = (bitField0_ & ~0x00004000);
+        reversed_ = false;
         onChanged();
         return this;
       }

@@ -110,6 +110,7 @@ public class Scan extends Query {
   private int caching = -1;
   private long maxResultSize = -1;
   private boolean cacheBlocks = true;
+  private boolean reversed = false;
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
@@ -547,6 +548,27 @@ public class Scan extends Query {
    */
   public boolean getCacheBlocks() {
     return cacheBlocks;
+  }
+
+  /**
+   * Set whether this scan is a reversed one
+   * <p>
+   * This is false by default which means forward(normal) scan.
+   * 
+   * @param reversed if true, scan will be backward order
+   * @return this
+   */
+  public Scan setReversed(boolean reversed) {
+    this.reversed = reversed;
+    return this;
+  }
+
+  /**
+   * Get whether this scan is a reversed one.
+   * @return true if backward scan, false if forward(default) scan
+   */
+  public boolean isReversed() {
+    return reversed;
   }
 
   /**

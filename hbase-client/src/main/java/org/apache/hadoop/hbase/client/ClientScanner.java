@@ -54,7 +54,7 @@ public class ClientScanner extends AbstractClientScanner {
     // Current region scanner is against.  Gets cleared if current region goes
     // wonky: e.g. if it splits on us.
     protected HRegionInfo currentRegion = null;
-    private ScannerCallable callable = null;
+    protected ScannerCallable callable = null;
     protected final LinkedList<Result> cache = new LinkedList<Result>();
     protected final int caching;
     protected long lastNext;
@@ -219,7 +219,7 @@ public class ClientScanner extends AbstractClientScanner {
      * @param nbRows
      * @param done Server-side says we're done scanning.
      */
-    private boolean nextScanner(int nbRows, final boolean done)
+  protected boolean nextScanner(int nbRows, final boolean done)
     throws IOException {
       // Close the previous scanner if it's open
       if (this.callable != null) {
