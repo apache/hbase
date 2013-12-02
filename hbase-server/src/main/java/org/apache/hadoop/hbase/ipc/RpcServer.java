@@ -1713,6 +1713,12 @@ public class RpcServer implements RpcServerInterface {
       } catch (Throwable t) {
         String msg = "Unable to read call parameter from client " + getHostAddress();
         LOG.warn(msg, t);
+
+        // If the method is not present on the server, do not retry.
+        if (t instanceof UnsupportedOperationException) {
+          t = new DoNotRetryIOException(t);
+        }
+
         final Call readParamsFailedCall =
           new Call(id, this.service, null, null, null, null, this,
             responder, totalRequestSize, null);
