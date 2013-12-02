@@ -35,10 +35,41 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.*;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
+import org.apache.hadoop.hbase.filter.BitComparator;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
+import org.apache.hadoop.hbase.filter.ColumnPaginationFilter;
+import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
+import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.DependentColumnFilter;
+import org.apache.hadoop.hbase.filter.FamilyFilter;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.MultipleColumnPrefixFilter;
+import org.apache.hadoop.hbase.filter.NullComparator;
+import org.apache.hadoop.hbase.filter.PageFilter;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.QualifierFilter;
+import org.apache.hadoop.hbase.filter.RandomRowFilter;
+import org.apache.hadoop.hbase.filter.RegexStringComparator;
+import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.filter.SkipFilter;
+import org.apache.hadoop.hbase.filter.SubstringComparator;
+import org.apache.hadoop.hbase.filter.TimestampsFilter;
+import org.apache.hadoop.hbase.filter.ValueFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner;
+import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -83,7 +114,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private String filter = null;
   private int maxVersions = Integer.MAX_VALUE;
   private int caching = -1;
-
+  private List<String> labels = new ArrayList<String>();
+  
   @XmlRootElement
   static class FilterModel {
     
@@ -488,6 +520,14 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     if (filter != null) {
       model.setFilter(stringifyFilter(filter));
     }
+    // Add the visbility labels if found in the attributes
+    Authorizations authorizations = scan.getAuthorizations();
+    if (authorizations != null) {
+      List<String> labels = authorizations.getLabels();
+      for (String label : labels) {
+        model.addLabel(label);
+      }
+    }
     return model;
   }
 
@@ -554,7 +594,13 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   public void addColumn(byte[] column) {
     columns.add(column);
   }
-
+  
+  /**
+   * Add a visibility label to the scan
+   */
+  public void addLabel(String label) {
+    labels.add(label);
+  }
   /**
    * @return true if a start row was specified
    */
@@ -591,6 +637,11 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   @XmlElement(name="column")
   public List<byte[]> getColumns() {
     return columns;
+  }
+  
+  @XmlElement(name="label")
+  public List<String> getLabels() {
+    return labels;
   }
 
   /**
@@ -730,6 +781,10 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     if (filter != null) {
       builder.setFilter(filter);
     }
+    if (labels != null && labels.size() > 0) {
+      for (String label : labels)
+        builder.addLabels(label);
+    }
     return builder.build().toByteArray();
   }
 
@@ -764,6 +819,12 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     }
     if (builder.hasFilter()) {
       filter = builder.getFilter();
+    }
+    if(builder.getLabelsList() != null) {
+      List<String> labels = builder.getLabelsList();
+      for(String label :  labels) {
+        addLabel(label);
+      }
     }
     return this;
   }

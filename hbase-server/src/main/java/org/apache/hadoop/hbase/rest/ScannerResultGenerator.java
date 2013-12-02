@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
+import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.Private
@@ -94,6 +95,9 @@ public class ScannerResultGenerator extends ResultGenerator {
       scan.setCacheBlocks(false);
       if (caching > 0 ) {
         scan.setCaching(caching);
+      }
+      if(rowspec.hasLabels()) {
+        scan.setAuthorizations(new Authorizations(rowspec.getLabels()));
       }
       scanner = table.getScanner(scan);
       cached = null;

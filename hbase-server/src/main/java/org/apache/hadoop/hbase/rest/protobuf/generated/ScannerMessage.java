@@ -109,6 +109,26 @@ public final class ScannerMessage {
      * <code>optional int32 caching = 9;</code>
      */
     int getCaching();
+
+    // repeated string labels = 10;
+    /**
+     * <code>repeated string labels = 10;</code>
+     */
+    java.util.List<java.lang.String>
+    getLabelsList();
+    /**
+     * <code>repeated string labels = 10;</code>
+     */
+    int getLabelsCount();
+    /**
+     * <code>repeated string labels = 10;</code>
+     */
+    java.lang.String getLabels(int index);
+    /**
+     * <code>repeated string labels = 10;</code>
+     */
+    com.google.protobuf.ByteString
+        getLabelsBytes(int index);
   }
   /**
    * Protobuf type {@code org.apache.hadoop.hbase.rest.protobuf.generated.Scanner}
@@ -209,6 +229,14 @@ public final class ScannerMessage {
               caching_ = input.readInt32();
               break;
             }
+            case 82: {
+              if (!((mutable_bitField0_ & 0x00000200) == 0x00000200)) {
+                labels_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00000200;
+              }
+              labels_.add(input.readBytes());
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -219,6 +247,9 @@ public final class ScannerMessage {
       } finally {
         if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
           columns_ = java.util.Collections.unmodifiableList(columns_);
+        }
+        if (((mutable_bitField0_ & 0x00000200) == 0x00000200)) {
+          labels_ = new com.google.protobuf.UnmodifiableLazyStringList(labels_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -430,6 +461,36 @@ public final class ScannerMessage {
       return caching_;
     }
 
+    // repeated string labels = 10;
+    public static final int LABELS_FIELD_NUMBER = 10;
+    private com.google.protobuf.LazyStringList labels_;
+    /**
+     * <code>repeated string labels = 10;</code>
+     */
+    public java.util.List<java.lang.String>
+        getLabelsList() {
+      return labels_;
+    }
+    /**
+     * <code>repeated string labels = 10;</code>
+     */
+    public int getLabelsCount() {
+      return labels_.size();
+    }
+    /**
+     * <code>repeated string labels = 10;</code>
+     */
+    public java.lang.String getLabels(int index) {
+      return labels_.get(index);
+    }
+    /**
+     * <code>repeated string labels = 10;</code>
+     */
+    public com.google.protobuf.ByteString
+        getLabelsBytes(int index) {
+      return labels_.getByteString(index);
+    }
+
     private void initFields() {
       startRow_ = com.google.protobuf.ByteString.EMPTY;
       endRow_ = com.google.protobuf.ByteString.EMPTY;
@@ -440,6 +501,7 @@ public final class ScannerMessage {
       maxVersions_ = 0;
       filter_ = "";
       caching_ = 0;
+      labels_ = com.google.protobuf.LazyStringArrayList.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -479,6 +541,9 @@ public final class ScannerMessage {
       }
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         output.writeInt32(9, caching_);
+      }
+      for (int i = 0; i < labels_.size(); i++) {
+        output.writeBytes(10, labels_.getByteString(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -529,6 +594,15 @@ public final class ScannerMessage {
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(9, caching_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < labels_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(labels_.getByteString(i));
+        }
+        size += dataSize;
+        size += 1 * getLabelsList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -664,6 +738,8 @@ public final class ScannerMessage {
         bitField0_ = (bitField0_ & ~0x00000080);
         caching_ = 0;
         bitField0_ = (bitField0_ & ~0x00000100);
+        labels_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
 
@@ -729,6 +805,12 @@ public final class ScannerMessage {
           to_bitField0_ |= 0x00000080;
         }
         result.caching_ = caching_;
+        if (((bitField0_ & 0x00000200) == 0x00000200)) {
+          labels_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              labels_);
+          bitField0_ = (bitField0_ & ~0x00000200);
+        }
+        result.labels_ = labels_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -780,6 +862,16 @@ public final class ScannerMessage {
         }
         if (other.hasCaching()) {
           setCaching(other.getCaching());
+        }
+        if (!other.labels_.isEmpty()) {
+          if (labels_.isEmpty()) {
+            labels_ = other.labels_;
+            bitField0_ = (bitField0_ & ~0x00000200);
+          } else {
+            ensureLabelsIsMutable();
+            labels_.addAll(other.labels_);
+          }
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1191,6 +1283,99 @@ public final class ScannerMessage {
         return this;
       }
 
+      // repeated string labels = 10;
+      private com.google.protobuf.LazyStringList labels_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureLabelsIsMutable() {
+        if (!((bitField0_ & 0x00000200) == 0x00000200)) {
+          labels_ = new com.google.protobuf.LazyStringArrayList(labels_);
+          bitField0_ |= 0x00000200;
+         }
+      }
+      /**
+       * <code>repeated string labels = 10;</code>
+       */
+      public java.util.List<java.lang.String>
+          getLabelsList() {
+        return java.util.Collections.unmodifiableList(labels_);
+      }
+      /**
+       * <code>repeated string labels = 10;</code>
+       */
+      public int getLabelsCount() {
+        return labels_.size();
+      }
+      /**
+       * <code>repeated string labels = 10;</code>
+       */
+      public java.lang.String getLabels(int index) {
+        return labels_.get(index);
+      }
+      /**
+       * <code>repeated string labels = 10;</code>
+       */
+      public com.google.protobuf.ByteString
+          getLabelsBytes(int index) {
+        return labels_.getByteString(index);
+      }
+      /**
+       * <code>repeated string labels = 10;</code>
+       */
+      public Builder setLabels(
+          int index, java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureLabelsIsMutable();
+        labels_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string labels = 10;</code>
+       */
+      public Builder addLabels(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureLabelsIsMutable();
+        labels_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string labels = 10;</code>
+       */
+      public Builder addAllLabels(
+          java.lang.Iterable<java.lang.String> values) {
+        ensureLabelsIsMutable();
+        super.addAll(values, labels_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string labels = 10;</code>
+       */
+      public Builder clearLabels() {
+        labels_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000200);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string labels = 10;</code>
+       */
+      public Builder addLabelsBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureLabelsIsMutable();
+        labels_.add(value);
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:org.apache.hadoop.hbase.rest.protobuf.generated.Scanner)
     }
 
@@ -1217,11 +1402,12 @@ public final class ScannerMessage {
   static {
     java.lang.String[] descriptorData = {
       "\n\024ScannerMessage.proto\022/org.apache.hadoo" +
-      "p.hbase.rest.protobuf.generated\"\245\001\n\007Scan" +
+      "p.hbase.rest.protobuf.generated\"\265\001\n\007Scan" +
       "ner\022\020\n\010startRow\030\001 \001(\014\022\016\n\006endRow\030\002 \001(\014\022\017\n" +
       "\007columns\030\003 \003(\014\022\r\n\005batch\030\004 \001(\005\022\021\n\tstartTi" +
       "me\030\005 \001(\003\022\017\n\007endTime\030\006 \001(\003\022\023\n\013maxVersions" +
-      "\030\007 \001(\005\022\016\n\006filter\030\010 \001(\t\022\017\n\007caching\030\t \001(\005"
+      "\030\007 \001(\005\022\016\n\006filter\030\010 \001(\t\022\017\n\007caching\030\t \001(\005\022" +
+      "\016\n\006labels\030\n \003(\t"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1233,7 +1419,7 @@ public final class ScannerMessage {
           internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Scanner_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Scanner_descriptor,
-              new java.lang.String[] { "StartRow", "EndRow", "Columns", "Batch", "StartTime", "EndTime", "MaxVersions", "Filter", "Caching", });
+              new java.lang.String[] { "StartRow", "EndRow", "Columns", "Batch", "StartTime", "EndTime", "MaxVersions", "Filter", "Caching", "Labels", });
           return null;
         }
       };

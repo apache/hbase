@@ -82,9 +82,14 @@ public class ScannerResource extends ResourceBase {
         .build();
     }
     byte[] endRow = model.hasEndRow() ? model.getEndRow() : null;
-    RowSpec spec = new RowSpec(model.getStartRow(), endRow,
-      model.getColumns(), model.getStartTime(), model.getEndTime(),
-      model.getMaxVersions());
+    RowSpec spec = null;
+    if (model.getLabels() != null) {
+      spec = new RowSpec(model.getStartRow(), endRow, model.getColumns(), model.getStartTime(),
+          model.getEndTime(), model.getMaxVersions(), model.getLabels());
+    } else {
+      spec = new RowSpec(model.getStartRow(), endRow, model.getColumns(), model.getStartTime(),
+          model.getEndTime(), model.getMaxVersions());
+    }
     try {
       Filter filter = ScannerResultGenerator.buildFilterFromModel(model);
       String tableName = tableResource.getName();

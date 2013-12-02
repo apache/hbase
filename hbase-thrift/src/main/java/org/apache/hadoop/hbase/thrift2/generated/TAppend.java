@@ -37,6 +37,7 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
   private static final org.apache.thrift.protocol.TField COLUMNS_FIELD_DESC = new org.apache.thrift.protocol.TField("columns", org.apache.thrift.protocol.TType.LIST, (short)2);
   private static final org.apache.thrift.protocol.TField ATTRIBUTES_FIELD_DESC = new org.apache.thrift.protocol.TField("attributes", org.apache.thrift.protocol.TType.MAP, (short)3);
   private static final org.apache.thrift.protocol.TField DURABILITY_FIELD_DESC = new org.apache.thrift.protocol.TField("durability", org.apache.thrift.protocol.TType.I32, (short)4);
+  private static final org.apache.thrift.protocol.TField CELL_VISIBILITY_FIELD_DESC = new org.apache.thrift.protocol.TField("cellVisibility", org.apache.thrift.protocol.TType.STRUCT, (short)5);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -52,6 +53,7 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
    * @see TDurability
    */
   public TDurability durability; // optional
+  public TCellVisibility cellVisibility; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -62,7 +64,8 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
      * 
      * @see TDurability
      */
-    DURABILITY((short)4, "durability");
+    DURABILITY((short)4, "durability"),
+    CELL_VISIBILITY((short)5, "cellVisibility");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -85,6 +88,8 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
           return ATTRIBUTES;
         case 4: // DURABILITY
           return DURABILITY;
+        case 5: // CELL_VISIBILITY
+          return CELL_VISIBILITY;
         default:
           return null;
       }
@@ -125,7 +130,7 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
   }
 
   // isset id assignments
-  private _Fields optionals[] = {_Fields.ATTRIBUTES,_Fields.DURABILITY};
+  private _Fields optionals[] = {_Fields.ATTRIBUTES,_Fields.DURABILITY,_Fields.CELL_VISIBILITY};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -140,6 +145,8 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
             new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , true))));
     tmpMap.put(_Fields.DURABILITY, new org.apache.thrift.meta_data.FieldMetaData("durability", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.EnumMetaData(org.apache.thrift.protocol.TType.ENUM, TDurability.class)));
+    tmpMap.put(_Fields.CELL_VISIBILITY, new org.apache.thrift.meta_data.FieldMetaData("cellVisibility", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TCellVisibility.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TAppend.class, metaDataMap);
   }
@@ -191,6 +198,9 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
     if (other.isSetDurability()) {
       this.durability = other.durability;
     }
+    if (other.isSetCellVisibility()) {
+      this.cellVisibility = new TCellVisibility(other.cellVisibility);
+    }
   }
 
   public TAppend deepCopy() {
@@ -203,6 +213,7 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
     this.columns = null;
     this.attributes = null;
     this.durability = null;
+    this.cellVisibility = null;
   }
 
   public byte[] getRow() {
@@ -345,6 +356,30 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
     }
   }
 
+  public TCellVisibility getCellVisibility() {
+    return this.cellVisibility;
+  }
+
+  public TAppend setCellVisibility(TCellVisibility cellVisibility) {
+    this.cellVisibility = cellVisibility;
+    return this;
+  }
+
+  public void unsetCellVisibility() {
+    this.cellVisibility = null;
+  }
+
+  /** Returns true if field cellVisibility is set (has been assigned a value) and false otherwise */
+  public boolean isSetCellVisibility() {
+    return this.cellVisibility != null;
+  }
+
+  public void setCellVisibilityIsSet(boolean value) {
+    if (!value) {
+      this.cellVisibility = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case ROW:
@@ -379,6 +414,14 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
       }
       break;
 
+    case CELL_VISIBILITY:
+      if (value == null) {
+        unsetCellVisibility();
+      } else {
+        setCellVisibility((TCellVisibility)value);
+      }
+      break;
+
     }
   }
 
@@ -395,6 +438,9 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
 
     case DURABILITY:
       return getDurability();
+
+    case CELL_VISIBILITY:
+      return getCellVisibility();
 
     }
     throw new IllegalStateException();
@@ -415,6 +461,8 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
       return isSetAttributes();
     case DURABILITY:
       return isSetDurability();
+    case CELL_VISIBILITY:
+      return isSetCellVisibility();
     }
     throw new IllegalStateException();
   }
@@ -465,6 +513,15 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
       if (!(this_present_durability && that_present_durability))
         return false;
       if (!this.durability.equals(that.durability))
+        return false;
+    }
+
+    boolean this_present_cellVisibility = true && this.isSetCellVisibility();
+    boolean that_present_cellVisibility = true && that.isSetCellVisibility();
+    if (this_present_cellVisibility || that_present_cellVisibility) {
+      if (!(this_present_cellVisibility && that_present_cellVisibility))
+        return false;
+      if (!this.cellVisibility.equals(that.cellVisibility))
         return false;
     }
 
@@ -524,6 +581,16 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetCellVisibility()).compareTo(typedOther.isSetCellVisibility());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetCellVisibility()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.cellVisibility, typedOther.cellVisibility);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -579,6 +646,16 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
       }
       first = false;
     }
+    if (isSetCellVisibility()) {
+      if (!first) sb.append(", ");
+      sb.append("cellVisibility:");
+      if (this.cellVisibility == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.cellVisibility);
+      }
+      first = false;
+    }
     sb.append(")");
     return sb.toString();
   }
@@ -592,6 +669,9 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
       throw new org.apache.thrift.protocol.TProtocolException("Required field 'columns' was not present! Struct: " + toString());
     }
     // check for sub-struct validity
+    if (cellVisibility != null) {
+      cellVisibility.validate();
+    }
   }
 
   private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
@@ -639,14 +719,14 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
           case 2: // COLUMNS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list80 = iprot.readListBegin();
-                struct.columns = new ArrayList<TColumnValue>(_list80.size);
-                for (int _i81 = 0; _i81 < _list80.size; ++_i81)
+                org.apache.thrift.protocol.TList _list88 = iprot.readListBegin();
+                struct.columns = new ArrayList<TColumnValue>(_list88.size);
+                for (int _i89 = 0; _i89 < _list88.size; ++_i89)
                 {
-                  TColumnValue _elem82; // required
-                  _elem82 = new TColumnValue();
-                  _elem82.read(iprot);
-                  struct.columns.add(_elem82);
+                  TColumnValue _elem90; // required
+                  _elem90 = new TColumnValue();
+                  _elem90.read(iprot);
+                  struct.columns.add(_elem90);
                 }
                 iprot.readListEnd();
               }
@@ -658,15 +738,15 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
           case 3: // ATTRIBUTES
             if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
               {
-                org.apache.thrift.protocol.TMap _map83 = iprot.readMapBegin();
-                struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map83.size);
-                for (int _i84 = 0; _i84 < _map83.size; ++_i84)
+                org.apache.thrift.protocol.TMap _map91 = iprot.readMapBegin();
+                struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map91.size);
+                for (int _i92 = 0; _i92 < _map91.size; ++_i92)
                 {
-                  ByteBuffer _key85; // required
-                  ByteBuffer _val86; // required
-                  _key85 = iprot.readBinary();
-                  _val86 = iprot.readBinary();
-                  struct.attributes.put(_key85, _val86);
+                  ByteBuffer _key93; // required
+                  ByteBuffer _val94; // required
+                  _key93 = iprot.readBinary();
+                  _val94 = iprot.readBinary();
+                  struct.attributes.put(_key93, _val94);
                 }
                 iprot.readMapEnd();
               }
@@ -679,6 +759,15 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
               struct.durability = TDurability.findByValue(iprot.readI32());
               struct.setDurabilityIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 5: // CELL_VISIBILITY
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+              struct.cellVisibility = new TCellVisibility();
+              struct.cellVisibility.read(iprot);
+              struct.setCellVisibilityIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -707,9 +796,9 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.columns.size()));
-          for (TColumnValue _iter87 : struct.columns)
+          for (TColumnValue _iter95 : struct.columns)
           {
-            _iter87.write(oprot);
+            _iter95.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -720,10 +809,10 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter88 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter96 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter88.getKey());
-              oprot.writeBinary(_iter88.getValue());
+              oprot.writeBinary(_iter96.getKey());
+              oprot.writeBinary(_iter96.getValue());
             }
             oprot.writeMapEnd();
           }
@@ -734,6 +823,13 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
         if (struct.isSetDurability()) {
           oprot.writeFieldBegin(DURABILITY_FIELD_DESC);
           oprot.writeI32(struct.durability.getValue());
+          oprot.writeFieldEnd();
+        }
+      }
+      if (struct.cellVisibility != null) {
+        if (struct.isSetCellVisibility()) {
+          oprot.writeFieldBegin(CELL_VISIBILITY_FIELD_DESC);
+          struct.cellVisibility.write(oprot);
           oprot.writeFieldEnd();
         }
       }
@@ -757,9 +853,9 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
       oprot.writeBinary(struct.row);
       {
         oprot.writeI32(struct.columns.size());
-        for (TColumnValue _iter89 : struct.columns)
+        for (TColumnValue _iter97 : struct.columns)
         {
-          _iter89.write(oprot);
+          _iter97.write(oprot);
         }
       }
       BitSet optionals = new BitSet();
@@ -769,19 +865,25 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
       if (struct.isSetDurability()) {
         optionals.set(1);
       }
-      oprot.writeBitSet(optionals, 2);
+      if (struct.isSetCellVisibility()) {
+        optionals.set(2);
+      }
+      oprot.writeBitSet(optionals, 3);
       if (struct.isSetAttributes()) {
         {
           oprot.writeI32(struct.attributes.size());
-          for (Map.Entry<ByteBuffer, ByteBuffer> _iter90 : struct.attributes.entrySet())
+          for (Map.Entry<ByteBuffer, ByteBuffer> _iter98 : struct.attributes.entrySet())
           {
-            oprot.writeBinary(_iter90.getKey());
-            oprot.writeBinary(_iter90.getValue());
+            oprot.writeBinary(_iter98.getKey());
+            oprot.writeBinary(_iter98.getValue());
           }
         }
       }
       if (struct.isSetDurability()) {
         oprot.writeI32(struct.durability.getValue());
+      }
+      if (struct.isSetCellVisibility()) {
+        struct.cellVisibility.write(oprot);
       }
     }
 
@@ -791,29 +893,29 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
       struct.row = iprot.readBinary();
       struct.setRowIsSet(true);
       {
-        org.apache.thrift.protocol.TList _list91 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-        struct.columns = new ArrayList<TColumnValue>(_list91.size);
-        for (int _i92 = 0; _i92 < _list91.size; ++_i92)
+        org.apache.thrift.protocol.TList _list99 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+        struct.columns = new ArrayList<TColumnValue>(_list99.size);
+        for (int _i100 = 0; _i100 < _list99.size; ++_i100)
         {
-          TColumnValue _elem93; // required
-          _elem93 = new TColumnValue();
-          _elem93.read(iprot);
-          struct.columns.add(_elem93);
+          TColumnValue _elem101; // required
+          _elem101 = new TColumnValue();
+          _elem101.read(iprot);
+          struct.columns.add(_elem101);
         }
       }
       struct.setColumnsIsSet(true);
-      BitSet incoming = iprot.readBitSet(2);
+      BitSet incoming = iprot.readBitSet(3);
       if (incoming.get(0)) {
         {
-          org.apache.thrift.protocol.TMap _map94 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-          struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map94.size);
-          for (int _i95 = 0; _i95 < _map94.size; ++_i95)
+          org.apache.thrift.protocol.TMap _map102 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+          struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map102.size);
+          for (int _i103 = 0; _i103 < _map102.size; ++_i103)
           {
-            ByteBuffer _key96; // required
-            ByteBuffer _val97; // required
-            _key96 = iprot.readBinary();
-            _val97 = iprot.readBinary();
-            struct.attributes.put(_key96, _val97);
+            ByteBuffer _key104; // required
+            ByteBuffer _val105; // required
+            _key104 = iprot.readBinary();
+            _val105 = iprot.readBinary();
+            struct.attributes.put(_key104, _val105);
           }
         }
         struct.setAttributesIsSet(true);
@@ -821,6 +923,11 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
       if (incoming.get(1)) {
         struct.durability = TDurability.findByValue(iprot.readI32());
         struct.setDurabilityIsSet(true);
+      }
+      if (incoming.get(2)) {
+        struct.cellVisibility = new TCellVisibility();
+        struct.cellVisibility.read(iprot);
+        struct.setCellVisibilityIsSet(true);
       }
     }
   }

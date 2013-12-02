@@ -43,6 +43,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.security.visibility.Authorizations;
+import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
@@ -101,6 +103,10 @@ public class ThriftUtilities {
       addAttributes(out,in.getAttributes());
     }
 
+    if (in.isSetAuthorizations()) {
+      out.setAuthorizations(new Authorizations(in.getAuthorizations().getLabels()));
+    }
+    
     if (!in.isSetColumns()) {
       return out;
     }
@@ -155,6 +161,9 @@ public class ThriftUtilities {
       col.setQualifier(CellUtil.cloneQualifier(kv));
       col.setTimestamp(kv.getTimestamp());
       col.setValue(CellUtil.cloneValue(kv));
+      if (kv.getTagsLength() > 0) {
+        col.setTags(CellUtil.getTagArray(kv));
+      }
       columnValues.add(col);
     }
     out.setColumnValues(columnValues);
@@ -211,6 +220,10 @@ public class ThriftUtilities {
 
     if (in.isSetAttributes()) {
       addAttributes(out,in.getAttributes());
+    }
+    
+    if (in.getCellVisibility() != null) {
+      out.setCellVisibility(new CellVisibility(in.getCellVisibility().getExpression()));
     }
 
     return out;
@@ -403,6 +416,10 @@ public class ThriftUtilities {
     if (in.isSetAttributes()) {
       addAttributes(out,in.getAttributes());
     }
+    
+		if (in.isSetAuthorizations()) {
+		  out.setAuthorizations(new Authorizations(in.getAuthorizations().getLabels()));
+    }
 
     return out;
   }
@@ -420,6 +437,10 @@ public class ThriftUtilities {
     if (in.isSetDurability()) {
       out.setDurability(durabilityFromThrift(in.getDurability()));
     }
+    
+    if(in.getCellVisibility() != null) {
+      out.setCellVisibility(new CellVisibility(in.getCellVisibility().getExpression()));
+    }
 
     return out;
   }
@@ -436,6 +457,10 @@ public class ThriftUtilities {
 
     if (append.isSetDurability()) {
       out.setDurability(durabilityFromThrift(append.getDurability()));
+    }
+    
+    if(append.getCellVisibility() != null) {
+      out.setCellVisibility(new CellVisibility(append.getCellVisibility().getExpression()));
     }
 
     return out;

@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -43,6 +45,7 @@ public class RowSpec {
   private byte[] endRow = null;
   private TreeSet<byte[]> columns =
     new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+  private List<String> labels = new ArrayList<String>();  
   private long startTime = DEFAULT_START_TIMESTAMP;
   private long endTime = DEFAULT_END_TIMESTAMP;
   private int maxVersions = 1;
@@ -277,6 +280,13 @@ public class RowSpec {
   }
 
   public RowSpec(byte[] startRow, byte[] endRow, Collection<byte[]> columns,
+      long startTime, long endTime, int maxVersions, Collection<String> labels) {
+    this(startRow, endRow, columns, startTime, endTime, maxVersions);
+    if(labels != null) {
+      this.labels.addAll(labels);
+    }
+  }
+  public RowSpec(byte[] startRow, byte[] endRow, Collection<byte[]> columns,
       long startTime, long endTime, int maxVersions) {
     this.row = startRow;
     this.endRow = endRow;
@@ -311,6 +321,10 @@ public class RowSpec {
   public boolean hasColumns() {
     return !columns.isEmpty();
   }
+  
+  public boolean hasLabels() {
+    return !labels.isEmpty();
+  }
 
   public byte[] getRow() {
     return row;
@@ -334,6 +348,10 @@ public class RowSpec {
 
   public byte[][] getColumns() {
     return columns.toArray(new byte[columns.size()][]);
+  }
+  
+  public List<String> getLabels() {
+    return labels;
   }
 
   public boolean hasTimestamp() {

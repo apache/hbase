@@ -40,6 +40,7 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
   private static final org.apache.thrift.protocol.TField QUALIFIER_FIELD_DESC = new org.apache.thrift.protocol.TField("qualifier", org.apache.thrift.protocol.TType.STRING, (short)2);
   private static final org.apache.thrift.protocol.TField VALUE_FIELD_DESC = new org.apache.thrift.protocol.TField("value", org.apache.thrift.protocol.TType.STRING, (short)3);
   private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)4);
+  private static final org.apache.thrift.protocol.TField TAGS_FIELD_DESC = new org.apache.thrift.protocol.TField("tags", org.apache.thrift.protocol.TType.STRING, (short)5);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -51,13 +52,15 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
   public ByteBuffer qualifier; // required
   public ByteBuffer value; // required
   public long timestamp; // optional
+  public ByteBuffer tags; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     FAMILY((short)1, "family"),
     QUALIFIER((short)2, "qualifier"),
     VALUE((short)3, "value"),
-    TIMESTAMP((short)4, "timestamp");
+    TIMESTAMP((short)4, "timestamp"),
+    TAGS((short)5, "tags");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -80,6 +83,8 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
           return VALUE;
         case 4: // TIMESTAMP
           return TIMESTAMP;
+        case 5: // TAGS
+          return TAGS;
         default:
           return null;
       }
@@ -122,7 +127,7 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
   // isset id assignments
   private static final int __TIMESTAMP_ISSET_ID = 0;
   private byte __isset_bitfield = 0;
-  private _Fields optionals[] = {_Fields.TIMESTAMP};
+  private _Fields optionals[] = {_Fields.TIMESTAMP,_Fields.TAGS};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -134,6 +139,8 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , true)));
     tmpMap.put(_Fields.TIMESTAMP, new org.apache.thrift.meta_data.FieldMetaData("timestamp", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
+    tmpMap.put(_Fields.TAGS, new org.apache.thrift.meta_data.FieldMetaData("tags", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , true)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TColumnValue.class, metaDataMap);
   }
@@ -170,6 +177,10 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
 ;
     }
     this.timestamp = other.timestamp;
+    if (other.isSetTags()) {
+      this.tags = org.apache.thrift.TBaseHelper.copyBinary(other.tags);
+;
+    }
   }
 
   public TColumnValue deepCopy() {
@@ -183,6 +194,7 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
     this.value = null;
     setTimestampIsSet(false);
     this.timestamp = 0;
+    this.tags = null;
   }
 
   public byte[] getFamily() {
@@ -310,6 +322,40 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
     __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __TIMESTAMP_ISSET_ID, value);
   }
 
+  public byte[] getTags() {
+    setTags(org.apache.thrift.TBaseHelper.rightSize(tags));
+    return tags == null ? null : tags.array();
+  }
+
+  public ByteBuffer bufferForTags() {
+    return tags;
+  }
+
+  public TColumnValue setTags(byte[] tags) {
+    setTags(tags == null ? (ByteBuffer)null : ByteBuffer.wrap(tags));
+    return this;
+  }
+
+  public TColumnValue setTags(ByteBuffer tags) {
+    this.tags = tags;
+    return this;
+  }
+
+  public void unsetTags() {
+    this.tags = null;
+  }
+
+  /** Returns true if field tags is set (has been assigned a value) and false otherwise */
+  public boolean isSetTags() {
+    return this.tags != null;
+  }
+
+  public void setTagsIsSet(boolean value) {
+    if (!value) {
+      this.tags = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case FAMILY:
@@ -344,6 +390,14 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
       }
       break;
 
+    case TAGS:
+      if (value == null) {
+        unsetTags();
+      } else {
+        setTags((ByteBuffer)value);
+      }
+      break;
+
     }
   }
 
@@ -360,6 +414,9 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
 
     case TIMESTAMP:
       return Long.valueOf(getTimestamp());
+
+    case TAGS:
+      return getTags();
 
     }
     throw new IllegalStateException();
@@ -380,6 +437,8 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
       return isSetValue();
     case TIMESTAMP:
       return isSetTimestamp();
+    case TAGS:
+      return isSetTags();
     }
     throw new IllegalStateException();
   }
@@ -430,6 +489,15 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
       if (!(this_present_timestamp && that_present_timestamp))
         return false;
       if (this.timestamp != that.timestamp)
+        return false;
+    }
+
+    boolean this_present_tags = true && this.isSetTags();
+    boolean that_present_tags = true && that.isSetTags();
+    if (this_present_tags || that_present_tags) {
+      if (!(this_present_tags && that_present_tags))
+        return false;
+      if (!this.tags.equals(that.tags))
         return false;
     }
 
@@ -489,6 +557,16 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetTags()).compareTo(typedOther.isSetTags());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetTags()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.tags, typedOther.tags);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -536,6 +614,16 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
       if (!first) sb.append(", ");
       sb.append("timestamp:");
       sb.append(this.timestamp);
+      first = false;
+    }
+    if (isSetTags()) {
+      if (!first) sb.append(", ");
+      sb.append("tags:");
+      if (this.tags == null) {
+        sb.append("null");
+      } else {
+        org.apache.thrift.TBaseHelper.toString(this.tags, sb);
+      }
       first = false;
     }
     sb.append(")");
@@ -624,6 +712,14 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 5: // TAGS
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+              struct.tags = iprot.readBinary();
+              struct.setTagsIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
         }
@@ -659,6 +755,13 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
         oprot.writeI64(struct.timestamp);
         oprot.writeFieldEnd();
       }
+      if (struct.tags != null) {
+        if (struct.isSetTags()) {
+          oprot.writeFieldBegin(TAGS_FIELD_DESC);
+          oprot.writeBinary(struct.tags);
+          oprot.writeFieldEnd();
+        }
+      }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
@@ -683,9 +786,15 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
       if (struct.isSetTimestamp()) {
         optionals.set(0);
       }
-      oprot.writeBitSet(optionals, 1);
+      if (struct.isSetTags()) {
+        optionals.set(1);
+      }
+      oprot.writeBitSet(optionals, 2);
       if (struct.isSetTimestamp()) {
         oprot.writeI64(struct.timestamp);
+      }
+      if (struct.isSetTags()) {
+        oprot.writeBinary(struct.tags);
       }
     }
 
@@ -698,10 +807,14 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
       struct.setQualifierIsSet(true);
       struct.value = iprot.readBinary();
       struct.setValueIsSet(true);
-      BitSet incoming = iprot.readBitSet(1);
+      BitSet incoming = iprot.readBitSet(2);
       if (incoming.get(0)) {
         struct.timestamp = iprot.readI64();
         struct.setTimestampIsSet(true);
+      }
+      if (incoming.get(1)) {
+        struct.tags = iprot.readBinary();
+        struct.setTagsIsSet(true);
       }
     }
   }

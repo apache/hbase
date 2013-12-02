@@ -19,22 +19,14 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
-
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestScannerModel extends TestModelBase<ScannerModel> {
+  private static final String PRIVATE = "private";
+  private static final String PUBLIC = "public";
   private static final byte[] START_ROW = Bytes.toBytes("abracadabra");
   private static final byte[] END_ROW = Bytes.toBytes("zzyzx");
   private static final byte[] COLUMN1 = Bytes.toBytes("column1");
@@ -46,20 +38,20 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
 
   public TestScannerModel() throws Exception {
     super(ScannerModel.class);
-    AS_XML =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
-      "<Scanner batch=\"100\" caching=\"1000\" endRow=\"enp5eng=\" endTime=\"1245393318192\" " +
-      "maxVersions=\"2147483647\" startRow=\"YWJyYWNhZGFicmE=\" startTime=\"1245219839331\">" +
-      "<column>Y29sdW1uMQ==</column><column>Y29sdW1uMjpmb28=</column></Scanner>";
+    AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+        + "<Scanner batch=\"100\" caching=\"1000\" endRow=\"enp5eng=\" endTime=\"1245393318192\" "
+        + "maxVersions=\"2147483647\" startRow=\"YWJyYWNhZGFicmE=\" startTime=\"1245219839331\">"
+        + "<column>Y29sdW1uMQ==</column><column>Y29sdW1uMjpmb28=</column>"
+        + "<label>private</label><label>public</label></Scanner>";
 
-    AS_JSON =
-      "{\"batch\":100,\"caching\":1000,\"endRow\":\"enp5eng=\",\"endTime\":1245393318192,"+
-      "\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\",\"startTime\":1245219839331,"+
-      "\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"]}";
+    AS_JSON = "{\"batch\":100,\"caching\":1000,\"endRow\":\"enp5eng=\",\"endTime\":1245393318192,"
+        + "\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\",\"startTime\":1245219839331,"
+        + "\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
+        +"\"labels\":[\"private\",\"public\"]}";
 
-    AS_PB =
-      "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9vIGQo47qL554kMLDi57mf" +
-      "JDj/////B0joBw==";
+    // TODO
+    AS_PB = "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9vIGQo47qL554kMLDi57mf"
+        + "JDj/////B0joBw==";
   }
 
   protected ScannerModel buildTestModel() {
@@ -72,6 +64,8 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     model.setEndTime(END_TIME);
     model.setBatch(BATCH);
     model.setCaching(CACHING);
+    model.addLabel(PRIVATE);
+    model.addLabel(PUBLIC);
     return model;
   }
 
@@ -79,7 +73,7 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     assertTrue(Bytes.equals(model.getStartRow(), START_ROW));
     assertTrue(Bytes.equals(model.getEndRow(), END_ROW));
     boolean foundCol1 = false, foundCol2 = false;
-    for (byte[] column: model.getColumns()) {
+    for (byte[] column : model.getColumns()) {
       if (Bytes.equals(column, COLUMN1)) {
         foundCol1 = true;
       } else if (Bytes.equals(column, COLUMN2)) {
@@ -92,7 +86,19 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     assertEquals(model.getEndTime(), END_TIME);
     assertEquals(model.getBatch(), BATCH);
     assertEquals(model.getCaching(), CACHING);
+    boolean foundLabel1 = false;
+    boolean foundLabel2 = false;
+    if (model.getLabels() != null && model.getLabels().size() > 0) {
+      for (String label : model.getLabels()) {
+        if (label.equals(PRIVATE)) {
+          foundLabel1 = true;
+        } else if (label.equals(PUBLIC)) {
+          foundLabel2 = true;
+        }
+      }
+      assertTrue(foundLabel1);
+      assertTrue(foundLabel2);
+    }
   }
 
 }
-

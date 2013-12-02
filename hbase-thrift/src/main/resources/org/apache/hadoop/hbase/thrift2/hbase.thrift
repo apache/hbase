@@ -47,7 +47,8 @@ struct TColumnValue {
   1: required binary family,
   2: required binary qualifier,
   3: required binary value,
-  4: optional i64 timestamp
+  4: optional i64 timestamp,
+  5: optional binary tags
 }
 
 /**
@@ -91,7 +92,13 @@ enum TDurability {
   SYNC_WAL = 3,
   FSYNC_WAL = 4
 }
+struct TAuthorization {
+ 1: optional list<string> labels
+}
 
+struct TCellVisibility {
+ 1: optional string expression
+}
 /**
  * Used to perform Get operations on a single row.
  *
@@ -115,6 +122,7 @@ struct TGet {
   5: optional i32 maxVersions,
   6: optional binary filterString,
   7: optional map<binary, binary> attributes
+  8: optional TAuthorization authorizations
 }
 
 /**
@@ -134,7 +142,8 @@ struct TPut {
   2: required list<TColumnValue> columnValues
   3: optional i64 timestamp,
   5: optional map<binary, binary> attributes,
-  6: optional TDurability durability
+  6: optional TDurability durability,
+  7: optional TCellVisibility cellVisibility
 }
 
 /**
@@ -185,6 +194,7 @@ struct TIncrement {
   2: required list<TColumnIncrement> columns,
   4: optional map<binary, binary> attributes,
   5: optional TDurability durability
+  6: optional TCellVisibility cellVisibility
 }
 
 /* 
@@ -195,6 +205,7 @@ struct TAppend {
   2: required list<TColumnValue> columns,
   3: optional map<binary, binary> attributes,
   4: optional TDurability durability
+  5: optional TCellVisibility cellVisibility
 }
 
 /**
@@ -211,6 +222,7 @@ struct TScan {
   7: optional binary filterString,
   8: optional i32 batchSize,
   9: optional map<binary, binary> attributes
+  10: optional TAuthorization authorizations
 }
 
 /**
