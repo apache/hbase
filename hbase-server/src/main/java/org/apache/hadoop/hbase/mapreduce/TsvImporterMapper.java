@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
+import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -54,6 +55,12 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
   protected ImportTsv.TsvParser parser;
 
   protected Configuration conf;
+
+  protected String cellVisibilityExpr;
+
+  private String hfileOutPath;
+
+  private LabelExpander labelExpander;
 
   public long getTs() {
     return ts;
@@ -89,6 +96,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
     if (parser.getRowKeyColumnIndex() == -1) {
       throw new RuntimeException("No row key column specified");
     }
+    labelExpander = new LabelExpander(conf);
   }
 
   /**
@@ -113,6 +121,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
     skipBadLines = context.getConfiguration().getBoolean(
         ImportTsv.SKIP_LINES_CONF_KEY, true);
     badLineCount = context.getCounter("ImportTsv", "Bad Lines");
+    hfileOutPath = conf.get(ImportTsv.BULK_OUTPUT_CONF_KEY);
   }
 
   /**
@@ -133,11 +142,12 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
             parsed.getRowKeyLength());
       // Retrieve timestamp if exists
       ts = parsed.getTimestamp(ts);
+      cellVisibilityExpr = parsed.getCellVisibility();
 
       Put put = new Put(rowKey.copyBytes());
       for (int i = 0; i < parsed.getColumnCount(); i++) {
         if (i == parser.getRowKeyColumnIndex() || i == parser.getTimestampKeyColumnIndex()
-            || i == parser.getAttributesKeyColumnIndex()) {
+            || i == parser.getAttributesKeyColumnIndex() || i == parser.getCellVisibilityColumnIndex()) {
           continue;
         }
         KeyValue kv = createPuts(lineBytes, parsed, put, i);
@@ -170,11 +180,24 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
 
   protected KeyValue createPuts(byte[] lineBytes, ImportTsv.TsvParser.ParsedLine parsed, Put put,
       int i) throws BadTsvLineException, IOException {
-    KeyValue kv;
-    kv = new KeyValue(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
-        parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
-        parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes, parsed.getColumnOffset(i),
-        parsed.getColumnLength(i));
+    KeyValue kv = null;
+    if (hfileOutPath == null) {
+      kv = new KeyValue(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
+          parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
+          parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes,
+          parsed.getColumnOffset(i), parsed.getColumnLength(i));
+      if (cellVisibilityExpr != null) {
+        // We won't be validating the expression here. The Visibility CP will do
+        // the validation
+        put.setCellVisibility(new CellVisibility(cellVisibilityExpr));
+      }
+    } else {
+      kv = labelExpander.createKVFromCellVisibilityExpr(
+          parsed.getRowKeyOffset(), parsed.getRowKeyLength(), parser.getFamily(i), 0,
+          parser.getFamily(i).length, parser.getQualifier(i), 0,
+          parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes,
+          parsed.getColumnOffset(i), parsed.getColumnLength(i), cellVisibilityExpr);
+    }
     put.add(kv);
     return kv;
   }

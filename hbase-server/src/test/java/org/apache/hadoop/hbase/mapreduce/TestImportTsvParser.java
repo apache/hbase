@@ -295,4 +295,19 @@ public class TestImportTsvParser {
     }
   }
 
+  @Test
+  public void testTsvParserWithCellVisibilityCol() throws BadTsvLineException {
+    TsvParser parser = new TsvParser(
+        "HBASE_ROW_KEY,col_a,HBASE_TS_KEY,HBASE_ATTRIBUTES_KEY,HBASE_CELL_VISIBILITY", "\t");
+    assertEquals(0, parser.getRowKeyColumnIndex());
+    assertEquals(4, parser.getCellVisibilityColumnIndex());
+    byte[] line = Bytes.toBytes("rowkey\tval_a\t1234\tkey=>value\tPRIVATE&SECRET");
+    ParsedLine parse = parser.parse(line, line.length);
+    assertEquals(18, parse.getAttributeKeyOffset());
+    assertEquals(3, parser.getAttributesKeyColumnIndex());
+    String attributes[] = parse.getIndividualAttributes();
+    assertEquals(attributes[0], "key=>value");
+    assertEquals(29, parse.getCellVisibilityColumnOffset());
+  }
+
 }

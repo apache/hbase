@@ -112,9 +112,15 @@ public class ImportTsv extends Configured implements Tool {
 
     public static final String ATTRIBUTES_COLUMN_SPEC = "HBASE_ATTRIBUTES_KEY";
 
+    public static final String CELL_VISIBILITY_COLUMN_SPEC = "HBASE_CELL_VISIBILITY";
+
     private int attrKeyColumnIndex = DEFAULT_ATTRIBUTES_COLUMN_INDEX;
 
     public static final int DEFAULT_ATTRIBUTES_COLUMN_INDEX = -1;
+
+    public static final int DEFAULT_CELL_VISIBILITY_COLUMN_INDEX = -1;
+
+    private int cellVisibilityColumnIndex = DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
     /**
      * @param columnsSpecification the list of columns to parser out, comma separated.
      * The row key should be the special token TsvParser.ROWKEY_COLUMN_SPEC
@@ -149,6 +155,10 @@ public class ImportTsv extends Configured implements Tool {
           attrKeyColumnIndex = i;
           continue;
         }
+        if(CELL_VISIBILITY_COLUMN_SPEC.equals(str)) {
+          cellVisibilityColumnIndex = i;
+          continue;
+        }
         String[] parts = str.split(":", 2);
         if (parts.length == 1) {
           families[i] = str.getBytes();
@@ -172,8 +182,16 @@ public class ImportTsv extends Configured implements Tool {
       return attrKeyColumnIndex != DEFAULT_ATTRIBUTES_COLUMN_INDEX;
     }
 
+    public boolean hasCellVisibility() {
+      return cellVisibilityColumnIndex != DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
+    }
+
     public int getAttributesKeyColumnIndex() {
       return attrKeyColumnIndex;
+    }
+
+    public int getCellVisibilityColumnIndex() {
+      return cellVisibilityColumnIndex;
     }
     public int getRowKeyColumnIndex() {
       return rowKeyColumnIndex;
@@ -209,6 +227,8 @@ public class ImportTsv extends Configured implements Tool {
         throw new BadTsvLineException("No timestamp");
       } else if (hasAttributes() && tabOffsets.size() <= getAttributesKeyColumnIndex()) {
         throw new BadTsvLineException("No attributes specified");
+      } else if(hasCellVisibility() && tabOffsets.size() <= getCellVisibilityColumnIndex()) {
+        throw new BadTsvLineException("No cell visibility specified");
       }
       return new ParsedLine(tabOffsets, lineBytes);
     }
@@ -279,8 +299,32 @@ public class ImportTsv extends Configured implements Tool {
           return DEFAULT_ATTRIBUTES_COLUMN_INDEX;
         }
       }
-      
-      
+
+      public int getCellVisibilityColumnOffset() {
+        if (hasCellVisibility()) {
+          return getColumnOffset(cellVisibilityColumnIndex);
+        } else {
+          return DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
+        }
+      }
+
+      public int getCellVisibilityColumnLength() {
+        if (hasCellVisibility()) {
+          return getColumnLength(cellVisibilityColumnIndex);
+        } else {
+          return DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
+        }
+      }
+
+      public String getCellVisibility() {
+        if (!hasCellVisibility()) {
+          return null;
+        } else {
+          return Bytes.toString(lineBytes, getColumnOffset(cellVisibilityColumnIndex),
+              getColumnLength(cellVisibilityColumnIndex));
+        }
+      }
+
       public int getColumnOffset(int idx) {
         if (idx > 0)
           return tabOffsets.get(idx - 1) + 1;
@@ -414,7 +458,10 @@ public class ImportTsv extends Configured implements Tool {
     Set<String> cfSet = new HashSet<String>();
     for (String aColumn : columns) {
       if (TsvParser.ROWKEY_COLUMN_SPEC.equals(aColumn)
-          || TsvParser.TIMESTAMPKEY_COLUMN_SPEC.equals(aColumn)) continue;
+          || TsvParser.TIMESTAMPKEY_COLUMN_SPEC.equals(aColumn)
+          || TsvParser.CELL_VISIBILITY_COLUMN_SPEC.equals(aColumn)
+          || TsvParser.ATTRIBUTES_COLUMN_SPEC.equals(aColumn))
+        continue;
       // we are only concerned with the first one (in case this is a cf:cq)
       cfSet.add(aColumn.split(":", 2)[0]);
     }

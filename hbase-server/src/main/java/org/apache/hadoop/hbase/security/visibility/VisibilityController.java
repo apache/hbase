@@ -799,6 +799,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       if (node instanceof LeafExpressionNode) {
         identifier = ((LeafExpressionNode) node)
             .getIdentifier();
+        LOG.debug("The identifier is "+identifier);
         labelOrdinal = this.visibilityManager.getLabelOrdinal(identifier);
       } else {
         // This is a NOT node.
@@ -949,11 +950,13 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       // for non-rpc handling, fallback to system user
       user = User.getCurrent();
     }
+    LOG.debug("Current active user name is "+user.getShortName());
     return user;
   }
 
   private List<String> getSystemAndSuperUsers() throws IOException {
     User user = User.getCurrent();
+    LOG.debug("Current user name is "+user.getShortName());
     if (user == null) {
       throw new IOException("Unable to obtain the current user, "
           + "authorization checks for internal operations will not work correctly!");
@@ -1040,6 +1043,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
             Put p = new Put(Bytes.toBytes(ordinalCounter));
             p.addImmutable(
                 LABELS_TABLE_FAMILY, LABEL_QUALIFIER, label, LABELS_TABLE_TAGS);
+            LOG.debug("Adding the label "+labelStr);
             puts.add(p);
             ordinalCounter++;
             response.addResult(successResult);
@@ -1264,6 +1268,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
         throw new IOException("Unable to retrieve calling user");
       }
       List<String> auths = this.visibilityManager.getAuths(user.getShortName());
+      LOG.debug("The list of auths are "+auths);
       if (!auths.contains(SYSTEM_LABEL)) {
         throw new AccessDeniedException("User '" + user.getShortName()
             + "' is not authorized to perform this action.");

@@ -58,6 +58,11 @@ public class TextSortReducer extends
 
   private ImportTsv.TsvParser parser;
 
+  /** Cell visibility expr **/
+  private String cellVisibilityExpr;
+
+  private LabelExpander labelExpander;
+
   public long getTs() {
     return ts;
   }
@@ -92,6 +97,7 @@ public class TextSortReducer extends
     if (parser.getRowKeyColumnIndex() == -1) {
       throw new RuntimeException("No row key column specified");
     }
+    labelExpander = new LabelExpander(conf);
   }
 
   /**
@@ -140,16 +146,27 @@ public class TextSortReducer extends
           ImportTsv.TsvParser.ParsedLine parsed = parser.parse(lineBytes, line.getLength());
           // Retrieve timestamp if exists
           ts = parsed.getTimestamp(ts);
+          cellVisibilityExpr = parsed.getCellVisibility();
 
           for (int i = 0; i < parsed.getColumnCount(); i++) {
-            if (i == parser.getRowKeyColumnIndex() || i == parser.getTimestampKeyColumnIndex()) {
+            if (i == parser.getRowKeyColumnIndex() || i == parser.getTimestampKeyColumnIndex()
+                || i == parser.getAttributesKeyColumnIndex() || i == parser.getCellVisibilityColumnIndex()) {
               continue;
             }
-            KeyValue kv = new KeyValue(lineBytes, parsed.getRowKeyOffset(),
-                parsed.getRowKeyLength(), parser.getFamily(i), 0,
-                parser.getFamily(i).length, parser.getQualifier(i), 0,
-                parser.getQualifier(i).length, ts, KeyValue.Type.Put,
-                lineBytes, parsed.getColumnOffset(i), parsed.getColumnLength(i));
+            KeyValue kv = null;
+            if (cellVisibilityExpr == null) {
+              kv = new KeyValue(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
+                  parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
+                  parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes,
+                  parsed.getColumnOffset(i), parsed.getColumnLength(i));
+            } else {
+              // Should ensure that VisibilityController is present
+              kv = labelExpander.createKVFromCellVisibilityExpr(
+                  parsed.getRowKeyOffset(), parsed.getRowKeyLength(), parser.getFamily(i), 0,
+                  parser.getFamily(i).length, parser.getQualifier(i), 0,
+                  parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes,
+                  parsed.getColumnOffset(i), parsed.getColumnLength(i), cellVisibilityExpr);
+            }
             kvs.add(kv);
             curSize += kv.heapSize();
           }
