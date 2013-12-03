@@ -687,5 +687,89 @@ The HBase shell has been extended to provide simple commands for editing and upd
         org.apache.hadoop.hbase.security.access.AccessController,org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint</value>
       </property>
     ]]></programlisting>
+</section> <!-- Secure Bulk Load -->
+
+<section xml:id="hbase.visibility.labels">
+    <title>Visibility Labels</title>
+	<para>
+	This feature provides cell level security with labeled visibility for the cells. Cells can be associated with a visibility expression. The visibility expression can contain labels joined with logical expressions &#39;&amp;&#39;, &#39;|&#39; and &#39;!&#39;. Also using &#39;(&#39;, &#39;)&#39; one can specify the precedence order. For example, consider the label set { confidential, secret, topsecret, probationary }, where the first three are sensitivity classifications and the last describes if an employee is probationary or not. If a cell is stored with this visibility expression:
+	( secret | topsecret ) &amp; !probationary
+	</para>
+	<para>
+	Then any user associated with the secret or topsecret label will be able to view the cell, as long as the user is not also associated with the probationary label. Furthermore, any user only associated with the confidential label, whether probationary or not, will not see the cell or even know of its existence.
+	</para>
+	<para>
+	Visibility expressions like the above can be added when storing or mutating a cell using the API,
+	</para>
+	<para><code>Mutation#setCellVisibility(new CellVisibility(String labelExpession));</code></para>
+	Where the labelExpression could be &#39;( secret | topsecret ) &amp; !probationary&#39;
+	
+	<para>
+	We build the user&#39;s label set in the RPC context when a request is first received by the HBase RegionServer. How users are associated with labels is pluggable. The default plugin passes through labels specified in Authorizations added to the Get or Scan and checks those against the calling user&#39;s authenticated labels list. When client passes some labels for which the user is not authenticated, this default algorithm will drop those. One can pass a subset of user authenticated labels via the Scan/Get authorizations.
+	</para>
+	<para><code>Get#setAuthorizations(new Authorizations(String,...));</code></para>
+	<para><code>Scan#setAuthorizations(new Authorizations(String,...));</code></para>
+
+	<section xml:id="hbase.visibility.label.administration">
+	    <title>Visibility Label Administration</title>
+		<para>
+		There are new client side Java APIs and shell commands for performing visibility labels administrative actions. Only the HBase super user is authorized to perform these operations.
+		</para>
+
+		<section xml:id="hbase.visibility.label.administration.add.label">
+		    <title>Adding Labels</title>
+			<para>A set of labels can be added to the system either by using the Java API</para>
+			<para><code>VisibilityClient#addLabels(Configuration conf, final String[] labels)</code></para>
+			<para>Or by using the shell command</para>
+			<para><code>add_labels [label1, label2]</code></para>
+			<para>
+			Valid label can include alphanumeric characters and characters &#39;-&#39;, &#39;_&#39;, &#39;:&#39;, &#39;.&#39; and &#39;/&#39;
+			</para>
+		</section>
+
+		<section xml:id="hbase.visibility.label.administration.add.label">
+		    <title>User Label Association</title>
+			<para>A set of labels can be associated with a user by using the API</para>
+			<para><code>VisibilityClient#setAuths(Configuration conf, final String[] auths, final String user)</code></para>
+			<para>Or by using the shell command</para>
+			<para><code>set_auths user,[label1, label2].</code></para>
+			<para>Labels can be disassociated from a user using API</para>
+			<para><code>VisibilityClient#clearAuths(Configuration conf, final String[] auths, final String user)</code></para>
+			<para>Or by using shell command</para>
+			<para><code>clear_auths user,[label1, label2]</code></para>
+			<para>
+			One can use the API <code>VisibilityClient#getAuths(Configuration conf, final String user)</code> or <code>get_auths</code> shell command to get the list of labels associated for a given user. The labels and user auths information will be stored in the system table &#34;labels&#34;.
+			</para>
+		</section>
+	</section>
+
+	<section xml:id="hbase.visibility.label.configuration">
+	    <title>Server  Side Configuration</title>
+		<para>
+		HBase stores cell level labels as cell tags. HFile version 3 adds the cell tags support. Be sure to use HFile version 3 by setting this property in every server site configuration file:
+		</para>
+		<programlisting><![CDATA[
+		  <property>
+		    <name>hfile.format.version</name>
+			<value>3</value>
+		  </property>
+		]]></programlisting>
+		<para>
+		You will also need to make sure the VisibilityController coprocessor is active on every table to protect by adding it to the list of system coprocessors in the server site configuration files:
+		</para>
+		<programlisting><![CDATA[
+		  <property>
+		    <name>hbase.coprocessor.master.classes</name>
+			<value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
+		  </property>
+		  <property>
+		    <name>hbase.coprocessor.region.classes</name>
+			<value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
+		  </property>
+		]]></programlisting>
+		<para>
+		As said above, finding out labels authenticated for a given get/scan request is a pluggable algorithm. A custom implementation can be plugged in using the property <code>hbase.regionserver.scan.visibility.label.generator.class</code>. The default implementation class is <code>org.apache.hadoop.hbase.security.visibility.DefaultScanLabelGenerator</code>
+		</para>
+	</section>
 </section>
 </chapter>
