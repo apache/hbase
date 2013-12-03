@@ -28,5 +28,5 @@ message WrappedKey {
   required uint32 length = 2;
   required bytes data = 3;
   optional bytes iv = 4;
-  optional fixed32 crc = 5;
+  optional bytes hash = 5;
 }

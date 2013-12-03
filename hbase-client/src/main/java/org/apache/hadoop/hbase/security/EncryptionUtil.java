@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
 import java.security.SecureRandom;
-import java.util.zip.CRC32;
 
 import javax.crypto.spec.SecretKeySpec;
 
@@ -34,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.ZeroCopyLiteralByteString;
 
@@ -87,17 +87,16 @@ public class EncryptionUtil {
       builder.setIv(ZeroCopyLiteralByteString.wrap(iv));
     }
     byte[] keyBytes = key.getEncoded();
-    CRC32 crc = new CRC32();
-    crc.update(keyBytes);
     builder.setLength(keyBytes.length);
+    builder.setHash(ZeroCopyLiteralByteString.wrap(Encryption.hash128(keyBytes)));
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Encryption.encryptWithSubjectKey(out, new ByteArrayInputStream(keyBytes), subject,
       conf, cipher, iv);
     builder.setData(ZeroCopyLiteralByteString.wrap(out.toByteArray()));
-    builder.setCrc((int)crc.getValue());
-    ByteArrayOutputStream os = new ByteArrayOutputStream();
-    builder.build().writeDelimitedTo(os);
-    return os.toByteArray();
+    // Build and return the protobuf message
+    out.reset();
+    builder.build().writeDelimitedTo(out);
+    return out.toByteArray();
   }
 
   /**
@@ -124,11 +123,9 @@ public class EncryptionUtil {
     Encryption.decryptWithSubjectKey(out, wrappedKey.getData().newInput(),
       wrappedKey.getLength(), subject, conf, cipher, iv);
     byte[] keyBytes = out.toByteArray();
-    if (wrappedKey.hasCrc()) {
-      CRC32 crc = new CRC32();
-      crc.update(keyBytes);
-      if ((int)(crc.getValue()&0xffffffff) != wrappedKey.getCrc()) {
-        throw new KeyException("Key was not successfully unwrapped: CRC check failed");
+    if (wrappedKey.hasHash()) {
+      if (!Bytes.equals(wrappedKey.getHash().toByteArray(), Encryption.hash128(keyBytes))) {
+        throw new KeyException("Key was not successfully unwrapped");
       }
     }
     return new SecretKeySpec(keyBytes, wrappedKey.getAlgorithm());

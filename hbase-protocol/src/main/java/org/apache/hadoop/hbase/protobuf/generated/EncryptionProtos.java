@@ -56,15 +56,15 @@ public final class EncryptionProtos {
      */
     com.google.protobuf.ByteString getIv();
 
-    // optional fixed32 crc = 5;
+    // optional bytes hash = 5;
     /**
-     * <code>optional fixed32 crc = 5;</code>
+     * <code>optional bytes hash = 5;</code>
      */
-    boolean hasCrc();
+    boolean hasHash();
     /**
-     * <code>optional fixed32 crc = 5;</code>
+     * <code>optional bytes hash = 5;</code>
      */
-    int getCrc();
+    com.google.protobuf.ByteString getHash();
   }
   /**
    * Protobuf type {@code WrappedKey}
@@ -137,9 +137,9 @@ public final class EncryptionProtos {
               iv_ = input.readBytes();
               break;
             }
-            case 45: {
+            case 42: {
               bitField0_ |= 0x00000010;
-              crc_ = input.readFixed32();
+              hash_ = input.readBytes();
               break;
             }
           }
@@ -273,20 +273,20 @@ public final class EncryptionProtos {
       return iv_;
     }
 
-    // optional fixed32 crc = 5;
-    public static final int CRC_FIELD_NUMBER = 5;
-    private int crc_;
+    // optional bytes hash = 5;
+    public static final int HASH_FIELD_NUMBER = 5;
+    private com.google.protobuf.ByteString hash_;
     /**
-     * <code>optional fixed32 crc = 5;</code>
+     * <code>optional bytes hash = 5;</code>
      */
-    public boolean hasCrc() {
+    public boolean hasHash() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     /**
-     * <code>optional fixed32 crc = 5;</code>
+     * <code>optional bytes hash = 5;</code>
      */
-    public int getCrc() {
-      return crc_;
+    public com.google.protobuf.ByteString getHash() {
+      return hash_;
     }
 
     private void initFields() {
@@ -294,7 +294,7 @@ public final class EncryptionProtos {
       length_ = 0;
       data_ = com.google.protobuf.ByteString.EMPTY;
       iv_ = com.google.protobuf.ByteString.EMPTY;
-      crc_ = 0;
+      hash_ = com.google.protobuf.ByteString.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -333,7 +333,7 @@ public final class EncryptionProtos {
         output.writeBytes(4, iv_);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeFixed32(5, crc_);
+        output.writeBytes(5, hash_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -362,7 +362,7 @@ public final class EncryptionProtos {
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeFixed32Size(5, crc_);
+          .computeBytesSize(5, hash_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -407,10 +407,10 @@ public final class EncryptionProtos {
         result = result && getIv()
             .equals(other.getIv());
       }
-      result = result && (hasCrc() == other.hasCrc());
-      if (hasCrc()) {
-        result = result && (getCrc()
-            == other.getCrc());
+      result = result && (hasHash() == other.hasHash());
+      if (hasHash()) {
+        result = result && getHash()
+            .equals(other.getHash());
       }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
@@ -441,9 +441,9 @@ public final class EncryptionProtos {
         hash = (37 * hash) + IV_FIELD_NUMBER;
         hash = (53 * hash) + getIv().hashCode();
       }
-      if (hasCrc()) {
-        hash = (37 * hash) + CRC_FIELD_NUMBER;
-        hash = (53 * hash) + getCrc();
+      if (hasHash()) {
+        hash = (37 * hash) + HASH_FIELD_NUMBER;
+        hash = (53 * hash) + getHash().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -562,7 +562,7 @@ public final class EncryptionProtos {
         bitField0_ = (bitField0_ & ~0x00000004);
         iv_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000008);
-        crc_ = 0;
+        hash_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
@@ -611,7 +611,7 @@ public final class EncryptionProtos {
         if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
           to_bitField0_ |= 0x00000010;
         }
-        result.crc_ = crc_;
+        result.hash_ = hash_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -642,8 +642,8 @@ public final class EncryptionProtos {
         if (other.hasIv()) {
           setIv(other.getIv());
         }
-        if (other.hasCrc()) {
-          setCrc(other.getCrc());
+        if (other.hasHash()) {
+          setHash(other.getHash());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -863,35 +863,38 @@ public final class EncryptionProtos {
         return this;
       }
 
-      // optional fixed32 crc = 5;
-      private int crc_ ;
+      // optional bytes hash = 5;
+      private com.google.protobuf.ByteString hash_ = com.google.protobuf.ByteString.EMPTY;
       /**
-       * <code>optional fixed32 crc = 5;</code>
+       * <code>optional bytes hash = 5;</code>
        */
-      public boolean hasCrc() {
+      public boolean hasHash() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       /**
-       * <code>optional fixed32 crc = 5;</code>
+       * <code>optional bytes hash = 5;</code>
        */
-      public int getCrc() {
-        return crc_;
+      public com.google.protobuf.ByteString getHash() {
+        return hash_;
       }
       /**
-       * <code>optional fixed32 crc = 5;</code>
+       * <code>optional bytes hash = 5;</code>
        */
-      public Builder setCrc(int value) {
-        bitField0_ |= 0x00000010;
-        crc_ = value;
+      public Builder setHash(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        hash_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional fixed32 crc = 5;</code>
+       * <code>optional bytes hash = 5;</code>
        */
-      public Builder clearCrc() {
+      public Builder clearHash() {
         bitField0_ = (bitField0_ & ~0x00000010);
-        crc_ = 0;
+        hash_ = getDefaultInstance().getHash();
         onChanged();
         return this;
       }
@@ -921,11 +924,11 @@ public final class EncryptionProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\020Encryption.proto\"V\n\nWrappedKey\022\021\n\talgo" +
+      "\n\020Encryption.proto\"W\n\nWrappedKey\022\021\n\talgo" +
       "rithm\030\001 \002(\t\022\016\n\006length\030\002 \002(\r\022\014\n\004data\030\003 \002(" +
-      "\014\022\n\n\002iv\030\004 \001(\014\022\013\n\003crc\030\005 \001(\007BC\n*org.apache" +
-      ".hadoop.hbase.protobuf.generatedB\020Encryp" +
-      "tionProtosH\001\240\001\001"
+      "\014\022\n\n\002iv\030\004 \001(\014\022\014\n\004hash\030\005 \001(\014BC\n*org.apach" +
+      "e.hadoop.hbase.protobuf.generatedB\020Encry" +
+      "ptionProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -937,7 +940,7 @@ public final class EncryptionProtos {
           internal_static_WrappedKey_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_WrappedKey_descriptor,
-              new java.lang.String[] { "Algorithm", "Length", "Data", "Iv", "Crc", });
+              new java.lang.String[] { "Algorithm", "Length", "Data", "Iv", "Hash", });
           return null;
         }
       };
