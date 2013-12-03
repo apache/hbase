@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A default implementation of {@link HFileBlockDecodingContext}. It assumes the
@@ -64,28 +65,25 @@ public class HFileBlockDefaultDecodingContext implements
 
       // Encrypted block format:
       // +--------------------------+
-      // | vint plaintext length    |
-      // +--------------------------+
-      // | vint iv length           |
+      // | byte iv length           |
       // +--------------------------+
       // | iv data ...              |
       // +--------------------------+
       // | encrypted block data ... |
       // +--------------------------+
 
-      int plaintextLength = StreamUtils.readRawVarint32(in);
-      int ivLength = StreamUtils.readRawVarint32(in);
+      int ivLength = in.read();
       if (ivLength > 0) {
         byte[] iv = new byte[ivLength];
         IOUtils.readFully(in, iv);
         decryptor.setIv(iv);
+        // All encrypted blocks will have a nonzero IV length. If we see an IV
+        // length of zero, this means the encoding context had 0 bytes of
+        // plaintext to encode.
+        decryptor.reset();
+        in = decryptor.createDecryptionStream(in);
       }
-      if (plaintextLength == 0) {
-        return;
-      }
-      decryptor.reset();
-      in = decryptor.createDecryptionStream(in);
-      onDiskSizeWithoutHeader = plaintextLength;
+      onDiskSizeWithoutHeader -= Bytes.SIZEOF_BYTE + ivLength;
     }
 
     Compression.Algorithm compression = fileContext.getCompression();

@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 
@@ -165,9 +164,7 @@ public class HFileBlockDefaultEncodingContext implements
 
       // Encrypted block format:
       // +--------------------------+
-      // | vint plaintext length    |
-      // +--------------------------+
-      // | vint iv length           |
+      // | byte iv length           |
       // +--------------------------+
       // | iv data ...              |
       // +--------------------------+
@@ -199,29 +196,29 @@ public class HFileBlockDefaultEncodingContext implements
 
       if (plaintextLength > 0) {
 
+        // Set up the cipher
         Cipher cipher = cryptoContext.getCipher();
         Encryptor encryptor = cipher.getEncryptor();
         encryptor.setKey(cryptoContext.getKey());
 
-        // Write the encryption header and IV (plaintext)
+        // Set up the IV
         int ivLength = iv.length;
-        StreamUtils.writeRawVInt32(cryptoByteStream, plaintextLength);
-        StreamUtils.writeRawVInt32(cryptoByteStream, ivLength);
+        Preconditions.checkState(ivLength <= Byte.MAX_VALUE, "IV length out of range");
+        cryptoByteStream.write(ivLength);
         if (ivLength > 0) {
           Encryption.incrementIv(iv);
           encryptor.setIv(iv);
           cryptoByteStream.write(iv);
         }
 
-        // Write the block contents (ciphertext)
+        // Encrypt the data
         Encryption.encrypt(cryptoByteStream, in, encryptor);
 
         onDiskBytesWithHeader = cryptoByteStream.toByteArray();
 
       } else {
 
-        StreamUtils.writeRawVInt32(cryptoByteStream, 0);
-        StreamUtils.writeRawVInt32(cryptoByteStream, 0);
+        cryptoByteStream.write(0);
         onDiskBytesWithHeader = cryptoByteStream.toByteArray();
 
       }

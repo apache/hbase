@@ -151,8 +151,9 @@ public class TestHFileEncryption {
     Configuration conf = TEST_UTIL.getConfiguration();
     CacheConfig cacheConf = new CacheConfig(conf);
 
-    HFileContext fileContext = new HFileContext();
-    fileContext.setEncryptionContext(cryptoContext);
+    HFileContext fileContext = new HFileContextBuilder()
+    .withEncryptionContext(cryptoContext)
+    .build();
 
     // write a simple encrypted hfile
     Path path = new Path(TEST_UTIL.getDataTestDir(), "cryptometa.hfile");
