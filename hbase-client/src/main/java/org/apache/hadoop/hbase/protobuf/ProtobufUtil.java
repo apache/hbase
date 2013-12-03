@@ -1752,9 +1752,9 @@ public final class ProtobufUtil {
   public static byte [] toDelimitedByteArray(final Message m) throws IOException {
     // Allocate arbitrary big size so we avoid resizing.
     ByteArrayOutputStream baos = new ByteArrayOutputStream(4096);
+    baos.write(PB_MAGIC);
     m.writeDelimitedTo(baos);
-    baos.close();
-    return ProtobufUtil.prependPBMagic(baos.toByteArray());
+    return baos.toByteArray();
   }
 
   /**

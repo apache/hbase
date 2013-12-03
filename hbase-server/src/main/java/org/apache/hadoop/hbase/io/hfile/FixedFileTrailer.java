@@ -180,7 +180,7 @@ public class FixedFileTrailer {
     // The last 4 bytes of the file encode the major and minor version universally
     baosDos.writeInt(materializeVersion(majorVersion, minorVersion));
 
-    outputStream.write(baos.toByteArray());
+    baos.writeTo(outputStream);
   }
 
   /**
@@ -208,8 +208,10 @@ public class FixedFileTrailer {
     if (encryptionKey != null) {
       builder.setEncryptionKey(ZeroCopyLiteralByteString.wrap(encryptionKey));
     }
+    // We need this extra copy unfortunately to determine the final size of the
+    // delimited output, see use of baos.size() below.
     builder.build().writeDelimitedTo(baos);
-    output.write(baos.toByteArray());
+    baos.writeTo(output);
     // Pad to make up the difference between variable PB encoding length and the
     // length when encoded as writable under earlier V2 formats. Failure to pad
     // properly or if the PB encoding is too big would mean the trailer wont be read

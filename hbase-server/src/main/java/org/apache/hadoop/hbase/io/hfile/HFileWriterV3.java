@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -216,15 +215,11 @@ public class HFileWriterV3 extends HFileWriterV2 {
     if (cryptoContext != Encryption.Context.NONE) {
       // Wrap the context's key and write it as the encryption metadata, the wrapper includes
       // all information needed for decryption
-      ByteArrayOutputStream os = new ByteArrayOutputStream();
-      os.write(EncryptionUtil.wrapKey(cryptoContext.getConf(),
+      trailer.setEncryptionKey(EncryptionUtil.wrapKey(cryptoContext.getConf(),
         cryptoContext.getConf().get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
           User.getCurrent().getShortName()),
         cryptoContext.getKey()));
-      os.close();
-      trailer.setEncryptionKey(os.toByteArray());
     }
-
     // Now we can finish the close
     super.finishClose(trailer);
   }

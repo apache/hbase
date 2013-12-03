@@ -194,9 +194,8 @@ public class SecureWALCellCodec extends WALCellCodec {
       cout.write(kvBuffer, pos, remainingLength);
       cout.close();
 
-      byte[] codedBytes = baos.toByteArray();
-      StreamUtils.writeRawVInt32(out, codedBytes.length);
-      out.write(codedBytes);
+      StreamUtils.writeRawVInt32(out, baos.size());
+      baos.writeTo(out);
     }
 
   }
