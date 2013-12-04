@@ -118,7 +118,7 @@
 %>
 <%= tableHeader %>
 <%
-  String url = "http://" + rl.getHostname() + ":" + infoPort + "/";
+  String url = "//" + rl.getHostname() + ":" + infoPort + "/";
 %>
 <tr>
   <td><%= tableName %></td>
@@ -137,7 +137,7 @@
   HRegionInfo meta = HRegionInfo.FIRST_META_REGIONINFO;
   ServerName metaLocation = master.getCatalogTracker().waitForMeta(1);
   for (int i = 0; i < 1; i++) {
-    String url = "http://" + metaLocation.getHostname() + ":" + infoPort + "/";
+    String url = "//" + metaLocation.getHostname() + ":" + infoPort + "/";
 %>
 <tr>
   <td><%= meta.getRegionNameAsString() %></td>
@@ -183,7 +183,7 @@
     ServerName addr = hriEntry.getValue();
     long req = 0;
 
-    String urlRegionServer = null;
+    String regionServer = null;
 
     if (addr != null) {
       HServerLoad sl = master.getServerManager().getLoad(addr);
@@ -193,21 +193,20 @@
           req = map.get(regionInfo.getRegionName()).getRequestsCount();
         }
         // This port might be wrong if RS actually ended up using something else.
-        urlRegionServer =
-            "http://" + addr.getHostname().toString() + ":" + infoPort + "/";
-        Integer i = regDistribution.get(urlRegionServer);
+        regionServer = addr.getHostname().toString() + ":" + infoPort;
+        Integer i = regDistribution.get(regionServer);
         if (null == i) i = new Integer(0);
-        regDistribution.put(urlRegionServer, i+1);
+        regDistribution.put(regionServer, i+1);
       }
     }
 %>
 <tr>
   <td><%= Bytes.toStringBinary(regionInfo.getRegionName())%></td>
   <%
-  if (urlRegionServer != null) {
+  if (regionServer != null) {
   %>
   <td>
-    <a href="<%= urlRegionServer %>"><%= addr.getHostname().toString() + ":" + infoPort %></a>
+    <a href="<%= "//" + regionServer + "/" %>"><%= regionServer %></a>
   </td>
   <%
   } else {
@@ -228,7 +227,7 @@
   for (Map.Entry<String, Integer> rdEntry : regDistribution.entrySet()) {
 %>
 <tr>
-  <td><%= rdEntry.getKey()%></td>
+  <td><a href="<%= "//" + rdEntry.getKey() + "/" %>"><%= rdEntry.getKey() %></a></td>
   <td><%= rdEntry.getValue()%></td>
 </tr>
 <% } %>
