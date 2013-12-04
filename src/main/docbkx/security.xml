@@ -772,4 +772,123 @@ The HBase shell has been extended to provide simple commands for editing and upd
 		</para>
 	</section>
 </section>
+
+<section xml:id="hbase.encryption.server">
+    <title>Transparent Server Side Encryption</title>
+    <para>
+This feature provides transparent encryption for protecting HFile and WAL data at rest, using a two-tier key architecture for flexible and non-intrusive key rotation.
+    </para>
+    <para>
+First, the administrator provisions a cluster master key, stored into a key provider accessable to every trusted HBase process: the Master, the RegionServers, and clients (e.g. the shell) on administrative workstations. The default key provider integrates with the Java KeyStore API and any key management system with support for it. How HBase retrieves key material is configurable via the site file. The master key may be stored on the cluster servers, protected by a secure KeyStore file, or on an external keyserver, or in a hardware security module. This master key is resolved as needed by HBase processes through the configured key provider.
+    </para>
+    <para>
+Then, encryption keys can be specified in schema on a per column family basis, by creating or modifying a column descriptor to include two additional attributes: the name of the encryption algorithm to use (currently only "AES" is supported), and, optionally, a data key wrapped (encrypted) with the cluster master key. Per CF keys facilitates low impact incremental key rotation and reduces the scope of any external leak of key material. The wrapped data key is stored in the CF schema metadata, and in each HFile for the CF, encrypted with the cluster master key. Once the CF is configured for encryption, any new HFiles will be written encrypted. To insure encryption of all HFiles, trigger a major compaction after first enabling this feature. The key for decryption, encrypted with the cluster master key, is stored in the HFiles in a new meta block. At file open time the data key will be extracted from the HFile, decrypted with the cluster master key, and used for decryption of the remainder of the HFile. The HFile will be unreadable if the master key is not available. Should remote users somehow acquire access to the HFile data because of some lapse in HDFS permissions or from inappropriately discarded media, there will be no means to decrypt either the data key or the file data.
+    </para>
+    <para>
+Specifying a data key in the CF schema is optional. If one is not present, a random data key will be created for each HFile.
+    </para>
+    <para>
+A new configuration option for encrypting the WAL is also introduced. Even though WALs are transient, it is necessary to encrypt the WALEdits to avoid circumventing HFile protections for encrypted column families.
+    </para>
+    <section xml:id="hbase.encryption.server.configuration">
+        <title>Configuration</title>
+        <para>
+Create a secret key of appropriate length for AES.
+        </para>
+	<programlisting><![CDATA[
+        $ keytool -keystore /path/to/hbase/conf/hbase.jks \
+          -storetype jceks -storepass <password> \
+          -genseckey -keyalg AES -keysize 128 \
+          -alias <alias>
+	]]></programlisting>
+        <para>
+where &lt;password&gt; is the password for the KeyStore file and &lt;alias&gt;is the user name of the HBase service account, typically "hbase". Simply press RETURN to store the key with the same password as the store. The resulting file should be distributed to all nodes running HBase daemons, with file ownership and permissions set to be readable only by the HBase service account.
+        </para>
+        <para>
+Configure HBase daemons to use a key provider backed by the KeyStore files for retrieving the cluster master key as needed.
+        </para>
+	<programlisting><![CDATA[
+        <property>
+            <name>hbase.crypto.keyprovider</name>
+            <value>org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider</value>
+        </property>
+        <property>
+            <name>hbase.crypto.keyprovider.parameters</name>
+            <value>jceks:///path/to/hbase/conf/hbase.jks?password=<password></value>
+        </property>
+        ]]></programlisting>
+        <para>
+By default the HBase service account name will be used to resolve the cluster master key, but you can store it with any arbitrary alias and configure HBase appropriately:
+        </para>
+	<programlisting><![CDATA[
+        <property>
+            <name>hbase.crypto.master.key.name</name>
+            <value>hbase</value>
+        </property>
+        ]]></programlisting>
+        <para>
+Because the password to the key store is sensitive information, the HBase site XML file should also have its permissions set to be readable only by the HBase service account.
+        </para>
+        <para>
+Transparent encryption is a feature of HFile version 3. Be sure to use HFile version 3 by setting this property in every server site configuration file:
+        </para>
+        <programlisting><![CDATA[
+        <property>
+            <name>hfile.format.version</name>
+            <value>3</value>
+        </property>
+        ]]></programlisting>
+        <para>
+Finally, configure the secure WAL in every server site configuration file:
+        </para>
+        <programlisting><![CDATA[
+        <property>
+            <name>hbase.regionserver.hlog.reader.impl</name>
+            <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
+        </property>
+        <property>
+            <name>hbase.regionserver.hlog.writer.impl</name>
+            <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter</value>
+        </property>
+        <property>
+            <name>hbase.regionserver.wal.encryption</name>
+            <value>true</value>
+        </property>
+        ]]></programlisting>
+    </section>
+    <section xml:id="hbase.encryption.server.schema">
+        <title>Setting Encryption on a CF</title>
+        <para>
+To enable encryption on a CF, use <code>HBaseAdmin#modifyColumn</code> or the HBase shell to modify the column descriptor. The attribute 'ENCRYPTION' specifies the encryption algorithm to use. Currently only "AES" is supported. If creating a new table, simply set this attribute; no subsequent table modification will be necessary.
+        </para>
+        <para>
+If setting a specific data key, the attribute 'ENCRYPTION_KEY' should contain the data key wrapped by the cluster master key. The static methods <code>wrapKey</code> and <code>unwrapKey</code> in <code>org.apache.hadoop.hbase.security.EncryptionUtil</code> can be used in conjunction with <code>HColumnDescriptor#setEncryptionKey</code> for this purpose. Because this must be done programatically, setting a data key with the shell is not supported.
+        </para>
+        <para>
+To disable encryption on a CF, simply remove the 'ENCRYPTION' (and 'ENCRYPTION_KEY', if it was set) attributes from the column schema, using <code>HBaseAdmin#modifyColumn</code> or the HBase shell. All new HFiles for the CF will be written without encryption. Trigger a major compaction to rewrite all files.
+	</para>
+    </section>
+    <section xml:id="hbase.encryption.server.data_key_rotation">
+        <title>Data Key Rotation</title>
+        <para>
+Data key rotation is made simple by this design. First, change the CF key in the column descriptor. Then, trigger major compaction. Once compaction has completed, all files will be (re)encrypted with the new key material. While this process is ongoing, HFiles encrypted with old key material will still be readable. 
+        </para>
+    </section>
+    <section xml:id="hbase.encryption.server.master_key_rotation">
+        <title>Master Key Rotation</title>
+        <para>
+Master key rotation can be achieved by updating the KeyStore to contain a new master key, as described above, with also the old master key added to the KeyStore under a different alias. Then, configure fallback to the old master key in the HBase site file:
+        </para>
+	<programlisting><![CDATA[
+        <property>
+            <name>hbase.crypto.master.alternate.key.name</name>
+            <value>hbase.old</value>
+        </property>
+        ]]></programlisting>
+        <para>
+This will require a rolling restart of the HBase daemons to take effect. As with data key rotation, trigger a major compaction and wait for it to complete. Once compaction has completed, all files will be (re)encrypted with data keys wrapped by the new cluster master key. The old master key, and its associated site file configuration, can then be removed, and all trace of the old master key will be gone after the next rolling restart. A second rolling restart is not immediately necessary.
+        </para>
+    </section>
+</section>
+
 </chapter>
