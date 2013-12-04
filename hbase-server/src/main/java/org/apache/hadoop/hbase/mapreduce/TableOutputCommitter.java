@@ -58,4 +58,12 @@ public class TableOutputCommitter extends OutputCommitter {
   public void setupTask(TaskAttemptContext arg0) throws IOException {
   }
 
+  public boolean isRecoverySupported() {
+    return true;
+  }
+
+  public void recoverTask(TaskAttemptContext taskContext)
+  throws IOException
+  {
+  }
 }
