@@ -29096,7 +29096,7 @@ public final class ClientProtos {
       " \n\010mutation\030\002 \002(\0132\016.MutationProto\022\035\n\tcon" +
       "dition\030\003 \001(\0132\n.Condition\022\023\n\013nonce_group\030" +
       "\004 \001(\004\"<\n\016MutateResponse\022\027\n\006result\030\001 \001(\0132" +
-      "\007.Result\022\021\n\tprocessed\030\002 \001(\010\"\344\002\n\004Scan\022\027\n\006" +
+      "\007.Result\022\021\n\tprocessed\030\002 \001(\010\"\375\002\n\004Scan\022\027\n\006" +
       "column\030\001 \003(\0132\007.Column\022!\n\tattribute\030\002 \003(\013" +
       "2\016.NameBytesPair\022\021\n\tstart_row\030\003 \001(\014\022\020\n\010s" +
       "top_row\030\004 \001(\014\022\027\n\006filter\030\005 \001(\0132\007.Filter\022\036" +
@@ -29105,49 +29105,50 @@ public final class ClientProtos {
       "rue\022\022\n\nbatch_size\030\t \001(\r\022\027\n\017max_result_si" +
       "ze\030\n \001(\004\022\023\n\013store_limit\030\013 \001(\r\022\024\n\014store_o" +
       "ffset\030\014 \001(\r\022&\n\036load_column_families_on_d" +
-      "emand\030\r \001(\010\022\r\n\005small\030\016 \001(\010\"\236\001\n\013ScanReque" +
-      "st\022 \n\006region\030\001 \001(\0132\020.RegionSpecifier\022\023\n\004" +
-      "scan\030\002 \001(\0132\005.Scan\022\022\n\nscanner_id\030\003 \001(\004\022\026\n" +
-      "\016number_of_rows\030\004 \001(\r\022\025\n\rclose_scanner\030\005" +
-      " \001(\010\022\025\n\rnext_call_seq\030\006 \001(\004\"y\n\014ScanRespo" +
-      "nse\022\030\n\020cells_per_result\030\001 \003(\r\022\022\n\nscanner",
-      "_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(\010\022\013\n\003ttl\030\004" +
-      " \001(\r\022\030\n\007results\030\005 \003(\0132\007.Result\"\263\001\n\024BulkL" +
-      "oadHFileRequest\022 \n\006region\030\001 \002(\0132\020.Region" +
-      "Specifier\0225\n\013family_path\030\002 \003(\0132 .BulkLoa" +
-      "dHFileRequest.FamilyPath\022\026\n\016assign_seq_n" +
-      "um\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006family\030\001 \002(\014\022\014" +
-      "\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFileResponse\022\016\n" +
-      "\006loaded\030\001 \002(\010\"a\n\026CoprocessorServiceCall\022" +
-      "\013\n\003row\030\001 \002(\014\022\024\n\014service_name\030\002 \002(\t\022\023\n\013me" +
-      "thod_name\030\003 \002(\t\022\017\n\007request\030\004 \002(\014\"d\n\031Copr",
-      "ocessorServiceRequest\022 \n\006region\030\001 \002(\0132\020." +
-      "RegionSpecifier\022%\n\004call\030\002 \002(\0132\027.Coproces" +
-      "sorServiceCall\"]\n\032CoprocessorServiceResp" +
-      "onse\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\035" +
-      "\n\005value\030\002 \002(\0132\016.NameBytesPair\"L\n\006Action\022" +
-      "\r\n\005index\030\001 \001(\r\022 \n\010mutation\030\002 \001(\0132\016.Mutat" +
-      "ionProto\022\021\n\003get\030\003 \001(\0132\004.Get\"Y\n\014RegionAct" +
-      "ion\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\016\n" +
-      "\006atomic\030\002 \001(\010\022\027\n\006action\030\003 \003(\0132\007.Action\"^" +
-      "\n\021ResultOrException\022\r\n\005index\030\001 \001(\r\022\027\n\006re",
-      "sult\030\002 \001(\0132\007.Result\022!\n\texception\030\003 \001(\0132\016" +
-      ".NameBytesPair\"f\n\022RegionActionResult\022-\n\021" +
-      "resultOrException\030\001 \003(\0132\022.ResultOrExcept" +
-      "ion\022!\n\texception\030\002 \001(\0132\016.NameBytesPair\"G" +
-      "\n\014MultiRequest\022#\n\014regionAction\030\001 \003(\0132\r.R" +
-      "egionAction\022\022\n\nnonceGroup\030\002 \001(\004\"@\n\rMulti" +
-      "Response\022/\n\022regionActionResult\030\001 \003(\0132\023.R" +
-      "egionActionResult2\261\002\n\rClientService\022 \n\003G" +
-      "et\022\013.GetRequest\032\014.GetResponse\022)\n\006Mutate\022" +
-      "\016.MutateRequest\032\017.MutateResponse\022#\n\004Scan",
-      "\022\014.ScanRequest\032\r.ScanResponse\022>\n\rBulkLoa" +
-      "dHFile\022\025.BulkLoadHFileRequest\032\026.BulkLoad" +
-      "HFileResponse\022F\n\013ExecService\022\032.Coprocess" +
-      "orServiceRequest\032\033.CoprocessorServiceRes" +
-      "ponse\022&\n\005Multi\022\r.MultiRequest\032\016.MultiRes" +
-      "ponseBB\n*org.apache.hadoop.hbase.protobu" +
-      "f.generatedB\014ClientProtosH\001\210\001\001\240\001\001"
+      "emand\030\r \001(\010\022\r\n\005small\030\016 \001(\010\022\027\n\010reversed\030\017" +
+      " \001(\010:\005false\"\236\001\n\013ScanRequest\022 \n\006region\030\001 " +
+      "\001(\0132\020.RegionSpecifier\022\023\n\004scan\030\002 \001(\0132\005.Sc" +
+      "an\022\022\n\nscanner_id\030\003 \001(\004\022\026\n\016number_of_rows" +
+      "\030\004 \001(\r\022\025\n\rclose_scanner\030\005 \001(\010\022\025\n\rnext_ca" +
+      "ll_seq\030\006 \001(\004\"y\n\014ScanResponse\022\030\n\020cells_pe",
+      "r_result\030\001 \003(\r\022\022\n\nscanner_id\030\002 \001(\004\022\024\n\014mo" +
+      "re_results\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\022\030\n\007results" +
+      "\030\005 \003(\0132\007.Result\"\263\001\n\024BulkLoadHFileRequest" +
+      "\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\0225\n\013fa" +
+      "mily_path\030\002 \003(\0132 .BulkLoadHFileRequest.F" +
+      "amilyPath\022\026\n\016assign_seq_num\030\003 \001(\010\032*\n\nFam" +
+      "ilyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n" +
+      "\025BulkLoadHFileResponse\022\016\n\006loaded\030\001 \002(\010\"a" +
+      "\n\026CoprocessorServiceCall\022\013\n\003row\030\001 \002(\014\022\024\n" +
+      "\014service_name\030\002 \002(\t\022\023\n\013method_name\030\003 \002(\t",
+      "\022\017\n\007request\030\004 \002(\014\"d\n\031CoprocessorServiceR" +
+      "equest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier" +
+      "\022%\n\004call\030\002 \002(\0132\027.CoprocessorServiceCall\"" +
+      "]\n\032CoprocessorServiceResponse\022 \n\006region\030" +
+      "\001 \002(\0132\020.RegionSpecifier\022\035\n\005value\030\002 \002(\0132\016" +
+      ".NameBytesPair\"L\n\006Action\022\r\n\005index\030\001 \001(\r\022" +
+      " \n\010mutation\030\002 \001(\0132\016.MutationProto\022\021\n\003get" +
+      "\030\003 \001(\0132\004.Get\"Y\n\014RegionAction\022 \n\006region\030\001" +
+      " \002(\0132\020.RegionSpecifier\022\016\n\006atomic\030\002 \001(\010\022\027" +
+      "\n\006action\030\003 \003(\0132\007.Action\"^\n\021ResultOrExcep",
+      "tion\022\r\n\005index\030\001 \001(\r\022\027\n\006result\030\002 \001(\0132\007.Re" +
+      "sult\022!\n\texception\030\003 \001(\0132\016.NameBytesPair\"" +
+      "f\n\022RegionActionResult\022-\n\021resultOrExcepti" +
+      "on\030\001 \003(\0132\022.ResultOrException\022!\n\texceptio" +
+      "n\030\002 \001(\0132\016.NameBytesPair\"G\n\014MultiRequest\022" +
+      "#\n\014regionAction\030\001 \003(\0132\r.RegionAction\022\022\n\n" +
+      "nonceGroup\030\002 \001(\004\"@\n\rMultiResponse\022/\n\022reg" +
+      "ionActionResult\030\001 \003(\0132\023.RegionActionResu" +
+      "lt2\261\002\n\rClientService\022 \n\003Get\022\013.GetRequest" +
+      "\032\014.GetResponse\022)\n\006Mutate\022\016.MutateRequest",
+      "\032\017.MutateResponse\022#\n\004Scan\022\014.ScanRequest\032" +
+      "\r.ScanResponse\022>\n\rBulkLoadHFile\022\025.BulkLo" +
+      "adHFileRequest\032\026.BulkLoadHFileResponse\022F" +
+      "\n\013ExecService\022\032.CoprocessorServiceReques" +
+      "t\032\033.CoprocessorServiceResponse\022&\n\005Multi\022" +
+      "\r.MultiRequest\032\016.MultiResponseBB\n*org.ap" +
+      "ache.hadoop.hbase.protobuf.generatedB\014Cl" +
+      "ientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -29237,7 +29238,7 @@ public final class ClientProtos {
           internal_static_Scan_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Scan_descriptor,
-              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", "StoreLimit", "StoreOffset", "LoadColumnFamiliesOnDemand", "Small", });
+              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", "StoreLimit", "StoreOffset", "LoadColumnFamiliesOnDemand", "Small", "Reversed", });
           internal_static_ScanRequest_descriptor =
             getDescriptor().getMessageTypes().get(12);
           internal_static_ScanRequest_fieldAccessorTable = new
