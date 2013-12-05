@@ -1279,19 +1279,18 @@ public class Bytes {
    * @param b right operand
    * @return True if equal
    */
-  public static boolean equals(byte[] a, ByteBuffer b) {
-    if (a == null) return b == null;
-    if (b == null) return false;
-    if (a.length != b.remaining()) return false;
+  public static boolean equals(byte[] a, ByteBuffer buf) {
+    if (a == null) return buf == null;
+    if (buf == null) return false;
+    if (a.length != buf.remaining()) return false;
 
-    b.mark();
+    // Thou shalt not modify the original byte buffer in what should be read only operations.
+    ByteBuffer b = buf.duplicate();
     for (byte anA : a) {
       if (anA != b.get()) {
-        b.reset();
         return false;
       }
     }
-    b.reset();
     return true;
   }
 
