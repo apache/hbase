@@ -248,7 +248,7 @@ public final class TableName implements Comparable<TableName> {
    */
   private TableName(ByteBuffer namespace, ByteBuffer qualifier) throws IllegalArgumentException {
     this.qualifier = new byte[qualifier.remaining()];
-    qualifier.get(this.qualifier);
+    qualifier.duplicate().get(this.qualifier);
     this.qualifierAsString = Bytes.toString(this.qualifier);
 
     if (qualifierAsString.equals(OLD_ROOT_STR)) {
@@ -275,7 +275,7 @@ public final class TableName implements Comparable<TableName> {
         this.systemTable = true;
       } else {
         this.namespace = new byte[namespace.remaining()];
-        namespace.get(this.namespace);
+        namespace.duplicate().get(this.namespace);
         this.namespaceAsString = Bytes.toString(this.namespace);
         this.systemTable = false;
       }
@@ -325,15 +325,15 @@ public final class TableName implements Comparable<TableName> {
     TableName newTable = new TableName(bns, qns);
     if (tableCache.add(newTable)) {  // Adds the specified element if it is not already present
       return newTable;
-    } else {
-      // Someone else added it. Let's find it.
-      for (TableName tn : tableCache) {
-        if (Bytes.equals(tn.getQualifier(), qns) && Bytes.equals(tn.getNamespace(), bns)) {
-          return tn;
-        }
-      }
     }
 
+    // Someone else added it. Let's find it.
+    for (TableName tn : tableCache) {
+      if (Bytes.equals(tn.getQualifier(), qns) && Bytes.equals(tn.getNamespace(), bns)) {
+        return tn;
+      }
+    }
+    // this should never happen.
     throw new IllegalStateException(newTable + " was supposed to be in the cache");
   }
 
