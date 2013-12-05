@@ -206,7 +206,7 @@ public class TestRegionMergeTransaction {
   }
 
   @Test
-  public void testWholesomeMerge() throws IOException {
+  public void testWholesomeMerge() throws IOException, InterruptedException {
     final int rowCountOfRegionA = loadRegion(this.region_a, CF, true);
     final int rowCountOfRegionB = loadRegion(this.region_b, CF, true);
     assertTrue(rowCountOfRegionA > 0 && rowCountOfRegionB > 0);
@@ -217,9 +217,8 @@ public class TestRegionMergeTransaction {
     RegionMergeTransaction mt = prepareOnGoodRegions();
 
     // Run the execute. Look at what it returns.
-    Server mockServer = Mockito.mock(Server.class);
-    when(mockServer.getConfiguration())
-        .thenReturn(TEST_UTIL.getConfiguration());
+    TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, 0);
+    Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration());
     HRegion mergedRegion = mt.execute(mockServer, null);
     // Do some assertions about execution.
     assertTrue(this.fs.exists(mt.getMergesDir()));
@@ -249,7 +248,7 @@ public class TestRegionMergeTransaction {
   }
 
   @Test
-  public void testRollback() throws IOException {
+  public void testRollback() throws IOException, InterruptedException {
     final int rowCountOfRegionA = loadRegion(this.region_a, CF, true);
     final int rowCountOfRegionB = loadRegion(this.region_b, CF, true);
     assertTrue(rowCountOfRegionA > 0 && rowCountOfRegionB > 0);
@@ -265,9 +264,8 @@ public class TestRegionMergeTransaction {
 
     // Run the execute. Look at what it returns.
     boolean expectedException = false;
-    Server mockServer = Mockito.mock(Server.class);
-    when(mockServer.getConfiguration())
-        .thenReturn(TEST_UTIL.getConfiguration());
+    TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, 0);
+    Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration());
     try {
       mt.execute(mockServer, null);
     } catch (MockedFailedMergedRegionCreation e) {
@@ -308,7 +306,7 @@ public class TestRegionMergeTransaction {
   }
 
   @Test
-  public void testFailAfterPONR() throws IOException, KeeperException {
+  public void testFailAfterPONR() throws IOException, KeeperException, InterruptedException {
     final int rowCountOfRegionA = loadRegion(this.region_a, CF, true);
     final int rowCountOfRegionB = loadRegion(this.region_b, CF, true);
     assertTrue(rowCountOfRegionA > 0 && rowCountOfRegionB > 0);
@@ -325,9 +323,8 @@ public class TestRegionMergeTransaction {
 
     // Run the execute. Look at what it returns.
     boolean expectedException = false;
-    Server mockServer = Mockito.mock(Server.class);
-    when(mockServer.getConfiguration())
-        .thenReturn(TEST_UTIL.getConfiguration());
+    TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, 0);
+    Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration());
     try {
       mt.execute(mockServer, null);
     } catch (MockedFailedMergedRegionOpen e) {

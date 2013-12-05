@@ -20,10 +20,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Comparator;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.MetaMutationAnnotation;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
@@ -55,6 +58,119 @@ public class RegionServerCoprocessorHost extends
       if (env.getInstance() instanceof RegionServerObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         ((RegionServerObserver) env.getInstance()).preStopRegionServer(ctx);
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public boolean preMerge(final HRegion regionA, final HRegion regionB) throws IOException {
+    boolean bypass = false;
+    ObserverContext<RegionServerCoprocessorEnvironment> ctx = null;
+    for (RegionServerEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionServerObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionServerObserver) env.getInstance()).preMerge(ctx, regionA, regionB);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return bypass;
+  }
+
+  public void postMerge(final HRegion regionA, final HRegion regionB, final HRegion mergedRegion)
+      throws IOException {
+    ObserverContext<RegionServerCoprocessorEnvironment> ctx = null;
+    for (RegionServerEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionServerObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionServerObserver) env.getInstance()).postMerge(ctx, regionA, regionB, mergedRegion);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public boolean preMergeCommit(final HRegion regionA, final HRegion regionB,
+      final @MetaMutationAnnotation List<Mutation> metaEntries) throws IOException {
+    boolean bypass = false;
+    ObserverContext<RegionServerCoprocessorEnvironment> ctx = null;
+    for (RegionServerEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionServerObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionServerObserver) env.getInstance()).preMergeCommit(ctx, regionA, regionB,
+            metaEntries);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return bypass;
+  }
+
+  public void postMergeCommit(final HRegion regionA, final HRegion regionB,
+      final HRegion mergedRegion) throws IOException {
+    ObserverContext<RegionServerCoprocessorEnvironment> ctx = null;
+    for (RegionServerEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionServerObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionServerObserver) env.getInstance()).postMergeCommit(ctx, regionA, regionB,
+            mergedRegion);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public void preRollBackMerge(final HRegion regionA, final HRegion regionB) throws IOException {
+    ObserverContext<RegionServerCoprocessorEnvironment> ctx = null;
+    for (RegionServerEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionServerObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionServerObserver) env.getInstance()).preRollBackMerge(ctx, regionA, regionB);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public void postRollBackMerge(final HRegion regionA, final HRegion regionB) throws IOException {
+    ObserverContext<RegionServerCoprocessorEnvironment> ctx = null;
+    for (RegionServerEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionServerObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionServerObserver) env.getInstance()).postRollBackMerge(ctx, regionA, regionB);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
         if (ctx.shouldComplete()) {
           break;
         }
