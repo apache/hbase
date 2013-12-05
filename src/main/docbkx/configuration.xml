@@ -1049,74 +1049,11 @@ index e70ebc6..96f8c27 100644
       </para>
       <para>See <xref linkend="compression" /> for more information.</para>
       </section>
-      <section xml:id="bigger.regions">
-      <title>Bigger Regions</title>
-      <para>
-      Consider going to larger regions to cut down on the total number of regions
-      on your cluster. Generally less Regions to manage makes for a smoother running
-      cluster (You can always later manually split the big Regions should one prove
-      hot and you want to spread the request load over the cluster).  A lower number of regions is
-       preferred, generally in the range of 20 to low-hundreds
-       per RegionServer.  Adjust the regionsize as appropriate to achieve this number.
-       </para>
-       <para>For the 0.90.x codebase, the upper-bound of regionsize is about 4Gb, with a default of 256Mb.
-       For 0.92.x codebase, due to the HFile v2 change much larger regionsizes can be supported (e.g., 20Gb).
-       </para>
-       <para>You may need to experiment with this setting based on your hardware configuration and application needs.
-       </para>
-       <para>Adjust <code>hbase.hregion.max.filesize</code> in your <filename>hbase-site.xml</filename>.
-       RegionSize can also be set on a per-table basis via
-       <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html">HTableDescriptor</link>.
-      </para>
-      <section xml:id="too_many_regions">
-          <title>How many regions per RegionServer?</title>
-          <para>
-              Typically you want to keep your region count low on HBase for numerous reasons.
-              Usually right around 100 regions per RegionServer has yielded the best results.
-              Here are some of the reasons below for keeping region count low:
-              <orderedlist>
-                  <listitem><para>
-                          MSLAB requires 2mb per memstore (that's 2mb per family per region).
-                          1000 regions that have 2 families each is 3.9GB of heap used, and it's not even storing data yet. NB: the 2MB value is configurable.
-                  </para></listitem>
-                  <listitem><para>If you fill all the regions at somewhat the same rate, the global memory usage makes it that it forces tiny
-                          flushes when you have too many regions which in turn generates compactions.
-                          Rewriting the same data tens of times is the last thing you want.
-                          An example is filling 1000 regions (with one family) equally and let's consider a lower bound for global memstore
-                          usage of 5GB (the region server would have a big heap).
-                          Once it reaches 5GB it will force flush the biggest region,
-                          at that point they should almost all have about 5MB of data so
-                          it would flush that amount. 5MB inserted later, it would flush another
-                          region that will now have a bit over 5MB of data, and so on.
-                          A basic formula for the amount of regions to have per region server would
-                          look like this:
-                          Heap * upper global memstore limit = amount of heap devoted to memstore
-                          then the amount of heap devoted to memstore / (Number of regions per RS * CFs).
-                          This will give you the rough memstore size if everything is being written to.
-                          A more accurate formula is
-                          Heap * upper global memstore limit = amount of heap devoted to memstore then the
-                          amount of heap devoted to memstore / (Number of actively written regions per RS * CFs).
-                          This can allot you a higher region count from the write perspective if you know how many
-                          regions you will be writing to at one time.
-                  </para></listitem>
-                  <listitem><para>The master as is is allergic to tons of regions, and will
-                          take a lot of time assigning them and moving them around in batches.
-                          The reason is that it's heavy on ZK usage, and it's not very async
-                          at the moment (could really be improved -- and has been imporoved a bunch
-                          in 0.96 hbase).
-                  </para></listitem>
-                  <listitem><para>
-                          In older versions of HBase (pre-v2 hfile, 0.90 and previous), tons of regions
-                          on a few RS can cause the store file index to rise raising heap usage and can
-                          create memory pressure or OOME on the RSs
-                  </para></listitem>
-          </orderedlist>
-      </para>
-      <para>Another issue is the effect of the number of regions on mapreduce jobs.
-          Keeping 5 regions per RS would be too low for a job, whereas 1000 will generate too many maps.
-      </para>
-      </section>
-
+      <section xml:id="config.wals"><title>Configuring the size and number of WAL files</title>
+      <para>HBase uses <xref linkend="wal" /> to recover the memstore data that has not been flushed to disk in case of an RS failure. These WAL files should be configured to be slightly smaller than HDFS block (by default, HDFS block is 64Mb and WAL file is ~60Mb).</para>
+      <para>HBase also has a limit on number of WAL files, designed to ensure there's never too much data that needs to be replayed during recovery. This limit needs to be set according to memstore configuration, so that all the necessary data would fit. It is recommended to allocated enough WAL files to store at least that much data (when all memstores are close to full).
+      For example, with 16Gb RS heap, default memstore settings (0.4), and default WAL file size (~60Mb), 16Gb*0.4/60, the starting point for WAL file count is ~109.
+      However, as all memstores are not expected to be full all the time, less WAL files can be allocated.</para>
       </section>
       <section xml:id="disable.splitting">
       <title>Managed Splitting</title>

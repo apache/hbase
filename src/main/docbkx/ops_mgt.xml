@@ -919,37 +919,73 @@ false
     </section>
   </section>  <!--  snapshots -->
 
-  <section xml:id="ops.capacity"><title>Capacity Planning</title>
-    <section xml:id="ops.capacity.storage"><title>Storage</title>
-      <para>A common question for HBase administrators is estimating how much storage will be required for an HBase cluster.
-      There are several apsects to consider, the most important of which is what data load into the cluster.  Start
-      with a solid understanding of how HBase handles data internally (KeyValue).
-      </para>
-      <section xml:id="ops.capacity.storage.kv"><title>KeyValue</title>
-        <para>HBase storage will be dominated by KeyValues.  See <xref linkend="keyvalue" /> and <xref linkend="keysize" /> for
-        how HBase stores data internally.
-        </para>
-        <para>It is critical to understand that there is a KeyValue instance for every attribute stored in a row, and the
-        rowkey-length, ColumnFamily name-length and attribute lengths will drive the size of the database more than any other
-        factor.
-        </para>
-      </section>
-      <section xml:id="ops.capacity.storage.sf"><title>StoreFiles and Blocks</title>
-        <para>KeyValue instances are aggregated into blocks, and the blocksize is configurable on a per-ColumnFamily basis.
-        Blocks are aggregated into StoreFile's.  See <xref linkend="regions.arch" />.
-        </para>
-      </section>
-      <section xml:id="ops.capacity.storage.hdfs"><title>HDFS Block Replication</title>
-        <para>Because HBase runs on top of HDFS, factor in HDFS block replication into storage calculations.
-        </para>
-      </section>
-    </section>
-    <section xml:id="ops.capacity.regions"><title>Regions</title>
-      <para>Another common question for HBase administrators is determining the right number of regions per
-      RegionServer.  This affects both storage and hardware planning. See <xref linkend="perf.number.of.regions" />.
-      </para>
-    </section>
-  </section>
+  <section xml:id="ops.capacity"><title>Capacity Planning and Region Sizing</title>
+    <para>There are several considerations when planning the capacity for an HBase cluster and performing the initial configuration. Start with a solid understanding of how HBase handles data internally.</para>
+    <section xml:id="ops.capacity.nodes"><title>Node count and hardware/VM configuration</title>
+      <section xml:id="ops.capacity.nodes.datasize"><title>Physical data size</title>
+<para>Physical data size on disk is distinct from logical size of your data and is affected by the following:
+<itemizedlist>
+<listitem>Increased by HBase overhead
+<itemizedlist>
+<listitem>See <xref linkend="keyvalue" /> and <xref linkend="keysize" />. At least 24 bytes per key-value (cell), can be more. Small keys/values means more relative overhead.</listitem>
+<listitem>KeyValue instances are aggregated into blocks, which are indexed. Indexes also have to be stored. Blocksize is configurable on a per-ColumnFamily basis. See <xref linkend="regions.arch" />.</listitem>
+</itemizedlist></listitem>
+<listitem>Decreased by <xref linkend="compression" xrefstyle="template:compression" /> and data block encoding, depending on data. See also <ulink url="http://search-hadoop.com/m/lL12B1PFVhp1">this thread</ulink>. You might want to test what compression and encoding (if any) make sense for your data.</listitem>
+<listitem>Increased by size of region server <xref linkend="wal" xrefstyle="template:WAL" /> (usually fixed and negligible - less than half of RS memory size, per RS).</listitem>
+<listitem>Increased by HDFS replication - usually x3.</listitem>
+</itemizedlist></para>
+<para>Aside from the disk space necessary to store the data, one RS may not be able to serve arbitrarily large amounts of data due to some practical limits on region count and size (see <xref linkend="ops.capacity.regions" xrefstyle="template:below" />).</para>
+      </section> <!-- ops.capacity.nodes.datasize -->
+      <section xml:id="ops.capacity.nodes.throughput"><title>Read/Write throughput</title>
+<para>Number of nodes can also be driven by required thoughput for reads and/or writes. The  throughput one can get per node depends a lot on data (esp. key/value sizes) and request patterns, as well as node and system configuration. Planning should be done for peak load if it is likely that the load would be the main driver of the increase of the node count. PerformanceEvaluation and <xref linkend="ycsb" xrefstyle="template:YCSB" /> tools can be used to test single node or a test cluster.</para>
+<para>For write, usually 5-15Mb/s per RS can be expected, since every region server has only one active WAL. There's no good estimate for reads, as it depends vastly on data, requests, and cache hit rate. <xref linkend="perf.casestudy" /> might be helpful.</para>
+      </section> <!-- ops.capacity.nodes.throughput -->
+      <section xml:id="ops.capacity.nodes.gc"><title>JVM GC limitations</title>
+<para>RS cannot currently utilize very large heap due to cost of GC. There's also no good way of running multiple RS-es per server (other than running several VMs per machine). Thus, ~20-24Gb or less memory dedicated to one RS is recommended. GC tuning is required for large heap sizes. See <xref linkend="gcpause" />, <xref linkend="trouble.log.gc" /> and elsewhere (TODO: where?)</para>
+      </section> <!-- ops.capacity.nodes.gc -->
+    </section> <!-- ops.capacity.nodes -->
+    <section xml:id="ops.capacity.regions"><title>Determining region count and size</title>
+<para>Generally less regions makes for a smoother running cluster (you can always manually split the big regions later (if necessary) to spread the data, or request load, over the cluster); 20-200 regions per RS is a reasonable range. The number of regions cannot be configured directly (unless you go for fully <xref linkend="disable.splitting" xrefstyle="template:manual splitting" />); adjust the region size to achieve the target region size given table size.</para>
+<para>When configuring regions for multiple tables, note that most region settings can be set on a per-table basis via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html">HTableDescriptor</link>, as well as shell commands. These settings will override the ones in <varname>hbase-site.xml</varname>. That is useful if your tables have different workloads/use cases.</para>
+<para>Also note that in the discussion of region sizes here, <emphasis role="bold">HDFS replication factor is not (and should not be) taken into account, whereas other factors <xref linkend="ops.capacity.nodes.datasize" xrefstyle="template:above" /> should be.</emphasis> So, if your data is compressed and replicated 3 ways by HDFS, "9 Gb region" means 9 Gb of compressed data. HDFS replication factor only affects your disk usage and is invisible to most HBase code.</para>
+      <section xml:id="ops.capacity.regions.count"><title>Number of regions per RS - upper bound</title>
+<para>In production scenarios, where you have a lot of data, you are normally concerned with the maximum number of regions you can have per server. <xref linkend="too_many_regions" /> has technical discussion on the subject; in short, maximum number of regions is mostly determined by memstore memory usage. Each region has its own memstores; these grow up to a configurable size; usually in 128-256Mb range, see <xref linkend="hbase.hregion.memstore.flush.size" />. There's one memstore per column family (so there's only one per region if there's one CF in the table). RS dedicates some fraction of total memory (see <xref linkend="hbase.regionserver.global.memstore.upperLimit" />) to region memstores. If this memory is exceeded (too much memstore usage), undesirable consequences such as unresponsive server, or later compaction storms, can result. Thus, a good starting point for the number of regions per RS (assuming one table) is <programlisting>(RS memory)*(total memstore fraction)/((memstore size)*(# column families))</programlisting>
+E.g. if RS has 16Gb RAM, with default settings, it is 16384*0.4/128 ~ 51 regions per RS is a starting point. The formula can be extended to multiple tables; if they all have the same configuration, just use total number of families.</para>
+<para>This number can be adjusted; the formula above assumes all your regions are filled at approximately the same rate. If only a fraction of your regions are going to be actively written to, you can divide the result by that fraction to get a larger region count. Then, even if all regions are written to, all region memstores are not filled evenly, and eventually jitter appears even if they are (due to limited number of concurrent flushes). Thus, one can have as many as 2-3 times more regions than the starting point; however, increased numbers carry increased risk.</para>
+<para>For write-heavy workload, memstore fraction can be increased in configuration at the expense of block cache; this will also allow one to have more regions.</para>
+      </section> <!-- ops.capacity.regions.count -->
+      <section xml:id="ops.capacity.regions.mincount"><title>Number of regions per RS - lower bound</title>
+<para>HBase scales by having regions across many servers. Thus if you have 2 regions for 16GB data, on a 20 node machine your data will be concentrated on just a few machines - nearly the entire        cluster will be idle. This really can't be stressed enough, since a common problem is loading 200MB data into HBase and then wondering why your awesome 10 node cluster isn't doing anything.</para>
+<para>On the other hand, if you have a very large amount of data, you may also want to go for a larger number of regions to avoid having regions that are too large.</para>
+      </section> <!-- ops.capacity.regions.mincount -->
+      <section xml:id="ops.capacity.regions.size"><title>Maximum region size</title>
+<para>For large tables in production scenarios, maximum region size is mostly limited by compactions - very large compactions, esp. major, can degrade cluster performance. Currently, the recommended maximum region size is 10-20Gb, and 5-10Gb is optimal. For older 0.90.x codebase, the upper-bound of regionsize is about 4Gb, with a default of 256Mb.</para>
+<para>The size at which the region is split into two is generally configured via <xref linkend="hbase.hregion.max.filesize" />; for details, see <xref linkend="arch.region.splits" />.</para>
+<para>If you cannot estimate the size of your tables well, when starting off, it's probably best to stick to the default region size, perhaps going smaller for hot tables (or manually split hot regions to spread the load over the cluster), or go with larger region sizes if your cell sizes tend to be largish (100k and up).</para>
+<para>In HBase 0.98, experimental stripe compactions feature was added that would allow for larger regions, especially for log data. See <xref linkend="ops.stripe" />.</para>
+      </section> <!-- ops.capacity.regions.size -->
+      <section xml:id="ops.capacity.regions.total"><title>Total data size per region server</title>
+<para>According to above numbers for region size and number of regions per region server, in an optimistic estimate 10 GB x 100 regions per RS will give up to 1TB served per region server, which is in line with some of the reported multi-PB use cases. However, it is important to think about the data vs cache size ratio at the RS level. With 1TB of data per server and 10 GB block cache, only 1% of the data will be cached, which may barely cover all block indices.</para>
+      </section> <!-- ops.capacity.regions.total -->
+    </section> <!-- ops.capacity.regions -->
+    <section xml:id="ops.capacity.config"><title>Initial configuration and tuning</title>
+<para>First, see <xref linkend="important_configurations" />. Note that some configurations, more than others, depend on specific scenarios. Pay special attention to 
+<itemizedlist>
+<listitem><xref linkend="hbase.regionserver.handler.count" /> - request handler thread count, vital for high-throughput workloads.</listitem>
+<listitem><xref linkend="config.wals" /> - the blocking number of WAL files depends on your memstore configuration and should be set accordingly to prevent potential blocking when doing high volume of writes.</listitem>
+</itemizedlist></para>
+<para>Then, there are some considerations when setting up your cluster and tables.</para>
+      <section xml:id="ops.capacity.config.compactions"><title>Compactions</title>
+<para>Depending on read/write volume and latency requirements, optimal compaction settings may be different. See <xref linkend="compaction" /> for some details.</para>
+<para>When provisioning for large data sizes, however, it's good to keep in mind that compactions can affect write throughput. Thus, for write-intensive workloads, you may opt for less frequent compactions and more store files per regions. Minimum number of files for compactions (<varname>hbase.hstore.compaction.min</varname>) can be set to higher value; <xref linkend="hbase.hstore.blockingStoreFiles" /> should also be increased, as more files might accumulate in such case. You may also consider manually managing compactions: <xref linkend="managed.compactions" /></para>
+      </section> <!-- ops.capacity.config.compactions -->
+      <section xml:id="ops.capacity.config.presplit"><title>Pre-splitting the table</title>
+<para>Based on the target number of the regions per RS (see <xref linkend="ops.capacity.regions.count" xrefstyle="template:above" />) and number of RSes, one can pre-split the table at creation time. This would both avoid some costly splitting as the table starts to fill up, and ensure that the table starts out already distributed across many servers.</para>
+<para>If the table is expected to grow large enough to justify that, at least one region per RS should be created. It is not recommended to split immediately into the full target number of regions (e.g. 50 * number of RSes), but a low intermediate value can be chosen. For multiple tables, it is recommended to be conservative with presplitting (e.g. pre-split 1 region per RS at most), especially if you don't know how much each table will grow. If you split too much, you may end up with too many regions, with some tables having too many small regions.</para>
+<para>For pre-splitting howto, see <xref linkend="precreate.regions" />.</para>
+      </section> <!-- ops.capacity.config.presplit -->
+    </section> <!-- ops.capacity.config -->
+  </section> <!-- ops.capacity -->
   <section xml:id="table.rename"><title>Table Rename</title>
       <para>In versions 0.90.x of hbase and earlier, we had a simple script that would rename the hdfs
           table directory and then do an edit of the .META. table replacing all mentions of the old

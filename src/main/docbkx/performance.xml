@@ -147,15 +147,6 @@
 
     <para>See <xref linkend="recommended_configurations" />.</para>
 
-
-    <section xml:id="perf.number.of.regions">
-      <title>Number of Regions</title>
-
-      <para>The number of regions for an HBase table is driven by the <xref
-              linkend="bigger.regions" />. Also, see the architecture
-          section on <xref linkend="arch.regions.size" /></para>
-    </section>
-
     <section xml:id="perf.compactions.and.splits">
       <title>Managing Compactions</title>
 
@@ -239,7 +230,7 @@
     <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html">HTableDescriptor</link> in the
     event where certain tables require different regionsizes than the configured default regionsize.
     </para>
-    <para>See <xref linkend="perf.number.of.regions"/> for more information.
+    <para>See <xref linkend="ops.capacity.regions"/> for more information.
     </para>
     </section>
     <section xml:id="schema.bloom">

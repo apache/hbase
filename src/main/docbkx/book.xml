@@ -1675,41 +1675,49 @@ rs.close();
  </programlisting>
      For a description of what HBase files look like when written to HDFS, see <xref linkend="trouble.namenode.hbase.objects"/>.
             </para>
-
     <section xml:id="arch.regions.size">
-      <title>Region Size</title>
-
-      <para>Determining the "right" region size can be tricky, and there are a few factors
-      to consider:</para>
-
-      <itemizedlist>
-        <listitem>
-          <para>HBase scales by having regions across many servers. Thus if
-          you have 2 regions for 16GB data, on a 20 node machine your data
-          will be concentrated on just a few machines - nearly the entire
-          cluster will be idle.  This really cant be stressed enough, since a
-          common problem is loading 200MB data into HBase then wondering why
-          your awesome 10 node cluster isn't doing anything.</para>
-        </listitem>
-
-        <listitem>
-          <para>On the other hand, high region count has been known to make things slow.
-          This is getting better with each release of HBase, but it is probably better to have
-          700 regions than 3000 for the same amount of data.</para>
-        </listitem>
-
-        <listitem>
-          <para>There is not much memory footprint difference between 1 region
-          and 10 in terms of indexes, etc, held by the RegionServer.</para>
-        </listitem>
-      </itemizedlist>
-
-      <para>When starting off, it's probably best to stick to the default region-size, perhaps going
-      smaller for hot tables (or manually split hot regions to spread the load over
-      the cluster), or go with larger region sizes if your cell sizes tend to be
-      largish (100k and up).</para>
-      <para>See <xref linkend="bigger.regions"/> for more information on configuration.
+<para> In general, HBase is designed to run with a small (20-200) number of relatively large (5-20Gb) regions per server. The considerations for this are as follows:</para>
+<section xml:id="too_many_regions">
+          <title>Why cannot I have too many regions?</title>
+          <para>
+              Typically you want to keep your region count low on HBase for numerous reasons.
+              Usually right around 100 regions per RegionServer has yielded the best results.
+              Here are some of the reasons below for keeping region count low:
+              <orderedlist>
+                  <listitem><para>
+                          MSLAB requires 2mb per memstore (that's 2mb per family per region).
+                          1000 regions that have 2 families each is 3.9GB of heap used, and it's not even storing data yet. NB: the 2MB value is configurable.
+                  </para></listitem>
+                  <listitem><para>If you fill all the regions at somewhat the same rate, the global memory usage makes it that it forces tiny
+                          flushes when you have too many regions which in turn generates compactions.
+                          Rewriting the same data tens of times is the last thing you want.
+                          An example is filling 1000 regions (with one family) equally and let's consider a lower bound for global memstore
+                          usage of 5GB (the region server would have a big heap).
+                          Once it reaches 5GB it will force flush the biggest region,
+                          at that point they should almost all have about 5MB of data so
+                          it would flush that amount. 5MB inserted later, it would flush another
+                          region that will now have a bit over 5MB of data, and so on.
+                          This is currently the main limiting factor for the number of regions; see <xref linkend="ops.capacity.regions.count" />
+                          for detailed formula.
+                  </para></listitem>
+                  <listitem><para>The master as is is allergic to tons of regions, and will
+                          take a lot of time assigning them and moving them around in batches.
+                          The reason is that it's heavy on ZK usage, and it's not very async
+                          at the moment (could really be improved -- and has been imporoved a bunch
+                          in 0.96 hbase).
+                  </para></listitem>
+                  <listitem><para>
+                          In older versions of HBase (pre-v2 hfile, 0.90 and previous), tons of regions
+                          on a few RS can cause the store file index to rise, increasing heap usage and potentially
+                          creating memory pressure or OOME on the RSs
+                  </para></listitem>
+          </orderedlist>
       </para>
+      </section>
+      <para>Another issue is the effect of the number of regions on mapreduce jobs; it is typical to have one mapper per HBase region.
+          Thus, hosting only 5 regions per RS may not be enough to get sufficient number of tasks for a mapreduce job, while 1000 regions will generate far too many tasks.
+      </para>
+      <para>See <xref linkend="ops.capacity.regions" /> for configuration guidelines.</para>
     </section>
 
       <section xml:id="regions.arch.assignment">
@@ -1785,7 +1793,7 @@ rs.close();
         </para>
       </section>
 
-      <section>
+      <section xml:id="arch.region.splits">
         <title>Region Splits</title>
 
         <para>Splits run unaided on the RegionServer; i.e. the Master does not
