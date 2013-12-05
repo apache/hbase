@@ -1278,7 +1278,7 @@ public class Bytes {
 
   /**
    * @param a left operand
-   * @param b right operand
+   * @param buf right operand
    * @return True if equal
    */
   public static boolean equals(byte[] a, ByteBuffer buf) {
