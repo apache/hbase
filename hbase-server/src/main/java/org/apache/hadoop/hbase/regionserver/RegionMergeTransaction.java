@@ -34,11 +34,17 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction.LoggingProgressable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -142,6 +148,8 @@ public class RegionMergeTransaction {
   private static IOException closedByOtherException = new IOException(
       "Failed to close region: already closed by another thread");
 
+  private RegionServerCoprocessorHost rsCoprocessorHost = null;
+
   /**
    * Constructor
    * @param a region a to merge
@@ -231,9 +239,20 @@ public class RegionMergeTransaction {
    */
   public HRegion execute(final Server server,
       final RegionServerServices services) throws IOException {
+    if (rsCoprocessorHost == null) {
+      rsCoprocessorHost = server != null ? ((HRegionServer) server).getCoprocessorHost() : null;
+    }
     HRegion mergedRegion = createMergedRegion(server, services);
+    if (rsCoprocessorHost != null) {
+      rsCoprocessorHost.postMergeCommit(this.region_a, this.region_b, mergedRegion);
+    }
+    return stepsAfterPONR(server, services, mergedRegion);
+  }
+
+  public HRegion stepsAfterPONR(final Server server, final RegionServerServices services,
+      HRegion mergedRegion) throws IOException {
     openMergedRegion(server, services, mergedRegion);
-    transitionZKNode(server, services);
+    transitionZKNode(server, services, mergedRegion);
     return mergedRegion;
   }
 
@@ -255,10 +274,95 @@ public class RegionMergeTransaction {
       throw new IOException("Server is stopped or stopping");
     }
 
+    if (rsCoprocessorHost != null) {
+      if (rsCoprocessorHost.preMerge(this.region_a, this.region_b)) {
+        throw new IOException("Coprocessor bypassing regions " + this.region_a + " "
+            + this.region_b + " merge.");
+      }
+    }
+
     // If true, no cluster to write meta edits to or to update znodes in.
     boolean testing = server == null ? true : server.getConfiguration()
         .getBoolean("hbase.testing.nocluster", false);
 
+    HRegion mergedRegion = stepsBeforePONR(server, services, testing);
+
+    @MetaMutationAnnotation
+    List<Mutation> metaEntries = new ArrayList<Mutation>();
+    if (rsCoprocessorHost != null) {
+      if (rsCoprocessorHost.preMergeCommit(this.region_a, this.region_b, metaEntries)) {
+        throw new IOException("Coprocessor bypassing regions " + this.region_a + " "
+            + this.region_b + " merge.");
+      }
+      try {
+        for (Mutation p : metaEntries) {
+          HRegionInfo.parseRegionName(p.getRow());
+        }
+      } catch (IOException e) {
+        LOG.error("Row key of mutation from coprocessor is not parsable as region name."
+            + "Mutations from coprocessor should only be for hbase:meta table.", e);
+        throw e;
+      }
+    }
+
+    // This is the point of no return. Similar with SplitTransaction.
+    // IF we reach the PONR then subsequent failures need to crash out this
+    // regionserver
+    this.journal.add(JournalEntry.PONR);
+
+    // Add merged region and delete region_a and region_b
+    // as an atomic update. See HBASE-7721. This update to hbase:meta makes the region
+    // will determine whether the region is merged or not in case of failures.
+    // If it is successful, master will roll-forward, if not, master will
+    // rollback
+    if (!testing) {
+      if (metaEntries.isEmpty()) {
+        MetaEditor.mergeRegions(server.getCatalogTracker(), mergedRegion.getRegionInfo(), region_a
+            .getRegionInfo(), region_b.getRegionInfo(), server.getServerName());
+      } else {
+        mergeRegionsAndPutMetaEntries(server.getCatalogTracker(), mergedRegion.getRegionInfo(),
+          region_a.getRegionInfo(), region_b.getRegionInfo(), server.getServerName(), metaEntries);
+      }
+    }
+    return mergedRegion;
+  }
+
+  private void mergeRegionsAndPutMetaEntries(CatalogTracker catalogTracker,
+      HRegionInfo mergedRegion, HRegionInfo regionA, HRegionInfo regionB, ServerName serverName,
+      List<Mutation> metaEntries) throws IOException {
+    prepareMutationsForMerge(mergedRegion, regionA, regionB, serverName, metaEntries);
+    MetaEditor.mutateMetaTable(catalogTracker, metaEntries);
+  }
+
+  public void prepareMutationsForMerge(HRegionInfo mergedRegion, HRegionInfo regionA,
+      HRegionInfo regionB, ServerName serverName, List<Mutation> mutations) throws IOException {
+    HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
+
+    // Put for parent
+    Put putOfMerged = MetaEditor.makePutFromRegionInfo(copyOfMerged);
+    putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER, regionA.toByteArray());
+    putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER, regionB.toByteArray());
+    mutations.add(putOfMerged);
+    // Deletes for merging regions
+    Delete deleteA = MetaEditor.makeDeleteFromRegionInfo(regionA);
+    Delete deleteB = MetaEditor.makeDeleteFromRegionInfo(regionB);
+    mutations.add(deleteA);
+    mutations.add(deleteB);
+    // The merged is a new region, openSeqNum = 1 is fine.
+    addLocation(putOfMerged, serverName, 1);
+  }
+
+  public Put addLocation(final Put p, final ServerName sn, long openSeqNum) {
+    p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, Bytes
+        .toBytes(sn.getHostAndPort()));
+    p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER, Bytes.toBytes(sn
+        .getStartcode()));
+    p.add(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER, Bytes.toBytes(openSeqNum));
+    return p;
+  }
+
+  public HRegion stepsBeforePONR(final Server server, final RegionServerServices services,
+      boolean testing) throws IOException {
     // Set ephemeral MERGING znode up in zk. Mocked servers sometimes don't
     // have zookeeper so don't do zk stuff if server or zookeeper is null
     if (server != null && server.getZooKeeper() != null) {
@@ -316,23 +420,6 @@ public class RegionMergeTransaction {
     this.journal.add(JournalEntry.STARTED_MERGED_REGION_CREATION);
     HRegion mergedRegion = createMergedRegionFromMerges(this.region_a,
         this.region_b, this.mergedRegionInfo);
-
-
-    // This is the point of no return. Similar with SplitTransaction.
-    // IF we reach the PONR then subsequent failures need to crash out this
-    // regionserver
-    this.journal.add(JournalEntry.PONR);
-
-    // Add merged region and delete region_a and region_b
-    // as an atomic update. See HBASE-7721. This update to hbase:meta makes the region
-    // will determine whether the region is merged or not in case of failures.
-    // If it is successful, master will roll-forward, if not, master will
-    // rollback
-    if (!testing) {
-      MetaEditor.mergeRegions(server.getCatalogTracker(),
-          mergedRegion.getRegionInfo(), region_a.getRegionInfo(),
-          region_b.getRegionInfo(), server.getServerName());
-    }
     return mergedRegion;
   }
 
@@ -478,8 +565,8 @@ public class RegionMergeTransaction {
    * @throws IOException If thrown, transaction failed. Call
    *           {@link #rollback(Server, RegionServerServices)}
    */
-  void transitionZKNode(final Server server, final RegionServerServices services)
-      throws IOException {
+  void transitionZKNode(final Server server, final RegionServerServices services,
+      HRegion mergedRegion) throws IOException {
     if (server == null || server.getZooKeeper() == null) {
       return;
     }
@@ -517,6 +604,10 @@ public class RegionMergeTransaction {
       }
       throw new IOException("Failed telling master about merge "
           + mergedRegionInfo.getEncodedName(), e);
+    }
+
+    if (rsCoprocessorHost != null) {
+      rsCoprocessorHost.postMerge(this.region_a, this.region_b, mergedRegion);
     }
 
     // Leaving here, the mergedir with its dross will be in place but since the
@@ -640,6 +731,11 @@ public class RegionMergeTransaction {
   public boolean rollback(final Server server,
       final RegionServerServices services) throws IOException {
     assert this.mergedRegionInfo != null;
+    // Coprocessor callback
+    if (rsCoprocessorHost != null) {
+      rsCoprocessorHost.preRollBackMerge(this.region_a, this.region_b);
+    }
+
     boolean result = true;
     ListIterator<JournalEntry> iterator = this.journal
         .listIterator(this.journal.size());
@@ -709,6 +805,11 @@ public class RegionMergeTransaction {
           throw new RuntimeException("Unhandled journal entry: " + je);
       }
     }
+    // Coprocessor callback
+    if (rsCoprocessorHost != null) {
+      rsCoprocessorHost.postRollBackMerge(this.region_a, this.region_b);
+    }
+
     return result;
   }
 

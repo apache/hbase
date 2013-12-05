@@ -1686,4 +1686,31 @@ public class AccessController extends BaseRegionObserver
       List<HTableDescriptor> descriptors) throws IOException {
   }
 
+  @Override
+  public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, HRegion regionA,
+      HRegion regionB) throws IOException {
+    requirePermission("mergeRegions", regionA.getTableDesc().getTableName(), null, null,
+      Action.ADMIN);
+  }
+
+  @Override
+  public void postMerge(ObserverContext<RegionServerCoprocessorEnvironment> c, HRegion regionA,
+      HRegion regionB, HRegion mergedRegion) throws IOException { }
+
+  @Override
+  public void preMergeCommit(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      HRegion regionA, HRegion regionB, List<Mutation> metaEntries) throws IOException { }
+
+  @Override
+  public void postMergeCommit(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      HRegion regionA, HRegion regionB, HRegion mergedRegion) throws IOException { }
+
+  @Override
+  public void preRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      HRegion regionA, HRegion regionB) throws IOException { }
+
+  @Override
+  public void postRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      HRegion regionA, HRegion regionB) throws IOException { }
+
 }

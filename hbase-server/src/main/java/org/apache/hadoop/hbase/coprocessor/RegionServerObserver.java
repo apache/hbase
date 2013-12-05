@@ -19,8 +19,12 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.MetaMutationAnnotation;
+import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 
 public interface RegionServerObserver extends Coprocessor {
 
@@ -32,4 +36,73 @@ public interface RegionServerObserver extends Coprocessor {
   void preStopRegionServer(
     final ObserverContext<RegionServerCoprocessorEnvironment> env)
     throws IOException;
+
+  /**
+   * Called before the regions merge. 
+   * Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} to skip the merge.
+   * @throws IOException if an error occurred on the coprocessor
+   * @param ctx
+   * @param regionA
+   * @param regionB
+   * @throws IOException
+   */
+  void preMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      final HRegion regionA, final HRegion regionB) throws IOException;
+
+  /**
+   * called after the regions merge.
+   * @param c
+   * @param regionA
+   * @param regionB
+   * @param mergedRegion
+   * @throws IOException
+   */
+  void postMerge(final ObserverContext<RegionServerCoprocessorEnvironment> c,
+      final HRegion regionA, final HRegion regionB, final HRegion mergedRegion) throws IOException;
+
+  /**
+   * This will be called before PONR step as part of regions merge transaction. Calling
+   * {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} rollback the merge
+   * @param ctx
+   * @param regionA
+   * @param regionB
+   * @param metaEntries mutations to execute on hbase:meta atomically with regions merge updates. 
+   *        Any puts or deletes to execute on hbase:meta can be added to the mutations.
+   * @throws IOException
+   */
+  void preMergeCommit(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      final HRegion regionA, final HRegion regionB,
+      @MetaMutationAnnotation List<Mutation> metaEntries) throws IOException;
+
+  /**
+   * This will be called after PONR step as part of regions merge transaction.
+   * @param ctx
+   * @param regionA
+   * @param regionB
+   * @param mergedRegion
+   * @throws IOException
+   */
+  void postMergeCommit(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      final HRegion regionA, final HRegion regionB, final HRegion mergedRegion) throws IOException;
+
+  /**
+   * This will be called before the roll back of the regions merge.
+   * @param ctx
+   * @param regionA
+   * @param regionB
+   * @throws IOException
+   */
+  void preRollBackMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      final HRegion regionA, final HRegion regionB) throws IOException;
+
+  /**
+   * This will be called after the roll back of the regions merge.
+   * @param ctx
+   * @param regionA
+   * @param regionB
+   * @throws IOException
+   */
+  void postRollBackMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      final HRegion regionA, final HRegion regionB) throws IOException;
+
 }
