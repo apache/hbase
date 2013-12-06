@@ -3081,7 +3081,8 @@ public class AssignmentManager extends ZooKeeperListener {
           regionStates.getRegionTransitionState(encodedName);
         if (regionState == null
             || (regionState.getServerName() != null && !regionState.isOnServer(sn))
-            || !(regionState.isFailedClose() || regionState.isPendingOpenOrOpening())) {
+            || !(regionState.isFailedClose() || regionState.isPendingOpenOrOpening() || regionState
+                .isOffline())) {
           LOG.info("Skip " + regionState + " since it is not opening/failed_close"
             + " on the dead server any more: " + sn);
           it.remove();

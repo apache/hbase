@@ -513,8 +513,8 @@ public class RegionStates {
         // pending open on this server, was open on another one.
         // It could be in failed_close state too if tried several times
         // to open it while the server is not reachable.
-        if (state.isPendingOpenOrOpening() || state.isFailedClose()) {
-          LOG.info("Found opening region " + state + " to be reassigned by SSH for " + sn);
+        if (state.isPendingOpenOrOpening() || state.isFailedClose() || state.isOffline()) {
+          LOG.info("Found region in " + state + " to be reassigned by SSH for " + sn);
           rits.add(hri);
         } else {
           LOG.warn("THIS SHOULD NOT HAPPEN: unexpected " + state);
