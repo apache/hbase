@@ -20,11 +20,12 @@ package org.apache.hadoop.hbase.ipc;
 
 public interface RpcCallContext extends Delayable {
   /**
-   * Throw an exception if the caller who made this IPC call has disconnected.
+   * Check if the caller who made this IPC call has disconnected.
    * If called from outside the context of IPC, this does nothing.
-   * @throws CallerDisconnectedException
+   * @return < 0 if the caller is still connected. The time in ms
+   *  since the disconnection otherwise
    */
-  void throwExceptionIfCallerDisconnected(String regionName) throws CallerDisconnectedException;
+  long disconnectSince();
 
   /**
    * If the client connected and specified a codec to use, then we will use this codec making

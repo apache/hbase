@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -3745,7 +3746,13 @@ public class HRegion implements HeapSize { // , Writable{
           // client might time out and disconnect while the server side
           // is still processing the request. We should abort aggressively
           // in that case.
-          rpcCall.throwExceptionIfCallerDisconnected(getRegionNameAsString());
+          long afterTime = rpcCall.disconnectSince();
+          if (afterTime >= 0) {
+            throw new CallerDisconnectedException(
+                "Aborting on region " + getRegionNameAsString() + ", call " +
+                    this + " after " + afterTime + " ms, since " +
+                    "caller disconnected");
+          }
         }
 
         // Let's see what we have in the storeHeap.
