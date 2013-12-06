@@ -2906,7 +2906,9 @@ hbase> describe 't1'</programlisting>
   <appendix>
       <title xml:id="ycsb"><link xlink:href="https://github.com/brianfrankcooper/YCSB/">YCSB: The Yahoo! Cloud Serving Benchmark</link> and HBase</title>
       <para>TODO: Describe how YCSB is poor for putting up a decent cluster load.</para>
-      <para>TODO: Describe setup of YCSB for HBase</para>
+      <para>TODO: Describe setup of YCSB for HBase.  In particular, presplit your tables before you start
+          a run.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-4163">HBASE-4163 Create Split Strategy for YCSB Benchmark</link>
+          for why and a little shell command for how to do it.</para>
       <para>Ted Dunning redid YCSB so it's mavenized and added facility for verifying workloads.  See <link xlink:href="https://github.com/tdunning/YCSB">Ted Dunning's YCSB</link>.</para>
 
   </appendix>
