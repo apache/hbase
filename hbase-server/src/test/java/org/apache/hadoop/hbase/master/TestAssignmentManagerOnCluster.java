@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,9 +41,11 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -60,6 +64,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -70,6 +75,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestAssignmentManagerOnCluster {
+  private static final Log LOG = LogFactory.getLog(TestAssignmentManagerOnCluster.class);
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static Configuration conf = TEST_UTIL.getConfiguration();
@@ -758,6 +764,66 @@ public class TestAssignmentManagerOnCluster {
     } finally {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
+  }
+
+  /**
+   * This tests a RIT in offline state will get re-assigned after a master restart
+   */
+  @Test(timeout = 60000)
+  public void testOfflineRegionReAssginedAfterMasterRestart() throws Exception {
+    final TableName table = TableName.valueOf("testOfflineRegionReAssginedAfterMasterRestart");
+    final HRegionInfo hri = createTableAndGetOneRegion(table);
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    ServerName serverName = regionStates.getRegionServerOfRegion(hri);
+    TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+
+    ServerName dstName = null;
+    for (ServerName tmpServer : master.serverManager.getOnlineServers().keySet()) {
+      if (!tmpServer.equals(serverName)) {
+        dstName = tmpServer;
+        break;
+      }
+    }
+    // find a different server
+    assertTrue(dstName != null);
+    // shutdown HBase cluster
+    TEST_UTIL.shutdownMiniHBaseCluster();
+    // create a RIT node in offline state
+    ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+    ZKAssign.createNodeOffline(zkw, hri, dstName);
+    Stat stat = new Stat();
+    byte[] data =
+        ZKAssign.getDataNoWatch(TEST_UTIL.getZooKeeperWatcher(), hri.getEncodedName(), stat);
+    assertTrue(data != null);
+    RegionTransition rt = RegionTransition.parseFrom(data);
+    assertTrue(rt.getEventType() == EventType.M_ZK_REGION_OFFLINE);
+
+    LOG.info(hri.getEncodedName() + " region is in offline state with source server=" + serverName
+        + " and dst server=" + dstName);
+
+    // start HBase cluster
+    TEST_UTIL.startMiniHBaseCluster(1, 4, MyMaster.class, null);
+
+    // wait for the region is re-assigned.
+    TEST_UTIL.waitFor(30000, 200, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+        if (master != null && master.isInitialized()) {
+          ServerManager serverManager = master.getServerManager();
+          return !serverManager.areDeadServersInProgress();
+        }
+        return false;
+      }
+    });
+
+    // verify the region is assigned
+    master = TEST_UTIL.getHBaseCluster().getMaster();
+    master.getAssignmentManager().waitForAssignment(hri);
+    regionStates = master.getAssignmentManager().getRegionStates();
+    RegionState newState = regionStates.getRegionState(hri);
+    assertTrue(newState.isOpened());
   }
 
   static class MyLoadBalancer extends StochasticLoadBalancer {
