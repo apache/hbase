@@ -343,36 +343,36 @@ applyPatch () {
 }
 
 ###############################################################################
-### Attempt to compile against the hadoop 2.0
+### Attempt to compile against the hadoop 1.1
 checkHadoop20Compile () {
   echo ""
   echo ""
   echo "======================================================================"
   echo "======================================================================"
-  echo "    Checking against hadoop 2.0 build"
+  echo "    Checking against hadoop 1.1 build"
   echo "======================================================================"
   echo "======================================================================"
   echo ""
   echo ""
 
-  patchForHadoop2=`$GREP -c -i 'hadoop.profile=2.0' $PATCH_DIR/patch`
+  patchForHadoop2=`$GREP -c -i 'hadoop.profile=1.1' $PATCH_DIR/patch`
   if [[ $patchForHadoop2 != 0 ]] ; then
     return 0;
   fi
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
   # build core and tests
-  $MVN clean test help:active-profiles -X -DskipTests -Dhadoop.profile=2.0 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunk2.0JavacWarnings.txt 2>&1
+  $MVN clean test help:active-profiles -X -DskipTests -Dhadoop.profile=1.1 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunk1.1JavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:red}-1 hadoop2.0{color}.  The patch failed to compile against the hadoop 2.0 profile."
+    {color:red}-1 hadoop1.1{color}.  The patch failed to compile against the hadoop 1.1 profile."
     submitJiraComment 1
     cleanupAndExit 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:green}+1 hadoop2.0{color}.  The patch compiles against the hadoop 2.0 profile."
+    {color:green}+1 hadoop1.1{color}.  The patch compiles against the hadoop 1.1 profile."
   return 0
 }
 
