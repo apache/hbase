@@ -1481,7 +1481,7 @@
     profiles with activation properties matching the profile here.
     Generally, it should be sufficient to copy the first
     few lines of the profile you want to match.  -->
-    <!-- profile against Hadoop 1.1.x: This is the default. -->
+    <!-- profile against Hadoop 1.1.x. -->
     <profile>
       <id>hadoop-1.1</id>
       <activation>
@@ -1600,7 +1600,8 @@
     </profile>
 
     <!-- profile for building against Hadoop 2.0.x
-    Activate using: mvn -Dhadoop.profile=2.0 -->
+         This is the default.
+         -->
     <profile>
       <id>hadoop-2.0</id>
       <activation>
