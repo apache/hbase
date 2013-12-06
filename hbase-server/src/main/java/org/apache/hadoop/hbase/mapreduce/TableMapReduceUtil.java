@@ -762,7 +762,7 @@ public class TableMapReduceUtil {
     }
 
     if (null == jar || jar.isEmpty()) {
-      throw new IOException("Cannot locate resource for class " + my_class.getName());
+      return null;
     }
 
     LOG.debug(String.format("For class %s, using jar %s", my_class.getName(), jar));
@@ -776,6 +776,9 @@ public class TableMapReduceUtil {
    * @param packagedClasses map[class -> jar]
    */
   private static void updateMap(String jar, Map<String, String> packagedClasses) throws IOException {
+    if (null == jar || jar.isEmpty()) {
+      return;
+    }
     ZipFile zip = null;
     try {
       zip = new ZipFile(jar);
