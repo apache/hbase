@@ -1487,7 +1487,7 @@
       <activation>
         <property>
             <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-            <!--h1--><name>!hadoop.profile</name>
+            <!--h1--><name>hadoop.profile</name><value>1.1</value>
         </property>
       </activation>
       <modules>
@@ -1606,7 +1606,7 @@
       <activation>
         <property>
             <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-            <!--h2--><name>hadoop.profile</name><value>2.0</value>
+            <!--h2--><name>!hadoop.profile</name>
         </property>
       </activation>
       <modules>
