@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,6 +51,10 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.yammer.metrics.core.Meter;
+import com.yammer.metrics.core.MetricsRegistry;
+import com.yammer.metrics.reporting.ConsoleReporter;
+
 /**
  * This class runs performance benchmarks for {@link HLog}.
  * See usage for this tool by running:
@@ -58,6 +63,11 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceAudience.Private
 public final class HLogPerformanceEvaluation extends Configured implements Tool {
   static final Log LOG = LogFactory.getLog(HLogPerformanceEvaluation.class.getName());
+  private final MetricsRegistry metrics = new MetricsRegistry();
+  private final Meter syncMeter =
+    metrics.newMeter(HLogPerformanceEvaluation.class, "syncMeter", "syncs", TimeUnit.MILLISECONDS);
+  private final Meter appendMeter =
+    metrics.newMeter(HLogPerformanceEvaluation.class, "append", "bytes", TimeUnit.MILLISECONDS);
 
   private HBaseTestingUtility TEST_UTIL;
 
@@ -85,12 +95,14 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     private final int numFamilies;
     private final boolean noSync;
     private final HRegion region;
+    private final int syncInterval;
     private final HTableDescriptor htd;
 
     HLogPutBenchmark(final HRegion region, final HTableDescriptor htd,
-        final long numIterations, final boolean noSync) {
+        final long numIterations, final boolean noSync, final int syncInterval) {
       this.numIterations = numIterations;
       this.noSync = noSync;
+      this.syncInterval = syncInterval;
       this.numFamilies = htd.getColumnFamilies().length;
       this.region = region;
       this.htd = htd;
@@ -105,16 +117,20 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
 
       try {
         long startTime = System.currentTimeMillis();
+        int lastSync = 0;
         for (int i = 0; i < numIterations; ++i) {
           Put put = setupPut(rand, key, value, numFamilies);
           long now = System.currentTimeMillis();
           WALEdit walEdit = new WALEdit();
           addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
           HRegionInfo hri = region.getRegionInfo();
-          if (this.noSync) {
-            hlog.appendNoSync(hri, hri.getTable(), walEdit, new ArrayList<UUID>(), now, htd);
-          } else {
-            hlog.append(hri, hri.getTable(), walEdit, now, htd);
+          hlog.appendNoSync(hri, hri.getTable(), walEdit, clusters, now, htd,
+            region.getSequenceId(), true, nonce, nonce);
+          if (!this.noSync) {
+            if (++lastSync >= this.syncInterval) {
+              hlog.sync();
+              lastSync = 0;
+            }
           }
         }
         long totalTime = (System.currentTimeMillis() - startTime);
@@ -129,8 +145,9 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
   public int run(String[] args) throws Exception {
     Path rootRegionDir = null;
     int numThreads = 1;
-    long numIterations = 10000;
+    long numIterations = 1000000;
     int numFamilies = 1;
+    int syncInterval = 0;
     boolean noSync = false;
     boolean verify = false;
     boolean verbose = false;
@@ -155,6 +172,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           keySize = Integer.parseInt(args[++i]);
         } else if (cmd.equals("-valueSize")) {
           valueSize = Integer.parseInt(args[++i]);
+        } else if (cmd.equals("-syncInterval")) {
+          syncInterval = Integer.parseInt(args[++i]);
         } else if (cmd.equals("-nosync")) {
           noSync = true;
         } else if (cmd.equals("-verify")) {
@@ -207,14 +226,32 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           }
           super.doWrite(info, logKey, logEdit, htd);
         };
+
+        @Override
+        public void postSync() {
+          super.postSync();
+          syncMeter.mark();
+        }
+
+        @Override
+        public void postAppend(List<Entry> entries) {
+          super.postAppend(entries);
+          int size = 0;
+          for (Entry e: entries) size += e.getEdit().heapSize();
+          appendMeter.mark(size);
+        }
       };
       hlog.rollWriter();
       HRegion region = null;
       try {
         region = openRegion(fs, rootRegionDir, htd, hlog);
-        long putTime = runBenchmark(new HLogPutBenchmark(region, htd, numIterations, noSync), numThreads);
-        logBenchmarkResult("Summary: threads=" + numThreads + ", iterations=" + numIterations,
-          numIterations * numThreads, putTime);
+        ConsoleReporter.enable(this.metrics, 1, TimeUnit.SECONDS);
+        long putTime =
+          runBenchmark(new HLogPutBenchmark(region, htd, numIterations, noSync, syncInterval),
+            numThreads);
+        logBenchmarkResult("Summary: threads=" + numThreads + ", iterations=" + numIterations +
+          ", syncInterval=" + syncInterval, numIterations * numThreads, putTime);
+
         if (region != null) {
           closeRegion(region);
           region = null;
@@ -293,6 +330,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
   private static void logBenchmarkResult(String testName, long numTests, long totalTime) {
     float tsec = totalTime / 1000.0f;
     LOG.info(String.format("%s took %.3fs %.3fops/s", testName, tsec, numTests / tsec));
+
   }
 
   private void printUsageAndExit() {
@@ -309,6 +347,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     System.err.println("  -nocleanup       Do NOT remove test data when done.");
     System.err.println("  -noclosefs       Do NOT close the filesystem when done.");
     System.err.println("  -nosync          Append without syncing");
+    System.err.println("  -syncInterval <N> Append N edits and then sync. Default=0, i.e. sync every edit.");
     System.err.println("  -verify          Verify edits written in sequence");
     System.err.println("  -verbose         Output extra info; e.g. all edit seq ids when verifying");
     System.err.println("  -roll <N>        Roll the way every N appends");

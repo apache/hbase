@@ -1050,6 +1050,7 @@ class FSHLog implements HLog, Syncable {
         pending = logSyncer.getPendingWrites();
         try {
           logSyncer.hlogFlush(tempWriter, pending);
+          postAppend(pending);
         } catch(IOException io) {
           ioe = io;
           LOG.error("syncer encountered error, will retry. txid=" + txid, ioe);
@@ -1061,6 +1062,7 @@ class FSHLog implements HLog, Syncable {
             // HBASE-4387, HBASE-5623, retry with updateLock held
             tempWriter = this.writer;
             logSyncer.hlogFlush(tempWriter, pending);
+            postAppend(pending);
           }
         }
       }
@@ -1069,14 +1071,20 @@ class FSHLog implements HLog, Syncable {
         return;
       }
       try {
-        if (tempWriter != null) tempWriter.sync();
+        if (tempWriter != null) {
+          tempWriter.sync();
+          postSync();
+        }
       } catch(IOException ex) {
         synchronized (this.updateLock) {
           // HBASE-4387, HBASE-5623, retry with updateLock held
           // TODO: we don't actually need to do it for concurrent close - what is the point
           //       of syncing new unrelated writer? Keep behavior for now.
           tempWriter = this.writer;
-          if (tempWriter != null) tempWriter.sync();
+          if (tempWriter != null) {
+            tempWriter.sync();
+            postSync();
+          }
         }
       }
       this.syncedTillHere = Math.max(this.syncedTillHere, doneUpto);
@@ -1101,6 +1109,12 @@ class FSHLog implements HLog, Syncable {
       throw e;
     }
   }
+
+  @Override
+  public void postSync() {}
+
+  @Override
+  public void postAppend(List<Entry> entries) {}
 
   private void checkLowReplication() {
     // if the number of replicas in HDFS has fallen below the configured

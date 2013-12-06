@@ -289,6 +289,17 @@ public interface HLog {
       final long now, HTableDescriptor htd, boolean isInMemstore) throws IOException;
 
   /**
+   * For notification post append to the writer.
+   * @param entries
+   */
+  void postAppend(final List<Entry> entries);
+
+  /**
+   * For notification post writer sync.
+   */
+  void postSync();
+
+  /**
    * Append a set of edits to the log. Log edits are keyed by (encoded) regionName, rowname, and
    * log-sequence-id. The HLog is not flushed after this transaction is written to the log.
    * @param info
