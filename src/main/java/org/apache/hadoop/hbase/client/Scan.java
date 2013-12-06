@@ -272,7 +272,7 @@ public class Scan extends OperationWithAttributes implements Writable {
    * @return this
    */
   public Scan setStartRow(byte [] startRow) {
-    this.startRow = startRow;
+    this.startRow = startRow == null ? HConstants.EMPTY_START_ROW : startRow;
     return this;
   }
 
@@ -283,7 +283,7 @@ public class Scan extends OperationWithAttributes implements Writable {
    * @return this
    */
   public Scan setStopRow(byte [] stopRow) {
-    this.stopRow = stopRow;
+    this.stopRow = stopRow == null ? HConstants.EMPTY_END_ROW : stopRow;
     return this;
   }
 
