@@ -181,7 +181,7 @@ public class LabelExpander {
    * @param columnOffset
    * @param columnLength
    * @param cellVisibilityExpr
-   * @return
+   * @return KeyValue from the cell visibility expr
    * @throws IOException
    * @throws BadTsvLineException
    */
