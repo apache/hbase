@@ -50,6 +50,8 @@ class MetricsRegionServerWrapperImpl
   private BlockCache blockCache;
 
   private volatile long numStores = 0;
+  private volatile long numHLogFiles = 0;
+  private volatile long hlogFileSize = 0;
   private volatile long numStoreFiles = 0;
   private volatile long memstoreSize = 0;
   private volatile long storeFileSize = 0;
@@ -263,7 +265,17 @@ class MetricsRegionServerWrapperImpl
   public long getNumStores() {
     return numStores;
   }
+  
+  @Override
+  public long getNumHLogFiles() {
+    return numHLogFiles;
+  }
 
+  @Override
+  public long getHLogFileSize() {
+    return hlogFileSize;
+  }
+  
   @Override
   public long getNumStoreFiles() {
     return numStoreFiles;
@@ -421,6 +433,19 @@ class MetricsRegionServerWrapperImpl
 
       //Copy over computed values so that no thread sees half computed values.
       numStores = tempNumStores;
+      long tempNumHLogFiles = regionServer.hlog.getNumLogFiles();
+      // meta logs
+      if (regionServer.hlogForMeta != null) {
+        tempNumHLogFiles += regionServer.hlogForMeta.getNumLogFiles();
+      }
+      numHLogFiles = tempNumHLogFiles;
+      
+      long tempHlogFileSize = regionServer.hlog.getLogFileSize();
+      if (regionServer.hlogForMeta != null) {
+        tempHlogFileSize += regionServer.hlogForMeta.getLogFileSize();
+      }
+      hlogFileSize = tempHlogFileSize;
+      
       numStoreFiles = tempNumStoreFiles;
       memstoreSize = tempMemstoreSize;
       storeFileSize = tempStoreFileSize;
@@ -436,5 +461,4 @@ class MetricsRegionServerWrapperImpl
       percentFileLocal = tempPercentFileLocal;
     }
   }
-
 }

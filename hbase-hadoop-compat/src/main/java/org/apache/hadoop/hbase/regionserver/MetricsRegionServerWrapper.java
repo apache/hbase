@@ -68,6 +68,16 @@ public interface MetricsRegionServerWrapper {
   long getNumStores();
 
   /**
+   * Get the number of HLog files of this region server.
+   */
+  public long getNumHLogFiles();
+  
+  /**
+   * Get the size of HLog files of this region server.
+   */
+  public long getHLogFileSize();
+  
+  /**
    * Get the number of store files hosted on this region server.
    */
   long getNumStoreFiles();
