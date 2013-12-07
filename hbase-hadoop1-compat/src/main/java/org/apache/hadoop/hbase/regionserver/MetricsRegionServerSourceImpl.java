@@ -148,6 +148,8 @@ public class MetricsRegionServerSourceImpl
     if (rsWrap != null) {
       mrb.addGauge(REGION_COUNT, REGION_COUNT_DESC, rsWrap.getNumOnlineRegions())
           .addGauge(STORE_COUNT, STORE_COUNT_DESC, rsWrap.getNumStores())
+          .addGauge(HLOGFILE_COUNT, HLOGFILE_COUNT_DESC, rsWrap.getNumHLogFiles())
+          .addGauge(HLOGFILE_SIZE, HLOGFILE_SIZE_DESC, rsWrap.getHLogFileSize())
           .addGauge(STOREFILE_COUNT, STOREFILE_COUNT_DESC, rsWrap.getNumStoreFiles())
           .addGauge(MEMSTORE_SIZE, MEMSTORE_SIZE_DESC, rsWrap.getMemstoreSize())
           .addGauge(STOREFILE_SIZE, STOREFILE_SIZE_DESC, rsWrap.getStoreFileSize())

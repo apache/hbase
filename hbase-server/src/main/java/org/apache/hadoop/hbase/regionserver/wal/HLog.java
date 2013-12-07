@@ -208,6 +208,16 @@ public interface HLog {
   // TODO: Remove.  Implementation detail.
   long getFilenum();
 
+  /**
+   * @return the number of HLog files
+   */
+  int getNumLogFiles();
+  
+  /**
+   * @return the size of HLog files
+   */
+  long getLogFileSize();
+  
   // TODO: Log rolling should not be in this interface.
   /**
    * Roll the log writer. That is, start writing log messages to a new file.

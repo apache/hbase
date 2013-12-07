@@ -221,7 +221,7 @@ public class TestLogRolling  {
   public void testLogRolling() throws Exception {
     this.tableName = getName();
       startAndWriteData();
-      LOG.info("after writing there are " + ((FSHLog) log).getNumLogFiles() + " log files");
+      LOG.info("after writing there are " + ((FSHLog) log).getNumRolledLogFiles() + " log files");
 
       // flush all regions
 
@@ -234,9 +234,9 @@ public class TestLogRolling  {
       // Now roll the log
       log.rollWriter();
 
-      int count = ((FSHLog) log).getNumLogFiles();
+      int count = ((FSHLog) log).getNumRolledLogFiles();
       LOG.info("after flushing all regions and rolling logs there are " +
-                                      ((FSHLog) log).getNumLogFiles() + " log files");
+                                      ((FSHLog) log).getNumRolledLogFiles() + " log files");
       assertTrue(("actual count: " + count), count <= 2);
   }
 
@@ -606,12 +606,12 @@ public class TestLogRolling  {
       admin.flush(table2.getTableName());
     }
     doPut(table2, 3); // don't flush yet, or compaction might trigger before we roll WAL
-    assertEquals("Should have no WAL after initial writes", 0, fshLog.getNumLogFiles());
+    assertEquals("Should have no WAL after initial writes", 0, fshLog.getNumRolledLogFiles());
     assertEquals(2, s.getStorefilesCount());
 
     // Roll the log and compact table2, to have compaction record in the 2nd WAL.
     fshLog.rollWriter();
-    assertEquals("Should have WAL; one table is not flushed", 1, fshLog.getNumLogFiles());
+    assertEquals("Should have WAL; one table is not flushed", 1, fshLog.getNumRolledLogFiles());
     admin.flush(table2.getTableName());
     region.compactStores();
     // Wait for compaction in case if flush triggered it before us.
@@ -624,13 +624,13 @@ public class TestLogRolling  {
     // Write some value to the table so the WAL cannot be deleted until table is flushed.
     doPut(table, 0); // Now 2nd WAL will have compaction record for table2 and put for table.
     fshLog.rollWriter(); // 1st WAL deleted, 2nd not deleted yet.
-    assertEquals("Should have WAL; one table is not flushed", 1, fshLog.getNumLogFiles());
+    assertEquals("Should have WAL; one table is not flushed", 1, fshLog.getNumRolledLogFiles());
 
     // Flush table to make latest WAL obsolete; write another record, and roll again.
     admin.flush(table.getTableName());
     doPut(table, 1);
     fshLog.rollWriter(); // Now 2nd WAL is deleted and 3rd is added.
-    assertEquals("Should have 1 WALs at the end", 1, fshLog.getNumLogFiles());
+    assertEquals("Should have 1 WALs at the end", 1, fshLog.getNumRolledLogFiles());
 
     table.close();
     table2.close();

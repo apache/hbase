@@ -59,6 +59,8 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("regionServerStartTime", 100, serverSource);
     HELPER.assertGauge("regionCount", 101, serverSource);
     HELPER.assertGauge("storeCount", 2, serverSource);
+    HELPER.assertGauge("hlogFileCount", 10, serverSource);
+    HELPER.assertGauge("hlogFileSize", 1024000, serverSource);
     HELPER.assertGauge("storeFileCount", 300, serverSource);
     HELPER.assertGauge("memstoreSize", 1025, serverSource);
     HELPER.assertGauge("storeFileSize", 1900, serverSource);

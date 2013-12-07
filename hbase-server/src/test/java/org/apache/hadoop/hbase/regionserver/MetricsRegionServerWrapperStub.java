@@ -201,4 +201,14 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
     //IGNORED.
   }
 
+  @Override
+  public long getNumHLogFiles() {
+    return 10;
+  }
+
+  @Override
+  public long getHLogFileSize() {
+    return 1024000;
+  }
+
 }
