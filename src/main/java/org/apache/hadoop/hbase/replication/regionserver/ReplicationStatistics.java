@@ -42,4 +42,10 @@ public class ReplicationStatistics extends MetricsMBeanBase {
     super(registry, name);
     mbeanName = MBeanUtil.registerMBean("Replication", name, this);
   }
+  
+  public void unRegisterMBean() {
+    if (mbeanName != null) {
+      MBeanUtil.unregisterMBean(mbeanName);
+    }
+  }
 }

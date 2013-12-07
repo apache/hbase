@@ -38,6 +38,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
 public class ReplicationSourceMetrics implements Updater {
   private final MetricsRecord metricsRecord;
   private MetricsRegistry registry = new MetricsRegistry();
+  private ReplicationStatistics replicationStatistics;
 
   /** Rate of shipped operations by the source */
   public final MetricsRate shippedOpsRate =
@@ -87,7 +88,7 @@ public class ReplicationSourceMetrics implements Updater {
       id = "CAN'T ENCODE UTF8";
     }
     // export for JMX
-    new ReplicationStatistics(this.registry, "ReplicationSource for " + id);
+    replicationStatistics = new ReplicationStatistics(this.registry, "ReplicationSource for " + id);
   }
 
   /**
@@ -120,5 +121,11 @@ public class ReplicationSourceMetrics implements Updater {
       this.sizeOfLogQueue.pushMetric(this.metricsRecord);
     }
     this.metricsRecord.update();
+  }
+  
+  public void stopReportMetrics() {
+    if (this.replicationStatistics != null) {
+      this.replicationStatistics.unRegisterMBean();
+    }
   }
 }
