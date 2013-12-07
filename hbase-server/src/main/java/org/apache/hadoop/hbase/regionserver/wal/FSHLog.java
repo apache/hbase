@@ -203,6 +203,14 @@ class FSHLog implements HLog, Syncable {
   // of the default Hdfs block size.
   private final long logrollsize;
 
+  /** size of current log */
+  private long curLogSize = 0;
+
+  /**
+   * The total size of hlog
+   */
+  private AtomicLong totalLogSize = new AtomicLong(0);
+
   // We synchronize on updateLock to prevent updates and to prevent a log roll
   // during an update
   // locked during appends
@@ -526,9 +534,14 @@ class FSHLog implements HLog, Syncable {
           this.numEntries.set(0);
         }
         if (oldFile == null) LOG.info("New WAL " + FSUtils.getPath(newPath));
-        else LOG.info("Rolled WAL " + FSUtils.getPath(oldFile) + " with entries=" + oldNumEntries +
-          ", filesize=" + StringUtils.humanReadableInt(this.fs.getFileStatus(oldFile).getLen()) +
-          "; new WAL " + FSUtils.getPath(newPath));
+        else {
+          long oldFileLen = this.fs.getFileStatus(oldFile).getLen();
+          this.totalLogSize.addAndGet(oldFileLen);
+          LOG.info("Rolled WAL " + FSUtils.getPath(oldFile) + " with entries="
+              + oldNumEntries + ", filesize="
+              + StringUtils.humanReadableInt(oldFileLen) + "; new WAL "
+              + FSUtils.getPath(newPath));
+        }
 
         // Tell our listeners that a new log was created
         if (!this.listeners.isEmpty()) {
@@ -538,7 +551,7 @@ class FSHLog implements HLog, Syncable {
         }
 
         // Can we delete any of the old log files?
-        if (getNumLogFiles() > 0) {
+        if (getNumRolledLogFiles() > 0) {
           cleanOldLogs();
           regionsToFlush = getRegionsToForceFlush();
         }
@@ -598,7 +611,9 @@ class FSHLog implements HLog, Syncable {
       }
     }
     for (Long seq : sequenceNumbers) {
-      archiveLogFile(this.outputfiles.remove(seq), seq);
+      Path p = this.outputfiles.remove(seq);
+      if (p != null) this.totalLogSize.addAndGet(-this.fs.getFileStatus(p).getLen());
+      archiveLogFile(p, seq);
     }
   }
 
@@ -626,7 +641,7 @@ class FSHLog implements HLog, Syncable {
     // If too many log files, figure which regions we need to flush.
     // Array is an array of encoded region names.
     byte [][] regions = null;
-    int logCount = getNumLogFiles();
+    int logCount = getNumRolledLogFiles();
     if (logCount > this.maxLogs && logCount > 0) {
       // This is an array of encoded region names.
       synchronized (oldestSeqNumsLock) {
@@ -1096,7 +1111,8 @@ class FSHLog implements HLog, Syncable {
       if (!this.logRollRunning) {
         checkLowReplication();
         try {
-          if (tempWriter.getLength() > this.logrollsize) {
+          curLogSize = tempWriter.getLength();
+          if (curLogSize > this.logrollsize) {
             requestLogRoll();
           }
         } catch (IOException x) {
@@ -1265,9 +1281,22 @@ class FSHLog implements HLog, Syncable {
     return this.logSeqNum.incrementAndGet();
   }
 
-  /** @return the number of log files in use */
-  int getNumLogFiles() {
+  /** @return the number of rolled log files */
+  public int getNumRolledLogFiles() {
     return outputfiles.size();
+  }
+
+  /** @return the number of log files in use */
+  @Override
+  public int getNumLogFiles() {
+    // +1 for current use log
+    return getNumRolledLogFiles() + 1;
+  }
+
+  /** @return the size of log files in use */
+  @Override
+  public long getLogFileSize() {
+    return totalLogSize.get() + curLogSize;
   }
 
   @Override

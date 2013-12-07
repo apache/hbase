@@ -675,12 +675,12 @@ public class TestHLog  {
       // Before HBASE-3198 it used to delete it
       addEdits(log, hri, tableName, 1);
       log.rollWriter();
-      assertEquals(1, ((FSHLog) log).getNumLogFiles());
+      assertEquals(1, ((FSHLog) log).getNumRolledLogFiles());
 
       // See if there's anything wrong with more than 1 edit
       addEdits(log, hri, tableName, 2);
       log.rollWriter();
-      assertEquals(2, ((FSHLog) log).getNumLogFiles());
+      assertEquals(2, ((FSHLog) log).getNumRolledLogFiles());
 
       // Now mix edits from 2 regions, still no flushing
       addEdits(log, hri, tableName, 1);
@@ -688,7 +688,7 @@ public class TestHLog  {
       addEdits(log, hri, tableName, 1);
       addEdits(log, hri2, tableName2, 1);
       log.rollWriter();
-      assertEquals(3, ((FSHLog) log).getNumLogFiles());
+      assertEquals(3, ((FSHLog) log).getNumRolledLogFiles());
 
       // Flush the first region, we expect to see the first two files getting
       // archived. We need to append something or writer won't be rolled.
@@ -696,7 +696,7 @@ public class TestHLog  {
       log.startCacheFlush(hri.getEncodedNameAsBytes());
       log.completeCacheFlush(hri.getEncodedNameAsBytes());
       log.rollWriter();
-      assertEquals(2, ((FSHLog) log).getNumLogFiles());
+      assertEquals(2, ((FSHLog) log).getNumRolledLogFiles());
 
       // Flush the second region, which removes all the remaining output files
       // since the oldest was completely flushed and the two others only contain
@@ -705,7 +705,7 @@ public class TestHLog  {
       log.startCacheFlush(hri2.getEncodedNameAsBytes());
       log.completeCacheFlush(hri2.getEncodedNameAsBytes());
       log.rollWriter();
-      assertEquals(0, ((FSHLog) log).getNumLogFiles());
+      assertEquals(0, ((FSHLog) log).getNumRolledLogFiles());
     } finally {
       if (log != null) log.closeAndDelete();
     }

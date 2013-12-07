@@ -33,8 +33,8 @@ public class HLogUtilsForTests {
    * @param log
    * @return
    */
-  public static int getNumLogFiles(HLog log) {
-    return ((FSHLog) log).getNumLogFiles();
+  public static int getNumRolledLogFiles(HLog log) {
+    return ((FSHLog) log).getNumRolledLogFiles();
   }
 
   public static int getNumEntries(HLog log) {

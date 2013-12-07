@@ -1523,7 +1523,7 @@ public class TestAdmin {
     byte[] value = Bytes.toBytes(v.toString());
     HRegionServer regionServer = startAndWriteData("TestLogRolling", value);
     LOG.info("after writing there are "
-        + HLogUtilsForTests.getNumLogFiles(regionServer.getWAL()) + " log files");
+        + HLogUtilsForTests.getNumRolledLogFiles(regionServer.getWAL()) + " log files");
 
     // flush all regions
 
@@ -1533,7 +1533,7 @@ public class TestAdmin {
       r.flushcache();
     }
     admin.rollHLogWriter(regionServer.getServerName().getServerName());
-    int count = HLogUtilsForTests.getNumLogFiles(regionServer.getWAL());
+    int count = HLogUtilsForTests.getNumRolledLogFiles(regionServer.getWAL());
     LOG.info("after flushing all regions and rolling logs there are " +
         count + " log files");
     assertTrue(("actual count: " + count), count <= 2);
