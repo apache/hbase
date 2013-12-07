@@ -124,8 +124,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           WALEdit walEdit = new WALEdit();
           addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
           HRegionInfo hri = region.getRegionInfo();
-          hlog.appendNoSync(hri, hri.getTable(), walEdit, clusters, now, htd,
-            region.getSequenceId(), true, nonce, nonce);
+          hlog.appendNoSync(hri, hri.getTable(), walEdit, new ArrayList<UUID>(), now, htd);
           if (!this.noSync) {
             if (++lastSync >= this.syncInterval) {
               hlog.sync();
