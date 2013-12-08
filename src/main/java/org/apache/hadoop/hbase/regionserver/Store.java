@@ -166,13 +166,21 @@ public class Store extends SchemaConfigured implements HeapSize,
   private final HRegionInfo info;
   private boolean writeHFileHistogram = false;
 
+  // The number of non static class variables.
+  private static final int NUM_REFERENCES = 22;
+  // Number of primitive non static fields in Store.
+  private static final int NUM_LONG_CNT = 6;
+  private static final int NUM_INT_CNT = 4;
+  private static final int NUM_BOOLEAN_CNT = 2;
   // This should account for the Store's non static variables. So, when there
   // is an addition to the member variables to Store, this value should be
   // adjusted accordingly.
   public static final long FIXED_OVERHEAD =
       ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (21 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
-          + (4 * Bytes.SIZEOF_INT) + 2 * Bytes.SIZEOF_BOOLEAN);
+          + (NUM_REFERENCES * ClassSize.REFERENCE)
+          + (NUM_LONG_CNT * Bytes.SIZEOF_LONG)
+          + (NUM_INT_CNT * Bytes.SIZEOF_INT)
+          + (NUM_BOOLEAN_CNT * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +

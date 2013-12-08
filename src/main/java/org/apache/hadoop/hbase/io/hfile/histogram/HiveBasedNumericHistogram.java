@@ -363,6 +363,7 @@ public class HiveBasedNumericHistogram implements NumericHistogram {
     double sum = 0.0;
     HiveBasedNumericHistogram hist = new HiveBasedNumericHistogram(
         this.minusInfinity, this.infinity);
+    hist.allocate(this.nusedbins);
     for (int j = 0; j < this.nusedbins; j++) {
       sum += bins.get(j).y;
     }
@@ -374,8 +375,6 @@ public class HiveBasedNumericHistogram implements NumericHistogram {
       partialSums[j] = partialSums[j - 1]
           + (this.bins.get(j - 1).y + this.bins.get(j).y) / 2;
     }
-    hist.allocate(this.nusedbins);
-    hist.bins = new ArrayList<Coord>();
     for (int j = 0; j < (B - 1); j++) {
       double s = sum * (j + 1) / B;
       int i = 0;
