@@ -26,13 +26,11 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -55,6 +53,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.Date;
+import java.text.SimpleDateFormat;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -72,15 +72,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowLock;
-import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -144,7 +143,7 @@ import com.google.common.collect.Lists;
  * regionName is a unique identifier for this HRegion. (startKey, endKey]
  * defines the keyspace for this HRegion.
  */
-public class HRegion implements HeapSize, ConfigurationObserver {
+public class HRegion implements HeapSize {
   public static final Log LOG = LogFactory.getLog(HRegion.class);
   static final String SPLITDIR = "splits";
   static final String MERGEDIR = "merges";
@@ -586,8 +585,6 @@ public class HRegion implements HeapSize, ConfigurationObserver {
    */
   public long initialize(final Progressable reporter)
   throws IOException {
-    HRegionServer.configurationManager.registerObserver(this);
-
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Initializing region " + this);
     try {
@@ -838,8 +835,6 @@ public class HRegion implements HeapSize, ConfigurationObserver {
    * @throws IOException e
    */
   public List<StoreFile> close(final boolean abort) throws IOException {
-    HRegionServer.configurationManager.deregisterObserver(this);
-
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Closing region " + this + (abort ? " due to abort" : ""));
     if (isClosed()) {
@@ -4129,4 +4124,5 @@ public class HRegion implements HeapSize, ConfigurationObserver {
       s.updateConfiguration();
     }
   }
+
 }
