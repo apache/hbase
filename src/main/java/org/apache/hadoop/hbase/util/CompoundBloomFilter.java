@@ -20,16 +20,14 @@
 
 package org.apache.hadoop.hbase.util;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.io.hfile.*;
+import org.apache.hadoop.io.RawComparator;
+
 import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
-import org.apache.hadoop.hbase.io.hfile.BlockType;
-import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileBlock;
-import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
-import org.apache.hadoop.io.RawComparator;
 
 /**
  * A Bloom filter implementation built on top of {@link ByteBloomFilter},
@@ -40,6 +38,8 @@ import org.apache.hadoop.io.RawComparator;
  */
 public class CompoundBloomFilter extends CompoundBloomFilterBase
     implements BloomFilter {
+  private static volatile long failedLoadCnt = 0;
+  private static final Log LOG = LogFactory.getLog(CompoundBloomFilter.class.getName());
 
   /** Used to load chunks on demand */
   private HFile.Reader reader;
@@ -99,10 +99,11 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
             index.getRootBlockDataSize(block), true, false, false,
             BlockType.BLOOM_CHUNK, null);
       } catch (IOException ex) {
-        // The Bloom filter is broken, turn it off.
-        throw new IllegalArgumentException(
-            "Failed to load Bloom block for key "
-                + Bytes.toStringBinary(key, keyOffset, keyLength), ex);
+       LOG.error( "Failed to load Bloom block. Returning a potential false positive " +
+         "for key " + Bytes.toStringBinary(key, keyOffset, keyLength),  ex);
+
+       failedLoadCnt++;
+       return true;
       }
 
       ByteBuffer bloomBuf = bloomBlock.getBufferReadOnly();
@@ -174,4 +175,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     return sb.toString();
   }
 
+  public static long getFailedLoadCnt() {
+    return failedLoadCnt;
+  }
 }

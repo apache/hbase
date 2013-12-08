@@ -200,6 +200,10 @@ public class RegionServerMetrics implements Updater {
   public final MetricsIntValue totalStaticBloomSizeKB =
     new MetricsIntValue("totalStaticBloomSizeKB", registry);
 
+  /** Total number of the bloom filter block load failure cnt */
+  public final MetricsLongValue totalCompoundBloomFilterLoadFailureCnt =
+    new MetricsLongValue("totalCompoundBloomFilterLoadFailureCnt", registry);
+
   /**
    * Sum of all the memstore sizes in this regionserver in MB
    */

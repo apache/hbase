@@ -19,49 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.lang.Thread.UncaughtExceptionHandler;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryUsage;
-import java.lang.management.RuntimeMXBean;
-import java.lang.reflect.Constructor;
-import java.net.BindException;
-import java.net.InetSocketAddress;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
+import com.google.common.base.Preconditions;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
@@ -73,58 +31,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HMsg.Type;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LeaseListener;
-import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
-import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.UnknownRowLockException;
-import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.MultiAction;
-import org.apache.hadoop.hbase.client.MultiPut;
-import org.apache.hadoop.hbase.client.MultiPutResponse;
-import org.apache.hadoop.hbase.client.MultiResponse;
-import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.RowMutations;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ServerConnection;
-import org.apache.hadoop.hbase.client.ServerConnectionManager;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.io.hfile.L2BucketCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.PreloadThreadPool;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
-import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
-import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
-import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
-import org.apache.hadoop.hbase.ipc.HBaseServer;
+import org.apache.hadoop.hbase.ipc.*;
 import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
-import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.master.RegionPlacement;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
@@ -132,20 +54,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.DaemonThreadFactory;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HasThread;
-import org.apache.hadoop.hbase.util.InfoServer;
-import org.apache.hadoop.hbase.util.InjectionEvent;
-import org.apache.hadoop.hbase.util.InjectionHandler;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ParamFormat;
-import org.apache.hadoop.hbase.util.ParamFormatter;
-import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
-import org.apache.hadoop.hbase.util.Sleeper;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.*;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -162,7 +71,23 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
+import java.lang.management.RuntimeMXBean;
+import java.lang.reflect.Constructor;
+import java.net.BindException;
+import java.net.InetSocketAddress;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
@@ -301,9 +226,9 @@ public class HRegionServer implements HRegionInterface,
 
   // An array of HLog and HLog roller.  log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
-  protected volatile HLog[] hlogs;  
+  protected volatile HLog[] hlogs;
   protected LogRoller[] hlogRollers;
-  
+
   private volatile int currentHLogIndex = 0;
   private Map<String, Integer> regionNameToHLogIDMap =
       new ConcurrentHashMap<String, Integer>();
@@ -377,6 +302,10 @@ public class HRegionServer implements HRegionInterface,
       new AtomicBoolean(false);
   public static AtomicInteger numOptimizedSeeks = new AtomicInteger(0);
   private int numRowRequests = 0;
+
+  // Configurations for quorum reads
+  private int quorumReadThreadsMax = HConstants.DEFAULT_HDFS_QUORUM_READ_THREADS_MAX;
+  private long quorumReadTimeoutMillis = HConstants.DEFAULT_HDFS_QUORUM_READ_TIMEOUT_MILLIS;
 
   public static boolean runMetrics = true;
   public static boolean useSeekNextUsingHint;
@@ -490,7 +419,7 @@ public class HRegionServer implements HRegionInterface,
     int corePreloadThreads =
         conf.getInt(HConstants.CORE_PRELOAD_THREAD_COUNT,
           HConstants.DEFAULT_CORE_PRELOAD_THREAD_COUNT);
-    int maxPreloadThreads = 
+    int maxPreloadThreads =
         conf.getInt(HConstants.MAX_PRELOAD_THREAD_COUNT, HConstants.DEFAULT_MAX_PRELOAD_THREAD_COUNT);
     PreloadThreadPool.constructPreloaderThreadPool(corePreloadThreads, maxPreloadThreads);
   }
@@ -583,9 +512,9 @@ public class HRegionServer implements HRegionInterface,
       hlogCntPerServer = 1;
       LOG.warn("Override HLOG_CNT_PER_SERVER as 1 due to HLOG_FORMAT_BACKWARD_COMPATIBILITY");
     }
-    this.hlogRollers = new LogRoller[hlogCntPerServer];  
-    for (int i = 0; i < hlogCntPerServer; i++) { 
-      this.hlogRollers[i] = new LogRoller(this, i); 
+    this.hlogRollers = new LogRoller[hlogCntPerServer];
+    for (int i = 0; i < hlogCntPerServer; i++) {
+      this.hlogRollers[i] = new LogRoller(this, i);
     }
 
     // Background thread to check for major compactions; needed if region
@@ -968,7 +897,7 @@ public class HRegionServer implements HRegionInterface,
       ArrayList<HRegion> regionsClosed = closeAllRegions();
       if (numRegionsToClose == regionsClosed.size()) {
         try {
-          if (this.hlogs != null) { 
+          if (this.hlogs != null) {
             this.closeAndDeleteAllHLogs();
           }
         } catch (Throwable e) {
@@ -1036,6 +965,9 @@ public class HRegionServer implements HRegionInterface,
     // We should start ignoring client requests now.
     // So, shutdown the MemstoreFlusher and LogRoller
     this.stopRequestedAtStageTwo.set(true);
+
+    // Stop listening to configuration update event
+    configurationManager.deregisterObserver(this);
 
     // shutdown thriftserver
     if (thriftServer != null) {
@@ -1198,7 +1130,7 @@ public class HRegionServer implements HRegionInterface,
               HConstants.DEFAULT_HDFS_QUORUM_READ_THREADS_MAX);
       LOG.debug("parallelHDFSReadPoolSize is (for quorum)" + parallelHDFSReadPoolSize);
       this.setNumHDFSQuorumReadThreads(parallelHDFSReadPoolSize);
-      
+
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics(this.conf);
       this.dynamicMetrics = RegionServerDynamicMetrics.newInstance(this);
@@ -1212,6 +1144,9 @@ public class HRegionServer implements HRegionInterface,
         thriftServer.start();
         LOG.info("Started Thrift API from Region Server.");
       }
+
+      // Register configuration update event for handling it on the fly
+      configurationManager.registerObserver(this);
     } catch (Throwable e) {
       this.isOnline = false;
       this.stopRequestedAtStageOne.set(true);
@@ -1487,29 +1422,29 @@ public class HRegionServer implements HRegionInterface,
 
   private void setupHLog(Path logDir, Path oldLogDir, int totalHLogCnt) throws IOException {
     hlogs = new HLog[totalHLogCnt];
-    for (int i = 0; i < totalHLogCnt; i++) { 
-      hlogs[i] = new HLog(this.fs, logDir, oldLogDir, this.conf, this.hlogRollers[i], 
-          null, (this.serverInfo.getServerAddress().toString()), i, totalHLogCnt);  
+    for (int i = 0; i < totalHLogCnt; i++) {
+      hlogs[i] = new HLog(this.fs, logDir, oldLogDir, this.conf, this.hlogRollers[i],
+          null, (this.serverInfo.getServerAddress().toString()), i, totalHLogCnt);
     }
     LOG.info("Initialized " + totalHLogCnt + " HLogs");
   }
 
-  private void killAllHLogs() { 
-    for (int i = 0; i < this.hlogs.length; i++) { 
-      hlogs[i].kill();  
-    } 
-  } 
-    
-  private void closeAllHLogs() throws IOException { 
-    for (int i = 0; i < this.hlogs.length; i++) { 
-      hlogs[i].close(); 
-    } 
-  } 
-    
-  private void closeAndDeleteAllHLogs() throws IOException {  
-    for (int i = 0; i < this.hlogs.length; i++) { 
-      hlogs[i].closeAndDelete();  
-    } 
+  private void killAllHLogs() {
+    for (int i = 0; i < this.hlogs.length; i++) {
+      hlogs[i].kill();
+    }
+  }
+
+  private void closeAllHLogs() throws IOException {
+    for (int i = 0; i < this.hlogs.length; i++) {
+      hlogs[i].close();
+    }
+  }
+
+  private void closeAndDeleteAllHLogs() throws IOException {
+    for (int i = 0; i < this.hlogs.length; i++) {
+      hlogs[i].closeAndDelete();
+    }
   }
 
   protected void doMetrics() {
@@ -1607,12 +1542,12 @@ public class HRegionServer implements HRegionInterface,
     for (Entry<String, MutableDouble> e : tempVals.entrySet()) {
       HRegion.setNumericMetric(e.getKey(), e.getValue().longValue());
     }
-    
+
     this.metrics.rowReadCnt.inc(rowReadCnt);
     this.metrics.rowUpdatedCnt.inc(rowUpdateCnt);
     this.numRowRequests  = rowReadCnt + rowUpdateCnt;
     this.metrics.requests.inc(numRowRequests);
-    
+
     this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);
     this.metrics.memstoreSizeMB.set((int)(memstoreSize/(1024*1024)));
@@ -1626,6 +1561,8 @@ public class HRegionServer implements HRegionInterface,
         (int) (totalStaticBloomSize / 1024));
     this.metrics.compactionQueueSize.set(compactSplitThread.
       getCompactionQueueSize());
+
+    this.metrics.totalCompoundBloomFilterLoadFailureCnt.set(CompoundBloomFilter.getFailedLoadCnt());
 
     LruBlockCache lruBlockCache = (LruBlockCache)cacheConfig.getBlockCache();
     if (lruBlockCache != null) {
@@ -3042,6 +2979,7 @@ public class HRegionServer implements HRegionInterface,
         client.disableParallelReads();
       }
     }
+    this.quorumReadThreadsMax = maxThreads;
   }
 
   @Override
@@ -3053,6 +2991,23 @@ public class HRegionServer implements HRegionInterface,
 
       client.setQuorumReadTimeout(timeoutMillis);
     }
+    this.quorumReadTimeoutMillis = timeoutMillis;
+  }
+
+  /**
+   * Get max quorum read threads
+   * @return max quorum read threads
+   */
+  public int getQuorumReadThreadsMax() {
+    return quorumReadThreadsMax;
+  }
+
+  /**
+   * Get quorum read timeout in millisecond
+   * @return quorum read timeout
+   */
+  public long getQuorumReadTimeoutMillis() {
+    return quorumReadTimeoutMillis;
   }
 
   Map<String, Integer> rowlocks =
@@ -3758,9 +3713,6 @@ public class HRegionServer implements HRegionInterface,
             " with new favored nodes: " + favoredNodes);
         counter++;
       }
-
-    HRegionServer.useSeekNextUsingHint =
-        conf.getBoolean("hbase.regionserver.scan.timestampfilter.allow_seek_next_using_hint", true);
     }
     return counter;
   }
@@ -3826,6 +3778,36 @@ public class HRegionServer implements HRegionInterface,
     return 0;
   }
 
+  @Override
+  public void notifyOnChange(Configuration conf) {
+    int threads = conf.getInt(
+        HConstants.HDFS_QUORUM_READ_THREADS_MAX, HConstants.DEFAULT_HDFS_QUORUM_READ_THREADS_MAX);
+    long timeout = conf.getLong(
+        HConstants.HDFS_QUORUM_READ_TIMEOUT_MILLIS, HConstants.DEFAULT_HDFS_QUORUM_READ_TIMEOUT_MILLIS);
+
+    boolean origProfiling = enableServerSideProfilingForAllCalls.get();
+    boolean newProfiling = conf.getBoolean(
+        "hbase.regionserver.enable.serverside.profiling", false);
+    if (origProfiling != newProfiling) {
+      enableServerSideProfilingForAllCalls.set(newProfiling);
+      LOG.info("enableServerSideProfilingForAllCalls changed from " +
+        origProfiling + " to " + newProfiling);
+    }
+
+    if (threads != this.quorumReadThreadsMax) {
+      LOG.info("HDFS quorum read thread number is changed from " + this.quorumReadThreadsMax + " to " + threads);
+      this.setNumHDFSQuorumReadThreads(threads);
+    }
+
+    if (timeout != this.quorumReadTimeoutMillis) {
+      LOG.info("HDFS quorum read timeout is changed from " + this.quorumReadTimeoutMillis + " to " + timeout);
+      this.setHDFSQuorumReadTimeoutMillis(timeout);
+    }
+
+    HRegionServer.useSeekNextUsingHint =
+        conf.getBoolean("hbase.regionserver.scan.timestampfilter.allow_seek_next_using_hint", true);
+  }
+
   /**
    *
    * Returns null if no data is available.
@@ -3853,12 +3835,3 @@ public class HRegionServer implements HRegionInterface,
     return hist.getUniformBuckets();
   }
 }
-    boolean origProfiling = enableServerSideProfilingForAllCalls.get();
-    boolean newProfiling = conf.getBoolean(
-        "hbase.regionserver.enable.serverside.profiling", false);
-    if (origProfiling != newProfiling) {
-      enableServerSideProfilingForAllCalls.set(newProfiling);
-      LOG.info("enableServerSideProfilingForAllCalls changed from " +
-        origProfiling + " to " + newProfiling);
-    }
-
