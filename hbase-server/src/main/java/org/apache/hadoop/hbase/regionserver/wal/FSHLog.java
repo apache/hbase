@@ -532,6 +532,13 @@ class FSHLog implements HLog, Syncable {
         FSDataOutputStream nextHdfsOut = null;
         if (nextWriter instanceof ProtobufLogWriter) {
           nextHdfsOut = ((ProtobufLogWriter)nextWriter).getStream();
+          // perform the costly sync before we get the lock to roll writers.
+          try {
+            nextWriter.sync();
+          } catch (IOException e) {
+            // optimization failed, no need to abort here.
+            LOG.warn("pre-sync failed", e);
+          }
         }
 
         Path oldFile = null;
