@@ -568,6 +568,8 @@ public final class Canary implements Tool {
         return false;
       }
 
+      if (this.targets == null || this.targets.length == 0) return true;
+
       for (String target : this.targets) {
         for (TableName tableName : tableNames) {
           if (target.equals(tableName.getNameAsString())) {
