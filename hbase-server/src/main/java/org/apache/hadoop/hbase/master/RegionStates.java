@@ -511,8 +511,9 @@ public class RegionStates {
         // region is not open on this server. So the region must be
         // moving to this server from another one (i.e. opening or
         // pending open on this server, was open on another one.
-        // It could be in failed_close state too if tried several times
-        // to open it while the server is not reachable.
+        // Offline state is also kind of pending open if the region is in
+        // transition. The region could be in failed_close state too if we have
+        // tried several times to open it while this region server is not reachable)
         if (state.isPendingOpenOrOpening() || state.isFailedClose() || state.isOffline()) {
           LOG.info("Found region in " + state + " to be reassigned by SSH for " + sn);
           rits.add(hri);
@@ -623,8 +624,13 @@ public class RegionStates {
   synchronized void setLastRegionServerOfRegions(
       final ServerName serverName, final List<HRegionInfo> regionInfos) {
     for (HRegionInfo hri: regionInfos) {
-      lastAssignments.put(hri.getEncodedName(), serverName);
+      setLastRegionServerOfRegion(serverName, hri.getEncodedName());
     }
+  }
+
+  synchronized void setLastRegionServerOfRegion(
+      final ServerName serverName, final String encodedName) {
+    lastAssignments.put(encodedName, serverName);
   }
 
   /**

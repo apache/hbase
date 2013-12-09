@@ -1006,7 +1006,9 @@ MasterServices, Server {
       if (!rit) {
         // Assign meta since not already in transition
         if (currentMetaServer != null) {
-          if (expireIfOnline(currentMetaServer)) {
+          if (!serverManager.isServerDead(currentMetaServer)) {
+            LOG.info("Forcing expire of " + currentMetaServer);
+            serverManager.expireServer(currentMetaServer);
             splitMetaLogBeforeAssignment(currentMetaServer);
             if (this.distributedLogReplay) {
               logReplayFailedMetaServer = currentMetaServer;
@@ -1085,22 +1087,6 @@ MasterServices, Server {
     if (!this.assignmentManager.getZKTable().isEnabledTable(metaTableName)) {
       this.assignmentManager.setEnabledTable(metaTableName);
     }
-  }
-
-  /**
-   * Expire a server if we find it is one of the online servers.
-   * @param sn ServerName to check.
-   * @return true when server <code>sn<code> is being expired by the function.
-   * @throws IOException
-   */
-  private boolean expireIfOnline(final ServerName sn)
-      throws IOException {
-    if (sn == null || !serverManager.isServerOnline(sn)) {
-      return false;
-    }
-    LOG.info("Forcing expire of " + sn);
-    serverManager.expireServer(sn);
-    return true;
   }
 
   /**
