@@ -625,6 +625,13 @@ public class HLog implements Syncable {
       FSDataOutputStream nextHdfsOut = null;
       if (nextWriter instanceof SequenceFileLogWriter) {
         nextHdfsOut = ((SequenceFileLogWriter)nextWriter).getWriterFSDataOutputStream();
+        // perform the costly sync before we get the lock to roll writers.
+        try {
+          nextWriter.sync();
+        } catch (IOException e) {
+          // optimization failed, no need to abort here.
+          LOG.warn("pre-sync failed", e);
+        }
       }
 
       synchronized (updateLock) {
