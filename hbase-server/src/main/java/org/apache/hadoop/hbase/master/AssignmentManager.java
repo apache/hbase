@@ -613,14 +613,31 @@ public class AssignmentManager extends ZooKeeperListener {
       return true;
     }
     if (!serverManager.isServerOnline(sn)) {
-      // It was on a dead server, it's closed now. Force to OFFLINE and put
-      // it in transition. Try to re-assign it, but it will fail most likely,
-      // since we have not done log splitting for the dead server yet.
+      // It was transitioning on a dead server, so it's closed now.
+      // Force to OFFLINE and put it in transition, but not assign it
+      // since log splitting for the dead server is not done yet.
       LOG.debug("RIT " + encodedName + " in state=" + rt.getEventType() +
         " was on deadserver; forcing offline");
-      ZKAssign.createOrForceNodeOffline(this.watcher, regionInfo, sn);
+      if (regionStates.isRegionOnline(regionInfo)) {
+        // Meta could still show the region is assigned to the previous
+        // server. If that server is online, when we reload the meta, the
+        // region is put back to online, we need to offline it.
+        regionStates.regionOffline(regionInfo);
+      }
+      // Put it back in transition so that SSH can re-assign it
       regionStates.updateRegionState(regionInfo, State.OFFLINE, sn);
-      invokeAssign(regionInfo);
+      // No mater the previous server is online or offline,
+      // we need to reset the last region server of the region.
+      regionStates.setLastRegionServerOfRegion(sn, encodedName);
+      if (regionInfo.isMetaRegion()) {
+        // If it's meta region, reset the meta location.
+        // So that master knows the right meta region server.
+        MetaRegionTracker.setMetaLocation(watcher, sn);
+      }
+      // Make sure we know the server is dead.
+      if (!serverManager.isServerDead(sn)) {
+        serverManager.expireServer(sn);
+      }
       return false;
     }
     switch (et) {
