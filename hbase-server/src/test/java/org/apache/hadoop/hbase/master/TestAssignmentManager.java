@@ -832,8 +832,8 @@ public class TestAssignmentManager {
 
   /**
    * Test the scenario when the master is in failover and trying to process a
-   * region which is in Opening state on a dead RS. Master should immediately
-   * assign the region and not wait for Timeout Monitor.(Hbase-5882).
+   * region which is in Opening state on a dead RS. Master will force offline the
+   * region and put it in transition. AM relies on SSH to reassign it.
    */
   @Test(timeout = 60000)
   public void testRegionInOpeningStateOnDeadRSWhileMasterFailover() throws IOException,
@@ -851,7 +851,10 @@ public class TestAssignmentManager {
     am.getRegionStates().logSplit(SERVERNAME_A); // Assume log splitting is done
     am.getRegionStates().createRegionState(REGIONINFO);
     am.gate.set(false);
-    am.processRegionsInTransition(rt, REGIONINFO, version);
+    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    assertFalse(am.processRegionsInTransition(rt, REGIONINFO, version));
+    am.getZKTable().setEnabledTable(REGIONINFO.getTable());
+    processServerShutdownHandler(ct, am, false);
     // Waiting for the assignment to get completed.
     while (!am.gate.get()) {
       Thread.sleep(10);
@@ -1159,6 +1162,8 @@ public class TestAssignmentManager {
     public void assign(List<HRegionInfo> regions)
         throws IOException, InterruptedException {
       assignInvoked = (regions != null && regions.size() > 0);
+      super.assign(regions);
+      this.gate.set(true);
     }
 
     /** reset the watcher */

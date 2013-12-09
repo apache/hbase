@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.data.Stat;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -970,6 +971,76 @@ public class TestMasterFailover {
     zkw.close();
     // Stop the cluster
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  /**
+   * This tests a RIT in offline state will get re-assigned after a master restart
+   */
+  @Test(timeout=240000)
+  public void testOfflineRegionReAssginedAfterMasterRestart() throws Exception {
+    final TableName table = TableName.valueOf("testOfflineRegionReAssginedAfterMasterRestart");
+    final int NUM_MASTERS = 1;
+    final int NUM_RS = 2;
+
+    // Create config to use for this cluster
+    Configuration conf = HBaseConfiguration.create();
+
+    // Start the cluster
+    final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    log("Cluster started");
+
+    TEST_UTIL.createTable(table, Bytes.toBytes("family"));
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    HRegionInfo hri = regionStates.getRegionsOfTable(table).get(0);
+    ServerName serverName = regionStates.getRegionServerOfRegion(hri);
+    TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+
+    ServerName dstName = null;
+    for (ServerName tmpServer : master.serverManager.getOnlineServers().keySet()) {
+      if (!tmpServer.equals(serverName)) {
+        dstName = tmpServer;
+        break;
+      }
+    }
+    // find a different server
+    assertTrue(dstName != null);
+    // shutdown HBase cluster
+    TEST_UTIL.shutdownMiniHBaseCluster();
+    // create a RIT node in offline state
+    ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+    ZKAssign.createNodeOffline(zkw, hri, dstName);
+    Stat stat = new Stat();
+    byte[] data =
+        ZKAssign.getDataNoWatch(zkw, hri.getEncodedName(), stat);
+    assertTrue(data != null);
+    RegionTransition rt = RegionTransition.parseFrom(data);
+    assertTrue(rt.getEventType() == EventType.M_ZK_REGION_OFFLINE);
+
+    LOG.info(hri.getEncodedName() + " region is in offline state with source server=" + serverName
+        + " and dst server=" + dstName);
+
+    // start HBase cluster
+    TEST_UTIL.startMiniHBaseCluster(NUM_MASTERS, NUM_RS);
+
+    while (true) {
+      master = TEST_UTIL.getHBaseCluster().getMaster();
+      if (master != null && master.isInitialized()) {
+        ServerManager serverManager = master.getServerManager();
+        if (!serverManager.areDeadServersInProgress()) {
+          break;
+        }
+      }
+      Thread.sleep(200);
+    }
+
+    // verify the region is assigned
+    master = TEST_UTIL.getHBaseCluster().getMaster();
+    master.getAssignmentManager().waitForAssignment(hri);
+    regionStates = master.getAssignmentManager().getRegionStates();
+    RegionState newState = regionStates.getRegionState(hri);
+    assertTrue(newState.isOpened());
   }
 
   /**
