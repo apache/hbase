@@ -525,16 +525,23 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   boolean processRegionInTransitionAndBlockUntilAssigned(final HRegionInfo hri)
       throws InterruptedException, KeeperException, IOException {
-    boolean intransistion = processRegionInTransition(hri.getEncodedName(), hri);
-    if (!intransistion) return intransistion;
-    LOG.debug("Waiting on " + HRegionInfo.prettyPrint(hri.getEncodedName()));
+    String encodedRegionName = hri.getEncodedName();
+    if (!processRegionInTransition(encodedRegionName, hri)) {
+      return false; // The region is not in transition
+    }
+    LOG.debug("Waiting on " + HRegionInfo.prettyPrint(encodedRegionName));
     while (!this.server.isStopped() &&
-      this.regionStates.isRegionInTransition(hri.getEncodedName())) {
-      // We put a timeout because we may have the region getting in just between the test
-      //  and the waitForUpdate
+        this.regionStates.isRegionInTransition(encodedRegionName)) {
+      RegionState state = this.regionStates.getRegionTransitionState(encodedRegionName);
+      if (state == null || !serverManager.isServerOnline(state.getServerName())) {
+        // The region is not in transition, or not in transition on an online
+        // server. Doesn't help to block here any more. Caller need to
+        // verify the region is actually assigned.
+        break;
+      }
       this.regionStates.waitForUpdate(100);
     }
-    return intransistion;
+    return true;
   }
 
   /**
@@ -3098,8 +3105,8 @@ public class AssignmentManager extends ZooKeeperListener {
           regionStates.getRegionTransitionState(encodedName);
         if (regionState == null
             || (regionState.getServerName() != null && !regionState.isOnServer(sn))
-            || !(regionState.isFailedClose() || regionState.isPendingOpenOrOpening() || regionState
-                .isOffline())) {
+            || !(regionState.isFailedClose() || regionState.isOffline()
+              || regionState.isPendingOpenOrOpening())) {
           LOG.info("Skip " + regionState + " since it is not opening/failed_close"
             + " on the dead server any more: " + sn);
           it.remove();
