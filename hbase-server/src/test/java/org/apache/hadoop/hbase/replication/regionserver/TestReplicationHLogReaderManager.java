@@ -139,12 +139,6 @@ public class TestReplicationHLogReaderManager {
     // Grab the path that was generated when the log rolled as part of its creation
     Path path = pathWatcher.currentPath;
 
-    // open it, it's empty so it fails
-    try {
-      logManager.openReader(path);
-      fail("Shouldn't be able to open an empty file");
-    } catch (EOFException ex) {}
-
     assertEquals(0, logManager.getPosition());
 
     appendToLog();
@@ -181,12 +175,6 @@ public class TestReplicationHLogReaderManager {
     logManager.finishCurrentFile();
 
     path = pathWatcher.currentPath;
-
-    // Finally we have a new empty log, which should still give us EOFs
-    try {
-      logManager.openReader(path);
-      fail();
-    } catch (EOFException ex) {}
 
     for (int i = 0; i < nbRows; i++) { appendToLogPlus(walEditKVs); }
     log.rollWriter();
