@@ -91,8 +91,7 @@ public class SingleSizeCache implements BlockCache, HeapSize {
     this.timeSinceLastAccess = new AtomicLong();
 
     // This evictionListener is called whenever the cache automatically
-    // evicts
-    // something.
+    // evicts something.
     RemovalListener<BlockCacheKey, CacheablePair> listener =
       new RemovalListener<BlockCacheKey, CacheablePair>() {
         @Override
@@ -116,8 +115,6 @@ public class SingleSizeCache implements BlockCache, HeapSize {
         .removalListener(listener)
         .<BlockCacheKey, CacheablePair>build()
         .asMap();
-
-
   }
 
   @Override
@@ -138,7 +135,6 @@ public class SingleSizeCache implements BlockCache, HeapSize {
 
     synchronized (this) {
       CacheablePair alreadyCached = backingMap.putIfAbsent(blockName, newEntry);
-    
 
       if (alreadyCached != null) {
         backingStore.free(storedBlock);
@@ -193,7 +189,6 @@ public class SingleSizeCache implements BlockCache, HeapSize {
       doEviction(key, evictedBlock);
     }
     return evictedBlock != null;
-
   }
 
   private void doEviction(BlockCacheKey key, CacheablePair evictedBlock) {

@@ -603,26 +603,17 @@ public class LruBlockCache implements BlockCache, HeapSize {
     return this.maxSize;
   }
 
-  /**
-   * Get the current size of this cache.
-   * @return current size in bytes
-   */
+  @Override
   public long getCurrentSize() {
     return this.size.get();
   }
 
-  /**
-   * Get the current size of this cache.
-   * @return current size in bytes
-   */
+  @Override
   public long getFreeSize() {
     return getMaxSize() - getCurrentSize();
   }
 
-  /**
-   * Get the size of this cache (number of cached blocks)
-   * @return number of cached blocks
-   */
+  @Override
   public long size() {
     return this.elements.get();
   }
@@ -639,10 +630,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     return this.stats.getEvictionCount();
   }
 
-  /**
-   * Get the number of blocks that have been evicted during the lifetime
-   * of this cache.
-   */
+  @Override
   public long getEvictedCount() {
     return this.stats.getEvictedCount();
   }

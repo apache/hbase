@@ -26,22 +26,53 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.common.base.Preconditions;
 
+import javax.management.JMException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+
+/**
+ * Utilities for interacting with and monitoring DirectByteBuffer allocations.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DirectMemoryUtils {
+  private static final Log LOG = LogFactory.getLog(DirectMemoryUtils.class);
+  private static final MBeanServer beanServer;
+  private static final ObjectName nioDirectPool;
+
+  static {
+    // initialize singletons. Only maintain a reference to the MBeanServer if
+    // we're able to consume it -- hence convoluted logic.
+    ObjectName n = null;
+    MBeanServer s = null;
+    try {
+      n = new ObjectName("java.nio:type=BufferPool,name=direct");
+    } catch (MalformedObjectNameException e) {
+      LOG.warn("Unable to initialize ObjectName for DirectByteBuffer allocations.");
+    } finally {
+      nioDirectPool = n;
+    }
+    if (nioDirectPool != null) {
+      s = ManagementFactory.getPlatformMBeanServer();
+    }
+    beanServer = s;
+  }
+
   /**
    * @return the setting of -XX:MaxDirectMemorySize as a long. Returns 0 if
    *         -XX:MaxDirectMemorySize is not set.
    */
-
   public static long getDirectMemorySize() {
-    RuntimeMXBean RuntimemxBean = ManagementFactory.getRuntimeMXBean();
-    List<String> arguments = RuntimemxBean.getInputArguments();
+    RuntimeMXBean runtimemxBean = ManagementFactory.getRuntimeMXBean();
+    List<String> arguments = runtimemxBean.getInputArguments();
     long multiplier = 1; //for the byte case.
     for (String s : arguments) {
       if (s.contains("-XX:MaxDirectMemorySize=")) {
@@ -64,9 +95,22 @@ public class DirectMemoryUtils {
         long retValue = Long.parseLong(memSize);
         return retValue * multiplier;
       }
-
     }
     return 0;
+  }
+
+  /**
+   * @return the current amount of direct memory used.
+   */
+  public static long getDirectMemoryUsage() {
+    if (beanServer == null || nioDirectPool == null) return 0;
+    try {
+      Long value = (Long) beanServer.getAttribute(nioDirectPool, "MemoryUsed");
+      return value == null ? 0 : value;
+    } catch (JMException e) {
+      LOG.debug("Failed to retrieve nio.BufferPool direct MemoryUsed");
+      return 0;
+    }
   }
 
   /**
@@ -94,6 +138,5 @@ public class DirectMemoryUtils {
     Method cleanMethod = cleaner.getClass().getMethod("clean");
     cleanMethod.setAccessible(true);
     cleanMethod.invoke(cleaner);
-
   }
 }

@@ -179,7 +179,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
 
   private void addSlab(int blockSize, int numBlocks) {
     LOG.info("Creating a slab of blockSize " + blockSize + " with " + numBlocks
-        + " blocks.");
+        + " blocks, " + StringUtils.humanReadableInt(blockSize * numBlocks) + "bytes.");
     sizer.put(blockSize, new SingleSizeCache(blockSize, numBlocks, this));
   }
 
@@ -229,8 +229,6 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
 
   /**
    * Get the buffer of the block with the specified name.
-   * @param caching
-   * @param key
    *
    * @return buffer of specified block name, or null if not in cache
    */
@@ -301,13 +299,17 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
   }
 
   public long getFreeSize() {
-    return 0; // this cache, by default, allocates all its space.
+    long childFreeSize = 0;
+    for (SingleSizeCache s : sizer.values()) {
+      childFreeSize += s.getFreeSize();
+    }
+    return childFreeSize;
   }
 
   @Override
   public long getBlockCount() {
     long count = 0;
-    for (SingleSizeCache cache : backingStore.values()) {
+    for (SingleSizeCache cache : sizer.values()) {
       count += cache.getBlockCount();
     }
     return count;
