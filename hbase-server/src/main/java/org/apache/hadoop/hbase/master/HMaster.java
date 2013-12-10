@@ -1006,16 +1006,16 @@ MasterServices, Server {
       assigned++;
       if (!rit) {
         // Assign meta since not already in transition
-        if (currentMetaServer != null) {
-          if (!serverManager.isServerDead(currentMetaServer)) {
-            LOG.info("Forcing expire of " + currentMetaServer);
-            serverManager.expireServer(currentMetaServer);
-            splitMetaLogBeforeAssignment(currentMetaServer);
-            if (this.distributedLogReplay) {
-              logReplayFailedMetaServer = currentMetaServer;
-            }
+        if (!serverManager.isServerDead(currentMetaServer)) {
+          LOG.info("Forcing expire of " + currentMetaServer);
+          serverManager.expireServer(currentMetaServer);
+          splitMetaLogBeforeAssignment(currentMetaServer);
+          if (this.distributedLogReplay) {
+            logReplayFailedMetaServer = currentMetaServer;
           }
         }
+        // Make sure assignment manager knows where the meta is,
+        // so that meta sever shutdown handler kicks in.
         assignmentManager.assignMeta();
       }
     } else {
