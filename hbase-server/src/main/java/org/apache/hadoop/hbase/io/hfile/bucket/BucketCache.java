@@ -893,14 +893,11 @@ public class BucketCache implements BlockCache, HeapSize {
     return this.bucketAllocator;
   }
 
+  @Override
   public long heapSize() {
     return this.heapSize.get();
   }
 
-  /**
-   * Returns the total size of the block cache, in bytes.
-   * @return size of cache, in bytes
-   */
   @Override
   public long size() {
     return this.realCacheSize.get();
@@ -916,10 +913,6 @@ public class BucketCache implements BlockCache, HeapSize {
     return this.blockNumber.get();
   }
 
-  /**
-   * Returns the occupied size of the block cache, in bytes.
-   * @return occupied space in cache, in bytes
-   */
   @Override
   public long getCurrentSize() {
     return this.bucketAllocator.getUsedSize();
@@ -931,10 +924,10 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Evicts all blocks for a specific HFile. 
+   * Evicts all blocks for a specific HFile.
    * <p>
    * This is used for evict-on-close to remove all blocks of a specific HFile.
-   * 
+   *
    * @return the number of blocks evicted
    */
   @Override

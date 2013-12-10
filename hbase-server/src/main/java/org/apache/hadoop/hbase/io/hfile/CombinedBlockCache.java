@@ -55,7 +55,6 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
     return lruCache.heapSize() + bucketCache.heapSize();
   }
 
-
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
     boolean isMetaBlock = buf.getBlockType().getCategory() != BlockCategory.DATA;
@@ -65,7 +64,6 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
       bucketCache.cacheBlock(cacheKey, buf, inMemory);
     }
   }
-
 
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
@@ -79,7 +77,6 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
       return lruCache.getBlock(cacheKey, caching, repeat);
     }
     return bucketCache.getBlock(cacheKey, caching, repeat);
-
   }
 
   @Override
@@ -102,7 +99,6 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
   public void shutdown() {
     lruCache.shutdown();
     bucketCache.shutdown();
-    
   }
 
   @Override
@@ -209,7 +205,5 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
           .getSumRequestCachingCountsPastNPeriods()));
       return Double.isNaN(ratio) ? 0 : ratio;
     }
-
   }
-
 }

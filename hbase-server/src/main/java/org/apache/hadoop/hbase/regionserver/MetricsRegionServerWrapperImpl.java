@@ -198,7 +198,7 @@ class MetricsRegionServerWrapperImpl
     if (this.blockCache == null) {
       return 0;
     }
-    return this.blockCache.size();
+    return this.blockCache.getBlockCount();
   }
 
   @Override

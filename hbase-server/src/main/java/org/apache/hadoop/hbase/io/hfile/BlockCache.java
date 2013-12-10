@@ -100,8 +100,8 @@ public interface BlockCache {
   long getCurrentSize();
 
   /**
-   * Returns the number of evictions that have occurred.
-   * @return number of evictions
+   * Returns the number of blocks that have been evicted.
+   * @return number of evicted blocks
    */
   long getEvictedCount();
 
