@@ -780,8 +780,14 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       LOG.error("Removing coprocessor '" + env.toString() + "' from " +
           "environment because it threw:  " + e,e);
       coprocessors.remove(env);
+      try {
+        shutdown(env);
+      } catch (Exception x) {
+        LOG.error("Uncaught exception when shutting down coprocessor '"
+            + env.toString() + "'", x);
+      }
       throw new DoNotRetryIOException("Coprocessor: '" + env.toString() +
-          "' threw: '" + e + "' and has been removed" + "from the active " +
+          "' threw: '" + e + "' and has been removed from the active " +
           "coprocessor set.", e);
     }
   }
