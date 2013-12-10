@@ -103,7 +103,12 @@ abstract class StoreFlusher {
   protected  InternalScanner postCreateCoprocScanner(InternalScanner scanner)
       throws IOException {
     if (store.getCoprocessorHost() != null) {
-      return store.getCoprocessorHost().preFlush(store, scanner);
+      try {
+        return store.getCoprocessorHost().preFlush(store, scanner);
+      } catch (IOException ioe) {
+        scanner.close();
+        throw ioe;
+      }
     }
     return scanner;
   }
