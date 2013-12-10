@@ -3794,7 +3794,7 @@ public class HRegion implements HeapSize { // , Writable{
     // KeyValue indicating that limit is reached when scanning
     private final KeyValue KV_LIMIT = new KeyValue();
     private final byte [] stopRow;
-    private Filter filter;
+    private final Filter filter;
     private int batch;
     private int isScan;
     private boolean filterClosed = false;
@@ -3924,7 +3924,7 @@ public class HRegion implements HeapSize { // , Writable{
         outResults.addAll(tmpList);
       }
       resetFilters();
-      if (isFilterDone()) {
+      if (isFilterDoneInternal()) {
         return false;
       }
       return returnResult;
@@ -3987,6 +3987,10 @@ public class HRegion implements HeapSize { // , Writable{
      * @return True if a filter rules the scanner is over, done.
      */
     public synchronized boolean isFilterDone() {
+      return isFilterDoneInternal();
+    }
+
+    private boolean isFilterDoneInternal() {
       return this.filter != null && this.filter.filterAllRemaining();
     }
 
