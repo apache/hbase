@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRes
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -375,6 +377,40 @@ public class SnapshotTestingUtils {
     SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), tableName, nonEmptyFamilyNames,
       emptyFamilyNames, rootDir, admin, fs, false,
       new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), null);
+  }
+
+  /**
+   * Corrupt the specified snapshot by deleting some files.
+   *
+   * @param util {@link HBaseTestingUtility}
+   * @param snapshotName name of the snapshot to corrupt
+   * @return array of the corrupted HFiles
+   * @throws IOException on unexecpted error reading the FS
+   */
+  public static ArrayList corruptSnapshot(final HBaseTestingUtility util, final String snapshotName)
+      throws IOException {
+    final MasterFileSystem mfs = util.getHBaseCluster().getMaster().getMasterFileSystem();
+    final FileSystem fs = mfs.getFileSystem();
+
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName,
+                                                                        mfs.getRootDir());
+    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    final TableName table = TableName.valueOf(snapshotDesc.getTable());
+
+    final ArrayList corruptedFiles = new ArrayList();
+    SnapshotReferenceUtil.visitTableStoreFiles(fs, snapshotDir, new FSVisitor.StoreFileVisitor() {
+      public void storeFile (final String region, final String family, final String hfile)
+          throws IOException {
+        HFileLink link = HFileLink.create(util.getConfiguration(), table, region, family, hfile);
+        if (corruptedFiles.size() % 2 == 0) {
+          fs.delete(link.getAvailablePath(fs));
+          corruptedFiles.add(hfile);
+        }
+      }
+    });
+
+    assertTrue(corruptedFiles.size() > 0);
+    return corruptedFiles;
   }
 
   // ==========================================================================

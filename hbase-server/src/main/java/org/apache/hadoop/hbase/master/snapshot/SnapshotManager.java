@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.snapshot.SnapshotExistsException;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.TablePartiallyOpenException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -707,6 +708,9 @@ public class SnapshotManager implements Stoppable {
 
     // stop tracking "abandoned" handlers
     cleanupSentinels();
+
+    // Verify snapshot validity
+    SnapshotReferenceUtil.verifySnapshot(master.getConfiguration(), fs, snapshotDir, fsSnapshot);
 
     // Execute the restore/clone operation
     if (MetaReader.tableExists(master.getCatalogTracker(), tableName)) {
