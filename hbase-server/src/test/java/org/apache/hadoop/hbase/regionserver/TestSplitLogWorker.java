@@ -235,7 +235,7 @@ public class TestSplitLogWorker {
       assertTrue(slt.isOwned(SRV));
       slt = new SplitLogTask.Unassigned(MANAGER);
       ZKUtil.setData(zkw, PATH, slt.toByteArray());
-      waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 0, 1, 1500);
+      waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 0, 1, 5000);
     } finally {
       stopSplitLogWorker(slw);
     }
@@ -254,13 +254,13 @@ public class TestSplitLogWorker {
     try {
       Thread.yield(); // let the worker start
       Thread.sleep(100);
-      waitForCounter(SplitLogCounters.tot_wkr_task_grabing, 0, 1, 1500);
+      waitForCounter(SplitLogCounters.tot_wkr_task_grabing, 0, 1, 5000);
 
       SplitLogTask unassignedManager = new SplitLogTask.Unassigned(MANAGER);
       zkw.getRecoverableZooKeeper().create(PATH1, unassignedManager.toByteArray(),
         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
-      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1500);
+      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 5000);
       // now the worker is busy doing the above task
 
       // create another task
@@ -272,9 +272,9 @@ public class TestSplitLogWorker {
       final ServerName anotherWorker = ServerName.valueOf("another-worker,1,1");
       SplitLogTask slt = new SplitLogTask.Owned(anotherWorker);
       ZKUtil.setData(zkw, PATH1, slt.toByteArray());
-      waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 0, 1, 1500);
+      waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 0, 1, 5000);
 
-      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 1, 2, 1500);
+      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 1, 2, 5000);
       assertEquals(2, slw.taskReadySeq);
       byte [] bytes = ZKUtil.getData(zkw, PATH2);
       slt = SplitLogTask.parseFrom(bytes);
