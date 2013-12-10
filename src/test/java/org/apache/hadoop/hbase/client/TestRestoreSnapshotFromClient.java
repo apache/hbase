@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -243,6 +245,22 @@ public class TestRestoreSnapshotFromClient {
     admin.restoreSnapshot(snapshotName0);
     admin.enableTable(tableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
+  }
+
+  @Test
+  public void testCorruptedSnapshot() throws IOException, InterruptedException {
+    SnapshotTestingUtils.corruptSnapshot(TEST_UTIL, Bytes.toString(snapshotName0));
+    byte[] cloneName = Bytes.toBytes("corruptedClone-" + System.currentTimeMillis());
+    try {
+      admin.cloneSnapshot(snapshotName0, cloneName);
+      fail("Expected CorruptedSnapshotException, got succeeded cloneSnapshot()");
+    } catch (CorruptedSnapshotException e) {
+      // Got the expected corruption exception.
+      // check for no references of the cloned table.
+      assertFalse(admin.tableExists(cloneName));
+    } catch (Exception e) {
+      fail("Expected CorruptedSnapshotException got: " + e);
+    }
   }
 
   // ==========================================================================

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.util.HashSet;
 import java.util.TreeMap;
 import java.util.LinkedList;
@@ -29,6 +30,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
@@ -153,6 +156,32 @@ public final class SnapshotReferenceUtil {
   public static void visitLogFiles(final FileSystem fs, final Path snapshotDir,
       final FSVisitor.LogFileVisitor visitor) throws IOException {
     FSVisitor.visitLogFiles(fs, snapshotDir, visitor);
+  }
+
+  /**
+   * Verify the validity of the snapshot
+   *
+   * @param conf The current {@link Configuration} instance.
+   * @param fs {@link FileSystem}
+   * @param snapshotDir {@link Path} to the Snapshot directory of the snapshot to verify
+   * @param snapshotDesc the {@link SnapshotDescription} of the snapshot to verify
+   * @throws CorruptedSnapshotException if the snapshot is corrupted
+   * @throws IOException if an error occurred while scanning the directory
+   */
+  public static void verifySnapshot(final Configuration conf, final FileSystem fs,
+      final Path snapshotDir, final SnapshotDescription snapshotDesc) throws IOException {
+    final String table = snapshotDesc.getTable();
+    visitTableStoreFiles(fs, snapshotDir, new FSVisitor.StoreFileVisitor() {
+      public void storeFile (final String region, final String family, final String hfile)
+          throws IOException {
+        HFileLink link = HFileLink.create(conf, table, region, family, hfile);
+        try {
+          link.getFileStatus(fs);
+        } catch (FileNotFoundException e) {
+          throw new CorruptedSnapshotException("Corrupted snapshot '" + snapshotDesc + "'", e);
+        }
+      }
+    });
   }
 
   /**
