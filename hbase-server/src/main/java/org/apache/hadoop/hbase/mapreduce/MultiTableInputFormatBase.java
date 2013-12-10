@@ -83,15 +83,24 @@ public abstract class MultiTableInputFormatBase extends
         new HTable(context.getConfiguration(), tSplit.getTableName());
 
     TableRecordReader trr = this.tableRecordReader;
-    // if no table record reader was provided use default
-    if (trr == null) {
-      trr = new TableRecordReader();
+
+    try {
+      // if no table record reader was provided use default
+      if (trr == null) {
+        trr = new TableRecordReader();
+      }
+      Scan sc = tSplit.getScan();
+      sc.setStartRow(tSplit.getStartRow());
+      sc.setStopRow(tSplit.getEndRow());
+      trr.setScan(sc);
+      trr.setHTable(table);
+    } catch (IOException ioe) {
+      // If there is an exception make sure that all
+      // resources are closed and released.
+      table.close();
+      trr.close();
+      throw ioe;
     }
-    Scan sc = tSplit.getScan();
-    sc.setStartRow(tSplit.getStartRow());
-    sc.setStopRow(tSplit.getEndRow());
-    trr.setScan(sc);
-    trr.setHTable(table);
     return trr;
   }
 
