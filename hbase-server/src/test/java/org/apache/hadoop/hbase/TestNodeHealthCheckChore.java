@@ -43,6 +43,7 @@ public class TestNodeHealthCheckChore {
 
   private static final Log LOG = LogFactory.getLog(TestNodeHealthCheckChore.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final int SCRIPT_TIMEOUT = 5000;
   private File healthScriptFile;
   private String eol = System.getProperty("line.separator");
 
@@ -69,7 +70,7 @@ public class TestNodeHealthCheckChore {
 
   @Test
   public void testHealthCheckerTimeout() throws Exception {
-    String timeOutScript = "sleep 4" + eol + "echo \"I am fine\"";
+    String timeOutScript = "sleep " + (SCRIPT_TIMEOUT * 2) + eol + "echo \"I am fine\"";
     healthCheckerTest(timeOutScript, HealthCheckerExitStatus.TIMED_OUT);
   }
 
@@ -78,7 +79,7 @@ public class TestNodeHealthCheckChore {
     Configuration config = getConfForNodeHealthScript();
     config.addResource(healthScriptFile.getName());
     String location = healthScriptFile.getAbsolutePath();
-    long timeout = config.getLong(HConstants.HEALTH_SCRIPT_TIMEOUT, 2000);
+    long timeout = config.getLong(HConstants.HEALTH_SCRIPT_TIMEOUT, SCRIPT_TIMEOUT);
 
     HealthChecker checker = new HealthChecker();
     checker.init(location, timeout);
@@ -142,7 +143,7 @@ public class TestNodeHealthCheckChore {
     healthScriptFile = new File(tempDir.getAbsolutePath(), scriptName);
     conf.set(HConstants.HEALTH_SCRIPT_LOC, healthScriptFile.getAbsolutePath());
     conf.setLong(HConstants.HEALTH_FAILURE_THRESHOLD, 3);
-    conf.setLong(HConstants.HEALTH_SCRIPT_TIMEOUT, 2000);
+    conf.setLong(HConstants.HEALTH_SCRIPT_TIMEOUT, SCRIPT_TIMEOUT);
     return conf;
   }
 
