@@ -237,7 +237,7 @@ public class RowSpec {
       case 'm': {
         StringBuilder sb = new StringBuilder();
         while (j <= query.length()) {
-          c = query.charAt(i);
+          c = query.charAt(j);
           if (c < '0' || c > '9') {
             j--;
             break;
@@ -249,7 +249,7 @@ public class RowSpec {
       case 'n': {
         StringBuilder sb = new StringBuilder();
         while (j <= query.length()) {
-          c = query.charAt(i);
+          c = query.charAt(j);
           if (c < '0' || c > '9') {
             j--;
             break;
