@@ -56,21 +56,21 @@ public class TestNodeHealthCheckChore {
     if (!fs.mkdirs(testDir)) throw new IOException("Failed mkdir " + testDir);
   }
 
-  @Test
+  @Test(timeout=60000)
   public void testHealthCheckerSuccess() throws Exception {
     String normalScript = "echo \"I am all fine\"";
     healthCheckerTest(normalScript, HealthCheckerExitStatus.SUCCESS);
   }
 
-  @Test
+  @Test(timeout=60000)
   public void testHealthCheckerFail() throws Exception {
     String errorScript = "echo ERROR" + eol + "echo \"Node not healthy\"";
     healthCheckerTest(errorScript, HealthCheckerExitStatus.FAILED);
   }
 
-  @Test
+  @Test(timeout=60000)
   public void testHealthCheckerTimeout() throws Exception {
-    String timeOutScript = "sleep " + (SCRIPT_TIMEOUT * 2) + eol + "echo \"I am fine\"";
+    String timeOutScript = "sleep 10" + eol + "echo \"I am fine\"";
     healthCheckerTest(timeOutScript, HealthCheckerExitStatus.TIMED_OUT);
   }
 
@@ -93,7 +93,7 @@ public class TestNodeHealthCheckChore {
     this.healthScriptFile.delete();
   }
 
-  @Test
+  @Test(timeout=60000)
   public void testRSHealthChore() throws Exception{
     Stoppable stop = new StoppableImplementation();
     Configuration conf = getConfForNodeHealthScript();
