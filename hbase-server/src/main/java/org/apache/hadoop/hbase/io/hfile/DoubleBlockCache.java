@@ -38,7 +38,7 @@ import org.apache.hadoop.util.StringUtils;
  *
  **/
 @InterfaceAudience.Private
-public class DoubleBlockCache implements BlockCache, HeapSize {
+public class DoubleBlockCache implements ResizableBlockCache, HeapSize {
 
   static final Log LOG = LogFactory.getLog(DoubleBlockCache.class.getName());
 
@@ -172,4 +172,8 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
     return onHeapCache.getBlockCount() + offHeapCache.getBlockCount();
   }
 
+  @Override
+  public void setMaxSize(long size) {
+    this.onHeapCache.setMaxSize(size);
+  }
 }

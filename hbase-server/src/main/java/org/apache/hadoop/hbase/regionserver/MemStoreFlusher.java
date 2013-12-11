@@ -21,9 +21,11 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -65,6 +67,18 @@ import org.cloudera.htrace.TraceScope;
 @InterfaceAudience.Private
 class MemStoreFlusher implements FlushRequester {
   static final Log LOG = LogFactory.getLog(MemStoreFlusher.class);
+  static final String MEMSTORE_SIZE_KEY = "hbase.regionserver.global.memstore.size";
+  private static final String MEMSTORE_SIZE_OLD_KEY = 
+      "hbase.regionserver.global.memstore.upperLimit";
+  private static final String MEMSTORE_SIZE_LOWER_LIMIT_KEY = 
+      "hbase.regionserver.global.memstore.size.lower.limit";
+  private static final String MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY = 
+      "hbase.regionserver.global.memstore.lowerLimit";
+
+  private static final float DEFAULT_MEMSTORE_SIZE = 0.4f;
+  // Default lower water mark limit is 95% size of memstore size.
+  private static final float DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT = 0.95f;
+
   // These two data members go together.  Any entry in the one must have
   // a corresponding entry in the other.
   private final BlockingQueue<FlushQueueEntry> flushQueue =
@@ -78,19 +92,15 @@ class MemStoreFlusher implements FlushRequester {
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final Object blockSignal = new Object();
 
-  protected final long globalMemStoreLimit;
-  protected final long globalMemStoreLimitLowMark;
+  protected long globalMemStoreLimit;
+  protected float globalMemStoreLimitLowMarkPercent;
+  protected long globalMemStoreLimitLowMark;
 
-  static final float DEFAULT_UPPER = 0.4f;
-  private static final float DEFAULT_LOWER = 0.35f;
-  static final String UPPER_KEY =
-    "hbase.regionserver.global.memstore.upperLimit";
-  private static final String LOWER_KEY =
-    "hbase.regionserver.global.memstore.lowerLimit";
   private long blockingWaitTime;
   private final Counter updatesBlockedMsHighWater = new Counter();
 
   private final FlushHandler[] flushHandlers;
+  private List<FlushRequestListener> flushRequestListeners = new ArrayList<FlushRequestListener>(1);
 
   /**
    * @param conf
@@ -103,15 +113,13 @@ class MemStoreFlusher implements FlushRequester {
     this.threadWakeFrequency =
       conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
     long max = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
-    this.globalMemStoreLimit = globalMemStoreLimit(max, DEFAULT_UPPER,
-      UPPER_KEY, conf);
-    long lower = globalMemStoreLimit(max, DEFAULT_LOWER, LOWER_KEY, conf);
-    if (lower > this.globalMemStoreLimit) {
-      lower = this.globalMemStoreLimit;
-      LOG.info("Setting globalMemStoreLimitLowMark == globalMemStoreLimit " +
-        "because supplied " + LOWER_KEY + " was > " + UPPER_KEY);
-    }
-    this.globalMemStoreLimitLowMark = lower;
+    float globalMemStorePercent = getGlobalMemStorePercent(conf);
+    this.globalMemStoreLimit = (long) (max * globalMemStorePercent);
+    this.globalMemStoreLimitLowMarkPercent = 
+        getGlobalMemStoreLowerMark(conf, globalMemStorePercent);
+    this.globalMemStoreLimitLowMark = 
+        (long) (this.globalMemStoreLimit * this.globalMemStoreLimitLowMarkPercent);
+
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000);
     int handlerCount = conf.getInt("hbase.hstore.flusher.count", 1);
@@ -124,29 +132,40 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   /**
-   * Calculate size using passed <code>key</code> for configured
-   * percentage of <code>max</code>.
+   * Calculate global memstore size for configured percentage of <code>max</code>.
    * @param max
-   * @param defaultLimit
-   * @param key
    * @param c
    * @return Limit.
    */
-  static long globalMemStoreLimit(final long max,
-     final float defaultLimit, final String key, final Configuration c) {
-    float limit = c.getFloat(key, defaultLimit);
-    return getMemStoreLimit(max, limit, defaultLimit);
+  static float getGlobalMemStorePercent(final Configuration c) {
+    float limit = c.getFloat(MEMSTORE_SIZE_KEY,
+        c.getFloat(MEMSTORE_SIZE_OLD_KEY, DEFAULT_MEMSTORE_SIZE));
+    if (limit > 0.8f || limit < 0.05f) {
+      LOG.warn("Setting global memstore limit to default of " + DEFAULT_MEMSTORE_SIZE
+          + " because supplied value outside allowed range of 0.05 -> 0.8");
+      limit = DEFAULT_MEMSTORE_SIZE;
+    }
+    return limit;
   }
 
-  static long getMemStoreLimit(final long max, final float limit,
-      final float defaultLimit) {
-    float effectiveLimit = limit;
-    if (limit >= 0.9f || limit < 0.1f) {
-      LOG.warn("Setting global memstore limit to default of " + defaultLimit +
-        " because supplied value outside allowed range of 0.1 -> 0.9");
-      effectiveLimit = defaultLimit;
+  private static float getGlobalMemStoreLowerMark(final Configuration c, float globalMemStorePercent) {
+    String lowMarkPercentStr = c.get(MEMSTORE_SIZE_LOWER_LIMIT_KEY);
+    if (lowMarkPercentStr != null) {
+      return Float.parseFloat(lowMarkPercentStr);
     }
-    return (long)(max * effectiveLimit);
+    String lowerWaterMarkOldValStr = c.get(MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY);
+    if (lowerWaterMarkOldValStr != null) {
+      LOG.warn(MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY + " is deprecated. Instead use "
+          + MEMSTORE_SIZE_LOWER_LIMIT_KEY);
+      float lowerWaterMarkOldVal = Float.parseFloat(lowerWaterMarkOldValStr);
+      if (lowerWaterMarkOldVal > globalMemStorePercent) {
+        lowerWaterMarkOldVal = globalMemStorePercent;
+        LOG.info("Setting globalMemStoreLimitLowMark == globalMemStoreLimit " + "because supplied "
+            + MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY + " was > " + MEMSTORE_SIZE_OLD_KEY);
+      }
+      return lowerWaterMarkOldVal / globalMemStorePercent;
+    }
+    return DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT;
   }
 
   public Counter getUpdatesBlockedMsHighWater() {
@@ -453,6 +472,7 @@ class MemStoreFlusher implements FlushRequester {
     }
     lock.readLock().lock();
     try {
+      notifyFlushRequest(region, emergencyFlush);
       boolean shouldCompact = region.flushcache();
       // We just want to check the size
       boolean shouldSplit = region.checkSplit() != null;
@@ -483,6 +503,16 @@ class MemStoreFlusher implements FlushRequester {
       wakeUpIfBlocking();
     }
     return true;
+  }
+
+  private void notifyFlushRequest(HRegion region, boolean emergencyFlush) {
+    FlushType type = FlushType.NORMAL;
+    if (emergencyFlush) {
+      type = isAboveHighWaterMark() ? FlushType.ABOVE_HIGHER_MARK : FlushType.ABOVE_LOWER_MARK;
+    }
+    for (FlushRequestListener listener : flushRequestListeners) {
+      listener.flushRequested(type, region);
+    }
   }
 
   private void wakeUpIfBlocking() {
@@ -568,6 +598,38 @@ class MemStoreFlusher implements FlushRequester {
     }
 
     return queueList.toString();
+  }
+
+  /**
+   * Register a MemstoreFlushListener
+   * @param listener
+   */
+  public void registerFlushRequestListener(final FlushRequestListener listener) {
+    this.flushRequestListeners.add(listener);
+  }
+
+  /**
+   * Unregister the listener from MemstoreFlushListeners
+   * @param listener
+   * @return true when passed listener is unregistered successfully.
+   */
+  public boolean unregisterFlushRequestListener(final FlushRequestListener listener) {
+    return this.flushRequestListeners.remove(listener);
+  }
+
+  /**
+   * Sets the global memstore limit to a new size.
+   * @param globalMemStoreSize
+   */
+  public void setGlobalMemstoreLimit(long globalMemStoreSize) {
+    this.globalMemStoreLimit = globalMemStoreSize;
+    this.globalMemStoreLimitLowMark = 
+        (long) (this.globalMemStoreLimitLowMarkPercent * globalMemStoreSize);
+    reclaimMemStoreMemory();
+  }
+
+  public long getMemoryLimit() {
+    return this.globalMemStoreLimit;
   }
 
   interface FlushQueueEntry extends Delayed {}
@@ -671,4 +733,8 @@ class MemStoreFlusher implements FlushRequester {
       return compareTo(other) == 0;
     }
   }
+}
+
+enum FlushType {
+  NORMAL, ABOVE_LOWER_MARK, ABOVE_HIGHER_MARK;
 }

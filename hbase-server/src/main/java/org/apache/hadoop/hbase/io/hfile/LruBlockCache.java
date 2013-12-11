@@ -95,7 +95,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * to the relative sizes and usage.
  */
 @InterfaceAudience.Private
-public class LruBlockCache implements BlockCache, HeapSize {
+public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   static final Log LOG = LogFactory.getLog(LruBlockCache.class);
 
@@ -272,6 +272,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
         statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
   }
 
+  @Override
   public void setMaxSize(long maxSize) {
     this.maxSize = maxSize;
     if(this.size.get() > acceptableSize() && !evictionInProgress) {

@@ -194,8 +194,7 @@ public class MemStoreChunkPool {
     }
     long heapMax = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
         .getMax();
-    long globalMemStoreLimit = MemStoreFlusher.globalMemStoreLimit(heapMax,
-        MemStoreFlusher.DEFAULT_UPPER, MemStoreFlusher.UPPER_KEY, conf);
+    long globalMemStoreLimit = (long) (heapMax * MemStoreFlusher.getGlobalMemStorePercent(conf));
     int chunkSize = conf.getInt(MemStoreLAB.CHUNK_SIZE_KEY,
         MemStoreLAB.CHUNK_SIZE_DEFAULT);
     int maxCount = (int) (globalMemStoreLimit * poolSizePercentage / chunkSize);

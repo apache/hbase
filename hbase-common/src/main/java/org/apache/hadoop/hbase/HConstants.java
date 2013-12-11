@@ -752,7 +752,7 @@ public final class HConstants {
   public static final String HFILE_BLOCK_CACHE_SIZE_KEY =
     "hfile.block.cache.size";
 
-  public static final float HFILE_BLOCK_CACHE_SIZE_DEFAULT = 0.25f;
+  public static final float HFILE_BLOCK_CACHE_SIZE_DEFAULT = 0.4f;
 
   /*
     * Minimum percentage of free heap necessary for a successful cluster startup.

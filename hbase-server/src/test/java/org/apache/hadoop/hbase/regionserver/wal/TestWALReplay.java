@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreFlusher;
+import org.apache.hadoop.hbase.regionserver.FlushRequestListener;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -866,6 +867,21 @@ public class TestWALReplay {
     public void requestDelayedFlush(HRegion region, long when) {
       // TODO Auto-generated method stub
       
+    }
+
+    @Override
+    public void registerFlushRequestListener(FlushRequestListener listener) {
+
+    }
+
+    @Override
+    public boolean unregisterFlushRequestListener(FlushRequestListener listener) {
+      return false;
+    }
+
+    @Override
+    public void setGlobalMemstoreLimit(long globalMemStoreSize) {
+
     }
   }
 

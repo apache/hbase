@@ -347,7 +347,7 @@ public class CacheConfig {
    * @param conf  The current configuration.
    * @return The block cache or <code>null</code>.
    */
-  private static synchronized BlockCache instantiateBlockCache(Configuration conf) {
+  public static synchronized BlockCache instantiateBlockCache(Configuration conf) {
     if (globalBlockCache != null) return globalBlockCache;
     if (blockCacheDisabled) return null;
 

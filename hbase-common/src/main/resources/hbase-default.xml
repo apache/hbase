@@ -243,21 +243,20 @@ possible configurations would overwhelm and obscure the important.
     <description>The HLog file writer implementation.</description>
   </property>
   <property>
-    <name>hbase.regionserver.global.memstore.upperLimit</name>
+    <name>hbase.regionserver.global.memstore.size</name>
     <value>0.4</value>
     <description>Maximum size of all memstores in a region server before new
       updates are blocked and flushes are forced. Defaults to 40% of heap.
       Updates are blocked and flushes are forced until size of all memstores
-      in a region server hits hbase.regionserver.global.memstore.lowerLimit.</description>
+      in a region server hits hbase.regionserver.global.memstore.size.lower.limit.</description>
   </property>
   <property>
-    <name>hbase.regionserver.global.memstore.lowerLimit</name>
-    <value>0.38</value>
-    <description>Maximum size of all memstores in a region server before
-      flushes are forced. Defaults to 38% of heap.
-      This value equal to hbase.regionserver.global.memstore.upperLimit causes
-      the minimum possible flushing to occur when updates are blocked due to
-      memstore limiting.</description>
+    <name>hbase.regionserver.global.memstore.size.lower.limit</name>
+    <value>0.95</value>
+    <description>Maximum size of all memstores in a region server before flushes are forced.
+      Defaults to 95% of hbase.regionserver.global.memstore.size.
+      A 100% value for this value causes the minimum possible flushing to occur when updates are 
+      blocked due to memstore limiting.</description>
   </property>
   <property>
     <name>hbase.regionserver.optionalcacheflushinterval</name>
