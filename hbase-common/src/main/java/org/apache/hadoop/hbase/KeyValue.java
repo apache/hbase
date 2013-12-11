@@ -733,9 +733,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   public KeyValue(Cell c) {
     this(c.getRowArray(), c.getRowOffset(), (int)c.getRowLength(),
         c.getFamilyArray(), c.getFamilyOffset(), (int)c.getFamilyLength(), 
-        c.getQualifierArray(), c.getQualifierOffset(), (int) c.getQualifierLength(),
-        c.getTimestamp(), Type.codeToType(c.getTypeByte()), 
-        c.getValueArray(), c.getValueOffset(), c.getValueLength());
+        c.getQualifierArray(), c.getQualifierOffset(), (int) c.getQualifierLength(), 
+        c.getTimestamp(), Type.codeToType(c.getTypeByte()), c.getValueArray(), c.getValueOffset(), 
+        c.getValueLength(), c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
   }
   
   /**
