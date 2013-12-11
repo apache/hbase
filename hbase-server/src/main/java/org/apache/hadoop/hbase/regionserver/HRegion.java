@@ -2338,14 +2338,19 @@ public class HRegion implements HeapSize { // , Writable{
         long nonceGroup = batchOp.getNonceGroup(i), nonce = batchOp.getNonce(i);
         // In replay, the batch may contain multiple nonces. If so, write WALEdit for each.
         // Given how nonces are originally written, these should be contiguous.
-        // txid should always increase, so having the last one is ok.
+        // They don't have to be, it will still work, just write more WALEdits than needed.
         if (nonceGroup != currentNonceGroup || nonce != currentNonce) {
           if (walEdit.size() > 0) {
             assert isInReplay;
+            if (!isInReplay) {
+              throw new IOException("Multiple nonces per batch and not in replay");
+            }
+            // txid should always increase, so having the one from the last call is ok.
             txid = this.log.appendNoSync(this.getRegionInfo(), htableDescriptor.getTableName(),
                   walEdit, m.getClusterIds(), now, htableDescriptor, this.sequenceId, true,
                   currentNonceGroup, currentNonce);
             hasWalAppends = true;
+            walEdit = new WALEdit(isInReplay);
           }
           currentNonceGroup = nonceGroup;
           currentNonce = nonce;
