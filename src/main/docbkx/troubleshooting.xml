@@ -1154,4 +1154,29 @@ at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniCluster
       </para>
     </section>
 
+    <section xml:id="trouble.crypto">
+      <title>Cryptographic Features</title>
+        <section xml:id="trouble.crypto.HBASE-10132">
+           <title>sun.security.pkcs11.wrapper.PKCS11Exception: CKR_ARGUMENTS_BAD</title>
+<para>This problem manifests as exceptions ultimately caused by:</para>
+<programlisting>
+Caused by: sun.security.pkcs11.wrapper.PKCS11Exception: CKR_ARGUMENTS_BAD
+	at sun.security.pkcs11.wrapper.PKCS11.C_DecryptUpdate(Native Method)
+	at sun.security.pkcs11.P11Cipher.implDoFinal(P11Cipher.java:795)
+</programlisting>
+<para>
+This problem appears to affect some versions of OpenJDK 7 shipped by some Linux vendors. NSS is configured as the default provider. If the host has an x86_64 architecture, depending on if the vendor packages contain the defect, the NSS provider will not function correctly.
+</para>
+<para>
+To work around this problem, find the JRE home directory and edit the file <filename>lib/security/java.security</filename>. Edit the file to comment out the line:
+</para>
+<programlisting>
+security.provider.1=sun.security.pkcs11.SunPKCS11 ${java.home}/lib/security/nss.cfg
+</programlisting>
+<para>
+Then renumber the remaining providers accordingly.
+</para>
+        </section>
+    </section>
+
   </chapter>
