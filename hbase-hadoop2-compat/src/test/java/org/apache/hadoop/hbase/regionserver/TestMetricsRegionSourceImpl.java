@@ -48,7 +48,7 @@ public class TestMetricsRegionSourceImpl {
     CompatibilitySingletonFactory.getInstance(MetricsRegionSource.class);
   }
 
-  class RegionWrapperStub implements MetricsRegionWrapper {
+  static class RegionWrapperStub implements MetricsRegionWrapper {
 
     private String regionName;
 
