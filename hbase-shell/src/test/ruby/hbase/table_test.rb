@@ -424,6 +424,18 @@ module Hbase
       assert_not_nil(res['1']['x:b'])
       assert_nil(res['2'])
     end
+    
+    define_test "scan should support REVERSED parameter" do
+      res = @test_table._scan_internal REVERSED => true
+      assert_not_nil(res)
+      assert_kind_of(Hash, res)
+      assert_not_nil(res['1'])
+      assert_not_nil(res['1']['x:a'])
+      assert_not_nil(res['1']['x:b'])
+      assert_not_nil(res['2'])
+      assert_not_nil(res['2']['x:a'])
+      assert_not_nil(res['2']['x:b'])
+    end
 
     define_test "scan should support TIMESTAMP parameter" do
       res = @test_table._scan_internal TIMESTAMP => @test_ts

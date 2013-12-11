@@ -346,6 +346,7 @@ EOF
         columns = args["COLUMNS"] || args["COLUMN"] || []
         cache_blocks = args["CACHE_BLOCKS"] || true
         cache = args["CACHE"] || 0
+        reversed = args["REVERSED"] || false
         versions = args["VERSIONS"] || 1
         timerange = args[TIMERANGE]
         raw = args["RAW"] || false
@@ -380,6 +381,7 @@ EOF
 
         scan.setTimeStamp(timestamp) if timestamp
         scan.setCacheBlocks(cache_blocks)
+        scan.setReversed(reversed)
         scan.setCaching(cache) if cache > 0
         scan.setMaxVersions(versions) if versions > 1
         scan.setTimeRange(timerange[0], timerange[1]) if timerange
