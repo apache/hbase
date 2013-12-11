@@ -19,9 +19,22 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonSyntaxException;
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.TreeMap;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -50,20 +63,9 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.Set;
-import java.util.TreeMap;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 
 public class RegionPlacement implements RegionPlacementPolicy{
   private static final Log LOG = LogFactory.getLog(RegionPlacement.class
@@ -115,8 +117,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
 
     try {
       // Place the primary region server based on the regions and servers
-      Map<HRegionInfo, HServerAddress> primaryRSMap =
-        this.placePrimaryRSAsRoundRobin(regions, domain);
+      Map<HRegionInfo, HServerAddress> primaryRSMap = this.placePrimaryRSAsRoundRobinBalanced(regions, domain);
 
       // Place the secondary and tertiary region server
       Map<HRegionInfo, Pair<HServerAddress, HServerAddress>>
@@ -135,18 +136,99 @@ public class RegionPlacement implements RegionPlacementPolicy{
   }
 
   /**
-   * Place the primary region server in the round robin way.
+   * Place the primary regions in the round robin way. Algorithm works as
+   * following: we merge all regionservers in single map, and sort the map in
+   * ascending order by number of regions per regionserver, then start the
+   * assignment in round robin fashion.
+   *
+   * We usually have same number of regionservers per rack, so having #regions
+   * per regionserver balanced will imply balance per rack too. If that is not
+   * the case, we can expect imbalances per rack.
+   *
    * @param regions
    * @param domain
    * @return the map between regions and its primary region server
    * @throws IOException
    */
+  private Map<HRegionInfo, HServerAddress> placePrimaryRSAsRoundRobinBalanced(
+      HRegionInfo[] regions, AssignmentDomain domain) throws IOException {
+    RegionAssignmentSnapshot currentSnapshot = this
+        .getRegionAssignmentSnapshot();
+    Map<HServerAddress, List<HRegionInfo>> assignmentSnapshotMap = currentSnapshot
+        .getRegionServerToRegionMap();
+    Set<HServerAddress> allServers = domain.getAllServers();
+    // not all servers will be in the assignmentSnapshotMap - so putting the ones
+    // which does not have assignment
+    for (HServerAddress server : allServers) {
+      if (assignmentSnapshotMap.get(server) == null) {
+        assignmentSnapshotMap.put(server, new ArrayList<HRegionInfo>());
+      }
+    }
+    // sort the regionserver by #regions assigned in ascending order
+    ValueComparator vComp = new ValueComparator(assignmentSnapshotMap);
+    Map<HServerAddress, List<HRegionInfo>> sortedMap = new TreeMap<HServerAddress, List<HRegionInfo>>(
+        vComp);
+    sortedMap.putAll(assignmentSnapshotMap);
+    List<HServerAddress> servers = new ArrayList<HServerAddress>(sortedMap.keySet());
+
+    Map<HRegionInfo, HServerAddress> primaryRSMap = new HashMap<HRegionInfo, HServerAddress>();
+    int index = 0;
+    for (HRegionInfo info : regions) {
+      primaryRSMap.put(info, servers.get(index++));
+      if (index == servers.size()) {
+        index = 0;
+      }
+    }
+    return primaryRSMap;
+  }
+
+  /**
+   * Comparator will sort HServerAddress based on number of regions assigned to
+   * it in ascending order
+   *
+   */
+  private class ValueComparator implements Comparator<HServerAddress> {
+    Map<HServerAddress, List<HRegionInfo>> map;
+
+    public ValueComparator(Map<HServerAddress, List<HRegionInfo>> map) {
+      this.map = map;
+    }
+
+    @Override
+    public int compare(HServerAddress server1, HServerAddress server2) {
+      if (map.get(server1) == null) {
+        return -1;
+      }
+      if (map.get(server1) != null && map.get(server2) == null) {
+        return 1;
+      } else {
+        if (map.get(server1).size() >= map.get(server2).size()) {
+          return 1;
+        } else {
+          return -1;
+        }
+      }
+    }
+  }
+
+  /**
+   * Place the primary region server in the round robin way. Algorithm works as
+   * following: per rack, per regionserserver -> place region which means the
+   * assignment will be balanced per rack *ONLY* and it is possible to be not
+   * balanced per regionserver
+   *
+   * @param regions
+   * @param domain
+   * @return the map between regions and its primary region server
+   * @throws IOException
+   */
+  @SuppressWarnings("unused")
   private Map<HRegionInfo, HServerAddress> placePrimaryRSAsRoundRobin(
       HRegionInfo[] regions, AssignmentDomain domain) throws IOException {
-
     // Get the rack to region server map from the assignment domain
-    Map<String, List<HServerAddress>> rackToRegionServerMap=
-      domain.getRackToRegionServerMap();
+    Map<String, List<HServerAddress>> rackToRegionServerMap = domain
+        .getRackToRegionServerMap();
+    //sort the map by existing #regions/rs
 
     List<String> rackList = new ArrayList<String>();
     rackList.addAll(rackToRegionServerMap.keySet());
