@@ -52,7 +52,7 @@ distMode=`$bin/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBa
 
 if [ "$distMode" == 'false' ] 
 then
-  "$bin"/hbase-daemon.sh $commandToRun master $@
+  "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" $commandToRun master $@
 else
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" $commandToRun zookeeper
   "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" $commandToRun master 
