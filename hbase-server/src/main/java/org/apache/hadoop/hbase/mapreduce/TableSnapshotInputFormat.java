@@ -185,7 +185,7 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
   }
 
   @VisibleForTesting
-  class TableSnapshotRegionRecordReader extends RecordReader<ImmutableBytesWritable, Result> {
+  static class TableSnapshotRegionRecordReader extends RecordReader<ImmutableBytesWritable, Result> {
     private TableSnapshotRegionSplit split;
     private Scan scan;
     private Result result = null;

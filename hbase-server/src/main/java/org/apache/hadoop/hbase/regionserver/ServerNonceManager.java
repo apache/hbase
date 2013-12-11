@@ -112,7 +112,7 @@ public class ServerNonceManager {
    * This implementation is not smart and just treats nonce group and nonce as random bits.
    */
   // TODO: we could use pure byte arrays, but then we wouldn't be able to use hash map.
-  private class NonceKey {
+  private static class NonceKey {
     private long group;
     private long nonce;
 

@@ -328,7 +328,7 @@ public class IntegrationTestMTTR {
    *
    * Stores times and trace id.
    */
-  private class TimingResult {
+  private static class TimingResult {
     DescriptiveStatistics stats = new DescriptiveStatistics();
     ArrayList<Long> traces = new ArrayList<Long>(10);
 
@@ -366,7 +366,7 @@ public class IntegrationTestMTTR {
   /**
    * Base class for actions that need to record the time needed to recover from a failure.
    */
-  public abstract class TimingCallable implements Callable<TimingResult> {
+  static abstract class TimingCallable implements Callable<TimingResult> {
     protected final Future<?> future;
 
     public TimingCallable(Future<?> f) {
@@ -456,7 +456,7 @@ public class IntegrationTestMTTR {
    * Callable that will keep putting small amounts of data into a table
    * until  the future supplied returns.  It keeps track of the max time.
    */
-  public class PutCallable extends TimingCallable {
+  static class PutCallable extends TimingCallable {
 
     private final HTable table;
 
@@ -484,7 +484,7 @@ public class IntegrationTestMTTR {
    * Callable that will keep scanning for small amounts of data until the
    * supplied future returns.  Returns the max time taken to scan.
    */
-  public class ScanCallable extends TimingCallable {
+  static class ScanCallable extends TimingCallable {
     private final HTable table;
 
     public ScanCallable(Future<?> f) throws IOException {
@@ -520,7 +520,7 @@ public class IntegrationTestMTTR {
   /**
    * Callable that will keep going to the master for cluster status.  Returns the max time taken.
    */
-  public class AdminCallable extends TimingCallable {
+  static class AdminCallable extends TimingCallable {
 
     public AdminCallable(Future<?> f) throws IOException {
       super(f);
@@ -547,7 +547,7 @@ public class IntegrationTestMTTR {
   }
 
 
-  public class ActionCallable implements Callable<Boolean> {
+  static class ActionCallable implements Callable<Boolean> {
     private final Action action;
 
     public ActionCallable(Action action) {
@@ -565,7 +565,7 @@ public class IntegrationTestMTTR {
    * Callable used to make sure the cluster has some load on it.
    * This callable uses LoadTest tool to
    */
-  public class LoadCallable implements Callable<Boolean> {
+  public static class LoadCallable implements Callable<Boolean> {
 
     private final Future<?> future;
 
