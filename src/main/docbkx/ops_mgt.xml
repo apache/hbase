@@ -235,6 +235,10 @@ Valid program names are:
         <note><title>Scanner Caching</title>
         <para>Caching for the input Scan is configured via <code>hbase.client.scanner.caching</code> in the job configuration.
         </para>
+	</note>
+	<note><title>Versions</title>
+        <para>By default, CopyTable utility only copies the latest version of row cells unless <code>--versions=n</code> is explicitly specified in the command.
+        </para>
         </note>
         <para>
         See Jonathan Hsieh's <link xlink:href="http://www.cloudera.com/blog/2012/06/online-hbase-backups-with-copytable-2/">Online HBase Backups with CopyTable</link> blog post for more on <command>CopyTable</command>.
