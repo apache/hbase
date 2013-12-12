@@ -1044,7 +1044,7 @@ public class HLogSplitter {
         });
       CompletionService<Void> completionService =
         new ExecutorCompletionService<Void>(closeThreadPool);
-      for (final Map.Entry<byte[], ? extends SinkWriter> writersEntry : writers.entrySet()) {
+      for (final Map.Entry<byte[], SinkWriter> writersEntry : writers.entrySet()) {
         LOG.debug("Submitting close of " + ((WriterAndPath)writersEntry.getValue()).p);
         completionService.submit(new Callable<Void>() {
           public Void call() throws Exception {
@@ -1260,7 +1260,7 @@ public class HLogSplitter {
     Map<byte[], Long> getOutputCounts() {
       TreeMap<byte[], Long> ret = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
       synchronized (writers) {
-        for (Map.Entry<byte[], ? extends SinkWriter> entry : writers.entrySet()) {
+        for (Map.Entry<byte[], SinkWriter> entry : writers.entrySet()) {
           ret.put(entry.getKey(), entry.getValue().editsWritten);
         }
       }
