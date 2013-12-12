@@ -34,13 +34,106 @@
   <section xml:id="tools">
     <title >HBase Tools and Utilities</title>
 
-    <para>Here we list HBase tools for administration, analysis, fixup, and
-    debugging.</para>
+    <para>Here we list HBase tools for administration, analysis, fixup, and debugging.</para>
+    <section xml:id="canary"><title>Canary</title>
+<para>There is a Canary class can help users to canary-test the HBase cluster status, with every column-family for every regions or regionservers granularity. To see the usage,
+<programlisting>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -help</programlisting>
+Will output
+<programlisting>Usage: bin/hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
+ where [opts] are:
+   -help          Show this help and exit.
+   -regionserver  replace the table argument to regionserver,
+      which means to enable regionserver mode
+   -daemon        Continuous check at defined intervals.
+   -interval &lt;N>  Interval between checks (sec)
+   -e             Use region/regionserver as regular expression
+      which means the region/regionserver is regular expression pattern
+   -f &lt;B>         stop whole program if first error occurs, default is true
+   -t &lt;N>         timeout for a check, default is 600000 (milisecs)</programlisting>
+This tool will return non zero error codes to user for collaborating with other monitoring tools, such as Nagios.
+The error code definitions are...
+<programlisting>private static final int USAGE_EXIT_CODE = 1;
+private static final int INIT_ERROR_EXIT_CODE = 2;
+private static final int TIMEOUT_ERROR_EXIT_CODE = 3;
+private static final int ERROR_EXIT_CODE = 4;</programlisting>
+Here are some examples based on the following given case. There are two HTable called test-01 and test-02, they have two column family cf1 and cf2 respectively, and deployed on the 3 regionservers. see following table.
+	     <table>
+		 <tgroup cols='3' align='center' colsep='1' rowsep='1'><colspec colname='regionserver' align='center'/><colspec colname='test-01' align='center'/><colspec colname='test-02' align='center'/>
+         <thead>
+         <row><entry>RegionServer</entry><entry>test-01</entry><entry>test-02</entry></row>
+	     </thead><tbody>
+          <row><entry>rs1</entry><entry>r1</entry>          <entry>r2</entry></row>
+          <row><entry>rs2</entry><entry>r2</entry>          <entry></entry></row>
+          <row><entry>rs3</entry><entry>r2</entry>          <entry>r1</entry></row>
+		 </tbody></tgroup></table>
+Following are some examples based on the previous given case.
+</para>
+<section><title>Canary test for every column family (store) of every region of every table</title>
+<para>
+<programlisting>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary</programlisting>
+The output log is...
+<programlisting>13/12/09 03:26:32 INFO tool.Canary: read from region test-01,,1386230156732.0e3c7d77ffb6361ea1b996ac1042ca9a. column family cf1 in 2ms
+13/12/09 03:26:32 INFO tool.Canary: read from region test-01,,1386230156732.0e3c7d77ffb6361ea1b996ac1042ca9a. column family cf2 in 2ms
+13/12/09 03:26:32 INFO tool.Canary: read from region test-01,0004883,1386230156732.87b55e03dfeade00f441125159f8ca87. column family cf1 in 4ms
+13/12/09 03:26:32 INFO tool.Canary: read from region test-01,0004883,1386230156732.87b55e03dfeade00f441125159f8ca87. column family cf2 in 1ms
+...
+13/12/09 03:26:32 INFO tool.Canary: read from region test-02,,1386559511167.aa2951a86289281beee480f107bb36ee. column family cf1 in 5ms
+13/12/09 03:26:32 INFO tool.Canary: read from region test-02,,1386559511167.aa2951a86289281beee480f107bb36ee. column family cf2 in 3ms
+13/12/09 03:26:32 INFO tool.Canary: read from region test-02,0004883,1386559511167.cbda32d5e2e276520712d84eaaa29d84. column family cf1 in 31ms
+13/12/09 03:26:32 INFO tool.Canary: read from region test-02,0004883,1386559511167.cbda32d5e2e276520712d84eaaa29d84. column family cf2 in 8ms
+</programlisting>
+So you can see, table test-01 has two regions and two column families, so the Canary tool will pick 4 small piece of data from 4 (2 region * 2 store) different stores. This is a default behavior of the this tool does.
+</para>
+    </section>
+
+<section><title>Canary test for every column family (store) of every region of specific table(s)</title>
+<para>
+You can also test one or more specific tables.
+<programlisting>$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary test-01 test-02</programlisting>
+</para>
+    </section>
+
+<section><title>Canary test with regionserver granularity</title>
+<para>
+This will pick one small piece of data from each regionserver, and can also put your resionserver name as input options for canary-test specific regionservers.
+<programlisting>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -regionserver</programlisting>
+The output log is...
+<programlisting>13/12/09 06:05:17 INFO tool.Canary: Read from table:test-01 on region server:rs2 in 72ms
+13/12/09 06:05:17 INFO tool.Canary: Read from table:test-02 on region server:rs3 in 34ms
+13/12/09 06:05:17 INFO tool.Canary: Read from table:test-01 on region server:rs1 in 56ms</programlisting>
+</para>
+    </section>
+<section><title>Canary test with regular expression pattern</title>
+<para>
+This will test both table test-01 and test-02.
+<programlisting>$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -e test-0[1-2]</programlisting>
+</para>
+    </section>
+
+<section><title>Run canary test as daemon mode</title>
+<para>
+Run repeatedly with interval defined in option -interval whose default value is 6 seconds. This daemon will stop itself and return non-zero error code if any error occurs, due to the default value of option -f is true.
+<programlisting>$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -daemon</programlisting>
+Run repeatedly with internal 5 seconds and will not stop itself even error occurs in the test.
+<programlisting>$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -daemon -interval 50000 -f false</programlisting>
+</para>
+    </section>
+
+<section><title>Force timeout if canary test stuck</title>
+<para>In some cases, we suffered the request stucked on the regionserver and not response back to the client. The regionserver in problem, would also not indicated to be dead by Master, which would bring the clients hung. So we provide the timeout option to kill the canary test forcefully and return non-zero error code as well.
+This run sets the timeout value to 60 seconds, the default value is 600 seconds.
+<programlisting>$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -t 600000</programlisting>
+</para>
+    </section>
+
+    </section>
+
     <section xml:id="health.check"><title>Health Checker</title>
         <para>You can configure HBase to run a script on a period and if it fails N times (configurable), have the server exit.
             See <link xlink:ref="">HBASE-7351 Periodic health check script</link> for configurations and detail.
         </para>
     </section>
+
     <section xml:id="driver"><title>Driver</title>
       <para>There is a <code>Driver</code> class that is executed by the HBase jar can be used to invoke frequently accessed utilities.  For example,
 <programlisting>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar
