@@ -956,11 +956,11 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
 
   private List<String> getSystemAndSuperUsers() throws IOException {
     User user = User.getCurrent();
-    LOG.debug("Current user name is "+user.getShortName());
     if (user == null) {
       throw new IOException("Unable to obtain the current user, "
           + "authorization checks for internal operations will not work correctly!");
     }
+    LOG.debug("Current user name is "+user.getShortName());
     String currentUser = user.getShortName();
     List<String> superUsers = Lists.asList(currentUser,
         this.conf.getStrings(AccessControlLists.SUPERUSER_CONF_KEY, new String[0]));
