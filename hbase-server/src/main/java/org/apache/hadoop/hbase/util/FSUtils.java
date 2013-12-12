@@ -717,7 +717,7 @@ public abstract class FSUtils {
       }
       // If not pb'd, make it so.
       if (!ProtobufUtil.isPBMagicPrefix(content)) {
-        String cid = new String();
+        String cid = null;
         in = fs.open(idPath);
         try {
           cid = in.readUTF();
