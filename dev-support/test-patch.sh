@@ -36,6 +36,7 @@ AWK=${AWK:-awk}
 WGET=${WGET:-wget}
 SVN=${SVN:-svn}
 GREP=${GREP:-grep}
+EGREP=${EGREP:-egrep}
 PATCH=${PATCH:-patch}
 JIRACLI=${JIRA:-jira}
 FINDBUGS_HOME=${FINDBUGS_HOME}
@@ -200,7 +201,7 @@ setup () {
       echo "$defect is not \"Patch Available\".  Exiting."
       cleanupAndExit 0
     fi
-    relativePatchURL=`$GREP -o '"/jira/secure/attachment/[0-9]*/[^"]*' $PATCH_DIR/jira | $GREP -v -e 'htm[l]*$' | sort | tail -1 | $GREP -o '/jira/secure/attachment/[0-9]*/[^"]*'`
+    relativePatchURL=`$GREP -o '"/jira/secure/attachment/[0-9]*/[^"]*' $PATCH_DIR/jira | $EGREP '(\.txt$|\.patch$|\.diff$)' | sort | tail -1 | $GREP -o '/jira/secure/attachment/[0-9]*/[^"]*'`
     patchURL="http://issues.apache.org${relativePatchURL}"
     patchNum=`echo $patchURL | $GREP -o '[0-9]*/' | $GREP -o '[0-9]*'`
     echo "$defect patch is being downloaded at `date` from"
