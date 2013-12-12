@@ -179,7 +179,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
 
   private void addSlab(int blockSize, int numBlocks) {
     LOG.info("Creating a slab of blockSize " + blockSize + " with " + numBlocks
-        + " blocks, " + StringUtils.humanReadableInt(blockSize * numBlocks) + "bytes.");
+        + " blocks, " + StringUtils.humanReadableInt(blockSize * (long) numBlocks) + "bytes.");
     sizer.put(blockSize, new SingleSizeCache(blockSize, numBlocks, this));
   }
 
