@@ -68,8 +68,6 @@ public class TestOpenTableInCoprocessor {
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
         boolean writeToWAL) throws IOException {
       HTableInterface table = e.getEnvironment().getTable(otherTable);
-      Put p = new Put(new byte[] { 'a' });
-      p.add(family, null, new byte[] { 'a' });
       table.put(put);
       table.flushCommits();
       completed[0] = true;
