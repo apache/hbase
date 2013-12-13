@@ -82,25 +82,27 @@ public class TestDurability {
     HRegion deferredRegion = createHRegion(tableName, "deferredRegion", wal, true);
 
     region.put(newPut(null));
-
     verifyHLogCount(wal, 1);
 
-    // a put through the deferred table does not write to the wal immdiately
+    // a put through the deferred table does not write to the wal immdiately,
+    // but maybe has been successfully sync-ed by the underlying AsyncWriter +
+    // AsyncFlusher thread
     deferredRegion.put(newPut(null));
-    verifyHLogCount(wal, 1);
     // but will after we sync the wal
     wal.sync();
     verifyHLogCount(wal, 2);
 
     // a put through a deferred table will be sync with the put sync'ed put
     deferredRegion.put(newPut(null));
-    verifyHLogCount(wal, 2);
+    wal.sync();
+    verifyHLogCount(wal, 3);
     region.put(newPut(null));
     verifyHLogCount(wal, 4);
 
     // a put through a deferred table will be sync with the put sync'ed put
     deferredRegion.put(newPut(Durability.USE_DEFAULT));
-    verifyHLogCount(wal, 4);
+    wal.sync();
+    verifyHLogCount(wal, 5);
     region.put(newPut(Durability.USE_DEFAULT));
     verifyHLogCount(wal, 6);
 
@@ -114,7 +116,6 @@ public class TestDurability {
     // async overrides sync table default
     region.put(newPut(Durability.ASYNC_WAL));
     deferredRegion.put(newPut(Durability.ASYNC_WAL));
-    verifyHLogCount(wal, 6);
     wal.sync();
     verifyHLogCount(wal, 8);
 
