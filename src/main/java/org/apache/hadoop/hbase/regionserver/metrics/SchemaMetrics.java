@@ -295,7 +295,7 @@ public class SchemaMetrics {
           sb.append(metricType);
 
           int i = getBlockMetricIndex(blockCategory, isCompaction, metricType);
-          blockMetricNames[i] = sb.toString().intern();
+          blockMetricNames[i] = sb.toString();
           blockMetricTimeVarying[i] = metricType.timeVarying;
         }
       }

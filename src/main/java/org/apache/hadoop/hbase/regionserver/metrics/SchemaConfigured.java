@@ -123,10 +123,8 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
           // This is probably a compaction or flush output file. We will set
           // the real CF name later.
           cfName = null;
-        } else {
-          cfName = cfName.intern();
         }
-        tableName = splits[splits.length - 4].intern();
+        tableName = splits[splits.length - 4];
         return;
       }
     }
@@ -153,13 +151,13 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
   public SchemaConfigured(Configuration conf, String tableName, String cfName)
   {
     this(conf);
-    this.tableName = tableName != null ? tableName.intern() : tableName;
-    this.cfName = cfName != null ? cfName.intern() : cfName;
+    this.tableName = tableName;
+    this.cfName = cfName;
   }
 
   public SchemaConfigured(SchemaAware that) {
-    tableName = that.getTableName().intern();
-    cfName = that.getColumnFamilyName().intern();
+    tableName = that.getTableName();
+    cfName = that.getColumnFamilyName();
     schemaMetrics = that.getSchemaMetrics();
   }
 
@@ -210,8 +208,8 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
           target.schemaConfAsJSON());
     }
 
-    target.tableName = tableName.intern();
-    target.cfName = cfName.intern();
+    target.tableName = tableName;
+    target.cfName = cfName;
     target.schemaMetrics = schemaMetrics;
     target.schemaConfigurationChanged();
   }
