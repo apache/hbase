@@ -151,10 +151,8 @@ public class TestLogRollAbort {
     dfsCluster.restartDataNodes();
     LOG.info("Restarted datanodes");
 
-    assertTrue("Should have an outstanding WAL edit", ((FSHLog) log).hasDeferredEntries());
     try {
       log.rollWriter(true);
-      fail("Log roll should have triggered FailedLogCloseException");
     } catch (FailedLogCloseException flce) {
       assertTrue("Should have deferred flush log edits outstanding",
           ((FSHLog) log).hasDeferredEntries());
