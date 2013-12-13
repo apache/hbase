@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -108,7 +109,15 @@ public class TestZKPermissionsWatcher {
     List<TablePermission> acl = new ArrayList<TablePermission>();
     acl.add(new TablePermission(TEST_TABLE, null, TablePermission.Action.READ,
       TablePermission.Action.WRITE));
+    final long mtimeB = AUTH_B.getMTime();
     AUTH_A.setTableUserPermissions("george", TEST_TABLE, acl);
+    // Wait for the update to propagate
+    UTIL.waitFor(10000, 100, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return AUTH_B.getMTime() > mtimeB;
+      }
+    });
     Thread.sleep(100);
 
     // check it
@@ -132,7 +141,15 @@ public class TestZKPermissionsWatcher {
     // update ACL: hubert R
     acl = new ArrayList<TablePermission>();
     acl.add(new TablePermission(TEST_TABLE, null, TablePermission.Action.READ));
+    final long mtimeA = AUTH_A.getMTime();
     AUTH_B.setTableUserPermissions("hubert", TEST_TABLE, acl);
+    // Wait for the update to propagate
+    UTIL.waitFor(10000, 100, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return AUTH_A.getMTime() > mtimeA;
+      }
+    });
     Thread.sleep(100);
 
     // check it

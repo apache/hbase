@@ -103,6 +103,7 @@ public class TableAuthManager {
 
   private Configuration conf;
   private ZKPermissionWatcher zkperms;
+  private volatile long mtime;
 
   private TableAuthManager(ZooKeeperWatcher watcher, Configuration conf)
       throws IOException {
@@ -209,6 +210,7 @@ public class TableAuthManager {
         }
       }
       globalCache = newCache;
+      mtime++;
     } catch (IOException e) {
       // Never happens
       LOG.error("Error occured while updating the global cache", e);
@@ -236,6 +238,7 @@ public class TableAuthManager {
     }
 
     tableCache.put(table, newTablePerms);
+    mtime++;
   }
 
   /**
@@ -259,6 +262,7 @@ public class TableAuthManager {
     }
 
     nsCache.put(namespace, newTablePerms);
+    mtime++;
   }
 
   private PermissionCache<TablePermission> getTablePermissions(TableName table) {
@@ -676,6 +680,10 @@ public class TableAuthManager {
     }
     zkperms.writeToZookeeper(Bytes.toBytes(AccessControlLists.toNamespaceEntry(namespace)),
         serialized);
+  }
+
+  public long getMTime() {
+    return mtime;
   }
 
   static Map<ZooKeeperWatcher,TableAuthManager> managerMap =
