@@ -543,6 +543,13 @@ public class HRegion implements HeapSize { // , Writable{
       this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
       this.metricsRegionWrapper = new MetricsRegionWrapperImpl(this);
       this.metricsRegion = new MetricsRegion(this.metricsRegionWrapper);
+
+      Map<String, HRegion> recoveringRegions = rsServices.getRecoveringRegions();
+      String encodedName = getRegionInfo().getEncodedName();
+      if (recoveringRegions != null && recoveringRegions.containsKey(encodedName)) {
+        this.isRecovering = true;
+        recoveringRegions.put(encodedName, this);
+      }
     } else {
       this.metricsRegionWrapper = null;
       this.metricsRegion = null;
