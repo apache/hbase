@@ -45,6 +45,9 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
   public static final String STEP_KEY = "hbase.regionserver.heapmemory.autotuner.step";
   public static final float DEFAULT_STEP_VALUE = 0.02f; // 2%
 
+  private static final TunerResult TUNER_RESULT = new TunerResult(true);
+  private static final TunerResult NO_OP_TUNER_RESULT = new TunerResult(false);
+
   private Configuration conf;
   private float step = DEFAULT_STEP_VALUE;
 
@@ -61,9 +64,8 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
     boolean memstoreSufficient = blockedFlushCount == 0 && unblockedFlushCount == 0;
     boolean blockCacheSufficient = evictCount == 0;
     if (memstoreSufficient && blockCacheSufficient) {
-      return new TunerResult(false);
+      return NO_OP_TUNER_RESULT;
     }
-    TunerResult result = new TunerResult(true);
     float newMemstoreSize;
     float newBlockCacheSize;
     if (memstoreSufficient) {
@@ -75,7 +77,7 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
       newBlockCacheSize = context.getCurBlockCacheSize() - step;
       newMemstoreSize = context.getCurMemStoreSize() + step;
     } else {
-      return new TunerResult(false);
+      return NO_OP_TUNER_RESULT;
       // As of now not making any tuning in write/read heavy scenario.
     }
     if (newMemstoreSize > globalMemStorePercentMaxRange) {
@@ -88,9 +90,9 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
     } else if (newBlockCacheSize < blockCachePercentMinRange) {
       newBlockCacheSize = blockCachePercentMinRange;
     }
-    result.setBlockCacheSize(newBlockCacheSize);
-    result.setMemstoreSize(newMemstoreSize);
-    return result;
+    TUNER_RESULT.setBlockCacheSize(newBlockCacheSize);
+    TUNER_RESULT.setMemstoreSize(newMemstoreSize);
+    return TUNER_RESULT;
   }
 
   @Override
