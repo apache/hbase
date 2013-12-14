@@ -73,7 +73,7 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
   }
 
   /**
-   * @param candidateFiles candidate files, ordered from oldest to newest
+   * @param candidateFiles candidate files, ordered from oldest to newest. All files in store.
    * @return subset copy of candidate list that meets compaction criteria
    * @throws java.io.IOException
    */
@@ -93,9 +93,11 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
         filesCompacting.size() + " compacting, " + candidateSelection.size() +
         " eligible, " + storeConfigInfo.getBlockingFileCount() + " blocking");
 
-    long cfTtl = this.storeConfigInfo.getStoreFileTtl();
-    if (!forceMajor) {
+    // If we can't have all files, we cannot do major anyway
+    boolean isAllFiles = candidateFiles.size() == candidateSelection.size();
+    if (!(forceMajor && isAllFiles)) {
       // If there are expired files, only select them so that compaction deletes them
+      long cfTtl = this.storeConfigInfo.getStoreFileTtl();
       if (comConf.shouldDeleteExpired() && (cfTtl != Long.MAX_VALUE)) {
         ArrayList<StoreFile> expiredSelection = selectExpiredStoreFiles(
             candidateSelection, EnvironmentEdgeManager.currentTimeMillis() - cfTtl);
@@ -104,28 +106,28 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
         }
       }
       candidateSelection = skipLargeFiles(candidateSelection);
+      isAllFiles = candidateFiles.size() == candidateSelection.size();
     }
 
-    // Force a major compaction if this is a user-requested major compaction,
-    // or if we do not have too many files to compact and this was requested
-    // as a major compaction.
+    // Try a major compaction if this is a user-requested major compaction,
+    // or if we do not have too many files to compact and this was requested as a major compaction
+    boolean isTryingMajor = (forceMajor && isAllFiles && isUserCompaction)
+        || (((forceMajor && isAllFiles) || isMajorCompaction(candidateSelection))
+          && (candidateSelection.size() < comConf.getMaxFilesToCompact()));
     // Or, if there are any references among the candidates.
-    boolean majorCompaction = (
-      (forceMajor && isUserCompaction)
-      || ((forceMajor || isMajorCompaction(candidateSelection))
-          && (candidateSelection.size() < comConf.getMaxFilesToCompact()))
-      || StoreUtils.hasReferences(candidateSelection)
-      );
-
-    if (!majorCompaction) {
-      // we're doing a minor compaction, let's see what files are applicable
+    boolean isAfterSplit = StoreUtils.hasReferences(candidateSelection);
+    if (!isTryingMajor && !isAfterSplit) {
+      // We're are not compacting all files, let's see what files are applicable
       candidateSelection = filterBulk(candidateSelection);
       candidateSelection = applyCompactionPolicy(candidateSelection, mayUseOffPeak, mayBeStuck);
       candidateSelection = checkMinFilesCriteria(candidateSelection);
     }
-    candidateSelection = removeExcessFiles(candidateSelection, isUserCompaction, majorCompaction);
+    candidateSelection = removeExcessFiles(candidateSelection, isUserCompaction, isTryingMajor);
+    // Now we have the final file list, so we can determine if we can do major/all files.
+    isAllFiles = (candidateFiles.size() == candidateSelection.size());
     CompactionRequest result = new CompactionRequest(candidateSelection);
-    result.setOffPeak(!candidateSelection.isEmpty() && !majorCompaction && mayUseOffPeak);
+    result.setOffPeak(!candidateSelection.isEmpty() && !isAllFiles && mayUseOffPeak);
+    result.setIsMajor(isTryingMajor && isAllFiles, isAllFiles);
     return result;
   }
 

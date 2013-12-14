@@ -45,7 +45,7 @@ public class DefaultCompactor extends Compactor {
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
    */
   public List<Path> compact(final CompactionRequest request) throws IOException {
-    FileDetails fd = getFileDetails(request.getFiles(), request.isMajor());
+    FileDetails fd = getFileDetails(request.getFiles(), request.isAllFiles());
     this.progress = new CompactionProgress(fd.maxKeyCount);
 
     // Find the smallest read point across all the Scanners.
@@ -57,9 +57,9 @@ public class DefaultCompactor extends Compactor {
     try {
       InternalScanner scanner = null;
       try {
-        /* Include deletes, unless we are doing a major compaction */
+        /* Include deletes, unless we are doing a compaction of all files */
         ScanType scanType =
-            request.isMajor() ? ScanType.COMPACT_DROP_DELETES : ScanType.COMPACT_RETAIN_DELETES;
+            request.isAllFiles() ? ScanType.COMPACT_DROP_DELETES : ScanType.COMPACT_RETAIN_DELETES;
         scanner = preCreateCoprocScanner(request, scanType, fd.earliestPutTs, scanners);
         if (scanner == null) {
           scanner = createScanner(store, scanners, scanType, smallestReadPoint, fd.earliestPutTs);
@@ -89,7 +89,7 @@ public class DefaultCompactor extends Compactor {
       }
     } finally {
       if (writer != null) {
-        writer.appendMetadata(fd.maxSeqId, request.isMajor());
+        writer.appendMetadata(fd.maxSeqId, request.isAllFiles());
         writer.close();
         newFiles.add(writer.getPath());
       }
@@ -110,7 +110,7 @@ public class DefaultCompactor extends Compactor {
   public List<Path> compactForTesting(final Collection<StoreFile> filesToCompact, boolean isMajor)
       throws IOException {
     CompactionRequest cr = new CompactionRequest(filesToCompact);
-    cr.setIsMajor(isMajor);
+    cr.setIsMajor(isMajor, isMajor);
     return this.compact(cr);
   }
 }

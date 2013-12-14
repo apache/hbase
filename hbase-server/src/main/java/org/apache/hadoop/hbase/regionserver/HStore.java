@@ -1163,10 +1163,9 @@ public class HStore implements Store {
       CompactionRequest cr, List<StoreFile> sfs, long compactionStartTime) {
     long now = EnvironmentEdgeManager.currentTimeMillis();
     StringBuilder message = new StringBuilder(
-      "Completed" + (cr.isMajor() ? " major " : " ") + "compaction of "
-      + cr.getFiles().size() + " file(s) in " + this + " of "
-      + this.getRegionInfo().getRegionNameAsString()
-      + " into ");
+      "Completed" + (cr.isMajor() ? " major" : "") + " compaction of "
+      + cr.getFiles().size() + (cr.isAllFiles() ? " (all)" : "") + " file(s) in "
+      + this + " of " + this.getRegionInfo().getRegionNameAsString() + " into ");
     if (sfs.isEmpty()) {
       message.append("none, ");
     } else {
@@ -1342,6 +1341,7 @@ public class HStore implements Store {
     }
 
     CompactionContext compaction = storeEngine.createCompaction();
+    CompactionRequest request = null;
     this.lock.readLock().lock();
     try {
       synchronized (filesCompacting) {
@@ -1388,9 +1388,9 @@ public class HStore implements Store {
           compaction.forceSelect(
               baseRequest.combineWith(compaction.getRequest()));
         }
-
         // Finally, we have the resulting files list. Check if we have any files at all.
-        final Collection<StoreFile> selectedFiles = compaction.getRequest().getFiles();
+        request = compaction.getRequest();
+        final Collection<StoreFile> selectedFiles = request.getFiles();
         if (selectedFiles.isEmpty()) {
           return null;
         }
@@ -1404,24 +1404,21 @@ public class HStore implements Store {
         Collections.sort(filesCompacting, StoreFile.Comparators.SEQ_ID);
 
         // If we're enqueuing a major, clear the force flag.
-        boolean isMajor = selectedFiles.size() == this.getStorefilesCount();
-        this.forceMajor = this.forceMajor && !isMajor;
+        this.forceMajor = this.forceMajor && !request.isMajor();
 
         // Set common request properties.
         // Set priority, either override value supplied by caller or from store.
-        compaction.getRequest().setPriority(
-            (priority != Store.NO_PRIORITY) ? priority : getCompactPriority());
-        compaction.getRequest().setIsMajor(isMajor);
-        compaction.getRequest().setDescription(
-            getRegionInfo().getRegionNameAsString(), getColumnFamilyName());
+        request.setPriority((priority != Store.NO_PRIORITY) ? priority : getCompactPriority());
+        request.setDescription(getRegionInfo().getRegionNameAsString(), getColumnFamilyName());
       }
     } finally {
       this.lock.readLock().unlock();
     }
 
-    LOG.debug(getRegionInfo().getEncodedName() + " - " + getColumnFamilyName() + ": Initiating "
-        + (compaction.getRequest().isMajor() ? "major" : "minor") + " compaction");
-    this.region.reportCompactionRequestStart(compaction.getRequest().isMajor());
+    LOG.debug(getRegionInfo().getEncodedName() + " - "  + getColumnFamilyName()
+        + ": Initiating " + (request.isMajor() ? "major" : "minor") + " compaction"
+        + (request.isAllFiles() ? " (all files)" : ""));
+    this.region.reportCompactionRequestStart(request.isMajor());
     return compaction;
   }
 
@@ -1732,9 +1729,6 @@ public class HStore implements Store {
     this.forceMajor = true;
   }
 
-  boolean getForceMajorCompaction() {
-    return this.forceMajor;
-  }
 
   //////////////////////////////////////////////////////////////////////////////
   // File administration

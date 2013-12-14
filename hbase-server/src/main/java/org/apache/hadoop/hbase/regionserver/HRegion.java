@@ -4527,19 +4527,6 @@ public class HRegion implements HeapSize { // , Writable{
     return dstRegion;
   }
 
-  /**
-   * @return True if needs a major compaction.
-   * @throws IOException
-   */
-  boolean isMajorCompaction() throws IOException {
-    for (Store store : this.stores.values()) {
-      if (store.isMajorCompaction()) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   //
   // HBASE-880
   //
@@ -5802,7 +5789,7 @@ public class HRegion implements HeapSize { // , Writable{
     (isMajor ? majorInProgress : minorInProgress).incrementAndGet();
   }
 
-  public void reportCompactionRequestEnd(boolean isMajor, int numFiles, long filesSizeCompacted){
+  public void reportCompactionRequestEnd(boolean isMajor, int numFiles, long filesSizeCompacted) {
     int newValue = (isMajor ? majorInProgress : minorInProgress).decrementAndGet();
 
     // metrics

@@ -56,8 +56,8 @@ public class CompactSplitThread implements CompactionRequestor {
   private final HRegionServer server;
   private final Configuration conf;
 
-  private final ThreadPoolExecutor largeCompactions;
-  private final ThreadPoolExecutor smallCompactions;
+  private final ThreadPoolExecutor longCompactions;
+  private final ThreadPoolExecutor shortCompactions;
   private final ThreadPoolExecutor splits;
   private final ThreadPoolExecutor mergePool;
 
@@ -88,28 +88,28 @@ public class CompactSplitThread implements CompactionRequestor {
 
     final String n = Thread.currentThread().getName();
 
-    this.largeCompactions = new ThreadPoolExecutor(largeThreads, largeThreads,
+    this.longCompactions = new ThreadPoolExecutor(largeThreads, largeThreads,
         60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>(),
         new ThreadFactory() {
           @Override
           public Thread newThread(Runnable r) {
             Thread t = new Thread(r);
-            t.setName(n + "-largeCompactions-" + System.currentTimeMillis());
+            t.setName(n + "-longCompactions-" + System.currentTimeMillis());
             return t;
           }
       });
-    this.largeCompactions.setRejectedExecutionHandler(new Rejection());
-    this.smallCompactions = new ThreadPoolExecutor(smallThreads, smallThreads,
+    this.longCompactions.setRejectedExecutionHandler(new Rejection());
+    this.shortCompactions = new ThreadPoolExecutor(smallThreads, smallThreads,
         60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>(),
         new ThreadFactory() {
           @Override
           public Thread newThread(Runnable r) {
             Thread t = new Thread(r);
-            t.setName(n + "-smallCompactions-" + System.currentTimeMillis());
+            t.setName(n + "-shortCompactions-" + System.currentTimeMillis());
             return t;
           }
       });
-    this.smallCompactions
+    this.shortCompactions
         .setRejectedExecutionHandler(new Rejection());
     this.splits = (ThreadPoolExecutor)
         Executors.newFixedThreadPool(splitThreads,
@@ -136,8 +136,8 @@ public class CompactSplitThread implements CompactionRequestor {
   @Override
   public String toString() {
     return "compaction_queue=("
-        + largeCompactions.getQueue().size() + ":"
-        + smallCompactions.getQueue().size() + ")"
+        + longCompactions.getQueue().size() + ":"
+        + shortCompactions.getQueue().size() + ")"
         + ", split_queue=" + splits.getQueue().size()
         + ", merge_queue=" + mergePool.getQueue().size();
   }
@@ -146,17 +146,17 @@ public class CompactSplitThread implements CompactionRequestor {
     StringBuffer queueLists = new StringBuffer();
     queueLists.append("Compaction/Split Queue dump:\n");
     queueLists.append("  LargeCompation Queue:\n");
-    BlockingQueue<Runnable> lq = largeCompactions.getQueue();
+    BlockingQueue<Runnable> lq = longCompactions.getQueue();
     Iterator it = lq.iterator();
     while(it.hasNext()){
       queueLists.append("    "+it.next().toString());
       queueLists.append("\n");
     }
 
-    if( smallCompactions != null ){
+    if( shortCompactions != null ){
       queueLists.append("\n");
       queueLists.append("  SmallCompation Queue:\n");
-      lq = smallCompactions.getQueue();
+      lq = shortCompactions.getQueue();
       it = lq.iterator();
       while(it.hasNext()){
         queueLists.append("    "+it.next().toString());
@@ -312,10 +312,10 @@ public class CompactSplitThread implements CompactionRequestor {
     // pool; we will do selection there, and move to large pool if necessary.
     long size = selectNow ? compaction.getRequest().getSize() : 0;
     ThreadPoolExecutor pool = (!selectNow && s.throttleCompaction(size))
-      ? largeCompactions : smallCompactions;
+      ? longCompactions : shortCompactions;
     pool.execute(new CompactionRunner(s, r, compaction, pool));
     if (LOG.isDebugEnabled()) {
-      String type = (pool == smallCompactions) ? "Small " : "Large ";
+      String type = (pool == shortCompactions) ? "Small " : "Large ";
       LOG.debug(type + "Compaction requested: " + (selectNow ? compaction.toString() : "system")
           + (why != null && !why.isEmpty() ? "; Because: " + why : "") + "; " + this);
     }
@@ -345,8 +345,8 @@ public class CompactSplitThread implements CompactionRequestor {
   void interruptIfNecessary() {
     splits.shutdown();
     mergePool.shutdown();
-    largeCompactions.shutdown();
-    smallCompactions.shutdown();
+    longCompactions.shutdown();
+    shortCompactions.shutdown();
   }
 
   private void waitFor(ThreadPoolExecutor t, String name) {
@@ -367,8 +367,8 @@ public class CompactSplitThread implements CompactionRequestor {
   void join() {
     waitFor(splits, "Split Thread");
     waitFor(mergePool, "Merge Thread");
-    waitFor(largeCompactions, "Large Compaction Thread");
-    waitFor(smallCompactions, "Small Compaction Thread");
+    waitFor(longCompactions, "Large Compaction Thread");
+    waitFor(shortCompactions, "Small Compaction Thread");
   }
 
   /**
@@ -378,16 +378,16 @@ public class CompactSplitThread implements CompactionRequestor {
    * @return The current size of the regions queue.
    */
   public int getCompactionQueueSize() {
-    return largeCompactions.getQueue().size() + smallCompactions.getQueue().size();
+    return longCompactions.getQueue().size() + shortCompactions.getQueue().size();
   }
 
   public int getLargeCompactionQueueSize() {
-    return largeCompactions.getQueue().size();
+    return longCompactions.getQueue().size();
   }
 
 
   public int getSmallCompactionQueueSize() {
-    return smallCompactions.getQueue().size();
+    return shortCompactions.getQueue().size();
   }
 
 
@@ -455,7 +455,7 @@ public class CompactSplitThread implements CompactionRequestor {
         // We might end up waiting for a while, so cancel the selection.
         assert this.compaction.hasSelection();
         ThreadPoolExecutor pool = store.throttleCompaction(
-            compaction.getRequest().getSize()) ? largeCompactions : smallCompactions;
+            compaction.getRequest().getSize()) ? longCompactions : shortCompactions;
         if (this.parent != pool) {
           this.store.cancelRequestedCompaction(this.compaction);
           this.compaction = null;

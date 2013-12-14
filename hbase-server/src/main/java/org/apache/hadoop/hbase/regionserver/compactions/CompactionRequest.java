@@ -45,7 +45,8 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
   static final Log LOG = LogFactory.getLog(CompactionRequest.class);
   // was this compaction promoted to an off-peak
   private boolean isOffPeak = false;
-  private boolean isMajor = false;
+  private enum DisplayCompactionType { MINOR, ALL_FILES, MAJOR }
+  private DisplayCompactionType isMajor = DisplayCompactionType.MINOR;
   private int priority = Store.NO_PRIORITY;
   private Collection<StoreFile> filesToCompact;
 
@@ -156,8 +157,13 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
     return totalSize;
   }
 
+  public boolean isAllFiles() {
+    return this.isMajor == DisplayCompactionType.MAJOR
+        || this.isMajor == DisplayCompactionType.ALL_FILES;
+  }
+
   public boolean isMajor() {
-    return this.isMajor;
+    return this.isMajor == DisplayCompactionType.MAJOR;
   }
 
   /** Gets the priority for the request */
@@ -187,8 +193,10 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
    * @param isMajor <tt>true</tt> if the system determines that this compaction should be a major
    *          compaction
    */
-  public void setIsMajor(boolean isMajor) {
-    this.isMajor = isMajor;
+  public void setIsMajor(boolean isMajor, boolean isAllFiles) {
+    assert isAllFiles || !isMajor;
+    this.isMajor = !isAllFiles ? DisplayCompactionType.MINOR
+        : (isMajor ? DisplayCompactionType.MAJOR : DisplayCompactionType.ALL_FILES);
   }
 
   @Override
