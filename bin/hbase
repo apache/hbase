@@ -112,8 +112,15 @@ fi
 
 # check envvars which might override default args
 if [ "$HBASE_HEAPSIZE" != "" ]; then
+  SUFFIX="m"
+  if [ "${HBASE_HEAPSIZE: -1}" == "m" ] || [ "${HBASE_HEAPSIZE: -1}" == "M" ]; then
+    SUFFIX=""
+  fi
+  if [ "${HBASE_HEAPSIZE: -1}" == "g" ] || [ "${HBASE_HEAPSIZE: -1}" == "G" ]; then
+    SUFFIX=""
+  fi
   #echo "run with heapsize $HBASE_HEAPSIZE"
-  JAVA_HEAP_MAX="-Xmx""$HBASE_HEAPSIZE""m"
+  JAVA_HEAP_MAX="-Xmx""$HBASE_HEAPSIZE""$SUFFIX"
   #echo $JAVA_HEAP_MAX
 fi
 
