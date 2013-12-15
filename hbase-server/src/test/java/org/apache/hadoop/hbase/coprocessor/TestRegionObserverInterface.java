@@ -115,11 +115,10 @@ public class TestRegionObserverInterface {
     // coprocessor.
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
     try {
-      verifyMethodResult(SimpleRegionObserver.class,
-          new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
-      "hadDelete"},
-      tableName,
-      new Boolean[] {false, false, false, false, false});
+      verifyMethodResult(SimpleRegionObserver.class, new String[] { "hadPreGet", "hadPostGet",
+          "hadPrePut", "hadPostPut", "hadDelete", "hadPostStartRegionOperation",
+          "hadPostCloseRegionOperation", "hadPostBatchMutateIndispensably" }, tableName,
+        new Boolean[] { false, false, false, false, false, false, false, false });
 
       Put put = new Put(ROW);
       put.add(A, A, A);
@@ -127,12 +126,11 @@ public class TestRegionObserverInterface {
       put.add(C, C, C);
       table.put(put);
 
-      verifyMethodResult(SimpleRegionObserver.class,
-          new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
-        "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
-        tableName,
-        new Boolean[] {false, false, true, true, true, true, false}
-          );
+      verifyMethodResult(SimpleRegionObserver.class, new String[] { "hadPreGet", "hadPostGet",
+          "hadPrePut", "hadPostPut", "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete",
+          "hadPostStartRegionOperation", "hadPostCloseRegionOperation",
+          "hadPostBatchMutateIndispensably" }, TEST_TABLE, new Boolean[] { false, false, true,
+          true, true, true, false, true, true, true });
 
       verifyMethodResult(SimpleRegionObserver.class,
           new String[] {"getCtPreOpen", "getCtPostOpen", "getCtPreClose", "getCtPostClose"},

@@ -225,7 +225,7 @@ public class HRegion implements HeapSize { // , Writable{
    * operations have to be defined here. It's only needed when a special check is need in
    * startRegionOperation
    */
-  protected enum Operation {
+  public enum Operation {
     ANY, GET, PUT, DELETE, SCAN, APPEND, INCREMENT, SPLIT_REGION, MERGE_REGION, BATCH_MUTATE,
     REPLAY_BATCH_MUTATE, COMPACT_REGION
   }
@@ -1738,7 +1738,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
       return result;
     } finally {
-      closeRegionOperation();
+      closeRegionOperation(Operation.GET);
     }
   }
 
@@ -1778,7 +1778,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
       return instantiateRegionScanner(scan, additionalScanners);
     } finally {
-      closeRegionOperation();
+      closeRegionOperation(Operation.SCAN);
     }
   }
 
@@ -1831,7 +1831,7 @@ public class HRegion implements HeapSize { // , Writable{
       // All edits for the given row (across all column families) must happen atomically.
       doBatchMutate(delete);
     } finally {
-      closeRegionOperation();
+      closeRegionOperation(Operation.DELETE);
     }
   }
 
@@ -1927,7 +1927,7 @@ public class HRegion implements HeapSize { // , Writable{
       // All edits for the given row (across all column families) must happen atomically.
       doBatchMutate(put);
     } finally {
-      closeRegionOperation();
+      closeRegionOperation(Operation.PUT);
     }
   }
 
@@ -2077,11 +2077,9 @@ public class HRegion implements HeapSize { // , Writable{
       checkResources();
 
       long newSize;
-      if (batchOp.isInReplay()) {
-        startRegionOperation(Operation.REPLAY_BATCH_MUTATE);
-      } else {
-        startRegionOperation(Operation.BATCH_MUTATE);
-      }
+      Operation op = Operation.BATCH_MUTATE;
+      if (batchOp.isInReplay()) op = Operation.REPLAY_BATCH_MUTATE;
+      startRegionOperation(op);
 
       try {
         if (!initialized) {
@@ -2094,7 +2092,7 @@ public class HRegion implements HeapSize { // , Writable{
         long addedSize = doMiniBatchMutation(batchOp);
         newSize = this.addAndGetGlobalMemstoreSize(addedSize);
       } finally {
-        closeRegionOperation();
+        closeRegionOperation(op);
       }
       if (isFlushSize(newSize)) {
         requestFlush();
@@ -2476,6 +2474,16 @@ public class HRegion implements HeapSize { // , Writable{
           }
         }
       }
+      if (coprocessorHost != null && !batchOp.isInReplay()) {
+        // call the coprocessor hook to do any finalization steps
+        // after the put is done
+        MiniBatchOperationInProgress<Mutation> miniBatchOp =
+            new MiniBatchOperationInProgress<Mutation>(batchOp.getMutationsForCoprocs(),
+                batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex,
+                lastIndexExclusive);
+        coprocessorHost.postBatchMutateIndispensably(miniBatchOp, success);
+      }
+
       batchOp.nextIndexToProcess = lastIndexExclusive;
     }
   }
@@ -3655,7 +3663,7 @@ public class HRegion implements HeapSize { // , Writable{
       try {
         return nextRaw(outResults, limit);
       } finally {
-        closeRegionOperation();
+        closeRegionOperation(Operation.SCAN);
       }
     }
 
@@ -5028,7 +5036,7 @@ public class HRegion implements HeapSize { // , Writable{
       if (w != null) {
         mvcc.completeMemstoreInsert(w);
       }
-      closeRegionOperation();
+      closeRegionOperation(Operation.APPEND);
     }
 
     if (this.metricsRegion != null) {
@@ -5206,7 +5214,7 @@ public class HRegion implements HeapSize { // , Writable{
       if (w != null) {
         mvcc.completeMemstoreInsert(w);
       }
-      closeRegionOperation();
+      closeRegionOperation(Operation.INCREMENT);
       if (this.metricsRegion != null) {
         this.metricsRegion.updateIncrement();
       }
@@ -5528,23 +5536,17 @@ public class HRegion implements HeapSize { // , Writable{
    * modifies data. It has to be called just before a try.
    * #closeRegionOperation needs to be called in the try's finally block
    * Acquires a read lock and checks if the region is closing or closed.
-   * @throws NotServingRegionException when the region is closing or closed
-   * @throws RegionTooBusyException if failed to get the lock in time
-   * @throws InterruptedIOException if interrupted while waiting for a lock
+   * @throws IOException 
    */
-  public void startRegionOperation()
-      throws NotServingRegionException, RegionTooBusyException, InterruptedIOException {
+  public void startRegionOperation() throws IOException {
     startRegionOperation(Operation.ANY);
   }
 
   /**
    * @param op The operation is about to be taken on the region
-   * @throws NotServingRegionException
-   * @throws RegionTooBusyException
-   * @throws InterruptedIOException
+   * @throws IOException 
    */
-  protected void startRegionOperation(Operation op) throws NotServingRegionException,
-      RegionTooBusyException, InterruptedIOException {
+  protected void startRegionOperation(Operation op) throws IOException {
     switch (op) {
     case INCREMENT:
     case APPEND:
@@ -5579,14 +5581,36 @@ public class HRegion implements HeapSize { // , Writable{
       lock.readLock().unlock();
       throw new NotServingRegionException(getRegionNameAsString() + " is closed");
     }
+    try {
+      if (coprocessorHost != null) {
+        coprocessorHost.postStartRegionOperation(op);
+      }
+    } catch (Exception e) {
+      lock.readLock().unlock();
+      throw new IOException(e);
+    }
   }
 
   /**
    * Closes the lock. This needs to be called in the finally block corresponding
    * to the try block of #startRegionOperation
+   * @throws IOException 
    */
-  public void closeRegionOperation() {
+  public void closeRegionOperation() throws IOException {
+    closeRegionOperation(Operation.ANY);
+  }
+
+  /**
+   * Closes the lock. This needs to be called in the finally block corresponding
+   * to the try block of {@link #startRegionOperation(Operation)}
+   * @param operation
+   * @throws IOException
+   */
+  public void closeRegionOperation(Operation operation) throws IOException {
     lock.readLock().unlock();
+    if (coprocessorHost != null) {
+      coprocessorHost.postCloseRegionOperation(operation);
+    }
   }
 
   /**

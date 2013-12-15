@@ -104,8 +104,8 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
       }
     }
     if (this.region != null) {
-      this.region.closeRegionOperation();
       try {
+        this.region.closeRegionOperation();
         this.region.close(true);
         this.region = null;
       } catch (IOException ex) {

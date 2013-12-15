@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
@@ -322,6 +323,11 @@ public abstract class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
+  public void postBatchMutateIndispensably(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      MiniBatchOperationInProgress<Mutation> miniBatchOp, final boolean success) throws IOException {
+  }
+
+  @Override
   public boolean preCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> e,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final ByteArrayComparable comparator,
@@ -480,5 +486,15 @@ public abstract class BaseRegionObserver implements RegionObserver {
   public Cell postMutationBeforeWAL(ObserverContext<RegionCoprocessorEnvironment> ctx,
       MutationType opType, Mutation mutation, Cell oldCell, Cell newCell) throws IOException {
     return newCell;
+  }
+
+  @Override
+  public void postStartRegionOperation(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      Operation op) throws IOException {
+  }
+
+  @Override
+  public void postCloseRegionOperation(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      Operation op) throws IOException {
   }
 }
