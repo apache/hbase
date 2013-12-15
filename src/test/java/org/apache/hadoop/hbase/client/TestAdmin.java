@@ -1503,7 +1503,7 @@ public class TestAdmin {
     int count = HLogUtilsForTests.getNumLogFiles(regionServer.getWAL());
     LOG.info("after flushing all regions and rolling logs there are " +
         count + " log files");
-    assertTrue(("actual count: " + count), count <= 2);
+    assertTrue(("actual count: " + count), count <= 3);
   }
 
   private void setUpforLogRolling() {

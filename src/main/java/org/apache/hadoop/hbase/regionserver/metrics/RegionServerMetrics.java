@@ -147,6 +147,18 @@ public class RegionServerMetrics implements Updater {
       new MetricsIntValue("storefiles", registry);
 
   /**
+   * Count of hlogfiles
+   */
+  public final MetricsIntValue hlogFileCount = 
+      new MetricsIntValue("hlogFileCount", registry);
+  
+  /**
+   * the total size of hlog files in MB
+   */
+  public final MetricsLongValue hlogFileSizeMB = 
+      new MetricsLongValue("hlogFileSizeMB", registry);
+  
+  /**
    * Count of read requests
    */
   public final MetricsLongValue readRequestsCount = 
@@ -363,6 +375,8 @@ public class RegionServerMetrics implements Updater {
 
       this.stores.pushMetric(this.metricsRecord);
       this.storefiles.pushMetric(this.metricsRecord);
+      this.hlogFileCount.pushMetric(this.metricsRecord);
+      this.hlogFileSizeMB.pushMetric(this.metricsRecord);
       this.storefileIndexSizeMB.pushMetric(this.metricsRecord);
       this.rootIndexSizeKB.pushMetric(this.metricsRecord);
       this.totalStaticIndexSizeKB.pushMetric(this.metricsRecord);
@@ -525,6 +539,10 @@ public class RegionServerMetrics implements Updater {
       Integer.valueOf(this.regions.get()));
     sb = Strings.appendKeyValue(sb, "numberOfStores",
       Integer.valueOf(this.stores.get()));
+    sb = Strings.appendKeyValue(sb, this.hlogFileCount.getName(),
+      Integer.valueOf(this.hlogFileCount.get()));
+    sb = Strings.appendKeyValue(sb, this.hlogFileSizeMB.getName(),
+      Long.valueOf(this.hlogFileSizeMB.get()));
     sb = Strings.appendKeyValue(sb, "numberOfStorefiles",
       Integer.valueOf(this.storefiles.get()));
     sb = Strings.appendKeyValue(sb, this.storefileIndexSizeMB.getName(),

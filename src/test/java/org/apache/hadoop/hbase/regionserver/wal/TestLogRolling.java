@@ -209,7 +209,7 @@ public class TestLogRolling  {
       int count = log.getNumLogFiles();
       LOG.info("after flushing all regions and rolling logs there are " +
           log.getNumLogFiles() + " log files");
-      assertTrue(("actual count: " + count), count <= 2);
+      assertTrue(("actual count: " + count), count <= 3);
   }
 
   private static String getName() {
