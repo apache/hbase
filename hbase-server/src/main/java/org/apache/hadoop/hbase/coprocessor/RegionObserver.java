@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
@@ -617,6 +618,36 @@ public interface RegionObserver extends Coprocessor {
    */
   void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
       final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException;
+
+  /**
+   * This will be called for region operations where read lock is acquired in
+   * {@link HRegion#startRegionOperation()}.
+   * @param ctx
+   * @param operation The operation is about to be taken on the region
+   * @throws IOException
+   */
+  void postStartRegionOperation(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      Operation operation) throws IOException;
+
+  /**
+   * Called after releasing read lock in {@link HRegion#closeRegionOperation(Operation)}.
+   * @param ctx
+   * @param operation
+   * @throws IOException
+   */
+  void postCloseRegionOperation(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      Operation operation) throws IOException;
+
+  /**
+   * Called after the completion of batch put/delete and will be called even if the batch operation
+   * fails
+   * @param ctx
+   * @param miniBatchOp 
+   * @param success true if batch operation is successful otherwise false.
+   * @throws IOException
+   */
+  void postBatchMutateIndispensably(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      MiniBatchOperationInProgress<Mutation> miniBatchOp, final boolean success) throws IOException;
 
   /**
    * Called before checkAndPut

@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.Leases;
@@ -119,6 +120,9 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   final AtomicInteger ctPreSplitAfterPONR = new AtomicInteger(0);
   final AtomicInteger ctPreStoreFileReaderOpen = new AtomicInteger(0);
   final AtomicInteger ctPostStoreFileReaderOpen = new AtomicInteger(0);
+  final AtomicInteger ctPostBatchMutateIndispensably = new AtomicInteger(0);
+  final AtomicInteger ctPostStartRegionOperation = new AtomicInteger(0);
+  final AtomicInteger ctPostCloseRegionOperation = new AtomicInteger(0);
   final AtomicBoolean throwOnPostFlush = new AtomicBoolean(false);
   static final String TABLE_SKIPPED = "SKIPPED_BY_PREWALRESTORE";
 
@@ -464,6 +468,26 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
+  public void postStartRegionOperation(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      Operation op) throws IOException {
+    ctPostStartRegionOperation.incrementAndGet();
+  }
+
+  @Override
+  public void postCloseRegionOperation(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      Operation op) throws IOException {
+    if (ctPostStartRegionOperation.get() > 0) {
+      ctPostCloseRegionOperation.incrementAndGet();
+    }
+  }
+
+  @Override
+  public void postBatchMutateIndispensably(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      MiniBatchOperationInProgress<Mutation> miniBatchOp, final boolean success) throws IOException {
+    ctPostBatchMutateIndispensably.incrementAndGet();
+  }
+
+  @Override
   public void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte[] row, final byte[] family, final Result result)
       throws IOException {
@@ -597,9 +621,29 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public boolean hadPostBatchMutate() {
     return ctPostBatchMutate.get() > 0;
   }
-  
+
+  public boolean hadPostBatchMutateIndispensably() {
+    return ctPostBatchMutateIndispensably.get() > 0;
+  }
+
+  public boolean hadPostStartRegionOperation() {
+    return ctPostStartRegionOperation.get() > 0;
+  }
+
+  public boolean hadPostCloseRegionOperation() {
+    return ctPostCloseRegionOperation.get() > 0;
+  }
+
   public boolean hadDelete() {
     return !(ctBeforeDelete.get() > 0);
+  }
+
+  public int getCtPostStartRegionOperation() {
+    return ctPostStartRegionOperation.get();
+  }
+
+  public int getCtPostCloseRegionOperation() {
+    return ctPostCloseRegionOperation.get();
   }
 
   public boolean hadPreIncrement() {
