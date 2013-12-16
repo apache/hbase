@@ -214,6 +214,13 @@ public class DemoClient {
             printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
             client.deleteAllRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes);
 
+            // sleep to force later timestamp
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                // no-op
+            }
+
             mutations = new ArrayList<Mutation>();
             mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")), ByteBuffer.wrap(bytes("0")), writeToWal));
             mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(bytes("FOO")), writeToWal));
