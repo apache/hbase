@@ -324,7 +324,7 @@ public class TablePermission extends Permission {
         ((qualifier == null && other.getQualifier() == null) ||
          Bytes.equals(qualifier, other.getQualifier())) &&
         ((namespace == null && other.getNamespace() == null) ||
-         namespace.equals(other.getNamespace()))
+         (namespace != null && namespace.equals(other.getNamespace())))
        )) {
       return false;
     }
