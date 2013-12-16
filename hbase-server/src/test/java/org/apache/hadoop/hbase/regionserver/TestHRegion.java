@@ -184,6 +184,8 @@ public class TestHRegion {
   @After
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
+    LOG.info("Cleaning test directory: " + TEST_UTIL.getDataTestDir());
+    TEST_UTIL.cleanupTestDir();
   }
 
   String getName() {
