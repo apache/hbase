@@ -24,24 +24,6 @@
 @rem Make sure java environment is set
 @rem
 
-if not defined JAVA_HOME (
-  echo Warning: JAVA_HOME environment variable is not set. Defaulting to c:\apps\java
-  set JAVA_HOME=c:\apps\java
-)
-
-if not exist "%JAVA_HOME%\bin\java.exe" (
-  echo Error: JAVA_HOME is incorrectly set or could not find java at the location %JAVA_HOME%\bin\
-  exit /B 2
-)
-
-set JAVA="%JAVA_HOME%\bin\java"
-
-for %%i in (%0) do (
-  if not defined HBASE_BIN_PATH (
-    set HBASE_BIN_PATH=%%~dpi
-  )
-)
-
 if "%HBASE_BIN_PATH:~-1%" == "\" (
   set HBASE_BIN_PATH=%HBASE_BIN_PATH:~0,-1%
 )
@@ -73,6 +55,24 @@ if not defined HBASE_BACKUP_MASTERS (
 )
 
 @rem Source the hbase-env.sh.  Will have JAVA_HOME defined.
-if EXIST "%HBASE_CONF_DIR%\hbase-env.cmd" (
-  call %HBASE_CONF_DIR%\hbase-env.cmd
+if exist "%HBASE_CONF_DIR%\hbase-env.cmd" (
+  call "%HBASE_CONF_DIR%\hbase-env.cmd"
+)
+
+if not defined JAVA_HOME (
+  echo Warning: JAVA_HOME environment variable is not set. Defaulting to c:\apps\java
+  set JAVA_HOME=c:\apps\java
+)
+
+if not exist "%JAVA_HOME%\bin\java.exe" (
+  echo Error: JAVA_HOME is incorrectly set or could not find java at the location %JAVA_HOME%\bin\
+  exit /B 2
+)
+
+set JAVA="%JAVA_HOME%\bin\java"
+
+for %%i in (%0) do (
+  if not defined HBASE_BIN_PATH (
+    set HBASE_BIN_PATH=%%~dpi
+  )
 )

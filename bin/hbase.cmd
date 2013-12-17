@@ -58,7 +58,7 @@ if "%HBASE_BIN_PATH:~-1%" == "\" (
 
 rem This will set HBASE_HOME, etc.
 set hbase-config-script=%HBASE_BIN_PATH%\hbase-config.cmd
-call %hbase-config-script% %*
+call "%hbase-config-script%" %*
 if "%1" == "--config" (
   shift
   shift
@@ -67,7 +67,7 @@ if "%1" == "--config" (
 rem Detect if we are in hbase sources dir
 set in_dev_env=false
 
-if EXIST %HBASE_HOME%\target set in_dev_env=true
+if exist "%HBASE_HOME%\target" set in_dev_env=true
 
 rem --service is an internal option. used by MSI setup to install HBase as a windows service
 if "%1" == "--service" (
@@ -88,34 +88,33 @@ if "%hbase-command%"=="" (
 set JAVA_HEAP_MAX=-Xmx1000m
 
 rem check envvars which might override default args
-if not "%HBASE_HEAPSIZE%" == "" (
+if defined HBASE_HEAPSIZE (
   set JAVA_HEAP_MAX=-Xmx%HBASE_HEAPSIZE%m
 )
 
-set CLASSPATH=%HBASE_CONF_DIR%;"%JAVA_HOME%\lib\tools.jar"
+set CLASSPATH=%HBASE_CONF_DIR%;%JAVA_HOME%\lib\tools.jar
 
 rem Add maven target directory
 set cached_classpath_filename=%HBASE_HOME%\target\cached_classpath.txt
 if "%in_dev_env%"=="true" (
 
   rem adding maven main classes to classpath
-  for /f %%i in ('dir /b %HBASE_HOME%\hbase-*') do (
+  for /f %%i in ('dir /b "%HBASE_HOME%\hbase-*"') do (
     if exist %%i\target\classes set CLASSPATH=!CLASSPATH!;%%i\target\classes
   )
 
   rem adding maven test classes to classpath
   rem For developers, add hbase classes to CLASSPATH
-  for /f %%i in ('dir /b %HBASE_HOME%\hbase-*') do (
+  for /f %%i in ('dir /b "%HBASE_HOME%\hbase-*"') do (
     if exist %%i\target\test-classes set CLASSPATH=!CLASSPATH!;%%i\target\test-classes
   )
 
-  if NOT exist "%cached_classpath_filename%" (
+  if not exist "%cached_classpath_filename%" (
       echo "As this is a development environment, we need %cached_classpath_filename% to be generated from maven (command: mvn install -DskipTests)"
 	  goto :eof
   )
 
-  for /f "delims=" %%i in ('type %cached_classpath_filename%') do set CLASSPATH=%CLASSPATH%;%%i
-
+  for /f "delims=" %%i in ('type "%cached_classpath_filename%"') do set CLASSPATH=%CLASSPATH%;%%i
 )
 
 @rem For releases add hbase webapps to CLASSPATH
@@ -128,47 +127,43 @@ if exist "%HBASE_HOME%\target\hbase-webapps" (
   set CLASSPATH=%CLASSPATH%;%HBASE_HOME%\target
 )
 
-for /F %%f in ('dir /b %HBASE_HOME%\hbase*.jar 2^>nul') do (
-  if NOT "%%f:~-11"=="sources.jar" (
+for /F %%f in ('dir /b "%HBASE_HOME%\hbase*.jar" 2^>nul') do (
+  if not "%%f:~-11"=="sources.jar" (
     set CLASSPATH=!CLASSPATH!;%HBASE_HOME%\%%f
   )
 )
 
 @rem Add libs to CLASSPATH
-if exist %HBASE_HOME%\lib (
+if exist "%HBASE_HOME%\lib" (
   set CLASSPATH=!CLASSPATH!;%HBASE_HOME%\lib\*
 )
 
 @rem Add user-specified CLASSPATH last
-if NOT "%HBASE_CLASSPATH%" == "" (
+if defined HBASE_CLASSPATH (
   set CLASSPATH=%CLASSPATH%;%HBASE_CLASSPATH%
 )
 
 @rem Default log directory and file
-if "%HBASE_LOG_DIR%" == "" (
+if not defined HBASE_LOG_DIR (
   set HBASE_LOG_DIR=%HBASE_HOME%\logs
 )
 
-if "%HBASE_LOGFILE%"=="" (
+if not defined HBASE_LOGFILE (
   set HBASE_LOGFILE=hbase.log
 )
 
 set JAVA_PLATFORM=
 
 rem If avail, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
-set PATH=%PATH%;%HADOOP_HOME%\bin
+set PATH=%PATH%;"%HADOOP_HOME%\bin"
 set HADOOP_IN_PATH=hadoop.cmd
 
 if exist "%HADOOP_HOME%\bin\%HADOOP_IN_PATH%" (
-  if "%in_dev_env%"=="true" (
-    set HADOOP_CLASSPATH=%HBASE_HOME%\target\classes
-  ) else (
-    for /f %%i in ('dir /b %HBASE_HOME%\hbase-*.jar 2^>nul ^| findstr /vi tests') do set HADOOP_CLASSPATH=%HBASE_HOME%\%%i
-  )
+  set HADOOP_CLASSPATH=%CLASSPATH%
 
   set hadoopJLPCommand=call %HADOOP_IN_PATH% org.apache.hadoop.hbase.util.GetJavaProperty java.library.path 2^>nul
   for /f "eol= delims=" %%i in ('!hadoopJLPCommand!') do set HADOOP_JAVA_LIBRARY_PATH=%%i
-  if [%JAVA_LIBRARY_PATH%]==[] (
+  if not defined JAVA_LIBRARY_PATH (
      set JAVA_LIBRARY_PATH=!HADOOP_JAVA_LIBRARY_PATH!
   ) else (
      set JAVA_LIBRARY_PATH=%JAVA_LIBRARY_PATH%;!HADOOP_JAVA_LIBRARY_PATH!
@@ -176,13 +171,14 @@ if exist "%HADOOP_HOME%\bin\%HADOOP_IN_PATH%" (
 )
 
 if exist "%HBASE_HOME%\build\native" (
-  for /f "eol= delims=" %%i in ('%JAVA% org.apache.hadoop.util.PlatformName') do set JAVA_PLATFORM=%%i
+  set platformCommand=call %JAVA% -classpath "%CLASSPATH%" org.apache.hadoop.util.PlatformName
+  for /f %%i in ('!platformCommand!') do set JAVA_PLATFORM=%%i
   set _PATH_TO_APPEND=%HBASE_HOME%\build\native\!JAVA_PLATFORM!;%HBASE_HOME%\build\native\!JAVA_PLATFORM!\lib
-  if "%JAVA_LIBRARY_PATH%"=="" (
-     set JAVA_LIBRARY_PATH=!_PATH_TO_APPEND!
-   ) else (
-     set JAVA_LIBRARY_PATH=%JAVA_LIBRARY_PATH%;!_PATH_TO_APPEND!
-   )
+  if not defined JAVA_LIBRARY_PATH (
+    set JAVA_LIBRARY_PATH=!_PATH_TO_APPEND!
+  ) else (
+    set JAVA_LIBRARY_PATH=%JAVA_LIBRARY_PATH%;!_PATH_TO_APPEND!
+  )
 )
 
 rem This loop would set %hbase-command-arguments%
@@ -219,7 +215,6 @@ if defined corecommand (
   ) else (
     set CLASS=%hbase-command%
   )
-  set CLASSPATH=%CLASSPATH%;%CD%
 )
 
 if not defined HBASE_IDENT_STRING (
@@ -248,7 +243,7 @@ if defined service_entry (
   set loglog=!HBASE_LOG_DIR!\!HBASE_LOGFILE!
 
   if "%HBASE_USE_GC_LOGFILE%" == "true" (
-    set HBASE_OPTS=%HBASE_OPTS% -Xloggc:!loggc!
+    set HBASE_OPTS=%HBASE_OPTS% -Xloggc:"!loggc!"
   )
 )
 
@@ -257,10 +252,10 @@ if defined service_entry (
 @rem and are named like the following: java_pid21612.hprof. Apparently it does not
 @rem 'cost' to have this flag enabled. Its a 1.6 flag only. See:
 @rem http://blogs.sun.com/alanb/entry/outofmemoryerror_looks_a_bit_better
-set HBASE_OPTS=%HBASE_OPTS% -Dhbase.log.dir=%HBASE_LOG_DIR%
-set HBASE_OPTS=%HBASE_OPTS% -Dhbase.log.file=%HBASE_LOGFILE%
-set HBASE_OPTS=%HBASE_OPTS% -Dhbase.home.dir=%HBASE_HOME%
-set HBASE_OPTS=%HBASE_OPTS% -Dhbase.id.str=%HBASE_IDENT_STRING%
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.log.dir="%HBASE_LOG_DIR%"
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.log.file="%HBASE_LOGFILE%"
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.home.dir="%HBASE_HOME%"
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.id.str="%HBASE_IDENT_STRING%"
 set HBASE_OPTS=%HBASE_OPTS% -XX:OnOutOfMemoryError="taskkill /F /PID %p"
 
 if not defined HBASE_ROOT_LOGGER (
@@ -268,7 +263,7 @@ if not defined HBASE_ROOT_LOGGER (
 )
 set HBASE_OPTS=%HBASE_OPTS% -Dhbase.root.logger="%HBASE_ROOT_LOGGER%"
 
-if NOT "x%JAVA_LIBRARY_PATH%" == "x" (
+if defined JAVA_LIBRARY_PATH (
   set HBASE_OPTS=%HBASE_OPTS% -Djava.library.path="%JAVA_LIBRARY_PATH%"
 )
 
@@ -284,7 +279,7 @@ if not defined HBASE_SECURITY_LOGGER (
 )
 set HBASE_OPTS=%HBASE_OPTS% -Dhbase.security.logger="%HBASE_SECURITY_LOGGER%"
 
-set java_arguments=%JAVA_HEAP_MAX% %HBASE_OPTS% -classpath %CLASSPATH% %CLASS% %hbase-command-arguments%
+set java_arguments=%JAVA_HEAP_MAX% %HBASE_OPTS% -classpath "%CLASSPATH%" %CLASS% %hbase-command-arguments%
 
 if defined service_entry (
   call :makeServiceXml %java_arguments%
@@ -297,18 +292,18 @@ goto :eof
 
 :shell
   rem eg export JRUBY_HOME=/usr/local/share/jruby
-  if NOT "%JRUBY_HOME%"=="" (
-    set CLASSPATH=%$CLASSPATH%;%JRUBY_HOME%\lib\jruby.jar
-    set HBASE_OPTS=%HBASE_OPTS% -Djruby.home=%JRUBY_HOME% -Djruby.lib=%JRUBY_HOME%\lib
+  if defined JRUBY_HOME (
+    set CLASSPATH=%CLASSPATH%;%JRUBY_HOME%\lib\jruby.jar
+    set HBASE_OPTS=%HBASE_OPTS% -Djruby.home="%JRUBY_HOME%" -Djruby.lib="%JRUBY_HOME%\lib"
   )
   rem find the hbase ruby sources
-  if EXIST %HBASE_HOME%\lib\ruby (
-    set HBASE_OPTS=%HBASE_OPTS% -Dhbase.ruby.sources=%HBASE_HOME%\lib\ruby
+  if exist "%HBASE_HOME%\lib\ruby" (
+    set HBASE_OPTS=%HBASE_OPTS% -Dhbase.ruby.sources="%HBASE_HOME%\lib\ruby"
   ) else (
-    set HBASE_OPTS=%HBASE_OPTS% -Dhbase.ruby.sources=%HBASE_HOME%\hbase-shell\src\main\ruby
+    set HBASE_OPTS=%HBASE_OPTS% -Dhbase.ruby.sources="%HBASE_HOME%\hbase-shell\src\main\ruby"
   )
 
-  set CLASS=org.jruby.Main -X+O %JRUBY_OPTS% %HBASE_HOME%\bin\hirb.rb
+  set CLASS=org.jruby.Main -X+O %JRUBY_OPTS% "%HBASE_HOME%\bin\hirb.rb"
   goto :eof
 
 :master
