@@ -43,6 +43,9 @@ public class TestByteBufferIOEngine {
     for (int i = 0; i < testNum; i++) {
       byte val = (byte) (Math.random() * 255);
       int blockSize = (int) (Math.random() * maxBlockSize);
+      if (blockSize == 0) {
+        blockSize = 1;
+      }
       byte[] byteArray = new byte[blockSize];
       for (int j = 0; j < byteArray.length; ++j) {
         byteArray[j] = val;
