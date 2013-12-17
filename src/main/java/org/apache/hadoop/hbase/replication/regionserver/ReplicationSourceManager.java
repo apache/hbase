@@ -274,6 +274,14 @@ public class ReplicationSourceManager {
     return this.sources;
   }
 
+  /**
+   * Get a list of all the old sources of this rs
+   * @return list of all old sources
+   */
+  public List<ReplicationSourceInterface> getOldSources() {
+    return this.oldsources;
+  }
+
   void preLogRoll(Path newLog) throws IOException {
     if (!this.replicating.get()) {
       LOG.warn("Replication stopped, won't add new log");
