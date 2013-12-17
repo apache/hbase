@@ -87,6 +87,12 @@ public interface RegionObserver extends Coprocessor {
   void postOpen(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
+   * Called after the log replay on the region is over.
+   * @param c the environment provided by the region server
+   */
+  void postLogReplay(final ObserverContext<RegionCoprocessorEnvironment> c);
+
+  /**
    * Called before a memstore is flushed to disk and prior to creating the scanner to read from
    * the memstore.  To override or modify how a memstore is flushed,
    * implementing classes can return a new scanner to provide the KeyValues to be

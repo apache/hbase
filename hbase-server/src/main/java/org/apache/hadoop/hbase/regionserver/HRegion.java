@@ -859,7 +859,12 @@ public class HRegion implements HeapSize { // , Writable{
    * @param newState
    */
   public void setRecovering(boolean newState) {
+    boolean wasRecovering = this.isRecovering;
     this.isRecovering = newState;
+    if (wasRecovering && !isRecovering) {
+      // Call only when log replay is over.
+      coprocessorHost.postLogReplay();
+    }
   }
 
   /**

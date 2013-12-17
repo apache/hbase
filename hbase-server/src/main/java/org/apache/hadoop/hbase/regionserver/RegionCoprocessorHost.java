@@ -317,6 +317,26 @@ public class RegionCoprocessorHost
   }
 
   /**
+   * Invoked after log replay on region
+   */
+  public void postLogReplay() {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionObserver) env.getInstance()).postLogReplay(ctx);
+        } catch (Throwable e) {
+          handleCoprocessorThrowableNoRethrow(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  /**
    * Invoked before a region is closed
    * @param abortRequested true if the server is aborting
    */
