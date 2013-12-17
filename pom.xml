@@ -1443,7 +1443,7 @@
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-surefire-plugin</artifactId>
               <configuration>
-                <argLine>-enableassertions -Xmx1900m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
+                <argLine>-enableassertions -Xmx1900m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true "-Djava.library.path=${hadoop.library.path};${java.library.path}"</argLine>
                 <systemProperties>
                   <property>
                     <name>java.net.preferIPv4Stack</name>
