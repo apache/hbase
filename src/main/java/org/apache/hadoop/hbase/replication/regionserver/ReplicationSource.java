@@ -347,8 +347,6 @@ public class ReplicationSource extends Thread
           sleepMultiplier++;
         }
         continue;
-      } else if (oldPath != null && !oldPath.getName().equals(getCurrentPath().getName())) {
-        this.manager.cleanOldLogs(getCurrentPath().getName(), this.peerId, this.queueRecovered);
       }
       boolean currentWALisBeingWrittenTo = false;
       //For WAL files we own (rather than recovered), take a snapshot of whether the
@@ -545,6 +543,11 @@ public class ReplicationSource extends Thread
       if (this.currentPath == null) {
         this.currentPath = queue.poll(this.sleepForRetries, TimeUnit.MILLISECONDS);
         this.metrics.sizeOfLogQueue.set(queue.size());
+        if (this.currentPath != null) {
+          this.manager.cleanOldLogs(this.currentPath.getName(),
+              this.peerId,
+              this.queueRecovered);
+        }
       }
     } catch (InterruptedException e) {
       LOG.warn("Interrupted while reading edits", e);
