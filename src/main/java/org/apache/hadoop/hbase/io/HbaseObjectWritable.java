@@ -42,6 +42,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -668,7 +669,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
         instance = tryInstantiateProtobuf(declaredClass, in);
       } catch (ClassNotFoundException e) {
         LOG.error("Can't find class " + className, e);
-        throw new IOException("Can't find class " + className, e);
+        throw new DoNotRetryIOException("Can't find class " + className, e);
       }
     } else {                                      // Writable or Serializable
       Class instanceClass = null;
@@ -679,7 +680,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
           instanceClass = getClassByName(conf, className);
         } catch (ClassNotFoundException e) {
           LOG.error("Can't find class " + className, e);
-          throw new IOException("Can't find class " + className, e);
+          throw new DoNotRetryIOException("Can't find class " + className, e);
         }
       } else {
         instanceClass = CODE_TO_CLASS.get(b);
@@ -688,6 +689,9 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
         Writable writable = WritableFactories.newInstance(instanceClass, conf);
         try {
           writable.readFields(in);
+        } catch (IOException io) {
+          LOG.error("Error in readFields", io);
+          throw io;
         } catch (Exception e) {
           LOG.error("Error in readFields", e);
           throw new IOException("Error in readFields" , e);
@@ -709,7 +713,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
           instance = ois.readObject();
         } catch (ClassNotFoundException e) {
           LOG.error("Class not found when attempting to deserialize object", e);
-          throw new IOException("Class not found when attempting to " +
+          throw new DoNotRetryIOException("Class not found when attempting to " +
               "deserialize object", e);
         } finally {
           if(bis!=null) bis.close();
