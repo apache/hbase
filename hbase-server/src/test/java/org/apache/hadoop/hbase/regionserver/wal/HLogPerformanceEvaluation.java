@@ -55,6 +55,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.yammer.metrics.core.Meter;
+import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.reporting.ConsoleReporter;
 
@@ -69,8 +70,10 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
   private final MetricsRegistry metrics = new MetricsRegistry();
   private final Meter syncMeter =
     metrics.newMeter(HLogPerformanceEvaluation.class, "syncMeter", "syncs", TimeUnit.MILLISECONDS);
+  private final Histogram syncHistogram =
+    metrics.newHistogram(HLogPerformanceEvaluation.class, "syncHistogram", "nanos-between-syncs", true);
   private final Meter appendMeter =
-    metrics.newMeter(HLogPerformanceEvaluation.class, "append", "bytes", TimeUnit.MILLISECONDS);
+    metrics.newMeter(HLogPerformanceEvaluation.class, "appendMeter", "bytes", TimeUnit.MILLISECONDS);
 
   private HBaseTestingUtility TEST_UTIL;
 
@@ -244,6 +247,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       final long whenToRoll = roll;
       HLog hlog = new FSHLog(fs, rootRegionDir, "wals", getConf()) {
         int appends = 0;
+	long lastSync = 0;
+
         @Override
         protected void doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit,
             HTableDescriptor htd)
@@ -260,6 +265,12 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
         public void postSync() {
           super.postSync();
           syncMeter.mark();
+          long now = System.nanoTime();
+          if (lastSync > 0) {
+            long diff = now - lastSync;
+            syncHistogram.update(diff);
+          }
+          this.lastSync = now;
         }
 
         @Override
@@ -274,7 +285,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       HRegion region = null;
       try {
         region = openRegion(fs, rootRegionDir, htd, hlog);
-        ConsoleReporter.enable(this.metrics, 1, TimeUnit.SECONDS);
+        ConsoleReporter.enable(this.metrics, 60, TimeUnit.SECONDS);
         long putTime =
           runBenchmark(new HLogPutBenchmark(region, htd, numIterations, noSync, syncInterval),
             numThreads);

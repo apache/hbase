@@ -282,9 +282,7 @@ if  (sl.getTotalCompactingKVs() > 0) {
         ServerLoad serverLoad;
         </%args>
         <%java>
-        boolean useDefault = (serverLoad == null);
-        int defaultPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
-        int infoPort = useDefault?defaultPort:serverLoad.getInfoServerPort();
+        int infoPort = master.getRegionServerInfoPort(serverName);
         String url = "http://" + serverName.getHostname() + ":" + infoPort + "/";
         </%java>
 

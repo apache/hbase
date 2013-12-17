@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.zookeeper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.NavigableSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
@@ -30,6 +32,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -45,7 +50,8 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class RegionServerTracker extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(RegionServerTracker.class);
-  private NavigableSet<ServerName> regionServers = new TreeSet<ServerName>();
+  private NavigableMap<ServerName, RegionServerInfo> regionServers = 
+		  new TreeMap<ServerName, RegionServerInfo>();
   private ServerManager serverManager;
   private Abortable abortable;
 
@@ -76,7 +82,25 @@ public class RegionServerTracker extends ZooKeeperListener {
       this.regionServers.clear();
       for (String n: servers) {
         ServerName sn = ServerName.parseServerName(ZKUtil.getNodeName(n));
-        this.regionServers.add(sn);
+        if (regionServers.get(sn) == null) {
+          RegionServerInfo.Builder rsInfoBuilder = RegionServerInfo.newBuilder();
+          try {
+            String nodePath = ZKUtil.joinZNode(watcher.rsZNode, n);
+            byte[] data = ZKUtil.getData(watcher, nodePath);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("RS node: " + nodePath + " data: " + Bytes.toString(data));
+            }
+            if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
+              int magicLen = ProtobufUtil.lengthOfPBMagic();
+              rsInfoBuilder.mergeFrom(data, magicLen, data.length - magicLen);
+            }
+          } catch (KeeperException e) {
+            LOG.warn("Get Rs info port from ephemeral node", e);
+          } catch (IOException e) {
+            LOG.warn("Illegal data from ephemeral node", e);
+          }
+          this.regionServers.put(sn, rsInfoBuilder.build());
+        }
       }
     }
   }
@@ -119,13 +143,17 @@ public class RegionServerTracker extends ZooKeeperListener {
     }
   }
 
+  public RegionServerInfo getRegionServerInfo(final ServerName sn) {
+    return regionServers.get(sn);
+  }
+  
   /**
    * Gets the online servers.
    * @return list of online servers
    */
   public List<ServerName> getOnlineServers() {
     synchronized (this.regionServers) {
-      return new ArrayList<ServerName>(this.regionServers);
+      return new ArrayList<ServerName>(this.regionServers.keySet());
     }
   }
 }

@@ -175,6 +175,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
@@ -346,8 +347,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   // debugging and unit tests.
   protected volatile boolean abortRequested;
 
-  // Port we put up the webui on.
-  protected int webuiport = -1;
+  // region server static info like info port
+  private RegionServerInfo.Builder rsInfo;
 
   ConcurrentMap<String, Integer> rowlocks = new ConcurrentHashMap<String, Integer>();
 
@@ -624,6 +625,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
     this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
       HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
+    
+    this.rsInfo = RegionServerInfo.newBuilder();
+    // Put up the webui. Webui may come up on port other than configured if
+    // that port is occupied. Adjust serverInfo if this is the case.
+    this.rsInfo.setInfoPort(putUpWebUI());
   }
 
   /**
@@ -1266,9 +1272,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
   }
 
-  private void createMyEphemeralNode() throws KeeperException {
-    ZKUtil.createEphemeralNodeAndWatch(this.zooKeeper, getMyEphemeralNodePath(),
-      HConstants.EMPTY_BYTE_ARRAY);
+  private void createMyEphemeralNode() throws KeeperException, IOException {
+    byte[] data = ProtobufUtil.prependPBMagic(rsInfo.build().toByteArray());
+    ZKUtil.createEphemeralNodeAndWatch(this.zooKeeper,
+      getMyEphemeralNodePath(), data);
   }
 
   private void deleteMyEphemeralNode() throws KeeperException {
@@ -1607,10 +1614,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     this.leases.setName(n + ".leaseChecker");
     this.leases.start();
 
-    // Put up the webui.  Webui may come up on port other than configured if
-    // that port is occupied. Adjust serverInfo if this is the case.
-    this.webuiport = putUpWebUI();
-
     if (this.replicationSourceHandler == this.replicationSinkHandler &&
         this.replicationSourceHandler != null) {
       this.replicationSourceHandler.startReplicationService();
@@ -1674,7 +1677,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         port++;
       }
     }
-    return port;
+    return this.infoServer.getPort();
   }
 
   /*
@@ -4021,7 +4024,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       final GetServerInfoRequest request) throws ServiceException {
     ServerName serverName = getServerName();
     requestCount.increment();
-    return ResponseConverter.buildGetServerInfoResponse(serverName, webuiport);
+    return ResponseConverter.buildGetServerInfoResponse(serverName, rsInfo.getInfoPort());
   }
 
 // End Admin methods

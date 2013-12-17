@@ -401,7 +401,6 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
        ServerName [] deadServerNames = deadServers.toArray(new ServerName[deadServers.size()]);
          Arrays.sort(deadServerNames);
          for (ServerName deadServerName: deadServerNames) {
-           int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
     </%java>
     <tr>
     	<th></th>

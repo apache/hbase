@@ -551,6 +551,7 @@ class FSHLog implements HLog, Syncable {
           // perform the costly sync before we get the lock to roll writers.
           try {
             nextWriter.sync();
+            postSync();
           } catch (IOException e) {
             // optimization failed, no need to abort here.
             LOG.warn("pre-sync failed", e);
@@ -1125,6 +1126,7 @@ class FSHLog implements HLog, Syncable {
             for (Entry e : pendWrites) {
               writer.append(e);
             }
+            postAppend(pendWrites);
           } catch(IOException e) {
             LOG.error("Error while AsyncWriter write, request close of hlog ", e);
             requestLogRoll();
@@ -1204,8 +1206,11 @@ class FSHLog implements HLog, Syncable {
           long now = EnvironmentEdgeManager.currentTimeMillis();
           try {
             this.isSyncing = true;
-            if (writer != null) writer.sync();
+            if (writer != null) {
+              writer.sync();
+            }
             this.isSyncing = false;
+            postSync();
           } catch (IOException e) {
             LOG.fatal("Error while AsyncSyncer sync, request close of hlog ", e);
             requestLogRoll();

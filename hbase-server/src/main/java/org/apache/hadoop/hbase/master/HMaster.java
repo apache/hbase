@@ -113,6 +113,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
@@ -2158,6 +2159,15 @@ MasterServices, Server {
     return masterActiveTime;
   }
 
+  public int getRegionServerInfoPort(final ServerName sn) {
+    RegionServerInfo info = this.regionServerTracker.getRegionServerInfo(sn);
+    if (info == null || info.getInfoPort() == 0) {
+      return conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
+        HConstants.DEFAULT_REGIONSERVER_INFOPORT);
+    }
+    return info.getInfoPort();
+  }
+  
   /**
    * @return array of coprocessor SimpleNames.
    */

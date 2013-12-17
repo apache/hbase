@@ -19,7 +19,7 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
   import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
-  import="java.util.HashMap"
+  import="java.util.TreeMap"
   import="java.util.Map"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HTable"
@@ -50,9 +50,6 @@
   if (showFragmentation) {
       frags = FSUtils.getTableFragmentation(master);
   }
-  // HARDCODED FOR NOW TODO: FIX GET FROM ZK
-  // This port might be wrong if RS actually ended up using something else.
-  int infoPort = conf.getInt("hbase.regionserver.info.port", 60030);
 %>
 <!--[if IE]>
 <!DOCTYPE html>
@@ -200,11 +197,11 @@
   HRegionInfo meta = HRegionInfo.FIRST_META_REGIONINFO;
   ServerName metaLocation = master.getCatalogTracker().waitForMeta(1);
   for (int i = 0; i < 1; i++) {
-    String url = "//" + metaLocation.getHostname() + ":" + infoPort + "/";
+    String url = "//" + metaLocation.getHostname() + ":" + master.getRegionServerInfoPort(metaLocation) + "/";
 %>
 <tr>
   <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-    <td><a href="<%= url %>"><%= metaLocation.getHostname().toString() + ":" + infoPort %></a></td>
+    <td><a href="<%= url %>"><%= metaLocation.getHostname().toString() + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
     <td>-</td>
     <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
     <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
@@ -252,7 +249,7 @@
 <%  } %>
 </table>
 <%
-  Map<String, Integer> regDistribution = new HashMap<String, Integer>();
+  Map<ServerName, Integer> regDistribution = new TreeMap<ServerName, Integer>();
   Map<HRegionInfo, ServerName> regions = table.getRegionLocations();
   if(regions != null && regions.size() > 0) { %>
 <%=     tableHeader %>
@@ -271,22 +268,20 @@
         if (map.containsKey(regionInfo.getRegionName())) {
           req = map.get(regionInfo.getRegionName()).getRequestsCount();
         }
-        // This port might be wrong if RS actually ended up using something else.
-        urlRegionServer =
-            addr.getHostname().toString() + ":" + infoPort;
-        Integer i = regDistribution.get(urlRegionServer);
+        Integer i = regDistribution.get(addr);
         if (null == i) i = Integer.valueOf(0);
-        regDistribution.put(urlRegionServer, i+1);
+        regDistribution.put(addr, i + 1);
       }
     }
 %>
 <tr>
   <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
   <%
-  if (urlRegionServer != null) {
+  if (addr != null) {
+  	String url = addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/";
   %>
   <td>
-    <a href="<%= "//" + urlRegionServer + "/" %>"><%= urlRegionServer %></a>
+     <a href="<%= url %>"><%= addr.getHostname().toString() + ":" + addr.getPort() %></a>
   </td>
   <%
   } else {
@@ -304,10 +299,12 @@
 <h2>Regions by Region Server</h2>
 <table class="table table-striped"><tr><th>Region Server</th><th>Region Count</th></tr>
 <%
-  for (Map.Entry<String, Integer> rdEntry : regDistribution.entrySet()) {
+  for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {   
+     ServerName addr = rdEntry.getKey();                                       
+     String url = addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/";
 %>
 <tr>
-  <td><a href="<%= "//" + rdEntry.getKey() + "/" %>"><%= rdEntry.getKey()%></a></td>
+  <td><a href="<%= url %>"><%= addr.getHostname().toString() + ":" + addr.getPort() %></a></td>
   <td><%= rdEntry.getValue()%></td>
 </tr>
 <% } %>
