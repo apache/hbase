@@ -498,6 +498,26 @@ public class ReplicationSource extends Thread
               }
             }
           }
+          // In the case of disaster/recovery, HMaster may be shutdown/crashed before flush data
+          // from .logs to .oldlogs. Loop into .logs folders and check whether a match exists
+          if (stopper instanceof ReplicationSyncUp.DummyServer) {
+            FileStatus[] rss = fs.listStatus(manager.getLogDir());
+            for (FileStatus rs : rss) {
+              Path p = rs.getPath();
+              FileStatus[] logs = fs.listStatus(p);
+              for (FileStatus log : logs) {
+                p = new Path(p, log.getPath().getName());
+                if (p.getName().equals(currentPath.getName())) {
+                  currentPath = p;
+                  LOG.info("Log " + this.currentPath + " exists under " + manager.getLogDir());
+                  // Open the log at the new location
+                  this.openReader(sleepMultiplier);
+                  return true;
+                }
+              }
+            }
+          }
+
           // TODO What happens if the log was missing from every single location?
           // Although we need to check a couple of times as the log could have
           // been moved by the master between the checks
