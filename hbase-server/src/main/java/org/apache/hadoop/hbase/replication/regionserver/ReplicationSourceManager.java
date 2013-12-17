@@ -285,6 +285,14 @@ public class ReplicationSourceManager implements ReplicationListener {
     return this.sources;
   }
 
+  /**
+   * Get a list of all the old sources of this rs
+   * @return list of all old sources
+   */
+  public List<ReplicationSourceInterface> getOldSources() {
+    return this.oldsources;
+  }
+
   void preLogRoll(Path newLog) throws IOException {
 
     synchronized (this.hlogsById) {
