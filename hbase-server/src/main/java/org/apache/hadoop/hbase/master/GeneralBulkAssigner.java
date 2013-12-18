@@ -53,7 +53,7 @@ public class GeneralBulkAssigner extends BulkAssigner {
   final AssignmentManager assignmentManager;
   final boolean waitTillAllAssigned;
 
-  GeneralBulkAssigner(final Server server,
+  public GeneralBulkAssigner(final Server server,
       final Map<ServerName, List<HRegionInfo>> bulkPlan,
       final AssignmentManager am, final boolean waitTillAllAssigned) {
     super(server);

@@ -3490,4 +3490,11 @@ public class AssignmentManager extends ZooKeeperListener {
     // remove the region plan as well just in case.
     clearRegionPlan(regionInfo);
   }
+
+  /**
+   * @return Instance of load balancer
+   */
+  public LoadBalancer getBalancer() {
+    return this.balancer;
+  }
 }
