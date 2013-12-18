@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -62,6 +63,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -141,6 +143,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   // Flag denoting whether AcessController is available or not.
   private boolean acOn = false;
   private Configuration conf;
+  private volatile boolean initialized = false;
 
   /** Mapping of scanner instances to the user who created them */
   private Map<InternalScanner,String> scannerOwners =
@@ -209,6 +212,8 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       // the system.
       labelsTable.setValue(HTableDescriptor.SPLIT_POLICY,
           DisabledRegionSplitPolicy.class.getName());
+      labelsTable.setValue(Bytes.toBytes(HConstants.DISALLOW_WRITES_IN_RECOVERING),
+          Bytes.toBytes(true));
       master.createTable(labelsTable, null);
     }
   }
@@ -535,32 +540,48 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     if (e.getEnvironment().getRegion().getRegionInfo().getTable().equals(LABELS_TABLE_NAME)) {
       this.labelsRegion = true;
       this.acOn = CoprocessorHost.getLoadedCoprocessors().contains(AccessController.class.getName());
-      try {
-        Pair<Map<String, Integer>, Map<String, List<Integer>>> labelsAndUserAuths = 
-            extractLabelsAndAuths(getExistingLabelsWithAuths());
-        Map<String, Integer> labels = labelsAndUserAuths.getFirst();
-        Map<String, List<Integer>> userAuths = labelsAndUserAuths.getSecond();
-        // Add the "system" label if it is not added into the system yet
-        addSystemLabel(e.getEnvironment().getRegion(), labels, userAuths);
-        int ordinal = 1; // Ordinal 1 is reserved for "system" label.
-        for (Integer i : labels.values()) {
-          if (i > ordinal) {
-            ordinal = i;
-          }
-        }
-        this.ordinalCounter = ordinal + 1;
-        if (labels.size() > 0) {
-          // If there is no data need not write to zk
-          byte[] serialized = VisibilityUtils.getDataToWriteToZooKeeper(labels);
-          this.visibilityManager.writeToZookeeper(serialized, true);
-        }
-        if (userAuths.size() > 0) {
-          byte[] serialized = VisibilityUtils.getUserAuthsDataToWriteToZooKeeper(userAuths);
-          this.visibilityManager.writeToZookeeper(serialized, false);
-        }
-      } catch (IOException ioe) {
-        LOG.error("Error while updating the zk with the exisiting labels data", ioe);
+      if (!e.getEnvironment().getRegion().isRecovering()) {
+        initialize(e);
       }
+    } else {
+      this.initialized = true;
+    }
+  }
+
+  @Override
+  public void postLogReplay(ObserverContext<RegionCoprocessorEnvironment> e) {
+    if (this.labelsRegion) {
+      initialize(e);
+    }
+  }
+
+  private void initialize(ObserverContext<RegionCoprocessorEnvironment> e) {
+    try {
+      Pair<Map<String, Integer>, Map<String, List<Integer>>> labelsAndUserAuths = 
+          extractLabelsAndAuths(getExistingLabelsWithAuths());
+      Map<String, Integer> labels = labelsAndUserAuths.getFirst();
+      Map<String, List<Integer>> userAuths = labelsAndUserAuths.getSecond();
+      // Add the "system" label if it is not added into the system yet
+      addSystemLabel(e.getEnvironment().getRegion(), labels, userAuths);
+      int ordinal = 1; // Ordinal 1 is reserved for "system" label.
+      for (Integer i : labels.values()) {
+        if (i > ordinal) {
+          ordinal = i;
+        }
+      }
+      this.ordinalCounter = ordinal + 1;
+      if (labels.size() > 0) {
+        // If there is no data need not write to zk
+        byte[] serialized = VisibilityUtils.getDataToWriteToZooKeeper(labels);
+        this.visibilityManager.writeToZookeeper(serialized, true);
+      }
+      if (userAuths.size() > 0) {
+        byte[] serialized = VisibilityUtils.getUserAuthsDataToWriteToZooKeeper(userAuths);
+        this.visibilityManager.writeToZookeeper(serialized, false);
+      }
+      initialized = true;
+    } catch (IOException ioe) {
+      LOG.error("Error while updating the zk with the exisiting labels data", ioe);
     }
   }
 
@@ -1025,6 +1046,10 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       RpcCallback<VisibilityLabelsResponse> done) {
     VisibilityLabelsResponse.Builder response = VisibilityLabelsResponse.newBuilder();
     List<VisibilityLabel> labels = request.getVisLabelList();
+    if (!initialized) {
+      setExceptionResults(labels.size(), new CoprocessorException(
+          "VisibilityController not yet initialized"), response);
+    }
     try {
       checkCallingUserAuth();
       List<Mutation> puts = new ArrayList<Mutation>(labels.size());
@@ -1072,14 +1097,19 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       }
     } catch (IOException e) {
       LOG.error(e);
-      RegionActionResult.Builder failureResultBuilder = RegionActionResult.newBuilder();
-      failureResultBuilder.setException(ResponseConverter.buildException(e));
-      RegionActionResult failureResult = failureResultBuilder.build();
-      for (int i = 0; i < labels.size(); i++) {
-        response.addResult(i, failureResult);
-      }
+      setExceptionResults(labels.size(), e, response);
     }
     done.run(response.build());
+  }
+
+  private void setExceptionResults(int size, IOException e,
+      VisibilityLabelsResponse.Builder response) {
+    RegionActionResult.Builder failureResultBuilder = RegionActionResult.newBuilder();
+    failureResultBuilder.setException(ResponseConverter.buildException(e));
+    RegionActionResult failureResult = failureResultBuilder.build();
+    for (int i = 0; i < size; i++) {
+      response.addResult(i, failureResult);
+    }
   }
 
   private void performACLCheck() throws IOException {
@@ -1115,6 +1145,10 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       RpcCallback<VisibilityLabelsResponse> done) {
     VisibilityLabelsResponse.Builder response = VisibilityLabelsResponse.newBuilder();
     List<ByteString> auths = request.getAuthList();
+    if (!initialized) {
+      setExceptionResults(auths.size(), new CoprocessorException(
+          "VisibilityController not yet initialized"), response);
+    }
     byte[] user = request.getUser().toByteArray();
     try {
       checkCallingUserAuth();
@@ -1153,12 +1187,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       }
     } catch (IOException e) {
       LOG.error(e);
-      RegionActionResult.Builder failureResultBuilder = RegionActionResult.newBuilder();
-      failureResultBuilder.setException(ResponseConverter.buildException(e));
-      RegionActionResult failureResult = failureResultBuilder.build();
-      for (int i = 0; i < auths.size(); i++) {
-        response.addResult(i, failureResult);
-      }
+      setExceptionResults(auths.size(), e, response);
     }
     done.run(response.build());
   }
@@ -1211,6 +1240,10 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       RpcCallback<VisibilityLabelsResponse> done) {
     VisibilityLabelsResponse.Builder response = VisibilityLabelsResponse.newBuilder();
     List<ByteString> auths = request.getAuthList();
+    if (!initialized) {
+      setExceptionResults(auths.size(), new CoprocessorException(
+          "VisibilityController not yet initialized"), response);
+    }
     byte[] user = request.getUser().toByteArray();
     try {
       checkCallingUserAuth();
@@ -1251,12 +1284,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       }
     } catch (IOException e) {
       LOG.error(e);
-      RegionActionResult.Builder failureResultBuilder = RegionActionResult.newBuilder();
-      failureResultBuilder.setException(ResponseConverter.buildException(e));
-      RegionActionResult failureResult = failureResultBuilder.build();
-      for (int i = 0; i < auths.size(); i++) {
-        response.addResult(i, failureResult);
-      }
+      setExceptionResults(auths.size(), e, response);
     }
     done.run(response.build());
   }
