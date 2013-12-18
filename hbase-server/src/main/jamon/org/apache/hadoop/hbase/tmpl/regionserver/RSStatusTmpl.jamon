@@ -89,7 +89,7 @@ org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
   <div class="container">
     <div class="row inner_header">
         <div class="page-header">
-            <h1>RegionServer <small><% serverName.getHostname() %></small></h1>
+            <h1>RegionServer <small><% serverName %></small></h1>
         </div>
     </div>
     <div class="row">

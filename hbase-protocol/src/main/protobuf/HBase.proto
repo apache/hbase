@@ -185,3 +185,10 @@ message NamespaceDescriptor {
   required bytes name = 1;
   repeated NameStringPair configuration = 2;
 }
+
+/**
+ * Description of the region server info
+ */
+message RegionServerInfo {
+  optional int32 infoPort = 1;
+}
