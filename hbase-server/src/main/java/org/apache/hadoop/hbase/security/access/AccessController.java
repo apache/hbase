@@ -1014,7 +1014,7 @@ public class AccessController extends BaseRegionObserver
       LOG.error("NULL region from RegionCoprocessorEnvironment in preOpen()");
     } else {
       HRegionInfo regionInfo = region.getRegionInfo();
-      if (isSpecialTable(regionInfo)) {
+      if (regionInfo.getTable().isSystemTable()) {
         isSystemOrSuperUser(regionEnv.getConfiguration());
       } else {
         requirePermission("preOpen", Action.ADMIN);
@@ -1625,13 +1625,6 @@ public class AccessController extends BaseRegionObserver
       throw new AccessDeniedException("User '" + (user != null ? user.getShortName() : "null") +
         "is not system or super user.");
     }
-  }
-
-  private boolean isSpecialTable(HRegionInfo regionInfo) {
-    TableName tableName = regionInfo.getTable();
-    return tableName.equals(AccessControlLists.ACL_TABLE_NAME)
-        || tableName.equals(TableName.NAMESPACE_TABLE_NAME)
-        || tableName.equals(TableName.META_TABLE_NAME);
   }
 
   @Override
