@@ -1,5 +1,52 @@
 HBase Change Log
 
+Release 0.94.15 - 12/17/2013
+Bug
+
+    [HBASE-7886] - [replication] hlog zk node will not be deleted if client roll hlog
+    [HBASE-9485] - TableOutputCommitter should implement recovery if we don't want jobs to start from 0 on RM restart
+    [HBASE-9995] - Not stopping ReplicationSink when using custom implementation for the ReplicationSink
+    [HBASE-10014] - HRegion#doMiniBatchMutation rollbacks the memstore even if there is nothing to rollback.
+    [HBASE-10015] - Replace intrinsic locking with explicit locks in StoreScanner
+    [HBASE-10026] - HBaseAdmin#createTable could fail if region splits too fast
+    [HBASE-10046] - Unmonitored HBase service could accumulate Status objects and OOM
+    [HBASE-10057] - TestRestoreFlushSnapshotFromClient and TestRestoreSnapshotFromClient fail to finish occasionally
+    [HBASE-10061] - TableMapReduceUtil.findOrCreateJar calls updateMap(null, ) resulting in thrown NPE
+    [HBASE-10064] - AggregateClient.validateParameters can throw NPE
+    [HBASE-10089] - Metrics intern table names cause eventual permgen OOM in 0.94
+    [HBASE-10111] - Verify that a snapshot is not corrupted before restoring it
+    [HBASE-10112] - Hbase rest query params for maxVersions and maxValues are not parsed
+    [HBASE-10117] - Avoid synchronization in HRegionScannerImpl.isFilterDone
+    [HBASE-10120] - start-hbase.sh doesn't respect --config in non-distributed mode
+    [HBASE-10179] - HRegionServer underreports readRequestCounts by 1 under certain conditions
+    [HBASE-10181] - HBaseObjectWritable.readObject catches DoNotRetryIOException and wraps it back in a regular IOException
+
+Improvement
+
+    [HBASE-9931] - Optional setBatch for CopyTable to copy large rows in batches
+    [HBASE-10001] - Add a coprocessor to help testing the performances without taking into account the i/o
+    [HBASE-10007] - PerformanceEvaluation: Add sampling and latency collection to randomRead test
+    [HBASE-10010] - eliminate the put latency spike on the new log file beginning
+    [HBASE-10048] - Add hlog number metric in regionserver
+    [HBASE-10049] - Small improvments in region_mover.rb
+    [HBASE-10093] - Unregister ReplicationSource metric bean when the replication source thread is terminated
+
+New Feature
+
+    [HBASE-9047] - Tool to handle finishing replication when the cluster is offline
+    [HBASE-10119] - Allow HBase coprocessors to clean up when they fail
+
+Task
+
+    [HBASE-9927] - ReplicationLogCleaner#stop() calls HConnectionManager#deleteConnection() unnecessarily
+    [HBASE-9986] - Incorporate HTTPS support for HBase (0.94 port)
+
+Test
+
+    [HBASE-10058] - Test for HBASE-9915 (avoid reading index blocks)
+    [HBASE-10189] - Intermittent TestReplicationSyncUpTool failure
+
+
 Release 0.94.14 - 11/18/2013
 Sub-task
 
