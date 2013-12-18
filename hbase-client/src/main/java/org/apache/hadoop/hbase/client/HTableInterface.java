@@ -128,6 +128,8 @@ public interface HTableInterface extends Closeable {
    *         the call for that action failed, even after retries
    * @throws IOException
    * @since 0.90.0
+   * @deprecated If any exception is thrown by one of the actions, there is no way to
+   * retrieve the partially executed results. Use {@link #batch(List, Object[])} instead.
    */
   Object[] batch(final List<? extends Row> actions) throws IOException, InterruptedException;
 
@@ -144,6 +146,10 @@ public interface HTableInterface extends Closeable {
   /**
    * Same as {@link #batch(List)}, but with a callback.
    * @since 0.96.0
+   * @deprecated If any exception is thrown by one of the actions, there is no way to
+   * retrieve the partially executed results. Use
+   * {@link #batchCallback(List, Object[], org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
+   * instead.
    */
   <R> Object[] batchCallback(
     List<? extends Row> actions, Batch.Callback<R> callback

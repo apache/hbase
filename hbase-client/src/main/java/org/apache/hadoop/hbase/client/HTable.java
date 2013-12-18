@@ -784,18 +784,29 @@ public class HTable implements HTableInterface {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public void batch(final List<?extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
     batchCallback(actions, results, null);
   }
 
+  /**
+   * {@inheritDoc}
+   * @deprecated If any exception is thrown by one of the actions, there is no way to
+   * retrieve the partially executed results. Use {@link #batch(List, Object[])} instead.
+   */
   @Override
   public Object[] batch(final List<? extends Row> actions)
      throws InterruptedException, IOException {
     return batchCallback(actions, null);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public <R> void batchCallback(
       final List<? extends Row> actions, final Object[] results, final Batch.Callback<R> callback)
@@ -803,6 +814,13 @@ public class HTable implements HTableInterface {
     connection.processBatchCallback(actions, tableName, pool, results, callback);
   }
 
+  /**
+   * {@inheritDoc}
+   * @deprecated If any exception is thrown by one of the actions, there is no way to
+   * retrieve the partially executed results. Use
+   * {@link #batchCallback(List, Object[], org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
+   * instead.
+   */
   @Override
   public <R> Object[] batchCallback(
     final List<? extends Row> actions, final Batch.Callback<R> callback) throws IOException,

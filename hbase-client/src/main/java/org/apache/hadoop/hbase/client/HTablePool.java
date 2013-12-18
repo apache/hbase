@@ -376,6 +376,11 @@ public class HTablePool implements Closeable {
       table.batch(actions, results);
     }
 
+    /**
+     * {@inheritDoc}
+     * @deprecated If any exception is thrown by one of the actions, there is no way to
+     * retrieve the partially executed results. Use {@link #batch(List, Object[])} instead.
+     */
     @Override
     public Object[] batch(List<? extends Row> actions) throws IOException,
         InterruptedException {
@@ -547,6 +552,13 @@ public class HTablePool implements Closeable {
       table.batchCallback(actions, results, callback);
     }
 
+    /**
+     * {@inheritDoc}
+     * @deprecated If any exception is thrown by one of the actions, there is no way to
+     * retrieve the partially executed results. Use
+     * {@link #batchCallback(List, Object[], org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
+     * instead.
+     */
     @Override
     public <R> Object[] batchCallback(List<? extends Row> actions,
         Callback<R> callback) throws IOException, InterruptedException {
