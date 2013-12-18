@@ -1159,6 +1159,18 @@ public class TestAssignmentManager {
     }
 
     @Override
+    boolean assign(ServerName destination, List<HRegionInfo> regions) {
+      if (enabling) {
+        for (HRegionInfo region : regions) {
+          assignmentCount++;
+          this.regionOnline(region, SERVERNAME_A);
+        }
+        return true;
+      }
+      return super.assign(destination, regions);
+    }
+
+    @Override
     public void assign(List<HRegionInfo> regions)
         throws IOException, InterruptedException {
       assignInvoked = (regions != null && regions.size() > 0);

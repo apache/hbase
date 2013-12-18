@@ -880,7 +880,7 @@ public class TestAdmin {
     for (Map.Entry<HRegionInfo, ServerName> entry : regions.entrySet()) {
       assertEquals(regions2.get(entry.getKey()), entry.getValue());
     }
-    }
+  }
 
   /**
    * Multi-family scenario. Tests forcing split from client and
