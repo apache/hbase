@@ -122,7 +122,6 @@ public class RowCounter {
     if (endKey != null && !endKey.equals("")) {
       scan.setStopRow(Bytes.toBytes(endKey));
     }
-    scan.setFilter(new FirstKeyOnlyFilter());
     if (sb.length() > 0) {
       for (String columnName : sb.toString().trim().split(" ")) {
         String [] fields = columnName.split(":");
