@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.fs;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
@@ -46,7 +47,6 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.io.Closeable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -264,12 +264,9 @@ public class HFileSystem extends FilterFileSystem {
               public Object invoke(Object proxy, Method method,
                                    Object[] args) throws Throwable {
                 try {
-                  if ((args == null || args.length == 0) && "close".equals(method.getName())) {
-                    if (cp instanceof Closeable) {
-                      ((Closeable)cp).close();
-                    } else {
-                      RPC.stopProxy(cp);
-                    }
+                  if ((args == null || args.length == 0)
+                      && "close".equals(method.getName())) {
+                    RPC.stopProxy(cp);
                     return null;
                   } else {
                     Object res = method.invoke(cp, args);
@@ -380,6 +377,7 @@ public class HFileSystem extends FilterFileSystem {
    * createNonRecursive. This is a hadoop bug and when it is fixed in Hadoop,
    * this definition will go away.
    */
+  @SuppressWarnings("deprecation")
   public FSDataOutputStream createNonRecursive(Path f,
       boolean overwrite,
       int bufferSize, short replication, long blockSize,
