@@ -924,10 +924,12 @@ public class AssignmentManager extends ZooKeeperListener {
               + " from " + sn + " but the region isn't PENDING_OPEN/OPENING here: "
               + regionStates.getRegionState(encodedName));
 
-            // Close it without updating the internal region states,
-            // so as not to create double assignments in unlucky scenarios
-            // mentioned in OpenRegionHandler#process
-            unassign(regionState.getRegion(), null, -1, null, false, sn);
+            if (regionState != null) {
+              // Close it without updating the internal region states,
+              // so as not to create double assignments in unlucky scenarios
+              // mentioned in OpenRegionHandler#process
+              unassign(regionState.getRegion(), null, -1, null, false, sn);
+            }
             return;
           }
           // Handle OPENED by removing from transition and deleted zk node
