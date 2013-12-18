@@ -259,6 +259,10 @@ Valid program names are:
 <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.Import &lt;tablename&gt; &lt;inputdir&gt;
 </programlisting>
        </para>
+       <para>To import 0.94 exported files in a 0.96 cluster or onwards, you need to set system property "hbase.import.version" when running the import command as below:
+<programlisting>$ bin/hbase -Dhbase.import.version=0.94 org.apache.hadoop.hbase.mapreduce.Import &lt;tablename&gt; &lt;inputdir&gt;
+</programlisting>
+       </para>
     </section>
     <section xml:id="importtsv">
        <title>ImportTsv</title>
