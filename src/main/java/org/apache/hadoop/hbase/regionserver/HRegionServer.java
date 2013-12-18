@@ -2670,7 +2670,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         int i = 0;
         synchronized(s) {
           for (; i < nbRows
-              && currentScanResultSize < maxScannerResultSize; i++) {
+              && currentScanResultSize < maxScannerResultSize; ) {
             // Collect values to be returned here
             boolean moreRows = s.nextRaw(values, SchemaMetrics.METRIC_NEXTSIZE);
             if (!values.isEmpty()) {
@@ -2680,6 +2680,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
                 }
               }
               results.add(new Result(values));
+              i++;
             }
             if (!moreRows) {
               break;
