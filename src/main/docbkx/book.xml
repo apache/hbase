@@ -1778,9 +1778,11 @@ rs.close();
            <orderedlist>
              <listitem>First replica is written to local node
              </listitem>
-             <listitem>Second replica is written to another node in same rack
+             <listitem>Second replica is written to a random node on another rack
              </listitem>
-             <listitem>Third replica is written to a node in another rack (if sufficient nodes)
+             <listitem>Third replica is written on the same rack as the second, but on a different node chosen randomly
+             </listitem>
+             <listitem>Subsequent replicas are written on random nodes on the cluster
              </listitem>
            </orderedlist>
           Thus, HBase eventually achieves locality for a region after a flush or a compaction.
