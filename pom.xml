@@ -263,6 +263,14 @@
       <organizationUrl>http://www.salesforce.com/</organizationUrl>
     </developer>
     <developer>
+      <id>liangxie</id>
+      <name>Liang Xie</name>
+      <email>liangxie@apache.org</email>
+      <timezone>+8</timezone>
+      <organization>Xiaomi</organization>
+      <organizationUrl>http://www.xiaomi.com/</organizationUrl>
+    </developer>
+    <developer>
       <id>mbautin</id>
       <name>Mikhail Bautin</name>
       <email>mbautin@apache.org</email>
