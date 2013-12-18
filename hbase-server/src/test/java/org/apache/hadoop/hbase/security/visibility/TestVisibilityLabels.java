@@ -331,7 +331,7 @@ public class TestVisibilityLabels {
     }
   }
 
-  @Test
+  @Test(timeout = 60 * 1000)
   public void testVisibilityLabelsOnRSRestart() throws Exception {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
@@ -341,19 +341,7 @@ public class TestVisibilityLabels {
     }
     // Start one new RS
     RegionServerThread rs = TEST_UTIL.getHBaseCluster().startRegionServer();
-    HRegionServer regionServer = rs.getRegionServer();
-    while (!regionServer.isOnline()) {
-      try {
-        Thread.sleep(10);
-      } catch (InterruptedException e) {
-      }
-    }
-    while (regionServer.getOnlineRegions(LABELS_TABLE_NAME).isEmpty()) {
-      try {
-        Thread.sleep(10);
-      } catch (InterruptedException e) {
-      }
-    }
+    waitForLabelsRegionAvailability(rs.getRegionServer());
     HTable table = createTableAndWriteDataWithLabels(tableName, "(" + SECRET + "|" + CONFIDENTIAL
         + ")", PRIVATE);
     try {
@@ -369,7 +357,7 @@ public class TestVisibilityLabels {
     }
   }
 
-  @Test
+  @Test(timeout = 60 * 1000)
   public void testAddVisibilityLabelsOnRSRestart() throws Exception {
     List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
         .getRegionServerThreads();
@@ -378,20 +366,7 @@ public class TestVisibilityLabels {
     }
     // Start one new RS
     RegionServerThread rs = TEST_UTIL.getHBaseCluster().startRegionServer();
-    HRegionServer regionServer = rs.getRegionServer();
-    while (!regionServer.isOnline()) {
-      try {
-        Thread.sleep(10);
-      } catch (InterruptedException e) {
-      }
-    }
-    while (regionServer.getOnlineRegions(LABELS_TABLE_NAME).isEmpty()) {
-      try {
-        Thread.sleep(10);
-      } catch (InterruptedException e) {
-      }
-    }
-
+    waitForLabelsRegionAvailability(rs.getRegionServer());
     String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, "ABC", "XYZ" };
     try {
       VisibilityClient.addLabels(conf, labels);
@@ -419,6 +394,28 @@ public class TestVisibilityLabels {
     }
     // One label is the "system" label.
     Assert.assertEquals("The count should be 8", 8, i);
+  }
+
+  private void waitForLabelsRegionAvailability(HRegionServer regionServer) {
+    while (!regionServer.isOnline()) {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+      }
+    }
+    while (regionServer.getOnlineRegions(LABELS_TABLE_NAME).isEmpty()) {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+      }
+    }
+    HRegion labelsTableRegion = regionServer.getOnlineRegions(LABELS_TABLE_NAME).get(0);
+    while (labelsTableRegion.isRecovering()) {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+      }
+    }
   }
 
   @Test
