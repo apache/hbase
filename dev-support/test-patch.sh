@@ -36,6 +36,7 @@ AWK=${AWK:-awk}
 WGET=${WGET:-wget}
 SVN=${SVN:-svn}
 GREP=${GREP:-grep}
+EGREP=${EGREP:-egrep}
 PATCH=${PATCH:-patch}
 JIRACLI=${JIRA:-jira}
 FINDBUGS_HOME=${FINDBUGS_HOME}
@@ -200,16 +201,24 @@ setup () {
       echo "$defect is not \"Patch Available\".  Exiting."
       cleanupAndExit 0
     fi
-    relativePatchURL=`$GREP -o '"/jira/secure/attachment/[0-9]*/[^"]*' $PATCH_DIR/jira | $GREP -v -e 'htm[l]*$' | sort | tail -1 | $GREP -o '/jira/secure/attachment/[0-9]*/[^"]*'`
+    relativePatchURL=`$GREP -o '"/jira/secure/attachment/[0-9]*/[^"]*' $PATCH_DIR/jira | $EGREP '(\.txt$|\.patch$|\.diff$)' | sort | tail -1 | $GREP -o '/jira/secure/attachment/[0-9]*/[^"]*'`
     patchURL="http://issues.apache.org${relativePatchURL}"
     patchNum=`echo $patchURL | $GREP -o '[0-9]*/' | $GREP -o '[0-9]*'`
+    # ensure attachment has not already been tested
+    ATTACHMENT_ID=$(basename $(dirname $patchURL))
+    if grep -q "ATTACHMENT ID: $ATTACHMENT_ID" $PATCH_DIR/jira
+    then
+      echo "Attachment $ATTACHMENT_ID is already tested for $defect"
+      exit 1
+    fi
     echo "$defect patch is being downloaded at `date` from"
     echo "$patchURL"
     $WGET -q -O $PATCH_DIR/patch $patchURL
     VERSION=${SVN_REVISION}_${defect}_PATCH-${patchNum}
     JIRA_COMMENT="Here are the results of testing the latest attachment 
   $patchURL
-  against trunk revision ${SVN_REVISION}."
+  against trunk revision ${SVN_REVISION}.
+  ATTACHMENT ID: ${ATTACHMENT_ID}"
 
     #PENDING: cp -f $SUPPORT_DIR/etc/checkstyle* ./src/test
   ### Copy the patch file to $PATCH_DIR
