@@ -3055,7 +3055,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
               int i = 0;
               synchronized(scanner) {
                 for (; i < rows
-                    && currentScanResultSize < maxResultSize; i++) {
+                    && currentScanResultSize < maxResultSize; ) {
                   // Collect values to be returned here
                   boolean moreRows = scanner.nextRaw(values);
                   if (!values.isEmpty()) {
@@ -3065,6 +3065,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
                       }
                     }
                     results.add(Result.create(values));
+                    i++;
                   }
                   if (!moreRows) {
                     break;
