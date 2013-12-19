@@ -96,17 +96,10 @@ public class SchemaResource extends ResourceBase {
       response.cacheControl(cacheControl);
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();
-    } catch (TableNotFoundException e) {
+    } catch (Exception e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      return Response.status(Response.Status.NOT_FOUND)
-        .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
-        .build();
-    } catch (IOException e) {
-      servlet.getMetrics().incrementFailedGetRequests(1);
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
-    }
+      return processException(e);
+    } 
   }
 
   private Response replace(final byte[] name, final TableSchemaModel model,
@@ -143,10 +136,9 @@ public class SchemaResource extends ResourceBase {
           .build();
       }
       return Response.created(uriInfo.getAbsolutePath()).build();
-    } catch (IOException e) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+    } catch (Exception e) {
+      servlet.getMetrics().incrementFailedPutRequests(1);
+      return processException(e);
     }
   }
 
@@ -181,10 +173,9 @@ public class SchemaResource extends ResourceBase {
       }
       servlet.getMetrics().incrementSucessfulPutRequests(1);
       return Response.ok().build();
-    } catch (IOException e) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+    } catch (Exception e) {
+      servlet.getMetrics().incrementFailedPutRequests(1);
+      return processException(e);
     }
   }
 
@@ -198,11 +189,9 @@ public class SchemaResource extends ResourceBase {
       } else {
         return update(name, model, uriInfo, admin);
       }
-    } catch (IOException e) {
+    } catch (Exception e) {
       servlet.getMetrics().incrementFailedPutRequests(1);
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+      return processException(e);
     }
   }
 
@@ -255,16 +244,9 @@ public class SchemaResource extends ResourceBase {
       admin.deleteTable(tableResource.getName());
       servlet.getMetrics().incrementSucessfulDeleteRequests(1);
       return Response.ok().build();
-    } catch (TableNotFoundException e) {
+    } catch (Exception e) {
       servlet.getMetrics().incrementFailedDeleteRequests(1);
-      return Response.status(Response.Status.NOT_FOUND)
-        .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
-        .build();
-    } catch (IOException e) {
-      servlet.getMetrics().incrementFailedDeleteRequests(1);
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+      return processException(e);
     }
   }
 }

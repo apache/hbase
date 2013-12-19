@@ -35,6 +35,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -42,7 +43,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
@@ -118,21 +118,9 @@ public class RowResource extends ResourceBase {
       model.addRow(rowModel);
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return Response.ok(model).build();
-    } catch (RuntimeException e) {
-      servlet.getMetrics().incrementFailedGetRequests(1);
-      if (e.getCause() instanceof TableNotFoundException) {
-        return Response.status(Response.Status.NOT_FOUND)
-          .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
-          .build();
-      }
-      return Response.status(Response.Status.BAD_REQUEST)
-        .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
-        .build();
     } catch (Exception e) {
-      servlet.getMetrics().incrementFailedGetRequests(1);
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+      servlet.getMetrics().incrementFailedPutRequests(1);
+      return processException(e);
     }
   }
 
@@ -146,9 +134,9 @@ public class RowResource extends ResourceBase {
     // doesn't make sense to use a non specific coordinate as this can only
     // return a single cell
     if (!rowspec.hasColumns() || rowspec.getColumns().length > 1) {
-      return Response.status(Response.Status.BAD_REQUEST)
-        .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
-        .build();
+      servlet.getMetrics().incrementFailedGetRequests(1);
+      return Response.status(Response.Status.BAD_REQUEST).type(MIMETYPE_TEXT)
+          .entity("Bad request: Either 0 or more than 1 columns specified." + CRLF).build();
     }
     try {
       ResultGenerator generator =
@@ -164,17 +152,16 @@ public class RowResource extends ResourceBase {
       response.header("X-Timestamp", value.getTimestamp());
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();
-    } catch (IOException e) {
+    } catch (Exception e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+      return processException(e);
     }
   }
 
   Response update(final CellSetModel model, final boolean replace) {
     servlet.getMetrics().incrementRequests(1);
     if (servlet.isReadOnly()) {
+      servlet.getMetrics().incrementFailedPutRequests(1);
       return Response.status(Response.Status.FORBIDDEN)
         .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
         .build();
@@ -200,8 +187,9 @@ public class RowResource extends ResourceBase {
           key = rowspec.getRow();
         }
         if (key == null) {
+          servlet.getMetrics().incrementFailedPutRequests(1);
           return Response.status(Response.Status.BAD_REQUEST)
-            .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+            .type(MIMETYPE_TEXT).entity("Bad request: Row key not specified." + CRLF)
             .build();
         }
         Put put = new Put(key);
@@ -214,8 +202,9 @@ public class RowResource extends ResourceBase {
             col = null;
           }
           if (col == null) {
+            servlet.getMetrics().incrementFailedPutRequests(1);
             return Response.status(Response.Status.BAD_REQUEST)
-              .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+              .type(MIMETYPE_TEXT).entity("Bad request: Column found to be null." + CRLF)
               .build();
           }
           byte [][] parts = KeyValue.parseColumn(col);
@@ -237,11 +226,9 @@ public class RowResource extends ResourceBase {
       ResponseBuilder response = Response.ok();
       servlet.getMetrics().incrementSucessfulPutRequests(1);
       return response.build();
-    } catch (IOException e) {
+    } catch (Exception e) {
       servlet.getMetrics().incrementFailedPutRequests(1);
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+      return processException(e);
     } finally {
       if (table != null) try {
         table.close();
@@ -256,6 +243,7 @@ public class RowResource extends ResourceBase {
       final boolean replace) {
     servlet.getMetrics().incrementRequests(1);
     if (servlet.isReadOnly()) {
+      servlet.getMetrics().incrementFailedPutRequests(1);
       return Response.status(Response.Status.FORBIDDEN)
         .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
         .build();
@@ -282,9 +270,10 @@ public class RowResource extends ResourceBase {
         timestamp = Long.valueOf(vals.get(0));
       }
       if (column == null) {
+        servlet.getMetrics().incrementFailedPutRequests(1);
         return Response.status(Response.Status.BAD_REQUEST)
-          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
-          .build();
+            .type(MIMETYPE_TEXT).entity("Bad request: Column found to be null." + CRLF)
+            .build();
       }
       Put put = new Put(row);
       byte parts[][] = KeyValue.parseColumn(column);
@@ -301,15 +290,15 @@ public class RowResource extends ResourceBase {
       }
       servlet.getMetrics().incrementSucessfulPutRequests(1);
       return Response.ok().build();
-    } catch (IOException e) {
+    } catch (Exception e) {
       servlet.getMetrics().incrementFailedPutRequests(1);
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+      return processException(e);
     } finally {
       if (table != null) try {
         table.close();
-      } catch (IOException ioe) { }
+      } catch (IOException ioe) {
+        LOG.debug(ioe);
+      }
     }
   }
 
@@ -364,6 +353,7 @@ public class RowResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     if (servlet.isReadOnly()) {
+      servlet.getMetrics().incrementFailedDeleteRequests(1);
       return Response.status(Response.Status.FORBIDDEN)
         .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
         .build();
@@ -406,15 +396,15 @@ public class RowResource extends ResourceBase {
       if (LOG.isDebugEnabled()) {
         LOG.debug("DELETE " + delete.toString());
       }
-    } catch (IOException e) {
+    } catch (Exception e) {
       servlet.getMetrics().incrementFailedDeleteRequests(1);
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+      return processException(e);
     } finally {
       if (table != null) try {
         table.close();
-      } catch (IOException ioe) { }
+      } catch (IOException ioe) {
+        LOG.debug(ioe);
+      }
     }
     return Response.ok().build();
   }
@@ -429,10 +419,11 @@ public class RowResource extends ResourceBase {
   Response checkAndPut(final CellSetModel model) {
     HTableInterface table = null;
     try {
+      table = servlet.getTable(tableResource.getName());
       if (model.getRows().size() != 1) {
-        return Response.status(Response.Status.BAD_REQUEST)
-          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
-          .build();
+        servlet.getMetrics().incrementFailedPutRequests(1);
+        return Response.status(Response.Status.BAD_REQUEST).type(MIMETYPE_TEXT)
+            .entity("Bad request: Number of rows specified is not 1." + CRLF).build();
       }
 
       RowModel rowModel = model.getRows().get(0);
@@ -444,56 +435,68 @@ public class RowResource extends ResourceBase {
       List<CellModel> cellModels = rowModel.getCells();
       int cellModelCount = cellModels.size();
       if (key == null || cellModelCount <= 1) {
-        return Response.status(Response.Status.BAD_REQUEST)
-          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
-          .build();
+        servlet.getMetrics().incrementFailedPutRequests(1);
+        return Response
+            .status(Response.Status.BAD_REQUEST)
+            .type(MIMETYPE_TEXT)
+            .entity(
+              "Bad request: Either row key is null or no data found for columns specified." + CRLF)
+            .build();
       }
 
       Put put = new Put(key);
+      boolean retValue;
       CellModel valueToCheckCell = cellModels.get(cellModelCount - 1);
       byte[] valueToCheckColumn = valueToCheckCell.getColumn();
       byte[][] valueToPutParts = KeyValue.parseColumn(valueToCheckColumn);
-      if (valueToPutParts.length != 2) {
-        return Response.status(Response.Status.BAD_REQUEST)
-          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
-          .build();
-      }
-      CellModel valueToPutCell = null;
-      for (int i = 0, n = cellModelCount - 1; i < n ; i++) {
-        if(Bytes.equals(cellModels.get(i).getColumn(),
-            valueToCheckCell.getColumn())) {
-          valueToPutCell = cellModels.get(i);
-          break;
+      if (valueToPutParts.length == 2 && valueToPutParts[1].length > 0) {
+        CellModel valueToPutCell = null;
+        for (int i = 0, n = cellModelCount - 1; i < n ; i++) {
+          if(Bytes.equals(cellModels.get(i).getColumn(),
+              valueToCheckCell.getColumn())) {
+            valueToPutCell = cellModels.get(i);
+            break;
+          }
         }
-      }
-      if (null == valueToPutCell) {
+        if (valueToPutCell == null) {
+          servlet.getMetrics().incrementFailedPutRequests(1);
+          return Response.status(Response.Status.BAD_REQUEST).type(MIMETYPE_TEXT)
+              .entity("Bad request: The column to put and check do not match." + CRLF).build();
+        } else {
+          put.addImmutable(valueToPutParts[0], valueToPutParts[1], valueToPutCell.getTimestamp(),
+            valueToPutCell.getValue());
+          retValue = table.checkAndPut(key, valueToPutParts[0], valueToPutParts[1],
+            valueToCheckCell.getValue(), put);
+        }
+      } else {
+        servlet.getMetrics().incrementFailedPutRequests(1);
         return Response.status(Response.Status.BAD_REQUEST)
-          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+          .type(MIMETYPE_TEXT).entity("Bad request: Column incorrectly specified." + CRLF)
           .build();
       }
-      put.addImmutable(valueToPutParts[0], valueToPutParts[1], valueToPutCell
-        .getTimestamp(), valueToPutCell.getValue());
 
-      table = servlet.getTable(this.tableResource.getName());
-      boolean retValue = table.checkAndPut(key, valueToPutParts[0],
-        valueToPutParts[1], valueToCheckCell.getValue(), put);
       if (LOG.isDebugEnabled()) {
         LOG.debug("CHECK-AND-PUT " + put.toString() + ", returns " + retValue);
       }
+      if (!retValue) {
+        servlet.getMetrics().incrementFailedPutRequests(1);
+        return Response.status(Response.Status.NOT_MODIFIED)
+          .type(MIMETYPE_TEXT).entity("Value not Modified" + CRLF)
+          .build();
+      }
       table.flushCommits();
       ResponseBuilder response = Response.ok();
-      if (!retValue) {
-        response = Response.status(304);
-      }
+      servlet.getMetrics().incrementSucessfulPutRequests(1);
       return response.build();
-    } catch (IOException e) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+    } catch (Exception e) {
+      servlet.getMetrics().incrementFailedPutRequests(1);
+      return processException(e);
     } finally {
       if (table != null) try {
         table.close();
-      } catch (IOException ioe) { }
+      } catch (IOException ioe) { 
+        LOG.debug("Exception received while closing the table", ioe);
+      }
     }
   }
 
@@ -508,7 +511,9 @@ public class RowResource extends ResourceBase {
     HTableInterface table = null;
     Delete delete = null;
     try {
+      table = servlet.getTable(tableResource.getName());
       if (model.getRows().size() != 1) {
+        servlet.getMetrics().incrementFailedDeleteRequests(1);
         return Response.status(Response.Status.BAD_REQUEST)
           .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
           .build();
@@ -519,48 +524,64 @@ public class RowResource extends ResourceBase {
         key = rowspec.getRow();
       }
       if (key == null) {
+        servlet.getMetrics().incrementFailedDeleteRequests(1);
         return Response.status(Response.Status.BAD_REQUEST)
-          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+          .type(MIMETYPE_TEXT).entity("Bad request: Row key found to be null." + CRLF)
           .build();
       }
 
       delete = new Delete(key);
+      boolean retValue;
       CellModel valueToDeleteCell = rowModel.getCells().get(0);
       byte[] valueToDeleteColumn = valueToDeleteCell.getColumn();
       if (valueToDeleteColumn == null) {
         try {
           valueToDeleteColumn = rowspec.getColumns()[0];
         } catch (final ArrayIndexOutOfBoundsException e) {
+          servlet.getMetrics().incrementFailedDeleteRequests(1);
           return Response.status(Response.Status.BAD_REQUEST)
-            .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+            .type(MIMETYPE_TEXT).entity("Bad request: Column not specified for check." + CRLF)
             .build();
         }
       }
       byte[][] parts = KeyValue.parseColumn(valueToDeleteColumn);
-      if (parts.length != 2) {
+      if (parts.length == 2) {
+        if (parts[1].length != 0) {
+          delete.deleteColumns(parts[0], parts[1]);
+          retValue = table.checkAndDelete(key, parts[0], parts[1],
+            valueToDeleteCell.getValue(), delete);
+        } else {
+          // The case of empty qualifier.
+          delete.deleteColumns(parts[0], Bytes.toBytes(StringUtils.EMPTY));
+          retValue = table.checkAndDelete(key, parts[0], Bytes.toBytes(StringUtils.EMPTY),
+            valueToDeleteCell.getValue(), delete);
+        }
+      } else {
+        servlet.getMetrics().incrementFailedDeleteRequests(1);
         return Response.status(Response.Status.BAD_REQUEST)
-          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+          .type(MIMETYPE_TEXT).entity("Bad request: Column incorrectly specified." + CRLF)
           .build();
       }
       delete.deleteColumns(parts[0], parts[1]);
 
-      table = servlet.getTable(tableResource.getName());
-      boolean retValue = table.checkAndDelete(key, parts[0], parts[1],
-        valueToDeleteCell.getValue(), delete);
       if (LOG.isDebugEnabled()) {
         LOG.debug("CHECK-AND-DELETE " + delete.toString() + ", returns "
           + retValue);
       }
+
+      if (!retValue) {
+        servlet.getMetrics().incrementFailedDeleteRequests(1);
+        return Response.status(Response.Status.NOT_MODIFIED)
+            .type(MIMETYPE_TEXT).entity(" Delete check failed." + CRLF)
+            .build();
+      }
       table.flushCommits();
       ResponseBuilder response = Response.ok();
-      if (!retValue) {
-        response = Response.status(304);
-      }
+      servlet.getMetrics().incrementSucessfulDeleteRequests(1);
       return response.build();
-    } catch (IOException e) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+    } catch (Exception e) {
+      servlet.getMetrics().incrementFailedDeleteRequests(1);
+      return processException(e);
     } finally {
       if (table != null) try {
         table.close();
