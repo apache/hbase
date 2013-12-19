@@ -28,12 +28,15 @@ import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
+import org.apache.hadoop.hbase.rest.provider.JacksonProvider;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -151,7 +154,7 @@ public class TestMultiRowResource {
   }
 
   @Test
-  public void testMultiCellGetJSONNotFound() throws IOException {
+  public void testMultiCellGetJSONNotFound() throws IOException, JAXBException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
 
     StringBuilder path = new StringBuilder();
@@ -163,11 +166,15 @@ public class TestMultiRowResource {
     path.append(ROW_2);
 
     client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1));
-
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
-
-    assertEquals(response.getCode(), 404);
-
+    assertEquals(response.getCode(), 200);
+    ObjectMapper mapper = new JacksonProvider().locateMapper(CellSetModel.class,
+      MediaType.APPLICATION_JSON_TYPE);
+    CellSetModel cellSet = (CellSetModel) mapper.readValue(response.getBody(), CellSetModel.class);
+    assertEquals(1, cellSet.getRows().size());
+    assertEquals(ROW_1, Bytes.toString(cellSet.getRows().get(0).getKey()));
+    assertEquals(VALUE_1, Bytes.toString(cellSet.getRows().get(0).getCells().get(0).getValue()));
+    client.delete(row_5_url);
   }
 
 }

@@ -281,7 +281,7 @@ public class TestRemoteTable {
     gets.add(new Get(ROW_2));
     results = remoteTable.get(gets);
     assertNotNull(results);
-    assertEquals(0, results.length);
+    assertEquals(2, results.length);
   }
 
   @Test
