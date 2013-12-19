@@ -94,11 +94,7 @@ public class ServerName implements Comparable<ServerName> {
   private byte [] bytes;
   public static final List<ServerName> EMPTY_SERVER_LIST = new ArrayList<ServerName>(0);
 
-  /**
-   * @deprecated since 0.96, made private in 0.98. use {@link #valueOf(String, int, long)} instead.
-   */
-  @Deprecated
-  public ServerName(final String hostname, final int port, final long startcode) {
+  private ServerName(final String hostname, final int port, final long startcode) {
     // Drop the domain is there is one; no need of it in a local cluster.  With it, we get long
     // unwieldy names.
     this.hostnameOnly = hostname;
@@ -118,20 +114,12 @@ public class ServerName implements Comparable<ServerName> {
     return parts[0];
   }
 
-  /**
-   * @deprecated since 0.96, made private in 0.98. use {@link #valueOf(String)} instead.
-   */
-  @Deprecated
-  public ServerName(final String serverName) {
+  private ServerName(final String serverName) {
     this(parseHostname(serverName), parsePort(serverName),
       parseStartcode(serverName));
   }
 
-  /**
-   * @deprecated since 0.96, made private in 0.98+. use {@link #valueOf(String, long)} instead.
-   */
-  @Deprecated
-  public ServerName(final String hostAndPort, final long startCode) {
+  private ServerName(final String hostAndPort, final long startCode) {
     this(Addressing.parseHostname(hostAndPort),
       Addressing.parsePort(hostAndPort), startCode);
   }
