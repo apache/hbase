@@ -56,13 +56,16 @@ public class RESTServlet implements Constants {
   static final String CLEANUP_INTERVAL = "hbase.rest.connection.cleanup-interval";
   static final String MAX_IDLETIME = "hbase.rest.connection.max-idletime";
 
-  static final String NULL_USERNAME = "--NULL--";
-
-  private final ThreadLocal<String> effectiveUser = new ThreadLocal<String>() {
-    protected String initialValue() {
-      return NULL_USERNAME;
+  private final ThreadLocal<UserGroupInformation> effectiveUser =
+      new ThreadLocal<UserGroupInformation>() {
+    protected UserGroupInformation initialValue() {
+      return realUser;
     }
   };
+
+  UserGroupInformation getRealUser() {
+    return realUser;
+  }
 
   // A chore to clean up idle connections.
   private final Chore connectionCleaner;
@@ -192,7 +195,7 @@ public class RESTServlet implements Constants {
   HBaseAdmin getAdmin() throws IOException {
     ConnectionInfo connInfo = getCurrentConnection();
     if (connInfo.admin == null) {
-      Lock lock = locker.acquireLock(effectiveUser.get());
+      Lock lock = locker.acquireLock(effectiveUser.get().getUserName());
       try {
         if (connInfo.admin == null) {
           connInfo.admin = new HBaseAdmin(connInfo.connection);
@@ -229,23 +232,19 @@ public class RESTServlet implements Constants {
     return getConfiguration().getBoolean("hbase.rest.readonly", false);
   }
 
-  void setEffectiveUser(String effectiveUser) {
+  void setEffectiveUser(UserGroupInformation effectiveUser) {
     this.effectiveUser.set(effectiveUser);
   }
 
   private ConnectionInfo getCurrentConnection() throws IOException {
-    String userName = effectiveUser.get();
+    String userName = effectiveUser.get().getUserName();
     ConnectionInfo connInfo = connections.get(userName);
     if (connInfo == null || !connInfo.updateAccessTime()) {
       Lock lock = locker.acquireLock(userName);
       try {
         connInfo = connections.get(userName);
         if (connInfo == null) {
-          UserGroupInformation ugi = realUser;
-          if (!userName.equals(NULL_USERNAME)) {
-            ugi = UserGroupInformation.createProxyUser(userName, realUser);
-          }
-          User user = userProvider.create(ugi);
+          User user = userProvider.create(effectiveUser.get());
           HConnection conn = HConnectionManager.createConnection(conf, user);
           connInfo = new ConnectionInfo(conn, userName);
           connections.put(userName, connInfo);
