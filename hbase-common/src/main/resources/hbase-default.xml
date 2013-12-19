@@ -829,6 +829,11 @@ possible configurations would overwhelm and obscure the important.
         The thread pool always has at least these number of threads so
         the REST server is ready to serve incoming requests.</description>
   </property>
+  <property>
+    <name>hbase.rest.support.proxyuser</name>
+    <value>false</value>
+    <description>Enables running the REST server to support proxy-user mode.</description>
+  </property>
   <property skipInDoc="true">
     <name>hbase.defaults.for.version</name>
     <value>@@@VERSION@@@</value>
