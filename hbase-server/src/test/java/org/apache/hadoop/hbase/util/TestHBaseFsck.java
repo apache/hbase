@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertNoErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -2175,6 +2176,54 @@ public class TestHBaseFsck {
       deleteTable(table);
     }
 
+  }
+
+  @Test
+  public void testHbckAfterRegionMerge() throws Exception {
+    TableName table = TableName.valueOf("testMergeRegionFilesInHdfs");
+    HTable meta = null;
+    try {
+      // disable CatalogJanitor
+      TEST_UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // make sure data in regions, if in hlog only there is no data loss
+      TEST_UTIL.getHBaseAdmin().flush(table.getName());
+      HRegionInfo region1 = tbl.getRegionLocation("A").getRegionInfo();
+      HRegionInfo region2 = tbl.getRegionLocation("B").getRegionInfo();
+
+      int regionCountBeforeMerge = tbl.getRegionLocations().size();
+
+      assertNotEquals(region1, region2);
+
+      // do a region merge
+      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      admin.mergeRegions(region1.getEncodedNameAsBytes(),
+          region2.getEncodedNameAsBytes(), false);
+
+      // wait until region merged
+      long timeout = System.currentTimeMillis() + 30 * 1000;
+      while (true) {
+        if (tbl.getRegionLocations().size() < regionCountBeforeMerge) {
+          break;
+        } else if (System.currentTimeMillis() > timeout) {
+          fail("Time out waiting on region " + region1.getEncodedName()
+              + " and " + region2.getEncodedName() + " be merged");
+        }
+        Thread.sleep(10);
+      }
+
+      assertEquals(ROWKEYS.length, countRows());
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertNoErrors(hbck); // no errors
+
+    } finally {
+      TEST_UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(true);
+      deleteTable(table);
+      IOUtils.closeQuietly(meta);
+    }
   }
 
   @org.junit.Rule

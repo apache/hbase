@@ -1668,6 +1668,14 @@ public class HBaseFsck extends Configured {
       }
 
     } else if (!inMeta && inHdfs && !isDeployed) {
+      if (hbi.isMerged()) {
+        // This region has already been merged, the remaining hdfs file will be
+        // cleaned by CatalogJanitor later
+        hbi.setSkipChecks(true);
+        LOG.info("Region " + descriptiveName
+            + " got merge recently, its file(s) will be cleaned by CatalogJanitor later");
+        return;
+      }
       errors.reportError(ERROR_CODE.NOT_IN_META_OR_DEPLOYED, "Region "
           + descriptiveName + " on HDFS, but not listed in hbase:meta " +
           "or deployed on any region server");
@@ -2646,6 +2654,16 @@ public class HBaseFsck extends Configured {
           } else {
             throw new IOException("Two entries in hbase:meta are same " + previous);
           }
+          
+          PairOfSameType<HRegionInfo> mergeRegions = HRegionInfo.getMergeRegions(result);
+          for (HRegionInfo mergeRegion : new HRegionInfo[] {
+              mergeRegions.getFirst(), mergeRegions.getSecond() }) {
+            if (mergeRegion != null) {
+              // This region is already been merged
+              HbckInfo hbInfo = getOrCreateInfo(mergeRegion.getEncodedName());
+              hbInfo.setMerged(true);
+            }
+          }
 
           // show proof of progress to the user, once for every 100 records.
           if (countRecord % 100 == 0) {
@@ -2753,6 +2771,7 @@ public class HBaseFsck extends Configured {
     private List<OnlineEntry> deployedEntries = Lists.newArrayList(); // on Region Server
     private List<ServerName> deployedOn = Lists.newArrayList(); // info on RS's
     private boolean skipChecks = false; // whether to skip further checks to this region info.
+    private boolean isMerged = false;// whether this region has already been merged into another one
 
     HbckInfo(MetaEntry metaEntry) {
       this.metaEntry = metaEntry;
@@ -2878,6 +2897,14 @@ public class HBaseFsck extends Configured {
 
     public boolean isSkipChecks() {
       return skipChecks;
+    }
+
+    public void setMerged(boolean isMerged) {
+      this.isMerged = isMerged;
+    }
+
+    public boolean isMerged() {
+      return this.isMerged;
     }
   }
 
