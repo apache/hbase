@@ -1012,6 +1012,20 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
     return new PairOfSameType<HRegionInfo>(splitA, splitB);
   }
+  
+  /**
+   * Returns the merge regions by reading the corresponding columns of the catalog table
+   * Result.
+   * @param data a Result object from the catalog table scan
+   * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
+   * parent
+   */
+  public static PairOfSameType<HRegionInfo> getMergeRegions(Result data) throws IOException {
+    HRegionInfo mergeA = getHRegionInfo(data, HConstants.MERGEA_QUALIFIER);
+    HRegionInfo mergeB = getHRegionInfo(data, HConstants.MERGEB_QUALIFIER);
+
+    return new PairOfSameType<HRegionInfo>(mergeA, mergeB);
+  }
 
   /**
    * Returns the HRegionInfo object from the column {@link HConstants#CATALOG_FAMILY} and
