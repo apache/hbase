@@ -1673,7 +1673,7 @@ public class HBaseFsck extends Configured {
         // cleaned by CatalogJanitor later
         hbi.setSkipChecks(true);
         LOG.info("Region " + descriptiveName
-            + " got merge recently, its file will be cleaned by CatalogJanitor later");
+            + " got merge recently, its file(s) will be cleaned by CatalogJanitor later");
         return;
       }
       errors.reportError(ERROR_CODE.NOT_IN_META_OR_DEPLOYED, "Region "
