@@ -81,11 +81,9 @@ public class RootResource extends ResourceBase {
       response.cacheControl(cacheControl);
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();
-    } catch (IOException e) {
+    } catch (Exception e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+      return processException(e);
     }
   }
 

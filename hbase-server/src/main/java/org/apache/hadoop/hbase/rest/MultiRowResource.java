@@ -27,6 +27,8 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -36,6 +38,7 @@ import org.apache.hadoop.hbase.rest.model.RowModel;
 
 @InterfaceAudience.Private
 public class MultiRowResource extends ResourceBase {
+  private static final Log LOG = LogFactory.getLog(MultiRowResource.class);
   public static final String ROW_KEYS_PARAM_NAME = "row";
 
   TableResource tableResource;
@@ -59,8 +62,7 @@ public class MultiRowResource extends ResourceBase {
   }
 
   @GET
-  @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
+  @Produces({ MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF, MIMETYPE_PROTOBUF_IETF })
   public Response get(final @Context UriInfo uriInfo) {
     MultivaluedMap<String, String> params = uriInfo.getQueryParameters();
 
@@ -75,32 +77,33 @@ public class MultiRowResource extends ResourceBase {
         }
 
         ResultGenerator generator =
-          ResultGenerator.fromRowSpec(this.tableResource.getName(), rowSpec, null);
-        if (!generator.hasNext()) {
-          return Response.status(Response.Status.NOT_FOUND)
-            .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
-            .build();
-        }
-
+            ResultGenerator.fromRowSpec(this.tableResource.getName(), rowSpec, null);
         Cell value = null;
         RowModel rowModel = new RowModel(rk);
-
-        while ((value = generator.next()) != null) {
-          rowModel.addCell(new CellModel(CellUtil.cloneFamily(value),
-              CellUtil.cloneQualifier(value),
-            value.getTimestamp(), CellUtil.cloneValue(value)));
+        if (generator.hasNext()) {
+          while ((value = generator.next()) != null) {
+            rowModel.addCell(new CellModel(CellUtil.cloneFamily(value), CellUtil
+                .cloneQualifier(value), value.getTimestamp(), CellUtil.cloneValue(value)));
+          }
+          model.addRow(rowModel);
+        } else {
+          LOG.trace("The row : " + rk + " not found in the table.");
         }
-
-        model.addRow(rowModel);
       }
-      servlet.getMetrics().incrementSucessfulGetRequests(1);
-      return Response.ok(model).build();
-    } catch (IOException e) {
-      servlet.getMetrics().incrementFailedGetRequests(1);
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
-    }
 
+      if (model.getRows().size() == 0) {
+      //If no rows found.
+        servlet.getMetrics().incrementFailedGetRequests(1);
+        return Response.status(Response.Status.NOT_FOUND)
+            .type(MIMETYPE_TEXT).entity("No rows found." + CRLF)
+            .build();
+      } else {
+        servlet.getMetrics().incrementSucessfulGetRequests(1);
+        return Response.ok(model).build();
+      }
+    } catch (Exception e) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
+      return processException(e);
+    }
   }
 }
