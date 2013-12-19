@@ -197,20 +197,20 @@ public class BucketCache implements BlockCache, HeapSize {
   // Allocate or free space for the block
   private BucketAllocator bucketAllocator;
   
-  public BucketCache(String ioEngineName, long capacity, int writerThreadNum,
+  public BucketCache(String ioEngineName, long capacity, int blockSize, int writerThreadNum,
       int writerQLen, String persistencePath) throws FileNotFoundException,
       IOException {
-    this(ioEngineName, capacity, writerThreadNum, writerQLen, persistencePath,
+    this(ioEngineName, capacity, blockSize, writerThreadNum, writerQLen, persistencePath,
         DEFAULT_ERROR_TOLERATION_DURATION);
   }
   
-  public BucketCache(String ioEngineName, long capacity, int writerThreadNum,
+  public BucketCache(String ioEngineName, long capacity, int blockSize, int writerThreadNum,
       int writerQLen, String persistencePath, int ioErrorsTolerationDuration)
       throws FileNotFoundException, IOException {
     this.ioEngine = getIOEngineFromName(ioEngineName, capacity);
     this.writerThreads = new WriterThread[writerThreadNum];
     this.cacheWaitSignals = new Object[writerThreadNum];
-    long blockNumCapacity = capacity / 16384;
+    long blockNumCapacity = capacity / blockSize;
     if (blockNumCapacity >= Integer.MAX_VALUE) {
       // Enough for about 32TB of cache!
       throw new IllegalArgumentException("Cache capacity is too large, only support 32TB now");
@@ -218,7 +218,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
     this.cacheCapacity = capacity;
     this.persistencePath = persistencePath;
-    this.blockSize = StoreFile.DEFAULT_BLOCKSIZE_SMALL;
+    this.blockSize = blockSize;
     this.ioErrorsTolerationDuration = ioErrorsTolerationDuration;
 
     bucketAllocator = new BucketAllocator(capacity);

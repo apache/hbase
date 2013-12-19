@@ -111,10 +111,6 @@ public class StoreFile {
   /** Key for timestamp of earliest-put in metadata*/
   public static final byte[] EARLIEST_PUT_TS = Bytes.toBytes("EARLIEST_PUT_TS");
 
-  // Make default block size for StoreFiles 8k while testing.  TODO: FIX!
-  // Need to make it 8k for testing.
-  public static final int DEFAULT_BLOCKSIZE_SMALL = 8 * 1024;
-
   private final StoreFileInfo fileInfo;
   private final FileSystem fs;
 

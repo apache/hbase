@@ -397,7 +397,7 @@ public class CacheConfig {
               "hbase.bucketcache.ioengine.errors.tolerated.duration",
               BucketCache.DEFAULT_ERROR_TOLERATION_DURATION);
           bucketCache = new BucketCache(bucketCacheIOEngineName,
-              bucketCacheSize, writerThreads, writerQueueLen, persistentPath,
+              bucketCacheSize, blockSize, writerThreads, writerQueueLen, persistentPath,
               ioErrorsTolerationDuration);
         } catch (IOException ioex) {
           LOG.error("Can't instantiate bucket cache", ioex);
@@ -406,7 +406,7 @@ public class CacheConfig {
       }
       LOG.info("Allocating LruBlockCache with maximum size " +
         StringUtils.humanReadableInt(lruCacheSize));
-      LruBlockCache lruCache = new LruBlockCache(lruCacheSize, StoreFile.DEFAULT_BLOCKSIZE_SMALL);
+      LruBlockCache lruCache = new LruBlockCache(lruCacheSize, blockSize);
       lruCache.setVictimCache(bucketCache);
       if (bucketCache != null && combinedWithLru) {
         globalBlockCache = new CombinedBlockCache(lruCache, bucketCache);
@@ -414,8 +414,8 @@ public class CacheConfig {
         globalBlockCache = lruCache;
       }
     } else {
-      globalBlockCache = new DoubleBlockCache(lruCacheSize, offHeapCacheSize,
-          StoreFile.DEFAULT_BLOCKSIZE_SMALL, blockSize, conf);
+      globalBlockCache = new DoubleBlockCache(
+          lruCacheSize, offHeapCacheSize, blockSize, blockSize, conf);
     }
     return globalBlockCache;
   }

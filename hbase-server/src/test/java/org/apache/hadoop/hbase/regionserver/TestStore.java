@@ -306,6 +306,7 @@ public class TestStore extends TestCase {
   // Get tests
   //////////////////////////////////////////////////////////////////////////////
 
+  private static final int BLOCKSIZE_SMALL = 8192;
   /**
    * Test for hbase-1686.
    * @throws IOException
@@ -323,7 +324,7 @@ public class TestStore extends TestCase {
     long seqid = f.getMaxSequenceId();
     Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
-    HFileContext meta = new HFileContextBuilder().withBlockSize(StoreFile.DEFAULT_BLOCKSIZE_SMALL).build();
+    HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).build();
     StoreFile.Writer w = new StoreFile.WriterBuilder(c, new CacheConfig(c),
         fs)
             .withOutputDir(storedir)
