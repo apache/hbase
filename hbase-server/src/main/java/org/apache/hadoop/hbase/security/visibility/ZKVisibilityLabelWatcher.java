@@ -59,8 +59,18 @@ public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
 
   public void start() throws KeeperException {
     watcher.registerListener(this);
-    ZKUtil.watchAndCheckExists(watcher, labelZnode);
-    ZKUtil.watchAndCheckExists(watcher, userAuthsZnode);
+    if (ZKUtil.watchAndCheckExists(watcher, labelZnode)) {
+      byte[] data = ZKUtil.getDataAndWatch(watcher, labelZnode);
+      if (data != null) {
+        refreshVisibilityLabelsCache(data);
+      }
+    }
+    if (ZKUtil.watchAndCheckExists(watcher, userAuthsZnode)) {
+      byte[] data = ZKUtil.getDataAndWatch(watcher, userAuthsZnode);
+      if (data != null) {
+        refreshUserAuthsCache(data);
+      }
+    }
   }
 
   private void refreshVisibilityLabelsCache(byte[] data) {
