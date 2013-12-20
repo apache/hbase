@@ -155,13 +155,6 @@ public class AccessController extends BaseRegionObserver
 
   void initialize(RegionCoprocessorEnvironment e) throws IOException {
     final HRegion region = e.getRegion();
-    canPersistCellACLs = HFile.getFormatVersion(e.getConfiguration()) >=
-      HFile.MIN_FORMAT_VERSION_WITH_TAGS;
-    if (!canPersistCellACLs) {
-      LOG.info("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS
-        + " is required to persist cell ACLs. Consider setting " + HFile.FORMAT_VERSION_KEY
-        + " accordingly.");
-    }
     Map<byte[], ListMultimap<String,TablePermission>> tables =
         AccessControlLists.loadAll(region);
     // For each table, write out the table's permissions to the respective
@@ -633,7 +626,13 @@ public class AccessController extends BaseRegionObserver
   /* ---- MasterObserver implementation ---- */
 
   public void start(CoprocessorEnvironment env) throws IOException {
-
+    canPersistCellACLs = HFile.getFormatVersion(env.getConfiguration()) >=
+      HFile.MIN_FORMAT_VERSION_WITH_TAGS;
+    if (!canPersistCellACLs) {
+      LOG.info("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS
+          + " is required to persist cell ACLs. Consider setting " + HFile.FORMAT_VERSION_KEY
+          + " accordingly.");
+    }
     ZooKeeperWatcher zk = null;
     if (env instanceof MasterCoprocessorEnvironment) {
       // if running on HMaster
