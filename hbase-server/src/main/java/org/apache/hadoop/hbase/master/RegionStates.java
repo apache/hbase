@@ -426,6 +426,10 @@ public class RegionStates {
    * Log split is done for a given region, so it is assignable now.
    */
   public synchronized void logSplit(final HRegionInfo region) {
+    clearLastAssignment(region);
+  }
+
+  public synchronized void clearLastAssignment(final HRegionInfo region) {
     lastAssignments.remove(region.getEncodedName());
   }
 

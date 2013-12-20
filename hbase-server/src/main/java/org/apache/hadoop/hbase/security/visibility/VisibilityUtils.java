@@ -23,6 +23,7 @@ import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations;
@@ -43,7 +44,7 @@ public class VisibilityUtils {
 
   public static final String VISIBILITY_LABEL_GENERATOR_CLASS = 
       "hbase.regionserver.scan.visibility.label.generator.class";
-  public static final byte VISIBILITY_TAG_TYPE = (byte) 2;
+  public static final byte VISIBILITY_TAG_TYPE = TagType.VISIBILITY_TAG_TYPE;
   public static final String SYSTEM_LABEL = "system";
 
   /**

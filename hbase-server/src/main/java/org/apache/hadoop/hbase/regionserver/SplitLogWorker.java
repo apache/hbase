@@ -174,9 +174,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     try {
       LOG.info("SplitLogWorker " + this.serverName + " starting");
       this.watcher.registerListener(this);
-      boolean distributedLogReplay = this.conf.getBoolean(
-        HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
-          HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
+      boolean distributedLogReplay = HLogSplitter.isDistributedLogReplay(conf);
       if (distributedLogReplay) {
         // initialize a new connection for splitlogworker configuration
         HConnectionManager.getConnection(conf);

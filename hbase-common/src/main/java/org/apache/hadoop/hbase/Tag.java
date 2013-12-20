@@ -155,6 +155,26 @@ public class Tag {
     }
     return tags;
   }
+  
+  /**
+   * Retrieve the first tag from the tags byte array matching the passed in tag type
+   * @param b
+   * @param offset
+   * @param length
+   * @param type
+   * @return null if there is no tag of the passed in tag type
+   */
+  public static Tag getTag(byte[] b, int offset, int length, byte type) {
+    int pos = offset;
+    while (pos < offset + length) {
+      short tagLen = Bytes.toShort(b, pos);
+      if(b[pos + TAG_LENGTH_SIZE] == type) {
+        return new Tag(b, pos, (short) (tagLen + TAG_LENGTH_SIZE));
+      }
+      pos += TAG_LENGTH_SIZE + tagLen;
+    }
+    return null;
+  }
 
   /**
    * Returns the total length of the entire tag entity
