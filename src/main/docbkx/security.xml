@@ -378,7 +378,68 @@
 
 </section>  <!-- Simple User Access to Apache HBase -->
 
-
+<section xml:id="hbase.tags">
+<title>Tags</title>
+<para>
+	Every cell can have metadata associated with it.  Adding metadata in the data part of every cell would make things difficult.
+</para>
+<para>
+	The 0.98 version of HBase solves this problem by providing Tags along with the cell format. 
+	Some of the usecases that uses the tags are Visibility labels, Cell level ACLs, etc.
+</para>
+<para>
+	HFile V3 version from 0.98 onwards supports tags and this feature can be turned on using the following configuration
+</para>
+<programlisting><![CDATA[
+      <property>
+	    <name>hfile.format.version</name>
+        <value>3</value>
+      </property>
+    ]]></programlisting>
+<para>
+	Every cell can have zero or more tags. Every tag has a type and the actual tag byte array.
+	The types <command>0-31</command> are reserved for System tags.  For example ‘1’ is reserved for ACL and ‘2’ is reserved for Visibility tags.
+</para>
+<para>
+	The way rowkeys, column families, qualifiers and values are encoded using different Encoding Algos, similarly the tags can also be encoded.  
+	Tag encoding can be turned on per CF.  Default is always turn ON.
+	To turn on the tag encoding on the HFiles use
+</para>
+<programlisting><![CDATA[
+    HColumnDescriptor#setCompressTags(boolean compressTags)
+    ]]></programlisting>
+<para>
+	Note that encoding of tags takes place only if the DataBlockEncoder is enabled for the CF.
+</para>
+<para>
+	As we compress the WAL entries using Dictionary the tags present in the WAL can also be compressed using Dictionary.  
+	Every tag is compressed individually using WAL Dictionary.  To turn ON tag compression in WAL dictionary enable the property
+</para>
+<programlisting><![CDATA[
+    <property>
+    	<name>hbase.regionserver.wal.tags.enablecompression</name>
+    	<value>true</value>
+	</property>
+    ]]></programlisting>
+<para>
+	To add tags to every cell during Puts, the following apis are provided
+</para>
+<programlisting><![CDATA[
+	Put#add(byte[] family, byte [] qualifier, byte [] value, Tag[] tag)
+	Put#add(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag)
+    ]]></programlisting>
+<para>
+	Some of the feature developed using tags are Cell level ACLs and Visibility labels.  
+	These are some features that use tags framework and allows users to gain better security features on cell level.
+</para>
+<para>
+	For details checkout 
+</para>
+<para>
+    <link linkend='hbase.accesscontrol.configuration'>Access Control</link>
+    <link linkend='hbase.visibility.labels'>Visibility labels</link>
+</para>
+</section>
 <section xml:id="hbase.accesscontrol.configuration">
     <title>Access Control</title>
     <para>
