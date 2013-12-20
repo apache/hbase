@@ -737,7 +737,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
         c.getTimestamp(), Type.codeToType(c.getTypeByte()), c.getValueArray(), c.getValueOffset(), 
         c.getValueLength(), c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
   }
-  
+
   /**
    * Create an empty byte[] representing a KeyValue
    * All lengths are preset and can be filled in later.
@@ -2053,9 +2053,37 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
         return compare;
       }
 
+      // Negate following comparisons so later edits show up first
+
+      // compare log replay tag value if there is any
+      // when either keyvalue tagged with log replay sequence number, we need to compare them:
+      // 1) when both keyvalues have the tag, then use the tag values for comparison
+      // 2) when one has and the other doesn't have, the one without the log replay tag wins because
+      // it means the edit isn't from recovery but new one coming from clients during recovery
+      // 3) when both doesn't have, then skip to the next mvcc comparison
+      long leftChangeSeqNum = getReplaySeqNum(left);
+      long RightChangeSeqNum = getReplaySeqNum(right);
+      if (leftChangeSeqNum != Long.MAX_VALUE || RightChangeSeqNum != Long.MAX_VALUE) {
+        return Longs.compare(RightChangeSeqNum, leftChangeSeqNum);
+      }
+
       // compare Mvcc Version
-      // Negate this comparison so later edits show up first
       return Longs.compare(right.getMvccVersion(), left.getMvccVersion());
+    }
+    
+    /**
+     * Return replay log sequence number for the cell
+     * @param c
+     * @return Long.MAX_VALUE if there is no LOG_REPLAY_TAG
+     */
+    private long getReplaySeqNum(final Cell c) {
+      Tag tag = Tag.getTag(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength(), 
+        TagType.LOG_REPLAY_TAG_TYPE);
+
+      if(tag != null) {
+        return Bytes.toLong(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength());
+      }
+      return Long.MAX_VALUE;
     }
 
     public int compareTimestamps(final KeyValue left, final KeyValue right) {
@@ -2734,6 +2762,27 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     byte [] bytes = new byte[length];
     in.readFully(bytes);
     return new KeyValue(bytes, 0, length);
+  }
+  
+  /**
+   * Create a new KeyValue by copying existing cell and adding new tags
+   * @param c
+   * @param newTags
+   * @return a new KeyValue instance with new tags
+   */
+  public static KeyValue cloneAndAddTags(Cell c, List<Tag> newTags) {
+    List<Tag> existingTags = null;
+    if(c.getTagsLength() > 0) {
+      existingTags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
+      existingTags.addAll(newTags);
+    } else {
+      existingTags = newTags;
+    }
+    return new KeyValue(c.getRowArray(), c.getRowOffset(), (int)c.getRowLength(),
+      c.getFamilyArray(), c.getFamilyOffset(), (int)c.getFamilyLength(), 
+      c.getQualifierArray(), c.getQualifierOffset(), (int) c.getQualifierLength(), 
+      c.getTimestamp(), Type.codeToType(c.getTypeByte()), c.getValueArray(), c.getValueOffset(), 
+      c.getValueLength(), existingTags);
   }
 
   /**

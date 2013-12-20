@@ -222,8 +222,7 @@ public class SplitLogManager extends ZooKeeperListener {
     this.timeout = conf.getInt("hbase.splitlog.manager.timeout", DEFAULT_TIMEOUT);
     this.unassignedTimeout =
       conf.getInt("hbase.splitlog.manager.unassigned.timeout", DEFAULT_UNASSIGNED_TIMEOUT);
-    this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
-    	      HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
+    this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(conf);
     LOG.info("Timeout=" + timeout + ", unassigned timeout=" + unassignedTimeout +
       ", distributedLogReplay=" + this.distributedLogReplay);
 

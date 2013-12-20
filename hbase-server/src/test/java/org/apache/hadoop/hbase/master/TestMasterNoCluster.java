@@ -27,6 +27,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -363,7 +364,7 @@ public class TestMasterNoCluster {
 
     HMaster master = new HMaster(conf) {
       @Override
-      void assignMeta(MonitoredTask status) {
+      void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMeatRSs) {
       }
 
       @Override

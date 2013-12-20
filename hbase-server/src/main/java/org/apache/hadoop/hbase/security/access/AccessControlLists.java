@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -103,7 +104,7 @@ public class AccessControlLists {
   public static final String ACL_LIST_FAMILY_STR = "l";
   public static final byte[] ACL_LIST_FAMILY = Bytes.toBytes(ACL_LIST_FAMILY_STR);
   /** KV tag to store per cell access control lists */
-  public static final byte ACL_TAG_TYPE = (byte) 1;
+  public static final byte ACL_TAG_TYPE = TagType.ACL_TAG_TYPE;
 
   public static final char NAMESPACE_PREFIX = '@';
 

@@ -195,7 +195,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
       "hbase.hregion.scan.loadColumnFamiliesOnDemand";
-
+      
   /**
    * This is the global default value for durability. All tables/mutations not
    * defining a durability or using USE_DEFAULT will default to this value.
@@ -210,7 +210,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   final AtomicBoolean closing = new AtomicBoolean(false);
 
-  protected long completeSequenceId = -1L;
+  protected volatile long completeSequenceId = -1L;
 
   /**
    * Region level sequence Id. It is used for appending WALEdits in HLog. Its default value is -1,
@@ -399,6 +399,8 @@ public class HRegion implements HeapSize { // , Writable{
   private RegionServerAccounting rsAccounting;
   private List<Pair<Long, Long>> recentFlushes = new ArrayList<Pair<Long,Long>>();
   private long flushCheckInterval;
+  // flushPerChanges is to prevent too many changes in memstore    
+  private long flushPerChanges;
   private long blockingMemStoreSize;
   final long threadWakeFrequency;
   // Used to guard closes
@@ -493,6 +495,12 @@ public class HRegion implements HeapSize { // , Writable{
       .addWritableMap(htd.getValues());
     this.flushCheckInterval = conf.getInt(MEMSTORE_PERIODIC_FLUSH_INTERVAL,
         DEFAULT_CACHE_FLUSH_INTERVAL);
+    this.flushPerChanges = conf.getLong(MEMSTORE_FLUSH_PER_CHANGES, DEFAULT_FLUSH_PER_CHANGES);
+    if (this.flushPerChanges > MAX_FLUSH_PER_CHANGES) {
+      throw new IllegalArgumentException(MEMSTORE_FLUSH_PER_CHANGES + " can not exceed "
+          + MAX_FLUSH_PER_CHANGES);
+    }
+    
     this.rowLockWaitDuration = conf.getInt("hbase.rowlock.wait.duration",
                     DEFAULT_ROWLOCK_WAIT_DURATION);
 
@@ -651,6 +659,12 @@ public class HRegion implements HeapSize { // , Writable{
     // Use maximum of log sequenceid or that which was found in stores
     // (particularly if no recovered edits, seqid will be -1).
     long nextSeqid = maxSeqId + 1;
+    if (this.isRecovering) {
+      // In distributedLogReplay mode, we don't know the last change sequence number because region
+      // is opened before recovery completes. So we add a safety bumper to avoid new sequence number
+      // overlaps used sequence numbers
+      nextSeqid += this.flushPerChanges + 10000000; // add another extra 10million
+    }
     LOG.info("Onlined " + this.getRegionInfo().getShortNameToLog() +
       "; next sequenceid=" + nextSeqid);
 
@@ -658,6 +672,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.closing.set(false);
     this.closed.set(false);
 
+    this.completeSequenceId = nextSeqid;
     if (coprocessorHost != null) {
       status.setStatus("Running coprocessor post-open hooks");
       coprocessorHost.postOpen();
@@ -964,6 +979,16 @@ public class HRegion implements HeapSize { // , Writable{
       "hbase.regionserver.optionalcacheflushinterval";
   /** Default interval for the memstore flush */
   public static final int DEFAULT_CACHE_FLUSH_INTERVAL = 3600000;
+
+  /** Conf key to force a flush if there are already enough changes for one region in memstore */
+  public static final String MEMSTORE_FLUSH_PER_CHANGES =
+      "hbase.regionserver.flush.per.changes";
+  public static final long DEFAULT_FLUSH_PER_CHANGES = 30000000; // 30 millions
+  /**
+   * The following MAX_FLUSH_PER_CHANGES is large enough because each KeyValue has 20+ bytes
+   * overhead. Therefore, even 1G empty KVs occupy at least 20GB memstore size for a single region
+   */
+  public static final long MAX_FLUSH_PER_CHANGES = 1000000000; // 1G
 
   /**
    * Close down this HRegion.  Flush the cache unless abort parameter is true,
@@ -1465,6 +1490,9 @@ public class HRegion implements HeapSize { // , Writable{
    * Should the memstore be flushed now
    */
   boolean shouldFlush() {
+    if(this.completeSequenceId + this.flushPerChanges < this.sequenceId.get()) {
+      return true;
+    }
     if (flushCheckInterval <= 0) { //disabled
       return false;
     }
@@ -1675,9 +1703,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
 
     // Update the last flushed sequence id for region
-    if (this.rsServices != null) {
-      completeSequenceId = flushSeqId;
-    }
+    completeSequenceId = flushSeqId;
 
     // C. Finally notify anyone waiting on memstore to clear:
     // e.g. checkResources().
@@ -5263,7 +5289,7 @@ public class HRegion implements HeapSize { // , Writable{
       ClassSize.OBJECT +
       ClassSize.ARRAY +
       41 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
-      (11 * Bytes.SIZEOF_LONG) +
+      (12 * Bytes.SIZEOF_LONG) +
       5 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:

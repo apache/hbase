@@ -70,17 +70,20 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.NonceGenerator;
 import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -1157,6 +1160,198 @@ public class TestDistributedLogSplitting {
     // meta region should be recovered
     assertFalse(isMetaRegionInRecovery);
     zkw.close();
+  }
+
+  @Test(timeout = 300000)
+  public void testSameVersionUpdatesRecovery() throws Exception {
+    LOG.info("testSameVersionUpdatesRecovery");
+    conf.setLong("hbase.regionserver.hlog.blocksize", 15 * 1024);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    conf.setInt("hfile.format.version", 3);
+    startCluster(NUM_RS);
+    final AtomicLong sequenceId = new AtomicLong(100);
+    final int NUM_REGIONS_TO_CREATE = 40;
+    final int NUM_LOG_LINES = 1000;
+    // turn off load balancing to prevent regions from moving around otherwise
+    // they will consume recovered.edits
+    master.balanceSwitch(false);
+
+    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
+    final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
+    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+
+    List<HRegionInfo> regions = null;
+    HRegionServer hrs = null;
+    for (int i = 0; i < NUM_RS; i++) {
+      boolean isCarryingMeta = false;
+      hrs = rsts.get(i).getRegionServer();
+      regions = ProtobufUtil.getOnlineRegions(hrs);
+      for (HRegionInfo region : regions) {
+        if (region.isMetaRegion()) {
+          isCarryingMeta = true;
+          break;
+        }
+      }
+      if (isCarryingMeta) {
+        continue;
+      }
+      break;
+    }
+
+    LOG.info("#regions = " + regions.size());
+    Iterator<HRegionInfo> it = regions.iterator();
+    while (it.hasNext()) {
+      HRegionInfo region = it.next();
+      if (region.isMetaTable()
+          || region.getEncodedName().equals(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName())) {
+        it.remove();
+      }
+    }
+    if (regions.size() == 0) return;
+    HRegionInfo curRegionInfo = regions.get(0);
+    byte[] startRow = curRegionInfo.getStartKey();
+    if (startRow == null || startRow.length == 0) {
+      startRow = new byte[] { 0, 0, 0, 0, 1 };
+    }
+    byte[] row = Bytes.incrementBytes(startRow, 1);
+    // use last 5 bytes because HBaseTestingUtility.createMultiRegions use 5 bytes key
+    row = Arrays.copyOfRange(row, 3, 8);
+    long value = 0;
+    byte[] tableName = Bytes.toBytes("table");
+    byte[] family = Bytes.toBytes("family");
+    byte[] qualifier = Bytes.toBytes("c1");
+    long timeStamp = System.currentTimeMillis();
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    htd.addFamily(new HColumnDescriptor(family));
+    for (int i = 0; i < NUM_LOG_LINES; i += 1) {
+      WALEdit e = new WALEdit();
+      value++;
+      e.add(new KeyValue(row, family, qualifier, timeStamp, Bytes.toBytes(value)));
+      hrs.getWAL().append(curRegionInfo, TableName.valueOf(tableName), e, 
+        System.currentTimeMillis(), htd, sequenceId);
+    }
+    hrs.getWAL().sync();
+    hrs.getWAL().close();
+
+    // wait for abort completes
+    this.abortRSAndWaitForRecovery(hrs, zkw, NUM_REGIONS_TO_CREATE);
+
+    // verify we got the last value
+    LOG.info("Verification Starts...");
+    Get g = new Get(row);
+    Result r = ht.get(g);
+    long theStoredVal = Bytes.toLong(r.getValue(family, qualifier));
+    assertEquals(value, theStoredVal);
+
+    // after flush
+    LOG.info("Verification after flush...");
+    TEST_UTIL.getHBaseAdmin().flush(tableName);
+    r = ht.get(g);
+    theStoredVal = Bytes.toLong(r.getValue(family, qualifier));
+    assertEquals(value, theStoredVal);
+    ht.close();
+  }
+
+  @Test(timeout = 300000)
+  public void testSameVersionUpdatesRecoveryWithCompaction() throws Exception {
+    LOG.info("testSameVersionUpdatesRecoveryWithWrites");
+    conf.setLong("hbase.regionserver.hlog.blocksize", 15 * 1024);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 30 * 1024);
+    conf.setInt("hbase.hstore.compactionThreshold", 3);
+    conf.setInt("hfile.format.version", 3);
+    startCluster(NUM_RS);
+    final AtomicLong sequenceId = new AtomicLong(100);
+    final int NUM_REGIONS_TO_CREATE = 40;
+    final int NUM_LOG_LINES = 1000;
+    // turn off load balancing to prevent regions from moving around otherwise
+    // they will consume recovered.edits
+    master.balanceSwitch(false);
+
+    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
+    final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
+    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+
+    List<HRegionInfo> regions = null;
+    HRegionServer hrs = null;
+    for (int i = 0; i < NUM_RS; i++) {
+      boolean isCarryingMeta = false;
+      hrs = rsts.get(i).getRegionServer();
+      regions = ProtobufUtil.getOnlineRegions(hrs);
+      for (HRegionInfo region : regions) {
+        if (region.isMetaRegion()) {
+          isCarryingMeta = true;
+          break;
+        }
+      }
+      if (isCarryingMeta) {
+        continue;
+      }
+      break;
+    }
+
+    LOG.info("#regions = " + regions.size());
+    Iterator<HRegionInfo> it = regions.iterator();
+    while (it.hasNext()) {
+      HRegionInfo region = it.next();
+      if (region.isMetaTable()
+          || region.getEncodedName().equals(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName())) {
+        it.remove();
+      }
+    }
+    if (regions.size() == 0) return;
+    HRegionInfo curRegionInfo = regions.get(0);
+    byte[] startRow = curRegionInfo.getStartKey();
+    if (startRow == null || startRow.length == 0) {
+      startRow = new byte[] { 0, 0, 0, 0, 1 };
+    }
+    byte[] row = Bytes.incrementBytes(startRow, 1);
+    // use last 5 bytes because HBaseTestingUtility.createMultiRegions use 5 bytes key
+    row = Arrays.copyOfRange(row, 3, 8);
+    long value = 0;
+    final byte[] tableName = Bytes.toBytes("table");
+    byte[] family = Bytes.toBytes("family");
+    byte[] qualifier = Bytes.toBytes("c1");
+    long timeStamp = System.currentTimeMillis();
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    htd.addFamily(new HColumnDescriptor(family));
+    for (int i = 0; i < NUM_LOG_LINES; i += 1) {
+      WALEdit e = new WALEdit();
+      value++;
+      e.add(new KeyValue(row, family, qualifier, timeStamp, Bytes.toBytes(value)));
+      hrs.getWAL().append(curRegionInfo, TableName.valueOf(tableName), e, 
+        System.currentTimeMillis(), htd, sequenceId);
+    }
+    hrs.getWAL().sync();
+    hrs.getWAL().close();
+
+    // wait for abort completes
+    this.abortRSAndWaitForRecovery(hrs, zkw, NUM_REGIONS_TO_CREATE);
+ 
+    // verify we got the last value
+    LOG.info("Verification Starts...");
+    Get g = new Get(row);
+    Result r = ht.get(g);
+    long theStoredVal = Bytes.toLong(r.getValue(family, qualifier));
+    assertEquals(value, theStoredVal);
+
+    // after flush & compaction
+    LOG.info("Verification after flush...");
+    TEST_UTIL.getHBaseAdmin().flush(tableName);
+    TEST_UTIL.getHBaseAdmin().compact(tableName);
+    
+    // wait for compaction completes
+    TEST_UTIL.waitFor(30000, 200, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return (TEST_UTIL.getHBaseAdmin().getCompactionState(tableName) == CompactionState.NONE);
+      }
+    });
+
+    r = ht.get(g);
+    theStoredVal = Bytes.toLong(r.getValue(family, qualifier));
+    assertEquals(value, theStoredVal);
+    ht.close();
   }
 
   HTable installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs) throws Exception {

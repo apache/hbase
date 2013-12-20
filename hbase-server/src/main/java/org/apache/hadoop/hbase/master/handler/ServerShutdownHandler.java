@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
@@ -84,9 +85,7 @@ public class ServerShutdownHandler extends EventHandler {
       LOG.warn(this.serverName + " is NOT in deadservers; it should be!");
     }
     this.shouldSplitHlog = shouldSplitHlog;
-    this.distributedLogReplay = server.getConfiguration().getBoolean(
-          HConstants.DISTRIBUTED_LOG_REPLAY_KEY, 
-          HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
+    this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(server.getConfiguration());
     this.regionAssignmentWaitTimeout = server.getConfiguration().getInt(
       HConstants.LOG_REPLAY_WAIT_REGION_TIMEOUT, 15000);
   }

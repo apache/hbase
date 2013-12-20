@@ -65,6 +65,9 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -73,6 +76,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -178,8 +182,7 @@ public class HLogSplitter {
     // a larger minBatchSize may slow down recovery because replay writer has to wait for
     // enough edits before replaying them
     this.minBatchSize = conf.getInt("hbase.regionserver.wal.logreplay.batch.size", 64);
-    this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
-      HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
+    this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(conf);
 
     this.numWriterThreads = conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
     if (zkw != null && this.distributedLogReplay) {
@@ -191,6 +194,7 @@ public class HLogSplitter {
       this.distributedLogReplay = false;
       outputSink = new LogRecoveredEditsOutputSink(numWriterThreads);
     }
+
   }
 
   /**
@@ -1483,6 +1487,7 @@ public class HLogSplitter {
         if (!skippedKVs.isEmpty()) {
           kvs.removeAll(skippedKVs);
         }
+
         synchronized (serverToBufferQueueMap) {
           locKey = loc.getHostnamePort() + KEY_DELIMITER + table;
           List<Pair<HRegionLocation, HLog.Entry>> queue = serverToBufferQueueMap.get(locKey);
@@ -1851,6 +1856,33 @@ public class HLogSplitter {
     public final long nonce;
   }
 
+ /**
+  * Tag original sequence number for each edit to be replayed
+  * @param entry
+  * @param cell
+  * @return
+  */
+  private static Cell tagReplayLogSequenceNumber(WALEntry entry, Cell cell) {
+    // Tag puts with original sequence number if there is no LOG_REPLAY_TAG yet
+    boolean needAddRecoveryTag = true;
+    if (cell.getTagsLength() > 0) {
+      Tag tmpTag = Tag.getTag(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength(),
+        TagType.LOG_REPLAY_TAG_TYPE);
+      if (tmpTag != null) {
+        // found an existing log replay tag so reuse it
+        needAddRecoveryTag = false;
+      }
+    }
+    if (needAddRecoveryTag) {
+      List<Tag> newTags = new ArrayList<Tag>();
+      Tag replayTag = new Tag(TagType.LOG_REPLAY_TAG_TYPE, Bytes.toBytes(entry.getKey()
+          .getLogSequenceNumber()));
+      newTags.add(replayTag);
+      return KeyValue.cloneAndAddTags(cell, newTags);
+    }
+    return cell;
+  }
+
   /**
    * This function is used to construct mutations from a WALEntry. It also reconstructs HLogKey &
    * WALEdit from the passed in WALEntry
@@ -1858,11 +1890,12 @@ public class HLogSplitter {
    * @param cells
    * @param logEntry pair of HLogKey and WALEdit instance stores HLogKey and WALEdit instances
    *          extracted from the passed in WALEntry.
+   * @param addLogReplayTag
    * @return list of Pair<MutationType, Mutation> to be replayed
    * @throws IOException
    */
-  public static List<MutationReplay> getMutationsFromWALEntry(WALEntry entry,
-      CellScanner cells, Pair<HLogKey, WALEdit> logEntry) throws IOException {
+  public static List<MutationReplay> getMutationsFromWALEntry(WALEntry entry, CellScanner cells,
+      Pair<HLogKey, WALEdit> logEntry, boolean addLogReplayTag) throws IOException {
 
     if (entry == null) {
       // return an empty array
@@ -1907,7 +1940,11 @@ public class HLogSplitter {
       if (CellUtil.isDelete(cell)) {
         ((Delete) m).addDeleteMarker(KeyValueUtil.ensureKeyValue(cell));
       } else {
-        ((Put) m).add(KeyValueUtil.ensureKeyValue(cell));
+        Cell tmpNewCell = cell;
+        if (addLogReplayTag) {
+          tmpNewCell = tagReplayLogSequenceNumber(entry, cell);
+        }
+        ((Put) m).add(KeyValueUtil.ensureKeyValue(tmpNewCell));
       }
       previousCell = cell;
     }
@@ -1927,5 +1964,15 @@ public class HLogSplitter {
     }
 
     return mutations;
+  }
+
+  /**
+   * Returns if distributed log replay is turned on or not
+   * @param conf
+   * @return true when distributed log replay is turned on
+   */
+  public static boolean isDistributedLogReplay(Configuration conf) {
+    return conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
+      HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
   }
 }

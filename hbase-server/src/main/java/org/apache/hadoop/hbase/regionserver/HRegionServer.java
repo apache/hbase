@@ -104,6 +104,7 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -621,13 +622,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     };
     this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
 
-    this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
-      HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
-    
     this.rsInfo = RegionServerInfo.newBuilder();
     // Put up the webui. Webui may come up on port other than configured if
     // that port is occupied. Adjust serverInfo if this is the case.
     this.rsInfo.setInfoPort(putUpWebUI());
+    this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(this.conf);
   }
 
   /**
@@ -3924,6 +3923,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       RegionCoprocessorHost coprocessorHost = region.getCoprocessorHost();
       List<Pair<HLogKey, WALEdit>> walEntries = new ArrayList<Pair<HLogKey, WALEdit>>();
       List<HLogSplitter.MutationReplay> mutations = new ArrayList<HLogSplitter.MutationReplay>();
+      // when tag is enabled, we need tag replay edits with log sequence number
+      boolean needAddReplayTag = (HFile.getFormatVersion(this.conf) >= 3);
       for (WALEntry entry : entries) {
         if (nonceManager != null) {
           long nonceGroup = entry.getKey().hasNonceGroup()
@@ -3933,8 +3934,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         }
         Pair<HLogKey, WALEdit> walEntry = (coprocessorHost == null) ? null :
           new Pair<HLogKey, WALEdit>();
-        List<HLogSplitter.MutationReplay> edits =
-            HLogSplitter.getMutationsFromWALEntry(entry, cells, walEntry);
+        List<HLogSplitter.MutationReplay> edits = HLogSplitter.getMutationsFromWALEntry(entry,
+          cells, walEntry, needAddReplayTag);
         if (coprocessorHost != null) {
           // Start coprocessor replay here. The coprocessor is for each WALEdit instead of a
           // KeyValue.

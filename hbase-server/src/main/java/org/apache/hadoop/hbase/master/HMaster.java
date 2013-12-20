@@ -856,6 +856,15 @@ MasterServices, Server {
       // may also host user regions
     }
     Set<ServerName> previouslyFailedMetaRSs = getPreviouselyFailedMetaServersFromZK();
+    // need to use union of previouslyFailedMetaRSs recorded in ZK and previouslyFailedServers
+    // instead of previouslyFailedMetaRSs alone to address the following two situations:
+    // 1) the chained failure situation(recovery failed multiple times in a row).
+    // 2) master get killed right before it could delete the recovering hbase:meta from ZK while the
+    // same server still has non-meta wals to be replayed so that
+    // removeStaleRecoveringRegionsFromZK can't delete the stale hbase:meta region
+    // Passing more servers into splitMetaLog is all right. If a server doesn't have hbase:meta wal,
+    // there is no op for the server.
+    previouslyFailedMetaRSs.addAll(previouslyFailedServers);
 
     this.initializationBeforeMetaAssignment = true;
 
@@ -866,25 +875,10 @@ MasterServices, Server {
 
     // Make sure meta assigned before proceeding.
     status.setStatus("Assigning Meta Region");
-    assignMeta(status);
+    assignMeta(status, previouslyFailedMetaRSs);
     // check if master is shutting down because above assignMeta could return even hbase:meta isn't
     // assigned when master is shutting down
     if(this.stopped) return;
-
-    if (this.distributedLogReplay && (!previouslyFailedMetaRSs.isEmpty())) {
-      // replay WAL edits mode need new hbase:meta RS is assigned firstly
-      status.setStatus("replaying log for Meta Region");
-      // need to use union of previouslyFailedMetaRSs recorded in ZK and previouslyFailedServers
-      // instead of oldMetaServerLocation to address the following two situations:
-      // 1) the chained failure situation(recovery failed multiple times in a row).
-      // 2) master get killed right before it could delete the recovering hbase:meta from ZK while the
-      // same server still has non-meta wals to be replayed so that
-      // removeStaleRecoveringRegionsFromZK can't delete the stale hbase:meta region
-      // Passing more servers into splitMetaLog is all right. If a server doesn't have hbase:meta wal,
-      // there is no op for the server.
-      previouslyFailedMetaRSs.addAll(previouslyFailedServers);
-      this.fileSystemManager.splitMetaLog(previouslyFailedMetaRSs);
-    }
 
     status.setStatus("Submitting log splitting work for previously failed region servers");
     // Master has recovered hbase:meta region server and we put
@@ -982,17 +976,17 @@ MasterServices, Server {
   /**
    * Check <code>hbase:meta</code> is assigned. If not, assign it.
    * @param status MonitoredTask
+   * @param previouslyFailedMetaRSs
    * @throws InterruptedException
    * @throws IOException
    * @throws KeeperException
    */
-  void assignMeta(MonitoredTask status)
+  void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMetaRSs)
       throws InterruptedException, IOException, KeeperException {
     // Work on meta region
     int assigned = 0;
     long timeout = this.conf.getLong("hbase.catalog.verification.timeout", 1000);
     status.setStatus("Assigning hbase:meta region");
-    ServerName logReplayFailedMetaServer = null;
 
     RegionStates regionStates = assignmentManager.getRegionStates();
     regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO);
@@ -1010,12 +1004,10 @@ MasterServices, Server {
           LOG.info("Forcing expire of " + currentMetaServer);
           serverManager.expireServer(currentMetaServer);
           splitMetaLogBeforeAssignment(currentMetaServer);
-          if (this.distributedLogReplay) {
-            logReplayFailedMetaServer = currentMetaServer;
-          }
+          previouslyFailedMetaRSs.add(currentMetaServer);
         }
-        // Make sure assignment manager knows where the meta is,
-        // so that meta sever shutdown handler kicks in.
+        // Make sure following meta assignment happens
+        assignmentManager.getRegionStates().clearLastAssignment(HRegionInfo.FIRST_META_REGIONINFO);
         assignmentManager.assignMeta();
       }
     } else {
@@ -1028,18 +1020,17 @@ MasterServices, Server {
 
     enableMeta(TableName.META_TABLE_NAME);
 
+    if (this.distributedLogReplay && (!previouslyFailedMetaRSs.isEmpty())) {
+      // replay WAL edits mode need new hbase:meta RS is assigned firstly
+      status.setStatus("replaying log for Meta Region");
+      this.fileSystemManager.splitMetaLog(previouslyFailedMetaRSs);
+    }
+
     // Make sure a hbase:meta location is set. We need to enable SSH here since
     // if the meta region server is died at this time, we need it to be re-assigned
     // by SSH so that system tables can be assigned.
     // No need to wait for meta is assigned = 0 when meta is just verified.
     enableServerShutdownHandler(assigned != 0);
-
-    // logReplayFailedMetaServer is set only if log replay is
-    // enabled and the current meta server is expired
-    if (logReplayFailedMetaServer != null) {
-      // In Replay WAL Mode, we need the new hbase:meta server online
-      this.fileSystemManager.splitMetaLog(logReplayFailedMetaServer);
-    }
 
     LOG.info("hbase:meta assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getMetaLocation());

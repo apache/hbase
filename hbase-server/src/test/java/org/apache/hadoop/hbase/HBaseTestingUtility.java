@@ -962,11 +962,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       hbaseAdmin = null;
     }
 
-    if (zooKeeperWatcher != null) {
-      zooKeeperWatcher.close();
-      zooKeeperWatcher = null;
-    }
-
     // unset the configuration for MIN and MAX RS to start
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, -1);
@@ -975,6 +970,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       // Wait till hbase is down before going on to shutdown zk.
       this.hbaseCluster.waitUntilShutDown();
       this.hbaseCluster = null;
+    }
+
+    if (zooKeeperWatcher != null) {
+      zooKeeperWatcher.close();
+      zooKeeperWatcher = null;
     }
   }
 
