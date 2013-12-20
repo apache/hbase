@@ -692,6 +692,7 @@ public class HRegion implements HeapSize { // , Writable{
           }
         });
       }
+      boolean allStoresOpened = false;
       try {
         for (int i = 0; i < htableDescriptor.getFamilies().size(); i++) {
           Future<HStore> future = completionService.take();
@@ -712,12 +713,24 @@ public class HRegion implements HeapSize { // , Writable{
             maxMemstoreTS = maxStoreMemstoreTS;
           }
         }
+        allStoresOpened = true;
       } catch (InterruptedException e) {
         throw new IOException(e);
       } catch (ExecutionException e) {
         throw new IOException(e.getCause());
       } finally {
         storeOpenerThreadPool.shutdownNow();
+        if (!allStoresOpened) {
+          // something went wrong, close all opened stores
+          LOG.error("Could not initialize all stores for the region=" + this);
+          for (Store store : this.stores.values()) {
+            try {
+              store.close();
+            } catch (IOException e) { 
+              LOG.warn(e.getMessage());
+            }
+          }
+        }
       }
     }
     mvcc.initialize(maxMemstoreTS + 1);
