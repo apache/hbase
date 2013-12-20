@@ -524,11 +524,13 @@ public class HStore implements Store {
     }
     if (ioe != null) {
       // close StoreFile readers
-      try {
-        for (StoreFile file : results) {
+      for (StoreFile file : results) {
+        try {
           if (file != null) file.closeReader(true);
+        } catch (IOException e) { 
+          LOG.warn(e.getMessage());
         }
-      } catch (IOException e) { }
+      }
       throw ioe;
     }
 
