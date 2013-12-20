@@ -65,7 +65,7 @@ public class TestBucketCache {
         int writerThreads,
         int writerQLen, String persistencePath) throws FileNotFoundException,
         IOException {
-      super(ioEngineName, capacity, writerThreads, writerQLen, persistencePath);
+      super(ioEngineName, capacity, 8192, writerThreads, writerQLen, persistencePath);
       super.wait_when_cache = true;
     }
 

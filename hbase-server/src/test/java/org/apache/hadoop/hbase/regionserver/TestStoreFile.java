@@ -488,6 +488,8 @@ public class TestStoreFile extends HBaseTestCase {
         + ", expected no more than " + maxFalsePos + ")",
         falsePos <= maxFalsePos);
   }
+  
+  private static final int BLOCKSIZE_SMALL = 8192;
 
   public void testBloomFilter() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
@@ -496,7 +498,7 @@ public class TestStoreFile extends HBaseTestCase {
 
     // write the file
     Path f = new Path(ROOT_DIR, getName());
-    HFileContext meta = new HFileContextBuilder().withBlockSize(StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+    HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
                         .withChecksumType(CKTYPE)
                         .withBytesPerCheckSum(CKBYTES).build();
     // Make a store file and write data to it.
@@ -519,7 +521,7 @@ public class TestStoreFile extends HBaseTestCase {
     Path f = new Path(ROOT_DIR, getName());
 
     HFileContext meta = new HFileContextBuilder()
-                        .withBlockSize(StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+                        .withBlockSize(BLOCKSIZE_SMALL)
                         .withChecksumType(CKTYPE)
                         .withBytesPerCheckSum(CKBYTES).build();
     // Make a store file and write data to it.
@@ -617,7 +619,7 @@ public class TestStoreFile extends HBaseTestCase {
     for (int x : new int[]{0,1}) {
       // write the file
       Path f = new Path(ROOT_DIR, getName() + x);
-      HFileContext meta = new HFileContextBuilder().withBlockSize(StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+      HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
           .withChecksumType(CKTYPE)
           .withBytesPerCheckSum(CKBYTES).build();
       // Make a store file and write data to it.
@@ -992,7 +994,7 @@ public class TestStoreFile extends HBaseTestCase {
         new HFileDataBlockEncoderImpl(
             dataBlockEncoderAlgo);
     cacheConf = new CacheConfig(conf);
-    HFileContext meta = new HFileContextBuilder().withBlockSize(StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+    HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
         .withChecksumType(CKTYPE)
         .withBytesPerCheckSum(CKBYTES)
         .withDataBlockEncoding(dataBlockEncoderAlgo)
