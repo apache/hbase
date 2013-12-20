@@ -127,6 +127,7 @@ public class TestScannersWithLabels {
     conf = TEST_UTIL.getConfiguration();
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS,
         SimpleScanLabelGenerator.class, ScanLabelGenerator.class);
+    conf.setInt("hfile.format.version", 3);
     conf.set("hbase.superuser", SUPERUSER.getShortName());
     conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
     conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());

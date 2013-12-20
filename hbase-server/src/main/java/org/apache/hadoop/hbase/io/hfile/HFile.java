@@ -156,6 +156,11 @@ public class HFile {
    */
   public static final int MAX_FORMAT_VERSION = 3;
 
+  /**
+   * Minimum HFile format version with support for persisting cell tags
+   */
+  public static final int MIN_FORMAT_VERSION_WITH_TAGS = 3;
+
   /** Default compression name: none. */
   public final static String DEFAULT_COMPRESSION =
     DEFAULT_COMPRESSION_ALGORITHM.getName();
