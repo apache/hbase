@@ -2795,6 +2795,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       final GetRequest request) throws ServiceException {
     long before = EnvironmentEdgeManager.currentTimeMillis();
     try {
+      checkOpen();
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
 
@@ -2861,6 +2862,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // Clear scanner so we are not holding on to reference across call.
     if (controller != null) controller.setCellScanner(null);
     try {
+      checkOpen();
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       MutateResponse.Builder builder = MutateResponse.newBuilder();
@@ -3231,6 +3233,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   public BulkLoadHFileResponse bulkLoadHFile(final RpcController controller,
       final BulkLoadHFileRequest request) throws ServiceException {
     try {
+      checkOpen();
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       List<Pair<byte[], String>> familyPaths = new ArrayList<Pair<byte[], String>>();
@@ -3261,6 +3264,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   public CoprocessorServiceResponse execService(final RpcController controller,
       final CoprocessorServiceRequest request) throws ServiceException {
     try {
+      checkOpen();
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       // ignore the passed in controller (from the serialized call)
@@ -3292,7 +3296,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   @Override
   public MultiResponse multi(final RpcController rpcc, final MultiRequest request)
   throws ServiceException {
-    
+    try {
+      checkOpen();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+
     // rpc controller is how we bring in data via the back door;  it is unprotobuf'ed data.
     // It is also the conduit via which we pass back data.
     PayloadCarryingRpcController controller = (PayloadCarryingRpcController)rpcc;
@@ -3458,6 +3467,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   public GetStoreFileResponse getStoreFile(final RpcController controller,
       final GetStoreFileRequest request) throws ServiceException {
     try {
+      checkOpen();
       HRegion region = getRegion(request.getRegion());
       requestCount.increment();
       Set<byte[]> columnFamilies;
@@ -3971,6 +3981,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   public RollWALWriterResponse rollWALWriter(final RpcController controller,
       final RollWALWriterRequest request) throws ServiceException {
     try {
+      checkOpen();
       requestCount.increment();
       HLog wal = this.getWAL();
       byte[][] regionsToFlush = wal.rollWriter(true);
@@ -4012,6 +4023,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   @Override
   public GetServerInfoResponse getServerInfo(final RpcController controller,
       final GetServerInfoRequest request) throws ServiceException {
+    try {
+      checkOpen();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
     ServerName serverName = getServerName();
     requestCount.increment();
     return ResponseConverter.buildGetServerInfoResponse(serverName, rsInfo.getInfoPort());
