@@ -130,6 +130,7 @@ public static void beforeClass() throws Exception {
       VisibilityController.class.getName());
   conf.set("hbase.coprocessor.region.classes",
       VisibilityController.class.getName());
+  conf.setInt("hfile.format.version", 3);
   UTIL.startMiniCluster(1);
   // Wait for the labels table to become available
   UTIL.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);
