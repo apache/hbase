@@ -47,13 +47,24 @@ public class SecureTestUtil {
     conf.set("hbase.coprocessor.master.classes", AccessController.class.getName());
     conf.set("hbase.coprocessor.region.classes", AccessController.class.getName()+
         ","+SecureBulkLoadEndpoint.class.getName());
-    // add the process running user to superusers
+    // The secure minicluster creates separate service principals based on the
+    // current user's name, one for each slave. We need to add all of these to
+    // the superuser list or security won't function properly. We expect the
+    // HBase service account(s) to have superuser privilege.
     String currentUser = User.getCurrent().getName();
-    conf.set("hbase.superuser", "admin,"+currentUser);
+    StringBuffer sb = new StringBuffer();
+    sb.append("admin,");
+    sb.append(currentUser);
+    // Assumes we won't ever have a minicluster with more than 5 slaves
+    for (int i = 0; i < 5; i++) {
+      sb.append(',');
+      sb.append(currentUser); sb.append(".hfs."); sb.append(i);
+    }
+    conf.set("hbase.superuser", sb.toString());
     // Need HFile V3 for tags for security features
     conf.setInt("hfile.format.version", 3);
   }
-  
+
   public void verifyAllowed(User user, PrivilegedExceptionAction... actions) throws Exception {
     for (PrivilegedExceptionAction action : actions) {
       try {

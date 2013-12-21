@@ -76,7 +76,6 @@ public class TestVisibilityLabelsWithACL {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.setInt("hfile.format.version", 3);
     SecureTestUtil.enableSecurity(conf);
     conf.set("hbase.coprocessor.master.classes", AccessController.class.getName() + ","
         + VisibilityController.class.getName());
