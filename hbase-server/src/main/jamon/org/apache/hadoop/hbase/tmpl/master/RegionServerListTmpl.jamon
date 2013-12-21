@@ -283,7 +283,7 @@ if  (sl.getTotalCompactingKVs() > 0) {
         </%args>
         <%java>
         int infoPort = master.getRegionServerInfoPort(serverName);
-        String url = "http://" + serverName.getHostname() + ":" + infoPort + "/";
+        String url = "//" + serverName.getHostname() + ":" + infoPort + "/";
         </%java>
 
         <%if (infoPort > 0) %>
