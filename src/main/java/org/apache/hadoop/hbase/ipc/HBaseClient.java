@@ -438,8 +438,8 @@ public class HBaseClient {
         setupConnection();
         this.in = new DataInputStream(new BufferedInputStream
             (new PingInputStream(NetUtils.getInputStream(socket))));
-        this.out = new DataOutputStream
-            (new BufferedOutputStream(NetUtils.getOutputStream(socket)));
+        this.out = new DataOutputStream(new BufferedOutputStream(
+            NetUtils.getOutputStream(socket, pingInterval)));
         writeHeader();
 
         // update last activity time
