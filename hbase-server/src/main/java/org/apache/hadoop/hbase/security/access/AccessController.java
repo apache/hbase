@@ -142,6 +142,8 @@ public class AccessController extends BaseRegionObserver
 
   private UserProvider userProvider;
 
+  private volatile boolean initialized = false;
+
   void initialize(RegionCoprocessorEnvironment e) throws IOException {
     final HRegion region = e.getRegion();
     Map<byte[], ListMultimap<String,TablePermission>> tables =
@@ -155,6 +157,7 @@ public class AccessController extends BaseRegionObserver
       byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, e.getConfiguration());
       this.authManager.getZKPermissionWatcher().writeToZookeeper(entry, serialized);
     }
+    initialized = true;
   }
 
   /**
@@ -904,8 +907,26 @@ public class AccessController extends BaseRegionObserver
     }
     if (AccessControlLists.isAclRegion(region)) {
       aclRegion = true;
+      // When this region is under recovering state, initialize will be handled by postLogReplay
+      if (!region.isRecovering()) {
+        try {
+          initialize(env);
+        } catch (IOException ex) {
+          // if we can't obtain permissions, it's better to fail
+          // than perform checks incorrectly
+          throw new RuntimeException("Failed to initialize permissions cache", ex);
+        }
+      }
+    } else {
+      initialized = true;
+    }
+  }
+
+  @Override
+  public void postLogReplay(ObserverContext<RegionCoprocessorEnvironment> c) {
+    if (aclRegion) {
       try {
-        initialize(env);
+        initialize(c.getEnvironment());
       } catch (IOException ex) {
         // if we can't obtain permissions, it's better to fail
         // than perform checks incorrectly
@@ -1262,6 +1283,9 @@ public class AccessController extends BaseRegionObserver
     try {
       // verify it's only running at .acl.
       if (aclRegion) {
+        if (!initialized) {
+          throw new CoprocessorException("AccessController not yet initialized");
+        }
         if (LOG.isDebugEnabled()) {
           LOG.debug("Received request to grant access permission " + perm.toString());
         }
@@ -1302,6 +1326,9 @@ public class AccessController extends BaseRegionObserver
     try {
       // only allowed to be called on _acl_ region
       if (aclRegion) {
+        if (!initialized) {
+          throw new CoprocessorException("AccessController not yet initialized");
+        }
         if (LOG.isDebugEnabled()) {
           LOG.debug("Received request to revoke access permission " + perm.toString());
         }
@@ -1341,6 +1368,9 @@ public class AccessController extends BaseRegionObserver
     try {
       // only allowed to be called on _acl_ region
       if (aclRegion) {
+        if (!initialized) {
+          throw new CoprocessorException("AccessController not yet initialized");
+        }
         List<UserPermission> perms = null;
         if(request.getType() == AccessControlProtos.Permission.Type.Table) {
           TableName table = null;
