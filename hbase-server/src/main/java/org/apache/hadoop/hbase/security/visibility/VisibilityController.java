@@ -683,7 +683,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
             }
           }
         }
-      } else {
+      } else if (cellVisibility != null) {
         // CellVisibility in a Delete is not legal! Fail the operation
         miniBatchOp.setOperationStatus(i, new OperationStatus(SANITY_CHECK_FAILURE,
             "CellVisibility cannot be set on Delete mutation"));
