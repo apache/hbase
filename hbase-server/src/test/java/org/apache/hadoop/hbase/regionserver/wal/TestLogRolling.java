@@ -396,7 +396,7 @@ public class TestLogRolling  {
     // the configured value 2.
     assertTrue(dfsCluster.stopDataNode(pipeline[1].getName()) != null);
 
-    batchWriteAndWait(table, 3, false, 10000);
+    batchWriteAndWait(table, 3, false, 14000);
     assertTrue("LowReplication Roller should've been disabled, current replication="
             + ((FSHLog) log).getLogReplication(),
         !log.isLowReplicationRollEnabled());
