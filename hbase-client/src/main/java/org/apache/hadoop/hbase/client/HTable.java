@@ -1483,7 +1483,9 @@ public class HTable implements HTableInterface {
         new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
     coprocessorService(service, startKey, endKey, callable, new Batch.Callback<R>() {
       public void update(byte[] region, byte[] row, R value) {
-        results.put(region, value);
+        if (region != null) {
+          results.put(region, value);
+        }
       }
     });
     return results;
