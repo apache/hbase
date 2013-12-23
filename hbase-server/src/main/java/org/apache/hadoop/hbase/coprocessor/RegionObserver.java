@@ -967,12 +967,15 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param s the scanner
    * @param currentRow The current rowkey which got filtered out
+   * @param offset offset to rowkey
+   * @param length length of rowkey
    * @param hasMore the 'has more' indication
    * @return whether more rows are available for the scanner or not
    * @throws IOException
    */
   boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final InternalScanner s, final byte[] currentRow, final boolean hasMore) throws IOException;
+      final InternalScanner s, final byte[] currentRow, final int offset, final short length,
+      final boolean hasMore) throws IOException;
   
   /**
    * Called before the client closes a scanner.

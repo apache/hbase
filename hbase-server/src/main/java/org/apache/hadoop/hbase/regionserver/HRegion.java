@@ -3944,8 +3944,8 @@ public class HRegion implements HeapSize { // , Writable{
       resetFilters();
       // Calling the hook in CP which allows it to do a fast forward
       return this.region.getCoprocessorHost() == null
-          || this.region.getCoprocessorHost().postScannerFilterRow(this,
-                                                                   currentRow);
+          || this.region.getCoprocessorHost()
+              .postScannerFilterRow(this, currentRow, offset, length);
     }
 
     protected boolean isStopRow(byte[] currentRow, int offset, short length) {
