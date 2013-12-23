@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.util.HBaseFsck.PrintingErrorReporter;
 import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
+import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -208,6 +209,28 @@ public class TestHBaseFsck {
 
     scanner.close();
     meta.close();
+  }
+
+  @Test(timeout=180000)
+  public void testFixAssignmentsWhenMETAinTransition() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HBaseAdmin admin = null;
+    try {
+      admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      admin.closeRegion(cluster.getServerHoldingMeta(),
+          HRegionInfo.FIRST_META_REGIONINFO);
+    } finally {
+      if (admin != null) {
+        admin.close();
+      }
+    }
+    regionStates.regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
+    MetaRegionTracker.deleteMetaLocation(cluster.getMaster().getZooKeeper());
+    assertFalse(regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
+    HBaseFsck hbck = doFsck(conf, true);
+    assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.UNKNOWN, ERROR_CODE.NO_META_REGION,
+        ERROR_CODE.NULL_META_REGION });
+    assertNoErrors(doFsck(conf, false));
   }
 
   /**
