@@ -543,7 +543,7 @@ public class HBaseFsck extends Configured {
             // For all the stores in this column family.
             for (FileStatus storeFile : storeFiles) {
               HFile.Reader reader = HFile.createReader(fs, storeFile.getPath(), new CacheConfig(
-                  getConf()), getConf());
+                  getConf()));
               if ((reader.getFirstKey() != null)
                   && ((storeFirstKey == null) || (comparator.compare(storeFirstKey,
                       reader.getFirstKey()) > 0))) {
