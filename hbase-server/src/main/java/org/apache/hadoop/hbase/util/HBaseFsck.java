@@ -411,11 +411,7 @@ public class HBaseFsck extends Configured {
     // get regions according to what is online on each RegionServer
     loadDeployedRegions();
     // check whether hbase:meta is deployed and online
-    if (!recordMetaRegion()) {
-      // Will remove later if we can fix it
-      errors.reportError("Fatal error: unable to get hbase:meta region location. Exiting...");
-      return -2;
-    }
+    recordMetaRegion();
     // Check if hbase:meta is found only once and in the right place
     if (!checkMetaRegion()) {
       String errorMsg = "hbase:meta table is not consistent. ";
@@ -2577,8 +2573,12 @@ public class HBaseFsck extends Configured {
 
     // There will be always one entry in regionInfoMap corresponding to hbase:meta
     // Check the deployed servers. It should be exactly one server.
-    HbckInfo metaHbckInfo = metaRegions.get(0);
-    List<ServerName> servers = metaHbckInfo.deployedOn;
+    List<ServerName> servers = new ArrayList<ServerName>();
+    HbckInfo metaHbckInfo = null;
+    if (!metaRegions.isEmpty()) {
+      metaHbckInfo = metaRegions.get(0);
+      servers = metaHbckInfo.deployedOn;
+    }
     if (servers.size() != 1) {
       if (servers.size() == 0) {
         errors.reportError(ERROR_CODE.NO_META_REGION, "hbase:meta is not found on any region.");
@@ -2586,8 +2586,8 @@ public class HBaseFsck extends Configured {
           errors.print("Trying to fix a problem with hbase:meta..");
           setShouldRerun();
           // try to fix it (treat it as unassigned region)
-          HBaseFsckRepair.fixUnassigned(admin, metaHbckInfo.metaEntry);
-          HBaseFsckRepair.waitUntilAssigned(admin, metaHbckInfo.metaEntry);
+          HBaseFsckRepair.fixUnassigned(admin, HRegionInfo.FIRST_META_REGIONINFO);
+          HBaseFsckRepair.waitUntilAssigned(admin, HRegionInfo.FIRST_META_REGIONINFO);
         }
       } else if (servers.size() > 1) {
         errors

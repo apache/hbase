@@ -1864,12 +1864,9 @@ public class AssignmentManager extends ZooKeeperListener {
           } else {
             if (region.isMetaRegion()) {
               try {
-                if (i != maximumAttempts) {
-                  Thread.sleep(this.sleepTimeBeforeRetryingMetaAssignment);
-                  continue;
-                }
-                // TODO : Ensure HBCK fixes this
-                LOG.error("Unable to determine a plan to assign hbase:meta even after repeated attempts. Run HBCK to fix this");
+                Thread.sleep(this.sleepTimeBeforeRetryingMetaAssignment);
+                if (i == maximumAttempts) i = 1;
+                continue;
               } catch (InterruptedException e) {
                 LOG.error("Got exception while waiting for hbase:meta assignment");
                 Thread.currentThread().interrupt();
