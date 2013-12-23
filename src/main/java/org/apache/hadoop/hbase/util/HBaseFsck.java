@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
@@ -201,6 +202,7 @@ public class HBaseFsck extends Configured implements Tool {
   private boolean rerun = false; // if we tried to fix something, rerun hbck
   private static boolean summary = false; // if we want to print less output
   private boolean checkMetaOnly = false;
+  private boolean checkRegionBoundaries = false;
   private boolean ignorePreCheckPermission = false; // if pre-check permission
 
   /*********
@@ -451,6 +453,10 @@ public class HBaseFsck extends Configured implements Tool {
       admin.setBalancerRunning(oldBalancer, false);
     }
 
+    if (checkRegionBoundaries) {
+      checkRegionBoundaries();
+    }
+
     offlineReferenceFileRepair();
 
     // Print table summary
@@ -458,6 +464,112 @@ public class HBaseFsck extends Configured implements Tool {
     return errors.summarize();
   }
 
+    public static byte[] keyOnly (byte[] b) {
+        if (b == null)
+          return b;
+        int rowlength = Bytes.toShort(b, 0);
+        byte[] result = new byte[rowlength];
+        System.arraycopy(b, Bytes.SIZEOF_SHORT, result, 0, rowlength);
+        return result;
+      }
+    
+      private static class RegionBoundariesInformation {
+        public byte [] regionName;
+        public byte [] metaFirstKey;
+        public byte [] metaLastKey;
+        public byte [] storesFirstKey;
+        public byte [] storesLastKey;
+        public String toString () {
+          return "regionName=" + Bytes.toStringBinary(regionName) +
+                 "\nmetaFirstKey=" + Bytes.toStringBinary(metaFirstKey) +
+                 "\nmetaLastKey=" + Bytes.toStringBinary(metaLastKey) +
+                 "\nstoresFirstKey=" + Bytes.toStringBinary(storesFirstKey) +
+                 "\nstoresLastKey=" + Bytes.toStringBinary(storesLastKey);
+        }
+      }
+    
+      public void checkRegionBoundaries() {
+        try {
+          ByteArrayComparator comparator = new ByteArrayComparator();
+          List<HRegionInfo> regions = MetaScanner.listAllRegions(getConf(), false);
+          final RegionBoundariesInformation currentRegionBoundariesInformation =
+              new RegionBoundariesInformation();
+          for (HRegionInfo regionInfo : regions) {
+            currentRegionBoundariesInformation.regionName = regionInfo.getRegionName();
+            // For each region, get the start and stop key from the META and compare them to the
+            // same information from the Stores.
+            Path path = new Path(getConf().get(HConstants.HBASE_DIR) + "/"
+                + Bytes.toString(regionInfo.getTableName()) + "/"
+                + regionInfo.getEncodedName() + "/");
+            FileSystem fs = path.getFileSystem(getConf());
+            FileStatus[] files = fs.listStatus(path);
+            // For all the column families in this region...
+            byte[] storeFirstKey = null;
+            byte[] storeLastKey = null;
+            for (FileStatus file : files) {
+              String fileName = file.getPath().toString();
+              fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+              if (!fileName.startsWith(".") && !fileName.endsWith("recovered.edits")) {
+                FileStatus[] storeFiles = fs.listStatus(file.getPath());
+                // For all the stores in this column family.
+                for (FileStatus storeFile : storeFiles) {
+                  HFile.Reader reader = HFile.createReader(fs, storeFile.getPath(), new CacheConfig(
+                      getConf()));
+                  if ((reader.getFirstKey() != null)
+                      && ((storeFirstKey == null) || (comparator.compare(storeFirstKey,
+                          reader.getFirstKey()) > 0))) {
+                    storeFirstKey = reader.getFirstKey();
+                  }
+                  if ((reader.getLastKey() != null)
+                      && ((storeLastKey == null) || (comparator.compare(storeLastKey,
+                          reader.getLastKey())) < 0)) {
+                    storeLastKey = reader.getLastKey();
+                  }
+                  reader.close();
+                }
+              }
+            }
+            currentRegionBoundariesInformation.metaFirstKey = regionInfo.getStartKey();
+            currentRegionBoundariesInformation.metaLastKey = regionInfo.getEndKey();
+            currentRegionBoundariesInformation.storesFirstKey = keyOnly(storeFirstKey);
+            currentRegionBoundariesInformation.storesLastKey = keyOnly(storeLastKey);
+            if (currentRegionBoundariesInformation.metaFirstKey.length == 0)
+              currentRegionBoundariesInformation.metaFirstKey = null;
+            if (currentRegionBoundariesInformation.metaLastKey.length == 0)
+              currentRegionBoundariesInformation.metaLastKey = null;
+    
+            // For a region to be correct, we need the META start key to be smaller or equal to the
+            // smallest start key from all the stores, and the start key from the next META entry to
+            // be bigger than the last key from all the current stores. First region start key is null;
+            // Last region end key is null; some regions can be empty and not have any store.
+    
+            boolean valid = true;
+            // Checking start key.
+            if ((currentRegionBoundariesInformation.storesFirstKey != null)
+                && (currentRegionBoundariesInformation.metaFirstKey != null)) {
+              valid = valid
+                  && comparator.compare(currentRegionBoundariesInformation.storesFirstKey,
+                    currentRegionBoundariesInformation.metaFirstKey) >= 0;
+            }
+            // Checking stop key.
+            if ((currentRegionBoundariesInformation.storesLastKey != null)
+                && (currentRegionBoundariesInformation.metaLastKey != null)) {
+              valid = valid
+                  && comparator.compare(currentRegionBoundariesInformation.storesLastKey,
+                    currentRegionBoundariesInformation.metaLastKey) < 0;
+            }
+            if (!valid) {
+              errors.reportError(ERROR_CODE.BOUNDARIES_ERROR, "Found issues with regions boundaries",
+                tablesInfo.get(Bytes.toString(regionInfo.getTableName())));
+              LOG.warn("Region's boundaries not alligned between stores and META for:");
+              LOG.warn(currentRegionBoundariesInformation);
+            }
+          }
+        } catch (IOException e) {
+          LOG.error(e);
+        }
+      }
+    
   /**
    * Iterates through the list of all orphan/invalid regiondirs.
    */
@@ -2898,7 +3010,7 @@ public class HBaseFsck extends Configured implements Tool {
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
-      WRONG_USAGE
+      WRONG_USAGE, BOUNDARIES_ERROR
     }
     public void clear();
     public void report(String message);
@@ -3415,6 +3527,13 @@ public class HBaseFsck extends Configured implements Tool {
     this.hfcc = hfcc;
   }
 
+  /**
+   * Set region boundaries check mode.
+   */
+  void setRegionBoundariesCheck() {
+    checkRegionBoundaries = true;
+  }
+
   public void setRetCode(int code) {
     this.retcode = code;
   }
@@ -3457,6 +3576,7 @@ public class HBaseFsck extends Configured implements Tool {
     out.println("   -fixSplitParents  Try to force offline split parents to be online.");
     out.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
     out.println("   -fixReferenceFiles  Try to offline lingering reference store files");
+    out.println("   -boundaries Verify that regions boundaries are the same between META and store files.");
 
     out.println("");
     out.println("  Datafile Repair options: (expert features, use with caution!)");
@@ -3639,6 +3759,8 @@ public class HBaseFsck extends Configured implements Tool {
         setSummary();
       } else if (cmd.equals("-metaonly")) {
         setCheckMetaOnly();
+      } else if (cmd.equals("-boundaries")) {
+        setRegionBoundariesCheck();
       } else if (cmd.startsWith("-")) {
         errors.reportError(ERROR_CODE.WRONG_USAGE, "Unrecognized option:" + cmd);
         return printUsageAndExit();
