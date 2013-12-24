@@ -1439,11 +1439,13 @@ public class RegionCoprocessorHost
    * filter.
    * @param s the scanner
    * @param currentRow The current rowkey which got filtered out
+   * @param offset offset to rowkey
+   * @param length length of rowkey
    * @return whether more rows are available for the scanner or not
    * @throws IOException
    */
-  public boolean postScannerFilterRow(final InternalScanner s, final byte[] currentRow)
-      throws IOException {
+  public boolean postScannerFilterRow(final InternalScanner s, final byte[] currentRow, int offset,
+      short length) throws IOException {
     boolean hasMore = true; // By default assume more rows there.
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
@@ -1451,7 +1453,7 @@ public class RegionCoprocessorHost
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
           hasMore = ((RegionObserver) env.getInstance()).postScannerFilterRow(ctx, s, currentRow,
-              hasMore);
+              offset, length, hasMore);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }
