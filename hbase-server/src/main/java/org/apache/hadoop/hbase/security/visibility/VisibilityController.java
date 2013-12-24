@@ -826,7 +826,9 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       if (node instanceof LeafExpressionNode) {
         identifier = ((LeafExpressionNode) node)
             .getIdentifier();
-        LOG.debug("The identifier is "+identifier);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("The identifier is "+identifier);
+        }
         labelOrdinal = this.visibilityManager.getLabelOrdinal(identifier);
       } else {
         // This is a NOT node.
@@ -977,7 +979,9 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       // for non-rpc handling, fallback to system user
       user = User.getCurrent();
     }
-    LOG.debug("Current active user name is "+user.getShortName());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Current active user name is "+user.getShortName());
+    }
     return user;
   }
 
@@ -987,7 +991,9 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       throw new IOException("Unable to obtain the current user, "
           + "authorization checks for internal operations will not work correctly!");
     }
-    LOG.debug("Current user name is "+user.getShortName());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Current user name is "+user.getShortName());
+    }
     String currentUser = user.getShortName();
     List<String> superUsers = Lists.asList(currentUser,
         this.conf.getStrings(AccessControlLists.SUPERUSER_CONF_KEY, new String[0]));
@@ -1074,7 +1080,9 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
             Put p = new Put(Bytes.toBytes(ordinalCounter));
             p.addImmutable(
                 LABELS_TABLE_FAMILY, LABEL_QUALIFIER, label, LABELS_TABLE_TAGS);
-            LOG.debug("Adding the label "+labelStr);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Adding the label "+labelStr);
+            }
             puts.add(p);
             ordinalCounter++;
             response.addResult(successResult);
@@ -1302,7 +1310,9 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
         throw new IOException("Unable to retrieve calling user");
       }
       List<String> auths = this.visibilityManager.getAuths(user.getShortName());
-      LOG.debug("The list of auths are "+auths);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("The list of auths are "+auths);
+      }
       if (!auths.contains(SYSTEM_LABEL)) {
         throw new AccessDeniedException("User '" + user.getShortName()
             + "' is not authorized to perform this action.");
