@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -87,22 +88,26 @@ public class TestZKPermissionsWatcher {
 
   @Test
   public void testPermissionsWatcher() throws Exception {
-    assertFalse(AUTH_A.authorizeUser("george", TEST_TABLE, null,
+    Configuration conf = UTIL.getConfiguration();
+    User george = User.createUserForTesting(conf, "george", new String[] { });
+    User hubert = User.createUserForTesting(conf, "hubert", new String[] { });
+    
+    assertFalse(AUTH_A.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.READ));
-    assertFalse(AUTH_A.authorizeUser("george", TEST_TABLE, null,
+    assertFalse(AUTH_A.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.WRITE));
-    assertFalse(AUTH_A.authorizeUser("hubert", TEST_TABLE, null,
+    assertFalse(AUTH_A.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.READ));
-    assertFalse(AUTH_A.authorizeUser("hubert", TEST_TABLE, null,
+    assertFalse(AUTH_A.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.WRITE));
 
-    assertFalse(AUTH_B.authorizeUser("george", TEST_TABLE, null,
+    assertFalse(AUTH_B.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.READ));
-    assertFalse(AUTH_B.authorizeUser("george", TEST_TABLE, null,
+    assertFalse(AUTH_B.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.WRITE));
-    assertFalse(AUTH_B.authorizeUser("hubert", TEST_TABLE, null,
+    assertFalse(AUTH_B.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.READ));
-    assertFalse(AUTH_B.authorizeUser("hubert", TEST_TABLE, null,
+    assertFalse(AUTH_B.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.WRITE));
 
     // update ACL: george RW
@@ -110,7 +115,7 @@ public class TestZKPermissionsWatcher {
     acl.add(new TablePermission(TEST_TABLE, null, TablePermission.Action.READ,
       TablePermission.Action.WRITE));
     final long mtimeB = AUTH_B.getMTime();
-    AUTH_A.setTableUserPermissions("george", TEST_TABLE, acl);
+    AUTH_A.setTableUserPermissions(george.getShortName(), TEST_TABLE, acl);
     // Wait for the update to propagate
     UTIL.waitFor(10000, 100, new Predicate<Exception>() {
       @Override
@@ -121,21 +126,21 @@ public class TestZKPermissionsWatcher {
     Thread.sleep(100);
 
     // check it
-    assertTrue(AUTH_A.authorizeUser("george", TEST_TABLE, null,
+    assertTrue(AUTH_A.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.READ));
-    assertTrue(AUTH_A.authorizeUser("george", TEST_TABLE, null,
+    assertTrue(AUTH_A.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.WRITE));
-    assertTrue(AUTH_B.authorizeUser("george", TEST_TABLE, null,
+    assertTrue(AUTH_B.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.READ));
-    assertTrue(AUTH_B.authorizeUser("george", TEST_TABLE, null,
+    assertTrue(AUTH_B.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.WRITE));
-    assertFalse(AUTH_A.authorizeUser("hubert", TEST_TABLE, null,
+    assertFalse(AUTH_A.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.READ));
-    assertFalse(AUTH_A.authorizeUser("hubert", TEST_TABLE, null,
+    assertFalse(AUTH_A.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.WRITE));
-    assertFalse(AUTH_B.authorizeUser("hubert", TEST_TABLE, null,
+    assertFalse(AUTH_B.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.READ));
-    assertFalse(AUTH_B.authorizeUser("hubert", TEST_TABLE, null,
+    assertFalse(AUTH_B.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.WRITE));
 
     // update ACL: hubert R
@@ -153,21 +158,21 @@ public class TestZKPermissionsWatcher {
     Thread.sleep(100);
 
     // check it
-    assertTrue(AUTH_A.authorizeUser("george", TEST_TABLE, null,
+    assertTrue(AUTH_A.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.READ));
-    assertTrue(AUTH_A.authorizeUser("george", TEST_TABLE, null,
+    assertTrue(AUTH_A.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.WRITE));
-    assertTrue(AUTH_B.authorizeUser("george", TEST_TABLE, null,
+    assertTrue(AUTH_B.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.READ));
-    assertTrue(AUTH_B.authorizeUser("george", TEST_TABLE, null,
+    assertTrue(AUTH_B.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.WRITE));
-    assertTrue(AUTH_A.authorizeUser("hubert", TEST_TABLE, null,
+    assertTrue(AUTH_A.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.READ));
-    assertFalse(AUTH_A.authorizeUser("hubert", TEST_TABLE, null,
+    assertFalse(AUTH_A.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.WRITE));
-    assertTrue(AUTH_B.authorizeUser("hubert", TEST_TABLE, null,
+    assertTrue(AUTH_B.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.READ));
-    assertFalse(AUTH_B.authorizeUser("hubert", TEST_TABLE, null,
+    assertFalse(AUTH_B.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.WRITE));
   }
 }
