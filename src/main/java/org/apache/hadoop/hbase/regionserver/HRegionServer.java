@@ -146,7 +146,6 @@ import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -927,6 +926,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   void tryRegionServerReport()
   throws IOException {
+    if (!keepLooping() && hbaseMaster == null) {
+      // the current server is stopping
+      return;
+    }
     HServerLoad hsl = buildServerLoad();
     // Why we do this?
     this.requestCount.set(0);
