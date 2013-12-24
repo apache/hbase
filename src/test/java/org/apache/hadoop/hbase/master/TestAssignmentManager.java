@@ -960,6 +960,37 @@ public class TestAssignmentManager {
   }
 
   /**
+   * Test verifies whether stale znodes of unknown tables as for the hbase:meta will be removed or
+   * not.
+   * @throws KeeperException
+   * @throws IOException
+   * @throws Exception
+   */
+  @Test
+  public void testMasterRestartShouldRemoveStaleZnodesOfUnknownTableAsForMeta()
+      throws KeeperException, IOException, Exception {
+    List<ServerName> destServers = new ArrayList<ServerName>(1);
+    destServers.add(SERVERNAME_A);
+    Mockito.when(this.serverManager.getOnlineServersList()).thenReturn(destServers);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
+    HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
+    Server server = new HMaster(HTU.getConfiguration());
+    Whitebox.setInternalState(server, "serverManager", this.serverManager);
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
+        this.serverManager);
+    try {
+      String tableName = "dummyTable";
+      am.enablingTables.put(tableName, null);
+      // set table in enabling state.
+      am.getZKTable().setEnablingTable(tableName);
+      am.joinCluster();
+      assertFalse("Table should not be present in zookeeper.",
+        am.getZKTable().isTablePresent(tableName));
+    } finally {
+    }
+  }
+
+  /**
    * Test verifies whether all the enabling table regions assigned only once during master startup.
    * 
    * @throws KeeperException

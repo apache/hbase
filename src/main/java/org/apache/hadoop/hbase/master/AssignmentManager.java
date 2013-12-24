@@ -2810,8 +2810,15 @@ public class AssignmentManager extends ZooKeeperListener {
             + " to ENABLED state.");
         // enableTable in sync way during master startup,
         // no need to invoke coprocessor
-        new EnableTableHandler(this.master, tableName.getBytes(),
-            catalogTracker, this, true).process();
+        EnableTableHandler eth = null;
+        try {
+          eth =
+              new EnableTableHandler(this.master, tableName.getBytes(), catalogTracker, this, true);
+        } catch (TableNotFoundException e) {
+          LOG.warn("Table " + tableName + " not found in .META. to recover.");
+          continue;
+        }
+        if (eth != null) eth.process();
       }
     }
   }
