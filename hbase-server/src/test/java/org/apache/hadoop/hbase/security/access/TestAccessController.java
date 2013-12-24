@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -58,7 +57,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -2458,6 +2456,41 @@ public class TestAccessController extends SecureTestUtil {
 
     verifyDenied(deleteTableAction, USER_RW, USER_RO, USER_NONE);
     verifyAllowed(deleteTableAction, TABLE_ADMIN);
+  }
+
+  @Test
+  public void testNamespaceUserGrant() throws Exception {
+    AccessTestAction getAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          return t.get(new Get(TEST_ROW));
+        } finally {
+          t.close();
+        }
+      }
+    };
+
+    verifyDenied(getAction, USER_NONE);
+
+    // Grant namespace READ to USER_NONE, this should supercede any table permissions
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_BYTE_ARRAY);
+      AccessControlService.BlockingInterface protocol =
+        AccessControlService.newBlockingStub(service);
+      AccessControlProtos.GrantRequest request = RequestConverter.
+        buildGrantRequest(USER_NONE.getShortName(),
+          TEST_TABLE.getTableName().getNamespaceAsString(),
+          AccessControlProtos.Permission.Action.READ);
+      protocol.grant(null, request);
+    } finally {
+      acl.close();
+    }
+
+    // Now USER_NONE should be able to read also
+    verifyAllowed(getAction, USER_NONE);
   }
 
 }

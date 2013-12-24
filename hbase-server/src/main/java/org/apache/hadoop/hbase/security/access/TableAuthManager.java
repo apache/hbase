@@ -374,7 +374,7 @@ public class TableAuthManager {
     byte[] family = CellUtil.cloneFamily(cell);
     byte[] qualifier = CellUtil.cloneQualifier(cell);
     // User is authorized at table or CF level
-    if (authorizeUser(user.getShortName(), table, family, qualifier, action)) {
+    if (authorizeUser(user, table, family, qualifier, action)) {
       return true;
     }
     String groupNames[] = user.getGroupNames();
@@ -409,16 +409,17 @@ public class TableAuthManager {
   }
 
   public boolean authorize(User user, String namespace, Permission.Action action) {
-    if (authorizeUser(user.getShortName(), action)) {
+    // Global authorizations supercede namespace level
+    if (authorizeUser(user, action)) {
       return true;
     }
+    // Check namespace permissions
     PermissionCache<TablePermission> tablePerms = nsCache.get(namespace);
     if (tablePerms != null) {
       List<TablePermission> userPerms = tablePerms.getUser(user.getShortName());
       if (authorize(userPerms, namespace, action)) {
         return true;
       }
-
       String[] groupNames = user.getGroupNames();
       if (groupNames != null) {
         for (String group : groupNames) {
@@ -451,39 +452,39 @@ public class TableAuthManager {
    * Checks global authorization for a specific action for a user, based on the
    * stored user permissions.
    */
-  public boolean authorizeUser(String username, Permission.Action action) {
-    return authorize(globalCache.getUser(username), action);
+  public boolean authorizeUser(User user, Permission.Action action) {
+    return authorize(globalCache.getUser(user.getShortName()), action);
   }
 
   /**
    * Checks authorization to a given table and column family for a user, based on the
    * stored user permissions.
    *
-   * @param username
+   * @param user
    * @param table
    * @param family
    * @param action
    * @return true if known and authorized, false otherwise
    */
-  public boolean authorizeUser(String username, TableName table, byte[] family,
+  public boolean authorizeUser(User user, TableName table, byte[] family,
       Permission.Action action) {
-    return authorizeUser(username, table, family, null, action);
+    return authorizeUser(user, table, family, null, action);
   }
 
-  public boolean authorizeUser(String username, TableName table, byte[] family,
+  public boolean authorizeUser(User user, TableName table, byte[] family,
       byte[] qualifier, Permission.Action action) {
-    // global authorization supercedes table level
-    if (authorizeUser(username, action)) {
+    if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
+    // Global and namespace authorizations supercede table level
+    if (authorize(user, table.getNamespaceAsString(), action)) {    
       return true;
     }
-    if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
-    return authorize(getTablePermissions(table).getUser(username), table, family,
+    // Check table permissions
+    return authorize(getTablePermissions(table).getUser(user.getShortName()), table, family,
         qualifier, action);
   }
 
-
   /**
-   * Checks authorization for a given action for a group, based on the stored
+   * Checks global authorization for a given action for a group, based on the stored
    * permissions.
    */
   public boolean authorizeGroup(String groupName, Permission.Action action) {
@@ -501,17 +502,23 @@ public class TableAuthManager {
    */
   public boolean authorizeGroup(String groupName, TableName table, byte[] family,
       Permission.Action action) {
-    // global authorization supercedes table level
+    // Global authorization supercedes table level
     if (authorizeGroup(groupName, action)) {
       return true;
     }
     if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
+    // Namespace authorization supercedes table level
+    if (authorize(getNamespacePermissions(table.getNamespaceAsString()).getGroup(groupName),
+        table, family, action)) {
+      return true;
+    }
+    // Check table level
     return authorize(getTablePermissions(table).getGroup(groupName), table, family, action);
   }
 
   public boolean authorize(User user, TableName table, byte[] family,
       byte[] qualifier, Permission.Action action) {
-    if (authorizeUser(user.getShortName(), table, family, qualifier, action)) {
+    if (authorizeUser(user, table, family, qualifier, action)) {
       return true;
     }
 
