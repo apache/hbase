@@ -2714,8 +2714,15 @@ public class AssignmentManager extends ZooKeeperListener {
             + " to ENABLED state.");
         // enableTable in sync way during master startup,
         // no need to invoke coprocessor
-        new EnableTableHandler(this.server, tableName,
-            catalogTracker, this, tableLockManager, true).prepare().process();
+        EnableTableHandler eth = new EnableTableHandler(this.server, tableName,
+          catalogTracker, this, tableLockManager, true);
+        try {
+          eth.prepare();
+        } catch (TableNotFoundException e) {
+          LOG.warn("Table " + tableName + " not found in hbase:meta to recover.");
+          continue;
+        }
+        eth.process();
       }
     }
   }

@@ -948,6 +948,35 @@ public class TestAssignmentManager {
   }
 
   /**
+   * Test verifies whether stale znodes of unknown tables as for the hbase:meta will be removed or
+   * not.
+   * @throws KeeperException
+   * @throws IOException
+   * @throws Exception
+   */
+  @Test
+  public void testMasterRestartShouldRemoveStaleZnodesOfUnknownTableAsForMeta()
+      throws KeeperException, IOException, Exception {
+    List<ServerName> destServers = new ArrayList<ServerName>(1);
+    destServers.add(SERVERNAME_A);
+    Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
+    HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
+    Server server = new HMaster(HTU.getConfiguration());
+    Whitebox.setInternalState(server, "serverManager", this.serverManager);
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
+        this.serverManager);
+    try {
+      TableName tableName = TableName.valueOf("dummyTable");
+      // set table in enabling state.
+      am.getZKTable().setEnablingTable(tableName);
+      am.joinCluster();
+      assertFalse("Table should not be present in zookeeper.",
+        am.getZKTable().isTablePresent(tableName));
+    } finally {
+    }
+  }
+  /**
    * When a region is in transition, if the region server opening the region goes down,
    * the region assignment takes a long time normally (waiting for timeout monitor to trigger assign).
    * This test is to make sure SSH reassigns it right away.
