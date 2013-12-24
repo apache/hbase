@@ -91,6 +91,7 @@ public class EnableTableHandler extends EventHandler {
         } 
         try {
           this.assignmentManager.getZKTable().removeEnablingTable(tableName, true);
+          throw new TableNotFoundException(tableName);
         } catch (KeeperException e) {
           // TODO : Use HBCK to clear such nodes
           LOG.warn("Failed to delete the ENABLING node for the table " + tableName
