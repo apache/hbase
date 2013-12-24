@@ -2704,6 +2704,11 @@ public class HBaseFsck extends Configured {
         errors
             .reportError(ERROR_CODE.MULTI_META_REGION, "hbase:meta is found on more than one region.");
         if (shouldFixAssignments()) {
+          if (metaHbckInfo == null) {
+            errors.print(
+              "Unable to fix problem with hbase:meta due to hbase:meta region info missing");
+            return false;
+          }
           errors.print("Trying to fix a problem with hbase:meta..");
           setShouldRerun();
           // try fix it (treat is a dupe assignment)
