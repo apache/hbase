@@ -2340,7 +2340,13 @@ public class HRegionServer implements HRegionInterface,
           serverInfo.getServerName(), hri.getEncodedName());
       zkUpdater.startRegionCloseEvent(null, false);
     }
-    HRegion region = getRegion(hri.getRegionName());
+    HRegion region;
+    try {
+      region = getRegion(hri.getRegionName());
+    } catch (NotServingRegionException ex) {
+      // This is fine. Region is already closed.
+      return;
+    }
     if (region == null) {
       region = this.removeFromRetryCloseRegions(hri);
     }
