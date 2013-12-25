@@ -38,13 +38,17 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.AccessController;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -52,6 +56,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
+import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.ByteString;
 
 @Category(MediumTests.class)
@@ -86,9 +91,24 @@ public class TestVisibilityLabelsWithACL {
     TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName(), 50000);
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
+    addLabels();
+
+    // Create users for testing
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
     NORMAL_USER = User.createUserForTesting(conf, "user1", new String[] {});
-    addLabels();
+    // Grant NORMAL_USER EXEC privilege on the labels table. For the purposes of this
+    // test, we want to insure that access is denied even with the ability to access
+    // the endpoint.
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      BlockingRpcChannel service = acl.coprocessorService(LABELS_TABLE_NAME.getName());
+      AccessControlService.BlockingInterface protocol =
+        AccessControlService.newBlockingStub(service);
+      ProtobufUtil.grant(protocol, NORMAL_USER.getShortName(), LABELS_TABLE_NAME, null, null,
+        Permission.Action.EXEC);
+    } finally {
+      acl.close();
+    }
   }
 
   @AfterClass
