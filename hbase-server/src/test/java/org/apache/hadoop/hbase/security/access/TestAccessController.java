@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -62,10 +63,22 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingService;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -88,8 +101,10 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.TestTableName;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -100,6 +115,9 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
 import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -2491,6 +2509,118 @@ public class TestAccessController extends SecureTestUtil {
 
     // Now USER_NONE should be able to read also
     verifyAllowed(getAction, USER_NONE);
+  }
+
+  public static class PingCoprocessor extends PingService implements Coprocessor,
+      CoprocessorService {
+
+    @Override
+    public void start(CoprocessorEnvironment env) throws IOException { }
+
+    @Override
+    public void stop(CoprocessorEnvironment env) throws IOException { }
+
+    @Override
+    public Service getService() {
+      return this;
+    }
+
+    @Override
+    public void ping(RpcController controller, PingRequest request,
+        RpcCallback<PingResponse> callback) {
+      callback.run(PingResponse.newBuilder().setPong("Pong!").build());
+    }
+
+    @Override
+    public void count(RpcController controller, CountRequest request,
+        RpcCallback<CountResponse> callback) {
+      callback.run(CountResponse.newBuilder().build());
+    }
+
+    @Override
+    public void increment(RpcController controller, IncrementCountRequest requet,
+        RpcCallback<IncrementCountResponse> callback) {
+      callback.run(IncrementCountResponse.newBuilder().build());
+    }
+
+    @Override
+    public void hello(RpcController controller, HelloRequest request,
+        RpcCallback<HelloResponse> callback) {
+      callback.run(HelloResponse.newBuilder().setResponse("Hello!").build());
+    }
+
+    @Override
+    public void noop(RpcController controller, NoopRequest request,
+        RpcCallback<NoopResponse> callback) {
+      callback.run(NoopResponse.newBuilder().build());
+    }
+  }
+
+  @Test
+  public void testCoprocessorExec() throws Exception {
+    // Set up our ping endpoint service on all regions of our test table
+    for (JVMClusterUtil.RegionServerThread thread:
+        TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
+      HRegionServer rs = thread.getRegionServer();
+      for (HRegion region: rs.getOnlineRegions(TEST_TABLE.getTableName())) {
+        region.getCoprocessorHost().load(PingCoprocessor.class,
+          Coprocessor.PRIORITY_USER, conf);
+      }
+    }
+
+    // Create users for testing, and grant EXEC privileges on our test table
+    // only to user A
+    User userA = User.createUserForTesting(conf, "UserA", new String[0]);
+    User userB = User.createUserForTesting(conf, "UserB", new String[0]);
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_BYTE_ARRAY);
+      AccessControlService.BlockingInterface protocol =
+        AccessControlService.newBlockingStub(service);
+      AccessControlProtos.GrantRequest request = RequestConverter.
+        buildGrantRequest(userA.getShortName(), TEST_TABLE.getTableName(), null, null,
+          AccessControlProtos.Permission.Action.EXEC);
+      protocol.grant(null, request);
+    } finally {
+      acl.close();
+    }
+
+    // Create an action for invoking our test endpoint
+    AccessTestAction execEndpointAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          BlockingRpcChannel service = t.coprocessorService(HConstants.EMPTY_BYTE_ARRAY);
+          PingCoprocessor.newBlockingStub(service).noop(null, NoopRequest.newBuilder().build());
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    };
+
+    // Verify that EXEC permission is checked correctly
+    verifyDenied(execEndpointAction, userB);
+    verifyAllowed(execEndpointAction, userA);
+
+    // Now grant EXEC to the entire namespace to user B
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_BYTE_ARRAY);
+      AccessControlService.BlockingInterface protocol =
+        AccessControlService.newBlockingStub(service);
+      AccessControlProtos.GrantRequest request = RequestConverter.
+        buildGrantRequest(userB.getShortName(),
+          TEST_TABLE.getTableName().getNamespaceAsString(),
+          AccessControlProtos.Permission.Action.EXEC);
+        protocol.grant(null, request);
+    } finally {
+      acl.close();
+    }
+
+    // User B should now be allowed also
+    verifyAllowed(execEndpointAction, userA, userB);
   }
 
 }

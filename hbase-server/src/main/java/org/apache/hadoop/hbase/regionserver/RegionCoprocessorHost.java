@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
@@ -71,6 +72,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.ImmutableList;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -1802,4 +1805,44 @@ public class RegionCoprocessorHost
     }
     return newCell;
   }
+
+  public Message preEndpointInvocation(Service service, String methodName, Message request) 
+      throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof EndpointObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          request = ((EndpointObserver) env.getInstance()).preEndpointInvocation(ctx, service,
+            methodName, request);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return request;
+  }
+
+  public void postEndpointInvocation(Service service, String methodName, Message request,
+      Message.Builder responseBuilder) throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof EndpointObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((EndpointObserver) env.getInstance()).postEndpointInvocation(ctx, service, methodName,
+            request, responseBuilder);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
 }

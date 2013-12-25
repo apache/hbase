@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
@@ -128,7 +129,7 @@ import static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Acc
  */
 public class AccessController extends BaseRegionObserver
     implements MasterObserver, RegionServerObserver,
-      AccessControlService.Interface, CoprocessorService {
+      AccessControlService.Interface, CoprocessorService, EndpointObserver {
 
   public static final Log LOG = LogFactory.getLog(AccessController.class);
 
@@ -1467,7 +1468,29 @@ public class AccessController extends BaseRegionObserver
     }
   }
 
+  /* ---- EndpointObserver implementation ---- */
+
+  @Override
+  public Message preEndpointInvocation(ObserverContext<RegionCoprocessorEnvironment> ctx,
+      Service service, String methodName, Message request) throws IOException {
+    // Don't intercept calls to our own AccessControlService, we check for
+    // appropriate permissions in the service handlers
+    if (!(service instanceof AccessControlService)) {
+      requirePermission("invoke(" + service.getDescriptorForType().getName() + "." +
+        methodName + ")",
+        getTableName(ctx.getEnvironment()), null, null,
+        Action.EXEC);
+    }
+    return request;
+  }
+
+  @Override
+  public void postEndpointInvocation(ObserverContext<RegionCoprocessorEnvironment> ctx,
+      Service service, String methodName, Message request, Message.Builder responseBuilder)
+      throws IOException { }
+
   /* ---- Protobuf AccessControlService implementation ---- */
+
   @Override
   public void grant(RpcController controller,
                     AccessControlProtos.GrantRequest request,
