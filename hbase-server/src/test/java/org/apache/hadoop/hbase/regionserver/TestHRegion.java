@@ -1033,6 +1033,101 @@ public class TestHRegion {
   }
 
   @Test
+  public void testCheckAndMutate_WithNonEqualCompareOp() throws IOException {
+    byte[] row1 = Bytes.toBytes("row1");
+    byte[] fam1 = Bytes.toBytes("fam1");
+    byte[] qf1 = Bytes.toBytes("qualifier");
+    byte[] val1 = Bytes.toBytes("value1");
+    byte[] val2 = Bytes.toBytes("value2");
+    byte[] val3 = Bytes.toBytes("value3");
+    byte[] val4 = Bytes.toBytes("value4");
+
+    // Setting up region
+    String method = this.getName();
+    this.region = initHRegion(tableName, method, conf, fam1);
+    try {
+      // Putting val3 in key
+      Put put = new Put(row1);
+      put.add(fam1, qf1, val3);
+      region.put(put);
+
+      // Test CompareOp.LESS: original = val3, compare with val3, fail
+      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS,
+          new BinaryComparator(val3), put, true);
+      assertEquals(false, res);
+
+      // Test CompareOp.LESS: original = val3, compare with val4, fail
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS,
+          new BinaryComparator(val4), put, true);
+      assertEquals(false, res);
+
+      // Test CompareOp.LESS: original = val3, compare with val2,
+      // succeed (now value = val2)
+      put = new Put(row1);
+      put.add(fam1, qf1, val2);
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS,
+          new BinaryComparator(val2), put, true);
+      assertEquals(true, res);
+
+      // Test CompareOp.LESS_OR_EQUAL: original = val2, compare with val3, fail
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS_OR_EQUAL,
+          new BinaryComparator(val3), put, true);
+      assertEquals(false, res);
+
+      // Test CompareOp.LESS_OR_EQUAL: original = val2, compare with val2,
+      // succeed (value still = val2)
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS_OR_EQUAL,
+          new BinaryComparator(val2), put, true);
+      assertEquals(true, res);
+
+      // Test CompareOp.LESS_OR_EQUAL: original = val2, compare with val1,
+      // succeed (now value = val3)
+      put = new Put(row1);
+      put.add(fam1, qf1, val3);
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS_OR_EQUAL,
+          new BinaryComparator(val1), put, true);
+      assertEquals(true, res);
+
+      // Test CompareOp.GREATER: original = val3, compare with val3, fail
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER,
+          new BinaryComparator(val3), put, true);
+      assertEquals(false, res);
+
+      // Test CompareOp.GREATER: original = val3, compare with val2, fail
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER,
+          new BinaryComparator(val2), put, true);
+      assertEquals(false, res);
+
+      // Test CompareOp.GREATER: original = val3, compare with val4,
+      // succeed (now value = val2)
+      put = new Put(row1);
+      put.add(fam1, qf1, val2);
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER,
+          new BinaryComparator(val4), put, true);
+      assertEquals(true, res);
+
+      // Test CompareOp.GREATER_OR_EQUAL: original = val2, compare with val1, fail
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER_OR_EQUAL,
+          new BinaryComparator(val1), put, true);
+      assertEquals(false, res);
+
+      // Test CompareOp.GREATER_OR_EQUAL: original = val2, compare with val2,
+      // succeed (value still = val2)
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER_OR_EQUAL,
+          new BinaryComparator(val2), put, true);
+      assertEquals(true, res);
+
+      // Test CompareOp.GREATER_OR_EQUAL: original = val2, compare with val3, succeed
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER_OR_EQUAL,
+          new BinaryComparator(val3), put, true);
+      assertEquals(true, res);
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  @Test
   public void testCheckAndPut_ThatPutWasWritten() throws IOException {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] fam1 = Bytes.toBytes("fam1");

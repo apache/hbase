@@ -2601,10 +2601,10 @@ public class HRegion implements HeapSize { // , Writable{
               kv.getValueOffset(), kv.getValueLength());
           switch (compareOp) {
           case LESS:
-            matches = compareResult <= 0;
+            matches = compareResult < 0;
             break;
           case LESS_OR_EQUAL:
-            matches = compareResult < 0;
+            matches = compareResult <= 0;
             break;
           case EQUAL:
             matches = compareResult == 0;
@@ -2613,10 +2613,10 @@ public class HRegion implements HeapSize { // , Writable{
             matches = compareResult != 0;
             break;
           case GREATER_OR_EQUAL:
-            matches = compareResult > 0;
+            matches = compareResult >= 0;
             break;
           case GREATER:
-            matches = compareResult >= 0;
+            matches = compareResult > 0;
             break;
           default:
             throw new RuntimeException("Unknown Compare op " + compareOp.name());
