@@ -321,9 +321,9 @@ public class TestAccessController extends SecureTestUtil {
           }
         }
         else {
-          // For doBulkLoad calls AccessDeniedException
-          // is buried in the stack trace
-          Throwable ex = e;
+          // AccessDeniedException can be buried in the stack trace
+          Throwable ex = (e instanceof UndeclaredThrowableException) ?
+            ((UndeclaredThrowableException)e).getUndeclaredThrowable() : e;
           do {
             if (ex instanceof AccessDeniedException) {
               isAccessDeniedException = true;
