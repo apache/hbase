@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Map;
@@ -307,9 +308,9 @@ public class TestAccessController extends SecureTestUtil {
             fail("Expected no results for user '" + user.getShortName() + "'");
           }
         }
-      } catch (Exception e) {
+      } catch (IOException e) {
         boolean isAccessDeniedException = false;
-        if (e instanceof RetriesExhaustedWithDetailsException) {
+        if(e instanceof RetriesExhaustedWithDetailsException) {
           // in case of batch operations, and put, the client assembles a
           // RetriesExhaustedWithDetailsException instead of throwing an
           // AccessDeniedException
@@ -321,9 +322,9 @@ public class TestAccessController extends SecureTestUtil {
           }
         }
         else {
-          // AccessDeniedException can be buried in the stack trace
-          Throwable ex = (e instanceof UndeclaredThrowableException) ?
-            ((UndeclaredThrowableException)e).getUndeclaredThrowable() : e;
+          // For doBulkLoad calls AccessDeniedException
+          // is buried in the stack trace
+          Throwable ex = e;
           do {
             if (ex instanceof AccessDeniedException) {
               isAccessDeniedException = true;
@@ -334,6 +335,20 @@ public class TestAccessController extends SecureTestUtil {
         if (!isAccessDeniedException) {
           fail("Not receiving AccessDeniedException for user '" + user.getShortName() + "'");
         }
+      } catch (UndeclaredThrowableException ute) {
+        // TODO why we get a PrivilegedActionException, which is unexpected?
+        Throwable ex = ute.getUndeclaredThrowable();
+        if (ex instanceof PrivilegedActionException) {
+          ex = ((PrivilegedActionException) ex).getException();
+        }
+        if (ex instanceof ServiceException) {
+          ServiceException se = (ServiceException)ex;
+          if (se.getCause() != null && se.getCause() instanceof AccessDeniedException) {
+            // expected result
+            return;
+          }
+        }
+        fail("Not receiving AccessDeniedException for user '" + user.getShortName() + "'");
       }
     }
   }
