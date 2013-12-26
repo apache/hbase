@@ -5411,11 +5411,6 @@ public class HRegion implements HeapSize { // , Writable{
 
     Message request = service.getRequestPrototype(methodDesc).newBuilderForType()
         .mergeFrom(call.getRequest()).build();
-
-    if (coprocessorHost != null) {
-      request = coprocessorHost.preEndpointInvocation(service, methodName, request);
-    }
-
     final Message.Builder responseBuilder =
         service.getResponsePrototype(methodDesc).newBuilderForType();
     service.callMethod(methodDesc, controller, request, new RpcCallback<Message>() {
@@ -5426,10 +5421,6 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
     });
-
-    if (coprocessorHost != null) {
-      coprocessorHost.postEndpointInvocation(service, methodName, request, responseBuilder);
-    }
 
     return responseBuilder.build();
   }
