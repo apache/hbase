@@ -155,6 +155,14 @@ public class AccessController extends BaseRegionObserver
 
   private volatile boolean initialized = false;
 
+  public HRegion getRegion() {
+    return regionEnv != null ? regionEnv.getRegion() : null;
+  }
+
+  public TableAuthManager getAuthManager() {
+    return authManager;
+  }
+
   void initialize(RegionCoprocessorEnvironment e) throws IOException {
     final HRegion region = e.getRegion();
     Map<byte[], ListMultimap<String,TablePermission>> tables =
@@ -1768,5 +1776,4 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void postRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
       HRegion regionA, HRegion regionB) throws IOException { }
-
 }
