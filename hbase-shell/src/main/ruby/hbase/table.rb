@@ -169,13 +169,38 @@ EOF
 
     #----------------------------------------------------------------------------------------------
     # Increment a counter atomically
-    def _incr_internal(row, column, value = nil)
+    def _incr_internal(row, column, value = nil, args={})
+      if value.kind_of?(Hash)
+      	value = 1
+      end
       value ||= 1
+      incr = org.apache.hadoop.hbase.client.Increment.new(row.to_s.to_java_bytes)
       family, qualifier = parse_column_name(column)
       if qualifier.nil?
-	  raise ArgumentError, "Failed to provide both column family and column qualifier for incr"
+	  	raise ArgumentError, "Failed to provide both column family and column qualifier for incr"
       end
-      @table.incrementColumnValue(row.to_s.to_java_bytes, family, qualifier, value)
+      if args.any?
+      	attributes = args[ATTRIBUTES]
+        set_attributes(incr, attributes) if attributes       
+      end
+      incr.addColumn(family, qualifier, value)
+      @table.increment(incr)
+    end
+    
+    #----------------------------------------------------------------------------------------------
+    # appends the value atomically
+    def _append_internal(row, column, value, args={})
+      append = org.apache.hadoop.hbase.client.Append.new(row.to_s.to_java_bytes)
+      family, qualifier = parse_column_name(column)
+      if qualifier.nil?
+	  	raise ArgumentError, "Failed to provide both column family and column qualifier for append"
+      end
+      if args.any?
+      	attributes = args[ATTRIBUTES]
+        set_attributes(append, attributes) if attributes       
+      end
+      append.add(family, qualifier, value.to_s.to_java_bytes)
+      @table.append(append)
     end
 
     #----------------------------------------------------------------------------------------------

@@ -187,6 +187,11 @@ module Hbase
     end
 
     #-------------------------------------------------------------------------------
+ 
+    define_test "append should work with value" do
+      @test_table.append("123", 'x:cnt2', '123')
+    end
+    #-------------------------------------------------------------------------------
 
     define_test "get_counter should work with integer keys" do
       @test_table.incr(12345, 'x:cnt')

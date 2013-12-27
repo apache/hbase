@@ -19,40 +19,32 @@
 
 module Shell
   module Commands
-    class Incr < Command
+    class Append < Command
       def help
         return <<-EOF
-Increments a cell 'value' at specified table/row/column coordinates.
-To increment a cell value in table 't1' at row 'r1' under column
-'c1' by 1 (can be omitted) or 10 do:
+Appends a cell 'value' at specified table/row/column coordinates.
 
-  hbase> incr 't1', 'r1', 'c1'
-  hbase> incr 't1', 'r1', 'c1', 1
-  hbase> incr 't1', 'r1', 'c1', 10
-  hbase> incr 't1', 'r1', 'c1', 10, ATTRIBUTES=>{'mykey'=>'myvalue'}
-  hbase> incr 't1', 'r1', 'c1', ATTRIBUTES=>{'mykey'=>'myvalue'}
+  hbase> append 't1', 'r1', 'c1', 'value', ATTRIBUTES=>{'mykey'=>'myvalue'}
 
 The same commands also can be run on a table reference. Suppose you had a reference
 t to table 't1', the corresponding command would be:
 
-  hbase> t.incr 'r1', 'c1'
-  hbase> t.incr 'r1', 'c1', 1
-  hbase> t.incr 'r1', 'c1', 10, ATTRIBUTES=>{'mykey'=>'myvalue'}
+  hbase> t.append 'r1', 'c1', 'value', ATTRIBUTES=>{'mykey'=>'myvalue'}
 EOF
       end
 
-      def command(table, row, column, value = nil, args = {})
-        incr(table(table), row, column, value, args)
+      def command(table, row, column, value, args={})
+        append(table(table), row, column, value, args)
       end
 
-      def incr(table, row, column, value = nil, args={})
+      def append(table, row, column, value, args={})
       	format_simple_command do
-        	table._incr_internal(row, column, value, args)
-      	end
+        	table._append_internal(row, column, value, args)
+        end
       end
     end
   end
 end
 
 #add incr comamnd to Table
-::Hbase::Table.add_shell_command("incr")
+::Hbase::Table.add_shell_command("append")

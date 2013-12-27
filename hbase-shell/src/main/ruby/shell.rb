@@ -284,6 +284,7 @@ Shell.load_command_group(
     scan
     truncate
     truncate_preserve
+    append
   ]
 )
 
