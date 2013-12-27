@@ -1039,9 +1039,6 @@ public class HConnectionManager {
           }
           didTry = true;
 
-          HRegionInterface serverInterface =
-            getHRegionConnection(metaLocation.getServerAddress());
-
           Result regionInfoRow = null;
           // This block guards against two threads trying to load the meta
           // region at the same time. The first will load the meta region and
@@ -1067,7 +1064,10 @@ public class HConnectionManager {
               prefetchRegionCache(tableName, row);
             }
 
-          // Query the root or meta region for the location of the meta region
+            HRegionInterface serverInterface =
+              getHRegionConnection(metaLocation.getServerAddress());
+
+            // Query the root or meta region for the location of the meta region
             regionInfoRow = serverInterface.getClosestRowBefore(
             metaLocation.getRegionInfo().getRegionName(), metaKey,
             HConstants.CATALOG_FAMILY);
