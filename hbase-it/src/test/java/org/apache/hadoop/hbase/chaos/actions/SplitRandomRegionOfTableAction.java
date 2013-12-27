@@ -59,7 +59,11 @@ public class SplitRandomRegionOfTableAction extends Action {
     HRegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
         regions.toArray(new HRegionInfo[regions.size()]));
     LOG.debug("Splitting region " + region.getRegionNameAsString());
-    admin.split(region.getRegionName());
+    try {
+      admin.split(region.getRegionName());
+    } catch (Exception ex) {
+      LOG.warn("Split failed, might be caused by other chaos: " + ex.getMessage());
+    }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);
     }

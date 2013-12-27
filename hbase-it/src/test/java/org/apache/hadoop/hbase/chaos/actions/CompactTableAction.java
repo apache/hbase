@@ -51,10 +51,14 @@ public class CompactTableAction extends Action {
     boolean major = RandomUtils.nextInt(100) < majorRatio;
 
     LOG.info("Performing action: Compact table " + tableName + ", major=" + major);
-    if (major) {
-      admin.majorCompact(tableNameBytes);
-    } else {
-      admin.compact(tableNameBytes);
+    try {
+      if (major) {
+        admin.majorCompact(tableNameBytes);
+      } else {
+        admin.compact(tableNameBytes);
+      }
+    } catch (Exception ex) {
+      LOG.warn("Compaction failed, might be caused by other chaos: " + ex.getMessage());
     }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);

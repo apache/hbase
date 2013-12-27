@@ -66,12 +66,16 @@ public class CompactRandomRegionOfTableAction extends Action {
     HRegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
       regions.toArray(new HRegionInfo[regions.size()]));
 
-    if (major) {
-      LOG.debug("Major compacting region " + region.getRegionNameAsString());
-      admin.majorCompact(region.getRegionName());
-    } else {
-      LOG.debug("Compacting region " + region.getRegionNameAsString());
-      admin.compact(region.getRegionName());
+    try {
+      if (major) {
+        LOG.debug("Major compacting region " + region.getRegionNameAsString());
+        admin.majorCompact(region.getRegionName());
+      } else {
+        LOG.debug("Compacting region " + region.getRegionNameAsString());
+        admin.compact(region.getRegionName());
+      }
+    } catch (Exception ex) {
+      LOG.warn("Compaction failed, might be caused by other chaos: " + ex.getMessage());
     }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);
