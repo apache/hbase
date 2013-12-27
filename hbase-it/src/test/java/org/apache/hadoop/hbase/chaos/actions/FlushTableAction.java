@@ -46,7 +46,11 @@ public class FlushTableAction extends Action {
     HBaseAdmin admin = util.getHBaseAdmin();
 
     LOG.info("Performing action: Flush table " + tableName);
-    admin.flush(tableNameBytes);
+    try {
+      admin.flush(tableNameBytes);
+    } catch (Exception ex) {
+      LOG.warn("Flush failed, might be caused by other chaos: " + ex.getMessage());
+    }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);
     }

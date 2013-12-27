@@ -60,7 +60,11 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
     HRegionInfo a = regions.get(i++);
     HRegionInfo b = regions.get(i);
     LOG.debug("Merging " + a.getRegionNameAsString() + " and " + b.getRegionNameAsString());
-    admin.mergeRegions(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
+    try {
+      admin.mergeRegions(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
+    } catch (Exception ex) {
+      LOG.warn("Merge failed, might be caused by other chaos: " + ex.getMessage());
+    }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);
     }

@@ -74,8 +74,8 @@ public class MoveRegionsOfTableAction extends Action {
           servers[RandomUtils.nextInt(servers.length)].getServerName();
         LOG.debug("Moving " + regionInfo.getRegionNameAsString() + " to " + destServerName);
         admin.move(regionInfo.getEncodedNameAsBytes(), Bytes.toBytes(destServerName));
-      } catch (Exception e) {
-        LOG.debug("Error moving region", e);
+      } catch (Exception ex) {
+        LOG.warn("Move failed, might be caused by other chaos: " + ex.getMessage());
       }
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);
