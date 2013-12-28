@@ -48,7 +48,8 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
   List<Cell> values;
 
   public ClientSideRegionScanner(Configuration conf, FileSystem fs,
-      Path rootDir, HTableDescriptor htd, HRegionInfo hri, Scan scan, ScanMetrics scanMetrics) throws IOException {
+      Path rootDir, HTableDescriptor htd, HRegionInfo hri, Scan scan, ScanMetrics scanMetrics) 
+          throws IOException {
 
     this.scan = scan;
 

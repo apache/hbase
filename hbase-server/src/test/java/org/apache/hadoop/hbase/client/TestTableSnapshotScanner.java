@@ -124,8 +124,8 @@ public class TestTableSnapshotScanner {
     testScanner(UTIL, "testWithMultiRegion", 20, true);
   }
 
-  private void testScanner(HBaseTestingUtility util, String snapshotName, int numRegions, boolean shutdownCluster)
-      throws Exception {
+  private void testScanner(HBaseTestingUtility util, String snapshotName, int numRegions, 
+      boolean shutdownCluster) throws Exception {
     setupCluster();
     TableName tableName = TableName.valueOf("testScanner");
     try {
@@ -138,7 +138,8 @@ public class TestTableSnapshotScanner {
       Path restoreDir = util.getDataTestDirOnTestFS(snapshotName);
       Scan scan = new Scan(bbb, yyy); // limit the scan
 
-      TableSnapshotScanner scanner = new TableSnapshotScanner(UTIL.getConfiguration(), restoreDir, snapshotName, scan);
+      TableSnapshotScanner scanner = new TableSnapshotScanner(UTIL.getConfiguration(), restoreDir, 
+        snapshotName, scan);
 
       verifyScanner(scanner, bbb, yyy);
       scanner.close();
@@ -154,7 +155,8 @@ public class TestTableSnapshotScanner {
   private void verifyScanner(ResultScanner scanner, byte[] startRow, byte[] stopRow)
       throws IOException, InterruptedException {
 
-    HBaseTestingUtility.SeenRowTracker rowTracker = new HBaseTestingUtility.SeenRowTracker(startRow, stopRow);
+    HBaseTestingUtility.SeenRowTracker rowTracker = 
+        new HBaseTestingUtility.SeenRowTracker(startRow, stopRow);
 
     while (true) {
       Result result = scanner.next();

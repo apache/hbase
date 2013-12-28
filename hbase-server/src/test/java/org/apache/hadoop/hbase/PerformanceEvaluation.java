@@ -193,7 +193,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     addCommandDescriptor(ScanTest.class, "scan",
         "Run scan test (read every row)");
     addCommandDescriptor(FilteredScanTest.class, "filterScan",
-        "Run scan test using a filter to find a specific row based on it's value (make sure to use --rows=20)");
+        "Run scan test using a filter to find a specific row based on it's value " +
+        "(make sure to use --rows=20)");
   }
 
   protected void addCommandDescriptor(Class<? extends Test> cmdClass,
@@ -1584,13 +1585,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
           this.useTags = Boolean.parseBoolean(cmd.substring(useTags.length()));
           continue;
         }
-        
+
         final String noOfTags = "--nooftags=";
         if (cmd.startsWith(noOfTags)) {
           this.noOfTags = Integer.parseInt(cmd.substring(noOfTags.length()));
           continue;
         }
-        
+
         Class<? extends Test> cmdClass = determineCommandClass(cmd);
         if (cmdClass != null) {
           getArgs(i + 1, args);

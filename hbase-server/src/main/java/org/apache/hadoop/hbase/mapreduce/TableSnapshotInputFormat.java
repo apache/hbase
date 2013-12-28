@@ -82,7 +82,8 @@ import com.google.protobuf.ZeroCopyLiteralByteString;
  * while there are jobs reading from snapshot files.
  * <p>
  * Usage is similar to TableInputFormat, and
- * {@link TableMapReduceUtil#initTableSnapshotMapperJob(String, Scan, Class, Class, Class, Job, boolean, Path)}
+ * {@link TableMapReduceUtil#initTableSnapshotMapperJob(String, Scan, Class, Class, Class, Job, 
+ *   boolean, Path)}
  * can be used to configure the job.
  * <pre>{@code
  * Job job = new Job(conf);
@@ -100,12 +101,13 @@ import com.google.protobuf.ZeroCopyLiteralByteString;
  * <p>
  * HBase owns all the data and snapshot files on the filesystem. Only the HBase user can read from
  * snapshot files and data files. HBase also enforces security because all the requests are handled
- * by the server layer, and the user cannot read from the data files directly. To read from snapshot
- * files directly from the file system, the user who is running the MR job must have sufficient
- * permissions to access snapshot and reference files. This means that to run mapreduce over
- * snapshot files, the MR job has to be run as the HBase user or the user must have group or other
- * priviledges in the filesystem (See HBASE-8369). Note that, given other users access to read from
- * snapshot/data files will completely circumvent the access control enforced by HBase.
+ * by the server layer, and the user cannot read from the data files directly. 
+ * To read from snapshot files directly from the file system, the user who is running the MR job 
+ * must have sufficient permissions to access snapshot and reference files. 
+ * This means that to run mapreduce over snapshot files, the MR job has to be run as the HBase 
+ * user or the user must have group or other priviledges in the filesystem (See HBASE-8369). 
+ * Note that, given other users access to read from snapshot/data files will completely circumvent 
+ * the access control enforced by HBase.
  * @see TableSnapshotScanner
  */
 @InterfaceAudience.Public
@@ -117,7 +119,8 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
   private static final Log LOG = LogFactory.getLog(TableSnapshotInputFormat.class);
 
   /** See {@link #getBestLocations(Configuration, HDFSBlocksDistribution)} */
-  private static final String LOCALITY_CUTOFF_MULTIPLIER = "hbase.tablesnapshotinputformat.locality.cutoff.multiplier";
+  private static final String LOCALITY_CUTOFF_MULTIPLIER = 
+      "hbase.tablesnapshotinputformat.locality.cutoff.multiplier";
   private static final float DEFAULT_LOCALITY_CUTOFF_MULTIPLIER = 0.8f;
 
   private static final String SNAPSHOT_NAME_KEY = "hbase.TableSnapshotInputFormat.snapshot.name";
@@ -177,7 +180,8 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       int len = in.readInt();
       byte[] buf = new byte[len];
       in.readFully(buf);
-      MapReduceProtos.TableSnapshotRegionSplit split = MapReduceProtos.TableSnapshotRegionSplit.PARSER.parseFrom(buf);
+      MapReduceProtos.TableSnapshotRegionSplit split = 
+          MapReduceProtos.TableSnapshotRegionSplit.PARSER.parseFrom(buf);
       this.regionName = Bytes.toString(split.getRegion().getValue().toByteArray());
       List<String> locationsList = split.getLocationsList();
       this.locations = locationsList.toArray(new String[locationsList.size()]);
@@ -185,7 +189,8 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
   }
 
   @VisibleForTesting
-  static class TableSnapshotRegionRecordReader extends RecordReader<ImmutableBytesWritable, Result> {
+  static class TableSnapshotRegionRecordReader extends 
+    RecordReader<ImmutableBytesWritable, Result> {
     private TableSnapshotRegionSplit split;
     private Scan scan;
     private Result result = null;
@@ -223,8 +228,9 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
         throw new IllegalArgumentException("A Scan is not configured for this job");
       }
       scan = TableMapReduceUtil.convertStringToScan(scanStr);
-      scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED); // region is immutable, this should be fine,
-                                                               // otherwise we have to set the thread read point
+      // region is immutable, this should be fine,
+      // otherwise we have to set the thread read point
+      scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
 
       scanner = new ClientSideRegionScanner(conf, fs, tmpRootDir, htd, hri, scan, null);
       if (context != null) {
@@ -336,7 +342,8 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
    * weights into account, thus will treat every location passed from the input split as equal. We
    * do not want to blindly pass all the locations, since we are creating one split per region, and
    * the region's blocks are all distributed throughout the cluster unless favorite node assignment
-   * is used. On the expected stable case, only one location will contain most of the blocks as local.
+   * is used. On the expected stable case, only one location will contain most of the blocks as 
+   * local.
    * On the other hand, in favored node assignment, 3 nodes will contain highly local blocks. Here
    * we are doing a simple heuristic, where we will pass all hosts which have at least 80%
    * (hbase.tablesnapshotinputformat.locality.cutoff.multiplier) as much block locality as the top

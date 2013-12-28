@@ -190,7 +190,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     addCommandDescriptor(ScanTest.class, "scan",
         "Run scan test (read every row)");
     addCommandDescriptor(FilteredScanTest.class, "filterScan",
-        "Run scan test using a filter to find a specific row based on it's value (make sure to use --rows=20)");
+        "Run scan test using a filter to find a specific row based " +
+        "on it's value (make sure to use --rows=20)");
   }
 
   protected void addCommandDescriptor(Class<? extends Test> cmdClass,
@@ -1329,7 +1330,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
     System.err.println("Usage: java " + this.getClass().getName() + " \\");
     System.err.println("  [--nomapred] [--rows=ROWS] [--table=NAME] \\");
-    System.err.println("  [--compress=TYPE] [--blockEncoding=TYPE] [-D<property=value>]* <command> <nclients>");
+    System.err.println("  [--compress=TYPE] [--blockEncoding=TYPE] " +
+      "[-D<property=value>]* <command> <nclients>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" nomapred        Run multiple clients using threads " +
@@ -1337,15 +1339,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" rows            Rows each client runs. Default: One million");
     System.err.println(" table           Alternate table name. Default: 'TestTable'");
     System.err.println(" compress        Compression type to use (GZ, LZO, ...). Default: 'NONE'");
-    System.err.println(" flushCommits    Used to determine if the test should flush the table.  Default: false");
+    System.err.println(" flushCommits    Used to determine if the test should flush the table. " +
+      "Default: false");
     System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
-    System.err.println(" presplit        Create presplit table. Recommended for accurate perf analysis (see guide).  Default: disabled");
-    System.err
-        .println(" inmemory        Tries to keep the HFiles of the CF inmemory as far as possible.  Not " +
-            "guaranteed that reads are always served from inmemory.  Default: false");
-    System.err.println(" usetags         Writes tags along with KVs.  Use with HFile V3.  Default : false");
-    System.err
-        .println(" numoftags        Specify the no of tags that would be needed.  This works only if usetags is true.");
+    System.err.println(" presplit        Create presplit table. Recommended for accurate perf " +
+      "analysis (see guide).  Default: disabled");
+    System.err.println(" inmemory        Tries to keep the HFiles of the CF inmemory as far as " +
+      "possible.  Not guaranteed that reads are always served from inmemory.  Default: false");
+    System.err.println(" usetags         Writes tags along with KVs.  Use with HFile V3. " +
+      "Default : false");
+    System.err.println(" numoftags        Specify the no of tags that would be needed. " +
+      "This works only if usetags is true.");
     System.err.println();
     System.err.println(" Note: -D properties will be applied to the conf used. ");
     System.err.println("  For example: ");

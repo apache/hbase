@@ -674,10 +674,14 @@ public final class ExportSnapshot extends Configured implements Tool {
     System.err.println("  -snapshot NAME          Snapshot to restore.");
     System.err.println("  -copy-to NAME           Remote destination hdfs://");
     System.err.println("  -no-checksum-verify     Do not verify checksum.");
-    System.err.println("  -chuser USERNAME        Change the owner of the files to the specified one.");
-    System.err.println("  -chgroup GROUP          Change the group of the files to the specified one.");
-    System.err.println("  -chmod MODE             Change the permission of the files to the specified one.");
-    System.err.println("  -mappers                Number of mappers to use during the copy (mapreduce.job.maps).");
+    System.err.println("  -chuser USERNAME        Change the owner of the files " +
+        "to the specified one.");
+    System.err.println("  -chgroup GROUP          Change the group of the files to " +
+        "the specified one.");
+    System.err.println("  -chmod MODE             Change the permission of the files " +
+        "to the specified one.");
+    System.err.println("  -mappers                Number of mappers to use during the " +
+        "copy (mapreduce.job.maps).");
     System.err.println();
     System.err.println("Examples:");
     System.err.println("  hbase " + getClass() + " \\");

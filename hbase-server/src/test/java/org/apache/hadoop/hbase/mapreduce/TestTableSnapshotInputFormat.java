@@ -120,15 +120,18 @@ public class TestTableSnapshotInputFormat {
     Assert.assertEquals(Lists.newArrayList("h1"), tsif.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h2"}, 2);
-    Assert.assertEquals(Lists.newArrayList("h1", "h2"), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList("h1", "h2"), 
+      tsif.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h2"}, 3);
-    Assert.assertEquals(Lists.newArrayList("h2", "h1"), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList("h2", "h1"), 
+      tsif.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h3"}, 6);
     blockDistribution.addHostsAndBlockWeight(new String[] {"h4"}, 9);
 
-    Assert.assertEquals(Lists.newArrayList("h2", "h3", "h4", "h1"), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList("h2", "h3", "h4", "h1"), 
+      tsif.getBestLocations(conf, blockDistribution));
   }
 
   public static enum TestTableSnapshotCounters {
@@ -148,7 +151,8 @@ public class TestTableSnapshotInputFormat {
 
   public static class TestTableSnapshotReducer
     extends Reducer<ImmutableBytesWritable, NullWritable, NullWritable, NullWritable> {
-    HBaseTestingUtility.SeenRowTracker rowTracker = new HBaseTestingUtility.SeenRowTracker(bbb, yyy);
+    HBaseTestingUtility.SeenRowTracker rowTracker = 
+        new HBaseTestingUtility.SeenRowTracker(bbb, yyy);
     @Override
     protected void reduce(ImmutableBytesWritable key, Iterable<NullWritable> values,
        Context context) throws IOException, InterruptedException {
@@ -207,8 +211,8 @@ public class TestTableSnapshotInputFormat {
     testWithMockedMapReduce(UTIL, "testWithMockedMapReduceMultiRegion", 10, 8);
   }
 
-  public void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName, int numRegions, int expectedNumSplits)
-      throws Exception {
+  public void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName, 
+      int numRegions, int expectedNumSplits) throws Exception {
     setupCluster();
     TableName tableName = TableName.valueOf("testWithMockedMapReduce");
     try {
@@ -239,7 +243,8 @@ public class TestTableSnapshotInputFormat {
 
     Assert.assertEquals(expectedNumSplits, splits.size());
 
-    HBaseTestingUtility.SeenRowTracker rowTracker = new HBaseTestingUtility.SeenRowTracker(startRow, stopRow);
+    HBaseTestingUtility.SeenRowTracker rowTracker = 
+        new HBaseTestingUtility.SeenRowTracker(startRow, stopRow);
 
     for (int i = 0; i < splits.size(); i++) {
       // validate input split
@@ -249,7 +254,8 @@ public class TestTableSnapshotInputFormat {
       // validate record reader
       TaskAttemptContext taskAttemptContext = mock(TaskAttemptContext.class);
       when(taskAttemptContext.getConfiguration()).thenReturn(job.getConfiguration());
-      RecordReader<ImmutableBytesWritable, Result> rr = tsif.createRecordReader(split, taskAttemptContext);
+      RecordReader<ImmutableBytesWritable, Result> rr = 
+          tsif.createRecordReader(split, taskAttemptContext);
       rr.initialize(split, taskAttemptContext);
 
       // validate we can read all the data back
@@ -266,7 +272,8 @@ public class TestTableSnapshotInputFormat {
     rowTracker.validate();
   }
 
-  public static void verifyRowFromMap(ImmutableBytesWritable key, Result result) throws IOException {
+  public static void verifyRowFromMap(ImmutableBytesWritable key, Result result) 
+      throws IOException {
     byte[] row = key.get();
     CellScanner scanner = result.cellScanner();
     while (scanner.advance()) {
@@ -317,8 +324,8 @@ public class TestTableSnapshotInputFormat {
 
   // this is also called by the IntegrationTestTableSnapshotInputFormat
   public static void doTestWithMapReduce(HBaseTestingUtility util, TableName tableName,
-      String snapshotName, Path tableDir, int numRegions, int expectedNumSplits, boolean shutdownCluster)
-          throws Exception {
+      String snapshotName, Path tableDir, int numRegions, int expectedNumSplits, 
+      boolean shutdownCluster) throws Exception {
 
     //create the table and snapshot
     createTableAndSnapshot(util, tableName, snapshotName, numRegions);
@@ -333,7 +340,8 @@ public class TestTableSnapshotInputFormat {
       Scan scan = new Scan(bbb, yyy); // limit the scan
 
       job.setJarByClass(util.getClass());
-      TableMapReduceUtil.addDependencyJars(job.getConfiguration(), TestTableSnapshotInputFormat.class);
+      TableMapReduceUtil.addDependencyJars(job.getConfiguration(), 
+        TestTableSnapshotInputFormat.class);
 
       TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName,
         scan, TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
