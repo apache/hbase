@@ -49,6 +49,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   // Server name made of the concatenation of hostname, port and startcode
   // formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
   private final String deadServer;
+  private long deadServerStartCode;
   private boolean isRootServer;
   private List<MetaRegion> metaRegions, metaRegionsUnassigned;
   private boolean rootRescanned;
@@ -83,6 +84,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     super(master, serverInfo.getServerName());
     this.deadServer = serverInfo.getServerName();
     this.deadServerAddress = serverInfo.getServerAddress();
+    this.deadServerStartCode = serverInfo.getStartCode();
     this.rootRescanned = false;
     this.successfulMetaScans = new HashSet<String>();
     // check to see if I am responsible for either ROOT or any of the META tables.
@@ -315,6 +317,22 @@ class ProcessServerShutdown extends RegionServerOperation {
       if (LOG.isDebugEnabled()) {
         HServerAddress addr = master.getRegionManager().getRootRegionLocation();
         if (addr != null) {
+          if (addr.equals(deadServerAddress)) {
+            // We should not happen unless the master has restarted recently, because we
+            // explicitly call unsetRootRegion() in closeMetaRegions, which is called when
+            // ProcessServerShutdown was instantiated.
+            // However, in the case of a recovery by ZKClusterStateRecovery, it is possible that
+            // the rootRegion was updated after closeMetaRegions() was called. If we let the rootRegion
+            // point to a dead server,  the cluster might just block, because all ScanRootRegion calls
+            // will continue to fail. Let us fix this, by ensuring that the root gets reassigned.
+            if (deadServerStartCode == master.getRegionManager().getRootServerInfo().getStartCode()) {
+              LOG.error(ProcessServerShutdown.this.toString() + " unsetting root because it is on the dead server being processed" );
+              master.getRegionManager().reassignRootRegion();
+              return false;
+            } else {
+              LOG.info(ProcessServerShutdown.this.toString() + " NOT unsetting root because it is on the dead server, but different start code" );
+            }
+          }
           LOG.debug(ProcessServerShutdown.this.toString() + " scanning root region on " +
               addr.getBindAddress());
         } else {
