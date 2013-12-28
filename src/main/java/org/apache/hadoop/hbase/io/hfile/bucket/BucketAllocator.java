@@ -20,7 +20,7 @@
 
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -150,9 +150,9 @@ public final class BucketAllocator {
     private int sizeIndex;
 
     BucketSizeInfo(int sizeIndex) {
-      bucketList = new ArrayList<Bucket>();
-      freeBuckets = new ArrayList<Bucket>();
-      completelyFreeBuckets = new ArrayList<Bucket>();
+      bucketList = new LinkedList<Bucket>();
+      freeBuckets = new LinkedList<Bucket>();
+      completelyFreeBuckets = new LinkedList<Bucket>();
       this.sizeIndex = sizeIndex;
     }
 
@@ -186,7 +186,7 @@ public final class BucketAllocator {
       return result;
     }
 
-    void blockAllocated(Bucket b) {
+    private void blockAllocated(Bucket b) {
       if (!b.isCompletelyFree()) completelyFreeBuckets.remove(b);
       if (!b.hasFreeSpace()) freeBuckets.remove(b);
     }
@@ -247,7 +247,6 @@ public final class BucketAllocator {
         return bucketSizeInfos[i];
     return null;
   }
-
 
   static public final int FEWEST_ITEMS_IN_BUCKET = 4;
   // The capacity size for each bucket
@@ -349,7 +348,7 @@ public final class BucketAllocator {
     return targetBucket.itemAllocationSize();
   }
 
-  public int sizeOfAllocation(long offset) {
+  public synchronized int sizeOfAllocation(long offset) {
     int bucketNo = (int) (offset / bucketCapacity);
     Preconditions.checkPositionIndex(bucketNo, buckets.length);
     Bucket targetBucket = buckets[bucketNo];
@@ -421,10 +420,10 @@ public final class BucketAllocator {
     IndexStatistics total = new IndexStatistics();
     IndexStatistics[] stats = getIndexStatistics(total);
     LOG.info("Bucket allocator statistics follow:\n");
-    LOG.info("  Free bytes=" + total.freeBytes() + "+; used bytes="
+    LOG.info("  Free bytes=" + total.freeBytes() + "; used bytes="
         + total.usedBytes() + "; total bytes=" + total.totalBytes());
     for (IndexStatistics s : stats) {
-      LOG.info("  Object size " + s.itemSize() + " used=" + s.usedCount()
+      LOG.info("  Object size " + s.itemSize() + "; used=" + s.usedCount()
           + "; free=" + s.freeCount() + "; total=" + s.totalCount());
     }
   }
@@ -440,7 +439,7 @@ public final class BucketAllocator {
     return stats;
   }
 
-  public IndexStatistics[] getIndexStatistics() {
+  public synchronized IndexStatistics[] getIndexStatistics() {
     IndexStatistics[] stats = new IndexStatistics[bucketSizes.length];
     for (int i = 0; i < stats.length; ++i)
       stats[i] = bucketSizeInfos[i].statistics();
