@@ -472,13 +472,17 @@ public final class Canary implements Tool {
       return;
     }
 
-    for (HRegionInfo region : admin.getTableRegions(tableDesc.getName())) {
-      try {
-        sniffRegion(admin, sink, region, table);
-      } catch (Exception e) {
-        sink.publishReadFailure(region, e);
-        LOG.debug("sniffRegion failed", e);
+    try {
+      for (HRegionInfo region : admin.getTableRegions(tableDesc.getName())) {
+        try {
+          sniffRegion(admin, sink, region, table);
+        } catch (Exception e) {
+          sink.publishReadFailure(region, e);
+          LOG.debug("sniffRegion failed", e);
+        }
       }
+    } finally {
+      table.close();
     }
   }
 
