@@ -29,15 +29,17 @@ To increment a cell value in table 't1' at row 'r1' under column
   hbase> incr 't1', 'r1', 'c1'
   hbase> incr 't1', 'r1', 'c1', 1
   hbase> incr 't1', 'r1', 'c1', 10
-  hbase> incr 't1', 'r1', 'c1', 10, ATTRIBUTES=>{'mykey'=>'myvalue'}
-  hbase> incr 't1', 'r1', 'c1', ATTRIBUTES=>{'mykey'=>'myvalue'}
+  hbase> incr 't1', 'r1', 'c1', 10, {ATTRIBUTES=>{'mykey'=>'myvalue'}}
+  hbase> incr 't1', 'r1', 'c1', {ATTRIBUTES=>{'mykey'=>'myvalue'}}
+  hbase> incr 't1', 'r1', 'c1', 10, {VISIBILITY=>'PRIVATE|SECRET'}
 
 The same commands also can be run on a table reference. Suppose you had a reference
 t to table 't1', the corresponding command would be:
 
   hbase> t.incr 'r1', 'c1'
   hbase> t.incr 'r1', 'c1', 1
-  hbase> t.incr 'r1', 'c1', 10, ATTRIBUTES=>{'mykey'=>'myvalue'}
+  hbase> t.incr 'r1', 'c1', 10, {ATTRIBUTES=>{'mykey'=>'myvalue'}}
+  hbase> t.incr 'r1', 'c1', 10, {VISIBILITY=>'PRIVATE|SECRET'}
 EOF
       end
 

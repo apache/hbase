@@ -32,10 +32,12 @@ module Hbase
 
     def add_labels(*args)
       lables_table_available?
-
       # Normalize args
       if args.kind_of?(Array)
         labels = [ args ].flatten.compact
+      end
+      if labels.size() == 0
+      	raise(ArgumentError, "Arguments cannot be null")
       end
 
       begin

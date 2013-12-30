@@ -59,6 +59,8 @@ module HBaseConstants
   NUMREGIONS = 'NUMREGIONS'
   CONFIGURATION = org.apache.hadoop.hbase.HConstants::CONFIGURATION
   ATTRIBUTES="ATTRIBUTES"
+  VISIBILITY="VISIBILITY"
+  AUTHORIZATIONS = "AUTHORIZATIONS"
 
   # Load constants from hbase java API
   def self.promote_constants(constants)

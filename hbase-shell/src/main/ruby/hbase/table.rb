@@ -132,12 +132,20 @@ EOF
       family, qualifier = parse_column_name(column)
       if args.any?
          attributes = args[ATTRIBUTES]
-         set_attributes(p, attributes) if attributes       
+         set_attributes(p, attributes) if attributes
+         visibility = args[VISIBILITY]
+         set_cell_visibility(p, visibility) if visibility
       end
       #Case where attributes are specified without timestamp
       if timestamp.kind_of?(Hash)
       	timestamp.each do |k, v|
-      	  set_attributes(p, v) if v
+      	  if v.kind_of?(Hash)
+      	  	set_attributes(p, v) if v
+      	  end
+      	  if v.kind_of?(String)
+      	  	set_cell_visibility(p, v) if v
+      	  end
+      	  
         end
         timestamp = nil
       end  
@@ -181,7 +189,9 @@ EOF
       end
       if args.any?
       	attributes = args[ATTRIBUTES]
-        set_attributes(incr, attributes) if attributes       
+      	visibility = args[VISIBILITY]
+        set_attributes(incr, attributes) if attributes
+        set_cell_visibility(incr, visibility) if visibility
       end
       incr.addColumn(family, qualifier, value)
       @table.increment(incr)
@@ -197,7 +207,9 @@ EOF
       end
       if args.any?
       	attributes = args[ATTRIBUTES]
-        set_attributes(append, attributes) if attributes       
+      	visibility = args[VISIBILITY]
+        set_attributes(append, attributes) if attributes
+        set_cell_visibility(append, visibility) if visibility
       end
       append.add(family, qualifier, value.to_s.to_java_bytes)
       @table.append(append)
@@ -256,6 +268,7 @@ EOF
       maxlength = args.delete(MAXLENGTH) if args[MAXLENGTH]
       filter = args.delete(FILTER) if args[FILTER]
       attributes = args[ATTRIBUTES]
+      authorizations = args[AUTHORIZATIONS]
       unless args.empty?
         columns = args[COLUMN] || args[COLUMNS]
         if args[VERSIONS]
@@ -288,7 +301,9 @@ EOF
           get.setTimeRange(args[TIMERANGE][0], args[TIMERANGE][1]) if args[TIMERANGE]
         else
           if attributes
-          	 set_attributes(get, attributes) if attributes
+          	 set_attributes(get, attributes)
+          elsif authorizations
+          	 set_authorizations(get, authorizations)
           else
           	# May have passed TIMESTAMP and row only; wants all columns from ts.
           	unless ts = args[TIMESTAMP] || tr = args[TIMERANGE]
@@ -301,7 +316,8 @@ EOF
           get.setTimeStamp(ts.to_i) if args[TIMESTAMP]
           get.setTimeRange(args[TIMERANGE][0], args[TIMERANGE][1]) if args[TIMERANGE]
         end
-          set_attributes(get, attributes) if attributes           
+          set_attributes(get, attributes) if attributes
+          set_authorizations(get, authorizations) if authorizations  
       end
 
       unless filter.class == String
@@ -376,7 +392,7 @@ EOF
         timerange = args[TIMERANGE]
         raw = args["RAW"] || false
         attributes = args[ATTRIBUTES]
-
+        authorizations = args[AUTHORIZATIONS]
         # Normalize column names
         columns = [columns] if columns.class == String
         unless columns.kind_of?(Array)
@@ -412,6 +428,7 @@ EOF
         scan.setTimeRange(timerange[0], timerange[1]) if timerange
         scan.setRaw(raw)
         set_attributes(scan, attributes) if attributes
+        set_authorizations(scan, authorizations) if authorizations
       else
         scan = org.apache.hadoop.hbase.client.Scan.new
       end
@@ -460,6 +477,16 @@ EOF
           v = v.to_s unless v.nil?
           oprattr.setAttribute(k.to_s, v.to_java_bytes)
         end
+    end
+    
+    def set_cell_visibility(oprattr, visibility)
+    	oprattr.setCellVisibility(org.apache.hadoop.hbase.security.visibility.CellVisibility.new(visibility.to_s))
+    end
+    
+    def set_authorizations(oprattr, authorizations)
+        raise(ArgumentError, "#{"authorizations"} must be a Array type type") unless authorizations.kind_of?(Array)
+        auths = [ authorizations ].flatten.compact
+    	oprattr.setAuthorizations(org.apache.hadoop.hbase.security.visibility.Authorizations.new(auths.to_java(:string)))
     end
     
     #----------------------------

@@ -138,6 +138,10 @@ module Hbase
     define_test "put should work with attributes" do
        @test_table.put("123", "x:a", 4, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
     end
+    
+    define_test "put should work with VISIBILITY" do
+       @test_table.put("123", "x:a", 4, {VISIBILITY=>'mykey'})
+    end
     #-------------------------------------------------------------------------------
 
     define_test "delete should work without timestamp" do
@@ -172,22 +176,6 @@ module Hbase
       assert_nil(res)
     end
 
-    #-------------------------------------------------------------------------------
-
-    define_test "incr should work w/o value" do
-      @test_table.incr("123", 'x:cnt1')
-    end
-
-    define_test "incr should work with value" do
-      @test_table.incr("123", 'x:cnt2', 10)
-    end
-
-    define_test "incr should work with integer keys" do
-      @test_table.incr(123, 'x:cnt3')
-    end
-
-    #-------------------------------------------------------------------------------
- 
     define_test "append should work with value" do
       @test_table.append("123", 'x:cnt2', '123')
     end
@@ -224,6 +212,9 @@ module Hbase
       
       @test_table.put(3, "x:a", 21, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
       @test_table.put(3, "x:b", 22, @test_ts, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
+      
+      @test_table.put(4, "x:a", 31, {VISIBILITY=>'mykey'})
+      @test_table.put(4, "x:b", 32, @test_ts, {VISIBILITY=>'mykey'})
 
     end
 
@@ -252,6 +243,14 @@ module Hbase
     
     define_test "get should work for data written with Attributes" do
       res = @test_table._get_internal('3')
+      assert_not_nil(res)
+      assert_kind_of(Hash, res)
+      assert_not_nil(res['x:a'])
+      assert_not_nil(res['x:b'])
+    end
+    
+     define_test "get should work for data written with Visibility" do
+      res = @test_table._get_internal('4')
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['x:a'])
@@ -297,6 +296,14 @@ module Hbase
       assert_not_nil(res['x:a'])
       assert_not_nil(res['x:b'])
     end
+    
+    define_test "get should work with hash columns spec and an array of strings COLUMNS parameter with AUTHORIZATIONS" do
+      res = @test_table._get_internal('1', COLUMNS => [ 'x:a', 'x:b' ], AUTHORIZATIONS=>['PRIVATE'])
+      assert_not_nil(res)
+      assert_kind_of(Hash, res)
+      assert_not_nil(res['x:a'])
+      assert_not_nil(res['x:b'])
+    end
 
     define_test "get should work with hash columns spec and TIMESTAMP only" do
       res = @test_table._get_internal('1', TIMESTAMP => @test_ts)
@@ -305,7 +312,12 @@ module Hbase
       assert_nil(res['x:a'])
       assert_not_nil(res['x:b'])
     end
-
+    
+     define_test "get should work with hash columns spec and TIMESTAMP and AUTHORIZATIONS" do
+      res = @test_table._get_internal('1', TIMESTAMP => 1234, AUTHORIZATIONS=>['PRIVATE'])
+      assert_nil(res)
+    end
+    
     define_test "get should fail with hash columns spec and strange COLUMN value" do
       assert_raise(ArgumentError) do
         @test_table._get_internal('1', COLUMN => {})

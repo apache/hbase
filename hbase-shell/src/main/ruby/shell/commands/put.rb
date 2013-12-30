@@ -28,13 +28,14 @@ row 'r1' under column 'c1' marked with the time 'ts1', do:
 
   hbase> put 't1', 'r1', 'c1', 'value'
   hbase> put 't1', 'r1', 'c1', 'value', ts1
-  hbase> put 't1', 'r1', 'c1', 'value', {ATTRIBUTES=>{'mykey'=>'myvalue'}
-  hbase> put 't1', 'r1', 'c1', 'value', ts1, {ATTRIBUTES=>{'mykey'=>'myvalue'}
+  hbase> put 't1', 'r1', 'c1', 'value', {ATTRIBUTES=>{'mykey'=>'myvalue'}}
+  hbase> put 't1', 'r1', 'c1', 'value', ts1, {ATTRIBUTES=>{'mykey'=>'myvalue'}}
+  hbase> put 't1', 'r1', 'c1', 'value', ts1, {VISIBILITY=>'PRIVATE|SECRET'}}
 
 The same commands also can be run on a table reference. Suppose you had a reference
 t to table 't1', the corresponding command would be:
 
-  hbase> t.put 'r1', 'c1', 'value', ts1, {ATTRIBUTES=>{'mykey'=>'myvalue'}
+  hbase> t.put 'r1', 'c1', 'value', ts1, {ATTRIBUTES=>{'mykey'=>'myvalue'}}
 EOF
       end
 
