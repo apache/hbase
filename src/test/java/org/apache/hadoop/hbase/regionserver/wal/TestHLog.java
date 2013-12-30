@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.BindException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -436,7 +437,17 @@ public class TestHLog  {
       // the idle time threshold configured in the conf above
       Thread.sleep(2000);
 
-      cluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null, null, null, null);
+      cluster = null;
+      // retry a few times if the port is not freed, yet.
+      for (int i = 0; i < 30; i++) {
+        try {
+          cluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null, null, null, null);
+          break;
+        } catch (BindException e) {
+          LOG.info("Sleeping.  BindException bringing up new cluster");
+          Thread.sleep(1000);
+        }
+      }
       TEST_UTIL.setDFSCluster(cluster);
       cluster.waitActive();
       fs = cluster.getFileSystem();
