@@ -670,7 +670,7 @@ checkLineLengths () {
   MAX_LINE_LENGTH_PATCH=`expr $MAX_LINE_LENGTH + 1`
   lines=`cat $PATCH_DIR/patch | grep "^+" | grep -v "^@@" | grep -v "^+++" | grep -v "import" | grep -v "hbase.protobuf.generated" | awk -v len="$MAX_LINE_LENGTH_PATCH" 'length ($0) > len' | head -n 10`
   ll=`echo "$lines" | wc -l`
-  if [[ "$ll" -gt "$MAX_LINE_LENGTH_PATCH" ]]; then
+  if [[ "$ll" -gt "0" ]]; then
     JIRA_COMMENT="$JIRA_COMMENT
 
     {color:red}-1 lineLengths{color}.  The patch introduces the following lines longer than $MAX_LINE_LENGTH:
