@@ -32,7 +32,9 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -128,6 +130,62 @@ public class TestDurability {
     region.put(newPut(Durability.FSYNC_WAL));
     deferredRegion.put(newPut(Durability.FSYNC_WAL));
     verifyHLogCount(wal, 12);
+  }
+
+  @Test
+  public void testIncrement() throws Exception {
+    byte[] row1 = Bytes.toBytes("row1");
+    byte[] col1 = Bytes.toBytes("col1");
+    byte[] col2 = Bytes.toBytes("col2");
+    byte[] col3 = Bytes.toBytes("col3");
+
+    // Setting up region
+    HLog wal = HLogFactory.createHLog(FS, DIR, "myhlogdir",
+        "myhlogdir_archive", CONF);
+    byte[] tableName = Bytes.toBytes("TestIncrement");
+    HRegion region = createHRegion(tableName, "increment", wal, false);
+
+    // col1: amount = 1, 1 write back to WAL
+    Increment inc1 = new Increment(row1);
+    inc1.addColumn(FAMILY, col1, 1);
+    Result res = region.increment(inc1);
+    assertEquals(1, res.size());
+    assertEquals(1, Bytes.toLong(res.getValue(FAMILY, col1)));
+    verifyHLogCount(wal, 1);
+
+    // col1: amount = 0, 0 write back to WAL
+    inc1 = new Increment(row1);
+    inc1.addColumn(FAMILY, col1, 0);
+    res = region.increment(inc1);
+    assertEquals(1, res.size());
+    assertEquals(1, Bytes.toLong(res.getValue(FAMILY, col1)));
+    verifyHLogCount(wal, 1);
+
+    // col1: amount = 0, col2: amount = 0, col3: amount = 0
+    // 0 write back to WAL
+    inc1 = new Increment(row1);
+    inc1.addColumn(FAMILY, col1, 0);
+    inc1.addColumn(FAMILY, col2, 0);
+    inc1.addColumn(FAMILY, col3, 0);
+    res = region.increment(inc1);
+    assertEquals(3, res.size());
+    assertEquals(1, Bytes.toLong(res.getValue(FAMILY, col1)));
+    assertEquals(0, Bytes.toLong(res.getValue(FAMILY, col2)));
+    assertEquals(0, Bytes.toLong(res.getValue(FAMILY, col3)));
+    verifyHLogCount(wal, 1);
+
+    // col1: amount = 5, col2: amount = 4, col3: amount = 3
+    // 1 write back to WAL
+    inc1 = new Increment(row1);
+    inc1.addColumn(FAMILY, col1, 5);
+    inc1.addColumn(FAMILY, col2, 4);
+    inc1.addColumn(FAMILY, col3, 3);
+    res = region.increment(inc1);
+    assertEquals(3, res.size());
+    assertEquals(6, Bytes.toLong(res.getValue(FAMILY, col1)));
+    assertEquals(4, Bytes.toLong(res.getValue(FAMILY, col2)));
+    assertEquals(3, Bytes.toLong(res.getValue(FAMILY, col3)));
+    verifyHLogCount(wal, 2);
   }
 
   private Put newPut(Durability durability) {

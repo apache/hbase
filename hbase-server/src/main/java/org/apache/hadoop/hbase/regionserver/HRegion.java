@@ -5159,6 +5159,8 @@ public class HRegion implements HeapSize { // , Writable{
             int idx = 0;
             for (Cell kv: family.getValue()) {
               long amount = Bytes.toLong(CellUtil.cloneValue(kv));
+              boolean noWriteBack = (amount == 0);
+
               Cell c = null;
               if (idx < results.size() && CellUtil.matchingQualifier(results.get(idx), kv)) {
                 c = results.get(idx);
@@ -5200,57 +5202,66 @@ public class HRegion implements HeapSize { // , Writable{
                 newKV = KeyValueUtil.ensureKeyValue(coprocessorHost.postMutationBeforeWAL(
                     RegionObserver.MutationType.INCREMENT, increment, c, (Cell) newKV));
               }
-              kvs.add(newKV);
+              allKVs.add(newKV);
 
-              // Prepare WAL updates
-              if (writeToWAL) {
-                if (walEdits == null) {
-                  walEdits = new WALEdit();
+              if (!noWriteBack) {
+                kvs.add(newKV);
+
+                // Prepare WAL updates
+                if (writeToWAL) {
+                  if (walEdits == null) {
+                    walEdits = new WALEdit();
+                  }
+                  walEdits.add(newKV);
                 }
-                walEdits.add(newKV);
               }
             }
 
             //store the kvs to the temporary memstore before writing HLog
-            tempMemstore.put(store, kvs);
+            if (!kvs.isEmpty()) {
+              tempMemstore.put(store, kvs);
+            }
           }
 
           // Actually write to WAL now
-          if (writeToWAL) {
-            // Using default cluster id, as this can only happen in the orginating
-            // cluster. A slave cluster receives the final value (not the delta)
-            // as a Put.
-            txid = this.log.appendNoSync(this.getRegionInfo(),
-              this.htableDescriptor.getTableName(), walEdits, new ArrayList<UUID>(),
-              EnvironmentEdgeManager.currentTimeMillis(), this.htableDescriptor, this.sequenceId,
-              true, nonceGroup, nonce);
-          } else {
-            recordMutationWithoutWal(increment.getFamilyCellMap());
+          if (walEdits != null && !walEdits.isEmpty()) {
+            if (writeToWAL) {
+              // Using default cluster id, as this can only happen in the orginating
+              // cluster. A slave cluster receives the final value (not the delta)
+              // as a Put.
+              txid = this.log.appendNoSync(this.getRegionInfo(),
+                  this.htableDescriptor.getTableName(), walEdits, new ArrayList<UUID>(),
+                  EnvironmentEdgeManager.currentTimeMillis(), this.htableDescriptor, this.sequenceId,
+                  true, nonceGroup, nonce);
+            } else {
+              recordMutationWithoutWal(increment.getFamilyCellMap());
+            }
           }
           //Actually write to Memstore now
-          for (Map.Entry<Store, List<Cell>> entry : tempMemstore.entrySet()) {
-            Store store = entry.getKey();
-            if (store.getFamily().getMaxVersions() == 1) {
-              // upsert if VERSIONS for this CF == 1
-              size += store.upsert(entry.getValue(), getSmallestReadPoint());
-            } else {
-              // otherwise keep older versions around
-              for (Cell cell : entry.getValue()) {
-                KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-                size += store.add(kv);
+          if (!tempMemstore.isEmpty()) {
+            for (Map.Entry<Store, List<Cell>> entry : tempMemstore.entrySet()) {
+              Store store = entry.getKey();
+              if (store.getFamily().getMaxVersions() == 1) {
+                // upsert if VERSIONS for this CF == 1
+                size += store.upsert(entry.getValue(), getSmallestReadPoint());
+              } else {
+                // otherwise keep older versions around
+                for (Cell cell : entry.getValue()) {
+                  KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+                  size += store.add(kv);
+                }
               }
             }
-            allKVs.addAll(entry.getValue());
+            size = this.addAndGetGlobalMemstoreSize(size);
+            flush = isFlushSize(size);
           }
-          size = this.addAndGetGlobalMemstoreSize(size);
-          flush = isFlushSize(size);
         } finally {
           this.updatesLock.readLock().unlock();
         }
       } finally {
         rowLock.release();
       }
-      if (writeToWAL) {
+      if (writeToWAL && (walEdits != null) && !walEdits.isEmpty()) {
         // sync the transaction log outside the rowlock
         syncOrDefer(txid, durability);
       }
