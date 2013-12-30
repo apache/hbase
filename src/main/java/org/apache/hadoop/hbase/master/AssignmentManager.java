@@ -1886,8 +1886,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // OFFLINE. 
     if (!hijack && !state.isClosed() && !state.isOffline()) {
       if (!regionAlreadyInTransitionException ) {
-        String msg = "Unexpected state : " + state + " .. Cannot transit it to OFFLINE.";
-        this.master.abort(msg, new IllegalStateException(msg));
+        LOG.warn("Unexpected state : " + state + " .. Cannot transit it to OFFLINE.");
         return -1;
       } 
       LOG.debug("Unexpected state : " + state
