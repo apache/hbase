@@ -37,6 +37,7 @@ a dictionary of column(s), timestamp, timerange and versions. Examples:
   hbase> get 't1', 'r1', 'c1', 'c2'
   hbase> get 't1', 'r1', ['c1', 'c2']
   hbsase> get 't1','r1', {COLUMN => 'c1', ATTRIBUTES => {'mykey'=>'myvalue'}}
+  hbsase> get 't1','r1', {COLUMN => 'c1', AUTHORIZATIONS => ['PRIVATE','SECRET']}
 
 Besides the default 'toStringBinary' format, 'get' also supports custom formatting by
 column.  A user can define a FORMATTER by adding it to the column name in the get
