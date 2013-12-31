@@ -414,7 +414,7 @@ public class ReplicationSource extends Thread
         break;
       }
     }
-    metrics.incrLogReadInByes(this.repLogReader.getPosition() - positionBeforeRead);
+    metrics.incrLogReadInBytes(this.repLogReader.getPosition() - positionBeforeRead);
     if (currentWALisBeingWrittenTo) {
       return false;
     }

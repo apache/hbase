@@ -149,7 +149,7 @@ public class MetricsSource {
   }
   
   /** increase the byte number read by source from log file */
-  public void incrLogReadInByes(long readInBytes) {
+  public void incrLogReadInBytes(long readInBytes) {
     rms.incCounters(logReadInBytesKey, readInBytes);
     rms.incCounters(SOURCE_LOG_READ_IN_BYTES, readInBytes);
   }
