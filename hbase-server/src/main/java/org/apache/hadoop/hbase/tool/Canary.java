@@ -35,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -741,7 +742,7 @@ public final class Canary implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    int exitCode = ToolRunner.run(new Canary(), args);
+    int exitCode = ToolRunner.run(HBaseConfiguration.create(), new Canary(), args);
     System.exit(exitCode);
   }
 }
