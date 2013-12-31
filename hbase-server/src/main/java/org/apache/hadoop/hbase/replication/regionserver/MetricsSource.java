@@ -37,6 +37,7 @@ public class MetricsSource {
   public static final String SOURCE_LOG_EDITS_FILTERED = "source.logEditsFiltered";
   public static final String SOURCE_SHIPPED_BATCHES = "source.shippedBatches";
   public static final String SOURCE_SHIPPED_OPS = "source.shippedOps";
+  public static final String SOURCE_LOG_READ_IN_BYTES = "source.logReadInBytes";
 
   public static final Log LOG = LogFactory.getLog(MetricsSource.class);
   private String id;
@@ -50,6 +51,7 @@ public class MetricsSource {
   private String logEditsFilteredKey;
   private final String shippedBatchesKey;
   private final String shippedOpsKey;
+  private final String logReadInBytesKey;
 
   private MetricsReplicationSource rms;
 
@@ -67,6 +69,7 @@ public class MetricsSource {
     logEditsFilteredKey = "source." + id + ".logEditsFiltered";
     shippedBatchesKey = "source." + this.id + ".shippedBatches";
     shippedOpsKey = "source." + this.id + ".shippedOps";
+    logReadInBytesKey = "source." + this.id + ".logReadInBytes";
     rms = CompatibilitySingletonFactory.getInstance(MetricsReplicationSource.class);
   }
 
@@ -143,6 +146,12 @@ public class MetricsSource {
     rms.incCounters(SOURCE_SHIPPED_BATCHES, 1);
     rms.incCounters(shippedOpsKey, batchSize);
     rms.incCounters(SOURCE_SHIPPED_OPS, batchSize);
+  }
+  
+  /** increase the byte number read by source from log file */
+  public void incrLogReadInBytes(long readInBytes) {
+    rms.incCounters(logReadInBytesKey, readInBytes);
+    rms.incCounters(SOURCE_LOG_READ_IN_BYTES, readInBytes);
   }
 
   /** Removes all metrics about this Source. */

@@ -377,6 +377,7 @@ public class ReplicationSource extends Thread
           + this.repLogReader.getPosition());
     }
     this.repLogReader.seek();
+    long positionBeforeRead = this.repLogReader.getPosition();
     HLog.Entry entry =
         this.repLogReader.readNextAndSetPosition();
     while (entry != null) {
@@ -413,6 +414,7 @@ public class ReplicationSource extends Thread
         break;
       }
     }
+    metrics.incrLogReadInBytes(this.repLogReader.getPosition() - positionBeforeRead);
     if (currentWALisBeingWrittenTo) {
       return false;
     }
