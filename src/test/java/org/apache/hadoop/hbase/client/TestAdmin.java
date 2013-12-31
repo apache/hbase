@@ -71,8 +71,10 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runners.MethodSorters;
 
 
 /**
@@ -80,6 +82,7 @@ import org.junit.experimental.categories.Category;
  * Spins up the minicluster once at test start and then takes it down afterward.
  * Add any testing of HBaseAdmin functionality here.
  */
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Category(LargeTests.class)
 public class TestAdmin {
   final Log LOG = LogFactory.getLog(getClass());

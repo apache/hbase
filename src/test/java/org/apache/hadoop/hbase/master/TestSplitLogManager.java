@@ -27,7 +27,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import junit.framework.Assert;
-
 import static org.junit.Assert.*;
 
 import org.apache.commons.logging.Log;
@@ -50,10 +49,13 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runners.MethodSorters;
 import org.mockito.Mockito;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Category(MediumTests.class)
 public class TestSplitLogManager {
   private static final Log LOG = LogFactory.getLog(TestSplitLogManager.class);
