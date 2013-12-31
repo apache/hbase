@@ -34,11 +34,14 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runners.MethodSorters;
 
 import static org.junit.Assert.*;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Category(MediumTests.class)
 public class TestMultiParallel {
   private static final Log LOG = LogFactory.getLog(TestMultiParallel.class);
@@ -290,7 +293,9 @@ public class TestMultiParallel {
   }
 
   @Test (timeout=300000)
-  public void testBatchWithPut() throws Exception {
+  // FIXME: sort test lexicographically to the end.
+  // otherwise clashed with testFlushCommitsWithAbort
+  public void testZBatchWithPut() throws Exception {
     LOG.info("test=testBatchWithPut");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 

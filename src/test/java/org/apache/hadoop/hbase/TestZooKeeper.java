@@ -367,8 +367,13 @@ public class TestZooKeeper {
         }
       }
     }
-    zk.close();
     ZKUtil.createAndFailSilent(zk2, aclZnode);
+
+    // reset /'s ACL for tests that follow
+    zk = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance);
+    zk.addAuthInfo("digest", "hbase:rox".getBytes());
+    zk.setACL("/", ZooDefs.Ids.OPEN_ACL_UNSAFE, -1);
+    zk.close();
  }
   
   /**

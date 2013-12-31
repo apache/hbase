@@ -27,8 +27,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -71,10 +69,8 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runners.MethodSorters;
 
 
 /**
@@ -82,7 +78,6 @@ import org.junit.runners.MethodSorters;
  * Spins up the minicluster once at test start and then takes it down afterward.
  * Add any testing of HBaseAdmin functionality here.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Category(LargeTests.class)
 public class TestAdmin {
   final Log LOG = LogFactory.getLog(getClass());
@@ -383,8 +378,6 @@ public class TestAdmin {
   @Test
   public void testOnlineChangeTableSchema() throws IOException, InterruptedException {
     final byte [] tableName = Bytes.toBytes("changeTableSchemaOnline");
-    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
-        "hbase.online.schema.update.enable", true);
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
@@ -503,6 +496,8 @@ public class TestAdmin {
       expectedException = true;
     }
     assertTrue("Online schema update should not happen.", expectedException);
+    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
+        "hbase.online.schema.update.enable", true);
   }
 
   /**
