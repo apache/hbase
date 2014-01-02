@@ -100,6 +100,7 @@ public class OpenRegionHandler extends EventHandler {
       // processing needs to do a close as part of cleanup.
       region = openRegion();
       if (region == null) {
+        this.rsServices.removeFromRegionsInTransition(this.regionInfo);
         tryTransitionToFailedOpen(regionInfo);
         transitionToFailedOpen = true;
         return;
@@ -112,6 +113,7 @@ public class OpenRegionHandler extends EventHandler {
       }
       if (failed || this.server.isStopped() ||
           this.rsServices.isStopping()) {
+        this.rsServices.removeFromRegionsInTransition(this.regionInfo);
         cleanupFailedOpen(region);
         tryTransitionToFailedOpen(regionInfo);
         transitionToFailedOpen = true;
