@@ -71,8 +71,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runners.MethodSorters;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
 
@@ -82,6 +84,7 @@ import com.google.protobuf.ServiceException;
 /**
  * Test {@link AssignmentManager}
  */
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Category(MediumTests.class)
 public class TestAssignmentManager {
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
