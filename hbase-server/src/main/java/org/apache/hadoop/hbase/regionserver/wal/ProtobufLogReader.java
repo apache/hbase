@@ -25,13 +25,13 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.io.LimitInputStream;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.Builder;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
@@ -226,7 +226,7 @@ public class ProtobufLogReader extends ReaderBase {
                 "inputStream.available()= " + this.inputStream.available() + ", " +
                 "entry size= " + size);
           }
-          final InputStream limitedInput = new BoundedInputStream(this.inputStream, size);
+          final InputStream limitedInput = new LimitInputStream(this.inputStream, size);
           builder.mergeFrom(limitedInput);
         } catch (InvalidProtocolBufferException ipbe) {
           throw (EOFException) new EOFException("Invalid PB, EOF? Ignoring; originalPosition=" +
