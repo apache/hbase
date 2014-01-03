@@ -68,10 +68,6 @@ public abstract class MultiThreadedAction {
   protected AtomicLong totalOpTimeMs = new AtomicLong();
   protected boolean verbose = false;
 
-  protected boolean useTags = false;
-  protected int minNumTags = 1;
-  protected int maxNumTags = 1;
-
   protected LoadTestDataGenerator dataGenerator = null;
 
   /**
@@ -153,14 +149,10 @@ public abstract class MultiThreadedAction {
     this.actionLetter = actionLetter;
   }
 
-  public void start(long startKey, long endKey, int numThreads, boolean useTags, int minNumTags,
-      int maxNumTags) throws IOException {
+  public void start(long startKey, long endKey, int numThreads) throws IOException {
     this.startKey = startKey;
     this.endKey = endKey;
     this.numThreads = numThreads;
-    this.useTags = useTags;
-    this.minNumTags = minNumTags;
-    this.maxNumTags = maxNumTags;
     (new Thread(new ProgressReporter(actionLetter))).start();
   }
 

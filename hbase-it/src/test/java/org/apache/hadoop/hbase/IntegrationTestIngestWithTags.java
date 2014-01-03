@@ -17,20 +17,46 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.util.LoadTestDataGeneratorWithTags;
+import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.junit.experimental.categories.Category;
 
 @Category(IntegrationTests.class)
 public class IntegrationTestIngestWithTags extends IntegrationTestIngest {
+
+  private static final char COLON = ':';
+
+  private int minTagsPerKey = 1, maxTagsPerKey = 10;
+  private int minTagLength = 16, maxTagLength = 512;
+
   @Override
   public void setUpCluster() throws Exception {
-    getTestingUtil(conf).getConfiguration().setInt("hfile.format.version", 3);
+    getTestingUtil(conf).getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 3);
     super.setUpCluster();
   }
 
   @Override
-  protected void runIngestTest(long defaultRunTime, int keysPerServerPerIter, int colsPerKey,
-      int recordSize, int writeThreads, boolean useTags, int maxTagsPerKey) throws Exception {
-    super.runIngestTest(defaultRunTime, keysPerServerPerIter, colsPerKey, recordSize, writeThreads,
-        true, 10);
+  protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
+      long numKeys) {
+    String[] args = super.getArgsForLoadTestTool(mode, modeSpecificArg, startKey, numKeys);
+    List<String> tmp = new ArrayList<String>(Arrays.asList(args));
+    // LoadTestDataGeneratorWithTags:minNumTags:maxNumTags:minTagLength:maxTagLength
+    tmp.add(HIPHEN + LoadTestTool.OPT_GENERATOR);
+    StringBuilder sb = new StringBuilder(LoadTestDataGeneratorWithTags.class.getName());
+    sb.append(COLON);
+    sb.append(minTagsPerKey);
+    sb.append(COLON);
+    sb.append(maxTagsPerKey);
+    sb.append(COLON);
+    sb.append(minTagLength);
+    sb.append(COLON);
+    sb.append(maxTagLength);
+    tmp.add(sb.toString());
+    return tmp.toArray(new String[tmp.size()]);
   }
 }

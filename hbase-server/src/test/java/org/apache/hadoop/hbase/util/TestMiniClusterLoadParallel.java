@@ -45,8 +45,8 @@ public class TestMiniClusterLoadParallel
 
     readerThreads.linkToWriter(writerThreads);
 
-    writerThreads.start(0, numKeys, NUM_THREADS, false, 0, 0);
-    readerThreads.start(0, numKeys, NUM_THREADS, false, 0, 0);
+    writerThreads.start(0, numKeys, NUM_THREADS);
+    readerThreads.start(0, numKeys, NUM_THREADS);
 
     writerThreads.waitForFinish();
     readerThreads.waitForFinish();

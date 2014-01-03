@@ -18,6 +18,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.Constructor;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,6 +57,7 @@ import org.apache.hadoop.util.ToolRunner;
 public class LoadTestTool extends AbstractHBaseTool {
 
   private static final Log LOG = LogFactory.getLog(LoadTestTool.class);
+  private static final String COLON = ":";
 
   /** Table name for the test */
   private TableName tableName;
@@ -107,13 +109,10 @@ public class LoadTestTool extends AbstractHBaseTool {
   public static final String OPT_INMEMORY = "in_memory";
   public static final String OPT_USAGE_IN_MEMORY = "Tries to keep the HFiles of the CF " +
   		"inmemory as far as possible.  Not guaranteed that reads are always served from inmemory";
-  public static final String OPT_USETAGS = "usetags";
-  public static final String OPT_USAGE_USETAG = "Adds tags with every KV.  This option would be used" +
-  		" only if the HFileV3 version is used";
 
-  public static final String OPT_NUM_TAGS = "num_tags";
-  public static final String OPT_USAGE_NUM_TAGS = "Specifies the minimum and number of tags to be"
-      +      " added per KV";
+  public static final String OPT_GENERATOR = "generator";
+  public static final String OPT_GENERATOR_USAGE = "The class which generates load for the tool."
+      + " Any args for this class can be passed as colon separated after class name";
 
   protected static final String OPT_KEY_WINDOW = "key_window";
   protected static final String OPT_WRITE = "write";
@@ -153,9 +152,6 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected Compression.Algorithm compressAlgo;
   protected BloomType bloomType;
   private boolean inMemoryCF;
-  private boolean useTags;
-  private int minNumTags = 1;
-  private int maxNumTags = 1;
   // Writer options
   protected int numWriterThreads = DEFAULT_NUM_THREADS;
   protected int minColsPerKey, maxColsPerKey;
@@ -185,7 +181,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected String[] splitColonSeparated(String option,
       int minNumCols, int maxNumCols) {
     String optVal = cmd.getOptionValue(option);
-    String[] cols = optVal.split(":");
+    String[] cols = optVal.split(COLON);
     if (cols.length < minNumCols || cols.length > maxNumCols) {
       throw new IllegalArgumentException("Expected at least "
           + minNumCols + " columns but no more than " + maxNumCols +
@@ -269,8 +265,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptNoArg(OPT_BATCHUPDATE, "Whether to use batch as opposed to " +
         "separate updates for every column in a row");
     addOptNoArg(OPT_INMEMORY, OPT_USAGE_IN_MEMORY);
-    addOptNoArg(OPT_USETAGS, OPT_USAGE_USETAG);
-    addOptWithArg(OPT_NUM_TAGS,  OPT_USAGE_NUM_TAGS + " The default is 1:1");
+    addOptWithArg(OPT_GENERATOR, OPT_GENERATOR_USAGE);
 
     addOptWithArg(OPT_NUM_KEYS, "The number of keys to read/write");
     addOptWithArg(OPT_START_KEY, "The first key to read/write " +
@@ -406,24 +401,9 @@ public class LoadTestTool extends AbstractHBaseTool {
         BloomType.valueOf(bloomStr);
 
     inMemoryCF = cmd.hasOption(OPT_INMEMORY);
-    useTags = cmd.hasOption(OPT_USETAGS);
-    if (useTags) {
-      if (cmd.hasOption(OPT_NUM_TAGS)) {
-        String[] readOpts = splitColonSeparated(OPT_NUM_TAGS, 1, 2);
-        int colIndex = 0;
-        minNumTags = parseInt(readOpts[colIndex++], 1, 100);
-        if (colIndex < readOpts.length) {
-          maxNumTags = parseInt(readOpts[colIndex++], 1, 100);
-        }
-      }
-      System.out.println("Using tags, number of tags per KV: min=" + minNumTags + ", max="
-          + maxNumTags);
-    }
-
     if (cmd.hasOption(OPT_ENCRYPTION)) {
       cipher = Encryption.getCipher(conf, cmd.getOptionValue(OPT_ENCRYPTION));
     }
-
   }
 
   public void initTestTable() throws IOException {
@@ -456,8 +436,18 @@ public class LoadTestTool extends AbstractHBaseTool {
       initTestTable();
     }
 
-    LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(
-        minColDataSize, maxColDataSize, minColsPerKey, maxColsPerKey, COLUMN_FAMILY);
+    LoadTestDataGenerator dataGen = null;
+    if (cmd.hasOption(OPT_GENERATOR)) {
+      String[] clazzAndArgs = cmd.getOptionValue(OPT_GENERATOR).split(COLON);
+      dataGen = getLoadGeneratorInstance(clazzAndArgs[0]);
+      String[] args = clazzAndArgs.length == 1 ? new String[0] : Arrays.copyOfRange(clazzAndArgs,
+          1, clazzAndArgs.length);
+      dataGen.initialize(args);
+    } else {
+      // Default DataGenerator is MultiThreadedAction.DefaultDataGenerator
+      dataGen = new MultiThreadedAction.DefaultDataGenerator(minColDataSize, maxColDataSize,
+          minColsPerKey, maxColsPerKey, COLUMN_FAMILY);
+    }
 
     if (isWrite) {
       writerThreads = new MultiThreadedWriter(dataGen, conf, tableName);
@@ -489,7 +479,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     if (isWrite) {
       System.out.println("Starting to write data...");
-      writerThreads.start(startKey, endKey, numWriterThreads, useTags, minNumTags, maxNumTags);
+      writerThreads.start(startKey, endKey, numWriterThreads);
     }
 
     if (isUpdate) {
@@ -497,12 +487,12 @@ public class LoadTestTool extends AbstractHBaseTool {
       System.out.println("Starting to mutate data...");
       // TODO : currently append and increment operations not tested with tags
       // Will update this aftet it is done
-      updaterThreads.start(startKey, endKey, numUpdaterThreads, true, minNumTags, maxNumTags);
+      updaterThreads.start(startKey, endKey, numUpdaterThreads);
     }
 
     if (isRead) {
       System.out.println("Starting to read data...");
-      readerThreads.start(startKey, endKey, numReaderThreads, useTags, 0, 0);
+      readerThreads.start(startKey, endKey, numReaderThreads);
     }
 
     if (isWrite) {
@@ -529,6 +519,18 @@ public class LoadTestTool extends AbstractHBaseTool {
           && readerThreads.getNumReadFailures() == 0;
     }
     return success ? EXIT_SUCCESS : EXIT_FAILURE;
+  }
+
+  private LoadTestDataGenerator getLoadGeneratorInstance(String clazzName) throws IOException {
+    try {
+      Class<?> clazz = Class.forName(clazzName);
+      Constructor<?> constructor = clazz.getConstructor(int.class, int.class, int.class, int.class,
+          byte[][].class);
+      return (LoadTestDataGenerator) constructor.newInstance(minColDataSize, maxColDataSize,
+          minColsPerKey, maxColsPerKey, COLUMN_FAMILIES);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
   }
 
   static byte[] generateData(final Random r, int length) {

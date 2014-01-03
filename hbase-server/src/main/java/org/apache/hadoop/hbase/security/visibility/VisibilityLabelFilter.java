@@ -46,10 +46,12 @@ class VisibilityLabelFilter extends FilterBase {
   public ReturnCode filterKeyValue(Cell cell) throws IOException {
     Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
         cell.getTagsLength());
+    boolean visibilityTagPresent = false;
     while (tagsItr.hasNext()) {
       boolean includeKV = true;
       Tag tag = tagsItr.next();
       if (tag.getType() == VisibilityUtils.VISIBILITY_TAG_TYPE) {
+        visibilityTagPresent = true;
         int offset = tag.getTagOffset();
         int endOffset = offset + tag.getTagLength();
         while (offset < endOffset) {
@@ -76,9 +78,8 @@ class VisibilityLabelFilter extends FilterBase {
           // the result then.
           return ReturnCode.INCLUDE;
         }
-        return ReturnCode.SKIP;
       }
     }
-    return ReturnCode.INCLUDE;
+    return visibilityTagPresent ? ReturnCode.SKIP : ReturnCode.INCLUDE;
   }
 }

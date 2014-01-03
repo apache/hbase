@@ -81,7 +81,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
       minColDataSize, maxColDataSize, minColsPerKey, maxColsPerKey, LoadTestTool.COLUMN_FAMILY);
     MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
     writer.setMultiPut(true);
-    writer.start(startKey, endKey, numThreads, false, 0, 0);
+    writer.start(startKey, endKey, numThreads);
     System.out.printf("Started loading data...");
     writer.waitForFinish();
     System.out.printf("Finished loading data...");

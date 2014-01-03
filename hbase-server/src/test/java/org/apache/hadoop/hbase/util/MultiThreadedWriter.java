@@ -24,7 +24,6 @@ import static org.apache.hadoop.hbase.util.test.LoadTestDataGenerator.MUTATE_INF
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Random;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -32,7 +31,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
@@ -45,11 +43,6 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
 
   private boolean isMultiPut = false;
 
-  private Random random = new Random();
-  // TODO: Make this configurable
-  private int minTagLength = 16;
-  private int maxTagLength = 512;
-
   public MultiThreadedWriter(LoadTestDataGenerator dataGen, Configuration conf,
       TableName tableName) {
     super(dataGen, conf, tableName, "W");
@@ -61,9 +54,8 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
   }
 
   @Override
-  public void start(long startKey, long endKey, int numThreads, boolean useTags,
-       int minNumTags, int maxNumTags) throws IOException {
-    super.start(startKey, endKey, numThreads, useTags, minNumTags, maxNumTags);
+  public void start(long startKey, long endKey, int numThreads) throws IOException {
+    super.start(startKey, endKey, numThreads);
 
     if (verbose) {
       LOG.debug("Inserting keys [" + startKey + ", " + endKey + ")");
@@ -96,26 +88,9 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
           int columnCount = 0;
           for (byte[] cf : columnFamilies) {
             byte[][] columns = dataGenerator.generateColumnsForCf(rowKey, cf);
-            int numTags;
-            if (minNumTags == maxNumTags) {
-              numTags = minNumTags;
-            } else {
-              numTags = minNumTags + random.nextInt(maxNumTags - minNumTags);
-            }
-            Tag[] tags = new Tag[numTags];
             for (byte[] column : columns) {
               byte[] value = dataGenerator.generateValue(rowKey, cf, column);
-              byte[] tag = LoadTestTool.generateData(random,
-                    minTagLength + random.nextInt(maxTagLength - minTagLength));
-              if(useTags) {
-                for (int n = 0; n < numTags; n++) {
-                  Tag t = new Tag((byte) n, tag);
-                  tags[n] = t;
-                }
-                put.add(cf, column, value, tags);
-              } else {
-                put.add(cf, column, value);
-              }
+              put.add(cf, column, value);
               ++columnCount;
               if (!isMultiPut) {
                 insert(table, put, rowKeyBase);

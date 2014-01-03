@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.regionserver.StripeStoreConfig;
 import org.apache.hadoop.hbase.regionserver.StripeStoreEngine;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.MultiThreadedAction;
 import org.apache.hadoop.hbase.util.MultiThreadedReader;
 import org.apache.hadoop.hbase.util.MultiThreadedWriter;
@@ -204,7 +203,7 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     if (preloadKeys > 0) {
       MultiThreadedWriter preloader = new MultiThreadedWriter(dataGen, conf, tn);
       long time = System.currentTimeMillis();
-      preloader.start(0, startKey, writeThreads, false, 0, 0);
+      preloader.start(0, startKey, writeThreads);
       preloader.waitForFinish();
       if (preloader.getNumWriteFailures() > 0) {
         throw new IOException("Preload failed");
@@ -221,8 +220,8 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     reader.linkToWriter(writer);
 
     long testStartTime = System.currentTimeMillis();
-    writer.start(startKey, endKey, writeThreads, false, 0, 0);
-    reader.start(startKey, endKey, readThreads, /* rdmReadThreads, Long.MAX_VALUE, */ false, 0, 0);
+    writer.start(startKey, endKey, writeThreads);
+    reader.start(startKey, endKey, readThreads);
     writer.waitForFinish();
     reader.waitForFinish();
     // reader.waitForVerification(300000);

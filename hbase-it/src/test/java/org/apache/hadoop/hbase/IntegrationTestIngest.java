@@ -19,9 +19,10 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
-import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -32,12 +33,15 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.google.common.collect.Sets;
+
 /**
  * A base class for tests that do something with the cluster while running
  * {@link LoadTestTool} to write and verify some data.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestIngest extends IntegrationTestBase {
+  public static final char HIPHEN = '-';
   private static final int SERVER_COUNT = 4; // number of slaves for the smallest cluster
   private static final long DEFAULT_RUN_TIME = 20 * 60 * 1000;
   private static final long JUNIT_RUN_TIME = 10 * 60 * 1000;
@@ -78,11 +82,11 @@ public class IntegrationTestIngest extends IntegrationTestBase {
 
   @Test
   public void testIngest() throws Exception {
-    runIngestTest(JUNIT_RUN_TIME, 2500, 10, 1024, 10, false, 10);
+    runIngestTest(JUNIT_RUN_TIME, 2500, 10, 1024, 10);
   }
 
   private void internalRunIngestTest(long runTime) throws Exception {
-    runIngestTest(runTime, 2500, 10, 1024, 10, false, 10);
+    runIngestTest(runTime, 2500, 10, 1024, 10);
   }
 
   @Override
@@ -101,8 +105,8 @@ public class IntegrationTestIngest extends IntegrationTestBase {
     }
   }
 
-  protected void runIngestTest(long defaultRunTime, int keysPerServerPerIter,
-      int colsPerKey, int recordSize, int writeThreads, boolean useTags, int maxTagsPerKey) throws Exception {
+  protected void runIngestTest(long defaultRunTime, int keysPerServerPerIter, int colsPerKey,
+      int recordSize, int writeThreads) throws Exception {
     LOG.info("Running ingest");
     LOG.info("Cluster size:" + util.getHBaseClusterInterface().getClusterStatus().getServersSize());
 
@@ -117,45 +121,23 @@ public class IntegrationTestIngest extends IntegrationTestBase {
           ((runtime - (System.currentTimeMillis() - start))/60000) + " min");
 
       int ret = -1;
-      if (useTags) {
-        ret = loadTool.run(new String[] { "-tn", getTablename(), "-write",
-            String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads), "-start_key",
-            String.valueOf(startKey), "-num_keys", String.valueOf(numKeys), "-skip_init",
-            "-usetags", "-num_tags", String.format("1:%d", maxTagsPerKey) });
-      } else {
-        ret = loadTool.run(new String[] { "-tn", getTablename(), "-write",
-            String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads), "-start_key",
-            String.valueOf(startKey), "-num_keys", String.valueOf(numKeys), "-skip_init" });
-      }
+      ret = loadTool.run(getArgsForLoadTestTool("-write",
+          String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads), startKey, numKeys));
       if (0 != ret) {
         String errorMsg = "Load failed with error code " + ret;
         LOG.error(errorMsg);
         Assert.fail(errorMsg);
       }
 
-      if (useTags) {
-        ret = loadTool.run(new String[] { "-tn", getTablename(), "-update",
-            String.format("60:%d", writeThreads), "-start_key", String.valueOf(startKey),
-            "-num_keys", String.valueOf(numKeys), "-skip_init", "-usetags", "-num_tags",
-            String.format("1:%d", maxTagsPerKey) });
-      } else {
-        ret = loadTool.run(new String[] { "-tn", getTablename(), "-update",
-            String.format("60:%d", writeThreads), "-start_key", String.valueOf(startKey),
-            "-num_keys", String.valueOf(numKeys), "-skip_init" });
-      }
+      ret = loadTool.run(getArgsForLoadTestTool("-update", String.format("60:%d", writeThreads),
+          startKey, numKeys));
       if (0 != ret) {
         String errorMsg = "Update failed with error code " + ret;
         LOG.error(errorMsg);
         Assert.fail(errorMsg);
       }
-      if (useTags) {
-        ret = loadTool.run(new String[] { "-tn", getTablename(), "-read", "100:20", "-start_key",
-            String.valueOf(startKey), "-num_keys", String.valueOf(numKeys), "-skip_init",
-            "-usetags", "-num_tags", String.format("1:%d", maxTagsPerKey) });
-      } else {
-        ret = loadTool.run(new String[] { "-tn", getTablename(), "-read", "100:20", "-start_key",
-            String.valueOf(startKey), "-num_keys", String.valueOf(numKeys), "-skip_init" });
-      }
+
+      ret = loadTool.run(getArgsForLoadTestTool("-read", "100:20", startKey, numKeys));
       if (0 != ret) {
         String errorMsg = "Verification failed with error code " + ret;
         LOG.error(errorMsg);
@@ -163,6 +145,21 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       }
       startKey += numKeys;
     }
+  }
+
+  protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
+      long numKeys) {
+    List<String> args = new ArrayList<String>();
+    args.add("-tn");
+    args.add(getTablename());
+    args.add(mode);
+    args.add(modeSpecificArg);
+    args.add("-start_key");
+    args.add(String.valueOf(startKey));
+    args.add("-num_keys");
+    args.add(String.valueOf(numKeys));
+    args.add("-skip_init");
+    return args.toArray(new String[args.size()]);
   }
 
   /** Estimates a data size based on the cluster size */

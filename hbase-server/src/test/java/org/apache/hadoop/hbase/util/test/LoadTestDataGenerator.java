@@ -16,9 +16,12 @@
  */
 package org.apache.hadoop.hbase.util.test;
 
+import java.io.IOException;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Mutation;
 
 /**
  * A generator of random data (keys/cfs/columns/values) for load testing.
@@ -26,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public abstract class LoadTestDataGenerator {
-  protected final LoadTestKVGenerator kvGenerator;
+  protected LoadTestKVGenerator kvGenerator;
 
   // The mutate info column stores information
   // about update done to this column family this row.
@@ -35,6 +38,10 @@ public abstract class LoadTestDataGenerator {
   // The increment column always has a long value,
   // which can be incremented later on during updates.
   public final static byte[] INCREMENT = "increment".getBytes();
+
+  public LoadTestDataGenerator() {
+
+  }
 
   /**
    * Initializes the object.
@@ -45,6 +52,14 @@ public abstract class LoadTestDataGenerator {
    */
   public LoadTestDataGenerator(int minValueSize, int maxValueSize) {
     this.kvGenerator = new LoadTestKVGenerator(minValueSize, maxValueSize);
+  }
+
+  /**
+   * initialize the LoadTestDataGenerator
+   * @param args init args
+   */
+  public void initialize(String[] args) {
+
   }
 
   /**
@@ -97,4 +112,26 @@ public abstract class LoadTestDataGenerator {
    * @return True iff valid.
    */
   public abstract boolean verify(byte[] rowKey, byte[] cf, byte[] column, byte[] value);
+
+  /**
+   * Giving a chance for the LoadTestDataGenerator to change the Mutation load.
+   * @param rowkeyBase
+   * @param m
+   * @return updated Mutation
+   * @throws IOException
+   */
+  public Mutation beforeMutate(long rowkeyBase, Mutation m) throws IOException {
+    return m;
+  }
+
+  /**
+   * Giving a chance for the LoadTestDataGenerator to change the Get load.
+   * @param rowkeyBase
+   * @param get
+   * @return updated Get
+   * @throws IOException
+   */
+  public Get beforeGet(long rowkeyBase, Get get) throws IOException {
+    return get;
+  }
 }
