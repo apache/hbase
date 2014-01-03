@@ -354,6 +354,12 @@ public class CompactionTool extends Configured implements Tool {
     job.setMapSpeculativeExecution(false);
     job.setNumReduceTasks(0);
 
+    // add dependencies (including HBase ones)
+    TableMapReduceUtil.addDependencyJars(job);
+    // This job instantiates HRegions, which requires the Counter class from the high_scale library
+    TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+      org.cliffc.high_scale_lib.Counter.class);
+
     Path stagingDir = JobUtil.getStagingDir(conf);
     try {
       // Create input file with the store dirs
