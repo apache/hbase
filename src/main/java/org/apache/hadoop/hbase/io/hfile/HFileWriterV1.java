@@ -140,8 +140,7 @@ public class HFileWriterV1 extends AbstractHFileWriter {
       block = blockEncoder.diskToCacheFormat(block, false);
       passSchemaMetricsTo(block);
       cacheConf.getBlockCache().cacheBlock(
-          new BlockCacheKey(name, blockBegin, DataBlockEncoding.NONE,
-              block.getBlockType()), block);
+          new BlockCacheKey(name, blockBegin), block);
       baosDos.close();
     }
     blockNumber++;

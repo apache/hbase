@@ -294,10 +294,13 @@ public class TestHeapSize extends TestCase {
     }
 
     // SchemaConfigured
-    LOG.debug("Heap size for: " + SchemaConfigured.class.getName());
-    SchemaConfigured sc = new SchemaConfigured(null, "myTable", "myCF");
-    assertEquals(ClassSize.estimateBase(SchemaConfigured.class, true),
-        sc.heapSize());
+    cl = SchemaConfigured.class;
+    actual = new SchemaConfigured(null, "myTable", "myCF").heapSize();
+    expected = ClassSize.estimateBase(cl, false);
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      assertEquals(expected, actual);
+    }
 
     // Store Overhead
     cl = Store.class;
@@ -317,11 +320,10 @@ public class TestHeapSize extends TestCase {
       assertEquals(expected, actual);
     }
 
-    // Block cache key overhead
+    // Block cache key overhead. Only tests fixed overhead as estimating heap
+    // size of strings is hard.
     cl = BlockCacheKey.class;
-    // Passing zero length file name, because estimateBase does not handle
-    // deep overhead.
-    actual = new BlockCacheKey("", 0).heapSize();
+    actual = BlockCacheKey.FIXED_OVERHEAD;
     expected  = ClassSize.estimateBase(cl, false);
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);

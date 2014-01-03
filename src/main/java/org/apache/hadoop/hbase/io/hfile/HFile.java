@@ -435,7 +435,7 @@ public class HFile {
   public interface CachingBlockReader {
     /**
      * Read in a file block.
-     * @param dataBlockOffset offset to read.
+     * @param offset offset to read.
      * @param onDiskBlockSize size of the block
      * @param cacheBlock
      * @param isCompaction is this block being read as part of a compaction
@@ -443,13 +443,19 @@ public class HFile {
      * @param expectedBlockType the block type we are expecting to read with this read operation, or
      *          null to read whatever block type is available and avoid checking (that might reduce
      *          caching efficiency of encoded data blocks)
-     * @param obtainedFromCache
+     * @param expectedDataBlockEncoding the data block encoding the caller is
+     *          expecting data blocks to be in, or null to not perform this
+     *          check and return the block irrespective of the encoding. This
+     *          check only applies to data blocks and can be set to null when
+     *          the caller is expecting to read a non-data block and has set
+     *          {@param expectedBlockType} accordingly.
      * @return Block wrapped in a ByteBuffer.
      * @throws IOException
      */
     HFileBlock readBlock(long offset, long onDiskBlockSize,
         boolean cacheBlock, final boolean isCompaction, boolean cacheOnPreload,
-        BlockType expectedBlockType, KeyValueContext kvContext)
+        BlockType expectedBlockType,
+        DataBlockEncoding expectedDataBlockEncoding, KeyValueContext kvContext)
         throws IOException;
   }
 

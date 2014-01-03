@@ -292,8 +292,6 @@ public class LruBlockCache implements BlockCache, HeapSize {
   /**
    * Cache the block with the specified name and buffer.
    * <p>
-   * It is assumed this will NEVER be called on an already cached block.  If
-   * that is done, an exception will be thrown.
    * @param cacheKey block's cache key
    * @param buf block buffer
    * @param inMemory if block is in-memory
@@ -301,7 +299,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
     CachedBlock cb = map.get(cacheKey);
     if(cb != null) {
-      throw new RuntimeException("Cached an already cached block");
+      return;
     }
     cb = new CachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
     long newSize = updateSizeMetrics(cb, false);
@@ -315,10 +313,6 @@ public class LruBlockCache implements BlockCache, HeapSize {
   /**
    * Cache the block with the specified name and buffer.
    * <p>
-   * It is assumed this will NEVER be called on an already cached block.  If
-   * that is done, it is assumed that you are reinserting the same exact
-   * block due to a race condition and will update the buffer but not modify
-   * the size of the cache.
    * @param cacheKey block's cache key
    * @param buf block buffer
    */
@@ -964,8 +958,9 @@ public class LruBlockCache implements BlockCache, HeapSize {
   public Map<DataBlockEncoding, Integer> getEncodingCountsForTest() {
     Map<DataBlockEncoding, Integer> counts =
         new EnumMap<DataBlockEncoding, Integer>(DataBlockEncoding.class);
-    for (BlockCacheKey cacheKey : map.keySet()) {
-      DataBlockEncoding encoding = cacheKey.getDataBlockEncoding();
+    for (CachedBlock block : map.values()) {
+      DataBlockEncoding encoding =
+              ((HFileBlock) block.getBuffer()).getDataBlockEncoding();
       Integer count = counts.get(encoding);
       counts.put(encoding, (count == null ? 0 : count) + 1);
     }

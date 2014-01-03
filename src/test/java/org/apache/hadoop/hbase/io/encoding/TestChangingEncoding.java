@@ -16,29 +16,26 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
@@ -129,7 +126,7 @@ public class TestChangingEncoding {
       Put put = new Put(getRowKey(batchId, i));
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         put.add(CF_BYTES, getQualifier(j),
-            getValue(batchId, i, j));
+                getValue(batchId, i, j));
         table.put(put);
       }
     }
@@ -145,6 +142,7 @@ public class TestChangingEncoding {
       Result result = table.get(get);
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         KeyValue kv = result.getColumnLatest(CF_BYTES, getQualifier(j));
+        assertNotNull(kv);
         assertEquals(Bytes.toStringBinary(getValue(batchId, i, j)),
             Bytes.toStringBinary(kv.getValue()));
       }
@@ -166,7 +164,7 @@ public class TestChangingEncoding {
   private void setEncodingConf(DataBlockEncoding encoding,
       boolean encodeOnDisk) throws IOException {
     LOG.debug("Setting CF encoding to " + encoding + " (ordinal="
-        + encoding.ordinal() + "), encodeOnDisk=" + encodeOnDisk);
+            + encoding.ordinal() + "), encodeOnDisk=" + encodeOnDisk);
     admin.disableTable(tableName);
     hcd.setDataBlockEncoding(encoding);
     hcd.setEncodeOnDisk(encodeOnDisk);
@@ -250,4 +248,37 @@ public class TestChangingEncoding {
     }
   }
 
+  private long getDataBlockEncodingMismatchCount(boolean isCompaction) {
+    SchemaMetrics metrics =
+            new SchemaConfigured(conf, tableName, CF).getSchemaMetrics();
+    return HRegion.getNumericMetric(
+            metrics.getDataBlockEncodingMismatchMetricNames(isCompaction));
+  }
+
+  @Test
+  public void testDataBlockEncodingMismatchMetrics() throws Exception {
+    prepareTest("DataEncodingMismatchMetrics");
+
+    long oldCountCompaction = getDataBlockEncodingMismatchCount(true);
+    long oldCountNonCompaction = getDataBlockEncodingMismatchCount(false);
+
+    setEncodingConf(DataBlockEncoding.FAST_DIFF, false);
+    // Read and write several batches of data to force flushes and encoded
+    // blocks to be read into cache.
+    for (int i = 0; i < 10; i++) {
+      writeSomeNewData();
+      verifyAllData();
+    }
+    // Force a major compaction which uses a un-encoded scanner and causes data
+    // block encoding mismatches in the cache.
+    compactAndWait();
+
+    long newCountCompaction = getDataBlockEncodingMismatchCount(true);
+    long newCountNonCompaction = getDataBlockEncodingMismatchCount(false);
+
+    assertTrue("Compaction scanners should not match encoded data blocks",
+            newCountCompaction - oldCountCompaction > 0);
+    assertEquals("Get scanners should match encoded data", 0,
+            newCountNonCompaction - oldCountNonCompaction);
+  }
 }

@@ -229,9 +229,8 @@ public class TestCacheOnWrite {
       // Flags: don't cache the block, use pread, this is not a compaction.
       // Also, pass null for expected block type to avoid checking it.
       HFileBlock block = reader.readBlock(offset, onDiskSize, false,
-          false, false, null, null);
-      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
-          offset, encodingInCache, block.getBlockType());
+          false, false, null, encodingInCache, null);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
       boolean isCached = blockCache.getBlock(blockCacheKey, true) != null;
       boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
       if (shouldBeCached != isCached) {

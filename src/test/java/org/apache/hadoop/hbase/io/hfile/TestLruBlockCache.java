@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Random;
@@ -130,14 +129,13 @@ public class TestLruBlockCache {
     }
 
     // Re-add same blocks and ensure nothing has changed
+    long expectedBlockCount = cache.getBlockCount();
     for (CachedItem block : blocks) {
-      try {
-        cache.cacheBlock(block.cacheKey, block);
-        assertTrue("Cache should not allow re-caching a block", false);
-      } catch(RuntimeException re) {
-        // expected
-      }
+      cache.cacheBlock(block.cacheKey, block);
     }
+    assertEquals(
+            "Cache should ignore cache requests for blocks already in cache",
+            expectedBlockCount, cache.getBlockCount());
 
     // Verify correctly calculated cache heap size
     assertEquals(expectedCacheSize, cache.heapSize());

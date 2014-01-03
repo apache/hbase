@@ -231,9 +231,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     HFileBlock cacheFormatBlock = blockEncoder.diskToCacheFormat(
         fsBlockWriter.getBlockForCaching(), isCompaction);
     passSchemaMetricsTo(cacheFormatBlock);
-    cacheConf.getBlockCache().cacheBlock(
-        new BlockCacheKey(name, offset, blockEncoder.getEncodingInCache(),
-            cacheFormatBlock.getBlockType()), cacheFormatBlock);
+    cacheConf.getBlockCache().cacheBlock(new BlockCacheKey(name, offset),
+            cacheFormatBlock);
   }
 
   /**

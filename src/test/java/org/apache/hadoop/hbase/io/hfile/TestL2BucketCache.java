@@ -136,13 +136,13 @@ public class TestL2BucketCache {
       HFileBlock blockFromDisk;
       try {
         blockFromDisk =
-            reader.readBlock(offset, -1, false, false, false, null, null);
+            reader.readBlock(offset, -1, false, false, false, null,
+                    encodingInCache, null);
       } finally {
         mockedL2Cache.enableReads.set(true);
       }
       boolean isInL1Lcache = cacheConf.getBlockCache().getBlock(
-          new BlockCacheKey(reader.getName(), offset, encodingInCache,
-              blockFromDisk.getBlockType()), true) != null;
+          new BlockCacheKey(reader.getName(), offset), true) != null;
       if (isInL1Lcache) {
         cachedCount++;
         byte[] blockFromCacheRaw =
@@ -174,12 +174,13 @@ public class TestL2BucketCache {
     cacheConf.getBlockCache().clearCache();
     underlyingCache.clearCache();
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      HFileBlock blockFromDisk = reader.readBlock(offset, -1, true, false, false, null, null);
+      HFileBlock blockFromDisk = reader.readBlock(offset, -1, true, false,
+              false, null, encodingInCache, null);
       assertNotNull(mockedL2Cache.getRawBlock(reader.getName(), offset));
       cacheConf.getBlockCache().evictBlock(new BlockCacheKey(reader.getName(),
-          offset, encodingInCache, blockFromDisk.getBlockType()));
-      HFileBlock blockFromL2Cache = reader.readBlock(offset, -1, true, false, false,
-          null, null);
+              offset));
+      HFileBlock blockFromL2Cache = reader.readBlock(offset, -1, true, false,
+              false, null, encodingInCache, null);
       assertEquals("Data in block from disk (" + blockFromDisk +
           ") should match data in block from cache (" + blockFromL2Cache +
           ").", blockFromL2Cache.getBufferWithHeader(),

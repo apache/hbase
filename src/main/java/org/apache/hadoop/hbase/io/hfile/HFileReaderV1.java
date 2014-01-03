@@ -218,8 +218,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
     long startTimeNs = System.nanoTime();
 
-    BlockCacheKey cacheKey = new BlockCacheKey(name, offset,
-        DataBlockEncoding.NONE, BlockType.META);
+    BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
 
     BlockCategory effectiveCategory = BlockCategory.META;
     if (metaBlockName.equals(HFileWriterV1.BLOOM_FILTER_META_KEY) ||
@@ -393,8 +392,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
       for (int i = 0; i < dataBlockIndexReader.getRootBlockCount(); i++) {
         if (cacheConf.getBlockCache().evictBlock(
             new BlockCacheKey(name,
-                dataBlockIndexReader.getRootBlockOffset(i),
-                DataBlockEncoding.NONE, BlockType.DATA))) {
+                dataBlockIndexReader.getRootBlockOffset(i)))) {
           numEvicted++;
         }
       }
@@ -715,7 +713,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
   @Override
   public HFileBlock readBlock(long offset, long onDiskBlockSize, boolean cacheBlock,
       boolean isCompaction, boolean cacheOnPreload, BlockType expectedBlockType,
-      KeyValueContext kvContext) {
+      DataBlockEncoding expectedDataBlockEncoding, KeyValueContext kvContext) {
     throw new UnsupportedOperationException();
   }
 

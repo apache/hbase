@@ -177,15 +177,22 @@ public class HFileBlockIndex {
      * @param keyLength the length of the key
      * @param currentBlock the current block, to avoid re-reading the same
      *          block
+     * @param cacheBlocks
+     * @param isCompaction whether this seek is done on behalf of a compaction
+     * @param expectedDataBlockEncoding the data block encoding the caller is
+     *          expecting the data block to be in, or null to not perform this
+     *          check and return the block irrespective of the encoding.
      * @return reader a basic way to load blocks
      * @throws IOException
      */
     public HFileBlock seekToDataBlock(final byte[] key, int keyOffset,
         int keyLength, HFileBlock currentBlock, boolean cacheBlocks,
-        boolean isCompaction, KeyValueContext kvContext)
-        throws IOException {
-      BlockWithScanInfo blockWithScanInfo = loadDataBlockWithScanInfo(key, keyOffset, keyLength,
-          currentBlock, cacheBlocks, isCompaction, kvContext);
+        boolean isCompaction, DataBlockEncoding expectedDataBlockEncoding,
+        KeyValueContext kvContext) throws IOException {
+      BlockWithScanInfo blockWithScanInfo =
+              loadDataBlockWithScanInfo(key, keyOffset, keyLength, currentBlock,
+                      cacheBlocks, isCompaction, expectedDataBlockEncoding,
+                      kvContext);
       if (blockWithScanInfo == null) {
         return null;
       } else {
@@ -205,6 +212,9 @@ public class HFileBlockIndex {
      *          block
      * @param cacheBlocks
      * @param isCompaction
+     * @param expectedDataBlockEncoding the data block encoding the caller is
+     *          expecting the data block to be in, or null to not perform this
+     *          check and return the block irrespective of the encoding.
      * @param kvContext
      * @return the BlockWithScanInfo which contains the DataBlock with other scan info 
      *         such as nextIndexedKey.
@@ -212,8 +222,8 @@ public class HFileBlockIndex {
      */
     public BlockWithScanInfo loadDataBlockWithScanInfo(final byte[] key, int keyOffset,
         int keyLength, HFileBlock currentBlock, boolean cacheBlocks,
-        boolean isCompaction, KeyValueContext kvContext)
-        throws IOException {
+        boolean isCompaction, DataBlockEncoding expectedDataBlockEncoding,
+        KeyValueContext kvContext) throws IOException {
       int rootLevelIndex = rootBlockContainingKey(key, keyOffset, keyLength);
       if (rootLevelIndex < 0 || rootLevelIndex >= blockOffsets.length) {
         return null;
@@ -255,12 +265,11 @@ public class HFileBlockIndex {
           } else if (lookupLevel == searchTreeLevel - 1) {
             expectedBlockType = BlockType.LEAF_INDEX;
           } else {
-            // this also accounts for ENCODED_DATA
             expectedBlockType = BlockType.DATA;
           }
           block = cachingBlockReader.readBlock(currentOffset,
               currentOnDiskSize, shouldCache, isCompaction, false,
-              expectedBlockType, kvContext);
+              expectedBlockType, expectedDataBlockEncoding, kvContext);
         }
 
         if (block == null) {
@@ -335,8 +344,9 @@ public class HFileBlockIndex {
 
         // Caching, using pread, assuming this is not a compaction.
         HFileBlock midLeafBlock =
-            cachingBlockReader.readBlock(midLeafBlockOffset, midLeafBlockOnDiskSize, true, false,
-              false, BlockType.LEAF_INDEX, null);
+            cachingBlockReader.readBlock(midLeafBlockOffset,
+                    midLeafBlockOnDiskSize, true, false, false,
+                    BlockType.LEAF_INDEX, null, null);
 
         ByteBuffer b = midLeafBlock.getBufferWithoutHeader();
         int numDataBlocks = b.getInt();
@@ -938,9 +948,8 @@ public class HFileBlockIndex {
       if (blockCache != null) {
         HFileBlock blockForCaching = blockWriter.getBlockForCaching();
         passSchemaMetricsTo(blockForCaching);
-        blockCache.cacheBlock(new BlockCacheKey(nameForCaching,
-            beginOffset, DataBlockEncoding.NONE,
-            blockForCaching.getBlockType()), blockForCaching);
+        blockCache.cacheBlock(new BlockCacheKey(nameForCaching, beginOffset),
+                blockForCaching);
       }
 
       if (l2Cache != null) {
@@ -1030,8 +1039,6 @@ public class HFileBlockIndex {
      * blocks, so the non-root index format is used.
      *
      * @param out
-     * @param position The beginning offset of the inline block in the file not
-     *          include the header.
      */
     @Override
     public void writeInlineBlock(DataOutput out) throws IOException {

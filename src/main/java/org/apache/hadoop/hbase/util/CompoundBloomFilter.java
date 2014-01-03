@@ -97,7 +97,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
         // We cache the block and use a positional read.
         bloomBlock = reader.readBlock(index.getRootBlockOffset(block),
             index.getRootBlockDataSize(block), true, false, false,
-            BlockType.BLOOM_CHUNK, null);
+            BlockType.BLOOM_CHUNK, null, null);
       } catch (IOException ex) {
        LOG.error( "Failed to load Bloom block. Returning a potential false positive " +
          "for key " + Bytes.toStringBinary(key, keyOffset, keyLength),  ex);

@@ -117,10 +117,11 @@ public class SchemaMetrics {
     READ_COUNT("BlockReadCnt", COMPACTION_AWARE_METRIC_FLAG),
     CACHE_HIT("BlockReadCacheHitCnt", COMPACTION_AWARE_METRIC_FLAG),
     CACHE_MISS("BlockReadCacheMissCnt", COMPACTION_AWARE_METRIC_FLAG),
-  
+
     PRELOAD_CACHE_HIT("PreloadCacheHitCnt",COMPACTION_AWARE_METRIC_FLAG),
     PRELOAD_CACHE_MISS("PreloadCacheMissCnt",COMPACTION_AWARE_METRIC_FLAG),
-    PRELOAD_READ_TIME("PreloadReadTime",COMPACTION_AWARE_METRIC_FLAG | TIME_VARYING_METRIC_FLAG),
+    PRELOAD_READ_TIME("PreloadReadTime",
+            COMPACTION_AWARE_METRIC_FLAG | TIME_VARYING_METRIC_FLAG),
     
     CACHE_SIZE("blockCacheSize", PERSISTENT_METRIC_FLAG),
     UNENCODED_CACHE_SIZE("blockCacheUnencodedSize", PERSISTENT_METRIC_FLAG),
@@ -306,6 +307,7 @@ public class SchemaMetrics {
   private final String[] bloomMetricNames = new String[2];
   private final String[] storeMetricNames = new String[NUM_STORE_METRIC_TYPES];
   private final String[] storeMetricNamesMax = new String[NUM_STORE_METRIC_TYPES];
+  private final String[] dataBlockEncodingMismatchMetricNames = new String[2];
 
   private SchemaMetrics(final String tableName, final String cfName) {
     String metricPrefix =
@@ -348,6 +350,13 @@ public class SchemaMetrics {
     for (boolean isInBloom : BOOL_VALUES) {
       bloomMetricNames[isInBloom ? 1 : 0] = metricPrefix
           + (isInBloom ? "keyMaybeInBloomCnt" : "keyNotInBloomCnt");
+    }
+
+    for (boolean isCompaction : BOOL_VALUES) {
+      dataBlockEncodingMismatchMetricNames[isCompaction ? 1 : 0] =
+              String.format("%s%sDataBlockEncodingMismatchCnt", metricPrefix,
+                      isCompaction ? COMPACTION_METRIC_PREFIX :
+                              NON_COMPACTION_METRIC_PREFIX);
     }
 
     for (StoreMetricType storeMetric : StoreMetricType.values()) {
@@ -421,6 +430,10 @@ public class SchemaMetrics {
 
   public String getBloomMetricName(boolean isInBloom) {
     return bloomMetricNames[isInBloom ? 1 : 0];
+  }
+
+  public String getDataBlockEncodingMismatchMetricNames(boolean isCompaction) {
+    return dataBlockEncodingMismatchMetricNames[isCompaction ? 1 : 0];
   }
 
   /**
@@ -665,6 +678,19 @@ public class SchemaMetrics {
     HRegion.incrNumericMetric(getBloomMetricName(isInBloom), 1);
     if (this != ALL_SCHEMA_METRICS) {
       ALL_SCHEMA_METRICS.updateBloomMetrics(isInBloom);
+    }
+  }
+
+  /**
+   * Updates the number of times a block was present in the block cache, but
+   * could not be used due to a type mismatch. The assumption is this should
+   * really only happen upon compactions of CFs which use block encoding.
+   */
+  public void updateOnDataBlockEncodingMismatch(boolean isCompaction) {
+    HRegion.incrNumericMetric(
+            getDataBlockEncodingMismatchMetricNames(isCompaction), 1);
+    if (this != ALL_SCHEMA_METRICS) {
+      ALL_SCHEMA_METRICS.updateOnDataBlockEncodingMismatch(isCompaction);
     }
   }
 
@@ -1107,7 +1133,7 @@ public class SchemaMetrics {
       long metricValue = HRegion.getNumericPersistentMetric(metricName);
       long expectedValue = blockCategoryCounts[blockCategory.ordinal()];
       if (metricValue != expectedValue) {
-        throw new AssertionError("Expected " + expectedValue + " blocks of category " + 
+        throw new AssertionError("Expected " + expectedValue + " blocks of category " +
             blockCategory + " in cache, but found " + metricName + "=" + metricValue);
       }
     }
