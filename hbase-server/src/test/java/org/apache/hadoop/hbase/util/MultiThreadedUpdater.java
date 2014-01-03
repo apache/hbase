@@ -79,9 +79,8 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
   }
 
   @Override
-  public void start(long startKey, long endKey, int numThreads, boolean useTags, int minNumTags,
-      int maxNumTags) throws IOException {
-    super.start(startKey, endKey, numThreads, useTags, minNumTags, maxNumTags);
+  public void start(long startKey, long endKey, int numThreads) throws IOException {
+    super.start(startKey, endKey, numThreads);
 
     if (verbose) {
       LOG.debug("Updating keys [" + startKey + ", " + endKey + ")");
@@ -156,6 +155,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
               try {
                 Get get = new Get(rowKey);
                 get.addFamily(cf);
+                get = dataGenerator.beforeGet(rowKeyBase, get);
                 result = table.get(get);
               } catch (IOException ie) {
                 LOG.warn("Failed to get the row for key = ["
@@ -257,6 +257,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
       long keyBase, byte[] row, byte[] cf, byte[] q, byte[] v) {
     long start = System.currentTimeMillis();
     try {
+      m = dataGenerator.beforeMutate(keyBase, m);
       if (m instanceof Increment) {
         table.increment((Increment)m);
       } else if (m instanceof Append) {

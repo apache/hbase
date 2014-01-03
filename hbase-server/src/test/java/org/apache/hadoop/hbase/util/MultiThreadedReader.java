@@ -91,9 +91,8 @@ public class MultiThreadedReader extends MultiThreadedAction
   }
 
   @Override
-  public void start(long startKey, long endKey, int numThreads, boolean useTags,
-    int minNumTags, int maxNumTags) throws IOException {
-    super.start(startKey, endKey, numThreads, useTags, minNumTags, maxNumTags);
+  public void start(long startKey, long endKey, int numThreads) throws IOException {
+    super.start(startKey, endKey, numThreads);
     if (verbose) {
       LOG.debug("Reading keys [" + startKey + ", " + endKey + ")");
     }
@@ -235,6 +234,7 @@ public class MultiThreadedReader extends MultiThreadedAction
       }
 
       try {
+        get = dataGenerator.beforeGet(keyToRead, get);
         if (verbose) {
           LOG.info("[" + readerId + "] " + "Querying key " + keyToRead + ", cfs " + cfsString);
         }

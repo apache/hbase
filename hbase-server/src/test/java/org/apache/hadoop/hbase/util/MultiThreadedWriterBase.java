@@ -83,10 +83,8 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
   }
 
   @Override
-  public void start(long startKey, long endKey, int numThreads, boolean useTags, int minNumTags,
-      int maxNumTags) throws IOException {
-    super.start(startKey, endKey, numThreads, useTags, minNumTags, maxNumTags);
-
+  public void start(long startKey, long endKey, int numThreads) throws IOException {
+    super.start(startKey, endKey, numThreads);
     nextKeyToWrite.set(startKey);
     wroteUpToKey.set(startKey - 1);
 
@@ -176,6 +174,7 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
   public void insert(HTable table, Put put, long keyBase) {
     long start = System.currentTimeMillis();
     try {
+      put = (Put) dataGenerator.beforeMutate(keyBase, put);
       table.put(put);
       totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
     } catch (IOException e) {
