@@ -1,0 +1,38 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+#python
+*.pyc
+
+# CMake Generated Files
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.CMakeCache
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+build
+Testing
+
+
+
+# Thirdparty dirs
+
+thirdparty/glog-*
+thirdparty/gtest-*
+thirdparty/gtest
+thirdparty/protobuf-*
+thirdparty/libevent-*
+thirdparty/libev-*
+thirdparty/installed

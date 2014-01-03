@@ -1,0 +1,30 @@
+set( LIBEV_INCLUDE_SEARCH
+  ${CMAKE_SOURCE_DIR}/thirdparty/installed/include
+)
+
+set( LIBEV_LIB_SEARCH
+  ${CMAKE_SOURCE_DIR}/thirdparty/installed/include
+)
+
+find_path(LIBEV_INCLUDE
+  NAMES ev++.h
+  PATHS ${LIBEV_INCLUDE_SEARCH}
+  NO_DEFAULT_PATH
+)
+
+find_library(LIBEV_LIBRARY
+  NAMES ev
+  PATHS ${LIBEV_LIB_SEARCH}
+  NO_DEFAULT_PATH
+)
+
+if (LIBEV_INCLUDE_PATH AND LIBEV_LIBRARY)
+  set(LIBEV_LIBS ${LIBEV_LIBRARY})
+  set(LIBEV_INCLUDE_DIR ${LIBEV_INCLUDE})
+  set(LIBEV_FOUND TRUE)
+endif()
+
+mark_as_advanced(
+  LIBEV_INCLUDE_DIR
+  LIBEV_LIBS
+)
