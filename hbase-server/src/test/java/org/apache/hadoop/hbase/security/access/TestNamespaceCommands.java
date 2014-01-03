@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
@@ -31,10 +30,8 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.security.User;
@@ -70,20 +67,21 @@ public class TestNamespaceCommands extends SecureTestUtil {
   public static void beforeClass() throws Exception {
     conf = UTIL.getConfiguration();
     SecureTestUtil.enableSecurity(conf);
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, AccessController.class.getName());
-    UTIL.startMiniCluster();
+
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
     USER_RW = User.createUserForTesting(conf, "rw_user", new String[0]);
     USER_CREATE = User.createUserForTesting(conf, "create_user", new String[0]);
     USER_NSP_WRITE = User.createUserForTesting(conf, "namespace_write", new String[0]);
-    UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TestNamespace).build());
 
+    UTIL.startMiniCluster();
     // Wait for the ACL table to become available
     UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME.getName(), 30 * 1000);
 
-    MasterCoprocessorHost cpHost = UTIL.getMiniHBaseCluster().getMaster().getCoprocessorHost();
-    cpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
-    ACCESS_CONTROLLER = (AccessController) cpHost.findCoprocessor(AccessController.class.getName());
+    ACCESS_CONTROLLER = (AccessController) UTIL.getMiniHBaseCluster().getMaster()
+      .getCoprocessorHost()
+        .findCoprocessor(AccessController.class.getName());
+
+    UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TestNamespace).build());
 
     SecureTestUtil.grantOnNamespace(UTIL, USER_NSP_WRITE.getShortName(),
       TestNamespace, Permission.Action.WRITE);
