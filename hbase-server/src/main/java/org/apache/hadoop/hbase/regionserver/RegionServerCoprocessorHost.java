@@ -57,7 +57,16 @@ public class RegionServerCoprocessorHost extends
     for (RegionServerEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionServerObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
-        ((RegionServerObserver) env.getInstance()).preStopRegionServer(ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ((RegionServerObserver) env.getInstance()).preStopRegionServer(ctx);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
         if (ctx.shouldComplete()) {
           break;
         }
@@ -71,10 +80,15 @@ public class RegionServerCoprocessorHost extends
     for (RegionServerEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionServerObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionServerObserver) env.getInstance()).preMerge(ctx, regionA, regionB);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -91,10 +105,15 @@ public class RegionServerCoprocessorHost extends
     for (RegionServerEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionServerObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionServerObserver) env.getInstance()).postMerge(ctx, regionA, regionB, mergedRegion);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -110,11 +129,16 @@ public class RegionServerCoprocessorHost extends
     for (RegionServerEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionServerObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionServerObserver) env.getInstance()).preMergeCommit(ctx, regionA, regionB,
             metaEntries);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -131,11 +155,16 @@ public class RegionServerCoprocessorHost extends
     for (RegionServerEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionServerObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionServerObserver) env.getInstance()).postMergeCommit(ctx, regionA, regionB,
             mergedRegion);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -149,10 +178,15 @@ public class RegionServerCoprocessorHost extends
     for (RegionServerEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionServerObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionServerObserver) env.getInstance()).preRollBackMerge(ctx, regionA, regionB);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -166,10 +200,15 @@ public class RegionServerCoprocessorHost extends
     for (RegionServerEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionServerObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionServerObserver) env.getInstance()).postRollBackMerge(ctx, regionA, regionB);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;

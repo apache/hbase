@@ -93,7 +93,7 @@ public class WALCoprocessorHost
    * @return true if default behavior should be bypassed, false otherwise
    * @throws IOException
    */
-  public boolean preWALWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit)
+  public boolean preWALWrite(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
       throws IOException {
     boolean bypass = false;
     ObserverContext<WALCoprocessorEnvironment> ctx = null;
@@ -101,8 +101,17 @@ public class WALCoprocessorHost
       if (env.getInstance() instanceof
           org.apache.hadoop.hbase.coprocessor.WALObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
-        ((org.apache.hadoop.hbase.coprocessor.WALObserver)env.getInstance()).
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ((org.apache.hadoop.hbase.coprocessor.WALObserver)env.getInstance()).
             preWALWrite(ctx, info, logKey, logEdit);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
           break;
@@ -118,15 +127,24 @@ public class WALCoprocessorHost
    * @param logEdit
    * @throws IOException
    */
-  public void postWALWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit)
+  public void postWALWrite(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
       throws IOException {
     ObserverContext<WALCoprocessorEnvironment> ctx = null;
     for (WALEnvironment env: coprocessors) {
       if (env.getInstance() instanceof
           org.apache.hadoop.hbase.coprocessor.WALObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
-        ((org.apache.hadoop.hbase.coprocessor.WALObserver)env.getInstance()).
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ((org.apache.hadoop.hbase.coprocessor.WALObserver)env.getInstance()).
             postWALWrite(ctx, info, logKey, logEdit);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
         if (ctx.shouldComplete()) {
           break;
         }

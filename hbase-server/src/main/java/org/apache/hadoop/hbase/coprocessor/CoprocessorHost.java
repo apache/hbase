@@ -286,11 +286,25 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @return the coprocessor, or null if not found
    */
   public Coprocessor findCoprocessor(String className) {
-    // initialize the coprocessors
     for (E env: coprocessors) {
       if (env.getInstance().getClass().getName().equals(className) ||
           env.getInstance().getClass().getSimpleName().equals(className)) {
         return env.getInstance();
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Find a coprocessor environment by class name
+   * @param className the class name
+   * @return the coprocessor, or null if not found
+   */
+  public CoprocessorEnvironment findCoprocessorEnvironment(String className) {
+    for (E env: coprocessors) {
+      if (env.getInstance().getClass().getName().equals(className) ||
+          env.getInstance().getClass().getSimpleName().equals(className)) {
+        return env;
       }
     }
     return null;
@@ -312,22 +326,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
     }
     return externalClassLoaders;
-  }
-
-  /**
-   * Find a coprocessor environment by class name
-   * @param className the class name
-   * @return the coprocessor, or null if not found
-   */
-  public CoprocessorEnvironment findCoprocessorEnvironment(String className) {
-    // initialize the coprocessors
-    for (E env: coprocessors) {
-      if (env.getInstance().getClass().getName().equals(className) ||
-          env.getInstance().getClass().getSimpleName().equals(className)) {
-        return env;
-      }
-    }
-    return null;
   }
 
   /**
@@ -645,11 +643,16 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       if (state == Coprocessor.State.INSTALLED ||
           state == Coprocessor.State.STOPPED) {
         state = Coprocessor.State.STARTING;
+        Thread currentThread = Thread.currentThread();
+        ClassLoader hostClassLoader = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(this.getClassLoader());
           impl.start(this);
           state = Coprocessor.State.ACTIVE;
         } catch (IOException ioe) {
           LOG.error("Error starting coprocessor "+impl.getClass().getName(), ioe);
+        } finally {
+          currentThread.setContextClassLoader(hostClassLoader);
         }
       } else {
         LOG.warn("Not starting coprocessor "+impl.getClass().getName()+
@@ -661,11 +664,16 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     protected void shutdown() {
       if (state == Coprocessor.State.ACTIVE) {
         state = Coprocessor.State.STOPPING;
+        Thread currentThread = Thread.currentThread();
+        ClassLoader hostClassLoader = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(this.getClassLoader());
           impl.stop(this);
           state = Coprocessor.State.STOPPED;
         } catch (IOException ioe) {
           LOG.error("Error stopping coprocessor "+impl.getClass().getName(), ioe);
+        } finally {
+          currentThread.setContextClassLoader(hostClassLoader);
         }
       } else {
         LOG.warn("Not stopping coprocessor "+impl.getClass().getName()+
@@ -686,6 +694,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     @Override
     public Coprocessor getInstance() {
       return impl;
+    }
+
+    @Override
+    public ClassLoader getClassLoader() {
+      return impl.getClass().getClassLoader();
     }
 
     @Override
