@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
@@ -1148,6 +1149,31 @@ public class HTable implements HTableInterface {
     return rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
   }
 
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean checkAndPut(final byte [] row, final byte [] family,
+      final byte [] qualifier, final CompareOp compareOp, final byte [] value,
+      final Put put)
+  throws IOException {
+    RegionServerCallable<Boolean> callable =
+      new RegionServerCallable<Boolean>(connection, getName(), row) {
+        public Boolean call() throws IOException {
+          try {
+            CompareType compareType = CompareType.valueOf(compareOp.name());
+            MutateRequest request = RequestConverter.buildMutateRequest(
+              getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
+                new BinaryComparator(value), compareType, put);
+            MutateResponse response = getStub().mutate(null, request);
+            return Boolean.valueOf(response.getProcessed());
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
+          }
+        }
+      };
+    return rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
+  }
 
   /**
    * {@inheritDoc}
@@ -1164,6 +1190,32 @@ public class HTable implements HTableInterface {
             MutateRequest request = RequestConverter.buildMutateRequest(
               getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
                 new BinaryComparator(value), CompareType.EQUAL, delete);
+            MutateResponse response = getStub().mutate(null, request);
+            return Boolean.valueOf(response.getProcessed());
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
+          }
+        }
+      };
+    return rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean checkAndDelete(final byte [] row, final byte [] family,
+      final byte [] qualifier, final CompareOp compareOp, final byte [] value,
+      final Delete delete)
+  throws IOException {
+    RegionServerCallable<Boolean> callable =
+      new RegionServerCallable<Boolean>(connection, getName(), row) {
+        public Boolean call() throws IOException {
+          try {
+            CompareType compareType = CompareType.valueOf(compareOp.name());
+            MutateRequest request = RequestConverter.buildMutateRequest(
+              getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
+                new BinaryComparator(value), compareType, delete);
             MutateResponse response = getStub().mutate(null, request);
             return Boolean.valueOf(response.getProcessed());
           } catch (ServiceException se) {

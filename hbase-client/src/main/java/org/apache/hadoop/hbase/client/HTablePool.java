@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap;
@@ -446,6 +448,13 @@ public class HTablePool implements Closeable {
     }
 
     @Override
+    public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
+        CompareOp compareOp, byte[] value, Put put) throws IOException {
+      checkState();
+      return table.checkAndPut(row, family, qualifier, compareOp, value, put);
+    }
+
+    @Override
     public void delete(Delete delete) throws IOException {
       checkState();
       table.delete(delete);
@@ -462,6 +471,13 @@ public class HTablePool implements Closeable {
         byte[] value, Delete delete) throws IOException {
       checkState();
       return table.checkAndDelete(row, family, qualifier, value, delete);
+    }
+
+    @Override
+    public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
+        CompareOp compareOp, byte[] value, Delete delete) throws IOException {
+      checkState();
+      return table.checkAndDelete(row, family, qualifier, compareOp, value, delete);
     }
 
     @Override

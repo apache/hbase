@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.rest.Constants;
@@ -668,6 +669,11 @@ public class RemoteHTable implements HTableInterface {
     throw new IOException("checkAndPut request timed out");
   }
 
+  public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
+      CompareOp compareOp, byte[] value, Put put) throws IOException {
+    throw new IOException("checkAndPut for non-equal comparison not implemented");
+  }
+
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Delete delete) throws IOException {
     Put put = new Put(row);
@@ -701,6 +707,11 @@ public class RemoteHTable implements HTableInterface {
       }
     }
     throw new IOException("checkAndDelete request timed out");
+  }
+
+  public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
+      CompareOp compareOp, byte[] value, Delete delete) throws IOException {
+    throw new IOException("checkAndDelete for non-equal comparison not implemented");
   }
 
   public Result increment(Increment increment) throws IOException {
