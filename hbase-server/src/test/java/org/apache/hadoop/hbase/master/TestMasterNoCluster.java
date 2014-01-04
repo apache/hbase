@@ -372,7 +372,7 @@ public class TestMasterNoCluster {
       InterruptedException, KeeperException {
         super.initializeZKBasedSystemTrackers();
         // Record a newer server in server manager at first
-        serverManager.recordNewServer(newServer, ServerLoad.EMPTY_SERVERLOAD);
+        serverManager.recordNewServerWithLock(newServer, ServerLoad.EMPTY_SERVERLOAD);
 
         List<ServerName> onlineServers = new ArrayList<ServerName>();
         onlineServers.add(deadServer);

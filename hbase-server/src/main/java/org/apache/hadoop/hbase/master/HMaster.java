@@ -827,11 +827,10 @@ MasterServices, Server {
     this.serverManager.waitForRegionServers(status);
     // Check zk for region servers that are up but didn't register
     for (ServerName sn: this.regionServerTracker.getOnlineServers()) {
+      // The isServerOnline check is opportunistic, correctness is handled inside
       if (!this.serverManager.isServerOnline(sn)
-          && serverManager.checkAlreadySameHostPortAndRecordNewServer(
-              sn, ServerLoad.EMPTY_SERVERLOAD)) {
-        LOG.info("Registered server found up in zk but who has not yet "
-          + "reported in: " + sn);
+          && serverManager.checkAndRecordNewServer(sn, ServerLoad.EMPTY_SERVERLOAD)) {
+        LOG.info("Registered server found up in zk but who has not yet reported in: " + sn);
       }
     }
 
