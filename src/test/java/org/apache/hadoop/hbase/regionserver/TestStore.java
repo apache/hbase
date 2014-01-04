@@ -151,6 +151,8 @@ public class TestStore extends TestCase {
   }
 
   public void testDeleteExpiredStoreFiles() throws Exception {
+    ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
+    EnvironmentEdgeManagerTestHelper.injectEdge(mee);
     int storeFileNum = 4;
     int ttl = 4;
     
@@ -172,8 +174,10 @@ public class TestStore extends TestCase {
       this.store.add(new KeyValue(row, family, qf2, timeStamp, (byte[]) null));
       this.store.add(new KeyValue(row, family, qf3, timeStamp, (byte[]) null));
       flush(i);
-      Thread.sleep(sleepTime);
+      mee.incValue(sleepTime);
     }
+    // move time forward a bit more, so that the first file is expired
+    mee.incValue(1);
 
     // Verify the total number of store files
     assertEquals(storeFileNum, this.store.getStorefiles().size());
@@ -187,7 +191,7 @@ public class TestStore extends TestCase {
       // If not the first compaction, there is another empty store file,
       assertEquals(Math.min(i, 2), cr.getFiles().size());
       for (int j = 0; i < cr.getFiles().size(); j++) {
-        assertTrue(cr.getFiles().get(j).getReader().getMaxTimestamp() < (System
+        assertTrue(cr.getFiles().get(j).getReader().getMaxTimestamp() < (EnvironmentEdgeManager
             .currentTimeMillis() - this.store.scanInfo.getTtl()));
       }
       // Verify that the expired store file is compacted to an empty store file.
@@ -197,7 +201,7 @@ public class TestStore extends TestCase {
           .getEntries());
 
       // Let the next store file expired.
-      Thread.sleep(sleepTime);
+      mee.incValue(sleepTime);
     }
   }
 
