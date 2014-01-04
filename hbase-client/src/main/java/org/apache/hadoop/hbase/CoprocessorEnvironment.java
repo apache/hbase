@@ -57,5 +57,10 @@ public interface CoprocessorEnvironment {
    *         operations
    * @throws IOException
    */
-  public HTableInterface getTable(TableName tableName, ExecutorService service) throws IOException;
+  HTableInterface getTable(TableName tableName, ExecutorService service) throws IOException;
+
+  /**
+   * @return the classloader for the loaded coprocessor instance
+   */
+  ClassLoader getClassLoader();
 }

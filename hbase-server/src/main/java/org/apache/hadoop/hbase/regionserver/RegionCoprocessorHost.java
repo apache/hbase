@@ -224,7 +224,7 @@ public class RegionCoprocessorHost
     // uses a different way to be registered and executed.
     // It uses a visitor pattern to invoke registered Endpoint
     // method.
-    for (Class c : implClass.getInterfaces()) {
+    for (Class<?> c : implClass.getInterfaces()) {
       if (CoprocessorService.class.isAssignableFrom(c)) {
         region.registerService( ((CoprocessorService)instance).getService() );
       }
@@ -284,11 +284,16 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
-         try {
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).preOpen(ctx);
-         } catch (Throwable e) {
-           handleCoprocessorThrowable(env, e);
-         }
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
         if (ctx.shouldComplete()) {
           break;
         }
@@ -304,10 +309,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).postOpen(ctx);
         } catch (Throwable e) {
           handleCoprocessorThrowableNoRethrow(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -324,10 +334,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).postLogReplay(ctx);
         } catch (Throwable e) {
           handleCoprocessorThrowableNoRethrow(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -340,15 +355,20 @@ public class RegionCoprocessorHost
    * Invoked before a region is closed
    * @param abortRequested true if the server is aborting
    */
-  public void preClose(boolean abortRequested) throws IOException {
+  public void preClose(final boolean abortRequested) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).preClose(ctx, abortRequested);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
       }
     }
@@ -358,17 +378,21 @@ public class RegionCoprocessorHost
    * Invoked after a region is closed
    * @param abortRequested true if the server is aborting
    */
-  public void postClose(boolean abortRequested) {
+  public void postClose(final boolean abortRequested) {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).postClose(ctx, abortRequested);
         } catch (Throwable e) {
           handleCoprocessorThrowableNoRethrow(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
-
       }
       shutdown(env);
     }
@@ -378,18 +402,24 @@ public class RegionCoprocessorHost
    * See
    * {@link RegionObserver#preCompactScannerOpen(ObserverContext, Store, List, ScanType, long, InternalScanner, CompactionRequest)}
    */
-  public InternalScanner preCompactScannerOpen(Store store, List<StoreFileScanner> scanners,
-      ScanType scanType, long earliestPutTs, CompactionRequest request) throws IOException {
+  public InternalScanner preCompactScannerOpen(final Store store,
+      final List<StoreFileScanner> scanners, final ScanType scanType, final long earliestPutTs,
+      final CompactionRequest request) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     InternalScanner s = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          s = ((RegionObserver) env.getInstance()).preCompactScannerOpen(ctx, store, scanners,
-            scanType, earliestPutTs, s, request);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          s = ((RegionObserver) env.getInstance()).preCompactScannerOpen(ctx, store,
+            scanners, scanType, earliestPutTs, s, request);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env,e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -408,18 +438,23 @@ public class RegionCoprocessorHost
    * @return If {@code true}, skip the normal selection process and use the current list
    * @throws IOException
    */
-  public boolean preCompactSelection(Store store, List<StoreFile> candidates,
-      CompactionRequest request) throws IOException {
+  public boolean preCompactSelection(final Store store, final List<StoreFile> candidates,
+      final CompactionRequest request) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          ((RegionObserver) env.getInstance()).preCompactSelection(ctx, store, candidates, request);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ((RegionObserver) env.getInstance()).preCompactSelection(ctx, store, candidates,
+            request);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env,e);
-
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -437,16 +472,22 @@ public class RegionCoprocessorHost
    * @param selected The store files selected to compact
    * @param request custom compaction
    */
-  public void postCompactSelection(Store store, ImmutableList<StoreFile> selected,
-      CompactionRequest request) {
+  public void postCompactSelection(final Store store, final ImmutableList<StoreFile> selected,
+      final CompactionRequest request) {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          ((RegionObserver) env.getInstance()).postCompactSelection(ctx, store, selected, request);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ((RegionObserver) env.getInstance()).postCompactSelection(ctx, store, selected,
+            request);
         } catch (Throwable e) {
           handleCoprocessorThrowableNoRethrow(env,e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -463,18 +504,24 @@ public class RegionCoprocessorHost
    * @param request the compaction that will be executed
    * @throws IOException
    */
-  public InternalScanner preCompact(Store store, InternalScanner scanner, ScanType scanType,
-      CompactionRequest request) throws IOException {
+  public InternalScanner preCompact(final Store store, final InternalScanner scanner,
+      final ScanType scanType, final CompactionRequest request) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
+    InternalScanner s = scanner;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          scanner = ((RegionObserver) env.getInstance()).preCompact(ctx, store, scanner, scanType,
+          currentThread.setContextClassLoader(env.getClassLoader());
+          s = ((RegionObserver) env.getInstance()).preCompact(ctx, store, s, scanType,
             request);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env,e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -482,7 +529,7 @@ public class RegionCoprocessorHost
         }
       }
     }
-    return bypass ? null : scanner;
+    return bypass ? null : s;
   }
 
   /**
@@ -492,16 +539,21 @@ public class RegionCoprocessorHost
    * @param request the compaction that is being executed
    * @throws IOException
    */
-  public void postCompact(Store store, StoreFile resultFile, CompactionRequest request)
-      throws IOException {
+  public void postCompact(final Store store, final StoreFile resultFile,
+      final CompactionRequest request) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).postCompact(ctx, store, resultFile, request);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -514,17 +566,22 @@ public class RegionCoprocessorHost
    * Invoked before a memstore flush
    * @throws IOException
    */
-  public InternalScanner preFlush(Store store, InternalScanner scanner) throws IOException {
+  public InternalScanner preFlush(final Store store, final InternalScanner scanner) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
+    InternalScanner s = scanner;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          scanner = ((RegionObserver)env.getInstance()).preFlush(
-              ctx, store, scanner);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          s = ((RegionObserver)env.getInstance()).preFlush(ctx, store, s);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env,e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -532,7 +589,7 @@ public class RegionCoprocessorHost
         }
       }
     }
-    return bypass ? null : scanner;
+    return bypass ? null : s;
   }
 
   /**
@@ -544,10 +601,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).preFlush(ctx);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -561,18 +623,23 @@ public class RegionCoprocessorHost
    * {@link RegionObserver#preFlushScannerOpen(ObserverContext,
    *    Store, KeyValueScanner, InternalScanner)}
    */
-  public InternalScanner preFlushScannerOpen(Store store, KeyValueScanner memstoreScanner)
-      throws IOException {
+  public InternalScanner preFlushScannerOpen(final Store store,
+      final KeyValueScanner memstoreScanner) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     InternalScanner s = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          s = ((RegionObserver) env.getInstance())
-            .preFlushScannerOpen(ctx, store, memstoreScanner, s);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          s = ((RegionObserver) env.getInstance()).preFlushScannerOpen(ctx, store,
+            memstoreScanner, s);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -591,10 +658,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).postFlush(ctx);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -612,10 +684,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).postFlush(ctx, store, storeFile);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -633,10 +710,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).preSplit(ctx);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -649,15 +731,20 @@ public class RegionCoprocessorHost
    * Invoked just before a split
    * @throws IOException
    */
-  public void preSplit(byte[] splitRow) throws IOException {
+  public void preSplit(final byte[] splitRow) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).preSplit(ctx, splitRow);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -672,15 +759,20 @@ public class RegionCoprocessorHost
    * @param r the new right-hand daughter region
    * @throws IOException
    */
-  public void postSplit(HRegion l, HRegion r) throws IOException {
+  public void postSplit(final HRegion l, final HRegion r) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).postSplit(ctx, l, r);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -689,17 +781,22 @@ public class RegionCoprocessorHost
     }
   }
 
-  public boolean preSplitBeforePONR(byte[] splitKey, List<Mutation> metaEntries) throws IOException {
+  public boolean preSplitBeforePONR(final byte[] splitKey, 
+      final List<Mutation> metaEntries) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          ((RegionObserver) env.getInstance()).preSplitBeforePONR(ctx,
-              splitKey, metaEntries);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ((RegionObserver) env.getInstance()).preSplitBeforePONR(ctx, splitKey, metaEntries);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -715,10 +812,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).preSplitAfterPONR(ctx);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -736,10 +838,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).preRollBackSplit(ctx);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -757,10 +864,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).postRollBackSplit(ctx);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -778,10 +890,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).postCompleteSplit(ctx);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -789,6 +906,7 @@ public class RegionCoprocessorHost
       }
     }
   }
+
   // RegionObserver support
 
   /**
@@ -805,11 +923,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          ((RegionObserver)env.getInstance()).preGetClosestRowBefore(ctx, row,
-              family, result);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ((RegionObserver)env.getInstance()).preGetClosestRowBefore(ctx, row, family, result);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -832,11 +954,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          ((RegionObserver)env.getInstance()).postGetClosestRowBefore(ctx, row,
-              family, result);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ((RegionObserver)env.getInstance()).postGetClosestRowBefore(ctx, row, family, result);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -857,10 +983,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).preGetOp(ctx, get, results);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -882,10 +1013,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).postGetOp(ctx, get, results);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -907,10 +1043,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           exists = ((RegionObserver)env.getInstance()).preExists(ctx, get, exists);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -933,10 +1074,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           exists = ((RegionObserver)env.getInstance()).postExists(ctx, get, exists);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -953,17 +1099,22 @@ public class RegionCoprocessorHost
    * @return true if default processing should be bypassed
    * @exception IOException Exception
    */
-  public boolean prePut(Put put, WALEdit edit,
-      final Durability durability) throws IOException {
+  public boolean prePut(final Put put, final WALEdit edit, final Durability durability)
+      throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).prePut(ctx, put, edit, durability);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -980,16 +1131,21 @@ public class RegionCoprocessorHost
    * @param durability The durability used
    * @exception IOException Exception
    */
-  public void postPut(Put put, WALEdit edit,
-      final Durability durability) throws IOException {
+  public void postPut(final Put put, final WALEdit edit, final Durability durability)
+      throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).postPut(ctx, put, edit, durability);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1005,17 +1161,22 @@ public class RegionCoprocessorHost
    * @return true if default processing should be bypassed
    * @exception IOException Exception
    */
-  public boolean preDelete(Delete delete, WALEdit edit,
-      final Durability durability) throws IOException {
+  public boolean preDelete(final Delete delete, final WALEdit edit, final Durability durability)
+      throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).preDelete(ctx, delete, edit, durability);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -1032,16 +1193,21 @@ public class RegionCoprocessorHost
    * @param durability The durability used
    * @exception IOException Exception
    */
-  public void postDelete(Delete delete, WALEdit edit,
-      final Durability durability) throws IOException {
+  public void postDelete(final Delete delete, final WALEdit edit, final Durability durability)
+      throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).postDelete(ctx, delete, edit, durability);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1062,10 +1228,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).preBatchMutate(ctx, miniBatchOp);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -1086,10 +1257,15 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).postBatchMutate(ctx, miniBatchOp);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1105,11 +1281,16 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).postBatchMutateIndispensably(ctx, miniBatchOp,
             success);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1131,7 +1312,7 @@ public class RegionCoprocessorHost
    */
   public Boolean preCheckAndPut(final byte [] row, final byte [] family,
       final byte [] qualifier, final CompareOp compareOp,
-      final ByteArrayComparable comparator, Put put)
+      final ByteArrayComparable comparator, final Put put)
     throws IOException {
     boolean bypass = false;
     boolean result = false;
@@ -1139,14 +1320,17 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          result = ((RegionObserver)env.getInstance()).preCheckAndPut(ctx, row, family,
-            qualifier, compareOp, comparator, put, result);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          result = ((RegionObserver)env.getInstance()).preCheckAndPut(ctx, row, family, qualifier,
+            compareOp, comparator, put, result);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
-
-
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
           break;
@@ -1174,11 +1358,16 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          result = ((RegionObserver)env.getInstance()).postCheckAndPut(ctx, row,
-            family, qualifier, compareOp, comparator, put, result);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          result = ((RegionObserver)env.getInstance()).postCheckAndPut(ctx, row, family,
+            qualifier, compareOp, comparator, put, result);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1201,7 +1390,7 @@ public class RegionCoprocessorHost
    */
   public Boolean preCheckAndDelete(final byte [] row, final byte [] family,
       final byte [] qualifier, final CompareOp compareOp,
-      final ByteArrayComparable comparator, Delete delete)
+      final ByteArrayComparable comparator, final Delete delete)
       throws IOException {
     boolean bypass = false;
     boolean result = false;
@@ -1209,11 +1398,16 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          result = ((RegionObserver)env.getInstance()).preCheckAndDelete(ctx, row,
-            family, qualifier, compareOp, comparator, delete, result);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          result = ((RegionObserver)env.getInstance()).preCheckAndDelete(ctx, row, family,
+            qualifier, compareOp, comparator, delete, result);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -1236,18 +1430,21 @@ public class RegionCoprocessorHost
   public boolean postCheckAndDelete(final byte [] row, final byte [] family,
       final byte [] qualifier, final CompareOp compareOp,
       final ByteArrayComparable comparator, final Delete delete,
-      boolean result)
-    throws IOException {
+      boolean result) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          result = ((RegionObserver)env.getInstance())
-            .postCheckAndDelete(ctx, row, family, qualifier, compareOp,
-              comparator, delete, result);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          result = ((RegionObserver)env.getInstance()).postCheckAndDelete(ctx, row, family,
+            qualifier, compareOp, comparator, delete, result);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1263,18 +1460,22 @@ public class RegionCoprocessorHost
    * bypassed, null otherwise
    * @throws IOException if an error occurred on the coprocessor
    */
-  public Result preAppend(Append append)
-      throws IOException {
+  public Result preAppend(final Append append) throws IOException {
     boolean bypass = false;
     Result result = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           result = ((RegionObserver)env.getInstance()).preAppend(ctx, append);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -1291,18 +1492,22 @@ public class RegionCoprocessorHost
    * bypassed, null otherwise
    * @throws IOException if an error occurred on the coprocessor
    */
-  public Result preIncrement(Increment increment)
-      throws IOException {
+  public Result preIncrement(final Increment increment) throws IOException {
     boolean bypass = false;
     Result result = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           result = ((RegionObserver)env.getInstance()).preIncrement(ctx, increment);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -1315,19 +1520,23 @@ public class RegionCoprocessorHost
 
   /**
    * @param append Append object
-   * @param result the result returned by postAppend
+   * @param result the result returned by the append
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postAppend(final Append append, Result result)
-      throws IOException {
+  public void postAppend(final Append append, final Result result) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).postAppend(ctx, append, result);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1341,16 +1550,20 @@ public class RegionCoprocessorHost
    * @param result the result returned by postIncrement
    * @throws IOException if an error occurred on the coprocessor
    */
-  public Result postIncrement(final Increment increment, Result result)
-      throws IOException {
+  public Result postIncrement(final Increment increment, Result result) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           result = ((RegionObserver)env.getInstance()).postIncrement(ctx, increment, result);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1366,17 +1579,22 @@ public class RegionCoprocessorHost
    * bypassed, false otherwise
    * @exception IOException Exception
    */
-  public RegionScanner preScannerOpen(Scan scan) throws IOException {
+  public RegionScanner preScannerOpen(final Scan scan) throws IOException {
     boolean bypass = false;
     RegionScanner s = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           s = ((RegionObserver)env.getInstance()).preScannerOpen(ctx, scan, s);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -1392,18 +1610,23 @@ public class RegionCoprocessorHost
    * {@link RegionObserver#preStoreScannerOpen(ObserverContext,
    *    Store, Scan, NavigableSet, KeyValueScanner)}
    */
-  public KeyValueScanner preStoreScannerOpen(Store store, Scan scan,
+  public KeyValueScanner preStoreScannerOpen(final Store store, final Scan scan,
       final NavigableSet<byte[]> targetCols) throws IOException {
     KeyValueScanner s = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           s = ((RegionObserver) env.getInstance()).preStoreScannerOpen(ctx, store, scan,
-              targetCols, s);
+            targetCols, s);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1419,16 +1642,20 @@ public class RegionCoprocessorHost
    * @return the scanner instance to use
    * @exception IOException Exception
    */
-  public RegionScanner postScannerOpen(final Scan scan, RegionScanner s)
-      throws IOException {
+  public RegionScanner postScannerOpen(final Scan scan, RegionScanner s) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           s = ((RegionObserver)env.getInstance()).postScannerOpen(ctx, scan, s);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1447,18 +1674,23 @@ public class RegionCoprocessorHost
    * @exception IOException Exception
    */
   public Boolean preScannerNext(final InternalScanner s,
-      final List<Result> results, int limit) throws IOException {
+      final List<Result> results, final int limit) throws IOException {
     boolean bypass = false;
     boolean hasNext = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          hasNext = ((RegionObserver)env.getInstance()).preScannerNext(ctx, s, results,
-            limit, hasNext);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          hasNext = ((RegionObserver)env.getInstance()).preScannerNext(ctx, s, results, limit,
+            hasNext);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -1484,11 +1716,16 @@ public class RegionCoprocessorHost
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          hasMore = ((RegionObserver)env.getInstance()).postScannerNext(ctx, s,
-            results, limit, hasMore);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          hasMore = ((RegionObserver)env.getInstance()).postScannerNext(ctx, s, results, limit,
+            hasMore);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1508,18 +1745,23 @@ public class RegionCoprocessorHost
    * @return whether more rows are available for the scanner or not
    * @throws IOException
    */
-  public boolean postScannerFilterRow(final InternalScanner s, final byte[] currentRow, int offset,
-      short length) throws IOException {
+  public boolean postScannerFilterRow(final InternalScanner s, final byte[] currentRow,
+      final int offset, final short length) throws IOException {
     boolean hasMore = true; // By default assume more rows there.
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           hasMore = ((RegionObserver) env.getInstance()).postScannerFilterRow(ctx, s, currentRow,
-              offset, length, hasMore);
+            offset, length, hasMore);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1534,17 +1776,21 @@ public class RegionCoprocessorHost
    * @return true if default behavior should be bypassed, false otherwise
    * @exception IOException Exception
    */
-  public boolean preScannerClose(final InternalScanner s)
-      throws IOException {
+  public boolean preScannerClose(final InternalScanner s) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).preScannerClose(ctx, s);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -1559,16 +1805,20 @@ public class RegionCoprocessorHost
    * @param s the scanner
    * @exception IOException Exception
    */
-  public void postScannerClose(final InternalScanner s)
-      throws IOException {
+  public void postScannerClose(final InternalScanner s) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).postScannerClose(ctx, s);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1584,18 +1834,22 @@ public class RegionCoprocessorHost
    * @return true if default behavior should be bypassed, false otherwise
    * @throws IOException
    */
-  public boolean preWALRestore(HRegionInfo info, HLogKey logKey,
-      WALEdit logEdit) throws IOException {
+  public boolean preWALRestore(final HRegionInfo info, final HLogKey logKey,
+      final WALEdit logEdit) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          ((RegionObserver)env.getInstance()).preWALRestore(ctx, info, logKey,
-              logEdit);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ((RegionObserver)env.getInstance()).preWALRestore(ctx, info, logKey, logEdit);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -1612,17 +1866,21 @@ public class RegionCoprocessorHost
    * @param logEdit
    * @throws IOException
    */
-  public void postWALRestore(HRegionInfo info, HLogKey logKey,
-      WALEdit logEdit) throws IOException {
+  public void postWALRestore(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
+      throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          ((RegionObserver)env.getInstance()).postWALRestore(ctx, info,
-              logKey, logEdit);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ((RegionObserver)env.getInstance()).postWALRestore(ctx, info, logKey, logEdit);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1636,16 +1894,21 @@ public class RegionCoprocessorHost
    * @return true if the default operation should be bypassed
    * @throws IOException
    */
-  public boolean preBulkLoadHFile(List<Pair<byte[], String>> familyPaths) throws IOException {
+  public boolean preBulkLoadHFile(final List<Pair<byte[], String>> familyPaths) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver)env.getInstance()).preBulkLoadHFile(ctx, familyPaths);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -1653,7 +1916,6 @@ public class RegionCoprocessorHost
         }
       }
     }
-
     return bypass;
   }
 
@@ -1663,36 +1925,45 @@ public class RegionCoprocessorHost
    * @return the possibly modified value of hasLoaded
    * @throws IOException
    */
-  public boolean postBulkLoadHFile(List<Pair<byte[], String>> familyPaths, boolean hasLoaded)
-      throws IOException {
+  public boolean postBulkLoadHFile(final List<Pair<byte[], String>> familyPaths,
+      boolean hasLoaded) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
-          hasLoaded = ((RegionObserver)env.getInstance()).postBulkLoadHFile(ctx,
-            familyPaths, hasLoaded);
+          currentThread.setContextClassLoader(env.getClassLoader());
+          hasLoaded = ((RegionObserver)env.getInstance()).postBulkLoadHFile(ctx, familyPaths,
+            hasLoaded);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
         }
       }
     }
-
     return hasLoaded;
   }
 
-  public void postStartRegionOperation(Operation op) throws IOException {
+  public void postStartRegionOperation(final Operation op) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).postStartRegionOperation(ctx, op);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1701,15 +1972,20 @@ public class RegionCoprocessorHost
     }
   }
 
-  public void postCloseRegionOperation(Operation op) throws IOException {
+  public void postCloseRegionOperation(final Operation op) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           ((RegionObserver) env.getInstance()).postCloseRegionOperation(ctx, op);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1730,18 +2006,23 @@ public class RegionCoprocessorHost
    * @throws IOException
    */
   public StoreFile.Reader preStoreFileReaderOpen(final FileSystem fs, final Path p,
-      final FSDataInputStreamWrapper in, long size, final CacheConfig cacheConf,
+      final FSDataInputStreamWrapper in, final long size, final CacheConfig cacheConf,
       final Reference r) throws IOException {
     StoreFile.Reader reader = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           reader = ((RegionObserver) env.getInstance()).preStoreFileReaderOpen(ctx, fs, p, in,
             size, cacheConf, r, reader);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1763,17 +2044,22 @@ public class RegionCoprocessorHost
    * @throws IOException
    */
   public StoreFile.Reader postStoreFileReaderOpen(final FileSystem fs, final Path p,
-      final FSDataInputStreamWrapper in, long size, final CacheConfig cacheConf,
+      final FSDataInputStreamWrapper in, final long size, final CacheConfig cacheConf,
       final Reference r, StoreFile.Reader reader) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           reader = ((RegionObserver) env.getInstance()).postStoreFileReaderOpen(ctx, fs, p, in,
             size, cacheConf, r, reader);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -1783,17 +2069,22 @@ public class RegionCoprocessorHost
     return reader;
   }
 
-  public Cell postMutationBeforeWAL(MutationType opType, Mutation mutation, Cell oldCell,
-      Cell newCell) throws IOException {
+  public Cell postMutationBeforeWAL(final MutationType opType, final Mutation mutation,
+      final Cell oldCell, Cell newCell) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
         try {
+          currentThread.setContextClassLoader(env.getClassLoader());
           newCell = ((RegionObserver) env.getInstance()).postMutationBeforeWAL(ctx, opType,
-              mutation, oldCell, newCell);
+            mutation, oldCell, newCell);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
         }
         if (ctx.shouldComplete()) {
           break;
