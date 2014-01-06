@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.ipc.RpcClient.FailedServerException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -343,6 +344,10 @@ public class CatalogTracker {
       LOG.debug("Exception connecting to " + sn);
     } catch (UnknownHostException e) {
       LOG.debug("Unknown host exception connecting to  " + sn);
+    } catch (FailedServerException e) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Server " + sn + " is in failed server list.");
+      }
     } catch (IOException ioe) {
       Throwable cause = ioe.getCause();
       if (ioe instanceof ConnectException) {
