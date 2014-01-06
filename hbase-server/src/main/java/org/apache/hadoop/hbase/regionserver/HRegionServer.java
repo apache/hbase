@@ -834,9 +834,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
 
     try {
-      // Set our ephemeral znode up in zookeeper now we have a name.
-      createMyEphemeralNode();
-
       // Try and register with the Master; tell it we are here.  Break if
       // server is stopped or the clusterup flag is down or hdfs went wacky.
       while (keepLooping()) {
@@ -1222,6 +1219,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         this.conf.set("mapred.task.id", "hb_rs_" +
           this.serverNameFromMasterPOV.toString());
       }
+      // Set our ephemeral znode up in zookeeper now we have a name.
+      createMyEphemeralNode();
 
       // Save it in a file, this will allow to see if we crash
       ZNodeClearer.writeMyEphemeralNodeOnDisk(getMyEphemeralNodePath());
