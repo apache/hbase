@@ -19,18 +19,26 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Base64;
@@ -45,24 +53,34 @@ public class TestGet {
   private static final byte [] ROW = new byte [] {'r'};
 
   private static final String PB_GET = "CgNyb3ciEwoPdGVzdC5Nb2NrRmlsdGVyEgAwATgB";
+  private static final String PB_GET_WITH_FILTER_LIST =
+    "CgFyIosBCilvcmcuYXBhY2hlLmhhZG9vcC5oYmFzZS5maWx0ZXIuRmlsdGVyTGlzdBJeCAESEwoP" +
+    "dGVzdC5Nb2NrRmlsdGVyEgASEQoNbXkuTW9ja0ZpbHRlchIAEjIKLG9yZy5hcGFjaGUuaGFkb29w" +
+    "LmhiYXNlLmZpbHRlci5LZXlPbmx5RmlsdGVyEgIIADABOAE=";
 
   private static final String MOCK_FILTER_JAR =
-    "UEsDBBQACAgIACqBiEIAAAAAAAAAAAAAAAAJAAQATUVUQS1JTkYv/soAAAMAUEsHCAAAAAACAAAA" +
-    "AAAAAFBLAwQUAAgICAAqgYhCAAAAAAAAAAAAAAAAFAAAAE1FVEEtSU5GL01BTklGRVNULk1G803M" +
+    "UEsDBBQACAgIANWDlEMAAAAAAAAAAAAAAAAJAAQATUVUQS1JTkYv/soAAAMAUEsHCAAAAAACAAAA" +
+    "AAAAAFBLAwQUAAgICADVg5RDAAAAAAAAAAAAAAAAFAAAAE1FVEEtSU5GL01BTklGRVNULk1G803M" +
     "y0xLLS7RDUstKs7Mz7NSMNQz4OVyLkpNLElN0XWqBAmY6xnEG1gqaPgXJSbnpCo45xcV5BcllgCV" +
-    "a/Jy8XIBAFBLBwgxyqRbQwAAAEQAAABQSwMECgAACAAAz4CIQgAAAAAAAAAAAAAAAAUAAAB0ZXN0" +
-    "L1BLAwQUAAgICACPgIhCAAAAAAAAAAAAAAAAFQAAAHRlc3QvTW9ja0ZpbHRlci5jbGFzc41Qy0rD" +
-    "QBQ9k6RNG6N9aH2uXAhWwUC3FRdRC0J1oxSkq0k6mmjaCUkq6lfpqqLgB/hR4k1aqlQEs7j3zLnn" +
-    "3Ec+Pl/fATSwoUNhKCUiTqxT6d62/CARkQ6NoS6ja4uH3PWE5fGelKHlOTwW1lWmscZSmxiG/L4/" +
-    "8JMDBnW73mHQDmVPGFBRNJFDnga0/YE4G/YdEV1wJyBHtS1dHnR45KfvCaklnh8zVNoz+zQZiiGP" +
-    "YtGKZJ+htt216780BkjFoIeO/UA1BqVrM+xm2n+dQlOM43tXhIkvB7GOZYbmX0Yx1VlHIhZ0ReA/" +
-    "8pSYdkj3WTWxgBL1PZfDyBU0h64sfS+9d8PvODZJqSL9VEL0wyjq9LIoM8q5nREKzwQUGBTzYxJz" +
-    "FM0JNjFPuZhOm5gbpE5rhTewyxHKTzN+/Ye/gAqqQPmE/IukWiJOo0ot67Q1XeMFK7NtWNZGydBa" +
-    "hta/AFBLBwjdsJqTXwEAAF0CAABQSwECFAAUAAgICAAqgYhCAAAAAAIAAAAAAAAACQAEAAAAAAAA" +
-    "AAAAAAAAAAAATUVUQS1JTkYv/soAAFBLAQIUABQACAgIACqBiEIxyqRbQwAAAEQAAAAUAAAAAAAA" +
-    "AAAAAAAAAD0AAABNRVRBLUlORi9NQU5JRkVTVC5NRlBLAQIKAAoAAAgAAM+AiEIAAAAAAAAAAAAA" +
-    "AAAFAAAAAAAAAAAAAAAAAMIAAAB0ZXN0L1BLAQIUABQACAgIAI+AiELdsJqTXwEAAF0CAAAVAAAA" +
-    "AAAAAAAAAAAAAOUAAAB0ZXN0L01vY2tGaWx0ZXIuY2xhc3NQSwUGAAAAAAQABADzAAAAhwIAAAAA";
+    "a/Jy8XIBAFBLBwgxyqRbQwAAAEQAAABQSwMEFAAICAgAUoOUQwAAAAAAAAAAAAAAABMAAABteS9N" +
+    "b2NrRmlsdGVyLmNsYXNzdZHPTsJAEMa/LYVCRVFQMd68gQc38YrxUJUTetGQGE7bstrVwjbbYsSn" +
+    "0hOJJj6AD2WcFoP/4iYzX+bb32xmd9/en18B7GPLhY11BxsurEw3GUoHaqzSQ4ZCq91nsI/0UDLU" +
+    "emoszyYjX5oL4Ufk1Hs6EFFfGJXVn6adhirJ6NGUn+rgtquiVJoOQyUWJpFdo0cMjdbAa/8hnNj3" +
+    "pqmkbmvgMbgn94GMU6XHiYMm1ed6YgJJeDbNV+fejbgTVRRRYlj+cSZDW5trLmIRhJKHYqh1zENf" +
+    "JJJf5QCfcx45DJ3/WLmYgx/LRNJ1I/UgMmMxIXbo9WxkywLLZqHsUMVJGWlxdwb2lG+XKZdys4kK" +
+    "5eocgIsl0grVy0Q5+e9Y+V75BdblDIXHX/3b3/rLWEGNdJXCJmeNop7zjQ9QSwcI1kzyMToBAADs" +
+    "AQAAUEsDBBQACAgIAFKDlEMAAAAAAAAAAAAAAAAVAAAAdGVzdC9Nb2NrRmlsdGVyLmNsYXNzdVHB" +
+    "TsJAFJwthUJFERQx3ryBBzfxivFQlRN60ZAYTtuy2tXCNtti1K/SE4kmfoAfZXwtBg3RTd6bzOy8" +
+    "zezux+frO4ADbLuwsemg6cLKcIuhdKgmKj1iKLQ7Awb7WI8kQ62vJvJ8OvaluRR+REqjrwMRDYRR" +
+    "Gf8W7TRUCUO9n8ok5Wc6uOupKJWmy1CJhUlkz+gxQ7M99Dp/eJzY9x5JZrCGHoN7+hDIOFV6kjho" +
+    "Eb/QUxNIsmeJfib3b8W9qKKIEslLpzJ0tLnhIhZBKHkoRlrHPPRFIvl1buBzn0cKQ/c/r1wk4Scy" +
+    "kXTpSD2JTFhkxC69oY1sWWBZGuoOMU7ICIt7M7CXfLtMvZSLLVSoV+cGuFghrBBfJZeT/5GV75Xf" +
+    "YF3NUHhemt/5NV/GGmqE61Q2KXWqRu7f+AJQSwcIrS5nKDoBAADyAQAAUEsBAhQAFAAICAgA1YOU" +
+    "QwAAAAACAAAAAAAAAAkABAAAAAAAAAAAAAAAAAAAAE1FVEEtSU5GL/7KAABQSwECFAAUAAgICADV" +
+    "g5RDMcqkW0MAAABEAAAAFAAAAAAAAAAAAAAAAAA9AAAATUVUQS1JTkYvTUFOSUZFU1QuTUZQSwEC" +
+    "FAAUAAgICABSg5RD1kzyMToBAADsAQAAEwAAAAAAAAAAAAAAAADCAAAAbXkvTW9ja0ZpbHRlci5j" +
+    "bGFzc1BLAQIUABQACAgIAFKDlEOtLmcoOgEAAPIBAAAVAAAAAAAAAAAAAAAAAD0CAAB0ZXN0L01v" +
+    "Y2tGaWx0ZXIuY2xhc3NQSwUGAAAAAAQABAABAQAAugMAAAAA";
 
   @Test
   public void testAttributesSerialization() throws IOException {
@@ -146,19 +164,38 @@ public class TestGet {
     jarFile.delete();
     assertFalse("Should be deleted: " + jarFile.getPath(), jarFile.exists());
 
-    ClientProtos.Get getProto = ClientProtos.Get.parseFrom(Base64.decode(PB_GET));
+    ClientProtos.Get getProto1 =
+      ClientProtos.Get.parseFrom(Base64.decode(PB_GET));
+    ClientProtos.Get getProto2 =
+      ClientProtos.Get.parseFrom(Base64.decode(PB_GET_WITH_FILTER_LIST));
     try {
-      ProtobufUtil.toGet(getProto);
+      ProtobufUtil.toGet(getProto1);
       fail("Should not be able to load the filter class");
     } catch (IOException ioe) {
-      Assert.assertTrue(ioe.getCause() instanceof ClassNotFoundException);
+      assertTrue(ioe.getCause() instanceof ClassNotFoundException);
+    }
+    try {
+      ProtobufUtil.toGet(getProto2);
+      fail("Should not be able to load the filter class");
+    } catch (IOException ioe) {
+      assertTrue(ioe.getCause() instanceof InvocationTargetException);
+      InvocationTargetException ite = (InvocationTargetException)ioe.getCause();
+      assertTrue(ite.getTargetException()
+        instanceof DeserializationException);
     }
     FileOutputStream fos = new FileOutputStream(jarFile);
     fos.write(Base64.decode(MOCK_FILTER_JAR));
     fos.close();
 
-    Get get = ProtobufUtil.toGet(getProto);
-    Assert.assertEquals("test.MockFilter",
-      get.getFilter().getClass().getName());
+    Get get1 = ProtobufUtil.toGet(getProto1);
+    assertEquals("test.MockFilter", get1.getFilter().getClass().getName());
+
+    Get get2 = ProtobufUtil.toGet(getProto2);
+    assertTrue(get2.getFilter() instanceof FilterList);
+    List<Filter> filters = ((FilterList)get2.getFilter()).getFilters();
+    assertEquals(3, filters.size());
+    assertEquals("test.MockFilter", filters.get(0).getClass().getName());
+    assertEquals("my.MockFilter", filters.get(1).getClass().getName());
+    assertTrue(filters.get(2) instanceof KeyOnlyFilter);
   }
 }
