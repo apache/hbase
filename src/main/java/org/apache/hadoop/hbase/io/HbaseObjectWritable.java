@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.DependentColumnFilter;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.FuzzyRowFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
@@ -93,6 +94,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.snapshot.HSnapshotDescription;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Classes;
 import org.apache.hadoop.hbase.util.ProtoUtil;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.ObjectWritable;
@@ -726,6 +728,58 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       objectWritable.instance = instance;
     }
     return instance;
+  }
+
+  /**
+   * Read a {@link Filter} which is written as a {@link Writable}
+   * or a {@link Filter} directly. A custom filter class may be loaded
+   * dynamically.
+   *
+   * @param in
+   * @param conf
+   * @return the filter
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public static Filter readFilter(
+      DataInput in, Configuration conf) throws IOException {
+    Class<?> instanceClass = null;
+    int b = (byte)WritableUtils.readVInt(in);
+    if (b != NOT_ENCODED) {
+      instanceClass = CODE_TO_CLASS.get(b);
+      if (instanceClass == Writable.class) {
+        // In case Writable, the actual type code follows
+        b = (byte)WritableUtils.readVInt(in);
+        if (b != NOT_ENCODED) {
+          instanceClass = CODE_TO_CLASS.get(b);
+        }
+      }
+    }
+    if (b == NOT_ENCODED) {
+      String className = Text.readString(in);
+      try {
+        instanceClass = (Class<? extends Filter>)getClassByName(conf, className);
+      } catch (ClassNotFoundException cnfe) {
+        try {
+          instanceClass = Classes.getFilterClassByName(className);
+        } catch (ClassNotFoundException e) {
+          LOG.error("Can't find class " + className, e);
+          throw new DoNotRetryIOException("Can't find class " + className, e);
+        }
+      }
+    }
+    Filter filter = (Filter)WritableFactories.newInstance(
+      (Class<? extends Filter>)instanceClass, conf);
+    try {
+      filter.readFields(in);
+    } catch (IOException io) {
+      LOG.error("Error in readFields", io);
+      throw io;
+    } catch (Exception e) {
+      LOG.error("Error in readFields", e);
+      throw new IOException("Error in readFields" , e);
+    }
+    return filter;
   }
 
   /**

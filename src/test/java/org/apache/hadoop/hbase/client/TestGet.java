@@ -20,7 +20,9 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
@@ -33,10 +35,14 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
@@ -52,23 +58,35 @@ public class TestGet {
   private static final String WRITABLE_GET =
     "AgD//////////wAAAAEBD3Rlc3QuTW9ja0ZpbHRlcgEAAAAAAAAAAH//////////AQAAAAAAAAAA";
 
+  private static final String WRITABLE_GET_WITH_FILTER_LIST =
+    "AgD//////////wAAAAEBKW9yZy5hcGFjaGUuaGFkb29wLmhiYXNlLmZpbHRlci5GaWx0ZXJMaXN0" +
+    "AAAAAAMOAA90ZXN0Lk1vY2tGaWx0ZXIOAA1teS5Nb2NrRmlsdGVyDkYAAQAAAAAAAAAAf///////" +
+    "//8BAAAAAAAAAAA=";
+
   private static final String MOCK_FILTER_JAR =
-    "UEsDBBQACAgIACmBi0IAAAAAAAAAAAAAAAAJAAQATUVUQS1JTkYv/soAAAMAUEsHCAAAAAACAAAA" +
-    "AAAAAFBLAwQUAAgICAApgYtCAAAAAAAAAAAAAAAAFAAAAE1FVEEtSU5GL01BTklGRVNULk1G803M" +
+    "UEsDBBQACAgIADRQI0QAAAAAAAAAAAAAAAAJAAQATUVUQS1JTkYv/soAAAMAUEsHCAAAAAACAAAA" +
+    "AAAAAFBLAwQUAAgICAA0UCNEAAAAAAAAAAAAAAAAFAAAAE1FVEEtSU5GL01BTklGRVNULk1G803M" +
     "y0xLLS7RDUstKs7Mz7NSMNQz4OVyLkpNLElN0XWqBAmY6xnEG1gqaPgXJSbnpCo45xcV5BcllgCV" +
-    "a/Jy8XIBAFBLBwgxyqRbQwAAAEQAAABQSwMECgAACAAAbICLQgAAAAAAAAAAAAAAAAUAAAB0ZXN0" +
-    "L1BLAwQUAAgICAAcgItCAAAAAAAAAAAAAAAAFQAAAHRlc3QvTW9ja0ZpbHRlci5jbGFzc41Qy07C" +
-    "QBS9A4VKBZGHoO7cgQvHmLjCuPBBQlJloWE/tCMdLZ1mOlV/y5WJCz/AjzLeDqCRYOIs7uuce87N" +
-    "fHy+vQPAEezakCNQ1TzR9Ep6D30Raq5ssAh0pZpQFjMv4DRgvpQxDcYs4fTOcOiMeoYTAsUTEQl9" +
-    "SiDf6Y4IWOfS5w7koVSGAhTRwBURv06nY65u2TjEjborPRaOmBJZPx9aOhAJgZq7dE+PgKM48/uC" +
-    "hz4SWh33nj0yKiS9YJoNojjVvczYuXz2eKyFjBIb6gQaC9pg+I2gDVOTQwRXiBAoPCmh8Zb2b49h" +
-    "qhcmzVUAet/IVHkcL8bt6s/xBxkb9gA/B7KXxwo/BaONHcVMMBf2X2HtBYscOBiLZliCdYzlGQFz" +
-    "BTOBDagiaxNrC7uakTk2m4guS1SMRGsGziWyqgFN47xlsH+K1f4UaxuxbcPf+QJQSwcI8UIYqlEB" +
-    "AABeAgAAUEsBAhQAFAAICAgAKYGLQgAAAAACAAAAAAAAAAkABAAAAAAAAAAAAAAAAAAAAE1FVEEt" +
-    "SU5GL/7KAABQSwECFAAUAAgICAApgYtCMcqkW0MAAABEAAAAFAAAAAAAAAAAAAAAAAA9AAAATUVU" +
-    "QS1JTkYvTUFOSUZFU1QuTUZQSwECCgAKAAAIAABsgItCAAAAAAAAAAAAAAAABQAAAAAAAAAAAAAA" +
-    "AADCAAAAdGVzdC9QSwECFAAUAAgICAAcgItC8UIYqlEBAABeAgAAFQAAAAAAAAAAAAAAAADlAAAA" +
-    "dGVzdC9Nb2NrRmlsdGVyLmNsYXNzUEsFBgAAAAAEAAQA8wAAAHkCAAAAAA==";
+    "a/Jy8XIBAFBLBwgxyqRbQwAAAEQAAABQSwMEFAAICAgAcIsiRAAAAAAAAAAAAAAAABMAAABteS9N" +
+    "b2NrRmlsdGVyLmNsYXNzjVDLTsJAFL1DC5UKIg9B3bkDF4wxcYVx4YOEBGWhYT+0Ix0tnWaY+vgs" +
+    "VyYu/AA/yng7gAaDibO4r3PuOTfz8fn2DgCHsOtAhkBx8kwvpXffFaHmygGbQEuqMWUx8wJOA+ZL" +
+    "GdNgxKac3hoOnVFPcUIgdywioU8IWM3WkIB9Jn3uggX5AmQhR6DUFxG/SiYjrm7YKMSNSl96LBwy" +
+    "JdJ+PrR1IKYpe+maDgFXceZ3BQ99hOvN/h17YFRIes4060VxojuprXvx5PFYCxlNHagQqC5ovcE3" +
+    "giZMjQ8QXCFCIPuohMZLGsseg0QvTGqrAPS+lonyOF6M26Wf49spG/YAvwbSZ2GFX4LRwY5iJpiz" +
+    "+6+w9oJFBlyMOTPMwzrGwoyAuYiZwAaUkLWJtY1d2cgcmU1Ef0sUjUR9Bs4l0qoKNeO8ZbB/ipX/" +
+    "FGsYsW3D3/kCUEsHCEYmW6RQAQAAWgIAAFBLAwQUAAgICABuiyJEAAAAAAAAAAAAAAAAFQAAAHRl" +
+    "c3QvTW9ja0ZpbHRlci5jbGFzc41Qy07CQBS9A4VKBZGHoO7cgQvHmLjCuPBBQlJloWE/tCMdLZ1m" +
+    "OlV/y5WJCz/AjzLeDqCRYOIs7uuce87NfHy+vQPAEezakCNQ1TzR9Ep6D30Raq5ssAh0pZpQFjMv" +
+    "4DRgvpQxDcYs4fTOcOiMeoYTAsUTEQl9SiDf6Y4IWOfS5w7koVSGAhTRwBURv06nY65u2TjEjbor" +
+    "PRaOmBJZPx9aOhAJgZq7dE+PgKM48/uChz4SWh33nj0yKiS9YJoNojjVvczYuXz2eKyFjBIb6gQa" +
+    "C9pg+I2gDVOTQwRXiBAoPCmh8Zb2b49hqhcmzVUAet/IVHkcL8bt6s/xBxkb9gA/B7KXxwo/BaON" +
+    "HcVMMBf2X2HtBYscOBiLZliCdYzlGQFzBTOBDagiaxNrC7uakTk2m4guS1SMRGsGziWyqgFN47xl" +
+    "sH+K1f4UaxuxbcPf+QJQSwcI8UIYqlEBAABeAgAAUEsBAhQAFAAICAgANFAjRAAAAAACAAAAAAAA" +
+    "AAkABAAAAAAAAAAAAAAAAAAAAE1FVEEtSU5GL/7KAABQSwECFAAUAAgICAA0UCNEMcqkW0MAAABE" +
+    "AAAAFAAAAAAAAAAAAAAAAAA9AAAATUVUQS1JTkYvTUFOSUZFU1QuTUZQSwECFAAUAAgICABwiyJE" +
+    "RiZbpFABAABaAgAAEwAAAAAAAAAAAAAAAADCAAAAbXkvTW9ja0ZpbHRlci5jbGFzc1BLAQIUABQA" +
+    "CAgIAG6LIkTxQhiqUQEAAF4CAAAVAAAAAAAAAAAAAAAAAFMCAAB0ZXN0L01vY2tGaWx0ZXIuY2xh" +
+    "c3NQSwUGAAAAAAQABAABAQAA5wMAAAAA";
 
   @Test
   public void testAttributesSerialization() throws IOException {
@@ -156,8 +174,15 @@ public class TestGet {
       fail("Should not be able to load the filter class");
     } catch (RuntimeException re) {
       String msg = re.getMessage();
-      Assert.assertTrue(msg != null
-        && msg.contains("Can't find class test.MockFilter"));
+      assertTrue(msg != null && msg.contains("Can't find class test.MockFilter"));
+    }
+
+    dis = ByteStreams.newDataInput(Base64.decode(WRITABLE_GET_WITH_FILTER_LIST));
+    try {
+      get.readFields(dis);
+      fail("Should not be able to load the filter class");
+    } catch (IOException ioe) {
+      assertTrue(ioe.getCause() instanceof ClassNotFoundException);
     }
 
     FileOutputStream fos = new FileOutputStream(jarFile);
@@ -166,8 +191,17 @@ public class TestGet {
 
     dis = ByteStreams.newDataInput(Base64.decode(WRITABLE_GET));
     get.readFields(dis);
-    Assert.assertEquals("test.MockFilter",
-      get.getFilter().getClass().getName());
+    assertEquals("test.MockFilter", get.getFilter().getClass().getName());
+
+    get = new Get();
+    dis = ByteStreams.newDataInput(Base64.decode(WRITABLE_GET_WITH_FILTER_LIST));
+    get.readFields(dis);
+    assertTrue(get.getFilter() instanceof FilterList);
+    List<Filter> filters = ((FilterList)get.getFilter()).getFilters();
+    assertEquals(3, filters.size());
+    assertEquals("test.MockFilter", filters.get(0).getClass().getName());
+    assertEquals("my.MockFilter", filters.get(1).getClass().getName());
+    assertTrue(filters.get(2) instanceof KeyOnlyFilter);
   }
 
   @org.junit.Rule

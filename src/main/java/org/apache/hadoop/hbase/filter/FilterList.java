@@ -321,7 +321,7 @@ public class FilterList implements Filter {
     if (size > 0) {
       filters = new ArrayList<Filter>(size);
       for (int i = 0; i < size; i++) {
-        Filter filter = (Filter)HbaseObjectWritable.readObject(in, conf);
+        Filter filter = HbaseObjectWritable.readFilter(in, conf);
         filters.add(filter);
       }
     }

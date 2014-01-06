@@ -94,17 +94,28 @@ public class Classes {
   }
 
   /**
+   * Used to dynamically load a filter class.
+   *
+   * @param className the filter class name
+   * @return a filter class
+   * @throws ClassNotFoundException if couldn't find the class
+   */
+  @SuppressWarnings("unchecked")
+  public static Class<? extends Filter> getFilterClassByName(
+      String className) throws ClassNotFoundException {
+    return (Class<? extends Filter>) Class.forName(className, true, CLASS_LOADER);
+  }
+
+  /**
    * Used to dynamically load a filter class, and create a Writable filter.
    * This filter class most likely extends Configurable.
    *
    * @param className the filter class name.
    * @return a filter
    */
-  @SuppressWarnings("unchecked")
   public static Filter createWritableForName(String className) {
     try {
-      Class<? extends Filter> clazz =
-        (Class<? extends Filter>) Class.forName(className, true, CLASS_LOADER);
+      Class<? extends Filter> clazz = getFilterClassByName(className);
       return (Filter)WritableFactories.newInstance(clazz, new Configuration());
     } catch (ClassNotFoundException e) {
       throw new RuntimeException("Can't find class " + className);
@@ -118,11 +129,9 @@ public class Classes {
    * @param className the filter class name.
    * @return a filter
    */
-  @SuppressWarnings("unchecked")
   public static Filter createForName(String className) {
     try {
-      Class<? extends Filter> clazz =
-        (Class<? extends Filter>)Class.forName(className, true, CLASS_LOADER);
+      Class<? extends Filter> clazz = getFilterClassByName(className);
       return (Filter)clazz.newInstance();
     } catch (ClassNotFoundException e) {
       throw new RuntimeException("Can't find class " + className);
