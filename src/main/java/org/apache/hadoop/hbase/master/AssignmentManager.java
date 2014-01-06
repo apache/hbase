@@ -1766,6 +1766,7 @@ public class AssignmentManager extends ZooKeeperListener {
           }
           synchronized (this.regions) {
             this.regions.put(plan.getRegionInfo(), plan.getDestination());
+            addToServers(plan.getDestination(), plan.getRegionInfo());
           }
         }
         break;
@@ -2250,7 +2251,13 @@ public class AssignmentManager extends ZooKeeperListener {
             }
             // Remove from the regionsMap
             synchronized (this.regions) {
-              this.regions.remove(region);
+              ServerName sn = this.regions.remove(region);
+              if (sn != null) {
+                Set<HRegionInfo> serverRegions = this.servers.get(sn);
+                if (serverRegions == null || !serverRegions.remove(region)) {
+                  LOG.warn("No " + region + " on " + sn);
+                }
+              }
             }
             deleteClosingOrClosedNode(region);
           }
