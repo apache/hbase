@@ -381,10 +381,10 @@ public class TestSplitLogManager {
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     int version = ZKUtil.checkExists(zkw, tasknode);
     // Could be small race here.
-    if (tot_mgr_resubmit.get() == 0) waitForCounter(tot_mgr_resubmit, 0, 1, to/2);
+    if (tot_mgr_resubmit.get() == 0) {
+      waitForCounter(tot_mgr_resubmit, 0, 1, to/2);
+    }
     assertEquals(tot_mgr_resubmit.get(), 1);
-    int version1 = ZKUtil.checkExists(zkw, tasknode);
-    assertTrue("version1=" + version1 + ", version=" + version, version1 > version);
 
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
     slt = SplitLogTask.parseFrom(taskstate);
