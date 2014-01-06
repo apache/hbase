@@ -741,9 +741,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
 
     try {
-      // Set our ephemeral znode up in zookeeper now we have a name.
-      createMyEphemeralNode();
-   
       // Try and register with the Master; tell it we are here.  Break if
       // server is stopped or the clusterup flag is down or hdfs went wacky.
       while (keepLooping()) {
@@ -1090,6 +1087,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         this.conf.set("mapred.task.id", "hb_rs_" +
           this.serverNameFromMasterPOV.toString());
       }
+      // Set our ephemeral znode up in zookeeper now we have a name.
+      createMyEphemeralNode();
 
       // Master sent us hbase.rootdir to use. Should be fully qualified
       // path with file system specification included. Set 'fs.defaultFS'
