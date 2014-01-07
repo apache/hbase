@@ -1113,4 +1113,20 @@ possible configurations would overwhelm and obscure the important.
       as the SimpleLoadBalancer).
     </description>
   </property>
+  <property>
+    <name>hbase.security.exec.permission.checks</name>
+    <value>false</value>
+    <description>
+      If this setting is enabled and ACL based access control is active (the
+      AccessController coprocessor is installed either as a system coprocessor
+      or on a table as a table coprocessor) then you must grant all relevant
+      users EXEC privilege if they require the ability to execute coprocessor
+      endpoint calls. EXEC privilege, like any other permission, can be
+      granted globally to a user, or to a user on a per table or per namespace
+      basis. For more information on coprocessor endpoints, see the coprocessor
+      section of the HBase online manual. For more information on granting or
+      revoking permissions using the AccessController, see the security
+      section of the HBase online manual.
+    </description>
+  </property>
 </configuration>
