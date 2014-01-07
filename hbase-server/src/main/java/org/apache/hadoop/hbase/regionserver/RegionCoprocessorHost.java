@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
@@ -71,6 +72,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.ImmutableList;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -2093,4 +2096,54 @@ public class RegionCoprocessorHost
     }
     return newCell;
   }
+
+  public Message preEndpointInvocation(final Service service, final String methodName,
+      Message request) throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof EndpointObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          request = ((EndpointObserver) env.getInstance()).preEndpointInvocation(ctx, service,
+            methodName, request);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return request;
+  }
+
+  public void postEndpointInvocation(final Service service, final String methodName,
+      final Message request, final Message.Builder responseBuilder) throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof EndpointObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ((EndpointObserver) env.getInstance()).postEndpointInvocation(ctx, service,
+            methodName, request, responseBuilder);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
 }
