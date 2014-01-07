@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTestDataIngestWithChaosMonkey;
+import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -84,6 +84,14 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   /**
    * Construct a new ChaosMonkey
    * @param util the HBaseIntegrationTestingUtility already configured
+   */
+  public ChaosMonkey(IntegrationTestingUtility util) {
+	  this.util = util;
+  }
+  
+  /**
+   * Construct a new ChaosMonkey
+   * @param util the HBaseIntegrationTestingUtility already configured
    * @param policies names of pre-defined policies to use
    */
   public ChaosMonkey(IntegrationTestingUtility util, String... policies) {
@@ -105,6 +113,13 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     this.policies = new Policy[policies.length];
     for (int i=0; i < policies.length; i++) {
       this.policies[i] = NAMED_POLICIES.get(policies[i]);
+    }
+  }
+
+  private void setPolicies(Policy... policies) {
+    this.policies = new Policy[policies.length];
+    for (int i = 0; i < policies.length; i++) {
+      this.policies[i] = policies[i];
     }
   }
 
@@ -786,6 +801,9 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     String[] policies = cmd.getOptionValues("policy");
     if (policies != null) {
       setPoliciesByName(policies);
+    } else {
+      // Set a default policy if none is provided
+      setPolicies(NAMED_POLICIES.get(EVERY_MINUTE_RANDOM_ACTION_POLICY));
     }
   }
 
@@ -802,7 +820,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     IntegrationTestingUtility util = new IntegrationTestingUtility(conf);
     util.initializeCluster(1);
 
-    ChaosMonkey monkey = new ChaosMonkey(util, EVERY_MINUTE_RANDOM_ACTION_POLICY);
+    ChaosMonkey monkey = new ChaosMonkey(util);
     int ret = ToolRunner.run(conf, monkey, args);
     System.exit(ret);
   }
