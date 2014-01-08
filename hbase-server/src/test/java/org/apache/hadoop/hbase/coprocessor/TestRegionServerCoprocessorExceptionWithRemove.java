@@ -25,7 +25,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -55,6 +54,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
       String tableName =
           c.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
       if (tableName.equals("observed_table")) {
+        // Trigger a NPE to fail the coprocessor
         Integer i = null;
         i = i + 1;
       }
@@ -100,33 +100,22 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
     HRegionServer regionServer =
         TEST_UTIL.getRSForFirstRegionInTable(TEST_TABLE);
 
-    // same logic as {@link TestMasterCoprocessorExceptionWithRemove},
-    // but exception will be RetriesExhaustedWithDetailException rather
-    // than DoNotRetryIOException. The latter exception is what the RegionServer
-    // will have actually thrown, but the client will wrap this in a
-    // RetriesExhaustedWithDetailException.
-    // We will verify that "DoNotRetryIOException" appears in the text of the
-    // the exception's detailMessage.
-    boolean threwDNRE = false;
+    boolean threwIOE = false;
     try {
       final byte[] ROW = Bytes.toBytes("aaa");
       Put put = new Put(ROW);
       put.add(TEST_FAMILY, ROW, ROW);
       table.put(put);
-    } catch (RetriesExhaustedWithDetailsException e) {
-      // below, could call instead :
-      // startsWith("Failed 1 action: DoNotRetryIOException.")
-      // But that might be too brittle if client-side
-      // DoNotRetryIOException-handler changes its message.
-      assertTrue(e.getMessage().contains("DoNotRetryIOException"));
-      threwDNRE = true;
+      table.flushCommits();
+    } catch (IOException e) {
+      threwIOE = true;
     } finally {
-      assertTrue(threwDNRE);
+      assertTrue("The regionserver should have thrown an exception", threwIOE);
     }
 
-    // Wait 3 seconds for the regionserver to abort: expected result is that
+    // Wait 10 seconds for the regionserver to abort: expected result is that
     // it will survive and not abort.
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 10; i++) {
       assertFalse(regionServer.isAborted());
       try {
         Thread.sleep(1000);

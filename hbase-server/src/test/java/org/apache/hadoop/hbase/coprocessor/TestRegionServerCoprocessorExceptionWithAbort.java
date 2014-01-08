@@ -49,9 +49,7 @@ import static org.junit.Assert.*;
 public class TestRegionServerCoprocessorExceptionWithAbort {
   static final Log LOG = LogFactory.getLog(TestRegionServerCoprocessorExceptionWithAbort.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final byte[] ROW = Bytes.toBytes("aaa");
-  private static final TableName TABLE_NAME =
-      TableName.valueOf("observed_table");
+  private static final TableName TABLE_NAME = TableName.valueOf("observed_table");
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -83,30 +81,51 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
 
     // Note which regionServer will abort (after put is attempted).
     final HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(TEST_TABLE);
-    Put put = new Put(ROW);
-    put.add(TEST_FAMILY, ROW, ROW);
 
-    Assert.assertFalse("The region server should be available", regionServer.isAborted());
+    boolean threwIOE = false;
     try {
-      LOG.info("Running put " + put);
+      final byte[] ROW = Bytes.toBytes("aaa");
+      Put put = new Put(ROW);
+      put.add(TEST_FAMILY, ROW, ROW);
       table.put(put);
-      fail("The put should have failed, as the coprocessor is buggy");
-    } catch (IOException ignored) {
-      // Expected.
+      table.flushCommits();
+    } catch (IOException e) {
+      threwIOE = true;
+    } finally {
+      assertTrue("The regionserver should have thrown an exception", threwIOE);
     }
-    Assert.assertTrue("The region server should have aborted", regionServer.isAborted());
+
+    // Wait 10 seconds for the regionserver to abort: expected result is that
+    // it will abort.
+    boolean aborted = false;
+    for (int i = 0; i < 10; i++) {
+      aborted = regionServer.isAborted(); 
+      if (aborted) {
+        break;
+      }
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        fail("InterruptedException while waiting for regionserver " +
+            "zk node to be deleted.");
+      }
+    }
+    Assert.assertTrue("The region server should have aborted", aborted);
     table.close();
   }
 
   public static class BuggyRegionObserver extends SimpleRegionObserver {
+    @SuppressWarnings("null")
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
                        final Put put, final WALEdit edit,
                        final Durability durability) {
-      TableName tableName =
-          c.getEnvironment().getRegion().getRegionInfo().getTable();
-      if (TABLE_NAME.equals(tableName) && Bytes.equals(put.getRow(), ROW)) {
-        throw new NullPointerException("Buggy coprocessor: " + put);
+      String tableName =
+          c.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
+      if (tableName.equals("observed_table")) {
+        // Trigger a NPE to fail the coprocessor
+        Integer i = null;
+        i = i + 1;
       }
     }
   }
