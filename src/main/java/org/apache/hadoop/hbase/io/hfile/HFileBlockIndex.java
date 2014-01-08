@@ -772,7 +772,7 @@ public class HFileBlockIndex {
     private BlockCache blockCache;
 
     /** L2Cache, or null if cache-on-write is disabled */
-    private L2Cache l2Cache;
+    private L2CacheAgent cacheAgent;
 
     /** Name to use for computing cache keys */
     private String nameForCaching;
@@ -789,14 +789,15 @@ public class HFileBlockIndex {
      * @param blockWriter the block writer to use to write index blocks
      */
     public BlockIndexWriter(HFileBlock.Writer blockWriter,
-        BlockCache blockCache, L2Cache l2Cache, String nameForCaching) {
-      if (nameForCaching == null && (blockCache != null || l2Cache != null)) {
+        BlockCache blockCache, L2CacheAgent cacheAgent, String nameForCaching) {
+      if ((blockCache != null || cacheAgent != null)  &&
+              nameForCaching == null) {
           throw new IllegalArgumentException("If BlockCache OR L2Cache are  " +
               " not null, then nameForCaching must NOT be null");
       }
       this.blockWriter = blockWriter;
       this.blockCache = blockCache;
-      this.l2Cache = l2Cache;
+      this.cacheAgent = cacheAgent;
       this.nameForCaching = nameForCaching;
       this.maxChunkSize = HFileBlockIndex.DEFAULT_MAX_CHUNK_SIZE;
     }
@@ -945,16 +946,18 @@ public class HFileBlockIndex {
       byte[] curFirstKey = curChunk.getBlockKey(0);
       blockWriter.writeHeaderAndData(out);
 
+      HFileBlock blockForCaching = blockWriter.getBlockForCaching();
+      // The block type and SchemaConfigured data matter here, as this will be
+      // used by the cache to update block type specific metrics.
+      BlockCacheKey cacheKey = new BlockCacheKey(nameForCaching, beginOffset);
       if (blockCache != null) {
-        HFileBlock blockForCaching = blockWriter.getBlockForCaching();
         passSchemaMetricsTo(blockForCaching);
-        blockCache.cacheBlock(new BlockCacheKey(nameForCaching, beginOffset),
-                blockForCaching);
+        blockCache.cacheBlock(cacheKey, blockForCaching);
       }
-
-      if (l2Cache != null) {
-        l2Cache.cacheRawBlock(nameForCaching,  beginOffset,
-            blockWriter.getHeaderAndData());
+      if (cacheAgent != null) {
+        RawHFileBlock rawBlock = new RawHFileBlock(
+                blockForCaching.getBlockType(), blockWriter.getHeaderAndData());
+        cacheAgent.cacheRawBlock(cacheKey, rawBlock);
       }
 
       // Add intermediate index block size

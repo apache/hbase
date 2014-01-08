@@ -151,8 +151,8 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
    * current table and column family name, and the associated collection of
    * metrics.
    */
-  public void passSchemaMetricsTo(SchemaConfigured block) {
-    SchemaConfigured upcast = block;  // need this to assign private fields
+  public void passSchemaMetricsTo(SchemaConfigured that) {
+    SchemaConfigured upcast = that;  // need this to assign private fields
     upcast.tableName = tableName;
     upcast.cfName = cfName;
     upcast.schemaMetrics = schemaMetrics;

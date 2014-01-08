@@ -1413,7 +1413,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
   public static class FSReaderV2 extends AbstractFSReader {
 
     /** L2 cache instance or null if l2 cache is disabled */
-    private final L2Cache l2Cache;
+    private final L2CacheAgent cacheAgent;
 
     /**
      * Name of the current hfile. Used to compose the key in for the
@@ -1437,9 +1437,9 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         };
 
     public FSReaderV2(FSDataInputStream istream, Algorithm compressAlgo,
-        long fileSize, L2Cache l2Cache, String hfileNameForL2Cache) {
+        long fileSize, L2CacheAgent cacheAgent, String hfileNameForL2Cache) {
       super(istream, compressAlgo, fileSize);
-      this.l2Cache = l2Cache;
+      this.cacheAgent = cacheAgent;
       this.hfileNameForL2Cache = hfileNameForL2Cache;
     }
 
@@ -1532,9 +1532,6 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
               headerAndData.array(), headerAndData.arrayOffset()
                   + preReadHeaderSize, onDiskSizeWithHeader
                   - preReadHeaderSize, true, offset + preReadHeaderSize, options);
-          if (addToL2Cache) {
-            cacheBlockInL2Cache(offset, headerAndData.array());
-          }
           b = new HFileBlock(headerAndData);
           b.assumeUncompressed();
           b.validateOnDiskSizeWithoutHeader(onDiskSizeWithoutHeader);
@@ -1542,6 +1539,10 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
           if (b.nextBlockOnDiskSizeWithHeader > 0)
             setNextBlockHeader(offset, b);
+
+          if (addToL2Cache) {
+            cacheRawBlockBytes(b.getBlockType(), offset, headerAndData.array());
+          }
         } else {
           // Allocate enough space to fit the next block's header too.
           byte[] onDiskBlock = new byte[onDiskSizeWithHeader + HEADER_SIZE];
@@ -1565,14 +1566,14 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           }
           b.validateOnDiskSizeWithoutHeader(onDiskSizeWithoutHeader);
           b.nextBlockOnDiskSizeWithHeader = nextBlockOnDiskSize;
-          if (l2Cache != null && addToL2Cache) {
+          if (addToL2Cache && cacheAgent.isL2CacheEnabled()) {
             if (preReadHeaderSize > 0) {
               // If we plan to add block to L2 cache, we need to copy the
               // header information into the byte array so that it can be
               // cached in the L2 cache.
               System.arraycopy(header, 0, onDiskBlock, 0, preReadHeaderSize);
             }
-            cacheBlockInL2Cache(offset, onDiskBlock);
+            cacheRawBlockBytes(b.getBlockType(), offset, onDiskBlock);
           }
           DataInputStream dis = new DataInputStream(new ByteArrayInputStream(
               onDiskBlock, HEADER_SIZE, onDiskSizeWithoutHeader));
@@ -1629,7 +1630,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
               b.uncompressedSizeWithoutHeader, true, offset + HEADER_SIZE,
               options);
           if (addToL2Cache) {
-            cacheBlockInL2Cache(offset, b.buf.array());
+            cacheRawBlockBytes(b.getBlockType(), offset, b.buf.array());
           }
           if (b.nextBlockOnDiskSizeWithHeader > 0) {
             setNextBlockHeader(offset, b);
@@ -1641,13 +1642,13 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           b.nextBlockOnDiskSizeWithHeader = readAtOffset(compressedBytes,
               HEADER_SIZE, b.onDiskSizeWithoutHeader, true, offset
                   + HEADER_SIZE, options);
-          if (l2Cache != null && addToL2Cache) {
+          if (addToL2Cache && cacheAgent.isL2CacheEnabled()) {
             // If l2 cache is enabled, we need to copy the header bytes to
             // the compressed bytes array, so that they can be cached in the
             // L2 cache.
             System.arraycopy(headerBuf.array(), 0, compressedBytes, 0,
                 HEADER_SIZE);
-            cacheBlockInL2Cache(offset, compressedBytes);
+            cacheRawBlockBytes(b.getBlockType(), offset, compressedBytes);
           }
           DataInputStream dis = new DataInputStream(new ByteArrayInputStream(
               compressedBytes, HEADER_SIZE, b.onDiskSizeWithoutHeader));
@@ -1700,9 +1701,12 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      * @param blockBytes The block's bytes as they appear on disk (i.e.,
      *                   correctly encoded and compressed)
      */
-    void cacheBlockInL2Cache(long offset, byte[] blockBytes) {
-      if (l2Cache != null) {
-        l2Cache.cacheRawBlock(hfileNameForL2Cache, offset, blockBytes);
+    private void cacheRawBlockBytes(BlockType type, long offset,
+                                    byte[] blockBytes) {
+      if (cacheAgent != null) {
+        BlockCacheKey cacheKey = new BlockCacheKey(hfileNameForL2Cache, offset);
+        RawHFileBlock rawBlock = new RawHFileBlock(type, blockBytes);
+        cacheAgent.cacheRawBlock(cacheKey, rawBlock);
       }
     }
   }

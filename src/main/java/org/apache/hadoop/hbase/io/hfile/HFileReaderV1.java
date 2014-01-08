@@ -24,6 +24,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -234,8 +235,10 @@ public class HFileReaderV1 extends AbstractHFileReader {
           (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
               cacheConf.shouldCacheBlockOnRead(effectiveCategory));
         if (cachedBlock != null) {
-          getSchemaMetrics().updateOnCacheHit(effectiveCategory,
-              SchemaMetrics.NO_COMPACTION);
+          getSchemaMetrics().updateOnBlockRead(effectiveCategory,
+                  SchemaMetrics.NO_COMPACTION,
+                  TimeUnit.NANOSECONDS.toMillis(
+                          System.nanoTime() - startTimeNs), true, false, false);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Cache Miss, please load.
@@ -247,11 +250,12 @@ public class HFileReaderV1 extends AbstractHFileReader {
       passSchemaMetricsTo(hfileBlock);
       hfileBlock.expectType(BlockType.META);
 
-      long delta = System.nanoTime() - startTimeNs;
-      HFile.preadTimeNano.addAndGet(delta);
+      long deltaNs = System.nanoTime() - startTimeNs;
+      HFile.preadTimeNano.addAndGet(deltaNs);
       HFile.preadOps.incrementAndGet();
-      HFile.preadHistogram.addValue(delta);
-      getSchemaMetrics().updateOnCacheMiss(BlockCategory.META, false, delta);
+      HFile.preadHistogram.addValue(deltaNs);
+      getSchemaMetrics().updateOnBlockRead(effectiveCategory, false,
+              TimeUnit.NANOSECONDS.toMillis(deltaNs), false, false, false);
 
       // Cache the block
       if (cacheBlock && cacheConf.shouldCacheBlockOnRead(effectiveCategory)) {
@@ -266,8 +270,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
   /**
    * Read in a file block.
    * @param block Index of block to read.
-   * @param pread Use positional read instead of seek+read (positional is
-   * better doing random reads whereas seek+read is better scanning).
+   * @param cacheBlock cache block if read from disk
    * @param isCompaction is this block being read as part of a compaction
    * @return Block wrapped in a ByteBuffer.
    * @throws IOException
@@ -282,6 +285,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
       throw new IOException("Requested block is out of range: " + block +
         ", max: " + dataBlockIndexReader.getRootBlockCount());
     }
+
+    long startTimeNs = System.nanoTime();
 
     long offset = dataBlockIndexReader.getRootBlockOffset(block);
     BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
@@ -302,15 +307,16 @@ public class HFileReaderV1 extends AbstractHFileReader {
           if (kvContext != null) {
             kvContext.setObtainedFromCache(true);
           }
-          getSchemaMetrics().updateOnCacheHit(
-              cachedBlock.getBlockType().getCategory(), isCompaction);
+          getSchemaMetrics().updateOnBlockRead(
+                  cachedBlock.getBlockType().getCategory(), isCompaction,
+                  TimeUnit.NANOSECONDS.toMillis(
+                          System.nanoTime() - startTimeNs), true, false, false);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Carry on, please load.
       }
 
       // Load block from filesystem.
-      long startTimeNs = System.nanoTime();
       long nextOffset;
 
       if (block == dataBlockIndexReader.getRootBlockCount() - 1) {
@@ -329,18 +335,19 @@ public class HFileReaderV1 extends AbstractHFileReader {
       passSchemaMetricsTo(hfileBlock);
       hfileBlock.expectType(BlockType.DATA);
 
-      long delta = System.nanoTime() - startTimeNs;
+      long deltaNs = System.nanoTime() - startTimeNs;
       if (isCompaction) {
-        HFile.preadCompactionTimeNano.addAndGet(delta);
-        HFile.preadCompactionHistogram.addValue(delta);
+        HFile.preadCompactionTimeNano.addAndGet(deltaNs);
+        HFile.preadCompactionHistogram.addValue(deltaNs);
         HFile.preadCompactionOps.incrementAndGet();
       } else {
-        HFile.preadTimeNano.addAndGet(delta);
-        HFile.preadHistogram.addValue(delta);
+        HFile.preadTimeNano.addAndGet(deltaNs);
+        HFile.preadHistogram.addValue(deltaNs);
         HFile.preadOps.incrementAndGet();
       }
-      getSchemaMetrics().updateOnCacheMiss(BlockCategory.DATA, isCompaction,
-          delta);
+      getSchemaMetrics().updateOnBlockRead(
+              hfileBlock.getBlockType().getCategory(), isCompaction,
+              TimeUnit.NANOSECONDS.toMillis(deltaNs), false, false, false);
       if (kvContext != null) {
         kvContext.setObtainedFromCache(false);
       }
@@ -390,9 +397,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
     if (evictOnClose && cacheConf.isBlockCacheEnabled()) {
       int numEvicted = 0;
       for (int i = 0; i < dataBlockIndexReader.getRootBlockCount(); i++) {
-        if (cacheConf.getBlockCache().evictBlock(
-            new BlockCacheKey(name,
-                dataBlockIndexReader.getRootBlockOffset(i)))) {
+        BlockCacheKey key = new BlockCacheKey(name,
+                dataBlockIndexReader.getRootBlockOffset(i));
+        if (cacheConf.getBlockCache().evictBlock(key)) {
           numEvicted++;
         }
       }

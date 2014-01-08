@@ -526,11 +526,15 @@ public class CacheConfig implements ConfigurationObserver {
   }
 
   public boolean isL2CacheEnabled() {
-    return l2Cache != null && !l2Cache.isShutdown();
+    return l2Cache != null && l2Cache.isEnabled();
   }
 
   public L2Cache getL2Cache() {
     return l2Cache;
+  }
+
+  public L2CacheAgent getL2CacheAgent() {
+    return new L2CacheAgent(this, l2Cache);
   }
 
   @Override

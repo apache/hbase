@@ -64,7 +64,7 @@ public class L2BucketCacheFactory implements L2CacheFactory {
   }
 
   /** Cached instance of the L2Cache or null if not initialized */
-  private L2Cache l2Cache;
+  private L2BucketCache l2Cache;
 
   // Allows to short circuit getL2Cache() calls if the cache is disabled
   private boolean l2CacheDisabled;

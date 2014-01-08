@@ -88,6 +88,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
    */
   private List<HFileBlock> loadOnOpenBlocks = new ArrayList<HFileBlock>();
 
+  private L2CacheAgent l2Cache;
+
   /**
    * Opens a HFile. You must load the index before you can use it by calling
    * {@link #loadFileInfo()}.
@@ -110,9 +112,13 @@ public class HFileReaderV2 extends AbstractHFileReader {
       throws IOException {
     super(path, trailer, fsdis, size, closeIStream, cacheConf, conf);
     trailer.expectVersion(2);
+    // Get a cache agent and set schema context.
+    l2Cache = cacheConf.getL2CacheAgent();
+    passSchemaMetricsTo(l2Cache);
+
     HFileBlock.FSReaderV2 fsBlockReaderV2 = new HFileBlock.FSReaderV2(fsdis,
         compressAlgo, fileSize,
-        cacheConf.isL2CacheEnabled() ? cacheConf.getL2Cache() : null,
+        cacheConf.isL2CacheEnabled() ? cacheConf.getL2CacheAgent() : null,
         cacheConf.isL2CacheEnabled() ? name : null);
     this.fsBlockReader = fsBlockReaderV2; // upcast
 
@@ -230,20 +236,22 @@ public class HFileReaderV2 extends AbstractHFileReader {
       if (cachedBlock != null) {
         // Return a distinct 'shallow copy' of the block,
         // so pos does not get messed by the scanner
-        getSchemaMetrics().updateOnCacheHit(BlockCategory.META, false);
+        getSchemaMetrics().updateOnBlockRead(BlockCategory.META, false,
+                TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNs),
+                true, false, false);
         return cachedBlock.getBufferWithoutHeader();
       }
       // Cache Miss, please load.
       HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset,
-          blockSize, -1, cacheInL2);
+              blockSize, -1, cacheInL2);
       passSchemaMetricsTo(metaBlock);
 
       long deltaNs = System.nanoTime() - startTimeNs;
       HFile.preadTimeNano.addAndGet(deltaNs);
       HFile.preadHistogram.addValue(deltaNs);
       HFile.preadOps.incrementAndGet();
-      getSchemaMetrics().updateOnCacheMiss(BlockCategory.META, false,
-          TimeUnit.NANOSECONDS.toMillis(deltaNs));
+      getSchemaMetrics().updateOnBlockRead(BlockCategory.META, false,
+              TimeUnit.NANOSECONDS.toMillis(deltaNs), false, false, false);
 
       // Cache the block
       if (cacheBlock) {
@@ -322,7 +330,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       // update schema metrics
       getSchemaMetrics().updateOnBlockRead(
         cachedBlock.getBlockType().getCategory(), isCompaction,
-        System.currentTimeMillis() - startTime, cacheOnPreload, true);
+        System.currentTimeMillis() - startTime, true, false, cacheOnPreload);
       // update profiling data
       Call call = HRegionServer.callContext.get();
       ProfilingData pData = call == null ? null : call.getProfilingData();
@@ -344,14 +352,14 @@ public class HFileReaderV2 extends AbstractHFileReader {
         }
         getSchemaMetrics().updateOnBlockRead(
           cachedBlock.getBlockType().getCategory(), isCompaction,
-          System.currentTimeMillis() - startTime, cacheOnPreload, true);
+          System.currentTimeMillis() - startTime, true, false, cacheOnPreload);
         return cachedBlock;
       }
       // First, check if the block exists in L2 cache
       cachedBlock = null;
       try {
-        cachedBlock = getBlockFromL2Cache(name, dataBlockOffset,
-            expectedBlockType, isCompaction);
+        cachedBlock = getBlockFromL2Cache(cacheKey, expectedBlockType,
+                isCompaction);
       } catch (Throwable t) {
         // If exception is encountered when attempting to read from the L2
         // cache, we should go on to try to read from disk and log the
@@ -376,7 +384,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         }
         getSchemaMetrics().updateOnBlockRead(
           cachedBlock.getBlockType().getCategory(), isCompaction,
-          System.currentTimeMillis() - startTime, cacheOnPreload, true);
+          System.currentTimeMillis() - startTime, false, true, cacheOnPreload);
         // Return early if a block exists in the L2 cache
         return cachedBlock;
       }
@@ -384,7 +392,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       long startTimeNs = System.nanoTime();
       HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset,
           onDiskBlockSize, -1, cacheBlock && !isCompaction,
-          getReadOptions(isCompaction));
+              getReadOptions(isCompaction));
       hfileBlock = dataBlockEncoder.diskToCacheFormat(hfileBlock,
           isCompaction);
       validateBlockType(hfileBlock, expectedBlockType);
@@ -407,7 +415,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
       getSchemaMetrics().updateOnBlockRead(
        blockCategory, isCompaction,
-        System.currentTimeMillis() - startTime, cacheOnPreload, false);
+        System.currentTimeMillis() - startTime, false, false, cacheOnPreload);
 
       // Cache the block if necessary
       if (cacheOnPreload
@@ -503,10 +511,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * block (i.e., compressed and  encoded byte array) from the L2 cache,
    * de-compress, decode, and then construct an in-memory representation of the
    * block.
-   * @param hfileName Name of the HFile that contains the block (used as part
-   *                  of the cache key)
-   * @param offset Offset in the HFile containing the block (used as another
-   *               part of the cache key)
+   * @param cacheKey the key of the block to be fetched from cache
    * @param expectedBlockType Expected type of the block
    * @param isCompaction Indicates if this is a compaction related read. This
    *                     value is passed along to
@@ -518,20 +523,19 @@ public class HFileReaderV2 extends AbstractHFileReader {
    *         offset in the L2 cache.
    * @throws IOException If we are unable to decompress and decode the block.
    */
-  public HFileBlock getBlockFromL2Cache(String hfileName, long offset,
+  public HFileBlock getBlockFromL2Cache(BlockCacheKey cacheKey,
       BlockType expectedBlockType, boolean isCompaction) throws IOException {
-    if (cacheConf.isL2CacheEnabled()) {
-      byte[] bytes = cacheConf.getL2Cache().getRawBlock(hfileName, offset);
-      if (bytes != null) {
-        HFileBlock hfileBlock = HFileBlock.fromBytes(bytes, compressAlgo,
-            includesMemstoreTS, offset);
-        hfileBlock = dataBlockEncoder.diskToCacheFormat(hfileBlock, isCompaction);
-        validateBlockType(hfileBlock, expectedBlockType);
-        passSchemaMetricsTo(hfileBlock);
-        return hfileBlock;
-      }
+    HFileBlock cachedBlock = null;
+    byte[] bytes = l2Cache.getRawBlockBytes(cacheKey);
+    if (bytes != null) {
+      cachedBlock = HFileBlock.fromBytes(bytes, compressAlgo,
+              includesMemstoreTS, cacheKey.getOffset());
+      cachedBlock = dataBlockEncoder.diskToCacheFormat(cachedBlock,
+              isCompaction);
+      validateBlockType(cachedBlock, expectedBlockType);
+      passSchemaMetricsTo(cachedBlock);
     }
-    return null;
+    return cachedBlock;
   }
 
   /**
@@ -601,13 +605,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
     }
 
-    if (cacheConf.isL2CacheEnabled() && evictL2OnClose) {
-      int numEvicted = cacheConf.getL2Cache().evictBlocksByHfileName(name);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("On close, file=" + name + " evicted=" + numEvicted
-            + " block(s) from L2 cache");
-      }
-    }
+    l2Cache.evictBlocksByHfileName(name, true);
     if (closeIStream && istream != null) {
       istream.close();
       istream = null;

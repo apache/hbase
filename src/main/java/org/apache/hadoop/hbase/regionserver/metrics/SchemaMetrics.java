@@ -114,20 +114,30 @@ public class SchemaMetrics {
 
   public static enum BlockMetricType {
     READ_TIME("Read", COMPACTION_AWARE_METRIC_FLAG | TIME_VARYING_METRIC_FLAG),
+
     READ_COUNT("BlockReadCnt", COMPACTION_AWARE_METRIC_FLAG),
     CACHE_HIT("BlockReadCacheHitCnt", COMPACTION_AWARE_METRIC_FLAG),
     CACHE_MISS("BlockReadCacheMissCnt", COMPACTION_AWARE_METRIC_FLAG),
 
-    PRELOAD_CACHE_HIT("PreloadCacheHitCnt",COMPACTION_AWARE_METRIC_FLAG),
-    PRELOAD_CACHE_MISS("PreloadCacheMissCnt",COMPACTION_AWARE_METRIC_FLAG),
-    PRELOAD_READ_TIME("PreloadReadTime",
-            COMPACTION_AWARE_METRIC_FLAG | TIME_VARYING_METRIC_FLAG),
-    
     CACHE_SIZE("blockCacheSize", PERSISTENT_METRIC_FLAG),
     UNENCODED_CACHE_SIZE("blockCacheUnencodedSize", PERSISTENT_METRIC_FLAG),
     CACHE_NUM_BLOCKS("cacheNumBlocks", PERSISTENT_METRIC_FLAG),
     CACHED("blockCacheNumCached"),
-    EVICTED("blockCacheNumEvicted");
+    EVICTED("blockCacheNumEvicted"),
+
+    L2_READ_COUNT("L2ReadCnt", COMPACTION_AWARE_METRIC_FLAG),
+    L2_CACHE_HIT("L2CacheHitCnt", COMPACTION_AWARE_METRIC_FLAG),
+    L2_CACHE_MISS("L2CacheMissCnt", COMPACTION_AWARE_METRIC_FLAG),
+
+    L2_CACHE_NUM("L2CacheNumBlocks", PERSISTENT_METRIC_FLAG),
+    L2_CACHE_SIZE("L2CacheSize", PERSISTENT_METRIC_FLAG),
+    L2_CACHED("L2CacheNumCached"),
+    L2_EVICTED("L2CacheNumEvicted"),
+
+    PRELOAD_CACHE_HIT("PreloadCacheHitCnt", COMPACTION_AWARE_METRIC_FLAG),
+    PRELOAD_CACHE_MISS("PreloadCacheMissCnt", COMPACTION_AWARE_METRIC_FLAG),
+    PRELOAD_READ_TIME("PreloadReadTime",
+            COMPACTION_AWARE_METRIC_FLAG | TIME_VARYING_METRIC_FLAG);
 
     private final String metricStr;
     private final int flags;
@@ -250,7 +260,7 @@ public class SchemaMetrics {
       StoreMetricType.values().length;
 
   /** Conf key controlling whether we include table name in metric names */
-  private static final String SHOW_TABLE_NAME_CONF_KEY =
+  public static final String SHOW_TABLE_NAME_CONF_KEY =
       "hbase.metrics.showTableName";
 
   private static final String WORD_BOUNDARY_RE_STR = "\\b";
@@ -522,70 +532,76 @@ public class SchemaMetrics {
    * @param blockCategory category of the block read
    * @param isCompaction whether this is compaction read or not
    * @param timeMs time taken to read the block
+   * @param l1Cached whether this block was read from cache or not
+   * @param l2Cached whether this block was read from L2 cache or not
    * @param preload whether this a preloaded block or not
-   * @param obtainedFromCache whether the block is found in cache or not
    */
   public void updateOnBlockRead(BlockCategory blockCategory,
-      boolean isCompaction, long timeMs, boolean preload,
-      boolean obtainedFromCache) {
-    if (obtainedFromCache) {
-      if (!preload) {
-        updateOnCacheHit(blockCategory, isCompaction, timeMs);
-      } else {
-        updateOnPreloadCacheHit(blockCategory, isCompaction, timeMs);
-      }
+      boolean isCompaction, long timeMs, boolean l1Cached, boolean l2Cached,
+      boolean preload) {
+    addToReadTime(blockCategory, isCompaction, timeMs);
+    if (l1Cached || l2Cached) {
+      if (l1Cached) updateOnCacheHit(blockCategory, isCompaction);
+      if (l2Cached) updateOnL2CacheHit(blockCategory, isCompaction);
+      if (preload) updateOnPreloadCacheHit(blockCategory, isCompaction, timeMs);
     } else {
-      if (!preload) {
-        updateOnCacheMiss(blockCategory, isCompaction, timeMs);
-      } else {
-        updateOnPreloadCacheMiss(blockCategory, isCompaction, timeMs);
-      }
+      updateOnCacheMiss(blockCategory, isCompaction);
+      updateOnL2CacheMiss(blockCategory, isCompaction);
+      if (preload) updateOnPreloadCacheMiss(blockCategory, isCompaction, timeMs);
+    }
+
+    if (this != ALL_SCHEMA_METRICS) {
+      ALL_SCHEMA_METRICS.updateOnBlockRead(blockCategory, isCompaction, timeMs,
+              l1Cached, l2Cached, preload);
     }
   }
 
   /**
-   * Updates the number of hits and the total number of block reads on a block cache hit.
+   * Updates the number of hits and the total number of block reads on a block
+   * cache hit.
    */
   public void updateOnCacheHit(BlockCategory blockCategory,
       boolean isCompaction) {
     blockCategory.expectSpecific();
     incrNumericMetric(blockCategory, isCompaction, BlockMetricType.CACHE_HIT);
     incrNumericMetric(blockCategory, isCompaction, BlockMetricType.READ_COUNT);
-    if (this != ALL_SCHEMA_METRICS) {
-      ALL_SCHEMA_METRICS.updateOnCacheHit(blockCategory, isCompaction);
-    }
-  }
-  /**
-   * Updates the number of hits and the total number of block reads on a block
-   * cache hit.
-   */
-  public void updateOnCacheHit(BlockCategory blockCategory,
-      boolean isCompaction, long deltaMs) {
-    blockCategory.expectSpecific();
-    incrNumericMetric(blockCategory, isCompaction, BlockMetricType.CACHE_HIT);
-    incrNumericMetric(blockCategory, isCompaction, BlockMetricType.READ_COUNT);
-    addToReadTime(blockCategory, isCompaction, deltaMs);
-    if (this != ALL_SCHEMA_METRICS) {
-      ALL_SCHEMA_METRICS.updateOnCacheHit(blockCategory, isCompaction, deltaMs);
-    }
   }
 
   /**
-   * Updates read time, the number of misses, and the total number of block
-   * reads on a block cache miss.
+   * Updates read time and the number of misses on a block cache miss.
    */
-  public void updateOnCacheMiss(BlockCategory blockCategory,
-      boolean isCompaction, long timeMs) {
+  private void updateOnCacheMiss(BlockCategory blockCategory,
+                                 boolean isCompaction) {
     blockCategory.expectSpecific();
-    addToReadTime(blockCategory, isCompaction, timeMs);
     incrNumericMetric(blockCategory, isCompaction, BlockMetricType.CACHE_MISS);
     incrNumericMetric(blockCategory, isCompaction, BlockMetricType.READ_COUNT);
-    if (this != ALL_SCHEMA_METRICS) {
-      ALL_SCHEMA_METRICS.updateOnCacheMiss(blockCategory, isCompaction,
-          timeMs);
-    }
   }
-  
+
+  /**
+   * Updates the number of hits and the total number of block reads on a L2
+   * cache hit.
+   */
+  private void updateOnL2CacheHit(BlockCategory blockCategory,
+                                 boolean isCompaction) {
+    blockCategory.expectSpecific();
+    incrNumericMetric(blockCategory, isCompaction,
+            BlockMetricType.L2_READ_COUNT);
+    incrNumericMetric(blockCategory, isCompaction,
+            BlockMetricType.L2_CACHE_HIT);
+  }
+
+  /**
+   * Updates read time and the number of misses on a block cache miss.
+   */
+  private void updateOnL2CacheMiss(BlockCategory blockCategory,
+                                boolean isCompaction) {
+    blockCategory.expectSpecific();
+    incrNumericMetric(blockCategory, isCompaction,
+            BlockMetricType.L2_CACHE_MISS);
+    incrNumericMetric(blockCategory, isCompaction,
+            BlockMetricType.L2_READ_COUNT);
+  }
+
   private void addToPreloadReadTime(BlockCategory blockCategory,
       boolean isCompaction, long timeMs) {
     HRegion.incrTimeVaryingMetric(getBlockMetricName(blockCategory,
@@ -600,29 +616,22 @@ public class SchemaMetrics {
   /**
    * Updates read time, the number of misses, and the total number of block for preloader
    */
-  public void updateOnPreloadCacheMiss(BlockCategory blockCategory, boolean isCompaction,
+  private void updateOnPreloadCacheMiss(BlockCategory blockCategory, boolean isCompaction,
       long timeMs) {
     blockCategory.expectSpecific();
     addToPreloadReadTime(blockCategory, isCompaction, timeMs);
     incrNumericMetric(blockCategory, isCompaction, BlockMetricType.PRELOAD_CACHE_MISS);
-    if (this != ALL_SCHEMA_METRICS) {
-      ALL_SCHEMA_METRICS.updateOnPreloadCacheMiss(blockCategory, isCompaction, timeMs);
-    }
   }
 
   /**
    * Updates read time, the number of hits, and the total number of block for preloader
    */
-  public void updateOnPreloadCacheHit(BlockCategory blockCategory,
+  private void updateOnPreloadCacheHit(BlockCategory blockCategory,
       boolean isCompaction, long timeMs) {
     blockCategory.expectSpecific();
     addToPreloadReadTime(blockCategory, isCompaction, timeMs);
     incrNumericMetric(blockCategory, isCompaction,
-      BlockMetricType.PRELOAD_CACHE_HIT);
-    if (this != ALL_SCHEMA_METRICS) {
-      ALL_SCHEMA_METRICS.updateOnPreloadCacheMiss(blockCategory, isCompaction,
-        timeMs);
-    }
+            BlockMetricType.PRELOAD_CACHE_HIT);
   }
   
   /**
@@ -649,6 +658,21 @@ public class SchemaMetrics {
     }
   }
 
+  private void updateL2CacheSize(BlockCategory category, long delta) {
+    if (category == null) {
+      category = BlockCategory.ALL_CATEGORIES;
+    }
+    HRegion.incrNumericPersistentMetric(getBlockMetricName(category,
+            DEFAULT_COMPACTION_FLAG, BlockMetricType.L2_CACHE_NUM),
+            delta > 0 ? 1 : -1);
+    HRegion.incrNumericPersistentMetric(getBlockMetricName(category,
+            DEFAULT_COMPACTION_FLAG, BlockMetricType.L2_CACHE_SIZE), delta);
+
+    if (category != BlockCategory.ALL_CATEGORIES) {
+      updateL2CacheSize(BlockCategory.ALL_CATEGORIES, delta);
+    }
+  }
+
   /**
    * Updates the number and the total size of blocks in cache for both the configured table/CF
    * and all table/CFs (by calling the same method on {@link #ALL_SCHEMA_METRICS}), both the given
@@ -667,6 +691,16 @@ public class SchemaMetrics {
     if (this != ALL_SCHEMA_METRICS) {
       ALL_SCHEMA_METRICS.updateOnCachePutOrEvict(blockCategory, cacheSizeDelta,
           unencodedCacheSizeDelta);
+    }
+  }
+
+  public void updateOnL2CachePutOrEvict(BlockCategory blockCategory,
+                                        long delta) {
+    updateL2CacheSize(blockCategory, delta);
+    incrNumericMetric(blockCategory, DEFAULT_COMPACTION_FLAG,
+            delta > 0 ? BlockMetricType.L2_CACHED : BlockMetricType.L2_EVICTED);
+    if (this != ALL_SCHEMA_METRICS) {
+      ALL_SCHEMA_METRICS.updateOnL2CachePutOrEvict(blockCategory, delta);
     }
   }
 

@@ -28,37 +28,44 @@ public interface L2Cache {
   /**
    * Retrieve a block from the L2Cache. The block is retrieved as a byte
    * array, in the same exact format as it is stored on disk.
-   * @param hfileName Filename associated with the block
-   * @param dataBlockOffset Offset in the file
-   * @return
+   * @param cacheKey Key associated with the block
+   * @return raw byte string representing the block if present in cache, null
+   *    otherwise
    */
-  public byte[] getRawBlock(String hfileName, long dataBlockOffset);
+  public byte[] getRawBlockBytes(BlockCacheKey cacheKey);
 
 
   /**
    * Add a block to the L2Cache. The block must be represented by a
    * byte array identical to what would be written to disk.
-   * @param hfileName Filename associated with the block
-   * @param dataBlockOffset Offset in the file
-   * @param rawBlock The exact byte representation of the block
+   * @param cacheKey key associated with the block
+   * @param block the raw HFileBlock to be cached
+   * @return true if the block was cached, false otherwise
    */
-  public void cacheRawBlock(String hfileName, long dataBlockOffset,
-      byte[] rawBlock);
+  public boolean cacheRawBlock(BlockCacheKey cacheKey, RawHFileBlock block);
+
+  /**
+   * Evict a block from the L2Cache.
+   * @param cacheKey Key associated with the block to be evicted
+   * @return true if the block was evicted, false otherwise
+   */
+  public boolean evictRawBlock(BlockCacheKey cacheKey);
 
   /**
    * Evict all blocks matching a given filename. This operation should be
    * efficient and can be called on each close of a store file.
    * @param hfileName Filename whose blocks to evict
+   * @return the number of evicted blocks
    */
   public int evictBlocksByHfileName(String hfileName);
 
   /**
-   * @return true if the cache has been shutdown
+   * @return true if the cache is enabled, false otherwise
    */
-  public boolean isShutdown();
+  public boolean isEnabled();
 
   /**
-   * Shutdown the cache
+   * Shutdown the L2 cache.
    */
   public void shutdown();
 }

@@ -252,9 +252,10 @@ public class TestSchemaMetrics {
           }
 
           for (boolean isCompaction : BOOL_VALUES) {
-            sm.updateOnCacheHit(blockCat, isCompaction);
+            sm.updateOnBlockRead(blockCat, isCompaction, 0, true, false, false);
             checkMetrics();
-            sm.updateOnCacheMiss(blockCat, isCompaction, rand.nextInt(READ_TIME_MS_RANGE));
+            sm.updateOnBlockRead(blockCat, isCompaction,
+                    rand.nextInt(READ_TIME_MS_RANGE), false, false, false);
             checkMetrics();
           }
 

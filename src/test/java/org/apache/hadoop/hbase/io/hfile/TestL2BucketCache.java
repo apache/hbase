@@ -21,17 +21,18 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.ClientConfigurationUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.CreateRandomStoreFile;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.junit.After;
 import org.junit.Before;
@@ -40,9 +41,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
@@ -72,6 +71,8 @@ public class TestL2BucketCache {
 
   private Configuration conf;
   private CacheConfig cacheConf;
+  private HColumnDescriptor family;
+  private HRegion region;
   private FileSystem fs;
   private Path storeFilePath;
 
@@ -115,7 +116,7 @@ public class TestL2BucketCache {
   }
 
   @After
-  public void tearDown() {
+  public void tearDown() throws IOException {
     underlyingCache.shutdown();
   }
 
@@ -145,8 +146,8 @@ public class TestL2BucketCache {
           new BlockCacheKey(reader.getName(), offset), true) != null;
       if (isInL1Lcache) {
         cachedCount++;
-        byte[] blockFromCacheRaw =
-            mockedL2Cache.getRawBlock(reader.getName(), offset);
+        BlockCacheKey key = new BlockCacheKey(reader.getName(), offset);
+        byte[] blockFromCacheRaw = mockedL2Cache.getRawBlockBytes(key);
         assertNotNull("All blocks in l1 cache, should also be in l2 cache: "
             + blockFromDisk.toString(), blockFromCacheRaw);
         HFileBlock blockFromL2Cache = HFileBlock.fromBytes(blockFromCacheRaw,
@@ -176,7 +177,8 @@ public class TestL2BucketCache {
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       HFileBlock blockFromDisk = reader.readBlock(offset, -1, true, false,
               false, null, encodingInCache, null);
-      assertNotNull(mockedL2Cache.getRawBlock(reader.getName(), offset));
+      BlockCacheKey key = new BlockCacheKey(reader.getName(), offset);
+      assertNotNull(mockedL2Cache.getRawBlockBytes(key));
       cacheConf.getBlockCache().evictBlock(new BlockCacheKey(reader.getName(),
               offset));
       HFileBlock blockFromL2Cache = reader.readBlock(offset, -1, true, false,
@@ -227,12 +229,78 @@ public class TestL2BucketCache {
     assertFalse(cacheConf.isL2CacheEnabled());
   }
 
+  @Test
+  public void shouldUpdatePerBlockCategoryMetrics() throws Exception {
+    Map<String, Long> snapshot = SchemaMetrics.getMetricsSnapshot();
+    writeStoreFile();
+
+    // Get an unknown table and CF.
+    SchemaConfigured unknownSchema = new SchemaConfigured(conf, null);
+    // Get the test table and CF.
+    SchemaConfigured testSchema = new SchemaConfigured(conf, storeFilePath);
+
+    assertEquals(
+            "Unknown schema DATA category size in L2 cache should be zero",
+            0, getL2CacheSize(unknownSchema, BlockType.BlockCategory.DATA));
+    assertTrue(
+            "Test schema DATA category size in L2 cache should not be zero",
+            getL2CacheSize(testSchema, BlockType.BlockCategory.DATA) > 0);
+    // Validate that the per-cf-category metrics add up with the all-cf-category
+    // metrics.
+    SchemaMetrics.validateMetricChanges(snapshot);
+
+    readAndEvictBlocksFromL2Cache();
+
+    assertTrue("Test schema should have L2 cache hits",
+            getL2CacheHitCount(testSchema, BlockType.BlockCategory.DATA) > 0);
+    assertEquals("L2 cache should be empty", 0,
+            underlyingCache.getBlockCount());
+    assertEquals("DATA category size in L2 cache should be zero", 0,
+            getL2CacheSize(testSchema, BlockType.BlockCategory.DATA));
+    SchemaMetrics.validateMetricChanges(snapshot);
+  }
+
+  private void readAndEvictBlocksFromL2Cache() throws IOException {
+    long offset = 0;
+    HFileReaderV2 reader = (HFileReaderV2) HFile.createReaderWithEncoding(fs,
+            storeFilePath, cacheConf, ENCODER.getEncodingInCache());
+    // Clear the BlockCache to make sure reads are satisfied from L2 cache or
+    // disk.
+    cacheConf.getBlockCache().clearCache();
+    while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
+      HFileBlock block = reader.readBlock(offset, -1, true, false,
+              false, null, reader.getEffectiveEncodingInCache(false), null);
+      mockedL2Cache.evictRawBlock(new BlockCacheKey(reader.getName(), offset));
+      offset += block.getOnDiskSizeWithHeader();
+    }
+  }
+
+  private long getL2CacheSize(SchemaConfigured schema,
+                              BlockType.BlockCategory category) {
+    return HRegion.getNumericPersistentMetric(
+            schema.getSchemaMetrics().getBlockMetricName(category, false,
+                    SchemaMetrics.BlockMetricType.L2_CACHE_SIZE));
+  }
+
+  private long getL2CacheHitCount(SchemaConfigured schema,
+                                  BlockType.BlockCategory category) {
+    return HRegion.getNumericMetric(
+            schema.getSchemaMetrics().getBlockMetricName(category, false,
+                    SchemaMetrics.BlockMetricType.L2_CACHE_HIT));
+  }
+
   private void writeStoreFile() throws IOException {
-    Path storeFileParentDir = new Path(TEST_UTIL.getTestDir(),
-        "test_cache_on_write");
+    // Generate a random family name in order to keep different tests apart.
+    // This is important for the metrics test.
+    family = new HColumnDescriptor(
+            Integer.toHexString(new Random().nextInt(1023)));
+    region = TEST_UTIL.createTestRegion(TestL2BucketCache.class.getSimpleName(),
+            family);
+    Path storeHomeDir = Store.getStoreHomedir(region.getRegionDir(),
+            region.getRegionInfo().getEncodedName(), family.getName());
     StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf, cacheConf, fs,
         DATA_BLOCK_SIZE)
-        .withOutputDir(storeFileParentDir)
+        .withOutputDir(storeHomeDir)
         .withCompression(Compression.Algorithm.GZ)
         .withDataBlockEncoder(ENCODER)
         .withComparator(KeyValue.COMPARATOR)
@@ -271,26 +339,35 @@ public class TestL2BucketCache {
     }
 
     @Override
-    public byte[] getRawBlock(String hfileName, long dataBlockOffset) {
+    public byte[] getRawBlockBytes(BlockCacheKey key) {
       byte[] ret = null;
       if (enableReads.get()) {
-        ret = underlying.getRawBlock(hfileName, dataBlockOffset);
+        ret = underlying.getRawBlockBytes(key);
         if (LOG.isTraceEnabled()) {
           LOG.trace("Cache " + (ret == null ?"miss":"hit")  +
-              " for hfileName=" + hfileName + ", offset=" + dataBlockOffset);
+              " for hfileName=" + key.getHfileName() +
+              ", offset=" + key.getOffset());
         }
       }
       return ret;
     }
 
     @Override
-    public void cacheRawBlock(String hfileName, long dataBlockOffset,
-        byte[] rawBlock) {
+    public boolean cacheRawBlock(BlockCacheKey cacheKey,
+                                 RawHFileBlock rawBlock) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Caching " + rawBlock.length + " bytes, hfileName=" +
-            hfileName + ", offset=" + dataBlockOffset);
+        LOG.trace("Caching " + rawBlock.getData().length + " bytes, hfileName=" +
+            cacheKey.getHfileName() + ", offset=" + cacheKey.getOffset());
       }
-      underlying.cacheRawBlock(hfileName, dataBlockOffset, rawBlock);
+      return underlying.cacheRawBlock(cacheKey, rawBlock);
+    }
+
+    @Override
+    public boolean evictRawBlock(BlockCacheKey cacheKey) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Evicting " + cacheKey);
+      }
+      return underlying.evictRawBlock(cacheKey);
     }
 
     @Override
@@ -299,8 +376,8 @@ public class TestL2BucketCache {
     }
 
     @Override
-    public boolean isShutdown() {
-      return underlying.isShutdown();
+    public boolean isEnabled() {
+      return underlying.isEnabled();
     }
 
     @Override

@@ -26,24 +26,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.CachedBlock;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.io.hfile.*;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.HasThread;
-import org.apache.hadoop.hbase.util.IdLock;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.util.*;
 import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -252,43 +243,47 @@ public class BucketCache implements HeapSize {
   /**
    * Cache the block with the specified name and buffer.
    * @param cacheKey block's cache key
-   * @param buf block buffer
+   * @param block Raw HFile block
+   * @return true if the block was cached, false otherwise
    */
-  public void cacheBlock(BlockCacheKey cacheKey, byte[] buf) {
-    cacheBlock(cacheKey, buf, false);
+  public boolean cacheBlock(BlockCacheKey cacheKey, RawHFileBlock block) {
+    return cacheBlock(cacheKey, block, false);
   }
 
   /**
    * Cache the block with the specified name and buffer.
    * @param cacheKey block's cache key
-   * @param cachedItem block buffer
+   * @param block Raw HFile block
    * @param inMemory if block is in-memory
+   * @return true if the block was cached, false otherwise
    */
-  public void cacheBlock(BlockCacheKey cacheKey, byte[] cachedItem, boolean inMemory) {
-    cacheBlockWithWait(cacheKey, cachedItem, inMemory, wait_when_cache);
+  public boolean cacheBlock(BlockCacheKey cacheKey, RawHFileBlock block,
+                            boolean inMemory) {
+    return cacheBlockWithWait(cacheKey, block, inMemory, wait_when_cache);
   }
 
   /**
    * Cache the block to ramCache
    * @param cacheKey block's cache key
-   * @param cachedItem block buffer
+   * @param block Raw HFile block
    * @param inMemory if block is in-memory
    * @param wait if true, blocking wait when queue is full
+   * @return true if the block was cached, false otherwise
    */
-  public void cacheBlockWithWait(BlockCacheKey cacheKey, byte[] cachedItem,
+  public boolean cacheBlockWithWait(BlockCacheKey cacheKey, RawHFileBlock block,
       boolean inMemory, boolean wait) {
     if (!cacheEnabled)
-      return;
+      return false;
 
     if (backingMap.containsKey(cacheKey) || ramCache.containsKey(cacheKey))
-      return;
+      return true;
 
     /*
      * Stuff the entry into the RAM cache so it can get drained to the
      * persistent store
      */
-    RAMQueueEntry re = new RAMQueueEntry(cacheKey, cachedItem,
-        accessCount.incrementAndGet(), inMemory);
+    RAMQueueEntry re = new RAMQueueEntry(cacheKey, block,
+            accessCount.incrementAndGet(), inMemory);
     ramCache.put(cacheKey, re);
     int queueNum = (cacheKey.hashCode() & 0x7FFFFFFF) % writerQueues.size();
     BlockingQueue<RAMQueueEntry> bq = writerQueues.get(queueNum);
@@ -308,11 +303,11 @@ public class BucketCache implements HeapSize {
       failedBlockAdditions.incrementAndGet();
     } else {
       this.blockNumber.incrementAndGet();
-      this.heapSize.addAndGet(cachedItem.length);
+      this.heapSize.addAndGet(re.getRawHFileBlock().getData().length);
       blocksByHFile.put(cacheKey.getHfileName(), cacheKey);
     }
+    return successfulAddition;
   }
-
 
   /**
    * Get the buffer of the block with the specified key.
@@ -337,7 +332,7 @@ public class BucketCache implements HeapSize {
     if (re != null) {
       cacheStats.hit(caching);
       re.access(accessCount.incrementAndGet());
-      return re.getData();
+      return re.getRawHFileBlock().getData();
     }
     BucketEntry bucketEntry = backingMap.get(key);
     if(bucketEntry!=null) {
@@ -382,7 +377,8 @@ public class BucketCache implements HeapSize {
     RAMQueueEntry removedBlock = ramCache.remove(cacheKey);
     if (removedBlock != null) {
       this.blockNumber.decrementAndGet();
-      this.heapSize.addAndGet(-1 * removedBlock.getData().length);
+      this.heapSize.addAndGet(
+              -1 * removedBlock.getRawHFileBlock().getData().length);
     }
     BucketEntry bucketEntry = backingMap.get(cacheKey);
     if (bucketEntry == null) { return false; }
@@ -391,7 +387,7 @@ public class BucketCache implements HeapSize {
       lockEntry = offsetLock.getLockEntry(bucketEntry.offset());
       if (bucketEntry.equals(backingMap.remove(cacheKey))) {
         bucketAllocator.freeBlock(bucketEntry.offset());
-        realCacheSize.addAndGet(-1 * bucketEntry.getLength());
+        updateSizeMetrics(bucketEntry, true);
         blocksByHFile.remove(cacheKey.getHfileName(), cacheKey);
         if (removedBlock == null) {
           this.blockNumber.decrementAndGet();
@@ -409,6 +405,17 @@ public class BucketCache implements HeapSize {
     }
     cacheStats.evicted(bucketEntry.getPriority());
     return true;
+  }
+
+  protected long updateSizeMetrics(BucketEntry entry, boolean eviction) {
+    long delta = (eviction ? -1 : 1) * entry.getLength();
+    SchemaMetrics metrics = entry.getSchemaMetrics();
+    BlockType type = entry.getBlockType();
+    //LOG.info("updateSizeMetrics: " + type + ", delta: " + delta);
+    if (metrics != null && type != null) {
+      metrics.updateOnL2CachePutOrEvict(type.getCategory(), delta);
+    }
+    return realCacheSize.addAndGet(delta);
   }
 
   /*
@@ -666,6 +673,25 @@ public class BucketCache implements HeapSize {
       LOG.info(this.getName() + " exiting, cacheEnabled=" + cacheEnabled);
     }
 
+    private BucketEntry writeToCache(final RAMQueueEntry ramEntry)
+            throws CacheFullException, IOException, BucketAllocatorException {
+      int len = ramEntry.getRawHFileBlock().getData().length;
+      if (len == 0) {
+        return null;
+      }
+      long offset = bucketAllocator.allocateBlock(len);
+      BucketEntry bucketEntry = new BucketEntry(offset, ramEntry);
+      try {
+        ioEngine.write(ramEntry.getRawHFileBlock().getData(), offset);
+      } catch (IOException ioe) {
+        // free it in bucket allocator
+        bucketAllocator.freeBlock(offset);
+        throw ioe;
+      }
+      updateSizeMetrics(bucketEntry, false);
+      return bucketEntry;
+    }
+
     /**
      * Flush the entries in ramCache to IOEngine and add bucket entry to
      * backingMap
@@ -686,8 +712,7 @@ public class BucketCache implements HeapSize {
             LOG.warn("Couldn't get the entry from RAM queue, who steals it?");
             continue;
           }
-          BucketEntry bucketEntry = ramEntry.writeToCache(ioEngine,
-              bucketAllocator, realCacheSize);
+          BucketEntry bucketEntry = writeToCache(ramEntry);
           ramEntries[done] = ramEntry;
           bucketEntries[done++] = bucketEntry;
           if (ioErrorStartTime > 0) {
@@ -730,7 +755,8 @@ public class BucketCache implements HeapSize {
         }
         RAMQueueEntry ramCacheEntry = ramCache.remove(ramEntries[i].getKey());
         if (ramCacheEntry != null) {
-          heapSize.addAndGet(-1 * ramEntries[i].getData().length);
+          heapSize.addAndGet(
+                  -1 * ramEntries[i].getRawHFileBlock().getData().length);
         }
       }
 
@@ -864,15 +890,30 @@ public class BucketCache implements HeapSize {
    * up the long. Doubt we'll see devices this big for ages. Offsets are divided
    * by 256. So 5 bytes gives us 256TB or so.
    */
-  static class BucketEntry implements Serializable, Comparable<BucketEntry> {
+  static class BucketEntry implements Serializable, Comparable<BucketEntry>,
+          Cacheable {
     private static final long serialVersionUID = -6741504807982257534L;
     private int offsetBase;
     private int length;
     private byte offset1;
     private volatile long accessTime;
     private CachedBlock.BlockPriority priority;
+    private BlockType type;
+    private SchemaMetrics metrics;
 
-    BucketEntry(long offset, int length, long accessTime, boolean inMemory) {
+    public final static long BUCKET_ENTRY_OVERHEAD =
+            ClassSize.OBJECT +
+            // this.offsetBase, this.length
+            2 * Bytes.SIZEOF_INT +
+            // this.offset1
+            Bytes.SIZEOF_BYTE +
+            // this.accessTime
+            Bytes.SIZEOF_LONG +
+            // this.priority
+            ClassSize.REFERENCE;
+
+    BucketEntry(long offset, int length, long accessTime, boolean inMemory,
+                BlockType type, SchemaMetrics metrics) {
       setOffset(offset);
       this.length = length;
       this.accessTime = accessTime;
@@ -881,6 +922,15 @@ public class BucketCache implements HeapSize {
       } else {
         this.priority = CachedBlock.BlockPriority.SINGLE;
       }
+      this.type = type;
+      this.metrics = metrics;
+    }
+
+    BucketEntry(long offset, RAMQueueEntry ramEntry) {
+      this(offset, ramEntry.getRawHFileBlock().getData().length,
+              ramEntry.getAccessTime(), ramEntry.isInMemory(),
+              ramEntry.getRawHFileBlock().getBlockType(),
+              ramEntry.getRawHFileBlock().getSchemaMetrics());
     }
 
     long offset() { // Java has no unsigned numbers
@@ -923,6 +973,21 @@ public class BucketCache implements HeapSize {
     @Override
     public boolean equals(Object that) {
       return this == that;
+    }
+
+    @Override
+    public long heapSize() {
+      return ClassSize.align(BUCKET_ENTRY_OVERHEAD);
+    }
+
+    @Override
+    public BlockType getBlockType() {
+      return type;
+    }
+
+    @Override
+    public SchemaMetrics getSchemaMetrics() {
+      return metrics;
     }
   }
 

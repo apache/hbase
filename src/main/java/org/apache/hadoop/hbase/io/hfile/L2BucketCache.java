@@ -38,30 +38,40 @@ public class L2BucketCache implements L2Cache {
   }
 
   @Override
-  public byte[] getRawBlock(String hfileName, long dataBlockOffset) {
+  public byte[] getRawBlockBytes(BlockCacheKey key) {
     long startTimeNs = System.nanoTime();
-    BlockCacheKey cacheKey = new BlockCacheKey(hfileName, dataBlockOffset);
-    byte[] fromCache = bucketCache.getBlock(cacheKey, true);
+    byte[] fromCache = bucketCache.getBlock(key, true);
     if (LOG.isTraceEnabled()) {
       // Log elapsed time to retrieve a block from the cache
       long elapsedNs = System.nanoTime() - startTimeNs;
-      LOG.trace("getRawBlock() " + (fromCache == null ?"MISS" : "HIT") +
-          " on hfileName=" + hfileName + ", offset=" + dataBlockOffset +
-          " in " +  elapsedNs + " ns.");
+      LOG.trace("getRawBlock() " + (fromCache == null ? "MISS" : "HIT") +
+          " on hfileName=" + key.getHfileName() +
+          ", offset=" + key.getOffset() + " in " +  elapsedNs + " ns.");
     }
     return fromCache;
   }
 
   @Override
-  public void cacheRawBlock(String hfileName, long dataBlockOffset, byte[] block) {
+  public boolean cacheRawBlock(BlockCacheKey key, RawHFileBlock block) {
     long startTimeNs = System.nanoTime();
-    BlockCacheKey cacheKey = new BlockCacheKey(hfileName, dataBlockOffset);
-    bucketCache.cacheBlock(cacheKey, block);
+    boolean cached = bucketCache.cacheBlock(key, block);
     if (LOG.isTraceEnabled()) {
       long elapsedNs = System.nanoTime() - startTimeNs;
-      LOG.trace("cacheRawBlock() on hfileName=" + hfileName + ", offset=" +
-          dataBlockOffset + " in " + elapsedNs + " ns.");
+      LOG.trace("cacheRawBlock() on hfileName=" + key.getHfileName() +
+          ", offset=" + key.getOffset() + " in " + elapsedNs + " ns.");
     }
+    return cached;
+  }
+
+  @Override
+  public boolean evictRawBlock(BlockCacheKey cacheKey) {
+    long startTimeNs = System.nanoTime();
+    boolean evicted = bucketCache.evictBlock(cacheKey);
+    if (LOG.isTraceEnabled()) {
+      long elapsedNs = System.nanoTime() - startTimeNs;
+      LOG.trace("evictBlock() of " + cacheKey + " in " + elapsedNs + " ns.");
+    }
+    return evicted;
   }
 
   @Override
@@ -77,11 +87,10 @@ public class L2BucketCache implements L2Cache {
   }
 
   @Override
-  public boolean isShutdown() {
-    return !bucketCache.isEnabled();
+  public boolean isEnabled() {
+    return bucketCache.isEnabled();
   }
 
-  @Override
   public void shutdown() {
     bucketCache.shutdown();
   }

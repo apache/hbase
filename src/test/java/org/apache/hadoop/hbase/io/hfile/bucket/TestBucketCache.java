@@ -25,7 +25,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.RawHFileBlock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -135,7 +137,8 @@ public class TestBucketCache {
 
     // Add blocks
     for (BlockOnDisk block : blocks) {
-      cache.cacheBlock(block.blockName, block.block);
+      cache.cacheBlock(block.blockName,
+              new RawHFileBlock(BlockType.DATA, block.block));
     }
 
     // Check if all blocks are properly cached and contain the right
@@ -155,7 +158,8 @@ public class TestBucketCache {
     for (BlockOnDisk block : blocks) {
       try {
         if (cache.getBlock(block.blockName, true) != null) {
-          cache.cacheBlock(block.blockName, block.block);
+          cache.cacheBlock(block.blockName,
+                  new RawHFileBlock(BlockType.DATA, block.block));
         }
       } catch (RuntimeException re) {
         // expected
@@ -174,7 +178,7 @@ public class TestBucketCache {
         conf);
 
     final AtomicInteger totalQueries = new AtomicInteger();
-    cache.cacheBlock(key, buf);
+    cache.cacheBlock(key, new RawHFileBlock(BlockType.DATA, buf));
 
     for (int i = 0; i < NUM_THREADS; i++) {
       MultithreadedTestUtil.TestThread t = new MultithreadedTestUtil.RepeatingTestThread(ctx) {
@@ -202,7 +206,8 @@ public class TestBucketCache {
     cache.stopWriterThreads();
     BlockOnDisk[] blocks = generateDiskBlocks(BLOCK_SIZE, 1);
     long heapSize = cache.heapSize();
-    cache.cacheBlock(blocks[0].blockName, blocks[0].block);
+    cache.cacheBlock(blocks[0].blockName,
+            new RawHFileBlock(BlockType.DATA, blocks[0].block));
 
     /*When we cache something HeapSize should always increase */
     assertTrue(heapSize < cache.heapSize());
@@ -254,20 +259,20 @@ public class TestBucketCache {
     }
 
     @Override
-    public void cacheBlock(BlockCacheKey cacheKey, byte[] buf,
+    public boolean cacheBlock(BlockCacheKey cacheKey, RawHFileBlock block,
         boolean inMemory) {
       if (super.getBlock(cacheKey, true, false) != null) {
         throw new RuntimeException("Cached an already cached block");
       }
-      super.cacheBlock(cacheKey, buf, inMemory);
+      return super.cacheBlock(cacheKey, block, inMemory);
     }
 
     @Override
-    public void cacheBlock(BlockCacheKey cacheKey, byte[] buf) {
+    public boolean cacheBlock(BlockCacheKey cacheKey, RawHFileBlock block) {
       if (super.getBlock(cacheKey, true, false) != null) {
         throw new RuntimeException("Cached an already cached block");
       }
-      super.cacheBlock(cacheKey, buf);
+      return super.cacheBlock(cacheKey, block);
     }
   }
 }

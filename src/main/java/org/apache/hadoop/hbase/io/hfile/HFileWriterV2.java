@@ -79,6 +79,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   private final boolean includeMemstoreTS = true;
   private long maxMemstoreTS = 0;
 
+  private L2CacheAgent l2Cache;
+
   static class WriterFactoryV2 extends HFile.WriterFactory {
     WriterFactoryV2(Configuration conf, CacheConfig cacheConf) {
       super(conf, cacheConf);
@@ -103,6 +105,10 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     if (fsBlockWriter != null)
       throw new IllegalStateException("finishInit called twice");
 
+    // Get a schema aware L2 cache agent.
+    l2Cache = cacheConf.getL2CacheAgent();
+    passSchemaMetricsTo(l2Cache);
+
     // HFile filesystem-level (non-caching) block writer
     fsBlockWriter = new HFileBlock.Writer(compressAlgo, blockEncoder,
         includeMemstoreTS);
@@ -111,11 +117,11 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
     boolean cacheL2IndexesOnWrite = cacheConf.shouldL2CacheDataOnWrite();
     dataBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter(fsBlockWriter,
-        cacheIndexesOnWrite ? cacheConf.getBlockCache(): null,
-        cacheL2IndexesOnWrite ? cacheConf.getL2Cache() : null,
+        cacheIndexesOnWrite ? cacheConf.getBlockCache(): null, l2Cache,
         (cacheIndexesOnWrite || cacheL2IndexesOnWrite) ? name : null);
     dataBlockIndexWriter.setMaxChunkSize(
         HFileBlockIndex.getMaxChunkSize(conf));
+    passSchemaMetricsTo(dataBlockIndexWriter);
     inlineBlockWriters.add(dataBlockIndexWriter);
 
     // Meta data block index writer
@@ -163,13 +169,13 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     HFile.writeTimeNano.addAndGet(System.nanoTime() - startTimeNs);
     HFile.writeOps.incrementAndGet();
 
-    // If a write is succesfull, cached the written block in the L1 and L2
+    // If a write is successful, cached the written block in the L1 and L2
     // caches
     boolean cacheOnCompaction = cacheCurrentBlockForCompaction();
     if (cacheConf.shouldCacheDataOnFlush() || cacheOnCompaction) {
       doCacheOnWrite(lastDataBlockOffset);
     }
-    if (cacheConf.isL2CacheEnabled() && cacheConf.shouldL2CacheDataOnWrite()) {
+    if (cacheConf.shouldL2CacheDataOnWrite()) {
       doCacheInL2Cache(lastDataBlockOffset);
     }
   }
@@ -213,8 +219,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         if (cacheThisBlock) {
           doCacheOnWrite(offset);
         }
-        if (cacheConf.isL2CacheEnabled() &&
-            cacheConf.shouldL2CacheDataOnWrite()) {
+        if (cacheConf.shouldL2CacheDataOnWrite()) {
           doCacheInL2Cache(offset);
         }
       }
@@ -230,6 +235,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     final boolean isCompaction = false;
     HFileBlock cacheFormatBlock = blockEncoder.diskToCacheFormat(
         fsBlockWriter.getBlockForCaching(), isCompaction);
+    BlockCacheKey key = new BlockCacheKey(name, offset);
     passSchemaMetricsTo(cacheFormatBlock);
     cacheConf.getBlockCache().cacheBlock(new BlockCacheKey(name, offset),
             cacheFormatBlock);
@@ -241,8 +247,13 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    * @param offset Offset at which the block has been written
    */
   private void doCacheInL2Cache(long offset) throws IOException {
-    cacheConf.getL2Cache().cacheRawBlock(name, offset,
-        fsBlockWriter.getHeaderAndData());
+    if (cacheConf.isL2CacheEnabled()) {
+      BlockCacheKey key = new BlockCacheKey(name, offset);
+      RawHFileBlock rawBlock = new RawHFileBlock(
+              fsBlockWriter.getBlockForCaching().getBlockType(),
+              fsBlockWriter.getHeaderAndData());
+      l2Cache.cacheRawBlock(key, rawBlock);
+    }
   }
 
   /**
@@ -304,7 +315,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    * Comparator passed on construction.
    *
    * @param kv KeyValue to add. Cannot be empty nor null.
-   * @param appendForCompaction Whether the KV was read from cache or not
+   * @param cv Whether the KV was read from cache or not
    * @throws IOException
    */
   @Override
@@ -339,7 +350,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    * @param value
    * @param voffset
    * @param vlength
-   * @param KeyValueContext
+   * @param cv
    * @throws IOException
    */
   private void append(final long memstoreTS, final byte[] key,
