@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.util.test.LoadTestDataGenerator.INCREMENT;
 import static org.apache.hadoop.hbase.util.test.LoadTestDataGenerator.MUTATE_INFO;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -33,15 +35,17 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
+import org.apache.hadoop.util.StringUtils;
 
 /** Creates multiple threads that write key/values into the */
 public class MultiThreadedWriter extends MultiThreadedWriterBase {
   private static final Log LOG = LogFactory.getLog(MultiThreadedWriter.class);
 
-  private Set<HBaseWriterThread> writers = new HashSet<HBaseWriterThread>();
+  protected Set<HBaseWriterThread> writers = new HashSet<HBaseWriterThread>();
 
-  private boolean isMultiPut = false;
+  protected boolean isMultiPut = false;
 
   public MultiThreadedWriter(LoadTestDataGenerator dataGen, Configuration conf,
       TableName tableName) {
@@ -61,20 +65,28 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
       LOG.debug("Inserting keys [" + startKey + ", " + endKey + ")");
     }
 
-    for (int i = 0; i < numThreads; ++i) {
-      HBaseWriterThread writer = new HBaseWriterThread(i);
-      writers.add(writer);
-    }
+    createWriterThreads(numThreads);
 
     startThreads(writers);
   }
 
-  private class HBaseWriterThread extends Thread {
+  protected void createWriterThreads(int numThreads) throws IOException {
+    for (int i = 0; i < numThreads; ++i) {
+      HBaseWriterThread writer = new HBaseWriterThread(i);
+      writers.add(writer);
+    }
+  }
+
+  public class HBaseWriterThread extends Thread {
     private final HTable table;
 
     public HBaseWriterThread(int writerId) throws IOException {
       setName(getClass().getSimpleName() + "_" + writerId);
-      table = new HTable(conf, tableName);
+      table = createTable();
+    }
+
+    protected HTable createTable() throws IOException {
+      return new HTable(conf, tableName);
     }
 
     public void run() {
@@ -119,12 +131,42 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
           }
         }
       } finally {
-        try {
-          table.close();
-        } catch (IOException e) {
-          LOG.error("Error closing table", e);
-        }
+        closeHTable();
         numThreadsWorking.decrementAndGet();
+      }
+    }
+
+    public void insert(HTable table, Put put, long keyBase) {
+      long start = System.currentTimeMillis();
+      try {
+        put = (Put) dataGenerator.beforeMutate(keyBase, put);
+        table.put(put);
+        totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+      } catch (IOException e) {
+        failedKeySet.add(keyBase);
+        String exceptionInfo;
+        if (e instanceof RetriesExhaustedWithDetailsException) {
+          RetriesExhaustedWithDetailsException aggEx = (RetriesExhaustedWithDetailsException)e;
+          exceptionInfo = aggEx.getExhaustiveDescription();
+        } else {
+          StringWriter stackWriter = new StringWriter();
+          PrintWriter pw = new PrintWriter(stackWriter);
+          e.printStackTrace(pw);
+          pw.flush();
+          exceptionInfo = StringUtils.stringifyException(e);
+        }
+        LOG.error("Failed to insert: " + keyBase + " after " + (System.currentTimeMillis() - start)
+            + "ms; region information: " + getRegionDebugInfoSafe(table, put.getRow())
+            + "; errors: " + exceptionInfo);
+      }
+    }
+    protected void closeHTable() {
+      try {
+        if (table != null) {
+          table.close();
+        }
+      } catch (IOException e) {
+        LOG.error("Error closing table", e);
       }
     }
   }

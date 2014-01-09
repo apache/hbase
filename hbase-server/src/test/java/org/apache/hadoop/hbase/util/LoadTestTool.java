@@ -39,14 +39,18 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
+import org.apache.hadoop.hbase.util.test.LoadTestDataGeneratorWithACL;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -152,6 +156,8 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected Compression.Algorithm compressAlgo;
   protected BloomType bloomType;
   private boolean inMemoryCF;
+
+  private User userOwner;
   // Writer options
   protected int numWriterThreads = DEFAULT_NUM_THREADS;
   protected int minColsPerKey, maxColsPerKey;
@@ -435,11 +441,14 @@ public class LoadTestTool extends AbstractHBaseTool {
     if (!isSkipInit) {
       initTestTable();
     }
-
     LoadTestDataGenerator dataGen = null;
     if (cmd.hasOption(OPT_GENERATOR)) {
       String[] clazzAndArgs = cmd.getOptionValue(OPT_GENERATOR).split(COLON);
       dataGen = getLoadGeneratorInstance(clazzAndArgs[0]);
+      if(dataGen instanceof LoadTestDataGeneratorWithACL) {
+        LOG.info("ACL is on");
+        userOwner = User.createUserForTesting(conf, "owner", new String[0]);
+      }
       String[] args = clazzAndArgs.length == 1 ? new String[0] : Arrays.copyOfRange(clazzAndArgs,
           1, clazzAndArgs.length);
       dataGen.initialize(args);
@@ -449,18 +458,50 @@ public class LoadTestTool extends AbstractHBaseTool {
           minColsPerKey, maxColsPerKey, COLUMN_FAMILY);
     }
 
+    if(userOwner != null) {
+      conf.set("hadoop.security.authorization", "false");
+      conf.set("hadoop.security.authentication", "simple");
+      LOG.info("Granting permission for the user " + userOwner.getShortName());
+      HTable table = new HTable(conf, tableName);
+      AccessControlProtos.Permission.Action[] actions = {
+          AccessControlProtos.Permission.Action.ADMIN,
+          AccessControlProtos.Permission.Action.CREATE, AccessControlProtos.Permission.Action.READ,
+          AccessControlProtos.Permission.Action.WRITE };
+
+      try {
+        AccessControlClient.grant(conf, table.getName(), userOwner.getShortName(), COLUMN_FAMILY,
+            null, actions);
+      } catch (Throwable e) {
+        LOG.fatal("Error in granting permission for the user " + userOwner.getShortName(), e);
+        return EXIT_FAILURE;
+      }
+    }
+
     if (isWrite) {
-      writerThreads = new MultiThreadedWriter(dataGen, conf, tableName);
+      if (userOwner != null) {
+        writerThreads = new MultiThreadedWriterWithACL(dataGen, conf, tableName, userOwner);
+      } else {
+        writerThreads = new MultiThreadedWriter(dataGen, conf, tableName);
+      }
       writerThreads.setMultiPut(isMultiPut);
     }
 
     if (isUpdate) {
-      updaterThreads = new MultiThreadedUpdater(dataGen, conf, tableName, updatePercent);
+      if (userOwner != null) {
+        updaterThreads = new MultiThreadedUpdaterWithACL(dataGen, conf, tableName, updatePercent,
+            userOwner);
+      } else {
+        updaterThreads = new MultiThreadedUpdater(dataGen, conf, tableName, updatePercent);
+      }
       updaterThreads.setBatchUpdate(isBatchUpdate);
     }
 
     if (isRead) {
-      readerThreads = new MultiThreadedReader(dataGen, conf, tableName, verifyPercent);
+      if (userOwner != null) {
+        readerThreads = new MultiThreadedReaderWithACL(dataGen, conf, tableName, verifyPercent);
+      } else {
+        readerThreads = new MultiThreadedReader(dataGen, conf, tableName, verifyPercent);
+      }
       readerThreads.setMaxErrors(maxReadErrors);
       readerThreads.setKeyWindow(keyWindow);
     }
@@ -533,7 +574,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     }
   }
 
-  static byte[] generateData(final Random r, int length) {
+  public static byte[] generateData(final Random r, int length) {
     byte [] b = new byte [length];
     int i = 0;
 

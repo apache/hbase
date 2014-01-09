@@ -38,6 +38,7 @@ public class LoadTestDataGeneratorWithVisibilityLabels extends DefaultDataGenera
 
   @Override
   public void initialize(String[] args) {
+    super.initialize(args);
     if (args.length < 1 || args.length > 2) {
       throw new IllegalArgumentException("LoadTestDataGeneratorWithVisibilityLabels can have "
           + "1 or 2 initialization arguments");
