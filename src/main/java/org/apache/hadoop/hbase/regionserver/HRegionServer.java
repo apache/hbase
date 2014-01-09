@@ -323,6 +323,10 @@ public class HRegionServer implements HRegionInterface,
     HRegionServer.responseSizeLimit = responseSizeLimit;
   }
 
+  // Cause artificial delay before region opening finishs, for testing purpose.
+  // It should always be 0 in production environment!
+  public static volatile long openRegionDelay = 0;
+
   /**
    * Starts a HRegionServer at the default location
    * @param conf
@@ -2216,6 +2220,30 @@ public class HRegionServer implements HRegionInterface,
                 "Opening Region");
           }
         }
+
+        if (openRegionDelay > 0) {
+          Thread.sleep(openRegionDelay);
+          LOG.debug("Slept for " + openRegionDelay + " seconds. Going to add "
+              + regionInfo.getRegionNameAsString() + " to online region list");
+        }
+        this.lock.writeLock().lock();
+        try {
+          // Abort opening region when server is shutting down.
+          // Reason:
+          // If we let region opening succeed, there could be a race condition that closeAllRegion()
+          // does not close this region so that edits behind flushing only exist in HLog but not in
+          // HFiles after the shutdown. Since master thinks it's a clean shutdown, HLog won't be
+          // replayed. Eventually we loses these edits. This bug is captured by replication verification.
+          if (isStopRequested()) {
+            throw new IOException("Server is shutting down, aborting open region!");
+          }
+          this.onlineRegions.put(mapKey, region);
+          region.setRegionServer(this);
+          region.setOpenDate(EnvironmentEdgeManager.currentTimeMillis());
+          this.regionsOpening.remove(mapKey);
+        } finally {
+          this.lock.writeLock().unlock();
+        }
       } catch (Throwable e) {
         Throwable t = cleanup(e,
           "Error opening " + regionInfo.getRegionNameAsString());
@@ -2240,15 +2268,6 @@ public class HRegionServer implements HRegionInterface,
         }
 
         return;
-      }
-      this.lock.writeLock().lock();
-      try {
-        this.onlineRegions.put(mapKey, region);
-        region.setRegionServer(this);
-        region.setOpenDate(EnvironmentEdgeManager.currentTimeMillis());
-        this.regionsOpening.remove(mapKey);
-      } finally {
-        this.lock.writeLock().unlock();
       }
     }
     try {
