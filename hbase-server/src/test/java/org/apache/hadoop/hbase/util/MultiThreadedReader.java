@@ -37,11 +37,11 @@ public class MultiThreadedReader extends MultiThreadedAction
 {
   private static final Log LOG = LogFactory.getLog(MultiThreadedReader.class);
 
-  private Set<HBaseReaderThread> readers = new HashSet<HBaseReaderThread>();
+  protected Set<HBaseReaderThread> readers = new HashSet<HBaseReaderThread>();
   private final double verifyPercent;
   private volatile boolean aborted;
 
-  private MultiThreadedWriterBase writer = null;
+  protected MultiThreadedWriterBase writer = null;
 
   /**
    * The number of keys verified in a sequence. This will never be larger than
@@ -65,8 +65,9 @@ public class MultiThreadedReader extends MultiThreadedAction
   public static final int DEFAULT_KEY_WINDOW = 0;
 
   protected AtomicLong numKeysVerified = new AtomicLong(0);
-  private AtomicLong numReadErrors = new AtomicLong(0);
-  private AtomicLong numReadFailures = new AtomicLong(0);
+  protected AtomicLong numReadErrors = new AtomicLong(0);
+  protected AtomicLong numReadFailures = new AtomicLong(0);
+  protected AtomicLong nullResult = new AtomicLong(0);
 
   private int maxErrors = DEFAULT_MAX_ERRORS;
   private int keyWindow = DEFAULT_KEY_WINDOW;
@@ -97,22 +98,26 @@ public class MultiThreadedReader extends MultiThreadedAction
       LOG.debug("Reading keys [" + startKey + ", " + endKey + ")");
     }
 
+    addReaderThreads(numThreads);
+    startThreads(readers);
+  }
+
+  protected void addReaderThreads(int numThreads) throws IOException {
     for (int i = 0; i < numThreads; ++i) {
       HBaseReaderThread reader = new HBaseReaderThread(i);
       readers.add(reader);
     }
-    startThreads(readers);
   }
 
   public class HBaseReaderThread extends Thread {
-    private final int readerId;
-    private final HTable table;
+    protected final int readerId;
+    protected final HTable table;
 
     /** The "current" key being read. Increases from startKey to endKey. */
     private long curKey;
 
     /** Time when the thread started */
-    private long startTimeMs;
+    protected long startTimeMs;
 
     /** If we are ahead of the writer and reading a random key. */
     private boolean readingRandomKey;
@@ -123,8 +128,12 @@ public class MultiThreadedReader extends MultiThreadedAction
      */
     public HBaseReaderThread(int readerId) throws IOException {
       this.readerId = readerId;
-      table = new HTable(conf, tableName);
+      table = createTable();
       setName(getClass().getSimpleName() + "_" + readerId);
+    }
+
+    protected HTable createTable() throws IOException {
+      return new HTable(conf, tableName);
     }
 
     @Override
@@ -132,12 +141,18 @@ public class MultiThreadedReader extends MultiThreadedAction
       try {
         runReader();
       } finally {
-        try {
-          table.close();
-        } catch (IOException e) {
-          LOG.error("Error closing table", e);
-        }
+        closeTable();
         numThreadsWorking.decrementAndGet();
+      }
+    }
+
+    protected void closeTable() {
+      try {
+        if (table != null) {
+          table.close();
+        }
+      } catch (IOException e) {
+        LOG.error("Error closing table", e);
       }
     }
 
@@ -238,7 +253,7 @@ public class MultiThreadedReader extends MultiThreadedAction
         if (verbose) {
           LOG.info("[" + readerId + "] " + "Querying key " + keyToRead + ", cfs " + cfsString);
         }
-        queryKey(get, RandomUtils.nextInt(100) < verifyPercent);
+        queryKey(get, RandomUtils.nextInt(100) < verifyPercent, keyToRead);
       } catch (IOException e) {
         numReadFailures.addAndGet(1);
         LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "")
@@ -248,12 +263,18 @@ public class MultiThreadedReader extends MultiThreadedAction
       return get;
     }
 
-    public void queryKey(Get get, boolean verify) throws IOException {
+    public void queryKey(Get get, boolean verify, long keyToRead) throws IOException {
       String rowKey = Bytes.toString(get.getRow());
 
       // read the data
       long start = System.currentTimeMillis();
       Result result = table.get(get);
+      getResultMetricUpdation(verify, rowKey, start, result, table, false);
+    }
+
+    protected void getResultMetricUpdation(boolean verify, String rowKey, long start,
+        Result result, HTable table, boolean isNullExpected)
+        throws IOException {
       totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
       numKeys.addAndGet(1);
       if (!result.isEmpty()) {
@@ -265,9 +286,13 @@ public class MultiThreadedReader extends MultiThreadedAction
              Bytes.toBytes(rowKey));
         LOG.info("Key = " + rowKey + ", RegionServer: "
             + hloc.getHostname());
+        if(isNullExpected) {
+          nullResult.incrementAndGet();
+          LOG.debug("Null result obtained for the key ="+rowKey);
+          return;
+        }
       }
-
-      boolean isOk = verifyResultAgainstDataGenerator(result, verify);
+      boolean isOk = verifyResultAgainstDataGenerator(result, verify, false);
       long numErrorsAfterThis = 0;
       if (isOk) {
         long cols = 0;
@@ -306,12 +331,17 @@ public class MultiThreadedReader extends MultiThreadedAction
     return numUniqueKeysVerified.get();
   }
 
+  public long getNullResultsCount() {
+    return nullResult.get();
+  }
+
   @Override
   protected String progressInfo() {
     StringBuilder sb = new StringBuilder();
     appendToStatus(sb, "verified", numKeysVerified.get());
     appendToStatus(sb, "READ FAILURES", numReadFailures.get());
     appendToStatus(sb, "READ ERRORS", numReadErrors.get());
+    appendToStatus(sb, "NULL RESULT", nullResult.get());
     return sb.toString();
   }
 }

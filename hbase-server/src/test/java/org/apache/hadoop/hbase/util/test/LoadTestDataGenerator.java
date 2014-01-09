@@ -39,6 +39,8 @@ public abstract class LoadTestDataGenerator {
   // which can be incremented later on during updates.
   public final static byte[] INCREMENT = "increment".getBytes();
 
+  protected String[] args;
+
   public LoadTestDataGenerator() {
 
   }
@@ -56,10 +58,12 @@ public abstract class LoadTestDataGenerator {
 
   /**
    * initialize the LoadTestDataGenerator
-   * @param args init args
+   *
+   * @param args
+   *          init args
    */
   public void initialize(String[] args) {
-
+    this.args = args;
   }
 
   /**
@@ -133,5 +137,13 @@ public abstract class LoadTestDataGenerator {
    */
   public Get beforeGet(long rowkeyBase, Get get) throws IOException {
     return get;
+  }
+
+  /**
+   * Return the arguments passed to the generator as list of object
+   * @return
+   */
+  public String[] getArgs() {
+    return this.args;
   }
 }

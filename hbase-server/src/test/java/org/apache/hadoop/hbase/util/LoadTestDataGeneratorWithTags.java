@@ -45,6 +45,7 @@ public class LoadTestDataGeneratorWithTags extends DefaultDataGenerator {
 
   @Override
   public void initialize(String[] args) {
+    super.initialize(args);
     if (args.length != 4) {
       throw new IllegalArgumentException("LoadTestDataGeneratorWithTags must have "
           + "4 initialization arguments. ie. minNumTags:maxNumTags:minTagLength:maxTagLength");

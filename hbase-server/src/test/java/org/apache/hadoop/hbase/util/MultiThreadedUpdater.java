@@ -56,7 +56,7 @@ import com.google.common.base.Preconditions;
 public class MultiThreadedUpdater extends MultiThreadedWriterBase {
   private static final Log LOG = LogFactory.getLog(MultiThreadedUpdater.class);
 
-  private Set<HBaseUpdaterThread> updaters = new HashSet<HBaseUpdaterThread>();
+  protected Set<HBaseUpdaterThread> updaters = new HashSet<HBaseUpdaterThread>();
 
   private MultiThreadedWriterBase writer = null;
   private boolean isBatchUpdate = false;
@@ -86,12 +86,16 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
       LOG.debug("Updating keys [" + startKey + ", " + endKey + ")");
     }
 
+    addUpdaterThreads(numThreads);
+
+    startThreads(updaters);
+  }
+
+  protected void addUpdaterThreads(int numThreads) throws IOException {
     for (int i = 0; i < numThreads; ++i) {
       HBaseUpdaterThread updater = new HBaseUpdaterThread(i);
       updaters.add(updater);
     }
-
-    startThreads(updaters);
   }
 
   private long getNextKeyToUpdate() {
@@ -115,12 +119,16 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
     }
   }
 
-  private class HBaseUpdaterThread extends Thread {
-    private final HTable table;
+  protected class HBaseUpdaterThread extends Thread {
+    protected final HTable table;
 
     public HBaseUpdaterThread(int updaterId) throws IOException {
       setName(getClass().getSimpleName() + "_" + updaterId);
-      table = new HTable(conf, tableName);
+      table = createTable();
+    }
+
+    protected HTable createTable() throws IOException {
+      return new HTable(conf, tableName);
     }
 
     public void run() {
@@ -151,67 +159,73 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                 numCols.addAndGet(1);
                 app = new Append(rowKey);
               }
-              Result result = null;
+              Get get = new Get(rowKey);
+              get.addFamily(cf);
               try {
-                Get get = new Get(rowKey);
-                get.addFamily(cf);
                 get = dataGenerator.beforeGet(rowKeyBase, get);
-                result = table.get(get);
-              } catch (IOException ie) {
-                LOG.warn("Failed to get the row for key = ["
-                  + rowKey + "], column family = [" + Bytes.toString(cf) + "]", ie);
+              } catch (Exception e) {
+                // Ideally wont happen
+                LOG.warn("Failed to modify the get from the load generator  = [" + get.getRow()
+                    + "], column family = [" + Bytes.toString(cf) + "]", e);
               }
+              Result result = getRow(get, rowKeyBase, cf);
               Map<byte[], byte[]> columnValues =
                 result != null ? result.getFamilyMap(cf) : null;
               if (columnValues == null) {
-                failedKeySet.add(rowKeyBase);
-                LOG.error("Failed to update the row with key = ["
-                  + rowKey + "], since we could not get the original row");
+                int specialPermCellInsertionFactor = Integer.parseInt(dataGenerator.getArgs()[1]);
+                if (((int) rowKeyBase % specialPermCellInsertionFactor == 0)) {
+                  LOG.info("Null result expected for the rowkey " + Bytes.toString(rowKey));
+                } else {
+                  failedKeySet.add(rowKeyBase);
+                  LOG.error("Failed to update the row with key = [" + rowKey
+                      + "], since we could not get the original row");
+                }
               }
-              for (byte[] column : columnValues.keySet()) {
-                if (Bytes.equals(column, INCREMENT)
-                    || Bytes.equals(column, MUTATE_INFO)) {
-                  continue;
-                }
-                MutationType mt = MutationType.valueOf(
-                  RandomUtils.nextInt(MutationType.values().length));
-                long columnHash = Arrays.hashCode(column);
-                long hashCode = cfHash + columnHash;
-                byte[] hashCodeBytes = Bytes.toBytes(hashCode);
-                byte[] checkedValue = HConstants.EMPTY_BYTE_ARRAY;
-                if (hashCode % 2 == 0) {
-                  Cell kv = result.getColumnLatestCell(cf, column);
-                  checkedValue = kv != null ? CellUtil.cloneValue(kv) : null;
-                  Preconditions.checkNotNull(checkedValue,
-                    "Column value to be checked should not be null");
-                }
-                buf.setLength(0); // Clear the buffer
-                buf.append("#").append(Bytes.toString(column)).append(":");
-                ++columnCount;
-                switch (mt) {
-                case PUT:
-                  Put put = new Put(rowKey);
-                  put.add(cf, column, hashCodeBytes);
-                  mutate(table, put, rowKeyBase, rowKey, cf, column, checkedValue);
-                  buf.append(MutationType.PUT.getNumber());
-                  break;
-                case DELETE:
-                  Delete delete = new Delete(rowKey);
-                  // Delete all versions since a put
-                  // could be called multiple times if CM is used
-                  delete.deleteColumns(cf, column);
-                  mutate(table, delete, rowKeyBase, rowKey, cf, column, checkedValue);
-                  buf.append(MutationType.DELETE.getNumber());
-                  break;
-                default:
-                  buf.append(MutationType.APPEND.getNumber());
-                  app.add(cf, column, hashCodeBytes);
-                }
-                app.add(cf, MUTATE_INFO, Bytes.toBytes(buf.toString()));
-                if (!isBatchUpdate) {
-                  mutate(table, app, rowKeyBase);
-                  numCols.addAndGet(1);
-                  app = new Append(rowKey);
+              if(columnValues != null) {
+                for (byte[] column : columnValues.keySet()) {
+                  if (Bytes.equals(column, INCREMENT) || Bytes.equals(column, MUTATE_INFO)) {
+                    continue;
+                  }
+                  MutationType mt = MutationType
+                      .valueOf(RandomUtils.nextInt(MutationType.values().length));
+                  long columnHash = Arrays.hashCode(column);
+                  long hashCode = cfHash + columnHash;
+                  byte[] hashCodeBytes = Bytes.toBytes(hashCode);
+                  byte[] checkedValue = HConstants.EMPTY_BYTE_ARRAY;
+                  if (hashCode % 2 == 0) {
+                    Cell kv = result.getColumnLatestCell(cf, column);
+                    checkedValue = kv != null ? CellUtil.cloneValue(kv) : null;
+                    Preconditions.checkNotNull(checkedValue,
+                        "Column value to be checked should not be null");
+                  }
+                  buf.setLength(0); // Clear the buffer
+                  buf.append("#").append(Bytes.toString(column)).append(":");
+                  ++columnCount;
+                  switch (mt) {
+                  case PUT:
+                    Put put = new Put(rowKey);
+                    put.add(cf, column, hashCodeBytes);
+                    mutate(table, put, rowKeyBase, rowKey, cf, column, checkedValue);
+                    buf.append(MutationType.PUT.getNumber());
+                    break;
+                  case DELETE:
+                    Delete delete = new Delete(rowKey);
+                    // Delete all versions since a put
+                    // could be called multiple times if CM is used
+                    delete.deleteColumns(cf, column);
+                    mutate(table, delete, rowKeyBase, rowKey, cf, column, checkedValue);
+                    buf.append(MutationType.DELETE.getNumber());
+                    break;
+                  default:
+                    buf.append(MutationType.APPEND.getNumber());
+                    app.add(cf, column, hashCodeBytes);
+                  }
+                  app.add(cf, MUTATE_INFO, Bytes.toBytes(buf.toString()));
+                  if (!isBatchUpdate) {
+                    mutate(table, app, rowKeyBase);
+                    numCols.addAndGet(1);
+                    app = new Append(rowKey);
+                  }
                 }
               }
             }
@@ -230,12 +244,72 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
           }
         }
       } finally {
-        try {
-          table.close();
-        } catch (IOException e) {
-          LOG.error("Error closing table", e);
-        }
+        closeHTable();
         numThreadsWorking.decrementAndGet();
+      }
+    }
+
+    protected void closeHTable() {
+      try {
+        if (table != null) {
+          table.close();
+        }
+      } catch (IOException e) {
+        LOG.error("Error closing table", e);
+      }
+    }
+
+    protected Result getRow(Get get, long rowKeyBase, byte[] cf) {
+      Result result = null;
+      try {
+        result = table.get(get);
+      } catch (IOException ie) {
+        LOG.warn(
+            "Failed to get the row for key = [" + get.getRow() + "], column family = ["
+                + Bytes.toString(cf) + "]", ie);
+      }
+      return result;
+    }
+
+    public void mutate(HTable table, Mutation m, long keyBase) {
+      mutate(table, m, keyBase, null, null, null, null);
+    }
+
+    public void mutate(HTable table, Mutation m,
+        long keyBase, byte[] row, byte[] cf, byte[] q, byte[] v) {
+      long start = System.currentTimeMillis();
+      try {
+        m = dataGenerator.beforeMutate(keyBase, m);
+        if (m instanceof Increment) {
+          table.increment((Increment)m);
+        } else if (m instanceof Append) {
+          table.append((Append)m);
+        } else if (m instanceof Put) {
+          table.checkAndPut(row, cf, q, v, (Put)m);
+        } else if (m instanceof Delete) {
+          table.checkAndDelete(row, cf, q, v, (Delete)m);
+        } else {
+          throw new IllegalArgumentException(
+            "unsupported mutation " + m.getClass().getSimpleName());
+        }
+        totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+      } catch (IOException e) {
+        failedKeySet.add(keyBase);
+        String exceptionInfo;
+        if (e instanceof RetriesExhaustedWithDetailsException) {
+          RetriesExhaustedWithDetailsException aggEx = (RetriesExhaustedWithDetailsException) e;
+          exceptionInfo = aggEx.getExhaustiveDescription();
+        } else {
+          StringWriter stackWriter = new StringWriter();
+          PrintWriter pw = new PrintWriter(stackWriter);
+          e.printStackTrace(pw);
+          pw.flush();
+          exceptionInfo = StringUtils.stringifyException(e);
+        }
+        LOG.error("Failed to mutate: " + keyBase + " after " +
+            (System.currentTimeMillis() - start) +
+          "ms; region information: " + getRegionDebugInfoSafe(table, m.getRow()) + "; errors: "
+            + exceptionInfo);
       }
     }
   }

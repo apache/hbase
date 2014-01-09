@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
@@ -36,10 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
-import org.apache.hadoop.util.StringUtils;
 
 /** Creates multiple threads that write key/values into the */
 public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
@@ -169,31 +164,6 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
 
   public int getNumWriteFailures() {
     return failedKeySet.size();
-  }
-
-  public void insert(HTable table, Put put, long keyBase) {
-    long start = System.currentTimeMillis();
-    try {
-      put = (Put) dataGenerator.beforeMutate(keyBase, put);
-      table.put(put);
-      totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
-    } catch (IOException e) {
-      failedKeySet.add(keyBase);
-      String exceptionInfo;
-      if (e instanceof RetriesExhaustedWithDetailsException) {
-        RetriesExhaustedWithDetailsException aggEx = (RetriesExhaustedWithDetailsException)e;
-        exceptionInfo = aggEx.getExhaustiveDescription();
-      } else {
-        StringWriter stackWriter = new StringWriter();
-        PrintWriter pw = new PrintWriter(stackWriter);
-        e.printStackTrace(pw);
-        pw.flush();
-        exceptionInfo = StringUtils.stringifyException(e);
-      }
-      LOG.error("Failed to insert: " + keyBase + " after " + (System.currentTimeMillis() - start) +
-        "ms; region information: " + getRegionDebugInfoSafe(table, put.getRow()) + "; errors: "
-          + exceptionInfo);
-    }
   }
 
   /**
