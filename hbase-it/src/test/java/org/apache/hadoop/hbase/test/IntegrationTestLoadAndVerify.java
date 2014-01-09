@@ -109,7 +109,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
 
   private static final int SCANNER_CACHING = 500;
 
-  private IntegrationTestingUtility util;
+  protected IntegrationTestingUtility util;
 
   private String toRun = null;
 
@@ -152,15 +152,15 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
   public static class LoadMapper
       extends Mapper<NullWritable, NullWritable, NullWritable, NullWritable>
   {
-    private long recordsToWrite;
-    private HTable table;
-    private Configuration conf;
-    private int numBackReferencesPerRow;
-    private String shortTaskId;
+    protected long recordsToWrite;
+    protected HTable table;
+    protected Configuration conf;
+    protected int numBackReferencesPerRow;
+    protected String shortTaskId;
 
-    private Random rand = new Random();
+    protected Random rand = new Random();
 
-    private Counter rowsWritten, refsWritten;
+    protected Counter rowsWritten, refsWritten;
 
     @Override
     public void setup(Context context) throws IOException {
@@ -297,7 +297,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     }
   }
 
-  private void doLoad(Configuration conf, HTableDescriptor htd) throws Exception {
+  protected Job doLoad(Configuration conf, HTableDescriptor htd) throws Exception {
     Path outputDir = getTestDir(TEST_NAME, "load-output");
 
     NMapInputFormat.setNumMapTasks(conf, conf.getInt(NUM_MAP_TASKS_KEY, NUM_MAP_TASKS_DEFAULT));
@@ -306,7 +306,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     Job job = new Job(conf);
     job.setJobName(TEST_NAME + " Load for " + htd.getTableName());
     job.setJarByClass(this.getClass());
-    job.setMapperClass(LoadMapper.class);
+    setMapperClass(job);
     job.setInputFormatClass(NMapInputFormat.class);
     job.setNumReduceTasks(0);
     setJobScannerConf(job);
@@ -317,9 +317,14 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
     TableMapReduceUtil.initCredentials(job);
     assertTrue(job.waitForCompletion(true));
+    return job;
   }
 
-  private void doVerify(Configuration conf, HTableDescriptor htd) throws Exception {
+  protected void setMapperClass(Job job) {
+    job.setMapperClass(LoadMapper.class);
+  }
+
+  protected void doVerify(Configuration conf, HTableDescriptor htd) throws Exception {
     Path outputDir = getTestDir(TEST_NAME, "verify-output");
 
     Job job = new Job(conf);
