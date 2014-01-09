@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -593,6 +594,7 @@ public class TestAssignmentManagerOnCluster {
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaEditor.addRegionToMeta(meta, hri);
+      meta.close();
 
       MyRegionObserver.postOpenEnabled.set(true);
       MyRegionObserver.postOpenCalled = false;
@@ -619,7 +621,21 @@ public class TestAssignmentManagerOnCluster {
       // racing. This test is to make sure this scenario
       // is handled properly.
       MyRegionObserver.postOpenEnabled.set(false);
-      am.assign(hri, true, true);
+      ServerName destServerName = null;
+      int numRS = TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size();
+      for (int i = 0; i < numRS; i++) {
+        HRegionServer destServer = TEST_UTIL.getHBaseCluster().getRegionServer(i);
+        if (!destServer.getServerName().equals(oldServerName)) {
+          destServerName = destServer.getServerName();
+          break;
+        }
+      }
+      assertNotNull(destServerName);
+      assertFalse("Region should be assigned on a new region server",
+        oldServerName.equals(destServerName));
+      List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+      regions.add(hri);
+      am.assign(destServerName, regions);
 
       // let's check if it's assigned after it's out of transition
       am.waitOnRegionToClearRegionsInTransition(hri);
@@ -628,7 +644,7 @@ public class TestAssignmentManagerOnCluster {
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 200);
-      assertFalse("Region should assigned on a new region server",
+      assertFalse("Region should be assigned on a new region server",
         oldServerName.equals(serverName));
     } finally {
       MyRegionObserver.postOpenEnabled.set(false);
