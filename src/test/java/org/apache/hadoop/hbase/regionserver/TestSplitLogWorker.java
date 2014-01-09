@@ -56,6 +56,7 @@ public class TestSplitLogWorker {
   static {
     Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
   }
+  private static final int WAIT_TIME = 15000;
   private final static HBaseTestingUtility TEST_UTIL =
     new HBaseTestingUtility();
   private ZooKeeperWatcher zkw;
@@ -126,7 +127,7 @@ public class TestSplitLogWorker {
 
   };
 
-  @Test
+  @Test(timeout=60000)
   public void testAcquireTaskAtStartup() throws Exception {
     LOG.info("testAcquireTaskAtStartup");
     ZKSplitLog.Counters.resetCounters();
@@ -139,7 +140,7 @@ public class TestSplitLogWorker {
       "rs", neverEndingTask);
     slw.start();
     try {
-      waitForCounter(tot_wkr_task_acquired, 0, 1, 1500);
+      waitForCounter(tot_wkr_task_acquired, 0, 1, WAIT_TIME);
       assertTrue(TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
         ZKSplitLog.getEncodedNodeName(zkw, "tatas")), "rs"));
     } finally {
@@ -151,14 +152,14 @@ public class TestSplitLogWorker {
   throws InterruptedException {
     if (slw != null) {
       slw.stop();
-      slw.worker.join(3000);
+      slw.worker.join(WAIT_TIME);
       if (slw.worker.isAlive()) {
         assertTrue(("Could not stop the worker thread slw=" + slw) == null);
       }
     }
   }
 
-  @Test
+  @Test(timeout=60000)
   public void testRaceForTask() throws Exception {
     LOG.info("testRaceForTask");
     ZKSplitLog.Counters.resetCounters();
@@ -174,10 +175,10 @@ public class TestSplitLogWorker {
     slw1.start();
     slw2.start();
     try {
-      waitForCounter(tot_wkr_task_acquired, 0, 1, 1500);
+      waitForCounter(tot_wkr_task_acquired, 0, 1, WAIT_TIME);
       // Assert that either the tot_wkr_failed_to_grab_task_owned count was set of if
       // not it, that we fell through to the next counter in line and it was set.
-      assertTrue(waitForCounterBoolean(tot_wkr_failed_to_grab_task_owned, 0, 1, 1500) ||
+      assertTrue(waitForCounterBoolean(tot_wkr_failed_to_grab_task_owned, 0, 1, WAIT_TIME) ||
         tot_wkr_failed_to_grab_task_lost_race.get() == 1);
       assertTrue(TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
         ZKSplitLog.getEncodedNodeName(zkw, "trft")), "svr1") ||
@@ -189,7 +190,7 @@ public class TestSplitLogWorker {
     }
   }
 
-  @Test
+  @Test(timeout=60000)
   public void testPreemptTask() throws Exception {
     LOG.info("testPreemptTask");
     ZKSplitLog.Counters.resetCounters();
@@ -206,20 +207,20 @@ public class TestSplitLogWorker {
         TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
-      waitForCounter(tot_wkr_task_acquired, 0, 1, 1500);
+      waitForCounter(tot_wkr_task_acquired, 0, 1, WAIT_TIME);
       assertEquals(1, slw.taskReadySeq);
       assertTrue(TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
         ZKSplitLog.getEncodedNodeName(zkw, "tpt_task")), "tpt_svr"));
 
       ZKUtil.setData(zkw, ZKSplitLog.getEncodedNodeName(zkw, "tpt_task"),
         TaskState.TASK_UNASSIGNED.get("manager"));
-      waitForCounter(tot_wkr_preempt_task, 0, 1, 1500);
+      waitForCounter(tot_wkr_preempt_task, 0, 1, WAIT_TIME);
     } finally {
       stopSplitLogWorker(slw);
     }
   }
 
-  @Test
+  @Test(timeout=60000)
   public void testMultipleTasks() throws Exception {
     LOG.info("testMultipleTasks");
     ZKSplitLog.Counters.resetCounters();
@@ -234,7 +235,7 @@ public class TestSplitLogWorker {
         TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
-      waitForCounter(tot_wkr_task_acquired, 0, 1, 1500);
+      waitForCounter(tot_wkr_task_acquired, 0, 1, WAIT_TIME);
       // now the worker is busy doing the above task
 
       // create another task
@@ -245,9 +246,9 @@ public class TestSplitLogWorker {
       // preempt the first task, have it owned by another worker
       ZKUtil.setData(zkw, ZKSplitLog.getEncodedNodeName(zkw, "tmt_task"),
         TaskState.TASK_OWNED.get("another-worker"));
-      waitForCounter(tot_wkr_preempt_task, 0, 1, 1500);
+      waitForCounter(tot_wkr_preempt_task, 0, 1, WAIT_TIME);
 
-      waitForCounter(tot_wkr_task_acquired, 1, 2, 1500);
+      waitForCounter(tot_wkr_task_acquired, 1, 2, WAIT_TIME);
       assertEquals(2, slw.taskReadySeq);
       assertTrue(TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
         ZKSplitLog.getEncodedNodeName(zkw, "tmt_task_2")), "tmt_svr"));
@@ -256,7 +257,7 @@ public class TestSplitLogWorker {
     }
   }
 
-  @Test
+  @Test(timeout=60000)
   public void testRescan() throws Exception {
     LOG.info("testRescan");
     ZKSplitLog.Counters.resetCounters();
@@ -271,12 +272,12 @@ public class TestSplitLogWorker {
       TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
       CreateMode.PERSISTENT);
 
-    waitForCounter(tot_wkr_task_acquired, 0, 1, 1500);
+    waitForCounter(tot_wkr_task_acquired, 0, 1, WAIT_TIME);
     // now the worker is busy doing the above task
 
     // preempt the task, have it owned by another worker
     ZKUtil.setData(zkw, task, TaskState.TASK_UNASSIGNED.get("manager"));
-    waitForCounter(tot_wkr_preempt_task, 0, 1, 1500);
+    waitForCounter(tot_wkr_preempt_task, 0, 1, WAIT_TIME);
 
     // create a RESCAN node
     String rescan = ZKSplitLog.getEncodedNodeName(zkw, "RESCAN");
@@ -284,13 +285,13 @@ public class TestSplitLogWorker {
       TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
       CreateMode.PERSISTENT_SEQUENTIAL);
 
-    waitForCounter(tot_wkr_task_acquired, 1, 2, 1500);
+    waitForCounter(tot_wkr_task_acquired, 1, 2, WAIT_TIME);
     // RESCAN node might not have been processed if the worker became busy
     // with the above task. preempt the task again so that now the RESCAN
     // node is processed
     ZKUtil.setData(zkw, task, TaskState.TASK_UNASSIGNED.get("manager"));
-    waitForCounter(tot_wkr_preempt_task, 1, 2, 1500);
-    waitForCounter(tot_wkr_task_acquired_rescan, 0, 1, 1500);
+    waitForCounter(tot_wkr_preempt_task, 1, 2, WAIT_TIME);
+    waitForCounter(tot_wkr_task_acquired_rescan, 0, 1, WAIT_TIME);
 
     List<String> nodes = ZKUtil.listChildrenNoWatch(zkw, zkw.splitLogZNode);
     LOG.debug(nodes);
