@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -31,6 +25,12 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
  * <p>Contains a set of methods for the collaboration between the start/stop scripts and the
@@ -146,6 +146,7 @@ public class ZNodeClearer {
     String znodeFileContent;
     try {
       znodeFileContent = ZNodeClearer.readMyEphemeralNodeOnDisk();
+      return MasterAddressTracker.deleteIfEquals(zkw, znodeFileContent);
     } catch (FileNotFoundException fnfe) {
       // If no file, just keep going -- return success.
       LOG.warn("Can't find the znode file; presume non-fatal", fnfe);
@@ -156,7 +157,5 @@ public class ZNodeClearer {
     } finally {
       zkw.close();
     }
-
-    return MasterAddressTracker.deleteIfEquals(zkw, znodeFileContent);
   }
 }
