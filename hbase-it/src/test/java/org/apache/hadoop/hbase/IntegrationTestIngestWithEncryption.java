@@ -18,26 +18,19 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.security.Key;
-import java.security.SecureRandom;
 
-import javax.crypto.spec.SecretKeySpec;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
-import org.apache.hadoop.hbase.io.crypto.aes.AES;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderV3;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV3;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -47,65 +40,67 @@ import org.junit.experimental.categories.Category;
 @Category(IntegrationTests.class)
 public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
 
-  private static final Log LOG;
   static {
+    // These log level changes are only useful when running on a localhost
+    // cluster.
     Logger.getLogger(HFileReaderV3.class).setLevel(Level.TRACE);
     Logger.getLogger(HFileWriterV3.class).setLevel(Level.TRACE);
     Logger.getLogger(SecureProtobufLogReader.class).setLevel(Level.TRACE);
     Logger.getLogger(SecureProtobufLogWriter.class).setLevel(Level.TRACE);
-    LOG = LogFactory.getLog(IntegrationTestIngestWithEncryption.class);
+  }
+
+  @Override
+  public void setUpCluster() throws Exception {
+    util = getTestingUtil(null);
+    Configuration conf = util.getConfiguration();
+    conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
+    if (!util.isDistributedCluster()) {
+      // Inject the test key provider and WAL alternative if running on a
+      // localhost cluster; otherwise, whether or not the schema change below
+      // takes effect depends on the distributed cluster site configuration.
+      conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+      conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
+      conf.setClass("hbase.regionserver.hlog.reader.impl", SecureProtobufLogReader.class,
+        HLog.Reader.class);
+      conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
+        HLog.Writer.class);
+      conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
+    }
+    super.setUpCluster();
   }
 
   @Before
   @Override
   public void setUp() throws Exception {
-    // Inject test key provider
-    // Set up configuration
-    IntegrationTestingUtility testUtil = getTestingUtil(conf);
-    testUtil.getConfiguration().setInt("hfile.format.version", 3);
-    testUtil.getConfiguration().set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
-      KeyProviderForTesting.class.getName());
-    testUtil.getConfiguration().set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-    testUtil.getConfiguration().setClass("hbase.regionserver.hlog.reader.impl",
-      SecureProtobufLogReader.class, HLog.Reader.class);
-    testUtil.getConfiguration().setClass("hbase.regionserver.hlog.writer.impl",
-      SecureProtobufLogWriter.class, HLog.Writer.class);
-    testUtil.getConfiguration().setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
-    // Flush frequently
-    testUtil.getConfiguration().setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, 120000);
-
     // Initialize the cluster. This invokes LoadTestTool -init_only, which
     // will create the test table, appropriately pre-split
     super.setUp();
 
-    // Create the test encryption key
-    SecureRandom rng = new SecureRandom();
-    byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    rng.nextBytes(keyBytes);
-    Key cfKey = new SecretKeySpec(keyBytes, "AES");
-
     // Update the test table schema so HFiles from this point will be written with
     // encryption features enabled.
-    final HBaseAdmin admin = testUtil.getHBaseAdmin();
+    final HBaseAdmin admin = util.getHBaseAdmin();
     HTableDescriptor tableDescriptor =
         new HTableDescriptor(admin.getTableDescriptor(Bytes.toBytes(getTablename())));
     for (HColumnDescriptor columnDescriptor: tableDescriptor.getColumnFamilies()) {
       columnDescriptor.setEncryptionType("AES");
-      columnDescriptor.setEncryptionKey(EncryptionUtil.wrapKey(testUtil.getConfiguration(),
-        "hbase", cfKey));
       LOG.info("Updating CF schema for " + getTablename() + "." +
         columnDescriptor.getNameAsString());
       admin.disableTable(getTablename());
       admin.modifyColumn(getTablename(), columnDescriptor);
       admin.enableTable(getTablename());
-      testUtil.waitFor(10000, 1000, true, new Predicate<IOException>() {
+      util.waitFor(30000, 1000, true, new Predicate<IOException>() {
         @Override
         public boolean evaluate() throws IOException {
           return admin.isTableAvailable(getTablename());
         }
       });
     }
-
   }
 
+  public static void main(String[] args) throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    IntegrationTestingUtility.setUseDistributedCluster(conf);
+    int ret = ToolRunner.run(conf, new IntegrationTestIngestWithEncryption(), args);
+    System.exit(ret);
+  }
 }
