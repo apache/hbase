@@ -277,17 +277,16 @@ public class TestMultiParallel {
     List<JVMClusterUtil.RegionServerThread> liveRSs =
       UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
     int count = 0;
+    int regionCount = 0;
     for (JVMClusterUtil.RegionServerThread t: liveRSs) {
       count++;
+      regionCount += t.getRegionServer().getOnlineRegions().size();
       LOG.info("Count=" + count + ", Alive=" + t.getRegionServer());
     }
     LOG.info("Count=" + count);
     Assert.assertEquals("Server count=" + count + ", abort=" + doAbort,
         (doAbort ? (liveRScount - 1) : liveRScount), count);
-    for (JVMClusterUtil.RegionServerThread t: liveRSs) {
-      int regions = t.getRegionServer().getOnlineRegions().size();
-      Assert.assertTrue("Count of regions=" + regions, regions > 10);
-    }
+    Assert.assertTrue("Count of regions=" + regionCount, regionCount >= 25);
     table.close();
     LOG.info("done");
   }
