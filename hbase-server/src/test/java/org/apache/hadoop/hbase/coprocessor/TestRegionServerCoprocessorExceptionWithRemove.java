@@ -107,6 +107,9 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
       put.add(TEST_FAMILY, ROW, ROW);
       table.put(put);
       table.flushCommits();
+      // We may need two puts to reliably get an exception
+      table.put(put);
+      table.flushCommits();
     } catch (IOException e) {
       threwIOE = true;
     } finally {
