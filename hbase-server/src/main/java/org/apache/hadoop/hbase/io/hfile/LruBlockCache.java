@@ -101,6 +101,16 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
   static final String LRU_MIN_FACTOR_CONFIG_NAME = "hbase.lru.blockcache.min.factor";
   static final String LRU_ACCEPTABLE_FACTOR_CONFIG_NAME = "hbase.lru.blockcache.acceptable.factor";
+  static final String LRU_SINGLE_PERCENTAGE_CONFIG_NAME = "hbase.lru.blockcache.single.percentage";
+  static final String LRU_MULTI_PERCENTAGE_CONFIG_NAME = "hbase.lru.blockcache.multi.percentage";
+  static final String LRU_MEMORY_PERCENTAGE_CONFIG_NAME = "hbase.lru.blockcache.memory.percentage";
+
+  /**
+   * Configuration key to force data-block always(except in-memory are too much)
+   * cached in memory for in-memory hfile, unlike inMemory, which is a column-family
+   * configuration, inMemoryForceMode is a cluster-wide configuration
+   */
+  static final String LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME = "hbase.lru.rs.inmemoryforcemode";
 
   /** Default Configuration Parameters*/
 
@@ -116,6 +126,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
   static final float DEFAULT_SINGLE_FACTOR = 0.25f;
   static final float DEFAULT_MULTI_FACTOR = 0.50f;
   static final float DEFAULT_MEMORY_FACTOR = 0.25f;
+
+  static final boolean DEFAULT_IN_MEMORY_FORCE_MODE = false;
 
   /** Statistics thread */
   static final int statThreadPeriod = 60 * 5;
@@ -176,6 +188,9 @@ public class LruBlockCache implements BlockCache, HeapSize {
   /** Overhead of the structure itself */
   private long overhead;
 
+  /** Whether in-memory hfile's data block has higher priority when evicting */
+  private boolean forceInMemory;
+
   /** Where to send victims (blocks evicted from the cache) */
   private BucketCache victimHandler = null;
 
@@ -200,8 +215,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
         (int)Math.ceil(1.2*maxSize/blockSize),
         DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL,
         DEFAULT_MIN_FACTOR, DEFAULT_ACCEPTABLE_FACTOR,
-        DEFAULT_SINGLE_FACTOR, DEFAULT_MULTI_FACTOR,
-        DEFAULT_MEMORY_FACTOR);
+        DEFAULT_SINGLE_FACTOR,
+        DEFAULT_MULTI_FACTOR,
+        DEFAULT_MEMORY_FACTOR,
+        false
+        );
   }
 
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread, Configuration conf) {
@@ -211,9 +229,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
         DEFAULT_CONCURRENCY_LEVEL,
         conf.getFloat(LRU_MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR),
         conf.getFloat(LRU_ACCEPTABLE_FACTOR_CONFIG_NAME, DEFAULT_ACCEPTABLE_FACTOR),
-        DEFAULT_SINGLE_FACTOR,
-        DEFAULT_MULTI_FACTOR,
-        DEFAULT_MEMORY_FACTOR);
+        conf.getFloat(LRU_SINGLE_PERCENTAGE_CONFIG_NAME, DEFAULT_SINGLE_FACTOR),
+        conf.getFloat(LRU_MULTI_PERCENTAGE_CONFIG_NAME, DEFAULT_MULTI_FACTOR),
+        conf.getFloat(LRU_MEMORY_PERCENTAGE_CONFIG_NAME, DEFAULT_MEMORY_FACTOR),
+        conf.getBoolean(LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME, DEFAULT_IN_MEMORY_FORCE_MODE)
+        );
   }
 
   public LruBlockCache(long maxSize, long blockSize, Configuration conf) {
@@ -236,11 +256,12 @@ public class LruBlockCache implements BlockCache, HeapSize {
    */
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread,
       int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
-      float minFactor, float acceptableFactor,
-      float singleFactor, float multiFactor, float memoryFactor) {
-    if(singleFactor + multiFactor + memoryFactor != 1) {
+      float minFactor, float acceptableFactor, float singleFactor,
+      float multiFactor, float memoryFactor, boolean forceInMemory) {
+    if(singleFactor + multiFactor + memoryFactor != 1 ||
+        singleFactor < 0 || multiFactor < 0 || memoryFactor < 0) {
       throw new IllegalArgumentException("Single, multi, and memory factors " +
-          " should total 1.0");
+          " should be non-negative and total 1.0");
     }
     if(minFactor >= acceptableFactor) {
       throw new IllegalArgumentException("minFactor must be smaller than acceptableFactor");
@@ -250,6 +271,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     }
     this.maxSize = maxSize;
     this.blockSize = blockSize;
+    this.forceInMemory = forceInMemory;
     map = new ConcurrentHashMap<BlockCacheKey,CachedBlock>(mapInitialSize,
         mapLoadFactor, mapConcurrencyLevel);
     this.minFactor = minFactor;
@@ -497,25 +519,57 @@ public class LruBlockCache implements BlockCache, HeapSize {
         }
       }
 
-      PriorityQueue<BlockBucket> bucketQueue =
-        new PriorityQueue<BlockBucket>(3);
-
-      bucketQueue.add(bucketSingle);
-      bucketQueue.add(bucketMulti);
-      bucketQueue.add(bucketMemory);
-
-      int remainingBuckets = 3;
       long bytesFreed = 0;
-
-      BlockBucket bucket;
-      while((bucket = bucketQueue.poll()) != null) {
-        long overflow = bucket.overflow();
-        if(overflow > 0) {
-          long bucketBytesToFree = Math.min(overflow,
-            (bytesToFree - bytesFreed) / remainingBuckets);
-          bytesFreed += bucket.free(bucketBytesToFree);
+      if (forceInMemory || memoryFactor > 0.999f) {
+        long s = bucketSingle.totalSize();
+        long m = bucketMulti.totalSize();
+        if (bytesToFree > (s + m)) {
+          // this means we need to evict blocks in memory bucket to make room,
+          // so the single and multi buckets will be emptied
+          bytesFreed = bucketSingle.free(s);
+          bytesFreed += bucketMulti.free(m);
+          bytesFreed += bucketMemory.free(bytesToFree - bytesFreed);
+        } else {
+          // this means no need to evict block in memory bucket,
+          // and we try best to make the ratio between single-bucket and
+          // multi-bucket is 1:2
+          long bytesRemain = s + m - bytesToFree;
+          if (3 * s <= bytesRemain) {
+            // single-bucket is small enough that no eviction happens for it
+            // hence all eviction goes from multi-bucket
+            bytesFreed = bucketMulti.free(bytesToFree);
+          } else if (3 * m <= 2 * bytesRemain) {
+            // multi-bucket is small enough that no eviction happens for it
+            // hence all eviction goes from single-bucket
+            bytesFreed = bucketSingle.free(bytesToFree);
+          } else {
+            // both buckets need to evict some blocks
+            bytesFreed = bucketSingle.free(s - bytesRemain / 3);
+            if (bytesFreed < bytesToFree) {
+              bytesFreed += bucketMulti.free(bytesToFree - bytesFreed);
+            }
+          }
         }
-        remainingBuckets--;
+      } else {
+        PriorityQueue<BlockBucket> bucketQueue =
+          new PriorityQueue<BlockBucket>(3);
+
+        bucketQueue.add(bucketSingle);
+        bucketQueue.add(bucketMulti);
+        bucketQueue.add(bucketMemory);
+
+        int remainingBuckets = 3;
+
+        BlockBucket bucket;
+        while((bucket = bucketQueue.poll()) != null) {
+          long overflow = bucket.overflow();
+          if(overflow > 0) {
+            long bucketBytesToFree = Math.min(overflow,
+                (bytesToFree - bytesFreed) / remainingBuckets);
+            bytesFreed += bucket.free(bucketBytesToFree);
+          }
+          remainingBuckets--;
+        }
       }
 
       if (LOG.isTraceEnabled()) {
