@@ -38,8 +38,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
@@ -55,7 +53,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.ByteString;
 
 @Category(MediumTests.class)
@@ -97,21 +94,13 @@ public class TestVisibilityLabelsWithACL {
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
     NORMAL_USER1 = User.createUserForTesting(conf, "user1", new String[] {});
     NORMAL_USER2 = User.createUserForTesting(conf, "user2", new String[] {});
-    // Grant NORMAL_USER EXEC privilege on the labels table. For the purposes of this
+    // Grant users EXEC privilege on the labels table. For the purposes of this
     // test, we want to insure that access is denied even with the ability to access
     // the endpoint.
-    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    try {
-      BlockingRpcChannel service = acl.coprocessorService(LABELS_TABLE_NAME.getName());
-      AccessControlService.BlockingInterface protocol =
-        AccessControlService.newBlockingStub(service);
-      ProtobufUtil.grant(protocol, NORMAL_USER1.getShortName(), LABELS_TABLE_NAME, null, null,
-        Permission.Action.EXEC);
-      ProtobufUtil.grant(protocol, NORMAL_USER2.getShortName(), LABELS_TABLE_NAME, null, null,
-          Permission.Action.EXEC);
-    } finally {
-      acl.close();
-    }
+    SecureTestUtil.grantOnTable(TEST_UTIL, NORMAL_USER1.getShortName(), LABELS_TABLE_NAME,
+      null, null, Permission.Action.EXEC);
+    SecureTestUtil.grantOnTable(TEST_UTIL, NORMAL_USER2.getShortName(), LABELS_TABLE_NAME,
+      null, null, Permission.Action.EXEC);
   }
 
   @AfterClass
@@ -127,16 +116,8 @@ public class TestVisibilityLabelsWithACL {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     final HTable table = createTableAndWriteDataWithLabels(tableName, SECRET + "&" + CONFIDENTIAL
         + "&!" + PRIVATE, SECRET + "&!" + PRIVATE);
-    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
-      AccessControlService.BlockingInterface protocol = AccessControlService
-          .newBlockingStub(service);
-      ProtobufUtil.grant(protocol, NORMAL_USER2.getShortName(), tableName, null, null,
-          Permission.Action.READ);
-    } finally {
-      acl.close();
-    }
+    SecureTestUtil.grantOnTable(TEST_UTIL, NORMAL_USER2.getShortName(), tableName,
+      null, null, Permission.Action.READ);
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
         Scan s = new Scan();
@@ -217,20 +198,11 @@ public class TestVisibilityLabelsWithACL {
     VisibilityClient.setAuths(conf, auths, "user1");
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     final HTable table = createTableAndWriteDataWithLabels(tableName, SECRET);
-    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
-      AccessControlService.BlockingInterface protocol = AccessControlService
-          .newBlockingStub(service);
-      ProtobufUtil.grant(protocol, NORMAL_USER1.getShortName(), tableName, null, null,
-          Permission.Action.READ);
-      ProtobufUtil.grant(protocol, NORMAL_USER2.getShortName(), tableName, null, null,
-          Permission.Action.READ);
-    } finally {
-      acl.close();
-    }
-
-   PrivilegedExceptionAction<Void> getAction = new PrivilegedExceptionAction<Void>() {
+    SecureTestUtil.grantOnTable(TEST_UTIL, NORMAL_USER1.getShortName(), tableName,
+      null, null, Permission.Action.READ);
+    SecureTestUtil.grantOnTable(TEST_UTIL, NORMAL_USER2.getShortName(), tableName,
+      null, null, Permission.Action.READ);
+    PrivilegedExceptionAction<Void> getAction = new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
         Get g = new Get(row1);
         g.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
