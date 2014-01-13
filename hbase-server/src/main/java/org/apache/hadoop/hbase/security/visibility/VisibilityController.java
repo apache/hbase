@@ -855,6 +855,11 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       RegionScanner s) throws IOException {
     HRegion region = e.getEnvironment().getRegion();
     Authorizations authorizations = null;
+    // If a super user issues a scan, he should be able to scan the cells
+    // irrespective of the Visibility labels
+    if (checkIfScanOrGetFromSuperUser()) {
+      return s;
+    }
     try {
       authorizations = scan.getAuthorizations();
     } catch (DeserializationException de) {
@@ -870,6 +875,15 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       }
     }
     return s;
+  }
+
+  private boolean checkIfScanOrGetFromSuperUser() throws IOException {
+    User user = getActiveUser();
+    if (user != null && user.getShortName() != null) {
+      List<String> auths = this.visibilityManager.getAuths(user.getShortName());
+      return (auths.contains(SYSTEM_LABEL));
+    }
+    return false;
   }
 
   @Override
@@ -921,6 +935,11 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get, List<Cell> results)
       throws IOException {
     Authorizations authorizations = null;
+    // If a super user issues a get, he should be able to scan the cells
+    // irrespective of the Visibility labels
+    if (checkIfScanOrGetFromSuperUser()) {
+      return;
+    }
     try {
       authorizations = get.getAuthorizations();
     } catch (DeserializationException de) {
