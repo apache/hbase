@@ -28,12 +28,11 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Basic Cell codec that just writes out all the individual elements of a Cell.  Uses ints
- * delimiting all lengths. Profligate. Needs tune up.
- * Note: This will not write tags of a Cell.
+ * Basic Cell codec that just writes out all the individual elements of a Cell including the tags.
+ * Uses ints delimiting all lengths. Profligate. Needs tune up.
  */
 @InterfaceAudience.Private
-public class CellCodec implements Codec {
+public class CellCodecV2 implements Codec {
   static class CellEncoder extends BaseEncoder {
     CellEncoder(final OutputStream out) {
       super(out);
@@ -54,19 +53,21 @@ public class CellCodec implements Codec {
       this.out.write(cell.getTypeByte());
       // Value
       write(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+      // Tags
+      write(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
       // MvccVersion
       this.out.write(Bytes.toBytes(cell.getMvccVersion()));
     }
 
     /**
      * Write int length followed by array bytes.
+     * 
      * @param bytes
      * @param offset
      * @param length
      * @throws IOException
      */
-    private void write(final byte [] bytes, final int offset, final int length)
-    throws IOException {
+    private void write(final byte[] bytes, final int offset, final int length) throws IOException {
       this.out.write(Bytes.toBytes(length));
       this.out.write(bytes, offset, length);
     }
@@ -78,30 +79,31 @@ public class CellCodec implements Codec {
     }
 
     protected Cell parseCell() throws IOException {
-      byte [] row = readByteArray(this.in);
-      byte [] family = readByteArray(in);
-      byte [] qualifier = readByteArray(in);
-      byte [] longArray = new byte[Bytes.SIZEOF_LONG];
+      byte[] row = readByteArray(this.in);
+      byte[] family = readByteArray(in);
+      byte[] qualifier = readByteArray(in);
+      byte[] longArray = new byte[Bytes.SIZEOF_LONG];
       IOUtils.readFully(this.in, longArray);
       long timestamp = Bytes.toLong(longArray);
       byte type = (byte) this.in.read();
       byte[] value = readByteArray(in);
+      byte[] tags = readByteArray(in);
       // Read memstore version
       byte[] memstoreTSArray = new byte[Bytes.SIZEOF_LONG];
       IOUtils.readFully(this.in, memstoreTSArray);
       long memstoreTS = Bytes.toLong(memstoreTSArray);
-      return CellUtil.createCell(row, family, qualifier, timestamp, type, value, memstoreTS);
+      return CellUtil.createCell(row, family, qualifier, timestamp, type, value, tags, memstoreTS);
     }
 
     /**
      * @return Byte array read from the stream.
      * @throws IOException
      */
-    private byte [] readByteArray(final InputStream in) throws IOException {
-      byte [] intArray = new byte[Bytes.SIZEOF_INT];
+    private byte[] readByteArray(final InputStream in) throws IOException {
+      byte[] intArray = new byte[Bytes.SIZEOF_INT];
       IOUtils.readFully(in, intArray);
       int length = Bytes.toInt(intArray);
-      byte [] bytes = new byte [length];
+      byte[] bytes = new byte[length];
       IOUtils.readFully(in, bytes);
       return bytes;
     }
