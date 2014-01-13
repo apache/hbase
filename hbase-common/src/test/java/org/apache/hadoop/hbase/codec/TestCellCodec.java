@@ -27,10 +27,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.codec.CellCodec;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -109,49 +107,6 @@ public class TestCellCodec {
     long offset = cos.getCount();
     CountingInputStream cis =
       new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
-    DataInputStream dis = new DataInputStream(cis);
-    Codec.Decoder decoder = codec.getDecoder(dis);
-    assertTrue(decoder.advance());
-    Cell c = decoder.current();
-    assertTrue(CellComparator.equals(c, kv1));
-    assertTrue(decoder.advance());
-    c = decoder.current();
-    assertTrue(CellComparator.equals(c, kv2));
-    assertTrue(decoder.advance());
-    c = decoder.current();
-    assertTrue(CellComparator.equals(c, kv3));
-    assertFalse(decoder.advance());
-    dis.close();
-    assertEquals(offset, cis.getCount());
-  }
-
-  @Test
-  public void testThreeWithTag() throws IOException {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    CountingOutputStream cos = new CountingOutputStream(baos);
-    DataOutputStream dos = new DataOutputStream(cos);
-    Codec codec = new CellCodec();
-    Codec.Encoder encoder = codec.getEncoder(dos);
-    final KeyValue kv1 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("1"),
-        HConstants.LATEST_TIMESTAMP, Bytes.toBytes("1"), new Tag[] {
-            new Tag((byte) 1, Bytes.toBytes("teststring1")),
-            new Tag((byte) 2, Bytes.toBytes("testString2")) });
-    final KeyValue kv2 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("2"),
-        HConstants.LATEST_TIMESTAMP, Bytes.toBytes("2"), new Tag[] { new Tag((byte) 1,
-            Bytes.toBytes("teststring3")), });
-    final KeyValue kv3 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("3"),
-        HConstants.LATEST_TIMESTAMP, Bytes.toBytes("3"), new Tag[] {
-            new Tag((byte) 2, Bytes.toBytes("teststring4")),
-            new Tag((byte) 2, Bytes.toBytes("teststring5")),
-            new Tag((byte) 1, Bytes.toBytes("teststring6")) });
-
-    encoder.write(kv1);
-    encoder.write(kv2);
-    encoder.write(kv3);
-    encoder.flush();
-    dos.close();
-    long offset = cos.getCount();
-    CountingInputStream cis = new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = codec.getDecoder(dis);
     assertTrue(decoder.advance());
