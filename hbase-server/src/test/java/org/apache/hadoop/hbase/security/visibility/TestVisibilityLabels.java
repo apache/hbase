@@ -101,7 +101,7 @@ public class TestVisibilityLabels {
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);
     String currentUser = User.getCurrent().getName();
-    conf.set("hbase.superuser", "admin,"+currentUser);
+    conf.set("hbase.superuser", "admin");
     TEST_UTIL.startMiniCluster(2);
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
 
@@ -367,12 +367,19 @@ public class TestVisibilityLabels {
     // Start one new RS
     RegionServerThread rs = TEST_UTIL.getHBaseCluster().startRegionServer();
     waitForLabelsRegionAvailability(rs.getRegionServer());
-    String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, "ABC", "XYZ" };
-    try {
-      VisibilityClient.addLabels(conf, labels);
-    } catch (Throwable t) {
-      throw new IOException(t);
-    }
+    PrivilegedExceptionAction<VisibilityLabelsResponse> action =
+        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      public VisibilityLabelsResponse run() throws Exception {
+        String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, "ABC", "XYZ" };
+        try {
+          VisibilityClient.addLabels(conf, labels);
+        } catch (Throwable t) {
+          throw new IOException(t);
+        }
+        return null;
+      }
+    };
+    SUPERUSER.runAs(action);
     // Scan the visibility label
     Scan s = new Scan();
     s.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
@@ -437,24 +444,45 @@ public class TestVisibilityLabels {
 
   @Test
   public void testAddLabels() throws Throwable {
-    String[] labels = { "L1", SECRET, "L2", "invalid~", "L3" };
-    VisibilityLabelsResponse response = VisibilityClient.addLabels(conf, labels);
-    List<RegionActionResult> resultList = response.getResultList();
-    assertEquals(5, resultList.size());
-    assertTrue(resultList.get(0).getException().getValue().isEmpty());
-    assertEquals("org.apache.hadoop.hbase.security.visibility.LabelAlreadyExistsException",
-        resultList.get(1).getException().getName());
-    assertTrue(resultList.get(2).getException().getValue().isEmpty());
-    assertEquals("org.apache.hadoop.hbase.security.visibility.InvalidLabelException", resultList
-        .get(3).getException().getName());
-    assertTrue(resultList.get(4).getException().getValue().isEmpty());
+    PrivilegedExceptionAction<VisibilityLabelsResponse> action = 
+        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      public VisibilityLabelsResponse run() throws Exception {
+        String[] labels = { "L1", SECRET, "L2", "invalid~", "L3" };
+        VisibilityLabelsResponse response = null;
+        try {
+          response = VisibilityClient.addLabels(conf, labels);
+        } catch (Throwable e) {
+          fail("Should not have thrown exception");
+        }
+        List<RegionActionResult> resultList = response.getResultList();
+        assertEquals(5, resultList.size());
+        assertTrue(resultList.get(0).getException().getValue().isEmpty());
+        assertEquals("org.apache.hadoop.hbase.security.visibility.LabelAlreadyExistsException",
+            resultList.get(1).getException().getName());
+        assertTrue(resultList.get(2).getException().getValue().isEmpty());
+        assertEquals("org.apache.hadoop.hbase.security.visibility.InvalidLabelException",
+            resultList.get(3).getException().getName());
+        assertTrue(resultList.get(4).getException().getValue().isEmpty());
+        return null;
+      }
+    };
+    SUPERUSER.runAs(action);
   }
 
   @Test
   public void testSetAndGetUserAuths() throws Throwable {
-    String[] auths = { SECRET, CONFIDENTIAL };
-    String user = "user1";
-    VisibilityClient.setAuths(conf, auths, user);
+    final String user = "user1";
+    PrivilegedExceptionAction<Void> action = new PrivilegedExceptionAction<Void>() {
+      public Void run() throws Exception {
+        String[] auths = { SECRET, CONFIDENTIAL };
+        try {
+          VisibilityClient.setAuths(conf, auths, user);
+        } catch (Throwable e) {
+        }
+        return null;
+      }
+    };
+    SUPERUSER.runAs(action);
     HTable ht = null;
     try {
       ht = new HTable(conf, LABELS_TABLE_NAME);
@@ -477,73 +505,117 @@ public class TestVisibilityLabels {
         ht.close();
       }
     }
-    GetAuthsResponse authsResponse = VisibilityClient.getAuths(conf, user);
-    List<String> authsList = new ArrayList<String>();
-    for (ByteString authBS : authsResponse.getAuthList()) {
-      authsList.add(Bytes.toString(authBS.toByteArray()));
-    }
-    assertEquals(2, authsList.size());
-    assertTrue(authsList.contains(SECRET));
-    assertTrue(authsList.contains(CONFIDENTIAL));
-    
+
+    action = new PrivilegedExceptionAction<Void>() {
+      public Void run() throws Exception {
+        GetAuthsResponse authsResponse = null;
+        try {
+          authsResponse = VisibilityClient.getAuths(conf, user);
+        } catch (Throwable e) {
+          fail("Should not have failed");
+        }
+        List<String> authsList = new ArrayList<String>();
+        for (ByteString authBS : authsResponse.getAuthList()) {
+          authsList.add(Bytes.toString(authBS.toByteArray()));
+        }
+        assertEquals(2, authsList.size());
+        assertTrue(authsList.contains(SECRET));
+        assertTrue(authsList.contains(CONFIDENTIAL));
+        return null;
+      }
+    };
+    SUPERUSER.runAs(action);
+
     // Try doing setAuths once again and there should not be any duplicates
-    String[] auths1 = { SECRET, CONFIDENTIAL };
-    user = "user1";
-    VisibilityClient.setAuths(conf, auths1, user);
-    
-    authsResponse = VisibilityClient.getAuths(conf, user);
-    authsList = new ArrayList<String>();
-    for (ByteString authBS : authsResponse.getAuthList()) {
-      authsList.add(Bytes.toString(authBS.toByteArray()));
-    }
-    assertEquals(2, authsList.size());
-    assertTrue(authsList.contains(SECRET));
-    assertTrue(authsList.contains(CONFIDENTIAL));
+    action = new PrivilegedExceptionAction<Void>() {
+      public Void run() throws Exception {
+        String[] auths1 = { SECRET, CONFIDENTIAL };
+        GetAuthsResponse authsResponse = null;
+        try {
+          VisibilityClient.setAuths(conf, auths1, user);
+          try {
+            authsResponse = VisibilityClient.getAuths(conf, user);
+          } catch (Throwable e) {
+            fail("Should not have failed");
+          }
+        } catch (Throwable e) {
+        }
+        List<String> authsList = new ArrayList<String>();
+        for (ByteString authBS : authsResponse.getAuthList()) {
+          authsList.add(Bytes.toString(authBS.toByteArray()));
+        }
+        assertEquals(2, authsList.size());
+        assertTrue(authsList.contains(SECRET));
+        assertTrue(authsList.contains(CONFIDENTIAL));
+        return null;
+      }
+    };
+    SUPERUSER.runAs(action);
   }
 
   @Test
   public void testClearUserAuths() throws Throwable {
-    String[] auths = { SECRET, CONFIDENTIAL, PRIVATE };
-    String user = "testUser";
-    VisibilityClient.setAuths(conf, auths, user);
-    // Removing the auths for SECRET and CONFIDENTIAL for the user.
-    // Passing a non existing auth also.
-    auths = new String[] { SECRET, PUBLIC, CONFIDENTIAL };
-    VisibilityLabelsResponse response = VisibilityClient.clearAuths(conf, auths, user);
-    List<RegionActionResult> resultList = response.getResultList();
-    assertEquals(3, resultList.size());
-    assertTrue(resultList.get(0).getException().getValue().isEmpty());
-    assertEquals("org.apache.hadoop.hbase.security.visibility.InvalidLabelException",
-        resultList.get(1).getException().getName());
-    assertTrue(resultList.get(2).getException().getValue().isEmpty());
-    HTable ht = null;
-    try {
-      ht = new HTable(conf, LABELS_TABLE_NAME);
-      ResultScanner scanner = ht.getScanner(new Scan());
-      Result result = null;
-      while ((result = scanner.next()) != null) {
-        Cell label = result.getColumnLatestCell(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
-        Cell userAuth = result.getColumnLatestCell(LABELS_TABLE_FAMILY, user.getBytes());
-        if (Bytes.equals(PRIVATE.getBytes(), 0, PRIVATE.getBytes().length, label.getValueArray(),
-            label.getValueOffset(), label.getValueLength())) {
-          assertNotNull(userAuth);
-        } else {
-          assertNull(userAuth);
+    PrivilegedExceptionAction<Void> action = new PrivilegedExceptionAction<Void>() {
+      public Void run() throws Exception {
+        String[] auths = { SECRET, CONFIDENTIAL, PRIVATE };
+        String user = "testUser";
+        try {
+          VisibilityClient.setAuths(conf, auths, user);
+        } catch (Throwable e) {
+          fail("Should not have failed");
         }
-      }
-    } finally {
-      if (ht != null) {
-        ht.close();
-      }
-    }
+        // Removing the auths for SECRET and CONFIDENTIAL for the user.
+        // Passing a non existing auth also.
+        auths = new String[] { SECRET, PUBLIC, CONFIDENTIAL };
+        VisibilityLabelsResponse response = null;
+        try {
+          response = VisibilityClient.clearAuths(conf, auths, user);
+        } catch (Throwable e) {
+          fail("Should not have failed");
+        }
+        List<RegionActionResult> resultList = response.getResultList();
+        assertEquals(3, resultList.size());
+        assertTrue(resultList.get(0).getException().getValue().isEmpty());
+        assertEquals("org.apache.hadoop.hbase.security.visibility.InvalidLabelException",
+            resultList.get(1).getException().getName());
+        assertTrue(resultList.get(2).getException().getValue().isEmpty());
+        HTable ht = null;
+        try {
+          ht = new HTable(conf, LABELS_TABLE_NAME);
+          ResultScanner scanner = ht.getScanner(new Scan());
+          Result result = null;
+          while ((result = scanner.next()) != null) {
+            Cell label = result.getColumnLatestCell(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
+            Cell userAuth = result.getColumnLatestCell(LABELS_TABLE_FAMILY, user.getBytes());
+            if (Bytes.equals(PRIVATE.getBytes(), 0, PRIVATE.getBytes().length,
+                label.getValueArray(), label.getValueOffset(), label.getValueLength())) {
+              assertNotNull(userAuth);
+            } else {
+              assertNull(userAuth);
+            }
+          }
+        } finally {
+          if (ht != null) {
+            ht.close();
+          }
+        }
 
-    GetAuthsResponse authsResponse = VisibilityClient.getAuths(conf, user);
-    List<String> authsList = new ArrayList<String>();
-    for (ByteString authBS : authsResponse.getAuthList()) {
-      authsList.add(Bytes.toString(authBS.toByteArray()));
-    }
-    assertEquals(1, authsList.size());
-    assertTrue(authsList.contains(PRIVATE));
+        GetAuthsResponse authsResponse = null;
+        try {
+          authsResponse = VisibilityClient.getAuths(conf, user);
+        } catch (Throwable e) {
+          fail("Should not have failed");
+        }
+        List<String> authsList = new ArrayList<String>();
+        for (ByteString authBS : authsResponse.getAuthList()) {
+          authsList.add(Bytes.toString(authBS.toByteArray()));
+        }
+        assertEquals(1, authsList.size());
+        assertTrue(authsList.contains(PRIVATE));
+        return null;
+      }
+    };
+    SUPERUSER.runAs(action);
   }
 
   @Test

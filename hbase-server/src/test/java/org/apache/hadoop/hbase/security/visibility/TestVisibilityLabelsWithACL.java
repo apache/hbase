@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -75,7 +74,8 @@ public class TestVisibilityLabelsWithACL {
   @Rule
   public final TestName TEST_NAME = new TestName();
   private static User SUPERUSER;
-  private static User NORMAL_USER;
+  private static User NORMAL_USER1;
+  private static User NORMAL_USER2;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -95,7 +95,8 @@ public class TestVisibilityLabelsWithACL {
 
     // Create users for testing
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
-    NORMAL_USER = User.createUserForTesting(conf, "user1", new String[] {});
+    NORMAL_USER1 = User.createUserForTesting(conf, "user1", new String[] {});
+    NORMAL_USER2 = User.createUserForTesting(conf, "user2", new String[] {});
     // Grant NORMAL_USER EXEC privilege on the labels table. For the purposes of this
     // test, we want to insure that access is denied even with the ability to access
     // the endpoint.
@@ -104,8 +105,10 @@ public class TestVisibilityLabelsWithACL {
       BlockingRpcChannel service = acl.coprocessorService(LABELS_TABLE_NAME.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
-      ProtobufUtil.grant(protocol, NORMAL_USER.getShortName(), LABELS_TABLE_NAME, null, null,
+      ProtobufUtil.grant(protocol, NORMAL_USER1.getShortName(), LABELS_TABLE_NAME, null, null,
         Permission.Action.EXEC);
+      ProtobufUtil.grant(protocol, NORMAL_USER2.getShortName(), LABELS_TABLE_NAME, null, null,
+          Permission.Action.EXEC);
     } finally {
       acl.close();
     }
@@ -119,11 +122,21 @@ public class TestVisibilityLabelsWithACL {
   @Test
   public void testScanForUserWithFewerLabelAuthsThanLabelsInScanAuthorizations() throws Throwable {
     String[] auths = { SECRET };
-    String user = "admin";
+    String user = "user2";
     VisibilityClient.setAuths(conf, auths, user);
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     final HTable table = createTableAndWriteDataWithLabels(tableName, SECRET + "&" + CONFIDENTIAL
         + "&!" + PRIVATE, SECRET + "&!" + PRIVATE);
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
+      AccessControlService.BlockingInterface protocol = AccessControlService
+          .newBlockingStub(service);
+      ProtobufUtil.grant(protocol, NORMAL_USER2.getShortName(), tableName, null, null,
+          Permission.Action.READ);
+    } finally {
+      acl.close();
+    }
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
         Scan s = new Scan();
@@ -142,6 +155,57 @@ public class TestVisibilityLabelsWithACL {
         return null;
       }
     };
+    NORMAL_USER2.runAs(scanAction);
+  }
+
+  @Test
+  public void testScanForSuperUserWithFewerLabelAuths() throws Throwable {
+    String[] auths = { SECRET };
+    String user = "admin";
+    VisibilityClient.setAuths(conf, auths, user);
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    final HTable table = createTableAndWriteDataWithLabels(tableName, SECRET + "&" + CONFIDENTIAL
+        + "&!" + PRIVATE, SECRET + "&!" + PRIVATE);
+    PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
+      public Void run() throws Exception {
+        Scan s = new Scan();
+        s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
+        HTable t = new HTable(conf, table.getTableName());
+        try {
+          ResultScanner scanner = t.getScanner(s);
+          Result[] result = scanner.next(5);
+          assertTrue(result.length == 2);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    };
+    SUPERUSER.runAs(scanAction);
+  }
+
+  @Test
+  public void testGetForSuperUserWithFewerLabelAuths() throws Throwable {
+    String[] auths = { SECRET };
+    String user = "admin";
+    VisibilityClient.setAuths(conf, auths, user);
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    final HTable table = createTableAndWriteDataWithLabels(tableName, SECRET + "&" + CONFIDENTIAL
+        + "&!" + PRIVATE, SECRET + "&!" + PRIVATE);
+    PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
+      public Void run() throws Exception {
+        Get g = new Get(row1);
+        g.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
+        HTable t = new HTable(conf, table.getTableName());
+        try {
+          Result result = t.get(g);
+          assertTrue(!result.isEmpty());
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    };
     SUPERUSER.runAs(scanAction);
   }
 
@@ -153,7 +217,20 @@ public class TestVisibilityLabelsWithACL {
     VisibilityClient.setAuths(conf, auths, "user1");
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     final HTable table = createTableAndWriteDataWithLabels(tableName, SECRET);
-    PrivilegedExceptionAction<Void> getAction = new PrivilegedExceptionAction<Void>() {
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
+      AccessControlService.BlockingInterface protocol = AccessControlService
+          .newBlockingStub(service);
+      ProtobufUtil.grant(protocol, NORMAL_USER1.getShortName(), tableName, null, null,
+          Permission.Action.READ);
+      ProtobufUtil.grant(protocol, NORMAL_USER2.getShortName(), tableName, null, null,
+          Permission.Action.READ);
+    } finally {
+      acl.close();
+    }
+
+   PrivilegedExceptionAction<Void> getAction = new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
         Get g = new Get(row1);
         g.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
@@ -167,7 +244,7 @@ public class TestVisibilityLabelsWithACL {
         return null;
       }
     };
-    SUPERUSER.runAs(getAction);
+    NORMAL_USER2.runAs(getAction);
   }
 
   @Test
@@ -182,7 +259,7 @@ public class TestVisibilityLabelsWithACL {
         return null;
       }
     };
-    VisibilityLabelsResponse response = NORMAL_USER.runAs(action);
+    VisibilityLabelsResponse response = NORMAL_USER1.runAs(action);
     assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response
         .getResult(0).getException().getName());
     assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response
@@ -197,7 +274,7 @@ public class TestVisibilityLabelsWithACL {
         return null;
       }
     };
-    response = NORMAL_USER.runAs(action);
+    response = NORMAL_USER1.runAs(action);
     assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response
         .getResult(0).getException().getName());
     assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response
@@ -225,7 +302,7 @@ public class TestVisibilityLabelsWithACL {
         return null;
       }
     };
-    response = NORMAL_USER.runAs(action);
+    response = NORMAL_USER1.runAs(action);
     assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response.getResult(0)
         .getException().getName());
     assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response.getResult(1)
@@ -235,18 +312,18 @@ public class TestVisibilityLabelsWithACL {
     assertTrue(response.getResult(0).getException().getValue().isEmpty());
     assertTrue(response.getResult(1).getException().getValue().isEmpty());
 
-    VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE }, "user2");
+    VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE }, "user3");
     PrivilegedExceptionAction<GetAuthsResponse> action1 = 
         new PrivilegedExceptionAction<GetAuthsResponse>() {
       public GetAuthsResponse run() throws Exception {
         try {
-          return VisibilityClient.getAuths(conf, "user2");
+          return VisibilityClient.getAuths(conf, "user3");
         } catch (Throwable e) {
         }
         return null;
       }
     };
-    GetAuthsResponse authsResponse = NORMAL_USER.runAs(action1);
+    GetAuthsResponse authsResponse = NORMAL_USER1.runAs(action1);
     assertNull(authsResponse);
     authsResponse = SUPERUSER.runAs(action1);
     List<String> authsList = new ArrayList<String>();
