@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,8 +36,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -49,19 +46,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import com.google.protobuf.BlockingRpcChannel;
-
 @Category(LargeTests.class)
 public class TestAccessControlFilter {
   @Rule public TestName name = new TestName();
   private static HBaseTestingUtility TEST_UTIL;
 
-  private static User ADMIN;
   private static User READER;
   private static User LIMITED;
   private static User DENIED;
 
-  
   private static TableName TABLE;
   private static byte[] FAMILY = Bytes.toBytes("f1");
   private static byte[] PRIVATE_COL = Bytes.toBytes("private");
@@ -83,7 +76,6 @@ public class TestAccessControlFilter {
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
 
-    ADMIN = User.createUserForTesting(conf, "admin", new String[]{"supergroup"});
     READER = User.createUserForTesting(conf, "reader", new String[0]);
     LIMITED = User.createUserForTesting(conf, "limited", new String[0]);
     DENIED = User.createUserForTesting(conf, "denied", new String[0]);
@@ -104,28 +96,12 @@ public class TestAccessControlFilter {
     }
   }
 
-  private void doQualifierAccess(final HTable table) throws IOException, InterruptedException {
+  private void doQualifierAccess(final HTable table) throws Exception {
     // set permissions
-    ADMIN.runAs(new PrivilegedExceptionAction<Object>() {
-      @Override
-      public Object run() throws Exception {
-        HTable aclmeta = new HTable(TEST_UTIL.getConfiguration(),
-            AccessControlLists.ACL_TABLE_NAME);
-        try {
-          byte[] table = Bytes.toBytes(name.getMethodName());
-          BlockingRpcChannel service = aclmeta.coprocessorService(table);
-          AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(protocol, READER.getShortName(),
-            TABLE, null, null, Permission.Action.READ);
-          ProtobufUtil.grant(protocol, LIMITED.getShortName(),
-            TABLE, FAMILY, PUBLIC_COL, Permission.Action.READ);
-          return null;
-        } finally {
-          aclmeta.close();
-        }
-      }
-    });
+    SecureTestUtil.grantOnTable(TEST_UTIL, READER.getShortName(), TABLE, null, null,
+      Permission.Action.READ);
+    SecureTestUtil.grantOnTable(TEST_UTIL, LIMITED.getShortName(), TABLE, FAMILY, PUBLIC_COL,
+      Permission.Action.READ);
 
     // put some test data
     List<Put> puts = new ArrayList<Put>(100);
