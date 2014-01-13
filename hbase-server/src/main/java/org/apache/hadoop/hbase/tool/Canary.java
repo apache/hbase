@@ -243,14 +243,22 @@ public final class Canary implements Tool {
         // exit if any error occurs
         if (this.failOnError && monitor.hasError()) {
           monitorThread.interrupt();
-          System.exit(monitor.errorCode);
+          if (monitor.initialized) {
+            System.exit(monitor.errorCode);
+          } else {
+            System.exit(INIT_ERROR_EXIT_CODE);
+          }
         }
         currentTimeLength = System.currentTimeMillis() - startTime;
         if (currentTimeLength > this.timeout) {
           LOG.error("The monitor is running too long (" + currentTimeLength
               + ") after timeout limit:" + this.timeout
               + " will be killed itself !!");
-          monitor.errorCode = TIMEOUT_ERROR_EXIT_CODE;
+          if (monitor.initialized) {
+            System.exit(TIMEOUT_ERROR_EXIT_CODE);
+          } else {
+            System.exit(INIT_ERROR_EXIT_CODE);
+          }
           break;
         }
       }
@@ -320,6 +328,7 @@ public final class Canary implements Tool {
     protected HBaseAdmin admin;
     protected String[] targets;
     protected boolean useRegExp;
+    protected boolean initialized = false;
 
     protected boolean done = false;
     protected int errorCode = 0;
@@ -376,6 +385,7 @@ public final class Canary implements Tool {
         try {
           if (this.targets != null && this.targets.length > 0) {
             String[] tables = generateMonitorTables(this.targets);
+            this.initialized = true;
             for (String table : tables) {
               Canary.sniff(admin, sink, table);
             }
@@ -552,6 +562,7 @@ public final class Canary implements Tool {
     public void run() {
       if (this.initAdmin() && this.checkNoTableNames()) {
         Map<String, List<HRegionInfo>> rsAndRMap = this.filterRegionServerByName();
+        this.initialized = true;
         this.monitorRegionServers(rsAndRMap);
       }
       this.done = true;
