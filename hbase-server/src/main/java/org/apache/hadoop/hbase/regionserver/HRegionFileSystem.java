@@ -483,8 +483,16 @@ public class HRegionFileSystem {
   Path commitDaughterRegion(final HRegionInfo regionInfo) throws IOException {
     Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
     Path daughterTmpDir = this.getSplitsDir(regionInfo);
-    if (fs.exists(daughterTmpDir) && !rename(daughterTmpDir, regionDir)) {
-      throw new IOException("Unable to rename " + daughterTmpDir + " to " + regionDir);
+    if (fs.exists(daughterTmpDir)) {
+      // Write HRI to a file in case we need to recover hbase:meta
+      Path regionInfoFile = new Path(daughterTmpDir, REGION_INFO_FILE);
+      byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
+      writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
+
+      // Move the daughter temp dir to the table dir
+      if (!rename(daughterTmpDir, regionDir)) {
+        throw new IOException("Unable to rename " + daughterTmpDir + " to " + regionDir);
+      }
     }
     return regionDir;
   }
