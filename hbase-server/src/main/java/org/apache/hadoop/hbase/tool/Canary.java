@@ -632,7 +632,8 @@ public final class Canary implements Tool {
             scan.setCaching(1);
             scan.setMaxResultSize(1L);
             stopWatch.start();
-            table.getScanner(scan);
+            ResultScanner s = table.getScanner(scan);
+            s.close();
             stopWatch.stop();
           }
           this.getSink().publishReadTiming(tableName, serverName, stopWatch.getTime());
