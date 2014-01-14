@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.HConstants;
@@ -61,7 +59,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
   * Each ColumnCount instance also tracks how many versions of the requested
   * column have been returned.
   */
-  private final List<ColumnCount> columns;
+  private final ColumnCount[] columns;
   private int index;
   private ColumnCount column;
   /** Keeps track of the latest timestamp included for current column.
@@ -83,9 +81,10 @@ public class ExplicitColumnTracker implements ColumnTracker {
     this.maxVersions = maxVersions;
     this.minVersions = minVersions;
     this.oldestStamp = oldestUnexpiredTS;
-    this.columns = new ArrayList<ColumnCount>(columns.size());
+    this.columns = new ColumnCount[columns.size()];
+    int i=0;
     for(byte [] column : columns) {
-      this.columns.add(new ColumnCount(column));
+      this.columns[i++] = new ColumnCount(column);
     }
     reset();
   }
@@ -94,7 +93,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
    * Done when there are no more columns to match against.
    */
   public boolean done() {
-    return this.index >= this.columns.size();
+    return this.index >= columns.length;
   }
 
   public ColumnCount getColumnHint() {
@@ -150,7 +149,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
           return ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW; // done_row
         }
         // This is the recursive case.
-        this.column = this.columns.get(this.index);
+        this.column = this.columns[this.index];
       }
     } while(true);
   }
@@ -177,7 +176,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
       }
       // We are done with current column; advance to next column
       // of interest.
-      this.column = this.columns.get(this.index);
+      this.column = this.columns[this.index];
       return ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL;
     }
     setTS(timestamp);
@@ -187,7 +186,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
   // Called between every row.
   public void reset() {
     this.index = 0;
-    this.column = this.columns.get(this.index);
+    this.column = this.columns[this.index];
     for(ColumnCount col : this.columns) {
       col.setCount(0);
     }
@@ -230,7 +229,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
           // Will not hit any more columns in this storefile
           this.column = null;
         } else {
-          this.column = this.columns.get(this.index);
+          this.column = this.columns[this.index];
         }
         if (compare <= -1)
           continue;
