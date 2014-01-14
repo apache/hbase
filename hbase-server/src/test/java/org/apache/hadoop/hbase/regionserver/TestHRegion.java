@@ -3851,8 +3851,6 @@ public class TestHRegion {
     durabilityTest(method, Durability.USE_DEFAULT, Durability.USE_DEFAULT, 0, true, true, false);
 
     // expected cases for async wal
-    // do not sync for deferred flush with large optionallogflushinterval
-    conf.setLong("hbase.regionserver.optionallogflushinterval", Integer.MAX_VALUE);
     durabilityTest(method, Durability.SYNC_WAL, Durability.ASYNC_WAL, 0, true, false, false);
     durabilityTest(method, Durability.FSYNC_WAL, Durability.ASYNC_WAL, 0, true, false, false);
     durabilityTest(method, Durability.ASYNC_WAL, Durability.ASYNC_WAL, 0, true, false, false);
@@ -3860,8 +3858,6 @@ public class TestHRegion {
     durabilityTest(method, Durability.USE_DEFAULT, Durability.ASYNC_WAL, 0, true, false, false);
     durabilityTest(method, Durability.ASYNC_WAL, Durability.USE_DEFAULT, 0, true, false, false);
 
-    // now small deferred log flush optionallogflushinterval, expect sync
-    conf.setLong("hbase.regionserver.optionallogflushinterval", 5);
     durabilityTest(method, Durability.SYNC_WAL, Durability.ASYNC_WAL, 5000, true, false, true);
     durabilityTest(method, Durability.FSYNC_WAL, Durability.ASYNC_WAL, 5000, true, false, true);
     durabilityTest(method, Durability.ASYNC_WAL, Durability.ASYNC_WAL, 5000, true, false, true);

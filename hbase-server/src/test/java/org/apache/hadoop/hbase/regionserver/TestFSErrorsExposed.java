@@ -182,9 +182,6 @@ public class TestFSErrorsExposed {
     try {
       // We set it not to run or it will trigger server shutdown while sync'ing
       // because all the datanodes are bad
-      util.getConfiguration().setInt(
-          "hbase.regionserver.optionallogflushinterval", Integer.MAX_VALUE);
-
       util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
 
       util.startMiniCluster(1);

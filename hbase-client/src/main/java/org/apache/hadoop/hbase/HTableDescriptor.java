@@ -597,36 +597,31 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Check if deferred log edits are enabled on the table.
+   * Check if async log edits are enabled on the table.
    *
-   * @return true if that deferred log flush is enabled on the table
+   * @return true if that async log flush is enabled on the table
    *
-   * @see #setDeferredLogFlush(boolean)
-   * @deprecated use {@link #getDurability()}
+   * @see #setAsyncLogFlush(boolean)
    */
-  @Deprecated
-  public synchronized boolean isDeferredLogFlush() {
+  public synchronized boolean isAsyncLogFlush() {
     return getDurability() == Durability.ASYNC_WAL;
   }
 
   /**
-   * This is used to defer the log edits syncing to the file system. Everytime
+   * This is used to allowing the log edits syncing to the file system. Everytime
    * an edit is sent to the server it is first sync'd to the file system by the
    * log writer. This sync is an expensive operation and thus can be deferred so
-   * that the edits are kept in memory for a specified period of time as represented
-   * by <code> hbase.regionserver.optionallogflushinterval </code> and not flushed
-   * for every edit.
+   * that the edits are kept in memory until the background async writer-sync-notifier
+   * threads do the sync and not explicitly flushed for every edit.
    * <p>
    * NOTE:- This option might result in data loss if the region server crashes
-   * before these deferred edits in memory are flushed onto the filesystem.
+   * before these pending edits in memory are flushed onto the filesystem.
    * </p>
    *
-   * @param isDeferredLogFlush
-   * @deprecated use {@link #setDurability(Durability)}
+   * @param isAsyncLogFlush
    */
-  @Deprecated
-  public synchronized void setDeferredLogFlush(final boolean isDeferredLogFlush) {
-    this.setDurability(isDeferredLogFlush ? Durability.ASYNC_WAL : DEFAULT_DURABLITY);
+  public synchronized void setAsyncLogFlush(final boolean isAsyncLogFlush) {
+    this.setDurability(isAsyncLogFlush ? Durability.ASYNC_WAL : DEFAULT_DURABLITY);
   }
 
   /**

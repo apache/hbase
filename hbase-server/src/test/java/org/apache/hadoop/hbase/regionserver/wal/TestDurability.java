@@ -62,7 +62,6 @@ public class TestDurability {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     CONF = TEST_UTIL.getConfiguration();
-    CONF.setLong("hbase.regionserver.optionallogflushinterval", 500*1000);
     TEST_UTIL.startMiniDFSCluster(1);
 
     CLUSTER = TEST_UTIL.getDFSCluster();
@@ -208,10 +207,11 @@ public class TestDurability {
   }
 
   // lifted from TestAtomicOperation
-  private HRegion createHRegion (byte [] tableName, String callingMethod, HLog log, boolean isDeferredLogFlush)
+  private HRegion createHRegion (byte [] tableName, String callingMethod,
+      HLog log, boolean isAsyncLogFlush)
     throws IOException {
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
-      htd.setDeferredLogFlush(isDeferredLogFlush);
+      htd.setAsyncLogFlush(isAsyncLogFlush);
       HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
       htd.addFamily(hcd);
       HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
