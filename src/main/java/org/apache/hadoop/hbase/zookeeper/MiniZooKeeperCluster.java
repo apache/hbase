@@ -262,6 +262,8 @@ public class MiniZooKeeperCluster {
     if (!waitForServerDown(clientPort, CONNECTION_TIMEOUT)) {
       throw new IOException("Waiting for shutdown of standalone server");
     }
+    
+    zooKeeperServers.get(activeZKServerIndex).getZKDatabase().close();
 
     // remove the current active zk server
     standaloneServerFactoryList.remove(activeZKServerIndex);
@@ -303,6 +305,8 @@ public class MiniZooKeeperCluster {
     if (!waitForServerDown(clientPort, CONNECTION_TIMEOUT)) {
       throw new IOException("Waiting for shutdown of standalone server");
     }
+    
+    zooKeeperServers.get(backupZKServerIndex).getZKDatabase().close();
 
     // remove this backup zk server
     standaloneServerFactoryList.remove(backupZKServerIndex);
