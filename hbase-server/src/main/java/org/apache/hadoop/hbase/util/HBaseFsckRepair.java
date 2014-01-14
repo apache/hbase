@@ -149,7 +149,7 @@ public class HBaseFsckRepair {
     HConnection connection = admin.getConnection();
     AdminService.BlockingInterface rs = connection.getAdmin(server);
     try {
-      ProtobufUtil.closeRegion(rs, region.getRegionName(), false);
+      ProtobufUtil.closeRegion(rs, server, region.getRegionName(), false);
     } catch (IOException e) {
       LOG.warn("Exception when closing region: " + region.getRegionNameAsString(), e);
     }

@@ -22,13 +22,13 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -710,15 +710,19 @@ public final class RequestConverter {
  /**
   * Create a protocol buffer OpenRegionRequest for a given region
   *
+  * @param server the serverName for the RPC
   * @param region the region to open
- * @param versionOfOfflineNode that needs to be present in the offline node
- * @param favoredNodes
+  * @param versionOfOfflineNode that needs to be present in the offline node
+  * @param favoredNodes
   * @return a protocol buffer OpenRegionRequest
   */
- public static OpenRegionRequest buildOpenRegionRequest(
+ public static OpenRegionRequest buildOpenRegionRequest(ServerName server,
      final HRegionInfo region, final int versionOfOfflineNode, List<ServerName> favoredNodes) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
    builder.addOpenInfo(buildRegionOpenInfo(region, versionOfOfflineNode, favoredNodes));
+   if (server != null) {
+     builder.setServerStartCode(server.getStartcode());
+   }
    return builder.build();
  }
 
@@ -748,17 +752,20 @@ public final class RequestConverter {
   * @param transitionInZK indicator if to transition in ZK
   * @return a CloseRegionRequest
   */
- public static CloseRegionRequest buildCloseRegionRequest(
+ public static CloseRegionRequest buildCloseRegionRequest(ServerName server,
      final byte[] regionName, final boolean transitionInZK) {
    CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
    RegionSpecifier region = buildRegionSpecifier(
      RegionSpecifierType.REGION_NAME, regionName);
    builder.setRegion(region);
    builder.setTransitionInZK(transitionInZK);
+   if (server != null) {
+     builder.setServerStartCode(server.getStartcode());
+   }
    return builder.build();
  }
 
-  public static CloseRegionRequest buildCloseRegionRequest(
+  public static CloseRegionRequest buildCloseRegionRequest(ServerName server,
     final byte[] regionName, final int versionOfClosingNode,
     ServerName destinationServer, final boolean transitionInZK) {
     CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
@@ -769,6 +776,9 @@ public final class RequestConverter {
     builder.setTransitionInZK(transitionInZK);
     if (destinationServer != null){
       builder.setDestinationServer(ProtobufUtil.toServerName( destinationServer) );
+    }
+    if (server != null) {
+      builder.setServerStartCode(server.getStartcode());
     }
     return builder.build();
   }
@@ -781,7 +791,7 @@ public final class RequestConverter {
   * @return a CloseRegionRequest
   */
  public static CloseRegionRequest
-     buildCloseRegionRequest(final String encodedRegionName,
+     buildCloseRegionRequest(ServerName server, final String encodedRegionName,
        final boolean transitionInZK) {
    CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
    RegionSpecifier region = buildRegionSpecifier(
@@ -789,6 +799,9 @@ public final class RequestConverter {
      Bytes.toBytes(encodedRegionName));
    builder.setRegion(region);
    builder.setTransitionInZK(transitionInZK);
+   if (server != null) {
+     builder.setServerStartCode(server.getStartcode());
+   }
    return builder.build();
  }
 
