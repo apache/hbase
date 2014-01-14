@@ -638,7 +638,7 @@ public final class ProtobufUtil {
    * @param cellScanner
    * @param proto the protocol buffer Mutate to convert
    * @return the converted client Append
-   * @throws IOException 
+   * @throws IOException
    */
   public static Append toAppend(final MutationProto proto, final CellScanner cellScanner)
   throws IOException {
@@ -1560,9 +1560,9 @@ public final class ProtobufUtil {
    * @throws IOException
    */
   public static void closeRegion(final AdminService.BlockingInterface admin,
-      final byte[] regionName, final boolean transitionInZK) throws IOException {
+      final ServerName server, final byte[] regionName, final boolean transitionInZK) throws IOException {
     CloseRegionRequest closeRegionRequest =
-      RequestConverter.buildCloseRegionRequest(regionName, transitionInZK);
+      RequestConverter.buildCloseRegionRequest(server, regionName, transitionInZK);
     try {
       admin.closeRegion(null, closeRegionRequest);
     } catch (ServiceException se) {
@@ -1581,11 +1581,12 @@ public final class ProtobufUtil {
    * @throws IOException
    */
   public static boolean closeRegion(final AdminService.BlockingInterface admin,
+      final ServerName server,
       final byte[] regionName,
       final int versionOfClosingNode, final ServerName destinationServer,
       final boolean transitionInZK) throws IOException {
     CloseRegionRequest closeRegionRequest =
-      RequestConverter.buildCloseRegionRequest(
+      RequestConverter.buildCloseRegionRequest(server,
         regionName, versionOfClosingNode, destinationServer, transitionInZK);
     try {
       CloseRegionResponse response = admin.closeRegion(null, closeRegionRequest);
@@ -1603,9 +1604,9 @@ public final class ProtobufUtil {
    * @throws IOException
    */
   public static void openRegion(final AdminService.BlockingInterface admin,
-      final HRegionInfo region) throws IOException {
+      ServerName server, final HRegionInfo region) throws IOException {
     OpenRegionRequest request =
-      RequestConverter.buildOpenRegionRequest(region, -1, null);
+      RequestConverter.buildOpenRegionRequest(server, region, -1, null);
     try {
       admin.openRegion(null, request);
     } catch (ServiceException se) {
@@ -2501,7 +2502,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer CellVisibility to a client CellVisibility
-   * 
+   *
    * @param proto
    * @return the converted client CellVisibility
    */
@@ -2512,7 +2513,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer CellVisibility bytes to a client CellVisibility
-   * 
+   *
    * @param protoBytes
    * @return the converted client CellVisibility
    * @throws DeserializationException
@@ -2531,7 +2532,7 @@ public final class ProtobufUtil {
 
   /**
    * Create a protocol buffer CellVisibility based on a client CellVisibility.
-   * 
+   *
    * @param cellVisibility
    * @return a protocol buffer CellVisibility
    */
@@ -2543,7 +2544,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Authorizations to a client Authorizations
-   * 
+   *
    * @param proto
    * @return the converted client Authorizations
    */
@@ -2554,7 +2555,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Authorizations bytes to a client Authorizations
-   * 
+   *
    * @param protoBytes
    * @return the converted client Authorizations
    * @throws DeserializationException
@@ -2573,7 +2574,7 @@ public final class ProtobufUtil {
 
   /**
    * Create a protocol buffer Authorizations based on a client Authorizations.
-   * 
+   *
    * @param authorizations
    * @return a protocol buffer Authorizations
    */
