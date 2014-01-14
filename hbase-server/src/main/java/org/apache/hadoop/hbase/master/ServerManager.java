@@ -421,7 +421,9 @@ public class ServerManager {
    */
   public Map<ServerName, ServerLoad> getOnlineServers() {
     // Presumption is that iterating the returned Map is OK.
-    return Collections.unmodifiableMap(this.onlineServers);
+    synchronized (this.onlineServers) {
+      return Collections.unmodifiableMap(this.onlineServers);
+    }
   }
 
 
