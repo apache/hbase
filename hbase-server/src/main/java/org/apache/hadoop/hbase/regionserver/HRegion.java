@@ -4385,11 +4385,14 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    */
   HRegion createDaughterRegionFromSplits(final HRegionInfo hri) throws IOException {
+    // Move the files from the temporary .splits to the final /table/region directory
+    fs.commitDaughterRegion(hri);
+
+    // Create the daughter HRegion instance
     HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getLog(), fs.getFileSystem(),
         this.getBaseConf(), hri, this.getTableDesc(), rsServices);
     r.readRequestsCount.set(this.getReadRequestsCount() / 2);
     r.writeRequestsCount.set(this.getWriteRequestsCount() / 2);
-    fs.commitDaughterRegion(hri);
     return r;
   }
 
