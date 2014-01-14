@@ -424,7 +424,6 @@ public class HRegion implements HeapSize { // , Writable{
 
   private final MetricsRegion metricsRegion;
   private final MetricsRegionWrapperImpl metricsRegionWrapper;
-  private final boolean deferredLogSyncDisabled;
   private final Durability durability;
 
   /**
@@ -538,9 +537,6 @@ public class HRegion implements HeapSize { // , Writable{
      */
     this.rowProcessorTimeout = conf.getLong(
         "hbase.hregion.row.processor.timeout", DEFAULT_ROW_PROCESSOR_TIMEOUT);
-    // When hbase.regionserver.optionallogflushinterval <= 0 , deferred log sync is disabled.
-    this.deferredLogSyncDisabled = conf.getLong("hbase.regionserver.optionallogflushinterval",
-        1 * 1000) <= 0;
     this.durability = htd.getDurability() == Durability.USE_DEFAULT
         ? DEFAULT_DURABLITY
         : htd.getDurability();
@@ -5301,7 +5297,7 @@ public class HRegion implements HeapSize { // , Writable{
       ClassSize.ARRAY +
       41 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (12 * Bytes.SIZEOF_LONG) +
-      5 * Bytes.SIZEOF_BOOLEAN);
+      4 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:
   // 1 x HashMap - coprocessorServiceHandlers
@@ -5783,10 +5779,7 @@ public class HRegion implements HeapSize { // , Writable{
         // nothing do to
         break;
       case ASYNC_WAL:
-        // defer the sync, unless we globally can't
-        if (this.deferredLogSyncDisabled) {
-          this.log.sync(txid);
-        }
+        // nothing do to
         break;
       case SYNC_WAL:
       case FSYNC_WAL:
@@ -5801,8 +5794,7 @@ public class HRegion implements HeapSize { // , Writable{
    * Check whether we should sync the log from the table's durability settings
    */
   private boolean shouldSyncLog() {
-    return this.deferredLogSyncDisabled ||
-        durability.ordinal() >  Durability.ASYNC_WAL.ordinal();
+    return durability.ordinal() >  Durability.ASYNC_WAL.ordinal();
   }
 
   /**

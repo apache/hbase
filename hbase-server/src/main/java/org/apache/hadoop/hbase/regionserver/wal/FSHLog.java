@@ -122,7 +122,7 @@ class FSHLog implements HLog, Syncable {
   private final String prefix;
   private final AtomicLong unflushedEntries = new AtomicLong(0);
   private final AtomicLong syncedTillHere = new AtomicLong(0);
-  private long lastDeferredTxid;
+  private long lastUnSyncedTxid;
   private final Path oldLogDir;
 
   // all writes pending on AsyncWriter/AsyncSyncer thread with
@@ -765,10 +765,10 @@ class FSHLog implements HLog, Syncable {
       } catch (IOException e) {
         LOG.error("Failed close of HLog writer", e);
         int errors = closeErrorCount.incrementAndGet();
-        if (errors <= closeErrorsTolerated && !hasDeferredEntries()) {
+        if (errors <= closeErrorsTolerated && !hasUnSyncedEntries()) {
           LOG.warn("Riding over HLog close failure! error count="+errors);
         } else {
-          if (hasDeferredEntries()) {
+          if (hasUnSyncedEntries()) {
             LOG.error("Aborting due to unflushed edits in HLog");
           }
           // Failed close of log file.  Means we're losing edits.  For now,
@@ -1026,8 +1026,8 @@ class FSHLog implements HLog, Syncable {
           this.numEntries.incrementAndGet();
           this.asyncWriter.setPendingTxid(txid);
 
-          if (htd.isDeferredLogFlush()) {
-            lastDeferredTxid = txid;
+          if (htd.isAsyncLogFlush()) {
+            lastUnSyncedTxid = txid;
           }
           this.latestSequenceNums.put(encodedRegionName, seqNum);
         }
@@ -1037,7 +1037,7 @@ class FSHLog implements HLog, Syncable {
         // deferred log flushing
         if (doSync &&
             (info.isMetaRegion() ||
-            !htd.isDeferredLogFlush())) {
+            !htd.isAsyncLogFlush())) {
           // sync txn to file system
           this.sync(txid);
         }
@@ -1645,8 +1645,8 @@ class FSHLog implements HLog, Syncable {
   }
 
   /** Provide access to currently deferred sequence num for tests */
-  boolean hasDeferredEntries() {
-    return this.lastDeferredTxid > this.syncedTillHere.get();
+  boolean hasUnSyncedEntries() {
+    return this.lastUnSyncedTxid > this.syncedTillHere.get();
   }
 
   @Override

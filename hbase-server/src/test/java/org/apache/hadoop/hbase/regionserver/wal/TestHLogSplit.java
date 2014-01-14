@@ -1074,10 +1074,6 @@ public class TestHLogSplit {
   @Test (timeout=300000)
   @Ignore("Need HADOOP-6886, HADOOP-6840, & HDFS-617 for this. HDFS 0.20.205.1+ should have this")
   public void testLogRollAfterSplitStart() throws IOException {
-    // set flush interval to a large number so it doesn't interrupt us
-    final String F_INTERVAL = "hbase.regionserver.optionallogflushinterval";
-    long oldFlushInterval = conf.getLong(F_INTERVAL, 1000);
-    conf.setLong(F_INTERVAL, 1000*1000*100);
     HLog log = null;
     String logName = "testLogRollAfterSplitStart";
     Path thisTestsDir = new Path(HBASEDIR, logName);
@@ -1127,7 +1123,6 @@ public class TestHLogSplit {
         }
       }
     } finally {
-      conf.setLong(F_INTERVAL, oldFlushInterval);
       if (log != null) {
         log.close();
       }

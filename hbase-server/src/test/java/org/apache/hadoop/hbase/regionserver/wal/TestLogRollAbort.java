@@ -87,9 +87,6 @@ public class TestLogRollAbort {
     // the namenode might still try to choose the recently-dead datanode
     // for a pipeline, so try to a new pipeline multiple times
     TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 10);
-    // set periodic sync to 2 min so it doesn't run during test
-    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.optionallogflushinterval",
-        120 * 1000);
   }
 
   @Before
@@ -125,7 +122,7 @@ public class TestLogRollAbort {
     String tableName = this.getClass().getSimpleName();
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    desc.setDeferredLogFlush(true);
+    desc.setAsyncLogFlush(true);
 
     admin.createTable(desc);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
@@ -155,7 +152,7 @@ public class TestLogRollAbort {
       log.rollWriter(true);
     } catch (FailedLogCloseException flce) {
       assertTrue("Should have deferred flush log edits outstanding",
-          ((FSHLog) log).hasDeferredEntries());
+          ((FSHLog) log).hasUnSyncedEntries());
     }
   }
 
