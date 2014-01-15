@@ -622,7 +622,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         abort("Uncaught exception in service thread " + t.getName(), e);
       }
     };
-    this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
 
     this.rsInfo = RegionServerInfo.newBuilder();
     // Put up the webui. Webui may come up on port other than configured if
@@ -838,6 +837,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     try {
       // Set our ephemeral znode up in zookeeper now we have a name.
       createMyEphemeralNode();
+
+      // Initialize the RegionServerCoprocessorHost now that our ephemeral
+      // node was created, in case any coprocessors want to use ZooKeeper
+      this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
 
       // Try and register with the Master; tell it we are here.  Break if
       // server is stopped or the clusterup flag is down or hdfs went wacky.
