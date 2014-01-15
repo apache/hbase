@@ -574,7 +574,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         abort("Uncaught exception in service thread " + t.getName(), e);
       }
     };
-    this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
 
     this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
       HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
@@ -790,6 +789,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           break;
         }
       }
+
+      // Initialize the RegionServerCoprocessorHost now that our ephemeral
+      // node was created by reportForDuty, in case any coprocessors want
+      // to use ZooKeeper
+      this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
 
       if (!this.stopped && isHealthy()){
         // start the snapshot handler, since the server is ready to run

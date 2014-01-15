@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -132,6 +133,17 @@ public class TestAccessController extends SecureTestUtil {
   private static RegionServerCoprocessorEnvironment RSCP_ENV;
   private RegionCoprocessorEnvironment RCP_ENV;
 
+  static void verifyConfiguration(Configuration conf) {
+    if (!(conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY)
+            .contains(AccessController.class.getName())
+          && conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY)
+            .contains(AccessController.class.getName())
+          && conf.get(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY)
+            .contains(AccessController.class.getName()))) {
+      throw new RuntimeException("AccessController is missing from a system coprocessor list");
+    }
+  }
+
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     // setup configuration
@@ -142,6 +154,8 @@ public class TestAccessController extends SecureTestUtil {
     conf.set("hbase.master.logcleaner.plugins",
       "org.apache.hadoop.hbase.master.snapshot.SnapshotLogCleaner");
     SecureTestUtil.enableSecurity(conf);
+    // Verify enableSecurity sets up what we require
+    verifyConfiguration(conf);
 
     TEST_UTIL.startMiniCluster();
     MasterCoprocessorHost cpHost = TEST_UTIL.getMiniHBaseCluster().getMaster().getCoprocessorHost();
