@@ -658,6 +658,69 @@ htable.put(put);
   Start there.  Below is some additional help.</para>
   <para>For more information about MapReduce (i.e., the framework in general), see the Hadoop site (TODO: Need good links here --
       we used to have some but they rotted against apache hadoop).</para>
+  <caution>
+    <title>Notice to Mapreduce users of HBase 0.96.1 and above</title>
+    <para>Some mapreduce jobs that use HBase fail to launch. The symptom is an
+    exception similar to the following:
+    <programlisting>
+Exception in thread "main" java.lang.IllegalAccessError: class
+    com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass
+    com.google.protobuf.LiteralByteString
+    at java.lang.ClassLoader.defineClass1(Native Method)
+    at java.lang.ClassLoader.defineClass(ClassLoader.java:792)
+    at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)
+    at java.net.URLClassLoader.defineClass(URLClassLoader.java:449)
+    at java.net.URLClassLoader.access$100(URLClassLoader.java:71)
+    at java.net.URLClassLoader$1.run(URLClassLoader.java:361)
+    at java.net.URLClassLoader$1.run(URLClassLoader.java:355)
+    at java.security.AccessController.doPrivileged(Native Method)
+    at java.net.URLClassLoader.findClass(URLClassLoader.java:354)
+    at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
+    at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
+    at
+    org.apache.hadoop.hbase.protobuf.ProtobufUtil.toScan(ProtobufUtil.java:818)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.convertScanToString(TableMapReduceUtil.java:433)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:186)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:147)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:270)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:100)
+...
+</programlisting>
+    This is because of an optimization introduced in <link
+    xlink:href="https://issues.apache.org/jira/browse/HBASE-9867">HBASE-9867</link>
+    that inadvertently introduced a classloader dependency.
+    </para>
+    <para>This affects both jobs using the <code>-libjars</code> option and
+    "fat jar," those which package their runtime dependencies in a nested
+    <code>lib</code> folder.</para>
+    <para>In order to satisfy the new classloader requirements,
+    hbase-protocol.jar must be included in Hadoop's classpath. This can be
+    resolved system-wide by including a reference to the hbase-protocol.jar in
+    hadoop's lib directory, via a symlink or by copying the jar into the new
+    location.</para>
+    <para>This can also be achieved on a per-job launch basis by including it
+    in the <code>HADOOP_CLASSPATH</code> environment variable at job submission
+    time. When launching jobs that package their dependencies, all three of the
+    following job launching commands satisfy this requirement:</para>
+<programlisting>
+$ HADOOP_CLASSPATH=/path/to/hbase-protocol.jar:/path/to/hbase/conf hadoop jar MyJob.jar MyJobMainClass
+$ HADOOP_CLASSPATH=$(hbase mapredcp):/path/to/hbase/conf hadoop jar MyJob.jar MyJobMainClass
+$ HADOOP_CLASSPATH=$(hbase classpath) hadoop jar MyJob.jar MyJobMainClass
+</programlisting>
+  <para>For jars that do not package their dependencies, the following command
+  structure is necessary:</para>
+<programlisting>
+$ HADOOP_CLASSPATH=$(hbase mapredcp):/etc/hbase/conf hadoop jar MyApp.jar MyJobMainClass -libjars $(hbase mapredcp | tr ':' ',') ...
+</programlisting>
+  <para>See also <link
+  xlink:href="https://issues.apache.org/jira/browse/HBASE-10304">HBASE-10304</link>
+  for further discussion of this issue.</para>
+  </caution>
   <section xml:id="splitter">
     <title>Map-Task Splitting</title>
     <section xml:id="splitter.default">
