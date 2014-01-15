@@ -1201,6 +1201,15 @@ class FSHLog implements HLog, Syncable {
             this.txidToSync = this.writtenTxid;
           }
 
+          // if this syncer's writes have been synced by other syncer:
+          // 1. just set lastSyncedTxid
+          // 2. don't do real sync, don't notify AsyncNotifier, don't logroll check
+          // regardless of whether the writer is null or not
+          if (this.txidToSync <= syncedTillHere.get()) {
+            this.lastSyncedTxid = this.txidToSync;
+            continue;
+          }
+
           // 2. do 'sync' to HDFS to provide durability
           long now = EnvironmentEdgeManager.currentTimeMillis();
           try {
@@ -1219,16 +1228,13 @@ class FSHLog implements HLog, Syncable {
               // 6. t6: AsyncSyncer 1 starts to use writer to do sync... before
               //        rollWriter set writer to the newly created Writer
               //
-              // So when writer == null here:
-              // 1. if txidToSync <= syncedTillHere, can safely ignore sync here;
-              // 2. if txidToSync > syncedTillHere, we need fail all the writes with
-              //    txid <= txidToSync to avoid 'data loss' where user get successful
-              //    write response but can't read the writes!
-              if (this.txidToSync > syncedTillHere.get()) {
-                LOG.fatal("should never happen: has unsynced writes but writer is null!");
-                asyncIOE = new IOException("has unsynced writes but writer is null!");
-                failedTxid.set(this.txidToSync);
-              }
+              // Now writer == null and txidToSync > syncedTillHere here:
+              // we need fail all the writes with txid <= txidToSync to avoid
+              // 'data loss' where user get successful write response but can't
+              // read the writes!
+              LOG.fatal("should never happen: has unsynced writes but writer is null!");
+              asyncIOE = new IOException("has unsynced writes but writer is null!");
+              failedTxid.set(this.txidToSync);
             } else {
               this.isSyncing = true;            
               writer.sync();
