@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.AuthFailedException;
 import org.apache.zookeeper.KeeperException.ConnectionLossException;
 import org.apache.zookeeper.KeeperException.SessionExpiredException;
 
@@ -242,6 +243,9 @@ public class ReplicationZookeeper {
     try {
       addresses = fetchSlavesAddresses(peer.getZkw());
     } catch (KeeperException ke) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Fetch salves addresses failed.", ke);
+      }
       reconnectPeer(ke, peer);
       addresses = Collections.emptyList();
     }
@@ -878,8 +882,8 @@ public class ReplicationZookeeper {
   }
 
   private void reconnectPeer(KeeperException ke, ReplicationPeer peer) {
-    if (ke instanceof ConnectionLossException
-      || ke instanceof SessionExpiredException) {
+    if (ke instanceof ConnectionLossException || ke instanceof SessionExpiredException
+        || ke instanceof AuthFailedException) {
       LOG.warn(
         "Lost the ZooKeeper connection for peer " + peer.getClusterKey(),
         ke);
