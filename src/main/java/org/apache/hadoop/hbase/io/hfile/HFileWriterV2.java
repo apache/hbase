@@ -117,7 +117,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
     boolean cacheL2IndexesOnWrite = cacheConf.shouldL2CacheDataOnWrite();
     dataBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter(fsBlockWriter,
-        cacheIndexesOnWrite ? cacheConf.getBlockCache(): null, l2Cache,
+        cacheIndexesOnWrite ? cacheConf.getBlockCache(): null,
+        cacheL2IndexesOnWrite ? l2Cache : null,
         (cacheIndexesOnWrite || cacheL2IndexesOnWrite) ? name : null);
     dataBlockIndexWriter.setMaxChunkSize(
         HFileBlockIndex.getMaxChunkSize(conf));

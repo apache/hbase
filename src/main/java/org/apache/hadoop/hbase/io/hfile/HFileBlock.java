@@ -1566,7 +1566,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           }
           b.validateOnDiskSizeWithoutHeader(onDiskSizeWithoutHeader);
           b.nextBlockOnDiskSizeWithHeader = nextBlockOnDiskSize;
-          if (addToL2Cache && cacheAgent.isL2CacheEnabled()) {
+          if (addToL2Cache && cacheAgent != null &&
+                  cacheAgent.isL2CacheEnabled()) {
             if (preReadHeaderSize > 0) {
               // If we plan to add block to L2 cache, we need to copy the
               // header information into the byte array so that it can be
@@ -1642,7 +1643,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           b.nextBlockOnDiskSizeWithHeader = readAtOffset(compressedBytes,
               HEADER_SIZE, b.onDiskSizeWithoutHeader, true, offset
                   + HEADER_SIZE, options);
-          if (addToL2Cache && cacheAgent.isL2CacheEnabled()) {
+          if (addToL2Cache && cacheAgent != null &&
+                  cacheAgent.isL2CacheEnabled()) {
             // If l2 cache is enabled, we need to copy the header bytes to
             // the compressed bytes array, so that they can be cached in the
             // L2 cache.
