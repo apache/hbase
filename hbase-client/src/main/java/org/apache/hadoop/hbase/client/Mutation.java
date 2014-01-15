@@ -240,6 +240,25 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /**
+   * Method for retrieving the put's familyMap that is deprecated and inefficient.
+   * @return the map
+   * @deprecated use {@link #getFamilyCellMap()} instead.
+   */
+  @Deprecated
+  public NavigableMap<byte [], List<KeyValue>> getFamilyMap() {
+    TreeMap<byte[], List<KeyValue>> fm =
+        new TreeMap<byte[], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
+    for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
+      List<KeyValue> kvl = new ArrayList<KeyValue>(e.getValue().size());
+      for (Cell c : e.getValue()) {
+        kvl.add(KeyValueUtil.ensureKeyValue(c));
+      }
+      fm.put(e.getKey(), kvl);
+    }
+    return fm;
+  }
+
+  /**
    * Method for setting the put's familyMap that is deprecated and inefficient.
    * @deprecated use {@link #setFamilyCellMap(NavigableMap)} instead.
    */
