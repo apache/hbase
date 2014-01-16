@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -140,10 +139,6 @@ public class TestAssignmentManagerOnCluster {
   @Test (timeout=60000)
   public void testAssignRegionOnRestartedServer() throws Exception {
     String table = "testAssignRegionOnRestartedServer";
-    conf.setInt("hbase.assignment.maximum.attempts", 20);
-    TEST_UTIL.getMiniHBaseCluster().stopMaster(0);
-    TEST_UTIL.getMiniHBaseCluster().startMaster(); //restart the master so that conf take into affect
-
     ServerName deadServer = null;
     HMaster master = null;
     try {
@@ -152,7 +147,7 @@ public class TestAssignmentManagerOnCluster {
       admin.createTable(desc);
 
       HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
-      final HRegionInfo hri = new HRegionInfo(
+      HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaEditor.addRegionToMeta(meta, hri);
 
@@ -168,7 +163,7 @@ public class TestAssignmentManagerOnCluster {
           destServer.getPort(), destServer.getStartcode() - 100L);
       master.serverManager.recordNewServerWithLock(deadServer, ServerLoad.EMPTY_SERVERLOAD);
 
-      final AssignmentManager am = master.getAssignmentManager();
+      AssignmentManager am = master.getAssignmentManager();
       RegionPlan plan = new RegionPlan(hri, null, deadServer);
       am.addPlan(hri.getEncodedName(), plan);
       master.assignRegion(hri);
@@ -178,14 +173,15 @@ public class TestAssignmentManagerOnCluster {
         EventType.RS_ZK_REGION_OPENING, 0);
       assertEquals("TansitionNode should fail", -1, version);
 
-      TEST_UTIL.waitFor(40000, new Waiter.Predicate<Exception>() {
-        @Override
-        public boolean evaluate() throws Exception {
-          return ! am.getRegionStates().isRegionInTransition(hri);
-        }
-      });
+      // Give region 2 seconds to assign, which may not be enough.
+      // However, if HBASE-8545 is broken, this test will be flaky.
+      // Otherwise, this test should never be flaky.
+      Thread.sleep(2000);
 
-    assertFalse("Region should be assigned", am.getRegionStates().isRegionInTransition(hri));
+      assertTrue("Region should still be in transition",
+        am.getRegionStates().isRegionInTransition(hri));
+      assertEquals("Assign node should still be in version 0", 0,
+        ZKAssign.getVersion(master.getZooKeeper(), hri));
     } finally {
       if (deadServer != null) {
         master.serverManager.expireServer(deadServer);

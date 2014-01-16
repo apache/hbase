@@ -3556,15 +3556,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       throw new ServiceException(ie);
     }
     requestCount.increment();
-    if (request.hasServerStartCode() && this.serverNameFromMasterPOV != null) {
-      // check that we are the same server that this RPC is intended for.
-      long serverStartCode = request.getServerStartCode();
-      if (this.serverNameFromMasterPOV.getStartcode() !=  serverStartCode) {
-        throw new ServiceException(new DoNotRetryIOException("This RPC was intended for a " +
-            "different server with startCode: " + serverStartCode + ", this server is: "
-            + this.serverNameFromMasterPOV));
-      }
-    }
     OpenRegionResponse.Builder builder = OpenRegionResponse.newBuilder();
     final int regionCount = request.getOpenInfoCount();
     final Map<TableName, HTableDescriptor> htds =
@@ -3722,15 +3713,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
     try {
       checkOpen();
-      if (request.hasServerStartCode() && this.serverNameFromMasterPOV != null) {
-        // check that we are the same server that this RPC is intended for.
-        long serverStartCode = request.getServerStartCode();
-        if (this.serverNameFromMasterPOV.getStartcode() !=  serverStartCode) {
-          throw new ServiceException(new DoNotRetryIOException("This RPC was intended for a " +
-              "different server with startCode: " + serverStartCode + ", this server is: "
-              + this.serverNameFromMasterPOV));
-        }
-      }
       final String encodedRegionName = ProtobufUtil.getRegionEncodedName(request.getRegion());
 
       // Can be null if we're calling close on a region that's not online

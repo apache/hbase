@@ -27,10 +27,11 @@ package com.google.protobuf;  // This is a lie.
  *
  * @since 0.96.1
  */
-public final class ZeroCopyLiteralByteString {
+public final class ZeroCopyLiteralByteString extends LiteralByteString {
   // Gotten from AsyncHBase code base with permission.
   /** Private constructor so this class cannot be instantiated. */
   private ZeroCopyLiteralByteString() {
+    super(null);
     throw new UnsupportedOperationException("Should never be here.");
   }
 

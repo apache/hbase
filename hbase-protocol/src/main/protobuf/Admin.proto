@@ -68,8 +68,6 @@ message GetOnlineRegionResponse {
 
 message OpenRegionRequest {
   repeated RegionOpenInfo open_info = 1;
-  // the intended server for this RPC.
-  optional uint64 serverStartCode = 2;
 
   message RegionOpenInfo {
     required RegionInfo region = 1;
@@ -97,8 +95,6 @@ message CloseRegionRequest {
   optional uint32 version_of_closing_node = 2;
   optional bool transition_in_ZK = 3 [default = true];
   optional ServerName destination_server = 4;
-  // the intended server for this RPC.
-  optional uint64 serverStartCode = 5;
 }
 
 message CloseRegionResponse {

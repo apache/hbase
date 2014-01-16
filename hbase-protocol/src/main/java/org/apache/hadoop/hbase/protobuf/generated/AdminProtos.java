@@ -3856,24 +3856,6 @@ public final class AdminProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfoOrBuilder getOpenInfoOrBuilder(
         int index);
-
-    // optional uint64 serverStartCode = 2;
-    /**
-     * <code>optional uint64 serverStartCode = 2;</code>
-     *
-     * <pre>
-     * the intended server for this RPC.
-     * </pre>
-     */
-    boolean hasServerStartCode();
-    /**
-     * <code>optional uint64 serverStartCode = 2;</code>
-     *
-     * <pre>
-     * the intended server for this RPC.
-     * </pre>
-     */
-    long getServerStartCode();
   }
   /**
    * Protobuf type {@code OpenRegionRequest}
@@ -3932,11 +3914,6 @@ public final class AdminProtos {
                 mutable_bitField0_ |= 0x00000001;
               }
               openInfo_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo.PARSER, extensionRegistry));
-              break;
-            }
-            case 16: {
-              bitField0_ |= 0x00000001;
-              serverStartCode_ = input.readUInt64();
               break;
             }
           }
@@ -5012,7 +4989,6 @@ public final class AdminProtos {
       // @@protoc_insertion_point(class_scope:OpenRegionRequest.RegionOpenInfo)
     }
 
-    private int bitField0_;
     // repeated .OpenRegionRequest.RegionOpenInfo open_info = 1;
     public static final int OPEN_INFO_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo> openInfo_;
@@ -5049,33 +5025,8 @@ public final class AdminProtos {
       return openInfo_.get(index);
     }
 
-    // optional uint64 serverStartCode = 2;
-    public static final int SERVERSTARTCODE_FIELD_NUMBER = 2;
-    private long serverStartCode_;
-    /**
-     * <code>optional uint64 serverStartCode = 2;</code>
-     *
-     * <pre>
-     * the intended server for this RPC.
-     * </pre>
-     */
-    public boolean hasServerStartCode() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    /**
-     * <code>optional uint64 serverStartCode = 2;</code>
-     *
-     * <pre>
-     * the intended server for this RPC.
-     * </pre>
-     */
-    public long getServerStartCode() {
-      return serverStartCode_;
-    }
-
     private void initFields() {
       openInfo_ = java.util.Collections.emptyList();
-      serverStartCode_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -5098,9 +5049,6 @@ public final class AdminProtos {
       for (int i = 0; i < openInfo_.size(); i++) {
         output.writeMessage(1, openInfo_.get(i));
       }
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeUInt64(2, serverStartCode_);
-      }
       getUnknownFields().writeTo(output);
     }
 
@@ -5113,10 +5061,6 @@ public final class AdminProtos {
       for (int i = 0; i < openInfo_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, openInfo_.get(i));
-      }
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(2, serverStartCode_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -5143,11 +5087,6 @@ public final class AdminProtos {
       boolean result = true;
       result = result && getOpenInfoList()
           .equals(other.getOpenInfoList());
-      result = result && (hasServerStartCode() == other.hasServerStartCode());
-      if (hasServerStartCode()) {
-        result = result && (getServerStartCode()
-            == other.getServerStartCode());
-      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -5164,10 +5103,6 @@ public final class AdminProtos {
       if (getOpenInfoCount() > 0) {
         hash = (37 * hash) + OPEN_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getOpenInfoList().hashCode();
-      }
-      if (hasServerStartCode()) {
-        hash = (37 * hash) + SERVERSTARTCODE_FIELD_NUMBER;
-        hash = (53 * hash) + hashLong(getServerStartCode());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -5285,8 +5220,6 @@ public final class AdminProtos {
         } else {
           openInfoBuilder_.clear();
         }
-        serverStartCode_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -5314,7 +5247,6 @@ public final class AdminProtos {
       public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest result = new org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest(this);
         int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
         if (openInfoBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
             openInfo_ = java.util.Collections.unmodifiableList(openInfo_);
@@ -5324,11 +5256,6 @@ public final class AdminProtos {
         } else {
           result.openInfo_ = openInfoBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.serverStartCode_ = serverStartCode_;
-        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -5369,9 +5296,6 @@ public final class AdminProtos {
               openInfoBuilder_.addAllMessages(other.openInfo_);
             }
           }
-        }
-        if (other.hasServerStartCode()) {
-          setServerStartCode(other.getServerStartCode());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -5644,55 +5568,6 @@ public final class AdminProtos {
           openInfo_ = null;
         }
         return openInfoBuilder_;
-      }
-
-      // optional uint64 serverStartCode = 2;
-      private long serverStartCode_ ;
-      /**
-       * <code>optional uint64 serverStartCode = 2;</code>
-       *
-       * <pre>
-       * the intended server for this RPC.
-       * </pre>
-       */
-      public boolean hasServerStartCode() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      /**
-       * <code>optional uint64 serverStartCode = 2;</code>
-       *
-       * <pre>
-       * the intended server for this RPC.
-       * </pre>
-       */
-      public long getServerStartCode() {
-        return serverStartCode_;
-      }
-      /**
-       * <code>optional uint64 serverStartCode = 2;</code>
-       *
-       * <pre>
-       * the intended server for this RPC.
-       * </pre>
-       */
-      public Builder setServerStartCode(long value) {
-        bitField0_ |= 0x00000002;
-        serverStartCode_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional uint64 serverStartCode = 2;</code>
-       *
-       * <pre>
-       * the intended server for this RPC.
-       * </pre>
-       */
-      public Builder clearServerStartCode() {
-        bitField0_ = (bitField0_ & ~0x00000002);
-        serverStartCode_ = 0L;
-        onChanged();
-        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:OpenRegionRequest)
@@ -6368,24 +6243,6 @@ public final class AdminProtos {
      * <code>optional .ServerName destination_server = 4;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getDestinationServerOrBuilder();
-
-    // optional uint64 serverStartCode = 5;
-    /**
-     * <code>optional uint64 serverStartCode = 5;</code>
-     *
-     * <pre>
-     * the intended server for this RPC.
-     * </pre>
-     */
-    boolean hasServerStartCode();
-    /**
-     * <code>optional uint64 serverStartCode = 5;</code>
-     *
-     * <pre>
-     * the intended server for this RPC.
-     * </pre>
-     */
-    long getServerStartCode();
   }
   /**
    * Protobuf type {@code CloseRegionRequest}
@@ -6478,11 +6335,6 @@ public final class AdminProtos {
                 destinationServer_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000008;
-              break;
-            }
-            case 40: {
-              bitField0_ |= 0x00000010;
-              serverStartCode_ = input.readUInt64();
               break;
             }
           }
@@ -6601,36 +6453,11 @@ public final class AdminProtos {
       return destinationServer_;
     }
 
-    // optional uint64 serverStartCode = 5;
-    public static final int SERVERSTARTCODE_FIELD_NUMBER = 5;
-    private long serverStartCode_;
-    /**
-     * <code>optional uint64 serverStartCode = 5;</code>
-     *
-     * <pre>
-     * the intended server for this RPC.
-     * </pre>
-     */
-    public boolean hasServerStartCode() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
-    }
-    /**
-     * <code>optional uint64 serverStartCode = 5;</code>
-     *
-     * <pre>
-     * the intended server for this RPC.
-     * </pre>
-     */
-    public long getServerStartCode() {
-      return serverStartCode_;
-    }
-
     private void initFields() {
       region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       versionOfClosingNode_ = 0;
       transitionInZK_ = true;
       destinationServer_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
-      serverStartCode_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -6670,9 +6497,6 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeMessage(4, destinationServer_);
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeUInt64(5, serverStartCode_);
-      }
       getUnknownFields().writeTo(output);
     }
 
@@ -6697,10 +6521,6 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(4, destinationServer_);
-      }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(5, serverStartCode_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -6745,11 +6565,6 @@ public final class AdminProtos {
         result = result && getDestinationServer()
             .equals(other.getDestinationServer());
       }
-      result = result && (hasServerStartCode() == other.hasServerStartCode());
-      if (hasServerStartCode()) {
-        result = result && (getServerStartCode()
-            == other.getServerStartCode());
-      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -6778,10 +6593,6 @@ public final class AdminProtos {
       if (hasDestinationServer()) {
         hash = (37 * hash) + DESTINATION_SERVER_FIELD_NUMBER;
         hash = (53 * hash) + getDestinationServer().hashCode();
-      }
-      if (hasServerStartCode()) {
-        hash = (37 * hash) + SERVERSTARTCODE_FIELD_NUMBER;
-        hash = (53 * hash) + hashLong(getServerStartCode());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -6916,8 +6727,6 @@ public final class AdminProtos {
           destinationServerBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000008);
-        serverStartCode_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
 
@@ -6970,10 +6779,6 @@ public final class AdminProtos {
         } else {
           result.destinationServer_ = destinationServerBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
-          to_bitField0_ |= 0x00000010;
-        }
-        result.serverStartCode_ = serverStartCode_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -7001,9 +6806,6 @@ public final class AdminProtos {
         }
         if (other.hasDestinationServer()) {
           mergeDestinationServer(other.getDestinationServer());
-        }
-        if (other.hasServerStartCode()) {
-          setServerStartCode(other.getServerStartCode());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -7344,55 +7146,6 @@ public final class AdminProtos {
           destinationServer_ = null;
         }
         return destinationServerBuilder_;
-      }
-
-      // optional uint64 serverStartCode = 5;
-      private long serverStartCode_ ;
-      /**
-       * <code>optional uint64 serverStartCode = 5;</code>
-       *
-       * <pre>
-       * the intended server for this RPC.
-       * </pre>
-       */
-      public boolean hasServerStartCode() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
-      }
-      /**
-       * <code>optional uint64 serverStartCode = 5;</code>
-       *
-       * <pre>
-       * the intended server for this RPC.
-       * </pre>
-       */
-      public long getServerStartCode() {
-        return serverStartCode_;
-      }
-      /**
-       * <code>optional uint64 serverStartCode = 5;</code>
-       *
-       * <pre>
-       * the intended server for this RPC.
-       * </pre>
-       */
-      public Builder setServerStartCode(long value) {
-        bitField0_ |= 0x00000010;
-        serverStartCode_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional uint64 serverStartCode = 5;</code>
-       *
-       * <pre>
-       * the intended server for this RPC.
-       * </pre>
-       */
-      public Builder clearServerStartCode() {
-        bitField0_ = (bitField0_ & ~0x00000010);
-        serverStartCode_ = 0L;
-        onChanged();
-        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:CloseRegionRequest)
@@ -21166,77 +20919,76 @@ public final class AdminProtos {
       "FileResponse\022\022\n\nstore_file\030\001 \003(\t\"\030\n\026GetO" +
       "nlineRegionRequest\";\n\027GetOnlineRegionRes" +
       "ponse\022 \n\013region_info\030\001 \003(\0132\013.RegionInfo\"" +
-      "\326\001\n\021OpenRegionRequest\0224\n\topen_info\030\001 \003(\013" +
-      "2!.OpenRegionRequest.RegionOpenInfo\022\027\n\017s" +
-      "erverStartCode\030\002 \001(\004\032r\n\016RegionOpenInfo\022\033" +
-      "\n\006region\030\001 \002(\0132\013.RegionInfo\022\037\n\027version_o" +
-      "f_offline_node\030\002 \001(\r\022\"\n\rfavored_nodes\030\003 " +
-      "\003(\0132\013.ServerName\"\235\001\n\022OpenRegionResponse\022",
-      "=\n\ropening_state\030\001 \003(\0162&.OpenRegionRespo" +
-      "nse.RegionOpeningState\"H\n\022RegionOpeningS" +
-      "tate\022\n\n\006OPENED\020\000\022\022\n\016ALREADY_OPENED\020\001\022\022\n\016" +
-      "FAILED_OPENING\020\002\"\271\001\n\022CloseRegionRequest\022" +
-      " \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\037\n\027ver" +
-      "sion_of_closing_node\030\002 \001(\r\022\036\n\020transition" +
-      "_in_ZK\030\003 \001(\010:\004true\022\'\n\022destination_server" +
-      "\030\004 \001(\0132\013.ServerName\022\027\n\017serverStartCode\030\005" +
-      " \001(\004\"%\n\023CloseRegionResponse\022\016\n\006closed\030\001 " +
-      "\002(\010\"P\n\022FlushRegionRequest\022 \n\006region\030\001 \002(",
-      "\0132\020.RegionSpecifier\022\030\n\020if_older_than_ts\030" +
-      "\002 \001(\004\"?\n\023FlushRegionResponse\022\027\n\017last_flu" +
-      "sh_time\030\001 \002(\004\022\017\n\007flushed\030\002 \001(\010\"K\n\022SplitR" +
-      "egionRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpe" +
-      "cifier\022\023\n\013split_point\030\002 \001(\014\"\025\n\023SplitRegi" +
-      "onResponse\"W\n\024CompactRegionRequest\022 \n\006re" +
-      "gion\030\001 \002(\0132\020.RegionSpecifier\022\r\n\005major\030\002 " +
-      "\001(\010\022\016\n\006family\030\003 \001(\014\"\027\n\025CompactRegionResp" +
-      "onse\"\262\001\n\031UpdateFavoredNodesRequest\022@\n\013up" +
-      "date_info\030\001 \003(\0132+.UpdateFavoredNodesRequ",
-      "est.RegionUpdateInfo\032S\n\020RegionUpdateInfo" +
-      "\022\033\n\006region\030\001 \002(\0132\013.RegionInfo\022\"\n\rfavored" +
-      "_nodes\030\002 \003(\0132\013.ServerName\".\n\032UpdateFavor" +
-      "edNodesResponse\022\020\n\010response\030\001 \001(\r\"v\n\023Mer" +
-      "geRegionsRequest\022\"\n\010region_a\030\001 \002(\0132\020.Reg" +
-      "ionSpecifier\022\"\n\010region_b\030\002 \002(\0132\020.RegionS" +
-      "pecifier\022\027\n\010forcible\030\003 \001(\010:\005false\"\026\n\024Mer" +
-      "geRegionsResponse\"X\n\010WALEntry\022\024\n\003key\030\001 \002" +
-      "(\0132\007.WALKey\022\027\n\017key_value_bytes\030\002 \003(\014\022\035\n\025" +
-      "associated_cell_count\030\003 \001(\005\"4\n\030Replicate",
-      "WALEntryRequest\022\030\n\005entry\030\001 \003(\0132\t.WALEntr" +
-      "y\"\033\n\031ReplicateWALEntryResponse\"\026\n\024RollWA" +
-      "LWriterRequest\"0\n\025RollWALWriterResponse\022" +
-      "\027\n\017region_to_flush\030\001 \003(\014\"#\n\021StopServerRe" +
-      "quest\022\016\n\006reason\030\001 \002(\t\"\024\n\022StopServerRespo" +
-      "nse\"\026\n\024GetServerInfoRequest\"B\n\nServerInf" +
-      "o\022 \n\013server_name\030\001 \002(\0132\013.ServerName\022\022\n\nw" +
-      "ebui_port\030\002 \001(\r\"9\n\025GetServerInfoResponse" +
-      "\022 \n\013server_info\030\001 \002(\0132\013.ServerInfo2\306\007\n\014A" +
-      "dminService\022>\n\rGetRegionInfo\022\025.GetRegion",
-      "InfoRequest\032\026.GetRegionInfoResponse\022;\n\014G" +
-      "etStoreFile\022\024.GetStoreFileRequest\032\025.GetS" +
-      "toreFileResponse\022D\n\017GetOnlineRegion\022\027.Ge" +
-      "tOnlineRegionRequest\032\030.GetOnlineRegionRe" +
-      "sponse\0225\n\nOpenRegion\022\022.OpenRegionRequest" +
-      "\032\023.OpenRegionResponse\0228\n\013CloseRegion\022\023.C" +
-      "loseRegionRequest\032\024.CloseRegionResponse\022" +
-      "8\n\013FlushRegion\022\023.FlushRegionRequest\032\024.Fl" +
-      "ushRegionResponse\0228\n\013SplitRegion\022\023.Split" +
-      "RegionRequest\032\024.SplitRegionResponse\022>\n\rC",
-      "ompactRegion\022\025.CompactRegionRequest\032\026.Co" +
-      "mpactRegionResponse\022;\n\014MergeRegions\022\024.Me" +
-      "rgeRegionsRequest\032\025.MergeRegionsResponse" +
-      "\022J\n\021ReplicateWALEntry\022\031.ReplicateWALEntr" +
-      "yRequest\032\032.ReplicateWALEntryResponse\022?\n\006" +
-      "Replay\022\031.ReplicateWALEntryRequest\032\032.Repl" +
-      "icateWALEntryResponse\022>\n\rRollWALWriter\022\025" +
-      ".RollWALWriterRequest\032\026.RollWALWriterRes" +
-      "ponse\022>\n\rGetServerInfo\022\025.GetServerInfoRe" +
-      "quest\032\026.GetServerInfoResponse\0225\n\nStopSer",
-      "ver\022\022.StopServerRequest\032\023.StopServerResp" +
-      "onse\022M\n\022UpdateFavoredNodes\022\032.UpdateFavor" +
-      "edNodesRequest\032\033.UpdateFavoredNodesRespo" +
-      "nseBA\n*org.apache.hadoop.hbase.protobuf." +
-      "generatedB\013AdminProtosH\001\210\001\001\240\001\001"
+      "\275\001\n\021OpenRegionRequest\0224\n\topen_info\030\001 \003(\013" +
+      "2!.OpenRegionRequest.RegionOpenInfo\032r\n\016R" +
+      "egionOpenInfo\022\033\n\006region\030\001 \002(\0132\013.RegionIn" +
+      "fo\022\037\n\027version_of_offline_node\030\002 \001(\r\022\"\n\rf" +
+      "avored_nodes\030\003 \003(\0132\013.ServerName\"\235\001\n\022Open" +
+      "RegionResponse\022=\n\ropening_state\030\001 \003(\0162&.",
+      "OpenRegionResponse.RegionOpeningState\"H\n" +
+      "\022RegionOpeningState\022\n\n\006OPENED\020\000\022\022\n\016ALREA" +
+      "DY_OPENED\020\001\022\022\n\016FAILED_OPENING\020\002\"\240\001\n\022Clos" +
+      "eRegionRequest\022 \n\006region\030\001 \002(\0132\020.RegionS" +
+      "pecifier\022\037\n\027version_of_closing_node\030\002 \001(" +
+      "\r\022\036\n\020transition_in_ZK\030\003 \001(\010:\004true\022\'\n\022des" +
+      "tination_server\030\004 \001(\0132\013.ServerName\"%\n\023Cl" +
+      "oseRegionResponse\022\016\n\006closed\030\001 \002(\010\"P\n\022Flu" +
+      "shRegionRequest\022 \n\006region\030\001 \002(\0132\020.Region" +
+      "Specifier\022\030\n\020if_older_than_ts\030\002 \001(\004\"?\n\023F",
+      "lushRegionResponse\022\027\n\017last_flush_time\030\001 " +
+      "\002(\004\022\017\n\007flushed\030\002 \001(\010\"K\n\022SplitRegionReque" +
+      "st\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\023\n\013" +
+      "split_point\030\002 \001(\014\"\025\n\023SplitRegionResponse" +
+      "\"W\n\024CompactRegionRequest\022 \n\006region\030\001 \002(\013" +
+      "2\020.RegionSpecifier\022\r\n\005major\030\002 \001(\010\022\016\n\006fam" +
+      "ily\030\003 \001(\014\"\027\n\025CompactRegionResponse\"\262\001\n\031U" +
+      "pdateFavoredNodesRequest\022@\n\013update_info\030" +
+      "\001 \003(\0132+.UpdateFavoredNodesRequest.Region" +
+      "UpdateInfo\032S\n\020RegionUpdateInfo\022\033\n\006region",
+      "\030\001 \002(\0132\013.RegionInfo\022\"\n\rfavored_nodes\030\002 \003" +
+      "(\0132\013.ServerName\".\n\032UpdateFavoredNodesRes" +
+      "ponse\022\020\n\010response\030\001 \001(\r\"v\n\023MergeRegionsR" +
+      "equest\022\"\n\010region_a\030\001 \002(\0132\020.RegionSpecifi" +
+      "er\022\"\n\010region_b\030\002 \002(\0132\020.RegionSpecifier\022\027" +
+      "\n\010forcible\030\003 \001(\010:\005false\"\026\n\024MergeRegionsR" +
+      "esponse\"X\n\010WALEntry\022\024\n\003key\030\001 \002(\0132\007.WALKe" +
+      "y\022\027\n\017key_value_bytes\030\002 \003(\014\022\035\n\025associated" +
+      "_cell_count\030\003 \001(\005\"4\n\030ReplicateWALEntryRe" +
+      "quest\022\030\n\005entry\030\001 \003(\0132\t.WALEntry\"\033\n\031Repli",
+      "cateWALEntryResponse\"\026\n\024RollWALWriterReq" +
+      "uest\"0\n\025RollWALWriterResponse\022\027\n\017region_" +
+      "to_flush\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006r" +
+      "eason\030\001 \002(\t\"\024\n\022StopServerResponse\"\026\n\024Get" +
+      "ServerInfoRequest\"B\n\nServerInfo\022 \n\013serve" +
+      "r_name\030\001 \002(\0132\013.ServerName\022\022\n\nwebui_port\030" +
+      "\002 \001(\r\"9\n\025GetServerInfoResponse\022 \n\013server" +
+      "_info\030\001 \002(\0132\013.ServerInfo2\306\007\n\014AdminServic" +
+      "e\022>\n\rGetRegionInfo\022\025.GetRegionInfoReques" +
+      "t\032\026.GetRegionInfoResponse\022;\n\014GetStoreFil",
+      "e\022\024.GetStoreFileRequest\032\025.GetStoreFileRe" +
+      "sponse\022D\n\017GetOnlineRegion\022\027.GetOnlineReg" +
+      "ionRequest\032\030.GetOnlineRegionResponse\0225\n\n" +
+      "OpenRegion\022\022.OpenRegionRequest\032\023.OpenReg" +
+      "ionResponse\0228\n\013CloseRegion\022\023.CloseRegion" +
+      "Request\032\024.CloseRegionResponse\0228\n\013FlushRe" +
+      "gion\022\023.FlushRegionRequest\032\024.FlushRegionR" +
+      "esponse\0228\n\013SplitRegion\022\023.SplitRegionRequ" +
+      "est\032\024.SplitRegionResponse\022>\n\rCompactRegi" +
+      "on\022\025.CompactRegionRequest\032\026.CompactRegio",
+      "nResponse\022;\n\014MergeRegions\022\024.MergeRegions" +
+      "Request\032\025.MergeRegionsResponse\022J\n\021Replic" +
+      "ateWALEntry\022\031.ReplicateWALEntryRequest\032\032" +
+      ".ReplicateWALEntryResponse\022?\n\006Replay\022\031.R" +
+      "eplicateWALEntryRequest\032\032.ReplicateWALEn" +
+      "tryResponse\022>\n\rRollWALWriter\022\025.RollWALWr" +
+      "iterRequest\032\026.RollWALWriterResponse\022>\n\rG" +
+      "etServerInfo\022\025.GetServerInfoRequest\032\026.Ge" +
+      "tServerInfoResponse\0225\n\nStopServer\022\022.Stop" +
+      "ServerRequest\032\023.StopServerResponse\022M\n\022Up",
+      "dateFavoredNodes\022\032.UpdateFavoredNodesReq" +
+      "uest\032\033.UpdateFavoredNodesResponseBA\n*org" +
+      ".apache.hadoop.hbase.protobuf.generatedB" +
+      "\013AdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21284,7 +21036,7 @@ public final class AdminProtos {
           internal_static_OpenRegionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_OpenRegionRequest_descriptor,
-              new java.lang.String[] { "OpenInfo", "ServerStartCode", });
+              new java.lang.String[] { "OpenInfo", });
           internal_static_OpenRegionRequest_RegionOpenInfo_descriptor =
             internal_static_OpenRegionRequest_descriptor.getNestedTypes().get(0);
           internal_static_OpenRegionRequest_RegionOpenInfo_fieldAccessorTable = new
@@ -21302,7 +21054,7 @@ public final class AdminProtos {
           internal_static_CloseRegionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CloseRegionRequest_descriptor,
-              new java.lang.String[] { "Region", "VersionOfClosingNode", "TransitionInZK", "DestinationServer", "ServerStartCode", });
+              new java.lang.String[] { "Region", "VersionOfClosingNode", "TransitionInZK", "DestinationServer", });
           internal_static_CloseRegionResponse_descriptor =
             getDescriptor().getMessageTypes().get(9);
           internal_static_CloseRegionResponse_fieldAccessorTable = new
