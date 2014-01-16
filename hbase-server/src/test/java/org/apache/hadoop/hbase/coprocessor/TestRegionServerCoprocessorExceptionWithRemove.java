@@ -69,7 +69,8 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         BuggyRegionObserver.class.getName());
-    TEST_UTIL.startMiniCluster(2);
+    TEST_UTIL.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
+    TEST_UTIL.startMiniCluster();
   }
 
   @AfterClass

@@ -77,6 +77,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     private boolean startCalled;
     private boolean postStartMasterCalled;
 
+    @SuppressWarnings("null")
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
         HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
@@ -125,6 +126,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         BuggyMasterObserver.class.getName());
+    UTIL.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
     UTIL.startMiniCluster();
   }
 
@@ -182,7 +184,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     // In this test, there is only a single coprocessor (BuggyMasterObserver).
     String coprocessorName =
         BuggyMasterObserver.class.getName();
-    assertTrue(master.getLoadedCoprocessors().contains(coprocessorName));
+    assertTrue(HMaster.getLoadedCoprocessors().contains(coprocessorName));
 
     HTableDescriptor htd1 = new HTableDescriptor(TableName.valueOf(TEST_TABLE1));
     htd1.addFamily(new HColumnDescriptor(TEST_FAMILY1));
@@ -209,10 +211,8 @@ public class TestMasterCoprocessorExceptionWithRemove {
     assertFalse("Master survived coprocessor NPE, as expected.",
         masterTracker.masterZKNodeWasDeleted);
 
-    String loadedCoprocessors = master.getLoadedCoprocessors();
+    String loadedCoprocessors = HMaster.getLoadedCoprocessors();
     assertTrue(loadedCoprocessors.contains(coprocessorName));
-
-
 
     // Verify that BuggyMasterObserver has been removed due to its misbehavior
     // by creating another table: should not have a problem this time.
@@ -227,4 +227,3 @@ public class TestMasterCoprocessorExceptionWithRemove {
   }
 
 }
-

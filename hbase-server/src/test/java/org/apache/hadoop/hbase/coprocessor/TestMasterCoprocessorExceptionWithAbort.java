@@ -143,7 +143,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         BuggyMasterObserver.class.getName());
-    conf.set("hbase.coprocessor.abortonerror", "true");
+    conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, true);
     UTIL.startMiniCluster();
   }
 

@@ -69,7 +69,6 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Message;
@@ -146,6 +145,7 @@ public class RegionCoprocessorHost
    */
   public RegionCoprocessorHost(final HRegion region,
       final RegionServerServices rsServices, final Configuration conf) {
+    super(rsServices);
     this.conf = conf;
     this.rsServices = rsServices;
     this.region = region;
@@ -189,29 +189,40 @@ public class RegionCoprocessorHost
             } catch (IndexOutOfBoundsException ex) {
               // ignore
             }
+            Configuration ourConf;
             if (cfgSpec != null) {
               cfgSpec = cfgSpec.substring(cfgSpec.indexOf('|') + 1);
               // do an explicit deep copy of the passed configuration
-              Configuration newConf = new Configuration(false);
-              HBaseConfiguration.merge(newConf, conf);
+              ourConf = new Configuration(false);
+              HBaseConfiguration.merge(ourConf, conf);
               Matcher m = HConstants.CP_HTD_ATTR_VALUE_PARAM_PATTERN.matcher(cfgSpec);
               while (m.find()) {
-                newConf.set(m.group(1), m.group(2));
+                ourConf.set(m.group(1), m.group(2));
               }
-              configured.add(load(path, className, priority, newConf));
             } else {
-              configured.add(load(path, className, priority, conf));
+              ourConf = conf;
             }
-            LOG.info("Load coprocessor " + className + " from HTD of " +
-              region.getTableDesc().getTableName().getNameAsString() +
-                " successfully.");
+            // Load encompasses classloading and coprocessor initialization
+            try {
+              RegionEnvironment env = load(path, className, priority, ourConf);
+              configured.add(env);
+              LOG.info("Loaded coprocessor " + className + " from HTD of " +
+                region.getTableDesc().getTableName().getNameAsString() + " successfully.");
+            } catch (Throwable t) {
+              // Coprocessor failed to load, do we abort on error?
+              if (conf.getBoolean(ABORT_ON_ERROR_KEY, DEFAULT_ABORT_ON_ERROR)) {
+                abortServer(className, t);
+              } else {
+                LOG.error("Failed to load coprocessor " + className, t);
+              }
+            }
           } else {
-            throw new RuntimeException("specification does not match pattern");
+            LOG.error("Malformed table coprocessor specification: key=" + key +
+              ", spec: " + spec);
           }
-        } catch (Exception ex) {
-          LOG.warn("attribute '" + key +
-            "' has invalid coprocessor specification '" + spec + "'");
-          LOG.warn(StringUtils.stringifyException(ex));
+        } catch (Exception ioe) {
+          LOG.error("Malformed table coprocessor specification: key=" + key +
+            ", spec: " + spec);
         }
       }
     }
@@ -245,11 +256,6 @@ public class RegionCoprocessorHost
     }
     return new RegionEnvironment(instance, priority, seq, conf, region,
         rsServices, classData);
-  }
-
-  @Override
-  protected void abortServer(final CoprocessorEnvironment env, final Throwable e) {
-    abortServer("regionserver", rsServices, env, e);
   }
 
   /**

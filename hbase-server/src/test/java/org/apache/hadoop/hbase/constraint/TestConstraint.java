@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -58,6 +59,7 @@ public class TestConstraint {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     util = new HBaseTestingUtility();
+    util.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
     util.startMiniCluster();
   }
 
@@ -79,13 +81,15 @@ public class TestConstraint {
 
     util.getHBaseAdmin().createTable(desc);
     HTable table = new HTable(util.getConfiguration(), tableName);
-
-    // test that we don't fail on a valid put
-    Put put = new Put(row1);
-    byte[] value = Integer.toString(10).getBytes();
-    put.add(dummy, new byte[0], value);
-    table.put(put);
-
+    try {
+      // test that we don't fail on a valid put
+      Put put = new Put(row1);
+      byte[] value = Integer.toString(10).getBytes();
+      put.add(dummy, new byte[0], value);
+      table.put(put);
+    } finally {
+      table.close();
+    }
     assertTrue(CheckWasRunConstraint.wasRun);
   }
 
@@ -152,12 +156,14 @@ public class TestConstraint {
 
     util.getHBaseAdmin().createTable(desc);
     HTable table = new HTable(util.getConfiguration(), tableName);
-
-    // test that we don't fail because its disabled
-    Put put = new Put(row1);
-    put.add(dummy, new byte[0], "pass".getBytes());
-    table.put(put);
-
+    try {
+      // test that we don't fail because its disabled
+      Put put = new Put(row1);
+      put.add(dummy, new byte[0], "pass".getBytes());
+      table.put(put);
+    } finally {
+      table.close();
+    }
     assertTrue(CheckWasRunConstraint.wasRun);
   }
 
@@ -182,13 +188,15 @@ public class TestConstraint {
 
     util.getHBaseAdmin().createTable(desc);
     HTable table = new HTable(util.getConfiguration(), tableName);
-
-    // test that we do fail on violation
-    Put put = new Put(row1);
-    put.add(dummy, new byte[0], "pass".getBytes());
-    LOG.warn("Doing put in table");
-    table.put(put);
-
+    try {
+      // test that we do fail on violation
+      Put put = new Put(row1);
+      put.add(dummy, new byte[0], "pass".getBytes());
+      LOG.warn("Doing put in table");
+      table.put(put);
+    } finally {
+      table.close();
+    }
     assertFalse(CheckWasRunConstraint.wasRun);
   }
 
