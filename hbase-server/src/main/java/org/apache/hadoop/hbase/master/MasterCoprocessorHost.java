@@ -60,6 +60,7 @@ public class MasterCoprocessorHost
   private MasterServices masterServices;
 
   MasterCoprocessorHost(final MasterServices services, final Configuration conf) {
+    super(services);
     this.conf = conf;
     this.masterServices = services;
     loadSystemCoprocessors(conf, MASTER_COPROCESSOR_CONF_KEY);
@@ -76,11 +77,6 @@ public class MasterCoprocessorHost
     }
     return new MasterEnvironment(implClass, instance, priority, seq, conf,
         masterServices);
-  }
-
-  @Override
-  protected void abortServer(final CoprocessorEnvironment env, final Throwable e) {
-    abortServer("master", masterServices, env, e);
   }
 
   public boolean preCreateNamespace(final NamespaceDescriptor ns) throws IOException {

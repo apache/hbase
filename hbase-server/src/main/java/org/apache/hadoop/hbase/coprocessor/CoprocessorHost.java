@@ -39,12 +39,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CoprocessorHConnection;
@@ -91,8 +91,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       "hbase.coprocessor.master.classes";
   public static final String WAL_COPROCESSOR_CONF_KEY =
     "hbase.coprocessor.wal.classes";
+  public static final String ABORT_ON_ERROR_KEY = "hbase.coprocessor.abortonerror";
+  public static final boolean DEFAULT_ABORT_ON_ERROR = true;
 
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
+  protected Abortable abortable;
   /** Ordered set of loaded coprocessors with lock */
   protected SortedSet<E> coprocessors =
       new SortedCopyOnWriteSet<E>(new EnvironmentPriorityComparator());
@@ -101,8 +104,9 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   protected String pathPrefix;
   protected AtomicInteger loadSequence = new AtomicInteger();
 
-  public CoprocessorHost() {
-    pathPrefix = UUID.randomUUID().toString();
+  public CoprocessorHost(Abortable abortable) {
+    this.abortable = abortable;
+    this.pathPrefix = UUID.randomUUID().toString();
   }
 
   /**
@@ -160,12 +164,9 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         configured.add(loadInstance(implClass, Coprocessor.PRIORITY_SYSTEM, conf));
         LOG.info("System coprocessor " + className + " was loaded " +
             "successfully with priority (" + priority++ + ").");
-      } catch (ClassNotFoundException e) {
-        LOG.warn("Class " + className + " cannot be found. " +
-            e.getMessage());
-      } catch (IOException e) {
-        LOG.warn("Load coprocessor " + className + " failed. " +
-            e.getMessage());
+      } catch (Throwable t) {
+        // We always abort if system coprocessors cannot be loaded
+        abortServer(className, t);
       }
     }
 
@@ -639,7 +640,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     }
 
     /** Initialize the environment */
-    public void startup() {
+    public void startup() throws IOException {
       if (state == Coprocessor.State.INSTALLED ||
           state == Coprocessor.State.STOPPED) {
         state = Coprocessor.State.STARTING;
@@ -649,8 +650,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
           currentThread.setContextClassLoader(this.getClassLoader());
           impl.start(this);
           state = Coprocessor.State.ACTIVE;
-        } catch (IOException ioe) {
-          LOG.error("Error starting coprocessor "+impl.getClass().getName(), ioe);
         } finally {
           currentThread.setContextClassLoader(hostClassLoader);
         }
@@ -752,24 +751,19 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     }
   }
 
-  protected void abortServer(final String service,
-      final Server server,
-      final CoprocessorEnvironment environment,
-      final Throwable e) {
-    String coprocessorName = (environment.getInstance()).toString();
-    server.abort("Aborting service: " + service + " running on : "
-            + server.getServerName() + " because coprocessor: "
-            + coprocessorName + " threw an exception.", e);
+  protected void abortServer(final CoprocessorEnvironment environment, final Throwable e) {
+    abortServer(environment.getInstance().getClass().getName(), e);
   }
 
-  protected void abortServer(final CoprocessorEnvironment environment,
-                             final Throwable e) {
-    String coprocessorName = (environment.getInstance()).toString();
-    LOG.error("The coprocessor: " + coprocessorName + " threw an unexpected " +
-        "exception: " + e + ", but there's no specific implementation of " +
-        " abortServer() for this coprocessor's environment.");
+  protected void abortServer(final String coprocessorName, final Throwable e) {
+    String message = "The coprocessor " + coprocessorName + " threw an unexpected exception";
+    LOG.error(message, e);
+    if (abortable != null) {
+      abortable.abort(message, e);
+    } else {
+      LOG.warn("No available Abortable, process was not aborted");
+    }
   }
-
 
   /**
    * This is used by coprocessor hooks which are declared to throw IOException
@@ -786,8 +780,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @param e Throwable object thrown by coprocessor.
    * @exception IOException Exception
    */
-  protected void handleCoprocessorThrowable(final CoprocessorEnvironment env,
-                                            final Throwable e)
+  protected void handleCoprocessorThrowable(final CoprocessorEnvironment env, final Throwable e)
       throws IOException {
     if (e instanceof IOException) {
       throw (IOException)e;
@@ -798,7 +791,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     // 'hbase.coprocessor.abortonerror' to true will cause abortServer(),
     // which may be useful in development and testing environments where
     // 'failing fast' for error analysis is desired.
-    if (env.getConfiguration().getBoolean("hbase.coprocessor.abortonerror",false)) {
+    if (env.getConfiguration().getBoolean(ABORT_ON_ERROR_KEY, DEFAULT_ABORT_ON_ERROR)) {
       // server is configured to abort.
       abortServer(env, e);
     } else {
@@ -817,5 +810,3 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     }
   }
 }
-
-

@@ -39,6 +39,7 @@ public class RegionServerCoprocessorHost extends
 
   public RegionServerCoprocessorHost(RegionServerServices rsServices,
       Configuration conf) {
+    super(rsServices);
     this.rsServices = rsServices;
     this.conf = conf;
     // load system default cp's from configuration.

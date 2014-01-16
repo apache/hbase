@@ -25,15 +25,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -51,70 +50,100 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("observed_table");
 
-  @BeforeClass
-  public static void setupBeforeClass() throws Exception {
+  @Test(timeout=60000)
+  public void testExceptionDuringInitialization() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);  // Let's fail fast.
+    conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, true);
+    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
+    TEST_UTIL.startMiniCluster(2);
+    try {
+      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      // Trigger one regionserver to fail as if it came up with a coprocessor
+      // that fails during initialization
+      final HRegionServer regionServer = cluster.getRegionServer(0);
+      conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+        FailedInitializationObserver.class.getName());
+      regionServer.getCoprocessorHost().loadSystemCoprocessors(conf,
+        CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+      TEST_UTIL.waitFor(10000, 1000, new Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return regionServer.isAborted();
+        }
+      });
+    } finally {
+      TEST_UTIL.shutdownMiniCluster();
+    }
+  }
+
+  @Test(timeout=60000)
+  public void testExceptionFromCoprocessorDuringPut() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);  // Let's fail fast.
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, BuggyRegionObserver.class.getName());
-    conf.set("hbase.coprocessor.abortonerror", "true");
-    TEST_UTIL.startMiniCluster(3);
-  }
-
-  @AfterClass
-  public static void teardownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @Test
-  public void testExceptionFromCoprocessorDuringPut()
-    throws IOException, InterruptedException {
-    // When we try to write to TEST_TABLE, the buggy coprocessor will
-    // cause a NullPointerException, which will cause the regionserver (which
-    // hosts the region we attempted to write to) to abort.
-    TableName TEST_TABLE = TABLE_NAME;
-    byte[] TEST_FAMILY = Bytes.toBytes("aaa");
-
-    HTable table = TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);
-    TEST_UTIL.createMultiRegions(table, TEST_FAMILY);
-    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
-
-    // Note which regionServer will abort (after put is attempted).
-    final HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(TEST_TABLE);
-
-    boolean threwIOE = false;
+    conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, true);
+    TEST_UTIL.startMiniCluster(2);
     try {
-      final byte[] ROW = Bytes.toBytes("aaa");
-      Put put = new Put(ROW);
-      put.add(TEST_FAMILY, ROW, ROW);
-      table.put(put);
-      table.flushCommits();
-      // We may need two puts to reliably get an exception
-      table.put(put);
-      table.flushCommits();
-    } catch (IOException e) {
-      threwIOE = true;
-    } finally {
-      assertTrue("The regionserver should have thrown an exception", threwIOE);
-    }
+      // When we try to write to TEST_TABLE, the buggy coprocessor will
+      // cause a NullPointerException, which will cause the regionserver (which
+      // hosts the region we attempted to write to) to abort.
+      final byte[] TEST_FAMILY = Bytes.toBytes("aaa");
 
-    // Wait 10 seconds for the regionserver to abort: expected result is that
-    // it will abort.
-    boolean aborted = false;
-    for (int i = 0; i < 10; i++) {
-      aborted = regionServer.isAborted(); 
-      if (aborted) {
-        break;
-      }
+      HTable table = TEST_UTIL.createTable(TABLE_NAME, TEST_FAMILY);
+      TEST_UTIL.createMultiRegions(table, TEST_FAMILY);
+      TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME);
+
+      // Note which regionServer will abort (after put is attempted).
+      final HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
+
+      boolean threwIOE = false;
       try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-        fail("InterruptedException while waiting for regionserver " +
-            "zk node to be deleted.");
+        final byte[] ROW = Bytes.toBytes("aaa");
+        Put put = new Put(ROW);
+        put.add(TEST_FAMILY, ROW, ROW);
+        table.put(put);
+        table.flushCommits();
+        // We may need two puts to reliably get an exception
+        table.put(put);
+        table.flushCommits();
+      } catch (IOException e) {
+        threwIOE = true;
+      } finally {
+        assertTrue("The regionserver should have thrown an exception", threwIOE);
       }
+
+      // Wait 10 seconds for the regionserver to abort: expected result is that
+      // it will abort.
+      boolean aborted = false;
+      for (int i = 0; i < 10; i++) {
+        aborted = regionServer.isAborted(); 
+        if (aborted) {
+          break;
+        }
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          fail("InterruptedException while waiting for regionserver " +
+            "zk node to be deleted.");
+        }
+      }
+      Assert.assertTrue("The region server should have aborted", aborted);
+      table.close();
+    } finally {
+      TEST_UTIL.shutdownMiniCluster();
     }
-    Assert.assertTrue("The region server should have aborted", aborted);
-    table.close();
+  }
+
+  public static class FailedInitializationObserver extends SimpleRegionObserver {
+    @SuppressWarnings("null")
+    @Override
+    public void start(CoprocessorEnvironment e) throws IOException {
+      // Trigger a NPE to fail the coprocessor
+      Integer i = null;
+      i = i + 1;
+    }
   }
 
   public static class BuggyRegionObserver extends SimpleRegionObserver {

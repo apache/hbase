@@ -73,6 +73,13 @@ public class WALCoprocessorHost
    * @param conf the configuration
    */
   public WALCoprocessorHost(final FSHLog log, final Configuration conf) {
+    // We don't want to require an Abortable passed down through (FS)HLog, so
+    // this means that a failure to load of a WAL coprocessor won't abort the
+    // server. This isn't ideal, and means that security components that
+    // utilize a WALObserver will have to check the observer initialization
+    // state manually. However, WALObservers will eventually go away so it
+    // should be an acceptable state of affairs.
+    super(null);
     this.wal = log;
     // load system default cp's from configuration.
     loadSystemCoprocessors(conf, WAL_COPROCESSOR_CONF_KEY);

@@ -864,12 +864,13 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
       <name>hbase.coprocessor.abortonerror</name>
-      <value>false</value>
-      <description>Set to true to cause the hosting server (master or regionserver) to
-      abort if a coprocessor throws a Throwable object that is not IOException or
-      a subclass of IOException. Setting it to true might be useful in development
-      environments where one wants to terminate the server as soon as possible to
-      simplify coprocessor failure analysis.</description>
+      <value>true</value>
+      <description>Set to true to cause the hosting server (master or regionserver)
+      to abort if a coprocessor fails to load, fails to initialize, or throws an
+      unexpected Throwable object. Setting this to false will allow the server to
+      continue execution but the system wide state of the coprocessor in question
+      will become inconsistent as it will be properly executing in only a subset
+      of servers, so this is most useful for debugging only.</description>
   </property>
   <property>
     <name>hbase.online.schema.update.enable</name>

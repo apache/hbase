@@ -473,6 +473,7 @@ public class TestCoprocessorInterface {
         1024 * 128);
     TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster",
         true);
+    TEST_UTIL.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
 
     return TEST_UTIL.getConfiguration();
   }

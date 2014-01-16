@@ -62,7 +62,6 @@ public class TestClassLoading {
   static final String cpName4 = "TestCP4";
   static final String cpName5 = "TestCP5";
   static final String cpName6 = "TestCP6";
-  static final String cpNameInvalid = "TestCPInvalid";
 
   private static Class<?> regionCoprocessor1 = ColumnAggregationEndpoint.class;
   // TOOD: Fix the import of this handler.  It is coming in from a package that is far away.
@@ -146,9 +145,6 @@ public class TestClassLoading {
       // with configuration values
     htd.setValue("COPROCESSOR$2", jarFileOnHDFS2.toString() + "|" + cpName2 +
       "|" + Coprocessor.PRIORITY_USER + "|k1=v1,k2=v2,k3=v3");
-    // same jar but invalid class name (should fail to load this class)
-    htd.setValue("COPROCESSOR$3", jarFileOnHDFS2.toString() + "|" + cpNameInvalid +
-      "|" + Coprocessor.PRIORITY_USER);
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
@@ -164,8 +160,7 @@ public class TestClassLoading {
 
     // verify that the coprocessors were loaded
     boolean foundTableRegion=false;
-    boolean found_invalid = true, found1 = true, found2 = true, found2_k1 = true,
-        found2_k2 = true, found2_k3 = true;
+    boolean found1 = true, found2 = true, found2_k1 = true, found2_k2 = true, found2_k3 = true;
     Map<HRegion, Set<ClassLoader>> regionsActiveClassLoaders =
         new HashMap<HRegion, Set<ClassLoader>>();
     MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
@@ -186,9 +181,6 @@ public class TestClassLoading {
         } else {
           found2_k1 = found2_k2 = found2_k3 = false;
         }
-        env = region.getCoprocessorHost().findCoprocessorEnvironment(cpNameInvalid);
-        found_invalid = found_invalid && (env != null);
-
         regionsActiveClassLoaders
             .put(region, ((CoprocessorHost) region.getCoprocessorHost()).getExternalClassLoaders());
       }
@@ -197,8 +189,6 @@ public class TestClassLoading {
     assertTrue("No region was found for table " + tableName, foundTableRegion);
     assertTrue("Class " + cpName1 + " was missing on a region", found1);
     assertTrue("Class " + cpName2 + " was missing on a region", found2);
-    //an invalid CP class name is defined for this table, validate that it is not loaded
-    assertFalse("Class " + cpNameInvalid + " was found on a region", found_invalid);
     assertTrue("Configuration key 'k1' was missing on a region", found2_k1);
     assertTrue("Configuration key 'k2' was missing on a region", found2_k2);
     assertTrue("Configuration key 'k3' was missing on a region", found2_k3);
@@ -460,8 +450,6 @@ public class TestClassLoading {
     // This was a test for HBASE-4070.
     // We are removing coprocessors from region load in HBASE-5258.
     // Therefore, this test now only checks system coprocessors.
-
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     assertAllRegionServers(regionServerSystemCoprocessors,null);
   }
 
