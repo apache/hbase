@@ -19,31 +19,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.PreloadThreadPool;
@@ -54,6 +31,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Used to communicate with a single HBase table.
@@ -468,34 +454,27 @@ public class HTable implements HTableInterface {
     final NavigableMap<HRegionInfo, HServerAddress> regionMap =
       new TreeMap<HRegionInfo, HServerAddress>();
 
-    MetaScannerVisitor visitor = new MetaScannerVisitor() {
-      public boolean processRow(Result rowResult) throws IOException {
-        HRegionInfo info = Writables.getHRegionInfo(
-            rowResult.getValue(HConstants.CATALOG_FAMILY,
-                HConstants.REGIONINFO_QUALIFIER));
+    for (HRegionLocation location : getCachedHRegionLocations(true)) {
+      regionMap.put(location.getRegionInfo(), location.getServerAddress());
+    }
 
-        if (!(Bytes.equals(info.getTableDesc().getName(), getTableName()))) {
-          return false;
-        }
-
-        HServerAddress server = new HServerAddress();
-        byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
-            HConstants.SERVER_QUALIFIER);
-        if (value != null && value.length > 0) {
-          String address = Bytes.toString(value);
-          server = new HServerAddress(address);
-        }
-
-        if (!(info.isOffline() || info.isSplit())) {
-          regionMap.put(new UnmodifyableHRegionInfo(info), server);
-        }
-        return true;
-      }
-
-    };
-    MetaScanner.metaScan(configuration, visitor, tableName);
     return regionMap;
   }
+
+  /**
+   * Get all the cached HRegionLocations.
+   * @param forceRefresh
+   * @return
+   */
+  @Override
+  public Collection<HRegionLocation> getCachedHRegionLocations(boolean forceRefresh) {
+    if (forceRefresh) {
+      connection.prefetchHRegionLocations(configuration, tableName);
+    }
+
+    return connection.getCachedHRegionLocations(tableName);
+  }
+
 
   /**
    * Save the passed region information and the table's regions

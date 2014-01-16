@@ -20,44 +20,19 @@
 
 package org.apache.hadoop.hbase.rest.client;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.util.StringUtils;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.client.RowMutations;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.RowLock;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.rest.Constants;
-import org.apache.hadoop.hbase.rest.model.CellModel;
-import org.apache.hadoop.hbase.rest.model.CellSetModel;
-import org.apache.hadoop.hbase.rest.model.RowModel;
-import org.apache.hadoop.hbase.rest.model.ScannerModel;
-import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
+import org.apache.hadoop.hbase.rest.model.*;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.StringUtils;
+
+import java.io.IOException;
+import java.util.*;
 
 /**
  * HTable interface to remote tables accessed via REST gateway
@@ -640,5 +615,11 @@ public class RemoteHTable implements HTableInterface {
   @Override
   public void batchMutate(List<Mutation> actions) throws IOException {
     throw new IOException("batchMutate not supported");
+  }
+
+  @Override
+  public Collection<HRegionLocation> getCachedHRegionLocations(boolean forceRefresh)
+    throws IOException {
+    throw new IOException("atomicMutation not supported");
   }
 }

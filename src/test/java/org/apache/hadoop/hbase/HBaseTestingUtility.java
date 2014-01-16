@@ -78,13 +78,8 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.*;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -1277,6 +1272,41 @@ public class HBaseTestingUtility {
     } catch (Exception e) {
       LOG.info("Could not set max recovery field", e);
     }
+  }
+
+  /**
+   *
+   * @param expectedUserRegions The number of regions which are not META or ROOT
+   */
+  public void waitForOnlineRegionsToBeAssigned(int expectedUserRegions) {
+    int actualRegions;
+
+    do {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {} // Ignore
+
+      actualRegions = 0;
+
+      for (HRegionServer server : getOnlineRegionServers()) {
+        for (HRegion region : server.getOnlineRegions()) {
+          if (!region.getRegionInfo().isMetaRegion() && !region.getRegionInfo().isRootRegion()) {
+            actualRegions += 1;
+          }
+        }
+      }
+    } while (actualRegions != expectedUserRegions);
+
+  }
+
+  public List<HRegionServer> getOnlineRegionServers() {
+    List<HRegionServer> list = new ArrayList<HRegionServer>();
+    for (JVMClusterUtil.RegionServerThread rst : this.getMiniHBaseCluster().getRegionServerThreads()) {
+      if (rst.getRegionServer().isOnline() && !rst.getRegionServer().isStopped()) {
+        list.add(rst.getRegionServer());
+      }
+    }
+    return list;
   }
 
 

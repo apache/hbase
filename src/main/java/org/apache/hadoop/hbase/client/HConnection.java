@@ -22,10 +22,12 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -421,4 +423,20 @@ public interface HConnection extends Closeable {
    * @throws IOException
    */
   public String getServerConfProperty(String prop) throws IOException;
+
+  /**
+   * Initialize all the HRegionLocations by scanning the META table and cache these locations
+   * properly.
+   * @param conf
+   * @param tableName
+   */
+  public void prefetchHRegionLocations(final Configuration conf, final byte[] tableName);
+
+
+  /**
+   * Get all the cached HRegionLocations
+   * @param tableName
+   * @return cachedHRegionLocations
+   */
+  public Collection<HRegionLocation> getCachedHRegionLocations(final byte [] tableName);
 }

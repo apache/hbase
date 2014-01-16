@@ -20,9 +20,11 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -355,4 +357,12 @@ public interface HTableInterface {
   Result[] batchGet(List<Get> actions) throws IOException;
 
   void batchMutate(List<Mutation> actions) throws IOException;
+
+  /**
+   * Get all the cached HRegionLocations.
+   * @param forceRefresh
+   * @return
+   */
+  public Collection<HRegionLocation> getCachedHRegionLocations(boolean forceRefresh)
+    throws IOException;
 }

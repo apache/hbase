@@ -1,20 +1,22 @@
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.util.ArrayList;
-import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.NavigableMap;
+import java.util.concurrent.ThreadPoolExecutor;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestHTable {
   final Log LOG = LogFactory.getLog(getClass());
@@ -27,25 +29,9 @@ public class TestHTable {
   /**
    * @throws java.lang.Exception
    */
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(SLAVES);
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
   @Before
   public void setUp() throws Exception {
-    // Nothing to do.
+    TEST_UTIL.startMiniCluster(SLAVES);
   }
 
   /**
@@ -53,7 +39,74 @@ public class TestHTable {
    */
   @After
   public void tearDown() throws Exception {
-    // Nothing to do.
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testCachedHRegionLocations() throws IOException {
+    final int NUM_REGIONS = 20;
+    byte[] tableName = Bytes.toBytes("testCachedHRegionLocations");
+    HTable table = TEST_UTIL.createTable(tableName, new byte[][]{FAMILY},
+      3, Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
+
+    NavigableMap<HRegionInfo, HServerAddress> allRegionsInfoMap =  table.getRegionsInfo();
+    Collection<HRegionLocation> regionLocations = table.getCachedHRegionLocations(true);
+
+    // Make sure allRegions and regionLocations containing the same information
+    verifyOnlineRegionsAndRegionLocations(allRegionsInfoMap, regionLocations, NUM_REGIONS);
+
+    HRegionServer killedServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
+    Collection<HRegion> regionsToBeMoved = killedServer.getOnlineRegions();
+    List<HRegionInfo> testRegionInfos = new ArrayList();
+
+    for (HRegion region : regionsToBeMoved) {
+      HRegionInfo regionInfo = region.getRegionInfo();
+      if (Bytes.equals(regionInfo.getTableDesc().getName(),tableName)) {
+        testRegionInfos.add(regionInfo);
+      }
+    }
+    Assert.assertTrue(testRegionInfos.size() > 0);
+
+    HServerAddress killedAddress = killedServer.getHServerInfo().getServerAddress();
+    killedServer.stop("Testing");  // Stop this region server
+
+    TEST_UTIL.waitForOnlineRegionsToBeAssigned(NUM_REGIONS);
+
+    Assert.assertTrue(killedServer.getOnlineRegions().size() == 0);
+
+    regionLocations = table.getCachedHRegionLocations(false);
+    // Make sure allRegions and regionLocations containing the same information
+    verifyOnlineRegionsAndRegionLocations(allRegionsInfoMap, regionLocations, NUM_REGIONS);
+    // Also, it has the stale information about the region location
+    for (HRegionInfo info : testRegionInfos) {
+      Assert.assertTrue(allRegionsInfoMap.get(info).equals(killedAddress));
+    }
+
+    // Update the allRegionsInfoMap and regionLocations by fetching the META table again
+    allRegionsInfoMap = table.getRegionsInfo();
+    regionLocations = table.getCachedHRegionLocations(true);
+    // Make sure allRegions and regionLocations containing the same information
+    verifyOnlineRegionsAndRegionLocations(allRegionsInfoMap, regionLocations, NUM_REGIONS);
+
+    Assert.assertTrue(killedServer.getOnlineRegions().size() == 0);
+    // Verify the new allRegionsInfoMap has been updated without the stale information
+    for (HRegionInfo info : testRegionInfos) {
+      Assert.assertFalse((allRegionsInfoMap.get(info).equals(killedAddress)));
+    }
+  }
+
+  private void verifyOnlineRegionsAndRegionLocations(NavigableMap<HRegionInfo,HServerAddress> allRegions,
+                                                     Collection<HRegionLocation> regionLocation,
+                                                     int numRegions) {
+    Assert.assertEquals(numRegions, allRegions.size());
+    Assert.assertEquals(numRegions, regionLocation.size());
+    for (HRegionLocation location : regionLocation) {
+      HRegionInfo regionInfo = location.getRegionInfo();
+      HServerAddress address = location.getServerAddress();
+      HServerAddress address2 = allRegions.get(regionInfo);
+      Assert.assertTrue(address2 != null);
+      Assert.assertEquals(address, address2);
+    }
   }
 
   @Test

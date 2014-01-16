@@ -27,19 +27,8 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -919,13 +908,18 @@ public class HConnectionManager {
       }
     }
 
+    private void prefetchRegionCache(final byte[] tableName,
+                                     final byte[] row) {
+      prefetchRegionCache(tableName, row, this.prefetchRegionLimit);
+    }
+
     /*
      * Search .META. for the HRegionLocation info that contains the table and
      * row we're seeking. It will prefetch certain number of regions info and
      * save them to the global region cache.
      */
     private void prefetchRegionCache(final byte[] tableName,
-        final byte[] row) {
+        final byte[] row, int prefetchRegionLimit) {
       // Implement a new visitor for MetaScanner, and use it to walk through
       // the .META.
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
@@ -976,8 +970,7 @@ public class HConnectionManager {
       };
       try {
         // pre-fetch certain number of regions info at region cache.
-        MetaScanner.metaScan(conf, visitor, tableName, row,
-            this.prefetchRegionLimit);
+        MetaScanner.metaScan(conf, visitor, tableName, row, prefetchRegionLimit);
       } catch (IOException e) {
         LOG.warn("Encounted problems when prefetch META table: ", e);
       }
@@ -1179,6 +1172,16 @@ public class HConnectionManager {
               e instanceof EOFException);
     }
 
+    public void prefetchHRegionLocations(final Configuration conf, final byte[] tableName) {
+      prefetchRegionCache(tableName, null, Integer.MAX_VALUE);
+    }
+
+    public Collection<HRegionLocation> getCachedHRegionLocations(final byte [] tableName) {
+      ConcurrentSkipListMap<byte [], HRegionLocation> tableLocations =
+        getTableLocations(tableName);
+      return tableLocations.values();
+    }
+
     /*
      * Search the cache for a location that fits our table and row key.
      * Return null if no suitable region is located. TODO: synchronization note
@@ -1335,23 +1338,21 @@ public class HConnectionManager {
       }
     }
 
-    /*
+    /**
      * Put a newly discovered HRegionLocation into the cache.
      */
     private void cacheLocation(final byte [] tableName,
         final HRegionLocation location) {
       byte [] startKey = location.getRegionInfo().getStartKey();
-      Map<byte [], HRegionLocation> tableLocations =
-        getTableLocations(tableName);
-      boolean hasNewCache = false;
+      boolean hasNewCache;
       synchronized (this.cachedRegionLocations) {
         cachedServers.add(location.getServerAddress().toString());
-        hasNewCache = (tableLocations.put(startKey, location) == null);
+        hasNewCache = (getTableLocations(tableName).put(startKey, location) == null);
       }
       if (hasNewCache) {
         LOG.debug("Cached location for " +
-            location.getRegionInfo().getRegionNameAsString() +
-            " is " + location.getServerAddress().toString());
+          location.getRegionInfo().getRegionNameAsString() +
+          " is " + location.getServerAddress().toString());
       }
     }
 
