@@ -337,7 +337,7 @@ public class TestMasterFailover {
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     ZKAssign.createNodeOffline(zkw, region, serverName);
-    ProtobufUtil.openRegion(hrs, hrs.getServerName(), region);
+    ProtobufUtil.openRegion(hrs, region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -352,7 +352,7 @@ public class TestMasterFailover {
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     ZKAssign.createNodeOffline(zkw, region, serverName);
-    ProtobufUtil.openRegion(hrs, hrs.getServerName(), region);
+    ProtobufUtil.openRegion(hrs, region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -736,7 +736,7 @@ public class TestMasterFailover {
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
-    ProtobufUtil.openRegion(hrsDead, hrsDead.getServerName(), region);
+    ProtobufUtil.openRegion(hrsDead, region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -752,7 +752,7 @@ public class TestMasterFailover {
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
-    ProtobufUtil.openRegion(hrsDead, hrsDead.getServerName(), region);
+    ProtobufUtil.openRegion(hrsDead, region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -772,7 +772,7 @@ public class TestMasterFailover {
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
-    ProtobufUtil.openRegion(hrsDead, hrsDead.getServerName(), region);
+    ProtobufUtil.openRegion(hrsDead, region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -790,7 +790,7 @@ public class TestMasterFailover {
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
-    ProtobufUtil.openRegion(hrsDead, hrsDead.getServerName(), region);
+    ProtobufUtil.openRegion(hrsDead, region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -824,12 +824,12 @@ public class TestMasterFailover {
     log("Waiting for master to be ready");
     assertTrue(cluster.waitForActiveAndReadyMaster());
     log("Master is ready");
-
+    
     // Wait until SSH processing completed for dead server.
     while (master.getServerManager().areDeadServersInProgress()) {
       Thread.sleep(10);
     }
-
+    
     // Failover should be completed, now wait for no RIT
     log("Waiting for no more RIT");
     ZKAssign.blockUntilNoRIT(zkw);
