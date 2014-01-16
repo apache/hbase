@@ -127,6 +127,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_START_KEY = "start_key";
   protected static final String OPT_TABLE_NAME = "tn";
   protected static final String OPT_ZK_QUORUM = "zk";
+  protected static final String OPT_ZK_PARENT_NODE = "zk_root";
   protected static final String OPT_SKIP_INIT = "skip_init";
   protected static final String OPT_INIT_ONLY = "init_only";
   private static final String NUM_TABLES = "num_tables";
@@ -251,6 +252,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected void addOptions() {
     addOptWithArg(OPT_ZK_QUORUM, "ZK quorum as comma-separated host names " +
         "without port numbers");
+    addOptWithArg(OPT_ZK_PARENT_NODE, "name of parent znode in zookeeper");
     addOptWithArg(OPT_TABLE_NAME, "The name of the table to read or write");
     addOptWithArg(OPT_WRITE, OPT_USAGE_LOAD);
     addOptWithArg(OPT_READ, OPT_USAGE_READ);
@@ -430,6 +432,9 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected int loadTable() throws IOException {
     if (cmd.hasOption(OPT_ZK_QUORUM)) {
       conf.set(HConstants.ZOOKEEPER_QUORUM, cmd.getOptionValue(OPT_ZK_QUORUM));
+    }
+    if (cmd.hasOption(OPT_ZK_PARENT_NODE)) {
+      conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, cmd.getOptionValue(OPT_ZK_PARENT_NODE));
     }
 
     if (isInitOnly) {
