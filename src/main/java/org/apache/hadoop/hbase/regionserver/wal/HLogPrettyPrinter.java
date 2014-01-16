@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -66,6 +65,11 @@ public class HLogPrettyPrinter {
   private long sequence;
   private String region;
   private String row;
+  private String family;
+  private String qualifier;
+  private long offset;
+  private long transactions;
+
   // enable in order to output a single list of transactions from several files
   private boolean persistentOutput;
   private boolean firstTxn;
@@ -76,6 +80,7 @@ public class HLogPrettyPrinter {
 
   // analysis mode for HLog stats
   private boolean analysisMode = false;
+
   /**
    * Basic constructor that simply initializes values to reasonable defaults.
    */
@@ -83,8 +88,12 @@ public class HLogPrettyPrinter {
     outputValues = false;
     outputJSON = false;
     sequence = -1;
+    offset = 0;
+    transactions = Long.MAX_VALUE;
     region = null;
     row = null;
+    family = null;
+    qualifier = null;
     persistentOutput = false;
     firstTxn = true;
     out = System.out;
@@ -103,6 +112,10 @@ public class HLogPrettyPrinter {
    * @param sequence
    *          when nonnegative, serves as a filter; only log entries with this
    *          sequence id will be printed
+   * @param offset
+   *          starting offset of the hlog file
+   * @param transactions
+   *          number of transactions to process
    * @param region
    *          when not null, serves as a filter; only log entries from this
    *          region will be printed
@@ -117,13 +130,18 @@ public class HLogPrettyPrinter {
    *          PrettyPrinter's output.
    */
   public HLogPrettyPrinter(boolean outputValues, boolean outputJSON,
-      long sequence, String region, String row, boolean persistentOutput,
+      long sequence, long offset, long transactions, String region, String row,
+      String family, String qualifier, boolean persistentOutput,
       PrintStream out) {
     this.outputValues = outputValues;
     this.outputJSON = outputJSON;
     this.sequence = sequence;
+    this.offset = 0;
+    this.transactions = transactions;
     this.region = region;
     this.row = row;
+    this.family = family;
+    this.qualifier = qualifier;
     this.persistentOutput = persistentOutput;
     if (persistentOutput) {
       beginPersistentOutput();
@@ -171,6 +189,14 @@ public class HLogPrettyPrinter {
     this.sequence = sequence;
   }
 
+  public void setOffset(long offset) {
+    this.offset = offset;
+  }
+
+  public void setTransactions(long transactions) {
+    this.transactions = transactions;
+  }
+
   /**
    * sets the region by which output will be filtered
    *
@@ -198,6 +224,14 @@ public class HLogPrettyPrinter {
    */
   public void setRowFilter(String row) {
     this.row = row;
+  }
+
+  public void setColumnFamilyFilter(String family) {
+    this.family = family;
+  }
+
+  public void setColumnQualifierFilter(String qualifier) {
+    this.qualifier = qualifier;
   }
 
   /**
@@ -258,12 +292,16 @@ public class HLogPrettyPrinter {
     long numCFsUpdated = 0;
     long beginTime = 0;
     long endTime = 0;
+    long processedTxns = 0;
 
     HashMap<String, MutableLong> txnsPerPutSignature = new HashMap<String, MutableLong>();
     HashMap<String, MutableLong> kvCountPerCF = new HashMap<String, MutableLong>();
     HashMap<String, MutableLong> kvSizePerCF = new HashMap<String, MutableLong>();
 
     Reader log = HLog.getReader(fs, p, conf);
+    if (offset > 0) {
+      log.seek(offset);
+    }
     try {
       HLog.Entry entry;
       while ((entry = log.next()) != null) {
@@ -305,7 +343,10 @@ public class HLogPrettyPrinter {
           if (outputValues)
             op.put("value", Bytes.toStringBinary(kv.getValue()));
           // check row output filter
-          if (row == null || ((String) op.get("row")).equals(row)) {
+          if ((row == null || ((String) op.get("row")).equals(row)) &&
+               (family == null || ((String) op.get("family")).startsWith(family))
+              && (qualifier == null || ((String) op.get("qualifier"))
+                  .startsWith(qualifier))) {
             actions.add(op);
 
             if (analysisMode) {
@@ -379,6 +420,11 @@ public class HLogPrettyPrinter {
                 out.println("    value: " + op.get("value"));
             }
           }
+        }
+
+        processedTxns++;
+        if (processedTxns >= transactions) {
+          break;
         }
       }
 
@@ -470,7 +516,14 @@ public class HLogPrettyPrinter {
     options.addOption("s", "sequence", true,
         "Sequence to filter by. Pass sequence number.");
     options.addOption("w", "row", true, "Row to filter by. Pass row name.");
+    options.addOption("f", "family", true,
+        "Column family prefix. Pass column family prefix.");
+    options.addOption("q", "qualifier", true,
+        "Column qualifier prefix. Pass column qualifier prefix.");
     options.addOption("a", "analyze", false, "analyze the log");
+    options.addOption("o", "offset", true, "starting offset of the log");
+    options.addOption("t", "transactions", true,
+        "number of transactions to analyze");
 
     HLogPrettyPrinter printer = new HLogPrettyPrinter();
     CommandLineParser parser = new PosixParser();
@@ -490,12 +543,22 @@ public class HLogPrettyPrinter {
         printer.enableJSON();
       if (cmd.hasOption("r"))
         printer.setRegionFilter(cmd.getOptionValue("r"));
+      if (cmd.hasOption("f"))
+        printer.setColumnFamilyFilter(cmd.getOptionValue("f"));
+      if (cmd.hasOption("q"))
+        printer.setColumnQualifierFilter(cmd.getOptionValue("q"));
       if (cmd.hasOption("s"))
         printer.setSequenceFilter(Long.parseLong(cmd.getOptionValue("s")));
       if (cmd.hasOption("w"))
         printer.setRowFilter(cmd.getOptionValue("w"));
       if (cmd.hasOption("a"))
         printer.setAnalyzeOn();
+      if (cmd.hasOption("o")) {
+        printer.setOffset(Long.parseLong(cmd.getOptionValue("o")));
+      }
+      if (cmd.hasOption("t")) {
+        printer.setTransactions(Long.parseLong(cmd.getOptionValue("t")));
+      }
     } catch (ParseException e) {
       e.printStackTrace();
       HelpFormatter formatter = new HelpFormatter();
@@ -521,5 +584,4 @@ public class HLogPrettyPrinter {
     }
     printer.endPersistentOutput();
   }
-
 }
