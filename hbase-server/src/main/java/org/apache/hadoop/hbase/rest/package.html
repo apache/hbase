@@ -52,6 +52,7 @@ This package provides a RESTful Web service front end for HBase.
   <li><a href="#operation_scanner_create">Scanner Creation</a></li>
   <li><a href="#operation_scanner_next">Scanner Get Next</a></li>
   <li><a href="#operation_scanner_delete">Scanner Deletion</a></li>
+  <li><a href="#operation_stateless_scanner">Stateless scanner</a></li>
   </ol>
   <li><a href="#xmlschema">XML Schema</a></li>
   <li><a href="#pbufschema">Protobufs Schema</a></li>
@@ -1183,6 +1184,206 @@ Content-Length: 0<br>
 </tt>
 </blockquote>
 <p>
+
+<a name="operation_stateless_scanner">
+    <h3>Stateless Scanner</h3>
+</a>
+<pre>
+    GET /&lt;table&gt;/&lt;optional_row_prefix&gt;*?&lt;scan_parameters&gt;
+</pre>
+<p align="justify">
+ The current scanner API expects clients to restart scans if there is a REST server failure in the midst. The stateless
+ does not store any state related to scan operation and all the parameters are specified as query parameters.
+<p>
+<p>
+ The following are the scan parameters
+ <ol>
+ <li>startrow - The start row for the scan.</li>
+ <li>endrow - The end row for the scan.</li>
+ <li>columns - The columns to scan.</li>
+ <li>starttime, endtime - To only retrieve columns within a specific range of version timestamps,both start and end time must be specified.</li>
+ <li>maxversions - To limit the number of versions of each column to be returned.</li>
+ <li>batchsize - To limit the maximum number of values returned for each call to next().</li>
+ <li>limit - The number of rows to return in the scan operation.</li>
+ </ol>
+<p>
+<p>
+ More on start row, end row and limit parameters.
+ <ol>
+ <li>If start row, end row and limit not specified, then the whole table will be scanned.</li>
+ <li>If start row and limit (say N) is specified, then the scan operation will return N rows from the start row specified.</li>
+ <li>If only limit parameter is specified, then the scan operation will return N rows from the start of the table.</li>
+ <li>If limit and end row are specified, then the scan operation will return N rows from start of table till the end row. If the end
+    row is reached before N rows ( say M and M &lt; N ), then M rows will be returned to the user.</li>
+ <li>If start row, end row and limit (say N ) are specified and N &lt; number of rows between start row and end row, then N rows from
+    start row will be returned to the user. If N &gt; (number of rows between start row and end row (say M), then M number of rows
+    will be returned to the user.</li>
+ </ol>
+<p>
+<p><b>Examples</b><p>
+<p>
+<blockquote>
+<pre>
+Lets say we have a table with name "ExampleScanner". On Hbase shell,
+&gt;&gt; scan 'ExampleScanner'
+
+ROW COLUMN+CELL
+testrow1 column=a:1, timestamp=1389900769772, value=testvalue-a1
+testrow1 column=b:1, timestamp=1389900780536, value=testvalue-b1
+testrow2 column=a:1, timestamp=1389900823877, value=testvalue-a2
+testrow2 column=b:1, timestamp=1389900818233, value=testvalue-b2
+testrow3 column=a:1, timestamp=1389900847336, value=testvalue-a3
+testrow3 column=b:1, timestamp=1389900856845, value=testvalue-b3
+</pre>
+<ul>
+<li>
+<pre>
+<b>Scanning the entire table in json</b>
+
+curl -H "Accept: application/json" https://localhost:8080/ExampleScanner/*
+</pre>
+<p>
+<tt>
+{"Row":[{"key":"dGVzdHJvdzE=","Cell":[{"column":"YTox","timestamp":1389900769772,"$":"dGVzdHZhbHVlLWEx"},<br>
+{"column":"Yjox","timestamp":1389900780536,"$":"dGVzdHZhbHVlLWIx"}]},{"key":"dGVzdHJvdzI=","Cell":[{"column":<br>
+"YTox","timestamp":1389900823877,"$":"dGVzdHZhbHVlLWEy"}{"column":"Yjox",<br>
+"timestamp":1389900818233,"$":"dGVzdHZhbHVlLWIy"}]},{"key":"dGVzdHJvdzM=","Cell":[{"column":"YTox",<br>
+"timestamp":1389900847336,"$":"dGVzdHZhbHVlLWEz"},{"column":"Yjox","timestamp":1389900856845,"$":"dGVzdHZhbHVlLWIz"}]}]}<br>
+<br>
+</tt>
+<p>
+</li>
+<li>
+<pre>
+<b>Scanning the entire table in XML</b>
+
+curl -H "Content-Type: text/xml" https://localhost:8080/ExampleScanner/*
+</pre>
+<p>
+<tt>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;&lt;CellSet&gt;&lt;Row key="dGVzdHJvdzE="&gt;<br>
+&lt;Cell column="YTox" timestamp="1389900769772"&gt;dGVzdHZhbHVlLWEx&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900780536"&gt;dGVzdHZhbHVlLWIx&lt;/Cell&gt;&lt;/Row&gt;&lt;Row key="dGVzdHJvdzI="&gt;&lt;<br>
+Cell column="YTox" timestamp="1389900823877"&gt;dGVzdHZhbHVlLWEy&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900818233"&gt;dGVzdHZhbHVlLWIy&lt;/Cell&gt;&lt;/Row&gt;&lt;Row key="dGVzdHJvdzM="&gt;&lt;<br>
+Cell column="YTox" timestamp="1389900847336"&gt;dGVzdHZhbHVlLWEz&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900856845"&gt;dGVzdHZhbHVlLWIz&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;<br>
+</tt>
+<p>
+</li>
+<li>
+<pre>
+<b>Scanning the entire table in binary</b>
+    
+curl -H "Accept: application/protobuf" https://localhost:8080/ExampleScanner/*
+
+^@Ì
+B
+^Htestrow1^R^Z^R^Ca:1^XìÓªä¹("^Ltestvalue-a1^R^Z^R^Cb:1^Xø§«ä¹("^Ltestvalue-b1
+B
+^Htestrow2^R^Z^R^Ca:1^XÅú­ä¹("^Ltestvalue-a2^R^Z^R^Cb:1^X¹Î­ä¹("^Ltestvalue-b2
+B
+^Htestrow3^R^Z^R^Ca:1^Xè±¯ä¹("^Ltestvalue-a3^R^Z^R^Cb:1^X<8d>ü¯ä¹("^Ltestvalue-b3
+</pre>
+</li>
+<li>
+<pre>
+<b>Scanning the first row of table</b>
+    
+curl -H "Content-Type: text/xml" https://localhost:8080/ExampleScanner/*?limit=1
+</pre>
+<p>
+<tt>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;&lt;CellSet&gt;&lt;Row key="dGVzdHJvdzE="&gt;<br>
+&lt;Cell column="YTox" timestamp="1389900769772"&gt;dGVzdHZhbHVlLWEx&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900780536"&gt;dGVzdHZhbHVlLWIx&lt;/Cell&gt;&lt;/Row>&lt;/CellSet&gt;<br>
+</tt>
+<p>
+</li>
+<li>
+<pre>
+<b>Scanning a given column of table</b>
+    
+curl -H "Content-Type: text/xml" https://localhost:8080/ExampleScanner/*?columns=a:1
+</pre>
+<p>
+<tt>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;&lt;CellSet&gt;&lt;Row key="dGVzdHJvdzE="&gt;<br>
+&lt;Cell column="YTox" timestamp="1389900769772"&gt;dGVzdHZhbHVlLWEx&lt;/Cell&gt;&lt;/Row&gt;&lt;Row key="dGVzdHJvdzI="&gt;&lt;<br>
+Cell column="YTox" timestamp="1389900823877"&gt;dGVzdHZhbHVlLWEy&lt;/Cell&gt;&lt;/Row&gt;&lt;Row key="dGVzdHJvdzM="&gt;&lt;<br>
+Cell column="YTox" timestamp="1389900847336"&gt;dGVzdHZhbHVlLWEz&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;<br>
+</tt>
+<p>
+</li>
+<li>
+<pre>
+<b>Scanning more than one column of table</b>
+
+curl -H "Content-Type: text/xml" https://localhost:8080/ExampleScanner/*?columns=a:1,b:1
+</pre>
+<p>
+<tt>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;&lt;CellSet&gt;&lt;Row key="dGVzdHJvdzE="&gt;&lt;<br>
+Cell column="YTox" timestamp="1389900769772"&gt;dGVzdHZhbHVlLWEx&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900780536"&gt;dGVzdHZhbHVlLWIx&lt;/Cell&gt;&lt;/Row&gt;&lt;Row key="dGVzdHJvdzI="&gt;&lt;<br>
+Cell column="YTox" timestamp="1389900823877"&gt;dGVzdHZhbHVlLWEy&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900818233"&gt;dGVzdHZhbHVlLWIy&lt;/Cell&gt;&lt;/Row&gt;&lt;Row key="dGVzdHJvdzM="&gt;&lt;<br>
+Cell column="YTox" timestamp="1389900847336"&gt;dGVzdHZhbHVlLWEz&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900856845"&gt;dGVzdHZhbHVlLWIz&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;<br>
+</tt>
+<p>
+</li>
+<li>
+<pre>
+<b>Scanning table with start row and limit</b>
+
+curl -H "Content-Type: text/xml" https://localhost:8080/ExampleScanner/*?startrow=testrow1&amp;limit=2
+</pre>
+<p>
+<tt>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;&lt;CellSet&gt;&lt;Row key="dGVzdHJvdzE="&gt;&lt;<br>
+Cell column="YTox" timestamp="1389900769772"&gt;dGVzdHZhbHVlLWEx&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900780536"&gt;dGVzdHZhbHVlLWIx&lt;/Cell&gt;&lt;/Row&gt;&lt;Row key="dGVzdHJvdzI="&gt;&lt;<br>
+Cell column="YTox" timestamp="1389900823877"&gt;dGVzdHZhbHVlLWEy&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900818233"&gt;dGVzdHZhbHVlLWIy&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;<br>
+</tt>
+<p>
+</li>
+<li>
+<pre>
+<b>Scanning with start and end time</b>
+
+curl -H "Content-Type: text/xml" https://localhost:8080/ExampleScanner/*?starttime=1389900769772&amp;endtime=1389900800000
+</pre>
+<p>
+<tt>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;&lt;CellSet&gt;&lt;Row key="dGVzdHJvdzE="&gt;&lt;<br>
+Cell column="YTox" timestamp="1389900769772"&gt;dGVzdHZhbHVlLWEx&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900780536"&gt;dGVzdHZhbHVlLWIx&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;<br>
+</tt>
+<p>
+</li>
+<li>
+<pre>
+<b>Scanning with row prefix</b>
+        
+curl -H "Content-Type: text/xml" https://localhost:8080/ExampleScanner/test*
+</pre>
+<p>
+<tt>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;&lt;CellSet&gt;&lt;Row key="dGVzdHJvdzE="&gt;<br>
+&lt;Cell column="YTox" timestamp="1389900769772"&gt;dGVzdHZhbHVlLWEx&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900780536"&gt;dGVzdHZhbHVlLWIx&lt;/Cell&gt;&lt;/Row&gt;&lt;Row key="dGVzdHJvdzI="&gt;&lt;<br>
+Cell column="YTox" timestamp="1389900823877"&gt;dGVzdHZhbHVlLWEy&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900818233"&gt;dGVzdHZhbHVlLWIy&lt;/Cell&gt;&lt;/Row&gt;&lt;Row key="dGVzdHJvdzM="&gt;&lt;<br>
+Cell column="YTox" timestamp="1389900847336"&gt;dGVzdHZhbHVlLWEz&lt;/Cell&gt;&lt;Cell column="Yjox"<br>
+timestamp="1389900856845"&gt;dGVzdHZhbHVlLWIz&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;<br>
+</tt>
+<p>
+</li>
+</ul>
+</blockquote>
+</p>
 
 <p>
 <a name="xmlschema">
