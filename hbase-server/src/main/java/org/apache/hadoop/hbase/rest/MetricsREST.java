@@ -78,12 +78,26 @@ public class MetricsREST {
   public void incrementSucessfulDeleteRequests(final int inc) {
     source.incrementSucessfulDeleteRequests(inc);
   }
-  
+
   /**
    * @param inc How much to add to failedDeleteCount.
    */
   public void incrementFailedDeleteRequests(final int inc) {
     source.incrementFailedDeleteRequests(inc);
   }
-  
+
+  /**
+   * @param inc How much to add to sucessfulScanCount.
+   */
+  public synchronized void incrementSucessfulScanRequests(final int inc) {
+    source.incrementSucessfulScanRequests(inc);
+  }
+
+  /**
+   * @param inc How much to add to failedScanCount.
+   */
+  public void incrementFailedScanRequests(final int inc) {
+    source.incrementFailedScanRequests(inc);
+  }
+
 }

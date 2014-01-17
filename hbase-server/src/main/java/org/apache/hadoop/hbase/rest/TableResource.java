@@ -20,18 +20,32 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
+import java.util.List;
 
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.Encoded;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.UriInfo;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Private
 public class TableResource extends ResourceBase {
 
   String table;
+  private static final Log LOG = LogFactory.getLog(TableResource.class);
 
   /**
    * Constructor
@@ -82,7 +96,7 @@ public class TableResource extends ResourceBase {
     return new MultiRowResource(this, versions);
   }
 
-  @Path("{rowspec: .+}")
+  @Path("{rowspec: [^*]+}")
   public RowResource getRowResource(
       // We need the @Encoded decorator so Jersey won't urldecode before
       // the RowSpec constructor has a chance to parse
@@ -90,5 +104,77 @@ public class TableResource extends ResourceBase {
       final @QueryParam("v") String versions,
       final @QueryParam("check") String check) throws IOException {
     return new RowResource(this, rowspec, versions, check);
+  }
+
+  @Path("{suffixglobbingspec: .*\\*/.+}")
+  public RowResource getRowResourceWithSuffixGlobbing(
+      // We need the @Encoded decorator so Jersey won't urldecode before
+      // the RowSpec constructor has a chance to parse
+      final @PathParam("suffixglobbingspec") @Encoded String suffixglobbingspec,
+      final @QueryParam("v") String versions,
+      final @QueryParam("check") String check) throws IOException {
+    return new RowResource(this, suffixglobbingspec, versions, check);
+  }
+
+  @Path("{scanspec: .*[*]$}")
+  public TableScanResource  getScanResource(
+      final @Context UriInfo uriInfo,
+      final @PathParam("scanspec") String scanSpec,
+      final @HeaderParam("Accept") String contentType,
+      @DefaultValue(Integer.MAX_VALUE + "")
+      @QueryParam(Constants.SCAN_LIMIT) int userRequestedLimit,
+      @DefaultValue("") @QueryParam(Constants.SCAN_START_ROW) String startRow,
+      @DefaultValue("") @QueryParam(Constants.SCAN_END_ROW) String endRow,
+      @DefaultValue("") @QueryParam(Constants.SCAN_COLUMN) List<String> column,
+      @DefaultValue("1") @QueryParam(Constants.SCAN_MAX_VERSIONS) int maxVersions,
+      @DefaultValue("-1") @QueryParam(Constants.SCAN_BATCH_SIZE) int batchSize,
+      @DefaultValue("0") @QueryParam(Constants.SCAN_START_TIME) long startTime,
+      @DefaultValue(Long.MAX_VALUE + "") @QueryParam(Constants.SCAN_END_TIME) long endTime,
+      @DefaultValue("true") @QueryParam(Constants.SCAN_BATCH_SIZE) boolean cacheBlocks) {
+    try {
+      Filter filter = null;
+      if (scanSpec.indexOf('*') > 0) {
+        String prefix = scanSpec.substring(0, scanSpec.indexOf('*'));
+        filter = new PrefixFilter(Bytes.toBytes(prefix));
+      }
+      LOG.debug("Query parameters  : Table Name = > " + this.table + " Start Row => " + startRow
+          + " End Row => " + endRow + " Columns => " + column + " Start Time => " + startTime
+          + " End Time => " + endTime + " Cache Blocks => " + cacheBlocks + " Max Versions => "
+          + maxVersions + " Batch Size => " + batchSize);
+      HTableInterface hTable = RESTServlet.getInstance().getTable(this.table);
+      Scan tableScan = new Scan();
+      tableScan.setBatch(batchSize);
+      tableScan.setMaxVersions(maxVersions);
+      tableScan.setTimeRange(startTime, endTime);
+      tableScan.setStartRow(Bytes.toBytes(startRow));
+      tableScan.setStopRow(Bytes.toBytes(endRow));
+      for (String csplit : column) {
+        String[] familysplit = csplit.trim().split(":");
+        if (familysplit.length == 2) {
+          if (familysplit[1].length() > 0) {
+            LOG.debug("Scan family and column : " + familysplit[0] + "  " + familysplit[1]);
+            tableScan.addColumn(Bytes.toBytes(familysplit[0]), Bytes.toBytes(familysplit[1]));
+          } else {
+            tableScan.addFamily(Bytes.toBytes(familysplit[0]));
+            LOG.debug("Scan family : " + familysplit[0] + " and empty qualifier.");
+            tableScan.addColumn(Bytes.toBytes(familysplit[0]), null);
+          }
+        } else if (StringUtils.isNotEmpty(familysplit[0])){
+          LOG.debug("Scan family : " + familysplit[0]);
+          tableScan.addFamily(Bytes.toBytes(familysplit[0]));
+        }
+      }
+      if (filter != null) {
+        tableScan.setFilter(filter);
+      }
+      int fetchSize = this.servlet.getConfiguration().getInt(Constants.SCAN_FETCH_SIZE, 10);
+      tableScan.setCaching(fetchSize);
+     return new TableScanResource(hTable.getScanner(tableScan), userRequestedLimit);
+    } catch (Exception exp) {
+      servlet.getMetrics().incrementFailedScanRequests(1);
+      processException(exp);
+      LOG.warn(exp);
+      return null;
+    }
   }
 }

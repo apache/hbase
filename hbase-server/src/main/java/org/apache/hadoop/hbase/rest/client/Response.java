@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.rest.client;
 
+import java.io.InputStream;
+
 import org.apache.commons.httpclient.Header;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -32,6 +34,7 @@ public class Response {
   private int code;
   private Header[] headers;
   private byte[] body;
+  private InputStream stream;
 
   /**
    * Constructor
@@ -61,12 +64,35 @@ public class Response {
     this.headers = headers;
     this.body = body;
   }
+  
+  /**
+   * Constructor
+   * @param code the HTTP response code
+   * @param headers headers the HTTP response headers
+   * @param body the response body, can be null
+   * @param in Inputstream if the response had one.
+   */
+  public Response(int code, Header[] headers, byte[] body, InputStream in) {
+    this.code = code;
+    this.headers = headers;
+    this.body = body;
+    this.stream = in;
+  }
 
   /**
    * @return the HTTP response code
    */
   public int getCode() {
     return code;
+  }
+  
+  /**
+   * Gets the input stream instance.
+   *
+   * @return an instance of InputStream class.
+   */
+  public InputStream getStream(){
+    return this.stream;
   }
 
   /**

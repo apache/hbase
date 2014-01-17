@@ -57,5 +57,16 @@ public interface Constants {
 
   static final String REST_DNS_NAMESERVER = "hbase.rest.dns.nameserver";
   static final String REST_DNS_INTERFACE = "hbase.rest.dns.interface";
+
   public static final String FILTER_CLASSES = "hbase.rest.filter.classes";
+  public static final String SCAN_START_ROW = "startrow";
+  public static final String SCAN_END_ROW = "endrow";
+  public static final String SCAN_COLUMN = "column";
+  public static final String SCAN_START_TIME = "starttime";
+  public static final String SCAN_END_TIME = "endtime";
+  public static final String SCAN_MAX_VERSIONS = "maxversions";
+  public static final String SCAN_BATCH_SIZE = "batchsize";
+  public static final String SCAN_LIMIT = "limit";
+  public static final String SCAN_FETCH_SIZE = "hbase.rest.scan.fetchsize";
+
 }
