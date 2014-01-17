@@ -140,13 +140,14 @@ public class LabelExpander {
     // This scan should be done by user with global_admin previliges.. Ensure
     // that it works
     HTable visibilityLabelsTable = null;
+    ResultScanner scanner = null;
     try {
       labels = new HashMap<String, Integer>();
       visibilityLabelsTable = new HTable(conf, LABELS_TABLE_NAME.getName());
       Scan scan = new Scan();
       scan.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
       scan.addColumn(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
-      ResultScanner scanner = visibilityLabelsTable.getScanner(scan);
+      scanner = visibilityLabelsTable.getScanner(scan);
       while (true) {
         Result next = scanner.next();
         if (next == null) {
@@ -156,10 +157,15 @@ public class LabelExpander {
         byte[] value = next.getValue(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
         labels.put(Bytes.toString(value), Bytes.toInt(row));
       }
-      scanner.close();
     } finally {
-      if (visibilityLabelsTable != null) {
-        visibilityLabelsTable.close();
+      try {
+        if (scanner != null) {
+          scanner.close();
+        }
+      } finally {
+        if (visibilityLabelsTable != null) {
+          visibilityLabelsTable.close();
+        }
       }
     }
   }
