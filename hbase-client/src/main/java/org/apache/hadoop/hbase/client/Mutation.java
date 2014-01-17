@@ -81,7 +81,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected Durability durability = Durability.USE_DEFAULT;
-  
+
   // A Map sorted by column family.
   protected NavigableMap<byte [], List<Cell>> familyMap =
     new TreeMap<byte [], List<Cell>>(Bytes.BYTES_COMPARATOR);
@@ -210,6 +210,27 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /**
+   * @deprecated Use {@link #getDurability()} instead.
+   * @return true if edits should be applied to WAL, false if not
+   */
+  @Deprecated
+  public boolean getWriteToWAL() {
+    return this.durability == Durability.SKIP_WAL;
+  }
+
+  /**
+   * Set whether this Delete should be written to the WAL or not.
+   * Not writing the WAL means you may lose edits on server crash.
+   * This method will reset any changes made via {@link #setDurability(Durability)}
+   * @param write true if edits should be written to WAL, false if not
+   * @deprecated Use {@link #setDurability(Durability)} instead.
+   */
+  @Deprecated
+  public void setWriteToWAL(boolean write) {
+    setDurability(write ? Durability.USE_DEFAULT : Durability.SKIP_WAL);
+  }
+
+  /**
    * Set the durability for this mutation
    * @param d
    */
@@ -288,6 +309,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     return this.row;
   }
 
+  @Override
   public int compareTo(final Row d) {
     return Bytes.compareTo(this.getRow(), d.getRow());
   }
