@@ -633,17 +633,19 @@ public class AssignmentManager extends ZooKeeperListener {
       }
       // Put it back in transition so that SSH can re-assign it
       regionStates.updateRegionState(regionInfo, State.OFFLINE, sn);
-      // No mater the previous server is online or offline,
-      // we need to reset the last region server of the region.
-      regionStates.setLastRegionServerOfRegion(sn, encodedName);
+
       if (regionInfo.isMetaRegion()) {
         // If it's meta region, reset the meta location.
         // So that master knows the right meta region server.
         MetaRegionTracker.setMetaLocation(watcher, sn);
-      }
-      // Make sure we know the server is dead.
-      if (!serverManager.isServerDead(sn)) {
-        serverManager.expireServer(sn);
+      } else {
+        // No matter the previous server is online or offline,
+        // we need to reset the last region server of the region.
+        regionStates.setLastRegionServerOfRegion(sn, encodedName);
+        // Make sure we know the server is dead.
+        if (!serverManager.isServerDead(sn)) {
+          serverManager.expireServer(sn);
+        }
       }
       return false;
     }
