@@ -75,8 +75,6 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -300,59 +298,7 @@ public class TestSplitTransactionOnCluster {
       TESTING_UTIL.deleteTable(tableName);
     }
   }
-  @Test
-  public void testSplitFailedCompactionAndSplit() throws Exception {
-    final byte[] tableName = Bytes.toBytes("testSplitFailedCompactionAndSplit");
-    Configuration conf = TESTING_UTIL.getConfiguration();
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    // Create table then get the single region for our new table.
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    byte[] cf = Bytes.toBytes("cf");
-    htd.addFamily(new HColumnDescriptor(cf));
-    admin.createTable(htd);
-    
-    for (int i = 0; cluster.getRegions(tableName).size() == 0 && i < 100; i++) {
-      Thread.sleep(100);
-    }
-    assertEquals(1, cluster.getRegions(tableName).size());
-    
-    HRegion region = cluster.getRegions(tableName).get(0);
-    Store store = region.getStore(cf);
-    int regionServerIndex = cluster.getServerWith(region.getRegionName());
-    HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
-    
-    HTable t  = new HTable(conf, tableName);
-    // insert data
-    insertData(tableName, admin, t);
-    insertData(tableName, admin, t);
-    insertData(tableName, admin, t);
-    insertData(tableName, admin, t);
-    
-    int fileNum = store.getStorefiles().size();
-    // 0, Compaction Request
-    store.triggerMajorCompaction();
-    CompactionContext cc = store.requestCompaction();
-    assertNotNull(cc);
-    // 1, A timeout split 
-    // 1.1 close region 
-    assertEquals(2, region.close(false).get(cf).size());
-    // 1.2 rollback and Region initialize again
-    region.initialize();
-    
-    // 2, Run Compaction cc
-    assertFalse(region.compact(cc, store));
-    assertTrue(fileNum > store.getStorefiles().size());
 
-    // 3, Split
-    SplitTransaction st = new SplitTransaction(region, Bytes.toBytes("row3"));
-    assertTrue(st.prepare());
-    st.execute(regionServer, regionServer);
-    assertEquals(2, cluster.getRegions(tableName).size());
-    
-    region.close();
-    t.close();
-  }
-  
   public static class FailingSplitRegionObserver extends BaseRegionObserver {
     static volatile CountDownLatch latch = new CountDownLatch(1);
     @Override
