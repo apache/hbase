@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -303,5 +301,30 @@ public class TestDefaultCompactSelection extends TestCase {
     compactEquals(sfCreate(99,99,99,99, 30,26,26,29,25,25), 30, 26, 26);
     // Prefer later compaction if the benefit is significant.
     compactEquals(sfCreate(99,99,99,99, 27,27,27,20,20,20), 20, 20, 20);
+  }
+
+  public void testCompactionEmptyHFile() throws IOException {
+    // Set TTL
+    ScanInfo oldScanInfo = store.getScanInfo();
+    ScanInfo newScanInfo = new ScanInfo(oldScanInfo.getFamily(),
+        oldScanInfo.getMinVersions(), oldScanInfo.getMaxVersions(), 600,
+        oldScanInfo.getKeepDeletedCells(), oldScanInfo.getTimeToPurgeDeletes(),
+        oldScanInfo.getComparator());
+    store.setScanInfo(newScanInfo);
+    // Do not compact empty store file
+    List<StoreFile> candidates = sfCreate(0);
+    for (StoreFile file : candidates) {
+      if (file instanceof MockStoreFile) {
+        MockStoreFile mockFile = (MockStoreFile) file;
+        mockFile.setTimeRangeTracker(new TimeRangeTracker(-1, -1));
+        mockFile.setEntries(0);
+      }
+    }
+    // Test Default compactions
+    CompactionRequest result = ((RatioBasedCompactionPolicy) store.storeEngine
+        .getCompactionPolicy()).selectCompaction(candidates,
+        new ArrayList<StoreFile>(), false, false, false);
+    assertTrue(result.getFiles().size() == 0);
+    store.setScanInfo(oldScanInfo);
   }
 }

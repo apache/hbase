@@ -36,6 +36,8 @@ public class MockStoreFile extends StoreFile {
   long sequenceid;
   private Map<byte[], byte[]> metadata = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
   byte[] splitPoint = null;
+  TimeRangeTracker timeRangeTracker;
+  long entryCount;
 
   MockStoreFile(HBaseTestingUtility testUtil, Path testPath,
       long length, long ageInDisk, boolean isRef, long sequenceid) throws IOException {
@@ -85,13 +87,33 @@ public class MockStoreFile extends StoreFile {
     this.metadata.put(key, value);
   }
 
+  void setTimeRangeTracker(TimeRangeTracker timeRangeTracker) {
+    this.timeRangeTracker = timeRangeTracker;
+  }
+
+  void setEntries(long entryCount) {
+    this.entryCount = entryCount;
+  }
+
   @Override
   public StoreFile.Reader getReader() {
     final long len = this.length;
+    final TimeRangeTracker timeRange = this.timeRangeTracker;
+    final long entries = this.entryCount;
     return new StoreFile.Reader() {
       @Override
       public long length() {
         return len;
+      }
+
+      @Override
+      public long getMaxTimestamp() {
+        return timeRange == null ? Long.MAX_VALUE : timeRange.maximumTimestamp;
+      }
+
+      @Override
+      public long getEntries() {
+        return entries;
       }
     };
   }
