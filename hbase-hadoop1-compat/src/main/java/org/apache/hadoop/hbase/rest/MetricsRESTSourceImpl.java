@@ -33,9 +33,11 @@ public class MetricsRESTSourceImpl extends BaseSourceImpl implements MetricsREST
   private MetricMutableCounterLong sucGet;
   private MetricMutableCounterLong sucPut;
   private MetricMutableCounterLong sucDel;
+  private MetricMutableCounterLong sucScan;
   private MetricMutableCounterLong fGet;
   private MetricMutableCounterLong fPut;
   private MetricMutableCounterLong fDel;
+  private MetricMutableCounterLong fScan;
 
   public MetricsRESTSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, CONTEXT, JMX_CONTEXT);
@@ -56,10 +58,12 @@ public class MetricsRESTSourceImpl extends BaseSourceImpl implements MetricsREST
     sucGet = getMetricsRegistry().getLongCounter(SUCCESSFUL_GET_KEY, 0l);
     sucPut = getMetricsRegistry().getLongCounter(SUCCESSFUL_PUT_KEY, 0l);
     sucDel = getMetricsRegistry().getLongCounter(SUCCESSFUL_DELETE_KEY, 0l);
+    sucScan = getMetricsRegistry().getLongCounter(SUCCESSFUL_SCAN_KEY, 0L);
 
     fGet = getMetricsRegistry().getLongCounter(FAILED_GET_KEY, 0l);
     fPut = getMetricsRegistry().getLongCounter(FAILED_PUT_KEY, 0l);
     fDel = getMetricsRegistry().getLongCounter(FAILED_DELETE_KEY, 0l);
+    fScan = getMetricsRegistry().getLongCounter(FAILED_SCAN_KEY, 0l);
   }
 
   @Override
@@ -95,5 +99,15 @@ public class MetricsRESTSourceImpl extends BaseSourceImpl implements MetricsREST
   @Override
   public void incrementFailedDeleteRequests(int inc) {
     fDel.incr(inc);
+  }
+
+  @Override
+  public void incrementSucessfulScanRequests(int inc) {
+    sucScan.incr(inc);
+  }
+
+  @Override
+  public void incrementFailedScanRequests(int inc) {
+    fScan.incr(inc);
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.rest.client;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -333,7 +334,8 @@ public class Client {
       int code = execute(c, method, headers, path);
       headers = method.getResponseHeaders();
       byte[] body = method.getResponseBody();
-      return new Response(code, headers, body);
+      InputStream in = method.getResponseBodyAsStream();
+      return new Response(code, headers, body, in);
     } finally {
       method.releaseConnection();
     }

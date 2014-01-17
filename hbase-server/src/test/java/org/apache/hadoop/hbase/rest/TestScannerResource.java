@@ -73,11 +73,11 @@ public class TestScannerResource {
   private static int expectedRows2;
   private static Configuration conf;
 
-  private static int insertData(String tableName, String column, double prob)
+  static int insertData(Configuration conf, String tableName, String column, double prob)
       throws IOException {
     Random rng = new Random();
     int count = 0;
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    HTable table = new HTable(conf, tableName);
     byte[] k = new byte[3];
     byte [][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(column));
     for (byte b1 = 'a'; b1 < 'z'; b1++) {
@@ -97,10 +97,11 @@ public class TestScannerResource {
       }
     }
     table.flushCommits();
+    table.close();
     return count;
   }
 
-  private static int countCellSet(CellSetModel model) {
+  static int countCellSet(CellSetModel model) {
     int count = 0;
     Iterator<RowModel> rows = model.getRows().iterator();
     while (rows.hasNext()) {
@@ -170,8 +171,8 @@ public class TestScannerResource {
     htd.addFamily(new HColumnDescriptor(CFA));
     htd.addFamily(new HColumnDescriptor(CFB));
     admin.createTable(htd);
-    expectedRows1 = insertData(TABLE, COLUMN_1, 1.0);
-    expectedRows2 = insertData(TABLE, COLUMN_2, 0.5);
+    expectedRows1 = insertData(TEST_UTIL.getConfiguration(), TABLE, COLUMN_1, 1.0);
+    expectedRows2 = insertData(TEST_UTIL.getConfiguration(), TABLE, COLUMN_2, 0.5);
   }
 
   @AfterClass

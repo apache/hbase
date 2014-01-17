@@ -482,5 +482,103 @@ public class TestGetAndPutResource extends RowResourceBase {
     }
     return contains;
   }
+
+  @Test
+  public void testSuffixGlobbingXMLWithNewScanner() throws IOException, JAXBException {
+    String path = "/" + TABLE + "/fakerow";  // deliberate nonexistent row
+
+    CellSetModel cellSetModel = new CellSetModel();
+    RowModel rowModel = new RowModel(ROW_1);
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
+      Bytes.toBytes(VALUE_1)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
+      Bytes.toBytes(VALUE_2)));
+    cellSetModel.addRow(rowModel);
+    rowModel = new RowModel(ROW_2);
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
+      Bytes.toBytes(VALUE_3)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
+      Bytes.toBytes(VALUE_4)));
+    cellSetModel.addRow(rowModel);
+    StringWriter writer = new StringWriter();
+    xmlMarshaller.marshal(cellSetModel, writer);
+    Response response = client.put(path, Constants.MIMETYPE_XML,
+      Bytes.toBytes(writer.toString()));
+    Thread.yield();
+
+    // make sure the fake row was not actually created
+    response = client.get(path, Constants.MIMETYPE_XML);
+    assertEquals(response.getCode(), 404);
+
+    // check that all of the values were created
+    StringBuilder query = new StringBuilder();
+    query.append('/');
+    query.append(TABLE);
+    query.append('/');
+    query.append("testrow*");
+    response = client.get(query.toString(), Constants.MIMETYPE_XML);
+    assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
+    CellSetModel cellSet = (CellSetModel)
+      xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+    assertTrue(cellSet.getRows().size() == 2);
+
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
+    response = deleteRow(TABLE, ROW_2);
+    assertEquals(response.getCode(), 200);
+  }
+
+  @Test
+  public void testSuffixGlobbingXML() throws IOException, JAXBException {
+    String path = "/" + TABLE + "/fakerow";  // deliberate nonexistent row
+
+    CellSetModel cellSetModel = new CellSetModel();
+    RowModel rowModel = new RowModel(ROW_1);
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
+      Bytes.toBytes(VALUE_1)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
+      Bytes.toBytes(VALUE_2)));
+    cellSetModel.addRow(rowModel);
+    rowModel = new RowModel(ROW_2);
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
+      Bytes.toBytes(VALUE_3)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
+      Bytes.toBytes(VALUE_4)));
+    cellSetModel.addRow(rowModel);
+    StringWriter writer = new StringWriter();
+    xmlMarshaller.marshal(cellSetModel, writer);
+    Response response = client.put(path, Constants.MIMETYPE_XML,
+      Bytes.toBytes(writer.toString()));
+    Thread.yield();
+
+    // make sure the fake row was not actually created
+    response = client.get(path, Constants.MIMETYPE_XML);
+    assertEquals(response.getCode(), 404);
+
+    // check that all of the values were created
+    StringBuilder query = new StringBuilder();
+    query.append('/');
+    query.append(TABLE);
+    query.append('/');
+    query.append("testrow*");
+    query.append('/');
+    query.append(COLUMN_1);
+    response = client.get(query.toString(), Constants.MIMETYPE_XML);
+    assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
+    CellSetModel cellSet = (CellSetModel)
+      xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+    List<RowModel> rows = cellSet.getRows();
+    assertTrue(rows.size() == 2);
+    for (RowModel row : rows) {
+      assertTrue(row.getCells().size() == 1);
+      assertEquals(COLUMN_1, Bytes.toString(row.getCells().get(0).getColumn()));
+    }
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
+    response = deleteRow(TABLE, ROW_2);
+    assertEquals(response.getCode(), 200);
+  }
 }
 

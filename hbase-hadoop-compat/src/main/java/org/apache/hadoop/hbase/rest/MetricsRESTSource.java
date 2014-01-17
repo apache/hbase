@@ -46,6 +46,10 @@ public interface MetricsRESTSource extends BaseSource {
   String FAILED_PUT_KEY = "failedPut";
 
   String FAILED_DELETE_KEY = "failedDelete";
+  
+  String SUCCESSFUL_SCAN_KEY = "successfulScanCount";
+  
+  String FAILED_SCAN_KEY = "failedScanCount";
 
   /**
    * Increment the number of requests
@@ -95,4 +99,18 @@ public interface MetricsRESTSource extends BaseSource {
    * @param inc The number of failed delete requests.
    */
   void incrementFailedDeleteRequests(int inc);
+  
+  /**
+   * Increment the number of successful scan requests.
+   *
+   * @param inc Number of successful scan requests.
+   */
+  void incrementSucessfulScanRequests(final int inc);
+  
+  /**
+   * Increment the number failed scan requests.
+   *
+   * @param inc the inc
+   */
+  void incrementFailedScanRequests(final int inc);
 }
