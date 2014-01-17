@@ -578,7 +578,7 @@ MasterServices, Server {
       this.masterAddressManager.start();
 
       // Put up info server.
-      int port = this.conf.getInt("hbase.master.info.port", 60010);
+      int port = this.conf.getInt("hbase.master.info.port", HConstants.DEFAULT_MASTER_INFOPORT);
       if (port >= 0) {
         String a = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
         this.infoServer = new InfoServer(MASTER, a, port, false, this.conf);

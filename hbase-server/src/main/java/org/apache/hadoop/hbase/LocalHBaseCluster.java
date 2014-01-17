@@ -48,12 +48,12 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
  * to close it all down. {@link #join} the cluster is you want to wait on
  * shutdown completion.
  *
- * <p>Runs master on port 60000 by default.  Because we can't just kill the
+ * <p>Runs master on port 16000 by default.  Because we can't just kill the
  * process -- not till HADOOP-1700 gets fixed and even then.... -- we need to
  * be able to find the master with a remote client to run shutdown.  To use a
- * port other than 60000, set the hbase.master to a value of 'local:PORT':
+ * port other than 16000, set the hbase.master to a value of 'local:PORT':
  * that is 'local', not 'localhost', and the port number the master should use
- * instead of 60000.
+ * instead of 16000.
  *
  */
 @InterfaceAudience.Public

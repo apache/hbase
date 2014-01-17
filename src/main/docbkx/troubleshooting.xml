@@ -257,7 +257,8 @@ export SERVER_GC_OPTS="$SERVER_GC_OPTS -XX:NewSize=64m -XX:MaxNewSize=64m"
            <title>Builtin Tools</title>
             <section xml:id="trouble.tools.builtin.webmaster">
               <title>Master Web Interface</title>
-              <para>The Master starts a web-interface on port 60010 by default.
+              <para>The Master starts a web-interface on port 16010 by default.
+	      (Up to and including 0.98 this was port 60010)
               </para>
               <para>The Master web UI lists created tables and their definition (e.g., ColumnFamilies, blocksize, etc.).  Additionally,
               the available RegionServers in the cluster are listed along with selected high-level metrics (requests, number of regions, usedHeap, maxHeap).
@@ -266,7 +267,8 @@ export SERVER_GC_OPTS="$SERVER_GC_OPTS -XX:NewSize=64m -XX:MaxNewSize=64m"
             </section>
             <section xml:id="trouble.tools.builtin.webregion">
               <title>RegionServer Web Interface</title>
-              <para>RegionServers starts a web-interface on port 60030 by default.
+              <para>RegionServers starts a web-interface on port 16030 by default.
+              (Up to an including 0.98 this was port 60030)
               </para>
               <para>The RegionServer web UI lists online regions and their start/end keys, as well as point-in-time RegionServer metrics (requests, regions, storeFileIndexSize, compactionQueueSize, etc.).
               </para>

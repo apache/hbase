@@ -98,12 +98,12 @@ possible configurations would overwhelm and obscure the important.
   <!--Master configurations-->
   <property >
     <name>hbase.master.port</name>
-    <value>60000</value>
+    <value>16000</value>
     <description>The port the HBase Master should bind to.</description>
   </property>
   <property>
     <name>hbase.master.info.port</name>
-    <value>60010</value>
+    <value>16010</value>
     <description>The port for the HBase Master web UI.
     Set to -1 if you do not want a UI instance run.</description>
   </property>
@@ -169,12 +169,12 @@ possible configurations would overwhelm and obscure the important.
   <!--RegionServer configurations-->
   <property>
     <name>hbase.regionserver.port</name>
-    <value>60020</value>
+    <value>16020</value>
     <description>The port the HBase RegionServer binds to.</description>
   </property>
   <property>
     <name>hbase.regionserver.info.port</name>
-    <value>60030</value>
+    <value>16030</value>
     <description>The port for the HBase RegionServer web UI
     Set to -1 if you do not want the RegionServer UI to run.</description>
   </property>

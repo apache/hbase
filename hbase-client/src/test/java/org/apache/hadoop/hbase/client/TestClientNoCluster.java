@@ -95,7 +95,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(TestClientNoCluster.class);
   private Configuration conf;
   public static final ServerName META_SERVERNAME =
-      ServerName.valueOf("meta.example.org", 60010, 12345);
+      ServerName.valueOf("meta.example.org", 16010, 12345);
 
   @Before
   public void setUp() throws Exception {
@@ -651,7 +651,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   private static ServerName [] makeServerNames(final int count) {
     ServerName [] sns = new ServerName[count];
     for (int i = 0; i < count; i++) {
-      sns[i] = ServerName.valueOf("" + i + ".example.org", 60010, i);
+      sns[i] = ServerName.valueOf("" + i + ".example.org", 16010, i);
     }
     return sns;
   }

@@ -1652,7 +1652,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * @throws IOException
    */
   private int putUpWebUI() throws IOException {
-    int port = this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 60030);
+    int port = this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
+				HConstants.DEFAULT_REGIONSERVER_INFOPORT);
     // -1 is for disabling info server
     if (port < 0) return port;
     String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");

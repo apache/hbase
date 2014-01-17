@@ -181,7 +181,7 @@ public class HBaseConfiguration extends Configuration {
 
   /** For debugging.  Dump configurations to system output as xml format.
    * Master and RS configurations can also be dumped using
-   * http services. e.g. "curl http://master:60010/dump"
+   * http services. e.g. "curl http://master:16010/dump"
    */
   public static void main(String[] args) throws Exception {
     HBaseConfiguration.create().writeXml(System.out);

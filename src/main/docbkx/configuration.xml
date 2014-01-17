@@ -515,13 +515,16 @@ homed on the node <varname>h-24-30.example.com</varname>.
                 </para>
             	<para>To start up an extra backup master(s) on the same server run...
                        <programlisting>% bin/local-master-backup.sh start 1</programlisting>
-                       ... the '1' means use ports 60001 &amp; 60011, and this backup master's logfile will be at <filename>logs/hbase-${USER}-1-master-${HOSTNAME}.log</filename>.
+                       ... the '1' means use ports 16001 &amp; 16011, and this backup master's
+		       logfile will be at 
+		       <filename>logs/hbase-${USER}-1-master-${HOSTNAME}.log</filename>.
                 </para>
                 <para>To startup multiple backup masters run... <programlisting>% bin/local-master-backup.sh start 2 3</programlisting> You can start up to 9 backup masters (10 total).
  				</para>
 				<para>To start up more regionservers...
      			  <programlisting>% bin/local-regionservers.sh start 1</programlisting>
-     			where '1' means use ports 60201 &amp; 60301 and its logfile will be at <filename>logs/hbase-${USER}-1-regionserver-${HOSTNAME}.log</filename>.
+			... where '1' means use ports 16201 &amp; 16301 and its logfile will be at 
+			`<filename>logs/hbase-${USER}-1-regionserver-${HOSTNAME}.log</filename>.
      			</para>
      			<para>To add 4 more regionservers in addition to the one you just started by running... <programlisting>% bin/local-regionservers.sh start 2 3 4 5</programlisting>
      			This supports up to 99 extra regionservers (100 total).
@@ -678,14 +681,18 @@ homed on the node <varname>h-24-30.example.com</varname>.
 
 
         <para>HBase also puts up a UI listing vital attributes. By default its
-        deployed on the Master host at port 60010 (HBase RegionServers listen
-        on port 60020 by default and put up an informational http server at
-        60030). If the Master were running on a host named
+        deployed on the Master host at port 16010 (HBase RegionServers listen
+        on port 16020 by default and put up an informational http server at
+        16030). If the Master were running on a host named
         <varname>master.example.org</varname> on the default port, to see the
         Master's homepage you'd point your browser at
-        <filename>http://master.example.org:60010</filename>.</para>
+        <filename>http://master.example.org:16010</filename>.</para>
 
-
+	<para>Prior to HBase 0.98, the default ports the master ui was deployed
+	on port 16010, and the HBase RegionServers would listen
+        on port 16020 by default and put up an informational http server at
+        16030.
+	</para>
 
     <para>Once HBase has started, see the <xref linkend="shell_exercises" /> for how to
         create tables, add data, scan your insertions, and finally disable and
