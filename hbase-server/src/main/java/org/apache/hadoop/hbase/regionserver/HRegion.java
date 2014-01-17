@@ -1345,14 +1345,6 @@ public class HRegion implements HeapSize { // , Writable{
     // block waiting for the lock for compaction
     lock.readLock().lock();
     try {
-      byte[] cf = Bytes.toBytes(store.getColumnFamilyName());
-      if (stores.get(cf) != store) {
-        LOG.warn("Store " + store.getColumnFamilyName() + " on region " + this
-            + " has been re-instantiated, cancel this compaction request. "
-            + " It may be caused by the roll back of split transaction");
-        return false;
-      }
-
       status = TaskMonitor.get().createStatus("Compacting " + store + " in " + this);
       if (this.closed.get()) {
         String msg = "Skipping compaction on " + this + " because closed";
