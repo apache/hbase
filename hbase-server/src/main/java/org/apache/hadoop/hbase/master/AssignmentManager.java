@@ -3144,9 +3144,6 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param plan Plan to execute.
    */
   public void balance(final RegionPlan plan) {
-    synchronized (this.regionPlans) {
-      this.regionPlans.put(plan.getRegionName(), plan);
-    }
     HRegionInfo hri = plan.getRegionInfo();
     TableName tableName = hri.getTable();
     if (zkTable.isDisablingOrDisabledTable(tableName)) {
@@ -3154,7 +3151,24 @@ public class AssignmentManager extends ZooKeeperListener {
         + tableName);
       return;
     }
-    unassign(hri, false, plan.getDestination());
+
+    // Move the region only if it's assigned
+    String encodedName = hri.getEncodedName();
+    ReentrantLock lock = locker.acquireLock(encodedName);
+    try {
+      if (!regionStates.isRegionOnline(hri)) {
+        RegionState state = regionStates.getRegionState(encodedName);
+        LOG.info("Ignored moving region not assigned: " + hri + ", "
+          + (state == null ? "not in region states" : state));
+        return;
+      }
+      synchronized (this.regionPlans) {
+        this.regionPlans.put(plan.getRegionName(), plan);
+      }
+      unassign(hri, false, plan.getDestination());
+    } finally {
+      lock.unlock();
+    }
   }
 
   public void stop() {

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -268,6 +269,54 @@ public class TestAssignmentManagerOnCluster {
 
     } finally {
       TEST_UTIL.deleteTable(table);
+    }
+  }
+
+  /**
+   * If a table is deleted, we should not be able to move it anymore.
+   * Otherwise, the region will be brought back.
+   * @throws Exception
+   */
+  @Test (timeout=50000)
+  public void testMoveRegionOfDeletedTable() throws Exception {
+    TableName table =
+        TableName.valueOf("testMoveRegionOfDeletedTable");
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    try {
+      HRegionInfo hri = createTableAndGetOneRegion(table);
+
+      HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+      AssignmentManager am = master.getAssignmentManager();
+      RegionStates regionStates = am.getRegionStates();
+      ServerName serverName = regionStates.getRegionServerOfRegion(hri);
+      ServerName destServerName = null;
+      for (int i = 0; i < 3; i++) {
+        HRegionServer destServer = TEST_UTIL.getHBaseCluster().getRegionServer(i);
+        if (!destServer.getServerName().equals(serverName)) {
+          destServerName = destServer.getServerName();
+          break;
+        }
+      }
+      assertTrue(destServerName != null
+        && !destServerName.equals(serverName));
+
+      TEST_UTIL.deleteTable(table);
+
+      try {
+        admin.move(hri.getEncodedNameAsBytes(),
+          Bytes.toBytes(destServerName.getServerName()));
+        fail("We should not find the region");
+      } catch (IOException ioe) {
+        assertTrue(ioe instanceof UnknownRegionException);
+      }
+
+      am.balance(new RegionPlan(hri, serverName, destServerName));
+      assertFalse("The region should not be in transition",
+        regionStates.isRegionInTransition(hri));
+    } finally {
+      if (admin.tableExists(table)) {
+        TEST_UTIL.deleteTable(table);
+      }
     }
   }
 

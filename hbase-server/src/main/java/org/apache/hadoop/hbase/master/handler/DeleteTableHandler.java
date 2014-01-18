@@ -117,7 +117,11 @@ public class DeleteTableHandler extends TableEventHandler {
       LOG.debug("Removing '" + tableName + "' descriptor.");
       this.masterServices.getTableDescriptors().remove(tableName);
 
-      // 7. If entry for this table in zk, and up in AssignmentManager, remove it.
+      // 7. Clean up regions of the table in RegionStates.
+      LOG.debug("Removing '" + tableName + "' from region states.");
+      states.tableDeleted(tableName);
+
+      // 8. If entry for this table in zk, and up in AssignmentManager, remove it.
       LOG.debug("Marking '" + tableName + "' as deleted.");
       am.getZKTable().setDeletedTable(tableName);
     }

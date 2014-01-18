@@ -573,6 +573,23 @@ public class RegionStates {
   }
 
   /**
+   * A table is deleted. Remove its regions from all internal maps.
+   * We loop through all regions assuming we don't delete tables too much.
+   */
+  public synchronized void tableDeleted(final TableName tableName) {
+    Set<HRegionInfo> regionsToDelete = new HashSet<HRegionInfo>();
+    for (RegionState state: regionStates.values()) {
+      HRegionInfo region = state.getRegion();
+      if (region.getTable().equals(tableName)) {
+        regionsToDelete.add(region);
+      }
+    }
+    for (HRegionInfo region: regionsToDelete) {
+      deleteRegion(region);
+    }
+  }
+
+  /**
    * Checking if a region was assigned to a server which is not online now.
    * If so, we should hold re-assign this region till SSH has split its hlogs.
    * Once logs are split, the last assignment of this region will be reset,
@@ -740,6 +757,21 @@ public class RegionStates {
       server.abort("Aborting because error occoured while reading "
         + Bytes.toStringBinary(regionName) + " from hbase:meta", e);
       return null;
+    }
+  }
+
+  /**
+   * Remove a region from all state maps.
+   */
+  private void deleteRegion(final HRegionInfo hri) {
+    String encodedName = hri.getEncodedName();
+    regionsInTransition.remove(encodedName);
+    regionStates.remove(encodedName);
+    lastAssignments.remove(encodedName);
+    ServerName sn = regionAssignments.remove(hri);
+    if (sn != null) {
+      Set<HRegionInfo> regions = serverHoldings.get(sn);
+      regions.remove(hri);
     }
   }
 }
