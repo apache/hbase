@@ -409,6 +409,8 @@ public class HiveBasedNumericHistogram implements NumericHistogram {
 
   private List<Bucket> getBuckets(HiveBasedNumericHistogram hist) {
     List<Bucket> buckets = Lists.newArrayList();
+    Preconditions.checkArgument(hist != null);
+    Preconditions.checkArgument(hist.bins != null);
     if (hist.bins.size() == 0) {
       return buckets;
     }
