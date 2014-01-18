@@ -1339,4 +1339,26 @@ public class TestAssignmentManager {
       am.shutdown();
     }
   }
+
+  /**
+   * If a table is deleted, we should not be able to balance it anymore.
+   * Otherwise, the region will be brought back.
+   * @throws Exception
+   */
+  @Test
+  public void testBalanceRegionOfDeletedTable() throws Exception {
+    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    AssignmentManager am = new AssignmentManager(this.server, this.serverManager,
+      ct, balancer, null, null, master.getTableLockManager());
+    RegionStates regionStates = am.getRegionStates();
+    HRegionInfo hri = REGIONINFO;
+    regionStates.createRegionState(hri);
+    assertFalse(regionStates.isRegionInTransition(hri));
+    RegionPlan plan = new RegionPlan(hri, SERVERNAME_A, SERVERNAME_B);
+    // Fake table is deleted
+    regionStates.tableDeleted(hri.getTable());
+    am.balance(plan);
+    assertFalse("The region should not in transition",
+      regionStates.isRegionInTransition(hri));
+  }
 }
