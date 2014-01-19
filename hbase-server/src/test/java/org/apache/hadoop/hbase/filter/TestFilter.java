@@ -579,6 +579,47 @@ public class TestFilter {
     assertEquals("The page filter returned more rows than expected", pageSize, scannerCounter);
   }
 
+
+  /**
+   * The following filter simulates a pre-0.96 filter where filterRow() is defined while 
+   * hasFilterRow() returns false
+   */
+  static class OldTestFilter extends FilterBase {
+    @Override
+    public byte [] toByteArray() {return null;}
+
+    @Override
+    public boolean hasFilterRow() {
+      return false;
+    }
+    
+    @Override
+    public boolean filterRow() {
+      // always filter out rows
+      return true;
+    }
+  }
+  
+  /**
+   * The following test is to ensure old(such as hbase0.94) filterRow() can be correctly fired in 
+   * 0.96+ code base.  
+   * 
+   * See HBASE-10366
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void tes94FilterRowCompatibility() throws Exception {
+    Scan s = new Scan();
+    OldTestFilter filter = new OldTestFilter();
+    s.setFilter(filter);
+
+    InternalScanner scanner = this.region.getScanner(s);
+    ArrayList<Cell> values = new ArrayList<Cell>();
+    scanner.next(values);
+    assertTrue("All rows should be filtered out", values.isEmpty());
+  }
+
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a
    * {@link Filter} that uses the

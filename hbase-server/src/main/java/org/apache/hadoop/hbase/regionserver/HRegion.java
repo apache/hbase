@@ -3880,10 +3880,12 @@ public class HRegion implements HeapSize { // , Writable{
           if (filter != null && filter.hasFilterRow()) {
             filter.filterRowCells(results);
           }
-          if (isEmptyRow) {
+          
+          if (isEmptyRow || filterRow()) {
+            results.clear();
             boolean moreRows = nextRow(currentRow, offset, length);
             if (!moreRows) return false;
-            results.clear();
+
             // This row was totally filtered out, if this is NOT the last row,
             // we should continue on. Otherwise, nothing else to do.
             if (!stopRow) continue;
@@ -3933,6 +3935,20 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
 
+    /**
+     * This function is to maintain backward compatibility for 0.94 filters. HBASE-6429 combines
+     * both filterRow & filterRow(List<KeyValue> kvs) functions. While 0.94 code or older, it may
+     * not implement hasFilterRow as HBase-6429 expects because 0.94 hasFilterRow() only returns
+     * true when filterRow(List<KeyValue> kvs) is overridden not the filterRow(). Therefore, the
+     * filterRow() will be skipped.
+     */
+    private boolean filterRow() throws IOException {
+      // when hasFilterRow returns true, filter.filterRow() will be called automatically inside
+      // filterRowCells(List<Cell> kvs) so we skip that scenario here.
+      return filter != null && (!filter.hasFilterRow())
+          && filter.filterRow();
+    }
+    
     private boolean filterRowKey(byte[] row, int offset, short length) throws IOException {
       return filter != null
           && filter.filterRowKey(row, offset, length);
