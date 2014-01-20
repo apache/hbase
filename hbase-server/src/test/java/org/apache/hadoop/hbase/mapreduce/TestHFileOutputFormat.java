@@ -33,9 +33,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
-
 import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -64,6 +62,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
@@ -474,36 +473,40 @@ public class TestHFileOutputFormat  {
   }
 
   /**
-   * Test for
-   * {@link HFileOutputFormat#createFamilyCompressionMap(Configuration)}. Tests
-   * that the compression map is correctly deserialized from configuration
+   * Test for {@link HFileOutputFormat#configureCompression(HTable,
+   * Configuration)} and {@link HFileOutputFormat#createFamilyCompressionMap
+   * (Configuration)}.
+   * Tests that the compression map is correctly serialized into
+   * and deserialized from configuration
    *
    * @throws IOException
    */
   @Test
-  public void testCreateFamilyCompressionMap() throws IOException {
+  public void testSerializeDeserializeFamilyCompressionMap() throws IOException {
     for (int numCfs = 0; numCfs <= 3; numCfs++) {
       Configuration conf = new Configuration(this.util.getConfiguration());
-      Map<String, Compression.Algorithm> familyToCompression = getMockColumnFamilies(numCfs);
+      Map<String, Compression.Algorithm> familyToCompression =
+          getMockColumnFamiliesForCompression(numCfs);
       HTable table = Mockito.mock(HTable.class);
-      setupMockColumnFamilies(table, familyToCompression);
+      setupMockColumnFamiliesForCompression(table, familyToCompression);
       HFileOutputFormat.configureCompression(table, conf);
 
       // read back family specific compression setting from the configuration
-      Map<byte[], String> retrievedFamilyToCompressionMap = HFileOutputFormat.createFamilyCompressionMap(conf);
+      Map<byte[], Algorithm> retrievedFamilyToCompressionMap = HFileOutputFormat
+          .createFamilyCompressionMap(conf);
 
       // test that we have a value for all column families that matches with the
       // used mock values
       for (Entry<String, Algorithm> entry : familyToCompression.entrySet()) {
-        assertEquals("Compression configuration incorrect for column family:" + entry.getKey(), entry.getValue()
-                     .getName(), retrievedFamilyToCompressionMap.get(entry.getKey().getBytes()));
+        assertEquals("Compression configuration incorrect for column family:"
+            + entry.getKey(), entry.getValue(),
+            retrievedFamilyToCompressionMap.get(entry.getKey().getBytes()));
       }
     }
   }
 
-  private void setupMockColumnFamilies(HTable table,
-    Map<String, Compression.Algorithm> familyToCompression) throws IOException
-  {
+  private void setupMockColumnFamiliesForCompression(HTable table,
+      Map<String, Compression.Algorithm> familyToCompression) throws IOException {
     HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
     for (Entry<String, Compression.Algorithm> entry : familyToCompression.entrySet()) {
       mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
@@ -515,21 +518,12 @@ public class TestHFileOutputFormat  {
     Mockito.doReturn(mockTableDescriptor).when(table).getTableDescriptor();
   }
 
-  private void setupMockStartKeys(HTable table) throws IOException {
-    byte[][] mockKeys = new byte[][] {
-        HConstants.EMPTY_BYTE_ARRAY,
-        Bytes.toBytes("aaa"),
-        Bytes.toBytes("ggg"),
-        Bytes.toBytes("zzz")
-    };
-    Mockito.doReturn(mockKeys).when(table).getStartKeys();
-  }
-
   /**
    * @return a map from column family names to compression algorithms for
    *         testing column family compression. Column family names have special characters
    */
-  private Map<String, Compression.Algorithm> getMockColumnFamilies(int numCfs) {
+  private Map<String, Compression.Algorithm>
+      getMockColumnFamiliesForCompression (int numCfs) {
     Map<String, Compression.Algorithm> familyToCompression = new HashMap<String, Compression.Algorithm>();
     // use column family names having special characters
     if (numCfs-- > 0) {
@@ -547,6 +541,238 @@ public class TestHFileOutputFormat  {
     return familyToCompression;
   }
 
+
+  /**
+   * Test for {@link HFileOutputFormat#configureBloomType(HTable,
+   * Configuration)} and {@link HFileOutputFormat#createFamilyBloomTypeMap
+   * (Configuration)}.
+   * Tests that the compression map is correctly serialized into
+   * and deserialized from configuration
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testSerializeDeserializeFamilyBloomTypeMap() throws IOException {
+    for (int numCfs = 0; numCfs <= 2; numCfs++) {
+      Configuration conf = new Configuration(this.util.getConfiguration());
+      Map<String, BloomType> familyToBloomType =
+          getMockColumnFamiliesForBloomType(numCfs);
+      HTable table = Mockito.mock(HTable.class);
+      setupMockColumnFamiliesForBloomType(table,
+          familyToBloomType);
+      HFileOutputFormat.configureBloomType(table, conf);
+
+      // read back family specific data block encoding settings from the
+      // configuration
+      Map<byte[], BloomType> retrievedFamilyToBloomTypeMap =
+          HFileOutputFormat
+              .createFamilyBloomTypeMap(conf);
+
+      // test that we have a value for all column families that matches with the
+      // used mock values
+      for (Entry<String, BloomType> entry : familyToBloomType.entrySet()) {
+        assertEquals("BloomType configuration incorrect for column family:"
+            + entry.getKey(), entry.getValue(),
+            retrievedFamilyToBloomTypeMap.get(entry.getKey().getBytes()));
+      }
+    }
+  }
+
+  private void setupMockColumnFamiliesForBloomType(HTable table,
+      Map<String, BloomType> familyToDataBlockEncoding) throws IOException {
+    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
+    for (Entry<String, BloomType> entry : familyToDataBlockEncoding.entrySet()) {
+      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
+          .setMaxVersions(1)
+          .setBloomFilterType(entry.getValue())
+          .setBlockCacheEnabled(false)
+          .setTimeToLive(0));
+    }
+    Mockito.doReturn(mockTableDescriptor).when(table).getTableDescriptor();
+  }
+
+  /**
+   * @return a map from column family names to compression algorithms for
+   *         testing column family compression. Column family names have special characters
+   */
+  private Map<String, BloomType>
+  getMockColumnFamiliesForBloomType (int numCfs) {
+    Map<String, BloomType> familyToBloomType =
+        new HashMap<String, BloomType>();
+    // use column family names having special characters
+    if (numCfs-- > 0) {
+      familyToBloomType.put("Family1!@#!@#&", BloomType.ROW);
+    }
+    if (numCfs-- > 0) {
+      familyToBloomType.put("Family2=asdads&!AASD",
+          BloomType.ROWCOL);
+    }
+    if (numCfs-- > 0) {
+      familyToBloomType.put("Family3", BloomType.NONE);
+    }
+    return familyToBloomType;
+  }
+
+  /**
+   * Test for {@link HFileOutputFormat#configureBlockSize(HTable,
+   * Configuration)} and {@link HFileOutputFormat#createFamilyBlockSizeMap
+   * (Configuration)}.
+   * Tests that the compression map is correctly serialized into
+   * and deserialized from configuration
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testSerializeDeserializeFamilyBlockSizeMap() throws IOException {
+    for (int numCfs = 0; numCfs <= 3; numCfs++) {
+      Configuration conf = new Configuration(this.util.getConfiguration());
+      Map<String, Integer> familyToBlockSize =
+          getMockColumnFamiliesForBlockSize(numCfs);
+      HTable table = Mockito.mock(HTable.class);
+      setupMockColumnFamiliesForBlockSize(table,
+          familyToBlockSize);
+      HFileOutputFormat.configureBlockSize(table, conf);
+
+      // read back family specific data block encoding settings from the
+      // configuration
+      Map<byte[], Integer> retrievedFamilyToBlockSizeMap =
+          HFileOutputFormat
+              .createFamilyBlockSizeMap(conf);
+
+      // test that we have a value for all column families that matches with the
+      // used mock values
+      for (Entry<String, Integer> entry : familyToBlockSize.entrySet()
+          ) {
+        assertEquals("BlockSize configuration incorrect for column family:"
+            + entry.getKey(), entry.getValue(),
+            retrievedFamilyToBlockSizeMap.get(entry.getKey().getBytes()));
+      }
+    }
+  }
+
+  private void setupMockColumnFamiliesForBlockSize(HTable table,
+      Map<String, Integer> familyToDataBlockEncoding) throws IOException {
+    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
+    for (Entry<String, Integer> entry : familyToDataBlockEncoding.entrySet()) {
+      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
+          .setMaxVersions(1)
+          .setBlocksize(entry.getValue())
+          .setBlockCacheEnabled(false)
+          .setTimeToLive(0));
+    }
+    Mockito.doReturn(mockTableDescriptor).when(table).getTableDescriptor();
+  }
+
+  /**
+   * @return a map from column family names to compression algorithms for
+   *         testing column family compression. Column family names have special characters
+   */
+  private Map<String, Integer>
+  getMockColumnFamiliesForBlockSize (int numCfs) {
+    Map<String, Integer> familyToBlockSize =
+        new HashMap<String, Integer>();
+    // use column family names having special characters
+    if (numCfs-- > 0) {
+      familyToBlockSize.put("Family1!@#!@#&", 1234);
+    }
+    if (numCfs-- > 0) {
+      familyToBlockSize.put("Family2=asdads&!AASD",
+          Integer.MAX_VALUE);
+    }
+    if (numCfs-- > 0) {
+      familyToBlockSize.put("Family2=asdads&!AASD",
+          Integer.MAX_VALUE);
+    }
+    if (numCfs-- > 0) {
+      familyToBlockSize.put("Family3", 0);
+    }
+    return familyToBlockSize;
+  }
+
+    /**
+   * Test for {@link HFileOutputFormat#configureDataBlockEncoding(HTable,
+   * Configuration)} and {@link HFileOutputFormat#createFamilyDataBlockEncodingMap
+   * (Configuration)}.
+   * Tests that the compression map is correctly serialized into
+   * and deserialized from configuration
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testSerializeDeserializeFamilyDataBlockEncodingMap() throws IOException {
+    for (int numCfs = 0; numCfs <= 3; numCfs++) {
+      Configuration conf = new Configuration(this.util.getConfiguration());
+      Map<String, DataBlockEncoding> familyToDataBlockEncoding =
+          getMockColumnFamiliesForDataBlockEncoding(numCfs);
+      HTable table = Mockito.mock(HTable.class);
+      setupMockColumnFamiliesForDataBlockEncoding(table,
+          familyToDataBlockEncoding);
+      HFileOutputFormat.configureDataBlockEncoding(table, conf);
+
+      // read back family specific data block encoding settings from the
+      // configuration
+      Map<byte[], DataBlockEncoding> retrievedFamilyToDataBlockEncodingMap =
+          HFileOutputFormat
+          .createFamilyDataBlockEncodingMap(conf);
+
+      // test that we have a value for all column families that matches with the
+      // used mock values
+      for (Entry<String, DataBlockEncoding> entry : familyToDataBlockEncoding.entrySet()) {
+        assertEquals("DataBlockEncoding configuration incorrect for column family:"
+            + entry.getKey(), entry.getValue(),
+            retrievedFamilyToDataBlockEncodingMap.get(entry.getKey().getBytes()));
+      }
+    }
+  }
+
+  private void setupMockColumnFamiliesForDataBlockEncoding(HTable table,
+      Map<String, DataBlockEncoding> familyToDataBlockEncoding) throws IOException {
+    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
+    for (Entry<String, DataBlockEncoding> entry : familyToDataBlockEncoding.entrySet()) {
+      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
+          .setMaxVersions(1)
+          .setDataBlockEncoding(entry.getValue())
+          .setBlockCacheEnabled(false)
+          .setTimeToLive(0));
+    }
+    Mockito.doReturn(mockTableDescriptor).when(table).getTableDescriptor();
+  }
+
+  /**
+   * @return a map from column family names to compression algorithms for
+   *         testing column family compression. Column family names have special characters
+   */
+  private Map<String, DataBlockEncoding>
+      getMockColumnFamiliesForDataBlockEncoding (int numCfs) {
+    Map<String, DataBlockEncoding> familyToDataBlockEncoding =
+        new HashMap<String, DataBlockEncoding>();
+    // use column family names having special characters
+    if (numCfs-- > 0) {
+      familyToDataBlockEncoding.put("Family1!@#!@#&", DataBlockEncoding.DIFF);
+    }
+    if (numCfs-- > 0) {
+      familyToDataBlockEncoding.put("Family2=asdads&!AASD",
+          DataBlockEncoding.FAST_DIFF);
+    }
+    if (numCfs-- > 0) {
+      familyToDataBlockEncoding.put("Family2=asdads&!AASD",
+          DataBlockEncoding.PREFIX);
+    }
+    if (numCfs-- > 0) {
+      familyToDataBlockEncoding.put("Family3", DataBlockEncoding.NONE);
+    }
+    return familyToDataBlockEncoding;
+  }
+
+  private void setupMockStartKeys(HTable table) throws IOException {
+    byte[][] mockKeys = new byte[][] {
+        HConstants.EMPTY_BYTE_ARRAY,
+        Bytes.toBytes("aaa"),
+        Bytes.toBytes("ggg"),
+        Bytes.toBytes("zzz")
+    };
+    Mockito.doReturn(mockKeys).when(table).getStartKeys();
+  }
 
   /**
    * Test that {@link HFileOutputFormat} RecordWriter uses compression and
