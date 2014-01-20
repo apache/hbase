@@ -718,8 +718,11 @@ The HBase shell has been extended to provide simple commands for editing and upd
     Grant
     <para>
     <programlisting>
-    grant &lt;user&gt; &lt;permissions&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
+    grant &lt;user|@group&gt; &lt;permissions&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
     </programlisting>
+    </para>
+    <para>
+    <code class="code">&lt;user|@group&gt;</code> is user or group  (start with character '@'), Groups are created and manipulated via the Hadoop group mapping service.
     </para>
     <para>
     <code>&lt;permissions&gt;</code> is zero or more letters from the set "RWCA": READ('R'), WRITE('W'), CREATE('C'), ADMIN('A').
@@ -732,7 +735,7 @@ The HBase shell has been extended to provide simple commands for editing and upd
     </para>
     <para>
     <programlisting>
-    revoke &lt;user&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
+    revoke &lt;user|@group&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
     </programlisting>
     </para>
     <para>
@@ -741,7 +744,7 @@ The HBase shell has been extended to provide simple commands for editing and upd
     <para>
     The <code>alter</code> command has been extended to allow ownership assignment:
     <programlisting>
-      alter 'tablename', {OWNER => 'username'}
+      alter 'tablename', {OWNER => 'username|@group'}
     </programlisting>
     </para>
     <para>
