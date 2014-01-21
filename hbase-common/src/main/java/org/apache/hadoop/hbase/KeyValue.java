@@ -1194,7 +1194,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
 
   /**
    * @return The byte array backing this KeyValue.
+   * @deprecated Since 0.98.0.  Use Cell Interface instead.  Do not presume single backing buffer.
    */
+  @Deprecated
   public byte [] getBuffer() {
     return this.bytes;
   }
