@@ -154,12 +154,13 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   }
 
   @Override
+  public boolean isThisOurZnode(String znode) {
+    return ZKUtil.joinZNode(this.queuesZNode, znode).equals(this.myQueuesZnode);
+  }
+
+  @Override
   public SortedMap<String, SortedSet<String>> claimQueues(String regionserverZnode) {
     SortedMap<String, SortedSet<String>> newQueues = new TreeMap<String, SortedSet<String>>();
-    if (ZKUtil.joinZNode(this.queuesZNode, regionserverZnode).equals(this.myQueuesZnode)) {
-      LOG.warn("An attempt was made to claim our own queues on region server " + regionserverZnode);
-      return newQueues;
-    }
     // check whether there is multi support. If yes, use it.
     if (conf.getBoolean(HConstants.ZOOKEEPER_USEMULTI, true)) {
       LOG.info("Atomically moving " + regionserverZnode + "'s hlogs to my queue");

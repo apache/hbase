@@ -106,4 +106,11 @@ public interface ReplicationQueues {
    * @return a list of server names
    */
   List<String> getListOfReplicators();
+
+  /**
+   * Checks if the provided znode is the same as this region server's
+   * @param znode to check
+   * @return if this is this rs's znode
+   */
+  boolean isThisOurZnode(String znode);
 }
