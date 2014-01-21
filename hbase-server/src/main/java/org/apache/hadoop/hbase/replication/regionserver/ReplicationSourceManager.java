@@ -475,6 +475,9 @@ public class ReplicationSourceManager implements ReplicationListener {
 
     @Override
     public void run() {
+      if (this.rq.isThisOurZnode(rsZnode)) {
+        return;
+      }
       // Wait a bit before transferring the queues, we may be shutting down.
       // This sleep may not be enough in some cases.
       try {
