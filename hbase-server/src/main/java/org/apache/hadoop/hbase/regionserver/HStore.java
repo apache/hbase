@@ -1927,6 +1927,10 @@ public class HStore implements Store {
       this.cacheFlushSeqNum = cacheFlushSeqNum;
     }
 
+    /**
+     * This is not thread safe. The caller should have a lock on the region or the store.
+     * If necessary, the lock can be added with the patch provided in HBASE-10087
+     */
     @Override
     public void prepare() {
       memstore.snapshot();
