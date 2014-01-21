@@ -4973,6 +4973,10 @@ public class HRegion implements HeapSize { // , Writable{
             Store store = stores.get(family.getKey());
             List<Cell> kvs = new ArrayList<Cell>(family.getValue().size());
 
+            // Sort the cells so that they match the order that they
+            // appear in the Get results. Otherwise, we won't be able to
+            // find the existing values if the cells are not specified
+            // in order by the client since cells are in an array list.
             Collections.sort(family.getValue(), store.getComparator());
             // Get previous values for all columns in this family
             Get get = new Get(row);
@@ -5168,6 +5172,11 @@ public class HRegion implements HeapSize { // , Writable{
             Store store = stores.get(family.getKey());
             List<Cell> kvs = new ArrayList<Cell>(family.getValue().size());
 
+            // Sort the cells so that they match the order that they
+            // appear in the Get results. Otherwise, we won't be able to
+            // find the existing values if the cells are not specified
+            // in order by the client since cells are in an array list.
+            Collections.sort(family.getValue(), store.getComparator());
             // Get previous values for all columns in this family
             Get get = new Get(row);
             for (Cell cell: family.getValue()) {
