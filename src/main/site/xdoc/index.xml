@@ -63,6 +63,9 @@ Apache HBase is an open-source, distributed, versioned, non-relational database 
    <p>See the <a href="http://hbase.apache.org/book/architecture.html#arch.overview">Architecture Overview</a>, the <a href="http://hbase.apache.org/book/faq.html">Apache HBase Reference Guide FAQ</a>,
     and the other documentation links on the left!
    </p>
+     <h4>Export Control</h4>
+   <p>The HBase distribution includes cryptographic software. See the export control notice <a href="export_control.html">here</a>
+   </p>
  </section>
      <section name="News">
          <p>May 5th, 2014 <a href="http://www.hbasecon.com">HBaseCon2014</a> at the Hilton San Francisco on Union Square</p>
