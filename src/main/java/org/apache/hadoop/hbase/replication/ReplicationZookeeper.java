@@ -632,6 +632,16 @@ public class ReplicationZookeeper {
   }
 
   /**
+   * Checks if the provided znode is the same as this region server's
+   * @param znode to check
+   * @return if this is this rs's znode
+   */
+  public boolean isThisOurZnode(String znode) {
+    String otherRs = ZKUtil.joinZNode(this.rsZNode, znode);
+    return otherRs.equals(rsServerNameZnode);
+  }
+
+  /**
    * Try to set a lock in another server's znode.
    * @param znode the server names of the other server
    * @return true if the lock was acquired, false in every other cases
@@ -639,10 +649,6 @@ public class ReplicationZookeeper {
   public boolean lockOtherRS(String znode) {
     try {
       String parent = ZKUtil.joinZNode(this.rsZNode, znode);
-      if (parent.equals(rsServerNameZnode)) {
-        LOG.warn("Won't lock because this is us, we're dead!");
-        return false;
-      }
       String p = ZKUtil.joinZNode(parent, RS_LOCK_ZNODE);
       ZKUtil.createAndWatch(this.zookeeper, p, Bytes.toBytes(rsServerNameZnode));
     } catch (KeeperException e) {

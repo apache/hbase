@@ -594,6 +594,10 @@ public class ReplicationSourceManager {
 
     @Override
     public void run() {
+      // We could end up checking if this is us
+      if (zkHelper.isThisOurZnode(this.rsZnode)) {
+        return;
+      }
       // Wait a bit before transferring the queues, we may be shutting down.
       // This sleep may not be enough in some cases.
       try {
