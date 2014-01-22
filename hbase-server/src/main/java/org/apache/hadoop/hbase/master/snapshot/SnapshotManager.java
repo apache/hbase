@@ -53,10 +53,13 @@ import org.apache.hadoop.hbase.master.MetricsMaster;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
+import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -86,7 +89,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class SnapshotManager implements Stoppable {
+public class SnapshotManager extends MasterProcedureManager implements Stoppable {
   private static final Log LOG = LogFactory.getLog(SnapshotManager.class);
 
   /** By default, check to see if the snapshot is complete every WAKE MILLIS (ms) */
@@ -133,9 +136,9 @@ public class SnapshotManager implements Stoppable {
   private static final int SNAPSHOT_POOL_THREADS_DEFAULT = 1;
 
   private boolean stopped;
-  private final MasterServices master;  // Needed by TableEventHandlers
-  private final MetricsMaster metricsMaster;
-  private final ProcedureCoordinator coordinator;
+  private MasterServices master;  // Needed by TableEventHandlers
+  private MetricsMaster metricsMaster;
+  private ProcedureCoordinator coordinator;
 
   // Is snapshot feature enabled?
   private boolean isSnapshotSupported = false;
@@ -154,37 +157,10 @@ public class SnapshotManager implements Stoppable {
   private Map<TableName, SnapshotSentinel> restoreHandlers =
       new HashMap<TableName, SnapshotSentinel>();
 
-  private final Path rootDir;
-  private final ExecutorService executorService;
+  private Path rootDir;
+  private ExecutorService executorService;
 
-  /**
-   * Construct a snapshot manager.
-   * @param master
-   */
-  public SnapshotManager(final MasterServices master, final MetricsMaster metricsMaster)
-      throws KeeperException, IOException, UnsupportedOperationException {
-    this.master = master;
-    this.metricsMaster = metricsMaster;
-
-    this.rootDir = master.getMasterFileSystem().getRootDir();
-    checkSnapshotSupport(master.getConfiguration(), master.getMasterFileSystem());
-
-    // get the configuration for the coordinator
-    Configuration conf = master.getConfiguration();
-    long wakeFrequency = conf.getInt(SNAPSHOT_WAKE_MILLIS_KEY, SNAPSHOT_WAKE_MILLIS_DEFAULT);
-    long timeoutMillis = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
-    int opThreads = conf.getInt(SNAPSHOT_POOL_THREADS_KEY, SNAPSHOT_POOL_THREADS_DEFAULT);
-
-    // setup the default procedure coordinator
-    String name = master.getServerName().toString();
-    ThreadPoolExecutor tpool = ProcedureCoordinator.defaultPool(name, opThreads);
-    ProcedureCoordinatorRpcs comms = new ZKProcedureCoordinatorRpcs(
-        master.getZooKeeper(), SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION, name);
-
-    this.coordinator = new ProcedureCoordinator(comms, tpool, timeoutMillis, wakeFrequency);
-    this.executorService = master.getExecutorService();
-    resetTempDir();
-  }
+  public SnapshotManager() {}
 
   /**
    * Fully specify all necessary components of a snapshot manager. Exposed for testing.
@@ -1023,5 +999,70 @@ public class SnapshotManager implements Stoppable {
         }
       }
     }
+  }
+
+  @Override
+  public void initialize(MasterServices master, MetricsMaster metricsMaster) throws KeeperException,
+      IOException, UnsupportedOperationException {
+    this.master = master;
+    this.metricsMaster = metricsMaster;
+
+    this.rootDir = master.getMasterFileSystem().getRootDir();
+    checkSnapshotSupport(master.getConfiguration(), master.getMasterFileSystem());
+
+    // get the configuration for the coordinator
+    Configuration conf = master.getConfiguration();
+    long wakeFrequency = conf.getInt(SNAPSHOT_WAKE_MILLIS_KEY, SNAPSHOT_WAKE_MILLIS_DEFAULT);
+    long timeoutMillis = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
+    int opThreads = conf.getInt(SNAPSHOT_POOL_THREADS_KEY, SNAPSHOT_POOL_THREADS_DEFAULT);
+
+    // setup the default procedure coordinator
+    String name = master.getServerName().toString();
+    ThreadPoolExecutor tpool = ProcedureCoordinator.defaultPool(name, opThreads);
+    ProcedureCoordinatorRpcs comms = new ZKProcedureCoordinatorRpcs(
+        master.getZooKeeper(), SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION, name);
+
+    this.coordinator = new ProcedureCoordinator(comms, tpool, timeoutMillis, wakeFrequency);
+    this.executorService = master.getExecutorService();
+    resetTempDir();
+  }
+
+  @Override
+  public String getProcedureSignature() {
+    return ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION;
+  }
+
+  @Override
+  public void execProcedure(ProcedureDescription desc) throws IOException {
+    takeSnapshot(toSnapshotDescription(desc));
+  }
+
+  @Override
+  public boolean isProcedureDone(ProcedureDescription desc) throws IOException {
+    return isSnapshotDone(toSnapshotDescription(desc));
+  }
+
+  private SnapshotDescription toSnapshotDescription(ProcedureDescription desc)
+      throws IOException {
+    SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
+    if (!desc.hasInstance()) {
+      throw new IOException("Snapshot name is not defined: " + desc.toString());
+    }
+    String snapshotName = desc.getInstance();
+    List<NameStringPair> props = desc.getConfigurationList();
+    String table = null;
+    for (NameStringPair prop : props) {
+      if ("table".equalsIgnoreCase(prop.getName())) {
+        table = prop.getValue();
+      }
+    }
+    if (table == null) {
+      throw new IOException("Snapshot table is not defined: " + desc.toString());
+    }
+    TableName tableName = TableName.valueOf(table);
+    builder.setTable(tableName.getNameAsString());
+    builder.setName(snapshotName);
+    builder.setType(SnapshotDescription.Type.FLUSH);
+    return builder.build();
   }
 }

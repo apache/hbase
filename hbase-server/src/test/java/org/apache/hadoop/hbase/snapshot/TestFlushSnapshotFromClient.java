@@ -24,8 +24,10 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
@@ -168,6 +170,60 @@ public class TestFlushSnapshotFromClient {
     String snapshotString = "offlineTableSnapshot";
     byte[] snapshot = Bytes.toBytes(snapshotString);
     admin.snapshot(snapshotString, STRING_TABLE_NAME, SnapshotDescription.Type.FLUSH);
+    LOG.debug("Snapshot completed.");
+
+    // make sure we have the snapshot
+    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(admin,
+      snapshot, TABLE_NAME);
+
+    // make sure its a valid snapshot
+    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
+    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    LOG.debug("FS state after snapshot:");
+    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+        FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+
+    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
+        admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), snapshotServers);
+  }
+
+
+  /**
+   * Test simple flush snapshotting a table that is online
+   * @throws Exception
+   */
+  @Test (timeout=300000)
+  public void testFlushTableSnapshotWithProcedure() throws Exception {
+    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    // make sure we don't fail on listing snapshots
+    SnapshotTestingUtils.assertNoSnapshots(admin);
+
+    // put some stuff in the table
+    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
+    SnapshotTestingUtils.loadData(UTIL, table, DEFAULT_NUM_ROWS, TEST_FAM);
+
+    // get the name of all the regionservers hosting the snapshotted table
+    Set<String> snapshotServers = new HashSet<String>();
+    List<RegionServerThread> servers = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
+    for (RegionServerThread server : servers) {
+      if (server.getRegionServer().getOnlineRegions(TABLE_NAME).size() > 0) {
+        snapshotServers.add(server.getRegionServer().getServerName().toString());
+      }
+    }
+
+    LOG.debug("FS state before snapshot:");
+    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+        FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+
+    // take a snapshot of the enabled table
+    String snapshotString = "offlineTableSnapshot";
+    byte[] snapshot = Bytes.toBytes(snapshotString);
+    Map<String, String> props = new HashMap<String, String>();
+    props.put("table", STRING_TABLE_NAME);
+    admin.execProcedure(SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION,
+        snapshotString, props);
+
+
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
