@@ -919,7 +919,7 @@ public final class HConstants {
   /**
    * The port to use for the multicast messages.
    */
-  public static final String STATUS_MULTICAST_PORT = "hbase.status.multicast.port";
+  public static final String STATUS_MULTICAST_PORT = "hbase.status.multicast.address.port";
   public static final int DEFAULT_STATUS_MULTICAST_PORT = 60100;
 
   /**

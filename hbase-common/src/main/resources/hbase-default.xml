@@ -1065,7 +1065,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.status.multicast.address.port</name>
-    <value>6100</value>
+    <value>60100</value>
     <description>
       Multicast port to use for the status publication by multicast.
     </description>
