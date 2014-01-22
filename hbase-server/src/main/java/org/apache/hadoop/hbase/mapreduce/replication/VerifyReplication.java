@@ -62,7 +62,7 @@ public class VerifyReplication {
 
   public final static String NAME = "verifyrep";
   static long startTime = 0;
-  static long endTime = 0;
+  static long endTime = Long.MAX_VALUE;
   static String tableName = null;
   static String families = null;
   static String peerId = null;
@@ -94,7 +94,7 @@ public class VerifyReplication {
         final Scan scan = new Scan();
         scan.setCaching(conf.getInt(TableInputFormat.SCAN_CACHEDROWS, 1));
         long startTime = conf.getLong(NAME + ".startTime", 0);
-        long endTime = conf.getLong(NAME + ".endTime", 0);
+        long endTime = conf.getLong(NAME + ".endTime", Long.MAX_VALUE);
         String families = conf.get(NAME + ".families", null);
         if(families != null) {
           String[] fams = families.split(",");
@@ -102,10 +102,7 @@ public class VerifyReplication {
             scan.addFamily(Bytes.toBytes(fam));
           }
         }
-        if (startTime != 0) {
-          scan.setTimeRange(startTime,
-              endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime);
-        }
+        scan.setTimeRange(startTime, endTime);
         HConnectionManager.execute(new HConnectable<Void>(conf) {
           @Override
           public Void connect(HConnection conn) throws IOException {
@@ -188,10 +185,7 @@ public class VerifyReplication {
     job.setJarByClass(VerifyReplication.class);
 
     Scan scan = new Scan();
-    if (startTime != 0) {
-      scan.setTimeRange(startTime,
-          endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime);
-    }
+    scan.setTimeRange(startTime, endTime);
     if(families != null) {
       String[] fams = families.split(",");
       for(String fam : fams) {
@@ -265,7 +259,7 @@ public class VerifyReplication {
     System.err.println("Options:");
     System.err.println(" starttime    beginning of the time range");
     System.err.println("              without endtime means from starttime to forever");
-    System.err.println(" stoptime     end of the time range");
+    System.err.println(" endtime      end of the time range");
     System.err.println(" families     comma-separated list of families to copy");
     System.err.println();
     System.err.println("Args:");
@@ -276,7 +270,7 @@ public class VerifyReplication {
     System.err.println(" To verify the data replicated from TestTable for a 1 hour window with peer #5 ");
     System.err.println(" $ bin/hbase " +
         "org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication" +
-        " --starttime=1265875194289 --stoptime=1265878794289 5 TestTable ");
+        " --starttime=1265875194289 --endtime=1265878794289 5 TestTable ");
   }
 
   /**
