@@ -142,7 +142,7 @@ dev list and we'll sign you up. Owners do not need to be committers.
           <para>We <link xlink:href="http://search-hadoop.com/m/Gwxwl10cFHa1">agreed</link>
           to the following SVN commit message format:
 <programlisting>HBASE-xxxxx &lt;title>. (&lt;contributor>)</programlisting>
-If the person making the commit is the contributor, leave off the '(<contributor>)' element.
+If the person making the commit is the contributor, leave off the '(&lt;contributor>)' element.
           </para>
       </section>
     </chapter>
