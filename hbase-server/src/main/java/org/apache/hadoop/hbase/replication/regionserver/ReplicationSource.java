@@ -31,6 +31,7 @@ import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -38,6 +39,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -144,7 +147,8 @@ public class ReplicationSource extends Thread
       final ReplicationPeers replicationPeers, final Stoppable stopper,
       final String peerClusterZnode, final UUID clusterId) throws IOException {
     this.stopper = stopper;
-    this.conf = conf;
+    this.conf = HBaseConfiguration.create(conf);
+    decorateConf();
     this.replicationQueueSizeCapacity =
         this.conf.getLong("replication.source.size.capacity", 1024*1024*64);
     this.replicationQueueNbCapacity =
@@ -154,12 +158,12 @@ public class ReplicationSource extends Thread
         maxRetriesMultiplier * maxRetriesMultiplier);
     this.queue =
         new PriorityBlockingQueue<Path>(
-            conf.getInt("hbase.regionserver.maxlogs", 32),
+            this.conf.getInt("hbase.regionserver.maxlogs", 32),
             new LogsComparator());
     // TODO: This connection is replication specific or we should make it particular to
     // replication and make replication specific settings such as compression or codec to use
     // passing Cells.
-    this.conn = HConnectionManager.getConnection(conf);
+    this.conn = HConnectionManager.getConnection(this.conf);
     this.replicationQueues = replicationQueues;
     this.replicationPeers = replicationPeers;
     this.manager = manager;
@@ -174,10 +178,16 @@ public class ReplicationSource extends Thread
     this.replicationQueueInfo = new ReplicationQueueInfo(peerClusterZnode);
     // ReplicationQueueInfo parses the peerId out of the znode for us
     this.peerId = this.replicationQueueInfo.getPeerId();
-    this.replicationSinkMgr = new ReplicationSinkManager(conn, peerId, replicationPeers, conf);
+    this.replicationSinkMgr = new ReplicationSinkManager(conn, peerId, replicationPeers, this.conf);
     this.logQueueWarnThreshold = this.conf.getInt("replication.source.log.queue.warn", 2);
   }
 
+  private void decorateConf() {
+    String replicationCodec = this.conf.get(HConstants.REPLICATION_CODEC_CONF_KEY);
+    if (StringUtils.isNotEmpty(replicationCodec)) {
+      this.conf.set(HConstants.RPC_CODEC_CONF_KEY, replicationCodec);
+    }
+  }
 
   @Override
   public void enqueueLog(Path log) {

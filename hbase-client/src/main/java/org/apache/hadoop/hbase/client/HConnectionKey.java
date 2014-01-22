@@ -47,7 +47,8 @@ class HConnectionKey {
       HConstants.HBASE_RPC_TIMEOUT_KEY,
       HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
       HConstants.HBASE_META_SCANNER_CACHING,
-      HConstants.HBASE_CLIENT_INSTANCE_ID };
+      HConstants.HBASE_CLIENT_INSTANCE_ID,
+      HConstants.RPC_CODEC_CONF_KEY };
 
   private Map<String, String> properties;
   private String username;

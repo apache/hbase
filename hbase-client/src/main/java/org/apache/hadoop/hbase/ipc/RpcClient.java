@@ -1298,9 +1298,9 @@ public class RpcClient {
    * @return Codec to use on this client.
    */
   Codec getCodec() {
-    // For NO CODEC, "hbase.client.rpc.codec" must be the empty string AND
-    // "hbase.client.default.rpc.codec" -- because default is to do cell block encoding.
-    String className = conf.get("hbase.client.rpc.codec", getDefaultCodec(this.conf));
+    // For NO CODEC, "hbase.client.rpc.codec" must be configured with empty string AND
+    // "hbase.client.default.rpc.codec" also -- because default is to do cell block encoding.
+    String className = conf.get(HConstants.RPC_CODEC_CONF_KEY, getDefaultCodec(this.conf));
     if (className == null || className.length() == 0) return null;
     try {
       return (Codec)Class.forName(className).newInstance();

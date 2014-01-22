@@ -29,6 +29,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -98,6 +99,10 @@ public class ReplicationSink {
         this.conf.getInt("replication.sink.client.retries.number", 4));
     this.conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
         this.conf.getInt("replication.sink.client.ops.timeout", 10000));
+    String replicationCodec = this.conf.get(HConstants.REPLICATION_CODEC_CONF_KEY);
+    if (StringUtils.isNotEmpty(replicationCodec)) {
+      this.conf.set(HConstants.RPC_CODEC_CONF_KEY, replicationCodec);
+    }
    }
 
   /**

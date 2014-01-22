@@ -27,24 +27,30 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 
 /**
- * Codec that does KeyValue version 1 serialization.
- * 
- * <p>Encodes by casting Cell to KeyValue and writing out the backing array with a length prefix.
- * This is how KVs were serialized in Puts, Deletes and Results pre-0.96.  Its what would
- * happen if you called the Writable#write KeyValue implementation.  This encoder will fail
- * if the passed Cell is not an old-school pre-0.96 KeyValue.  Does not copy bytes writing.
- * It just writes them direct to the passed stream.
+ * Codec that does KeyValue version 1 serialization with serializing tags also.
  *
- * <p>If you wrote two KeyValues to this encoder, it would look like this in the stream:
+ * <p>
+ * Encodes by casting Cell to KeyValue and writing out the backing array with a length prefix. This
+ * is how KVs were serialized in Puts, Deletes and Results pre-0.96. Its what would happen if you
+ * called the Writable#write KeyValue implementation. This encoder will fail if the passed Cell is
+ * not an old-school pre-0.96 KeyValue. Does not copy bytes writing. It just writes them direct to
+ * the passed stream.
+ *
+ * <p>
+ * If you wrote two KeyValues to this encoder, it would look like this in the stream:
+ *
  * <pre>
  * length-of-KeyValue1 // A java int with the length of KeyValue1 backing array
  * KeyValue1 backing array filled with a KeyValue serialized in its particular format
  * length-of-KeyValue2
  * KeyValue2 backing array
  * </pre>
+ *
+ * Note: The only difference of this with KeyValueCodec is the latter ignores tags in KeyValues.
+ * <b>Use this Codec only at server side.</b>
  */
 @InterfaceAudience.Private
-public class KeyValueCodec implements Codec {
+public class KeyValueCodecWithTags implements Codec {
   public static class KeyValueEncoder extends BaseEncoder {
     public KeyValueEncoder(final OutputStream out) {
       super(out);
@@ -55,8 +61,8 @@ public class KeyValueCodec implements Codec {
       checkFlushed();
       // This is crass and will not work when KV changes. Also if passed a non-kv Cell, it will
       // make expensive copy.
-      // Do not write tags over RPC
-      KeyValue.oswrite((KeyValue) KeyValueUtil.ensureKeyValue(cell), this.out, false);
+      // Write tags
+      KeyValue.oswrite((KeyValue) KeyValueUtil.ensureKeyValue(cell), this.out, true);
     }
   }
 

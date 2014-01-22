@@ -293,14 +293,16 @@ public class WALCellCodec implements Codec {
     }
   }
 
-  public class EnsureKvEncoder extends KeyValueCodec.KeyValueEncoder {
+  public class EnsureKvEncoder extends BaseEncoder {
     public EnsureKvEncoder(OutputStream out) {
       super(out);
     }
     @Override
     public void write(Cell cell) throws IOException {
       if (!(cell instanceof KeyValue)) throw new IOException("Cannot write non-KV cells to WAL");
-      super.write(cell);
+      checkFlushed();
+      // Make sure to write tags into WAL
+      KeyValue.oswrite((KeyValue) cell, this.out, true);
     }
   }
 
