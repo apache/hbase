@@ -26,7 +26,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.*;
@@ -34,6 +36,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.CompactUtility;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -601,6 +604,48 @@ public class TestCompaction extends HBaseClusterTestCase {
     addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
         "bbb").getBytes(), null);
     loader.flushcache();
+  }
+
+  /**
+   * Test compaction utility by creating 10 store files
+   * and comparing the number of store files remaining
+   * after compaction
+   *
+   * @throws Exception
+   */
+  public void testCompactionUtility() throws Exception {
+    FileSystem filesystem = FileSystem.get(conf);
+    Path rootdir = filesystem.makeQualified(
+            new Path(conf.get(HConstants.HBASE_DIR)));
+    HTableDescriptor htd = new HTableDescriptor("TestCompaction");
+    htd.addFamily(new HColumnDescriptor("colfamily1"));
+    HRegionInfo hri = new HRegionInfo(htd, null, null);
+    HRegion hRegion = HRegion.createHRegion(hri, rootdir, conf);
+    int nfiles = 10;
+    for (int i = 0; i < nfiles; i++) {
+      createStoreFile(hRegion);
+    }
+    Store store = hRegion.getStore(COLUMN_FAMILY);
+    List<StoreFile> storeFiles = store.getStorefiles();
+    int numFiles1 = storeFiles.size();
+    List<Path> pathList = new ArrayList<Path>();
+    for (StoreFile storeFile : storeFiles) {
+      pathList.add(storeFile.getPath());
+    }
+
+    CompactUtility util = new CompactUtility(
+            "TestCompaction", new HColumnDescriptor("colfamily1"),
+            hri.getRegionId(), pathList, conf);
+    util.compact();
+    Path tableDir = HTableDescriptor.getTableDir(
+            new Path(HConstants.HBASE_DIR), COLUMN_FAMILY);
+    Path regionDir = HRegion.getRegionDir(tableDir, hri.getEncodedName());
+    HLog log = new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME),
+            new Path(regionDir, HConstants.HREGION_OLDLOGDIR_NAME), conf, null);
+    hRegion = HRegion.openHRegion(hri, rootdir, log, conf);
+    store = hRegion.getStore(COLUMN_FAMILY);
+    int numfiles2 = store.getNumberOfStoreFiles();
+    assertTrue("CompactionFailed", numfiles2 == 1);
   }
 
   public void testCompactionWithCorruptResult() throws Exception {
