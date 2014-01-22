@@ -30,9 +30,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Basic Cell codec that just writes out all the individual elements of a Cell including the tags.
  * Uses ints delimiting all lengths. Profligate. Needs tune up.
+ * <b>Use this Codec only at server side.</b>
  */
 @InterfaceAudience.Private
-public class CellCodecV2 implements Codec {
+public class CellCodecWithTags implements Codec {
   static class CellEncoder extends BaseEncoder {
     CellEncoder(final OutputStream out) {
       super(out);
@@ -61,7 +62,7 @@ public class CellCodecV2 implements Codec {
 
     /**
      * Write int length followed by array bytes.
-     * 
+     *
      * @param bytes
      * @param offset
      * @param length

@@ -1180,7 +1180,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
           Tag t = new Tag((byte) n, tag);
           tags[n] = t;
         }
-        put.add(FAMILY_NAME, QUALIFIER_NAME, value, tags);
+        KeyValue kv = new KeyValue(row, FAMILY_NAME, QUALIFIER_NAME, HConstants.LATEST_TIMESTAMP,
+            value, tags);
+        put.add(kv);
       } else {
         put.add(FAMILY_NAME, QUALIFIER_NAME, value);
       }
@@ -1239,7 +1241,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(final int i) throws IOException {
-      Put put = new Put(format(i));
+      byte[] row = format(i);
+      Put put = new Put(row);
       byte[] value = generateData(this.rand, VALUE_LENGTH);
       if (useTags) {
         byte[] tag = generateData(this.rand, TAG_LENGTH);
@@ -1248,7 +1251,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
           Tag t = new Tag((byte) n, tag);
           tags[n] = t;
         }
-        put.add(FAMILY_NAME, QUALIFIER_NAME, value, tags);
+        KeyValue kv = new KeyValue(row, FAMILY_NAME, QUALIFIER_NAME, HConstants.LATEST_TIMESTAMP,
+            value, tags);
+        put.add(kv);
       } else {
         put.add(FAMILY_NAME, QUALIFIER_NAME, value);
       }

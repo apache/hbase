@@ -973,6 +973,12 @@ public final class HConstants {
   /** Configuration key for enabling HLog encryption, a boolean */
   public static final String ENABLE_WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
 
+  /** Configuration key for setting RPC codec class name */
+  public static final String RPC_CODEC_CONF_KEY = "hbase.client.rpc.codec";
+
+  /** Configuration key for setting replication codec class name */
+  public static final String REPLICATION_CODEC_CONF_KEY = "hbase.replication.rpc.codec";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

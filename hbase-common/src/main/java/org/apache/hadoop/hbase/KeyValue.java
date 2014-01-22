@@ -2840,8 +2840,34 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @see #create(DataInput) for the inverse function
    * @see #write(KeyValue, DataOutput)
    */
-  public static long oswrite(final KeyValue kv, final OutputStream out) throws IOException {
+  @Deprecated
+  public static long oswrite(final KeyValue kv, final OutputStream out)
+      throws IOException {
     int length = kv.getLength();
+    // This does same as DataOuput#writeInt (big-endian, etc.)
+    out.write(Bytes.toBytes(length));
+    out.write(kv.getBuffer(), kv.getOffset(), length);
+    return length + Bytes.SIZEOF_INT;
+  }
+
+  /**
+   * Write out a KeyValue in the manner in which we used to when KeyValue was a Writable but do
+   * not require a {@link DataOutput}, just take plain {@link OutputStream}
+   * Named <code>oswrite</code> so does not clash with {@link #write(KeyValue, DataOutput)}
+   * @param kv
+   * @param out
+   * @param withTags
+   * @return Length written on stream
+   * @throws IOException
+   * @see #create(DataInput) for the inverse function
+   * @see #write(KeyValue, DataOutput)
+   */
+  public static long oswrite(final KeyValue kv, final OutputStream out, final boolean withTags)
+      throws IOException {
+    int length = kv.getLength();
+    if (!withTags) {
+      length = kv.getKeyLength() + kv.getValueLength() + KEYVALUE_INFRASTRUCTURE_SIZE;
+    }
     // This does same as DataOuput#writeInt (big-endian, etc.)
     out.write(Bytes.toBytes(length));
     out.write(kv.getBuffer(), kv.getOffset(), length);

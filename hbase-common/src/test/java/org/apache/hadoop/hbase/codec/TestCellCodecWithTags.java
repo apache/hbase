@@ -42,14 +42,14 @@ import com.google.common.io.CountingInputStream;
 import com.google.common.io.CountingOutputStream;
 
 @Category(SmallTests.class)
-public class TestCellCodecV2 {
+public class TestCellCodecWithTags {
 
   @Test
   public void testCellWithTag() throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     CountingOutputStream cos = new CountingOutputStream(baos);
     DataOutputStream dos = new DataOutputStream(cos);
-    Codec codec = new CellCodecV2();
+    Codec codec = new CellCodecWithTags();
     Codec.Encoder encoder = codec.getEncoder(dos);
     final Cell cell1 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("1"),
         HConstants.LATEST_TIMESTAMP, Bytes.toBytes("1"), new Tag[] {

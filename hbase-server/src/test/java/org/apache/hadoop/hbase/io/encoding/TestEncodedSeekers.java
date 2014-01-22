@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Tag;
@@ -148,11 +149,13 @@ public class TestEncodedSeekers {
         Put put = new Put(key);
         byte[] col = Bytes.toBytes(String.valueOf(j));
         byte[] value = dataGenerator.generateRandomSizeValue(key, col);
-        put.add(CF_BYTES, col, value);
-        if(includeTags) {
+        if (includeTags) {
           Tag[] tag = new Tag[1];
-          tag[0] = new Tag((byte)1, "Visibility");
-          put.add(CF_BYTES, col, value, tag);
+          tag[0] = new Tag((byte) 1, "Visibility");
+          KeyValue kv = new KeyValue(key, CF_BYTES, col, HConstants.LATEST_TIMESTAMP, value, tag);
+          put.add(kv);
+        } else {
+          put.add(CF_BYTES, col, value);
         }
         if(VERBOSE){
           KeyValue kvPut = new KeyValue(key, CF_BYTES, col, value);

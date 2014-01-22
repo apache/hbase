@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Tag;
@@ -389,7 +390,9 @@ public class TestCacheOnWrite {
               Tag t = new Tag((byte) 1, "visibility");
               Tag[] tags = new Tag[1];
               tags[0] = t;
-              p.add(cfBytes, Bytes.toBytes(qualStr), ts++, Bytes.toBytes(valueStr), tags);
+              KeyValue kv = new KeyValue(Bytes.toBytes(rowStr), cfBytes, Bytes.toBytes(qualStr),
+                  HConstants.LATEST_TIMESTAMP, Bytes.toBytes(valueStr), tags);
+              p.add(kv);
             } else {
               p.add(cfBytes, Bytes.toBytes(qualStr), ts++, Bytes.toBytes(valueStr));
             }

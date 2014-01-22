@@ -126,7 +126,7 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
     if (connection == null) return true; // Default is to do cellblocks.
     Configuration configuration = connection.getConfiguration();
     if (configuration == null) return true;
-    String codec = configuration.get("hbase.client.rpc.codec", "");
+    String codec = configuration.get(HConstants.RPC_CODEC_CONF_KEY, "");
     return codec != null && codec.length() > 0;
   }
 
