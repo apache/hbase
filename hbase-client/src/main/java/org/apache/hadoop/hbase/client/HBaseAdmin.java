@@ -24,11 +24,10 @@ import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
@@ -3013,9 +3012,9 @@ public class HBaseAdmin implements Abortable, Closeable {
       Map<String, String> props) throws IOException {
     ProcedureDescription.Builder builder = ProcedureDescription.newBuilder();
     builder.setSignature(signature).setInstance(instance);
-    for (String key : props.keySet()) {
-      NameStringPair pair = NameStringPair.newBuilder().setName(key)
-          .setValue(props.get(key)).build();
+    for (Entry<String, String> entry : props.entrySet()) {
+      NameStringPair pair = NameStringPair.newBuilder().setName(entry.getKey())
+          .setValue(entry.getValue()).build();
       builder.addConfiguration(pair);
     }
 
@@ -3081,9 +3080,9 @@ public class HBaseAdmin implements Abortable, Closeable {
       throws IOException {
     final ProcedureDescription.Builder builder = ProcedureDescription.newBuilder();
     builder.setSignature(signature).setInstance(instance);
-    for (String key : props.keySet()) {
-      NameStringPair pair = NameStringPair.newBuilder().setName(key)
-          .setValue(props.get(key)).build();
+    for (Entry<String, String> entry : props.entrySet()) {
+      NameStringPair pair = NameStringPair.newBuilder().setName(entry.getKey())
+          .setValue(entry.getValue()).build();
       builder.addConfiguration(pair);
     }
     final ProcedureDescription desc = builder.build();
