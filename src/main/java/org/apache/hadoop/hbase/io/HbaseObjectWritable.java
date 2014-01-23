@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.CompoundRowPrefixFilter;
 import org.apache.hadoop.hbase.filter.DependentColumnFilter;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
@@ -218,6 +219,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(MultiAction.class, code++);
     addToMap(MultiResponse.class, code++);
     addToMap(HFileHistogram.Bucket.class, code++);
+    addToMap(CompoundRowPrefixFilter.class, code++);
   }
 
   private Class<?> declaredClass;
