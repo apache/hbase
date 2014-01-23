@@ -27,9 +27,21 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -2635,19 +2647,6 @@ public class HConnectionManager {
           Thread.currentThread().interrupt();
           throw new InterruptedIOException(e.getMessage());
         } catch (ExecutionException ex) {
-
-          // Add entry for the all the regions involved in this operation.
-          for (Map.Entry<byte[], List<Put>> e : request.puts.entrySet()) {
-            regionName = Bytes.toStringBinary(e.getKey());
-            if (!failedRegionsInfo.containsKey(regionName)) {
-              regionFailure = new HRegionFailureInfo(regionName);
-              failedRegionsInfo.put(regionName, regionFailure);
-            } else {
-              regionFailure = failedRegionsInfo.get(regionName);
-            }
-            regionFailure.setServerName(serverName);
-            regionFailure.addException(ex.getCause());
-          }
           // retry, unless it is not to be retried.
           if (ex.getCause() instanceof DoNotRetryIOException) {
             throw (DoNotRetryIOException)ex.getCause();
@@ -2667,6 +2666,31 @@ public class HConnectionManager {
           if (ex.getCause() instanceof ClientSideDoNotRetryException) {
             throw (ClientSideDoNotRetryException)ex.getCause();
           }
+
+          if (ex.getCause() instanceof OutOfMemoryError) {
+            throw (OutOfMemoryError)ex.getCause();
+          }
+
+          // Add entry for the all the regions involved in this operation.
+          for (Map.Entry<byte[], List<Put>> e : request.puts.entrySet()) {
+            regionName = Bytes.toStringBinary(e.getKey());
+            if (!failedRegionsInfo.containsKey(regionName)) {
+              regionFailure = new HRegionFailureInfo(regionName);
+              failedRegionsInfo.put(regionName, regionFailure);
+            } else {
+              regionFailure = failedRegionsInfo.get(regionName);
+            }
+            regionFailure.setServerName(serverName);
+            regionFailure.addException(ex.getCause());
+          }
+          LOG.warn("Current exception is not known as fatal, ignoring for retry.",
+              ex.getCause());
+        } catch (CancellationException ce) {
+          LOG.debug("Execution cancelled, ignoring for retry.");
+        } catch (Throwable unknownThrowable) {
+          // Don't eat unknown problem
+          LOG.error("Unknown throwable", unknownThrowable);
+          throw new RuntimeException(unknownThrowable);
         }
 
         // For each region
@@ -2842,13 +2866,13 @@ public class HConnectionManager {
       if (t instanceof NoSuchMethodError) {
         // We probably can't recover from this exception by retrying.
         LOG.error(t);
-        throw (NoSuchMethodError) t;
+        throw (NoSuchMethodError)t;
       }
 
       if (t instanceof NullPointerException) {
         // The same here. This is probably a bug.
         LOG.error(t);
-        throw (NullPointerException) t;
+        throw (NullPointerException)t;
       }
 
       if (t instanceof UndeclaredThrowableException) {
@@ -2859,6 +2883,9 @@ public class HConnectionManager {
       }
       if (t instanceof DoNotRetryIOException) {
         throw (DoNotRetryIOException)t;
+      }
+      if (t instanceof OutOfMemoryError) {
+        throw (OutOfMemoryError)t;
       }
       return t;
     }
