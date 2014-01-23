@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -2010,7 +2011,20 @@ public class HBaseFsck extends Configured {
 
     // rename the contained into the container.
     FileSystem fs = targetRegionDir.getFileSystem(getConf());
-    FileStatus[] dirs = fs.listStatus(contained.getHdfsRegionDir());
+    FileStatus[] dirs = null;
+    try { 
+      dirs = fs.listStatus(contained.getHdfsRegionDir());
+    } catch (FileNotFoundException fnfe) {
+      // region we are attempting to merge in is not present!  Since this is a merge, there is
+      // no harm skipping this region if it does not exist.
+      if (!fs.exists(contained.getHdfsRegionDir())) {
+        LOG.warn("HDFS region dir " + contained.getHdfsRegionDir() + " is missing. " +
+            "Assuming already sidelined or moved.");
+      } else {
+        sidelineRegionDir(fs, contained);
+      }
+      return fileMoves;
+    }
 
     if (dirs == null) {
       if (!fs.exists(contained.getHdfsRegionDir())) {
