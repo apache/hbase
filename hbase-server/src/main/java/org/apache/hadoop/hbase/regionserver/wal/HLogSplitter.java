@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -67,7 +68,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -76,7 +76,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -169,22 +168,25 @@ public class HLogSplitter {
 
   HLogSplitter(Configuration conf, Path rootDir,
       FileSystem fs, LastSequenceId idChecker, ZooKeeperWatcher zkw) {
-    this.conf = conf;
+    this.conf = HBaseConfiguration.create(conf);
+    String codecClassName = conf
+        .get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
+    this.conf.set(HConstants.RPC_CODEC_CONF_KEY, codecClassName);
     this.rootDir = rootDir;
     this.fs = fs;
     this.sequenceIdChecker = idChecker;
     this.watcher = zkw;
 
     entryBuffers = new EntryBuffers(
-        conf.getInt("hbase.regionserver.hlog.splitlog.buffersize",
+        this.conf.getInt("hbase.regionserver.hlog.splitlog.buffersize",
             128*1024*1024));
 
     // a larger minBatchSize may slow down recovery because replay writer has to wait for
     // enough edits before replaying them
-    this.minBatchSize = conf.getInt("hbase.regionserver.wal.logreplay.batch.size", 64);
-    this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(conf);
+    this.minBatchSize = this.conf.getInt("hbase.regionserver.wal.logreplay.batch.size", 64);
+    this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(this.conf);
 
-    this.numWriterThreads = conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
+    this.numWriterThreads = this.conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
     if (zkw != null && this.distributedLogReplay) {
       outputSink = new LogReplayOutputSink(numWriterThreads);
     } else {
