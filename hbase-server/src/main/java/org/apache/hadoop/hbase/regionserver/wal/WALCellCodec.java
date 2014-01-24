@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -41,7 +42,11 @@ import com.google.protobuf.ByteString;
 /**
  * Compression in this class is lifted off Compressor/KeyValueCompression.
  * This is a pure coincidence... they are independent and don't have to be compatible.
+ *
+ * This codec is used at server side for writing cells to WAL as well as for sending edits
+ * as part of the distributed splitting process.
  */
+@InterfaceAudience.Private
 public class WALCellCodec implements Codec {
   /** Configuration key for the class to use when encoding cells in the WAL */
   public static final String WAL_CELL_CODEC_CLASS_KEY = "hbase.regionserver.wal.codec";
@@ -53,6 +58,13 @@ public class WALCellCodec implements Codec {
       return WALCellCodec.uncompressByteString(data, dict);
     }
   };
+
+  /**
+   * <b>All subclasses must implement a no argument constructor</b>
+   */
+  public WALCellCodec() {
+    this.compression = null;
+  }
 
   /**
    * Default constructor - <b>all subclasses must implement a constructor with this signature </b>

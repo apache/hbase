@@ -76,7 +76,7 @@ public class TestVisibilityLabels {
   private static final String PRIVATE = "private";
   private static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] row1 = Bytes.toBytes("row1");
   private static final byte[] row2 = Bytes.toBytes("row2");
   private static final byte[] row3 = Bytes.toBytes("row3");
@@ -84,23 +84,23 @@ public class TestVisibilityLabels {
   private final static byte[] fam = Bytes.toBytes("info");
   private final static byte[] qual = Bytes.toBytes("qual");
   private final static byte[] value = Bytes.toBytes("value");
-  private static Configuration conf;
+  public static Configuration conf;
 
   private volatile boolean killedRS = false;
   @Rule 
   public final TestName TEST_NAME = new TestName();
-  private static User SUPERUSER;
+  public static User SUPERUSER;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     conf.setInt("hfile.format.version", 3);
     conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
     conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);
-    String currentUser = User.getCurrent().getName();
     conf.set("hbase.superuser", "admin");
     TEST_UTIL.startMiniCluster(2);
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
@@ -334,6 +334,8 @@ public class TestVisibilityLabels {
   @Test(timeout = 60 * 1000)
   public void testVisibilityLabelsOnRSRestart() throws Exception {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    HTable table = createTableAndWriteDataWithLabels(tableName, "(" + SECRET + "|" + CONFIDENTIAL
+        + ")", PRIVATE);
     List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
         .getRegionServerThreads();
     for (RegionServerThread rsThread : regionServerThreads) {
@@ -342,8 +344,6 @@ public class TestVisibilityLabels {
     // Start one new RS
     RegionServerThread rs = TEST_UTIL.getHBaseCluster().startRegionServer();
     waitForLabelsRegionAvailability(rs.getRegionServer());
-    HTable table = createTableAndWriteDataWithLabels(tableName, "(" + SECRET + "|" + CONFIDENTIAL
-        + ")", PRIVATE);
     try {
       Scan s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET));
@@ -486,7 +486,9 @@ public class TestVisibilityLabels {
     HTable ht = null;
     try {
       ht = new HTable(conf, LABELS_TABLE_NAME);
-      ResultScanner scanner = ht.getScanner(new Scan());
+      Scan scan = new Scan();
+      scan.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
+      ResultScanner scanner = ht.getScanner(scan);
       Result result = null;
       while ((result = scanner.next()) != null) {
         Cell label = result.getColumnLatestCell(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
@@ -739,7 +741,7 @@ public class TestVisibilityLabels {
     return table;
   }
 
-  private static void addLabels() throws Exception {
+  public static void addLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       public VisibilityLabelsResponse run() throws Exception {
