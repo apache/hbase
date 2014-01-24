@@ -37,7 +37,10 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -86,13 +89,21 @@ public class TestCompoundRowPrefixFilter {
     this.conf = util.getConfiguration();
     this.region = HRegion.createHRegion(info, testDir, this.conf);
     this.region.flushcache();
-    loadData();
+    loadData(this.familyName);
   }
 
-  private void loadData() throws IOException {
+  private List<Put> generatePuts(byte[] familyName) {
+    List<Put> lst = new ArrayList<Put>();
     for (byte[] key : keys) {
       Put p = new Put(key);
       p.add(familyName, null, key);
+      lst.add(p);
+    }
+    return lst;
+  }
+
+  private void loadData(byte[] familyName) throws IOException {
+    for (Put p : generatePuts(familyName)) {
       region.put(p);
     }
   }
@@ -161,15 +172,19 @@ public class TestCompoundRowPrefixFilter {
     assertTrue(filter.filterAllRemaining());
   }
 
-  @Test
-  public void testScannerBehavior() throws IOException {
-    setup();
+  private Scan createScan() {
     Scan s = new Scan();
     s.setStartRow(Bytes.toBytes(""));
     s.setStopRow(Bytes.toBytes("zzz"));
     Filter f = createFilter();
     s.setFilter(f);
-    InternalScanner scanner = this.region.getScanner(s);
+    return s;
+  }
+
+  @Test
+  public void testScannerBehavior() throws IOException {
+    setup();
+    InternalScanner scanner = this.region.getScanner(createScan());
     verifyScan(scanner);
   }
 
@@ -195,5 +210,31 @@ public class TestCompoundRowPrefixFilter {
     assertTrue(results.size() == 1);
     assertTrue(Bytes.compareTo(results.get(0).getRow(), keys[6]) == 0);
     results.clear();
+  }
+
+  private HTable setupForE2E(String tableName, String family) throws IOException {
+    HTable table = util.createTable(Bytes.toBytes(tableName),
+        Bytes.toBytes(family));
+    table.put(generatePuts(Bytes.toBytes(family)));
+    table.flushCommits();
+    return table;
+  }
+
+  @Test
+  public void testFilterE2E() throws IOException {
+    HTable table = setupForE2E("testFilterE2E", "cf");
+    ResultScanner scanner = table.getScanner(createScan());
+
+    Result r = scanner.next();
+    assertTrue(Bytes.compareTo(r.getRow(), keys[1]) == 0);
+
+    r = scanner.next();
+    assertTrue(Bytes.compareTo(r.getRow(), keys[2]) == 0);
+
+    r = scanner.next();
+    assertTrue(Bytes.compareTo(r.getRow(), keys[5]) == 0);
+
+    r = scanner.next();
+    assertTrue(Bytes.compareTo(r.getRow(), keys[6]) == 0);
   }
 }
