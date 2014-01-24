@@ -75,7 +75,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
   @Override
   protected void addOptions() {
     addOptWithArg(TABLE_ARG, "The table name to target.  Will be created if not there already.");
-    addOptWithArg(TABLE_ARG, "The family to target");
+    addOptWithArg(CF_ARG, "The family to target");
   }
 
   @Override
