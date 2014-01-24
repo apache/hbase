@@ -39,9 +39,6 @@ import org.junit.runner.Result;
 public class IntegrationTestsDriver extends AbstractHBaseTool {
   private static final String SHORT_REGEX_ARG = "r";
   private static final String LONG_REGEX_ARG = "regex";
-  protected static final String OPT_ZK_QUORUM = "zk";
-  protected static final String OPT_ZK_PARENT_NODE = "zk_root";
-
   private static final Log LOG = LogFactory.getLog(IntegrationTestsDriver.class);
   private IntegrationTestFilter intTestFilter = new IntegrationTestFilter();
 
@@ -76,19 +73,10 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
       "Java regex to use selecting tests to run: e.g. .*TestBig.*" +
       " will select all tests that include TestBig in their name.  Default: " +
       ".*IntegrationTest.*");
-    addOptWithArg(OPT_ZK_QUORUM, "ZK quorum as comma-separated host names " +
-        "without port numbers");
-    addOptWithArg(OPT_ZK_PARENT_NODE, "name of parent znode in zookeeper");
   }
 
   @Override
   protected void processOptions(CommandLine cmd) {
-    if (cmd.hasOption(OPT_ZK_QUORUM)) {
-      conf.set(HConstants.ZOOKEEPER_QUORUM, cmd.getOptionValue(OPT_ZK_QUORUM));
-    }
-    if (cmd.hasOption(OPT_ZK_PARENT_NODE)) {
-      conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, cmd.getOptionValue(OPT_ZK_PARENT_NODE));
-    }
     String testFilterString = cmd.getOptionValue(SHORT_REGEX_ARG, null);
     if (testFilterString != null) {
       intTestFilter.setPattern(testFilterString);
