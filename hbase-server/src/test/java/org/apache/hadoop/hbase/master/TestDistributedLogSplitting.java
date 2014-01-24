@@ -742,12 +742,12 @@ public class TestDistributedLogSplitting {
     for (int i = 0; i < NUM_RS; i++) {
       tableName = null;
       hasRegionsForBothTables = false;
-      boolean isCarryingMeta = false;
+      boolean isCarryingSystem = false;
       hrs = rsts.get(i).getRegionServer();
       regions = ProtobufUtil.getOnlineRegions(hrs);
       for (HRegionInfo region : regions) {
-        if (region.isMetaRegion()) {
-          isCarryingMeta = true;
+        if (region.getTable().isSystemTable()) {
+          isCarryingSystem = true;
           break;
         }
         if (tableName != null &&
@@ -759,7 +759,7 @@ public class TestDistributedLogSplitting {
           tableName = region.getTable().getNameAsString();
         }
       }
-      if (isCarryingMeta) {
+      if (isCarryingSystem) {
         continue;
       }
       if (hasRegionsForBothTables) {
@@ -810,7 +810,9 @@ public class TestDistributedLogSplitting {
       public boolean evaluate() throws Exception {
         List<String> recoveringRegions = zkw.getRecoverableZooKeeper().getChildren(
           zkw.recoveringRegionsZNode, false);
-        return (recoveringRegions != null && recoveringRegions.size() == 0);
+        ServerManager serverManager = master.getServerManager();
+        return (!serverManager.areDeadServersInProgress() &&
+            recoveringRegions != null && recoveringRegions.size() == 0);
       }
     });
 
