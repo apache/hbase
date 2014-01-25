@@ -47,11 +47,10 @@ public class TestSecureLoadIncrementalHFilesSplitRecovery extends TestLoadIncrem
   //make sure they are in sync
   @BeforeClass
   public static void setupCluster() throws Exception {
+    useSecureHBaseOverride = true;
     util = new HBaseTestingUtility();
     // setup configuration
     SecureTestUtil.enableSecurity(util.getConfiguration());
-    UserProvider.setUserProviderForTesting(util.getConfiguration(),
-      HadoopSecurityEnabledUserProviderForTesting.class);
     util.startMiniCluster();
 
     // Wait for the ACL table to become available

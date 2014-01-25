@@ -58,10 +58,11 @@ public interface SecureBulkLoadProtocol extends CoprocessorProtocol {
    * @param familyPaths column family to HFile path pairs
    * @param userToken requesting user's HDFS delegation token
    * @param bulkToken
+   * @param assignSeqId
    * @return
    * @throws IOException
    */
   boolean bulkLoadHFiles(List<Pair<byte[], String>> familyPaths,
-                         Token<?> userToken, String bulkToken) throws IOException;
+                         Token<?> userToken, String bulkToken, boolean assignSeqNum) throws IOException;
 
 }

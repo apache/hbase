@@ -58,6 +58,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(LargeTests.class)
 public class TestLoadIncrementalHFiles {
+  protected static boolean useSecureHBaseOverride = false;
   private static final byte[] QUALIFIER = Bytes.toBytes("myqual");
   private static final byte[] FAMILY = Bytes.toBytes("myfam");
 
@@ -160,7 +161,8 @@ public class TestLoadIncrementalHFiles {
     HTable table = new HTable(util.getConfiguration(), TABLE);
     util.waitTableAvailable(TABLE, 30000);
 
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
+    LoadIncrementalHFiles loader =
+        new LoadIncrementalHFiles(util.getConfiguration(), useSecureHBaseOverride);
     loader.doBulkLoad(dir, table);
 
     assertEquals(expectedRows, util.countRows(table));
@@ -192,7 +194,8 @@ public class TestLoadIncrementalHFiles {
 
     HTable table = new HTable(util.getConfiguration(), TABLE);
     util.waitTableAvailable(TABLE, 30000);
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
+    LoadIncrementalHFiles loader =
+        new LoadIncrementalHFiles(util.getConfiguration(), useSecureHBaseOverride);
 
     // Do a dummy put to increase the hlog sequence number
     Put put = new Put(Bytes.toBytes("row"));
@@ -247,7 +250,8 @@ public class TestLoadIncrementalHFiles {
     util.waitTableAvailable(TABLE, 30000);
     // make sure we go back to the usual user provider
     UserProvider.setUserProviderForTesting(util.getConfiguration(), UserProvider.class);
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
+    LoadIncrementalHFiles loader =
+        new LoadIncrementalHFiles(util.getConfiguration(), useSecureHBaseOverride);
     try {
       loader.doBulkLoad(dir, table);
       assertTrue("Loading into table with non-existent family should have failed", false);

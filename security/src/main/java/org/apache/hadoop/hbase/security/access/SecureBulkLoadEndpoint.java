@@ -150,7 +150,7 @@ public class SecureBulkLoadEndpoint extends BaseEndpointCoprocessor
 
   @Override
   public boolean bulkLoadHFiles(final List<Pair<byte[], String>> familyPaths,
-                                final Token<?> userToken, final String bulkToken) throws IOException {
+                                final Token<?> userToken, final String bulkToken, boolean assignSeqNum) throws IOException {
     User user = getActiveUser();
     final UserGroupInformation ugi = user.getUGI();
     if(userToken != null) {
@@ -167,6 +167,7 @@ public class SecureBulkLoadEndpoint extends BaseEndpointCoprocessor
       bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
     }
     boolean loaded = false;
+    final IOException[] es = new IOException[1];
     if (!bypass) {
       loaded = ugi.doAs(new PrivilegedAction<Boolean>() {
         @Override
@@ -189,13 +190,22 @@ public class SecureBulkLoadEndpoint extends BaseEndpointCoprocessor
             //To enable access prior to staging
             return env.getRegion().bulkLoadHFiles(familyPaths,
                 new SecureBulkLoadListener(fs, bulkToken));
-          } catch (Exception e) {
+          }
+          catch(DoNotRetryIOException e){
+            es[0] = e;
+          }
+          catch (Exception e) {
             LOG.error("Failed to complete bulk load", e);
           }
           return false;
         }
       });
     }
+
+    if (es[0] != null) {
+      throw es[0];
+    }
+
     if (region.getCoprocessorHost() != null) {
       loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);
     }

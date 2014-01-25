@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.token.Token;
@@ -107,14 +108,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private final boolean assignSeqIds;
   private UserProvider userProvider;
 
-  //package private for testing
   public LoadIncrementalHFiles(Configuration conf) throws Exception {
+    this(conf, false);
+  }
+
+  public LoadIncrementalHFiles(Configuration conf, boolean useSecureHBaseOverride) throws Exception {
     super(conf);
     this.cfg = conf;
     this.hbAdmin = new HBaseAdmin(conf);
     //added simple for testing
     this.userProvider = UserProvider.instantiate(conf);
-    this.useSecure = userProvider.isHBaseSecurityEnabled();
+    this.useSecure = useSecureHBaseOverride || userProvider.isHBaseSecurityEnabled();
     this.assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, false);
   }
 
@@ -571,7 +575,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
     try {
       List<LoadQueueItem> toRetry = new ArrayList<LoadQueueItem>();
-      boolean success = svrCallable.withRetries();
+      boolean success;
+      // secure client wraps the result in another layer of callables, which does its own retrying -
+      // we shouldn't rety again here as well.
+      if (useSecure) {
+        success = svrCallable.withoutRetries();
+      } else {
+        success = svrCallable.withRetries();
+      }
       if (!success) {
         LOG.warn("Attempt to bulk load region containing "
             + Bytes.toStringBinary(first) + " into table "

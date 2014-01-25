@@ -20,10 +20,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.client.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
-
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
@@ -43,10 +41,9 @@ public class TestSecureLoadIncrementalHFiles extends  TestLoadIncrementalHFiles{
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    useSecureHBaseOverride = true;
     // setup configuration
     SecureTestUtil.enableSecurity(util.getConfiguration());
-    UserProvider.setUserProviderForTesting(util.getConfiguration(),
-      HadoopSecurityEnabledUserProviderForTesting.class);
 
     util.startMiniCluster();
 

@@ -79,7 +79,7 @@ public class SecureBulkLoadClient {
       String bulkToken, boolean assignSeqNum) throws IOException {
     try {
       return (Boolean) Methods.call(protocolClazz, proxy, "bulkLoadHFiles", new Class[] {
-          List.class, Token.class, String.class, Boolean.class },
+          List.class, Token.class, String.class, boolean.class },
         new Object[] { familyPaths, userToken, bulkToken, assignSeqNum });
     } catch (Exception e) {
       throw new IOException("Failed to bulkLoadHFiles", e);
