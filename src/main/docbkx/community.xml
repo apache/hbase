@@ -99,6 +99,15 @@ until the justification for the -1 is addressed.
               to the issue must happen in a new JIRA.
           </para>
       </section>
+      <section xml:id="no.permanent.state.in.zk">
+          <title>Only transient state in ZooKeeper!</title>
+          <para>
+You should be able to kill the data in zookeeper and hbase should ride over it recreating the zk content as it goes.
+This is an old adage around these parts.  We just made note of it now.  We also are currently in violation of this
+basic tenet -- replication at least keeps permanent state in zk -- but we are working to undo this breaking of a
+golden rule.
+          </para>
+      </section>
     </section>
     <section xml:id="community.roles">
       <title>Community Roles</title>
