@@ -1056,11 +1056,11 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     // We need to create another KV, unfortunately, because the current new KV
     // has no space for tags
     KeyValue newKv = KeyValueUtil.ensureKeyValue(newCell);
-    byte[] bytes = newKv.getBuffer();
-    KeyValue rewriteKv = new KeyValue(bytes, newKv.getRowOffset(), newKv.getRowLength(), bytes,
-        newKv.getFamilyOffset(), newKv.getFamilyLength(), bytes, newKv.getQualifierOffset(),
-        newKv.getQualifierLength(), newKv.getTimestamp(), KeyValue.Type.codeToType(newKv
-            .getTypeByte()), bytes, newKv.getValueOffset(), newKv.getValueLength(), tags);
+    KeyValue rewriteKv = new KeyValue(newKv.getRowArray(), newKv.getRowOffset(), newKv.getRowLength(),
+    	newKv.getFamilyArray(), newKv.getFamilyOffset(), newKv.getFamilyLength(),
+    	newKv.getQualifierArray(), newKv.getQualifierOffset(), newKv.getQualifierLength(),
+    	newKv.getTimestamp(), KeyValue.Type.codeToType(newKv.getTypeByte()),
+    	newKv.getValueArray(), newKv.getValueOffset(), newKv.getValueLength(), tags);
     // Preserve mvcc data
     rewriteKv.setMvccVersion(newKv.getMvccVersion());
     return rewriteKv;

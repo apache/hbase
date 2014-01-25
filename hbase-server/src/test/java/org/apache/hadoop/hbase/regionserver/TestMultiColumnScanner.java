@@ -303,7 +303,7 @@ public class TestMultiColumnScanner {
   }
 
   private static String qualStr(KeyValue kv) {
-    return Bytes.toString(kv.getBuffer(), kv.getQualifierOffset(),
+    return Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(),
         kv.getQualifierLength());
   }
 

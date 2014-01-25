@@ -550,9 +550,9 @@ public class MemStore implements HeapSize {
     // Get the KeyValues for the row/family/qualifier regardless of timestamp.
     // For this case we want to clean up any other puts
     KeyValue firstKv = KeyValue.createFirstOnRow(
-        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
-        kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
-        kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength());
+        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+        kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
+        kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength());
     SortedSet<KeyValue> ss = kvset.tailSet(firstKv);
     Iterator<KeyValue> it = ss.iterator();
     // versions visible to oldest scanner

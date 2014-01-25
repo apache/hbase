@@ -186,7 +186,7 @@ public class SingleColumnValueFilter extends FilterBase {
       return ReturnCode.INCLUDE;
     }
     foundColumn = true;
-    if (filterColumnValue(keyValue.getBuffer(),
+    if (filterColumnValue(keyValue.getValueArray(),
         keyValue.getValueOffset(), keyValue.getValueLength())) {
       return this.latestVersionOnly? ReturnCode.NEXT_ROW: ReturnCode.INCLUDE;
     }

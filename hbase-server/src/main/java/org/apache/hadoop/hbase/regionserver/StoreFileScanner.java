@@ -197,8 +197,8 @@ public class StoreFileScanner implements KeyValueScanner {
       hfs.next();
       cur = hfs.getKeyValue();
       if (this.stopSkippingKVsIfNextRow
-          && Bytes.compareTo(cur.getBuffer(), cur.getRowOffset(),
-              cur.getRowLength(), startKV.getBuffer(), startKV.getRowOffset(),
+          && Bytes.compareTo(cur.getRowArray(), cur.getRowOffset(),
+              cur.getRowLength(), startKV.getRowArray(), startKV.getRowOffset(),
               startKV.getRowLength()) > 0) {
         return false;
       }
@@ -304,14 +304,14 @@ public class StoreFileScanner implements KeyValueScanner {
     if (useBloom) {
       // check ROWCOL Bloom filter first.
       if (reader.getBloomFilterType() == BloomType.ROWCOL) {
-        haveToSeek = reader.passesGeneralBloomFilter(kv.getBuffer(),
-            kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
+        haveToSeek = reader.passesGeneralBloomFilter(kv.getRowArray(),
+            kv.getRowOffset(), kv.getRowLength(), kv.getQualifierArray(),
             kv.getQualifierOffset(), kv.getQualifierLength());
       } else if (this.matcher != null && !matcher.hasNullColumnInQuery() &&
           (kv.isDeleteFamily() || kv.isDeleteFamilyVersion())) {
         // if there is no such delete family kv in the store file,
         // then no need to seek.
-        haveToSeek = reader.passesDeleteFamilyBloomFilter(kv.getBuffer(),
+        haveToSeek = reader.passesDeleteFamilyBloomFilter(kv.getRowArray(),
             kv.getRowOffset(), kv.getRowLength());
       }
     }
@@ -465,8 +465,8 @@ public class StoreFileScanner implements KeyValueScanner {
   public boolean backwardSeek(KeyValue key) throws IOException {
     seek(key);
     if (cur == null
-        || Bytes.compareTo(cur.getBuffer(), cur.getRowOffset(),
-            cur.getRowLength(), key.getBuffer(), key.getRowOffset(),
+        || Bytes.compareTo(cur.getRowArray(), cur.getRowOffset(),
+            cur.getRowLength(), key.getRowArray(), key.getRowOffset(),
             key.getRowLength()) > 0) {
       return seekToPreviousRow(key);
     }

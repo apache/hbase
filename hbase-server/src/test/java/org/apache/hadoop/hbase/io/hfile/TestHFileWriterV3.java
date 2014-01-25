@@ -258,7 +258,7 @@ public class TestHFileWriterV3 {
           assertNotNull(tagValue);
           KeyValue tkv =  keyValues.get(entriesRead);
           assertEquals(tagValue.length, tkv.getTagsLength());
-          assertTrue(Bytes.compareTo(tagValue, 0, tagValue.length, tkv.getBuffer(),
+          assertTrue(Bytes.compareTo(tagValue, 0, tagValue.length, tkv.getTagsArray(),
               tkv.getTagsOffset(), tkv.getTagsLength()) == 0);
         }
         ++entriesRead;

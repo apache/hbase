@@ -87,7 +87,7 @@ public class HFileWriterV3 extends HFileWriterV2 {
   public void append(final KeyValue kv) throws IOException {
     // Currently get the complete arrays
     append(kv.getMvccVersion(), kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength(),
-        kv.getBuffer(), kv.getValueOffset(), kv.getValueLength(), kv.getBuffer(),
+        kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(), kv.getTagsArray(),
         kv.getTagsOffset(), kv.getTagsLength());
     this.maxMemstoreTS = Math.max(this.maxMemstoreTS, kv.getMvccVersion());
   }

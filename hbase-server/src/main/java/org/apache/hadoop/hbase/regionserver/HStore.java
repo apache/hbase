@@ -629,16 +629,16 @@ public class HStore implements Store {
         do {
           KeyValue kv = scanner.getKeyValue();
           if (prevKV != null) {
-            if (Bytes.compareTo(prevKV.getBuffer(), prevKV.getRowOffset(),
-                prevKV.getRowLength(), kv.getBuffer(), kv.getRowOffset(),
+            if (Bytes.compareTo(prevKV.getRowArray(), prevKV.getRowOffset(),
+                prevKV.getRowLength(), kv.getRowArray(), kv.getRowOffset(),
                 kv.getRowLength()) > 0) {
               throw new InvalidHFileException("Previous row is greater than"
                   + " current row: path=" + srcPath + " previous="
                   + Bytes.toStringBinary(prevKV.getKey()) + " current="
                   + Bytes.toStringBinary(kv.getKey()));
             }
-            if (Bytes.compareTo(prevKV.getBuffer(), prevKV.getFamilyOffset(),
-                prevKV.getFamilyLength(), kv.getBuffer(), kv.getFamilyOffset(),
+            if (Bytes.compareTo(prevKV.getFamilyArray(), prevKV.getFamilyOffset(),
+                prevKV.getFamilyLength(), kv.getFamilyArray(), kv.getFamilyOffset(),
                 kv.getFamilyLength()) != 0) {
               throw new InvalidHFileException("Previous key had different"
                   + " family compared to current key: path=" + srcPath

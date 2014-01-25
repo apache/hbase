@@ -3754,7 +3754,7 @@ public class HRegion implements HeapSize { // , Writable{
         throws IOException {
       assert joinedContinuationRow != null;
       KeyValue kv = populateResult(results, this.joinedHeap, limit,
-          joinedContinuationRow.getBuffer(), joinedContinuationRow.getRowOffset(),
+          joinedContinuationRow.getRowArray(), joinedContinuationRow.getRowOffset(),
           joinedContinuationRow.getRowLength());
       if (kv != KV_LIMIT) {
         // We are done with this row, reset the continuation.
@@ -3834,7 +3834,7 @@ public class HRegion implements HeapSize { // , Writable{
         int offset = 0;
         short length = 0;
         if (current != null) {
-          currentRow = current.getBuffer();
+          currentRow = current.getRowArray();
           offset = current.getRowOffset();
           length = current.getRowLength();
         }
@@ -3871,7 +3871,7 @@ public class HRegion implements HeapSize { // , Writable{
           }
 
           stopRow = nextKv == null ||
-              isStopRow(nextKv.getBuffer(), nextKv.getRowOffset(), nextKv.getRowLength());
+              isStopRow(nextKv.getRowArray(), nextKv.getRowOffset(), nextKv.getRowLength());
           // save that the row was empty before filters applied to it.
           final boolean isEmptyRow = results.isEmpty();
 
@@ -4993,17 +4993,17 @@ public class HRegion implements HeapSize { // , Writable{
                     oldKv.getValueLength() + kv.getValueLength(),
                     oldKv.getTagsLength() + kv.getTagsLength());
                 // copy in the value
-                System.arraycopy(oldKv.getBuffer(), oldKv.getValueOffset(),
-                    newKV.getBuffer(), newKV.getValueOffset(),
+                System.arraycopy(oldKv.getValueArray(), oldKv.getValueOffset(),
+                    newKV.getValueArray(), newKV.getValueOffset(),
                     oldKv.getValueLength());
-                System.arraycopy(kv.getBuffer(), kv.getValueOffset(),
-                    newKV.getBuffer(),
+                System.arraycopy(kv.getValueArray(), kv.getValueOffset(),
+                    newKV.getValueArray(),
                     newKV.getValueOffset() + oldKv.getValueLength(),
                     kv.getValueLength());
                 // copy in the tags
-                System.arraycopy(oldKv.getBuffer(), oldKv.getTagsOffset(), newKV.getBuffer(),
+                System.arraycopy(oldKv.getTagsArray(), oldKv.getTagsOffset(), newKV.getTagsArray(),
                     newKV.getTagsOffset(), oldKv.getTagsLength());
-                System.arraycopy(kv.getBuffer(), kv.getTagsOffset(), newKV.getBuffer(),
+                System.arraycopy(kv.getTagsArray(), kv.getTagsOffset(), newKV.getTagsArray(),
                     newKV.getTagsOffset() + oldKv.getTagsLength(), kv.getTagsLength());
                 idx++;
               } else {
@@ -5012,21 +5012,21 @@ public class HRegion implements HeapSize { // , Writable{
                     kv.getQualifierLength(), now, KeyValue.Type.Put,
                     kv.getValueLength(), kv.getTagsLength());
                 // copy in the value
-                System.arraycopy(kv.getBuffer(), kv.getValueOffset(),
-                    newKV.getBuffer(), newKV.getValueOffset(),
+                System.arraycopy(kv.getValueArray(), kv.getValueOffset(),
+                    newKV.getValueArray(), newKV.getValueOffset(),
                     kv.getValueLength());
                 // copy in tags
-                System.arraycopy(kv.getBuffer(), kv.getTagsOffset(), newKV.getBuffer(),
+                System.arraycopy(kv.getTagsArray(), kv.getTagsOffset(), newKV.getTagsArray(),
                     newKV.getTagsOffset(), kv.getTagsLength());
               }
               // copy in row, family, and qualifier
-              System.arraycopy(kv.getBuffer(), kv.getRowOffset(),
-                  newKV.getBuffer(), newKV.getRowOffset(), kv.getRowLength());
-              System.arraycopy(kv.getBuffer(), kv.getFamilyOffset(),
-                  newKV.getBuffer(), newKV.getFamilyOffset(),
+              System.arraycopy(kv.getRowArray(), kv.getRowOffset(),
+                  newKV.getRowArray(), newKV.getRowOffset(), kv.getRowLength());
+              System.arraycopy(kv.getFamilyArray(), kv.getFamilyOffset(),
+                  newKV.getFamilyArray(), newKV.getFamilyOffset(),
                   kv.getFamilyLength());
-              System.arraycopy(kv.getBuffer(), kv.getQualifierOffset(),
-                  newKV.getBuffer(), newKV.getQualifierOffset(),
+              System.arraycopy(kv.getQualifierArray(), kv.getQualifierOffset(),
+                  newKV.getQualifierArray(), newKV.getQualifierOffset(),
                   kv.getQualifierLength());
 
               newKV.setMvccVersion(w.getWriteNumber());
@@ -5200,19 +5200,19 @@ public class HRegion implements HeapSize { // , Writable{
               int incCellTagsLen = kv.getTagsLength();
               KeyValue newKV = new KeyValue(row.length, family.getKey().length, q.length, now,
                   KeyValue.Type.Put, val.length, oldCellTagsLen + incCellTagsLen);
-              System.arraycopy(row, 0, newKV.getBuffer(), newKV.getRowOffset(), row.length);
-              System.arraycopy(family.getKey(), 0, newKV.getBuffer(), newKV.getFamilyOffset(),
+              System.arraycopy(row, 0, newKV.getRowArray(), newKV.getRowOffset(), row.length);
+              System.arraycopy(family.getKey(), 0, newKV.getFamilyArray(), newKV.getFamilyOffset(),
                   family.getKey().length);
-              System.arraycopy(q, 0, newKV.getBuffer(), newKV.getQualifierOffset(), q.length);
+              System.arraycopy(q, 0, newKV.getQualifierArray(), newKV.getQualifierOffset(), q.length);
               // copy in the value
-              System.arraycopy(val, 0, newKV.getBuffer(), newKV.getValueOffset(), val.length);
+              System.arraycopy(val, 0, newKV.getValueArray(), newKV.getValueOffset(), val.length);
               // copy tags
               if (oldCellTagsLen > 0) {
-                System.arraycopy(c.getTagsArray(), c.getTagsOffset(), newKV.getBuffer(),
+                System.arraycopy(c.getTagsArray(), c.getTagsOffset(), newKV.getTagsArray(),
                     newKV.getTagsOffset(), oldCellTagsLen);
               }
               if (incCellTagsLen > 0) {
-                System.arraycopy(kv.getTagsArray(), kv.getTagsOffset(), newKV.getBuffer(),
+                System.arraycopy(kv.getTagsArray(), kv.getTagsOffset(), newKV.getTagsArray(),
                     newKV.getTagsOffset() + oldCellTagsLen, incCellTagsLen);
               }
               newKV.setMvccVersion(w.getWriteNumber());

@@ -248,13 +248,13 @@ public class TablePermission extends Permission {
 
     if (family != null &&
         (Bytes.compareTo(family, 0, family.length,
-            kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength()) != 0)) {
+            kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength()) != 0)) {
       return false;
     }
 
     if (qualifier != null &&
         (Bytes.compareTo(qualifier, 0, qualifier.length,
-            kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength()) != 0)) {
+            kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()) != 0)) {
       return false;
     }
 

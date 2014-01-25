@@ -86,7 +86,7 @@ public class Increment extends Mutation implements Comparable<Row> {
     List<Cell> list = getCellList(family);
     //Checking that the row of the kv is the same as the put
     int res = Bytes.compareTo(this.row, 0, row.length,
-        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
+        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength());
     if (res != 0) {
       throw new WrongRowIOException("The row in " + kv.toString() +
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));

@@ -108,7 +108,7 @@ implements WALObserver {
       if (Arrays.equals(family, changedFamily) &&
           Arrays.equals(qulifier, changedQualifier)) {
         LOG.debug("Found the KeyValue from WALEdit which should be changed.");
-        kv.getBuffer()[kv.getValueOffset()] += 1;
+        kv.getValueArray()[kv.getValueOffset()] += 1;
       }
     }
     kvs.add(new KeyValue(row, addedFamily, addedQualifier));

@@ -277,7 +277,7 @@ public class TestPrefixTreeEncoding {
       userDataStream.writeInt(kv.getKeyLength());
       userDataStream.writeInt(kv.getValueLength());
       userDataStream.write(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
-      userDataStream.write(kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
+      userDataStream.write(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
       if (useTags) {
         userDataStream.writeShort(kv.getTagsLength());
         userDataStream.write(kv.getBuffer(), kv.getValueOffset() + kv.getValueLength()
@@ -314,7 +314,7 @@ public class TestPrefixTreeEncoding {
       userDataStream.writeInt(kv.getKeyLength());
       userDataStream.writeInt(kv.getValueLength());
       userDataStream.write(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
-      userDataStream.write(kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
+      userDataStream.write(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
       if (useTags) {
         userDataStream.writeShort(kv.getTagsLength());
         userDataStream.write(kv.getBuffer(), kv.getValueOffset() + kv.getValueLength()

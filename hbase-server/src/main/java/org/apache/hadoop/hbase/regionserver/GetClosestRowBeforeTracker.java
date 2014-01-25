@@ -68,7 +68,7 @@ class GetClosestRowBeforeTracker {
     this.rowoffset = kv.getRowOffset();
     int l = -1;
     if (metaregion) {
-      l = KeyValue.getDelimiter(kv.getBuffer(), rowoffset, kv.getRowLength(),
+      l = KeyValue.getDelimiter(kv.getRowArray(), rowoffset, kv.getRowLength(),
         HConstants.DELIMITER) - this.rowoffset;
     }
     this.tablenamePlusDelimiterLength = metaregion? l + 1: -1;
@@ -147,9 +147,9 @@ class GetClosestRowBeforeTracker {
         continue;
       }
       // Check column
-      int ret = Bytes.compareTo(kv.getBuffer(), kv.getQualifierOffset(),
+      int ret = Bytes.compareTo(kv.getQualifierArray(), kv.getQualifierOffset(),
           kv.getQualifierLength(),
-        d.getBuffer(), d.getQualifierOffset(), d.getQualifierLength());
+        d.getQualifierArray(), d.getQualifierOffset(), d.getQualifierLength());
       if (ret <= -1) {
         // This delete is for an earlier column.
         continue;
@@ -233,8 +233,8 @@ class GetClosestRowBeforeTracker {
     if (!metaregion) return true;
     // Compare start of keys row.  Compare including delimiter.  Saves having
     // to calculate where tablename ends in the candidate kv.
-    return Bytes.compareTo(this.targetkey.getBuffer(), this.rowoffset,
+    return Bytes.compareTo(this.targetkey.getRowArray(), this.rowoffset,
         this.tablenamePlusDelimiterLength,
-      kv.getBuffer(), kv.getRowOffset(), this.tablenamePlusDelimiterLength) == 0;
+      kv.getRowArray(), kv.getRowOffset(), this.tablenamePlusDelimiterLength) == 0;
   }
 }

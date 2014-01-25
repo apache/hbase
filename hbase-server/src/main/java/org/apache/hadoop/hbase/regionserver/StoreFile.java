@@ -843,7 +843,7 @@ public class StoreFile {
 
           switch (bloomType) {
           case ROW:
-            bloomKey = kv.getBuffer();
+            bloomKey = kv.getRowArray();
             bloomKeyOffset = kv.getRowOffset();
             bloomKeyLen = kv.getRowLength();
             break;
@@ -851,8 +851,8 @@ public class StoreFile {
             // merge(row, qualifier)
             // TODO: could save one buffer copy in case of compound Bloom
             // filters when this involves creating a KeyValue
-            bloomKey = generalBloomFilterWriter.createBloomKey(kv.getBuffer(),
-                kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
+            bloomKey = generalBloomFilterWriter.createBloomKey(kv.getRowArray(),
+                kv.getRowOffset(), kv.getRowLength(), kv.getQualifierArray(),
                 kv.getQualifierOffset(), kv.getQualifierLength());
             bloomKeyOffset = 0;
             bloomKeyLen = bloomKey.length;
@@ -894,7 +894,7 @@ public class StoreFile {
           newKey = !kvComparator.matchingRows(kv, lastDeleteFamilyKV);
         }
         if (newKey) {
-          this.deleteFamilyBloomFilterWriter.add(kv.getBuffer(),
+          this.deleteFamilyBloomFilterWriter.add(kv.getRowArray(),
               kv.getRowOffset(), kv.getRowLength());
           this.lastDeleteFamilyKV = kv;
         }

@@ -891,8 +891,8 @@ public class TestStoreFile extends HBaseTestCase {
           kv1.getBuffer(), kv1.getKeyOffset(), kv1.getKeyLength(), 
           kv2.getBuffer(), kv2.getKeyOffset(), kv2.getKeyLength()) == 0);
       assertTrue(Bytes.compareTo(
-          kv1.getBuffer(), kv1.getValueOffset(), kv1.getValueLength(),
-          kv2.getBuffer(), kv2.getValueOffset(), kv2.getValueLength()) == 0);
+          kv1.getValueArray(), kv1.getValueOffset(), kv1.getValueLength(),
+          kv2.getValueArray(), kv2.getValueOffset(), kv2.getValueLength()) == 0);
     }
     assertNull(scannerTwo.next());
     assertEquals(startHit + 6, cs.getHitCount());

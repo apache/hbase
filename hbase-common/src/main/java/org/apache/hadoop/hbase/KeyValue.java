@@ -1607,7 +1607,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     if (tagsLength == 0) {
       return EMPTY_ARRAY_LIST;
     }
-    return Tag.asList(getBuffer(), getTagsOffset(), tagsLength);
+    return Tag.asList(getTagsArray(), getTagsOffset(), tagsLength);
   }
 
   /**
@@ -1650,7 +1650,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   }
 
   public boolean matchingQualifier(final KeyValue other) {
-    return matchingQualifier(other.getBuffer(), other.getQualifierOffset(),
+    return matchingQualifier(other.getQualifierArray(), other.getQualifierOffset(),
         other.getQualifierLength());
   }
 
@@ -1664,7 +1664,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   }
 
   public boolean matchingRow(KeyValue other) {
-    return matchingRow(other.getBuffer(), other.getRowOffset(),
+    return matchingRow(other.getRowArray(), other.getRowOffset(),
         other.getRowLength());
   }
 
@@ -2101,8 +2101,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
      * @return Result comparing rows.
      */
     public int compareRows(final KeyValue left, final KeyValue right) {
-      return compareRows(left.getBuffer(),left.getRowOffset(), left.getRowLength(),
-      right.getBuffer(), right.getRowOffset(), right.getRowLength());
+      return compareRows(left.getRowArray(),left.getRowOffset(), left.getRowLength(),
+      right.getRowArray(), right.getRowOffset(), right.getRowLength());
     }
 
     /**
@@ -2351,8 +2351,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     private boolean matchingRows(final KeyValue left, final short lrowlength,
         final KeyValue right, final short rrowlength) {
       return lrowlength == rrowlength &&
-          matchingRows(left.getBuffer(), left.getRowOffset(), lrowlength,
-              right.getBuffer(), right.getRowOffset(), rrowlength);
+          matchingRows(left.getRowArray(), left.getRowOffset(), lrowlength,
+              right.getRowArray(), right.getRowOffset(), rrowlength);
     }
 
     /**

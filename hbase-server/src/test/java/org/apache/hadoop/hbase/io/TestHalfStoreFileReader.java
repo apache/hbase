@@ -227,9 +227,9 @@ public class TestHalfStoreFileReader {
 
   private KeyValue getLastOnCol(KeyValue curr) {
     return KeyValue.createLastOnRow(
-        curr.getBuffer(), curr.getRowOffset(), curr.getRowLength(),
-        curr.getBuffer(), curr.getFamilyOffset(), curr.getFamilyLength(),
-        curr.getBuffer(), curr.getQualifierOffset(), curr.getQualifierLength());
+        curr.getRowArray(), curr.getRowOffset(), curr.getRowLength(),
+        curr.getFamilyArray(), curr.getFamilyOffset(), curr.getFamilyLength(),
+        curr.getQualifierArray(), curr.getQualifierOffset(), curr.getQualifierLength());
   }
 
   static final int SIZE = 1000;

@@ -447,7 +447,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     // only call setRow if the row changes; avoids confusing the query matcher
     // if scanning intra-row
-    byte[] row = peeked.getBuffer();
+    byte[] row = peeked.getRowArray();
     int offset = peeked.getRowOffset();
     short length = peeked.getRowLength();
     if (limit < 0 || matcher.row == null || !Bytes.equals(row, offset, length, matcher.row,
@@ -644,7 +644,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     if (kv == null) {
       kv = lastTopKey;
     }
-    byte[] row = kv.getBuffer();
+    byte[] row = kv.getRowArray();
     int offset = kv.getRowOffset();
     short length = kv.getRowLength();
     if ((matcher.row == null) || !Bytes.equals(row, offset, length, matcher.row,

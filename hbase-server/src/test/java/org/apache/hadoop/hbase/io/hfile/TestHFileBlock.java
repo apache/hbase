@@ -184,13 +184,13 @@ public class TestHFileBlock {
       dataOutputStream.writeInt(kv.getKeyLength());
       dataOutputStream.writeInt(kv.getValueLength());
       dataOutputStream.write(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
-      dataOutputStream.write(kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
+      dataOutputStream.write(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
       // Write the additonal tag into the stream
       // always write the taglength
       totalSize += kv.getLength();
       if (useTag) {
         dataOutputStream.writeShort(kv.getTagsLength());
-        dataOutputStream.write(kv.getBuffer(), kv.getTagsOffset(), kv.getTagsLength());
+        dataOutputStream.write(kv.getTagsArray(), kv.getTagsOffset(), kv.getTagsLength());
       }
       if (includesMemstoreTS) {
         long memstoreTS = randomizer.nextLong();

@@ -467,7 +467,7 @@ public class ScanQueryMatcher {
 
   public boolean moreRowsMayExistAfter(KeyValue kv) {
     if (this.isReversed) {
-      if (rowComparator.compareRows(kv.getBuffer(), kv.getRowOffset(),
+      if (rowComparator.compareRows(kv.getRowArray(), kv.getRowOffset(),
           kv.getRowLength(), stopRow, 0, stopRow.length) <= 0) {
         return false;
       } else {
@@ -475,7 +475,7 @@ public class ScanQueryMatcher {
       }
     }
     if (!Bytes.equals(stopRow , HConstants.EMPTY_END_ROW) &&
-        rowComparator.compareRows(kv.getBuffer(),kv.getRowOffset(),
+        rowComparator.compareRows(kv.getRowArray(),kv.getRowOffset(),
             kv.getRowLength(), stopRow, 0, stopRow.length) >= 0) {
       // KV >= STOPROW
       // then NO there is nothing left.
@@ -532,20 +532,20 @@ public class ScanQueryMatcher {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
       return KeyValue.createLastOnRow(
-          kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
-          kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
-          kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength());
+          kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+          kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
+          kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength());
     } else {
       return KeyValue.createFirstOnRow(
-          kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
-          kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
+          kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+          kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
           nextColumn.getBuffer(), nextColumn.getOffset(), nextColumn.getLength());
     }
   }
 
   public KeyValue getKeyForNextRow(KeyValue kv) {
     return KeyValue.createLastOnRow(
-        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
+        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
         null, 0, 0,
         null, 0, 0);
   }

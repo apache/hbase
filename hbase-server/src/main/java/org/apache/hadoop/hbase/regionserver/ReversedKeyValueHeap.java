@@ -76,8 +76,8 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
     KeyValueScanner scanner;
     while ((scanner = heap.poll()) != null) {
       KeyValue topKey = scanner.peek();
-      if (comparator.getComparator().compareRows(topKey.getBuffer(),
-          topKey.getRowOffset(), topKey.getRowLength(), seekKey.getBuffer(),
+      if (comparator.getComparator().compareRows(topKey.getRowArray(),
+          topKey.getRowOffset(), topKey.getRowLength(), seekKey.getRowArray(),
           seekKey.getRowOffset(), seekKey.getRowLength()) < 0) {
         // Row of Top KeyValue is before Seek row.
         heap.add(scanner);

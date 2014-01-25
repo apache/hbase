@@ -201,7 +201,7 @@ public class AccessController extends BaseRegionObserver
       List<Cell> cells = f.getValue();
       for (Cell cell: cells) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        if (Bytes.equals(kv.getBuffer(), kv.getFamilyOffset(),
+        if (Bytes.equals(kv.getFamilyArray(), kv.getFamilyOffset(),
             kv.getFamilyLength(), AccessControlLists.ACL_LIST_FAMILY, 0,
             AccessControlLists.ACL_LIST_FAMILY.length)) {
           entries.add(kv.getRow());
@@ -610,13 +610,12 @@ public class AccessController extends BaseRegionObserver
         // Ensure KeyValue so we can do a scatter gather copy. This is only a win if the
         // incoming cell type is actually KeyValue.
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        byte[] bytes = kv.getBuffer();
         newCells.add(
-          new KeyValue(bytes, kv.getRowOffset(), kv.getRowLength(),
-            bytes, kv.getFamilyOffset(), kv.getFamilyLength(),
-            bytes, kv.getQualifierOffset(), kv.getQualifierLength(),
+          new KeyValue(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+            kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
+            kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength(),
             kv.getTimestamp(), KeyValue.Type.codeToType(kv.getTypeByte()),
-            bytes, kv.getValueOffset(), kv.getValueLength(),
+            kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(),
             tags));
       }
       // This is supposed to be safe, won't CME
@@ -1349,12 +1348,11 @@ public class AccessController extends BaseRegionObserver
     // We need to create another KV, unfortunately, because the current new KV
     // has no space for tags
     KeyValue newKv = KeyValueUtil.ensureKeyValue(newCell);
-    byte[] bytes = newKv.getBuffer();
-    KeyValue rewriteKv = new KeyValue(bytes, newKv.getRowOffset(), newKv.getRowLength(),
-      bytes, newKv.getFamilyOffset(), newKv.getFamilyLength(),
-      bytes, newKv.getQualifierOffset(), newKv.getQualifierLength(),
+    KeyValue rewriteKv = new KeyValue(newKv.getRowArray(), newKv.getRowOffset(), newKv.getRowLength(),
+      newKv.getFamilyArray(), newKv.getFamilyOffset(), newKv.getFamilyLength(),
+      newKv.getQualifierArray(), newKv.getQualifierOffset(), newKv.getQualifierLength(),
       newKv.getTimestamp(), KeyValue.Type.codeToType(newKv.getTypeByte()),
-      bytes, newKv.getValueOffset(), newKv.getValueLength(),
+      newKv.getValueArray(), newKv.getValueOffset(), newKv.getValueLength(),
       tags);
     // Preserve mvcc data
     rewriteKv.setMvccVersion(newKv.getMvccVersion());
