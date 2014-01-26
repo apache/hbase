@@ -60,8 +60,6 @@ public class MiniZooKeeperCluster {
   /** The default port. If zero, we use a random port. */
   private int defaultClientPort = 0;
 
-  private int clientPort;
-
   private List<NIOServerCnxnFactory> standaloneServerFactoryList;
   private List<ZooKeeperServer> zooKeeperServers;
   private List<Integer> clientPortList;
@@ -196,7 +194,7 @@ public class MiniZooKeeperCluster {
     // set the first one to be active ZK; Others are backups
     activeZKServerIndex = 0;
     started = true;
-    clientPort = clientPortList.get(activeZKServerIndex);
+    int clientPort = clientPortList.get(activeZKServerIndex);
     LOG.info("Started MiniZK Cluster and connect 1 ZK server " +
         "on client port: " + clientPort);
     return clientPort;
@@ -394,6 +392,7 @@ public class MiniZooKeeperCluster {
   }
 
   public int getClientPort() {
-    return clientPort;
+    return activeZKServerIndex < 0 || activeZKServerIndex >= clientPortList.size() ? -1
+        : clientPortList.get(activeZKServerIndex);
   }
 }

@@ -162,8 +162,15 @@ public class TestHBaseTestingUtility {
       assertEquals(4, cluster2.getBackupZooKeeperServerNum());
 
       // killing the current active zk server
-      assertTrue((cluster2.killCurrentActiveZooKeeperServer() >= defaultClientPort));
-      assertTrue((cluster2.killCurrentActiveZooKeeperServer() >= defaultClientPort));
+      int currentActivePort = cluster2.killCurrentActiveZooKeeperServer();
+      assertTrue(currentActivePort >= defaultClientPort);
+      // Check if the client port is returning a proper value
+      assertTrue(cluster2.getClientPort() == currentActivePort);
+
+      // kill another active zk server
+      currentActivePort = cluster2.killCurrentActiveZooKeeperServer();
+      assertTrue(currentActivePort >= defaultClientPort);
+      assertTrue(cluster2.getClientPort() == currentActivePort);      
       assertEquals(2, cluster2.getBackupZooKeeperServerNum());
       assertEquals(3, cluster2.getZooKeeperServerNum());
 
@@ -174,7 +181,9 @@ public class TestHBaseTestingUtility {
       assertEquals(1, cluster2.getZooKeeperServerNum());
 
       // killing the last zk server
-      assertTrue((cluster2.killCurrentActiveZooKeeperServer() == -1));
+      currentActivePort = cluster2.killCurrentActiveZooKeeperServer();
+      assertTrue(currentActivePort == -1);
+      assertTrue(cluster2.getClientPort() == currentActivePort);
       // this should do nothing.
       cluster2.killOneBackupZooKeeperServer();
       assertEquals(-1, cluster2.getBackupZooKeeperServerNum());
