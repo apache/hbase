@@ -18,23 +18,23 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -52,17 +52,6 @@ public class TestLogRollAbort {
   private static HBaseAdmin admin;
   private static MiniHBaseCluster cluster;
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
-  // verbose logging on classes that are touched in these tests
-  {
-    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.server.namenode.FSNamesystem"))
-        .getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)HRegionServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)HRegion.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)HLog.LOG).getLogger().setLevel(Level.ALL);
-  }
 
   // Need to override this setup so we can edit the config before it gets sent
   // to the HDFS & HBase cluster startup.
@@ -120,41 +109,45 @@ public class TestLogRollAbort {
 
     // Create the test table and open it
     String tableName = this.getClass().getSimpleName();
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    desc.setAsyncLogFlush(true);
 
     admin.createTable(desc);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    try {
 
-    HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
-    HLog log = server.getWAL();
+      HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
+      HLog log = server.getWAL();
 
-    assertTrue("Need HDFS-826 for this test", ((FSHLog) log).canGetCurReplicas());
-    // don't run this test without append support (HDFS-200 & HDFS-142)
-    assertTrue("Need append support for this test",
+      assertTrue("Need HDFS-826 for this test", ((FSHLog) log).canGetCurReplicas());
+      // don't run this test without append support (HDFS-200 & HDFS-142)
+      assertTrue("Need append support for this test",
         FSUtils.isAppendSupported(TEST_UTIL.getConfiguration()));
 
-    Put p = new Put(Bytes.toBytes("row2001"));
-    p.add(HConstants.CATALOG_FAMILY, Bytes.toBytes("col"), Bytes.toBytes(2001));
-    table.put(p);
+      Put p = new Put(Bytes.toBytes("row2001"));
+      p.add(HConstants.CATALOG_FAMILY, Bytes.toBytes("col"), Bytes.toBytes(2001));
+      table.put(p);
 
-    log.sync();
+      log.sync();
 
-    p = new Put(Bytes.toBytes("row2002"));
-    p.add(HConstants.CATALOG_FAMILY, Bytes.toBytes("col"), Bytes.toBytes(2002));
-    table.put(p);
+      p = new Put(Bytes.toBytes("row2002"));
+      p.add(HConstants.CATALOG_FAMILY, Bytes.toBytes("col"), Bytes.toBytes(2002));
+      table.put(p);
 
-    dfsCluster.restartDataNodes();
-    LOG.info("Restarted datanodes");
+      dfsCluster.restartDataNodes();
+      LOG.info("Restarted datanodes");
 
-    try {
-      log.rollWriter(true);
-    } catch (FailedLogCloseException flce) {
-      assertTrue("Should have deferred flush log edits outstanding",
-          ((FSHLog) log).hasUnSyncedEntries());
+      try {
+        log.rollWriter(true);
+      } catch (FailedLogCloseException flce) {
+        // Expected exception.  We used to expect that there would be unsynced appends but this
+        // not reliable now that sync plays a roll in wall rolling.  The above puts also now call
+        // sync.
+      } catch (Throwable t) {
+        LOG.fatal("FAILED TEST: Got wrong exception", t);
+      }
+    } finally {
+      table.close();
     }
   }
-
 }
-

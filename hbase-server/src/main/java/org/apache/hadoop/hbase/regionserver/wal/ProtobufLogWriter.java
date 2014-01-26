@@ -64,7 +64,8 @@ public class ProtobufLogWriter extends WriterBase {
 
   @Override
   @SuppressWarnings("deprecation")
-  public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable) throws IOException {
+  public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable)
+  throws IOException {
     super.init(fs, path, conf, overwritable);
     assert this.output == null;
     boolean doCompress = initializeCompressionContext(conf, path);
@@ -99,8 +100,8 @@ public class ProtobufLogWriter extends WriterBase {
   @Override
   public void append(HLog.Entry entry) throws IOException {
     entry.setCompressionContext(compressionContext);
-    entry.getKey().getBuilder(compressor).setFollowingKvCount(entry.getEdit().size())
-      .build().writeDelimitedTo(output);
+    entry.getKey().getBuilder(compressor).
+      setFollowingKvCount(entry.getEdit().size()).build().writeDelimitedTo(output);
     for (KeyValue kv : entry.getEdit().getKeyValues()) {
       // cellEncoder must assume little about the stream, since we write PB and cells in turn.
       cellEncoder.write(kv);

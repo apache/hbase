@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -57,8 +59,9 @@ public class TestParallelPut {
   static final Log LOG = LogFactory.getLog(TestParallelPut.class);
   @Rule public TestName name = new TestName(); 
   
-  private static HRegion region = null;
-  private static HBaseTestingUtility hbtu = new HBaseTestingUtility();
+  private HRegion region = null;
+  private static HBaseTestingUtility HBTU = new HBaseTestingUtility();
+  private static final int THREADS100 = 100;
 
   // Test names
   static byte[] tableName;
@@ -69,6 +72,13 @@ public class TestParallelPut {
   static final byte[] value2 = Bytes.toBytes("value2");
   static final byte [] row = Bytes.toBytes("rowA");
   static final byte [] row2 = Bytes.toBytes("rowB");
+
+  @BeforeClass
+  public static void beforeClass() {
+    // Make sure enough handlers.
+    HBTU.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, THREADS100);
+  }
+
 
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
@@ -81,6 +91,7 @@ public class TestParallelPut {
   @After
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
+    if (region != null) region.close(true);
   }
   
   public String getName() {
@@ -98,7 +109,7 @@ public class TestParallelPut {
   @Test
   public void testPut() throws IOException {
     LOG.info("Starting testPut");
-    initHRegion(tableName, getName(), fam1);
+    this.region = initHRegion(tableName, getName(), fam1);
 
     long value = 1L;
 
@@ -106,7 +117,7 @@ public class TestParallelPut {
     put.add(fam1, qual1, Bytes.toBytes(value));
     region.put(put);
 
-    assertGet(row, fam1, qual1, Bytes.toBytes(value));
+    assertGet(this.region, row, fam1, qual1, Bytes.toBytes(value));
   }
 
   /**
@@ -116,25 +127,25 @@ public class TestParallelPut {
   public void testParallelPuts() throws IOException {
 
     LOG.info("Starting testParallelPuts");
-    initHRegion(tableName, getName(), fam1);
+
+    this.region = initHRegion(tableName, getName(), fam1);
     int numOps = 1000; // these many operations per thread
 
     // create 100 threads, each will do its own puts
-    int numThreads = 100;
-    Putter[] all = new Putter[numThreads];
+    Putter[] all = new Putter[THREADS100];
 
     // create all threads
-    for (int i = 0; i < numThreads; i++) {
+    for (int i = 0; i < THREADS100; i++) {
       all[i] = new Putter(region, i, numOps);
     }
 
     // run all threads
-    for (int i = 0; i < numThreads; i++) {
+    for (int i = 0; i < THREADS100; i++) {
       all[i].start();
     }
 
     // wait for all threads to finish
-    for (int i = 0; i < numThreads; i++) {
+    for (int i = 0; i < THREADS100; i++) {
       try {
         all[i].join();
       } catch (InterruptedException e) {
@@ -143,14 +154,12 @@ public class TestParallelPut {
       }
     }
     LOG.info("testParallelPuts successfully verified " + 
-             (numOps * numThreads) + " put operations.");
+             (numOps * THREADS100) + " put operations.");
   }
 
 
-  static private void assertGet(byte [] row,
-                         byte [] familiy,
-                         byte[] qualifier,
-                         byte[] value) throws IOException {
+  private static void assertGet(final HRegion region, byte [] row, byte [] familiy,
+      byte[] qualifier, byte[] value) throws IOException {
     // run a get and see if the value matches
     Get get = new Get(row);
     get.addColumn(familiy, qualifier);
@@ -162,7 +171,7 @@ public class TestParallelPut {
     assertTrue(Bytes.compareTo(r, value) == 0);
   }
 
-  private void initHRegion(byte [] tableName, String callingMethod,
+  private HRegion initHRegion(byte [] tableName, String callingMethod,
     byte[] ... families)
   throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
@@ -170,7 +179,7 @@ public class TestParallelPut {
       htd.addFamily(new HColumnDescriptor(family));
     }
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    region = hbtu.createLocalHRegion(info, htd);
+    return HBTU.createLocalHRegion(info, htd);
   }
 
   /**
@@ -211,7 +220,7 @@ public class TestParallelPut {
           OperationStatus[] ret = region.batchMutate(in);
           assertEquals(1, ret.length);
           assertEquals(OperationStatusCode.SUCCESS, ret[0].getOperationStatusCode());
-          assertGet(rowkey, fam1, qual1, value);
+          assertGet(this.region, rowkey, fam1, qual1, value);
         } catch (IOException e) {
           assertTrue("Thread id " + threadNumber + " operation " + i + " failed.",
                      false);
@@ -219,6 +228,4 @@ public class TestParallelPut {
       }
     }
   }
-
 }
-

@@ -189,7 +189,7 @@ public class HLogUtil {
       serverName = ServerName.parseServerName(logDirName);
     } catch (IllegalArgumentException ex) {
       serverName = null;
-      LOG.warn("Invalid log file path=" + logFile, ex);
+      LOG.warn("Cannot parse a server name from path=" + logFile + "; " + ex.getMessage());
     }
     if (serverName != null && serverName.getStartcode() < 0) {
       LOG.warn("Invalid log file path=" + logFile);
@@ -266,9 +266,9 @@ public class HLogUtil {
     WALEdit e = WALEdit.createCompaction(c);
     long now = EnvironmentEdgeManager.currentTimeMillis();
     TableName tn = TableName.valueOf(c.getTableName().toByteArray());
-    long txid = log.appendNoSync(info, tn, e, new ArrayList<UUID>(), now, htd, sequenceId,
-        false, HConstants.NO_NONCE, HConstants.NO_NONCE);
-    log.sync(txid);
+    log.appendNoSync(info, tn, e, new ArrayList<UUID>(), now, htd, sequenceId, false,
+      HConstants.NO_NONCE, HConstants.NO_NONCE);
+    log.sync();
 
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));

@@ -91,18 +91,6 @@ public class TestLogRolling  {
   private MiniHBaseCluster cluster;
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
- // verbose logging on classes that are touched in these tests
- {
-   ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.server.namenode.FSNamesystem"))
-     .getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)HRegionServer.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)HRegion.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)HLog.LOG).getLogger().setLevel(Level.ALL);
- }
-
   /**
    * constructor
    * @throws Exception
@@ -135,8 +123,7 @@ public class TestLogRolling  {
     // We roll the log after every 32 writes
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.maxlogentries", 32);
 
-    TEST_UTIL.getConfiguration().setInt(
-        "hbase.regionserver.logroll.errors.tolerated", 2);
+    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.logroll.errors.tolerated", 2);
     TEST_UTIL.getConfiguration().setInt("ipc.ping.interval", 10 * 1000);
     TEST_UTIL.getConfiguration().setInt("ipc.socket.timeout", 10 * 1000);
     TEST_UTIL.getConfiguration().setInt("hbase.rpc.timeout", 10 * 1000);
@@ -162,13 +149,11 @@ public class TestLogRolling  {
    // quickly detects datanode failures
     TEST_UTIL.getConfiguration().setInt("heartbeat.recheck.interval", 5000);
     TEST_UTIL.getConfiguration().setInt("dfs.heartbeat.interval", 1);
-   // the namenode might still try to choose the recently-dead datanode
-   // for a pipeline, so try to a new pipeline multiple times
-    TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 30);
-    TEST_UTIL.getConfiguration().setInt(
-        "hbase.regionserver.hlog.tolerable.lowreplication", 2);
-    TEST_UTIL.getConfiguration().setInt(
-        "hbase.regionserver.hlog.lowreplication.rolllimit", 3);
+    // the namenode might still try to choose the recently-dead datanode
+    // for a pipeline, so try to a new pipeline multiple times
+     TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 30);
+    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.hlog.tolerable.lowreplication", 2);
+    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.hlog.lowreplication.rolllimit", 3);
   }
 
   @Before
@@ -220,6 +205,7 @@ public class TestLogRolling  {
   @Test
   public void testLogRolling() throws Exception {
     this.tableName = getName();
+      // TODO: Why does this write data take for ever?
       startAndWriteData();
       LOG.info("after writing there are " + ((FSHLog) log).getNumRolledLogFiles() + " log files");
 
@@ -322,6 +308,7 @@ public class TestLogRolling  {
    */
   @Test
   public void testLogRollOnDatanodeDeath() throws Exception {
+    TEST_UTIL.ensureSomeRegionServersAvailable(2);
     assertTrue("This test requires HLog file replication set to 2.",
       fs.getDefaultReplication() == 2);
     LOG.info("Replication=" + fs.getDefaultReplication());
@@ -363,7 +350,7 @@ public class TestLogRolling  {
 
     assertTrue("DataNodes " + dfsCluster.getDataNodes().size() +
         " default replication " + fs.getDefaultReplication(),
-      dfsCluster.getDataNodes().size() >= fs.getDefaultReplication() + 1);
+    dfsCluster.getDataNodes().size() >= fs.getDefaultReplication() + 1);
 
     writeData(table, 2);
 

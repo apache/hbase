@@ -1229,7 +1229,7 @@ public class TestDistributedLogSplitting {
       WALEdit e = new WALEdit();
       value++;
       e.add(new KeyValue(row, family, qualifier, timeStamp, Bytes.toBytes(value)));
-      hrs.getWAL().append(curRegionInfo, TableName.valueOf(tableName), e, 
+      hrs.getWAL().append(curRegionInfo, TableName.valueOf(tableName), e,
         System.currentTimeMillis(), htd, sequenceId);
     }
     hrs.getWAL().sync();

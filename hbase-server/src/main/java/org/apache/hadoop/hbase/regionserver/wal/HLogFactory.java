@@ -59,8 +59,8 @@ public class HLogFactory {
     public static HLog createMetaHLog(final FileSystem fs, final Path root, final String logName,
         final Configuration conf, final List<WALActionsListener> listeners,
         final String prefix) throws IOException {
-      return new FSHLog(fs, root, logName, HConstants.HREGION_OLDLOGDIR_NAME, 
-            conf, listeners, false, prefix, true);
+      return new FSHLog(fs, root, logName, HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners,
+        false, prefix, true);
     }
 
     /*

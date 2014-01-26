@@ -54,8 +54,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.core.Histogram;
+import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.reporting.ConsoleReporter;
 
@@ -71,9 +71,16 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
   private final Meter syncMeter =
     metrics.newMeter(HLogPerformanceEvaluation.class, "syncMeter", "syncs", TimeUnit.MILLISECONDS);
   private final Histogram syncHistogram =
-    metrics.newHistogram(HLogPerformanceEvaluation.class, "syncHistogram", "nanos-between-syncs", true);
+    metrics.newHistogram(HLogPerformanceEvaluation.class, "syncHistogram", "nanos-between-syncs",
+      true);
+  private final Histogram syncCountHistogram =
+      metrics.newHistogram(HLogPerformanceEvaluation.class, "syncCountHistogram", "countPerSync",
+        true);
   private final Meter appendMeter =
-    metrics.newMeter(HLogPerformanceEvaluation.class, "appendMeter", "bytes", TimeUnit.MILLISECONDS);
+    metrics.newMeter(HLogPerformanceEvaluation.class, "appendMeter", "bytes",
+      TimeUnit.MILLISECONDS);
+  private final Histogram latencyHistogram =
+    metrics.newHistogram(HLogPerformanceEvaluation.class, "latencyHistogram", "nanos", true);
 
   private HBaseTestingUtility TEST_UTIL;
 
@@ -127,8 +134,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
         long startTime = System.currentTimeMillis();
         int lastSync = 0;
         for (int i = 0; i < numIterations; ++i) {
+          long now = System.nanoTime();
           Put put = setupPut(rand, key, value, numFamilies);
-          long now = System.currentTimeMillis();
           WALEdit walEdit = new WALEdit();
           addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
           HRegionInfo hri = region.getRegionInfo();
@@ -140,6 +147,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
               lastSync = 0;
             }
           }
+          latencyHistogram.update(System.nanoTime() - now);
         }
         long totalTime = (System.currentTimeMillis() - startTime);
         logBenchmarkResult(Thread.currentThread().getName(), numIterations, totalTime);
@@ -231,6 +239,10 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       conf.set(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, cipher);
     }
 
+    // Internal config. goes off number of threads; if more threads than handlers, stuff breaks.
+    // In regionserver, number of handlers == number of threads.
+    getConf().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, numThreads);
+
     // Run HLog Performance Evaluation
     // First set the fs from configs.  In case we are on hadoop1
     FSUtils.setFsDefault(getConf(), FSUtils.getRootDir(getConf()));
@@ -245,47 +257,72 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       // Initialize Table Descriptor
       HTableDescriptor htd = createHTableDescriptor(numFamilies);
       final long whenToRoll = roll;
-      HLog hlog = new FSHLog(fs, rootRegionDir, "wals", getConf()) {
-        int appends = 0;
-	long lastSync = 0;
+      final HLog hlog = new FSHLog(fs, rootRegionDir, "wals", getConf()) {
 
         @Override
-        protected void doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit,
-            HTableDescriptor htd)
-        throws IOException {
+        public void postSync(final long timeInNanos, final int handlerSyncs) {
+          super.postSync(timeInNanos, handlerSyncs);
+          syncMeter.mark();
+          syncHistogram.update(timeInNanos);
+          syncCountHistogram.update(handlerSyncs);
+        }
+
+        @Override
+        public long postAppend(final HLog.Entry entry, final long elapsedTime) {
+          long size = super.postAppend(entry, elapsedTime);
+          appendMeter.mark(size);
+          return size;
+        }
+      };
+      hlog.registerWALActionsListener(new WALActionsListener() {
+        private int appends = 0;
+
+        @Override
+        public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey,
+            WALEdit logEdit) {
           this.appends++;
           if (this.appends % whenToRoll == 0) {
             LOG.info("Rolling after " + appends + " edits");
-            rollWriter();
+            // We used to do explicit call to rollWriter but changed it to a request
+            // to avoid dead lock (there are less threads going on in this class than
+            // in the regionserver -- regionserver does not have the issue).
+            ((FSHLog)hlog).requestLogRoll();
           }
-          super.doWrite(info, logKey, logEdit, htd);
-        };
-
-        @Override
-        public void postSync() {
-          super.postSync();
-          syncMeter.mark();
-          long now = System.nanoTime();
-          if (lastSync > 0) {
-            long diff = now - lastSync;
-            syncHistogram.update(diff);
-          }
-          this.lastSync = now;
         }
 
         @Override
-        public void postAppend(List<Entry> entries) {
-          super.postAppend(entries);
-          int size = 0;
-          for (Entry e: entries) size += e.getEdit().heapSize();
-          appendMeter.mark(size);
+        public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit) {
         }
-      };
+
+        @Override
+        public void preLogRoll(Path oldPath, Path newPath) throws IOException {
+        }
+
+        @Override
+        public void preLogArchive(Path oldPath, Path newPath) throws IOException {
+        }
+
+        @Override
+        public void postLogRoll(Path oldPath, Path newPath) throws IOException {
+        }
+
+        @Override
+        public void postLogArchive(Path oldPath, Path newPath) throws IOException {
+        }
+
+        @Override
+        public void logRollRequested() {
+        }
+
+        @Override
+        public void logCloseRequested() {
+        }
+      });
       hlog.rollWriter();
       HRegion region = null;
       try {
         region = openRegion(fs, rootRegionDir, htd, hlog);
-        ConsoleReporter.enable(this.metrics, 60, TimeUnit.SECONDS);
+        ConsoleReporter.enable(this.metrics, 30, TimeUnit.SECONDS);
         long putTime =
           runBenchmark(new HLogPutBenchmark(region, htd, numIterations, noSync, syncInterval),
             numThreads);
@@ -391,21 +428,27 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     System.err.println("  -nocleanup       Do NOT remove test data when done.");
     System.err.println("  -noclosefs       Do NOT close the filesystem when done.");
     System.err.println("  -nosync          Append without syncing");
-    System.err.println("  -syncInterval <N> Append N edits and then sync. Default=0, i.e. sync every edit.");
+    System.err.println("  -syncInterval <N> Append N edits and then sync. " +
+      "Default=0, i.e. sync every edit.");
     System.err.println("  -verify          Verify edits written in sequence");
-    System.err.println("  -verbose         Output extra info; e.g. all edit seq ids when verifying");
+    System.err.println("  -verbose         Output extra info; " +
+      "e.g. all edit seq ids when verifying");
     System.err.println("  -roll <N>        Roll the way every N appends");
     System.err.println("  -encryption <A>  Encrypt the WAL with algorithm A, e.g. AES");
     System.err.println("");
     System.err.println("Examples:");
     System.err.println("");
-    System.err.println(" To run 100 threads on hdfs with log rolling every 10k edits and verification afterward do:");
-    System.err.println(" $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLogPerformanceEvaluation \\");
-    System.err.println("    -conf ./core-site.xml -path hdfs://example.org:7000/tmp -threads 100 -roll 10000 -verify");
+    System.err.println(" To run 100 threads on hdfs with log rolling every 10k edits and " +
+      "verification afterward do:");
+    System.err.println(" $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal." +
+      "HLogPerformanceEvaluation \\");
+    System.err.println("    -conf ./core-site.xml -path hdfs://example.org:7000/tmp " +
+      "-threads 100 -roll 10000 -verify");
     System.exit(1);
   }
 
-  private HRegion openRegion(final FileSystem fs, final Path dir, final HTableDescriptor htd, final HLog hlog)
+  private HRegion openRegion(final FileSystem fs, final Path dir, final HTableDescriptor htd,
+      final HLog hlog)
   throws IOException {
     // Initialize HRegion
     HRegionInfo regionInfo = new HRegionInfo(htd.getTableName());

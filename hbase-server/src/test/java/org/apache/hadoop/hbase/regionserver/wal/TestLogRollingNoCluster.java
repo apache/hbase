@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -54,8 +55,9 @@ public class TestLogRollingNoCluster {
   public void testContendedLogRolling() throws IOException, InterruptedException {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     Path dir = TEST_UTIL.getDataTestDir();
-    HLog wal = HLogFactory.createHLog(fs, dir, "logs",
-      TEST_UTIL.getConfiguration());
+    // The implementation needs to know the 'handler' count.
+    TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, THREAD_COUNT);
+    HLog wal = HLogFactory.createHLog(fs, dir, "logs", TEST_UTIL.getConfiguration());
     
     Appender [] appenders = null;
 
@@ -122,7 +124,6 @@ public class TestLogRollingNoCluster {
           WALEdit edit = new WALEdit();
           byte[] bytes = Bytes.toBytes(i);
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
-
           this.wal.append(HRegionInfo.FIRST_META_REGIONINFO,
               HTableDescriptor.META_TABLEDESC.getTableName(),
               edit, now, HTableDescriptor.META_TABLEDESC, sequenceId);
@@ -135,6 +136,13 @@ public class TestLogRollingNoCluster {
       } catch (Exception e) {
         this.e = e;
         log.info("Caught exception from Appender:" + getName(), e);
+      } finally {
+        // Call sync on our log.else threads just hang out.
+        try {
+          this.wal.sync();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       }
     }
   }

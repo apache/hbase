@@ -24,6 +24,8 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -54,6 +56,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestHLogRecordReader {
+  private final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
   private static FileSystem fs;
@@ -113,6 +116,8 @@ public class TestHLogRecordReader {
   @Test
   public void testPartialRead() throws Exception {
     HLog log = HLogFactory.createHLog(fs, hbaseDir, logName, conf);
+    // This test depends on timestamp being millisecond based and the filename of the WAL also
+    // being millisecond based.
     long ts = System.currentTimeMillis();
     WALEdit edit = new WALEdit();
     final AtomicLong sequenceId = new AtomicLong(0);
@@ -121,7 +126,9 @@ public class TestHLogRecordReader {
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), ts+1, value));
     log.append(info, tableName, edit, ts+1, htd, sequenceId);
+    LOG.info("Before 1st WAL roll " + log.getFilenum());
     log.rollWriter();
+    LOG.info("Past 1st WAL roll " + log.getFilenum());
 
     Thread.sleep(1);
     long ts1 = System.currentTimeMillis();
@@ -133,7 +140,9 @@ public class TestHLogRecordReader {
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("4"), ts1+2, value));
     log.append(info, tableName, edit, ts1+2, htd, sequenceId);
     log.close();
+    LOG.info("Closed WAL " + log.getFilenum());
 
+ 
     HLogInputFormat input = new HLogInputFormat();
     Configuration jobConf = new Configuration(conf);
     jobConf.set("mapred.input.dir", logDir.toString());
@@ -141,6 +150,7 @@ public class TestHLogRecordReader {
 
     // only 1st file is considered, and only its 1st entry is used
     List<InputSplit> splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
+
     assertEquals(1, splits.size());
     testSplit(splits.get(0), Bytes.toBytes("1"));
 

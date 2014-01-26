@@ -85,12 +85,10 @@ public class TestHLog  {
 
   @Before
   public void setUp() throws Exception {
-
     FileStatus[] entries = fs.listStatus(new Path("/"));
     for (FileStatus dir : entries) {
       fs.delete(dir.getPath(), true);
     }
-
   }
 
   @After
@@ -127,6 +125,7 @@ public class TestHLog  {
     oldLogDir = new Path(hbaseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     dir = new Path(hbaseDir, getName());
   }
+
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
@@ -158,13 +157,11 @@ public class TestHLog  {
    */
   @Test
   public void testSplit() throws IOException {
-
     final TableName tableName =
         TableName.valueOf(getName());
     final byte [] rowName = tableName.getName();
     Path logdir = new Path(hbaseDir, HConstants.HREGION_LOGDIR_NAME);
-    HLog log = HLogFactory.createHLog(fs, hbaseDir,
-        HConstants.HREGION_LOGDIR_NAME, conf);
+    HLog log = HLogFactory.createHLog(fs, hbaseDir, HConstants.HREGION_LOGDIR_NAME, conf);
     final int howmany = 3;
     HRegionInfo[] infos = new HRegionInfo[3];
     Path tabledir = FSUtils.getTableDir(hbaseDir, tableName);
@@ -199,8 +196,7 @@ public class TestHLog  {
         log.rollWriter();
       }
       log.close();
-      List<Path> splits = HLogSplitter.split(
-        hbaseDir, logdir, oldLogDir, fs, conf);
+      List<Path> splits = HLogSplitter.split(hbaseDir, logdir, oldLogDir, fs, conf);
       verifySplits(splits, howmany);
       log = null;
     } finally {

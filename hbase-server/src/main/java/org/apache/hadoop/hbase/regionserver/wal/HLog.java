@@ -42,7 +42,9 @@ import org.apache.hadoop.io.Writable;
 
 import com.google.common.annotations.VisibleForTesting;
 
-
+/**
+ * HLog records all the edits to HStore.  It is the hbase write-ahead-log (WAL).
+ */
 @InterfaceAudience.Private
 // TODO: Rename interface to WAL
 public interface HLog {
@@ -52,7 +54,8 @@ public interface HLog {
   // TODO: this seems like an implementation detail that does not belong here.
   String SPLITTING_EXT = "-splitting";
   boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
-  /** The hbase:meta region's HLog filename extension */
+  /** The hbase:meta region's HLog filename extension.*/
+  // TODO: Implementation detail.  Does not belong in here.
   String META_HLOG_FILE_EXTN = ".meta";
 
   /**
@@ -63,12 +66,14 @@ public interface HLog {
   String WAL_TRAILER_WARN_SIZE = "hbase.regionserver.waltrailer.warn.size";
   int DEFAULT_WAL_TRAILER_WARN_SIZE = 1024 * 1024; // 1MB
 
-  // TODO: Implemenation detail.  Why in here?
+  // TODO: Implementation detail.  Why in here?
   Pattern EDITFILES_NAME_PATTERN = Pattern.compile("-?[0-9]+");
   String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
 
+  /**
+   * WAL Reader Interface
+   */
   interface Reader {
-
     /**
      * @param fs File system.
      * @param path Path.
@@ -90,12 +95,16 @@ public interface HLog {
 
     /**
      * @return the WALTrailer of the current HLog. It may be null in case of legacy or corrupt WAL
-     *         files.
+     * files.
      */
-    // TODO: What we need a trailer on WAL for?
+    // TODO: What we need a trailer on WAL for?  It won't be present on last WAL most of the time.
+    // What then?
     WALTrailer getWALTrailer();
   }
 
+  /**
+   * WAL Writer Intrface.
+   */
   interface Writer {
     void init(FileSystem fs, Path path, Configuration c, boolean overwritable) throws IOException;
 
@@ -108,17 +117,19 @@ public interface HLog {
     long getLength() throws IOException;
 
     /**
-     * Sets HLog's WALTrailer. This trailer is appended at the end of WAL on closing.
+     * Sets HLog/WAL's WALTrailer. This trailer is appended at the end of WAL on closing.
      * @param walTrailer trailer to append to WAL.
      */
+    // TODO: Why a trailer on the log?
     void setWALTrailer(WALTrailer walTrailer);
   }
 
   /**
-   * Utility class that lets us keep track of the edit with it's key.
-   * Only used when splitting logs.
+   * Utility class that lets us keep track of the edit and it's associated key. Only used when
+   * splitting logs.
    */
   // TODO: Remove this Writable.
+  // TODO: Why is this in here?  Implementation detail?
   class Entry implements Writable {
     private WALEdit edit;
     private HLogKey key;
@@ -135,7 +146,6 @@ public interface HLog {
      * @param key log's key
      */
     public Entry(HLogKey key, WALEdit edit) {
-      super();
       this.key = key;
       this.edit = edit;
     }
@@ -161,8 +171,7 @@ public interface HLog {
     /**
      * Set compression context for this entry.
      *
-     * @param compressionContext
-     *          Compression context
+     * @param compressionContext Compression context
      */
     public void setCompressionContext(CompressionContext compressionContext) {
       edit.setCompressionContext(compressionContext);
@@ -189,14 +198,14 @@ public interface HLog {
   }
 
   /**
-   * registers WALActionsListener
+   * Registers WALActionsListener
    *
    * @param listener
    */
   void registerWALActionsListener(final WALActionsListener listener);
 
   /**
-   * unregisters WALActionsListener
+   * Unregisters WALActionsListener
    *
    * @param listener
    */
@@ -217,7 +226,7 @@ public interface HLog {
    * @return the size of HLog files
    */
   long getLogFileSize();
-  
+
   // TODO: Log rolling should not be in this interface.
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
@@ -250,8 +259,7 @@ public interface HLog {
    * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
    * @throws IOException
    */
-  byte[][] rollWriter(boolean force) throws FailedLogCloseException,
-      IOException;
+  byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException;
 
   /**
    * Shut down the log.
@@ -261,43 +269,68 @@ public interface HLog {
   void close() throws IOException;
 
   /**
-   * Shut down the log and delete the log directory
+   * Shut down the log and delete the log directory.
+   * Used by tests only and in rare cases where we need a log just temporarily while bootstrapping
+   * a region or running migrations.
    *
    * @throws IOException
    */
   void closeAndDelete() throws IOException;
 
   /**
-   * Same as appendNoSync(HRegionInfo, TableName, WALEdit, List, long, HTableDescriptor),
+   * Same as {@link #appendNoSync(HRegionInfo, TableName, WALEdit, List, long, HTableDescriptor,
+   *   AtomicLong, boolean, long, long)}
    * except it causes a sync on the log
-   * @param sequenceId of the region.
+   * @param info
+   * @param tableName
+   * @param edits
+   * @param now
+   * @param htd
+   * @param sequenceId
+   * @throws IOException
    */
   @VisibleForTesting
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
       final long now, HTableDescriptor htd, AtomicLong sequenceId) throws IOException;
 
   /**
-   * For notification post append to the writer.
-   * @param entries
+   * For notification post append to the writer.  Used by metrics system at least.
+   * @param entry
+   * @param elapsedTime
+   * @return Size of this append.
    */
-  void postAppend(final List<Entry> entries);
+  long postAppend(final Entry entry, final long elapsedTime);
 
   /**
-   * For notification post writer sync.
+   * For notification post writer sync.  Used by metrics system at least.
+   * @param timeInMillis How long the filesystem sync took in milliseconds.
+   * @param handlerSyncs How many sync handler calls were released by this call to filesystem
+   * sync.
    */
-  void postSync();
+  void postSync(final long timeInMillis, final int handlerSyncs);
 
   /**
-   * Append a set of edits to the log. Log edits are keyed by (encoded) regionName, rowname, and
-   * log-sequence-id. The HLog is not flushed after this transaction is written to the log.
+   * Append a set of edits to the WAL. WAL edits are keyed by (encoded) regionName, rowname, and
+   * log-sequence-id. The WAL is not flushed/sync'd after this transaction completes.
+   * Call {@link #sync()} to flush/sync all outstanding edits/appends.
    * @param info
    * @param tableName
    * @param edits
-   * @param clusterIds The clusters that have consumed the change (for replication)
+   * @param clusterIds
    * @param now
    * @param htd
-   * @param sequenceId of the region
-   * @return txid of this transaction
+   * @param sequenceId A reference to the atomic long the <code>info</code> region is using as
+   * source of its incrementing edits sequence id.  Inside in this call we will increment it and
+   * attach the sequence to the edit we apply the WAL.
+   * @param isInMemstore Always true except for case where we are writing a compaction completion
+   * record into the WAL; in this case the entry is just so we can finish an unfinished compaction
+   * -- it is not an edit for memstore.
+   * @param nonceGroup
+   * @param nonce
+   * @return Returns a 'transaction id'.  Do not use. This is an internal implementation detail and
+   * cannot be respected in all implementations; i.e. the append/sync machine may or may not be
+   * able to sync an explicit edit only (the current default implementation syncs up to the time
+   * of the sync call syncing whatever is behind the sync).
    * @throws IOException
    */
   long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
@@ -311,6 +344,14 @@ public interface HLog {
 
   void sync() throws IOException;
 
+  /**
+   * @param txid Transaction id to sync to.
+   * @throws IOException
+   * @deprecated Since 0.96.2.  Just call {@link #sync()}.  <code>txid</code> should not be allowed
+   * outside the implementation.
+   */
+  // TODO: Why is this exposed?  txid is an internal detail.
+  @Deprecated
   void sync(long txid) throws IOException;
 
   /**
@@ -318,7 +359,7 @@ public interface HLog {
    * in order to be able to do cleanup. This method tells WAL that some region is about
    * to flush memstore.
    *
-   * We stash the oldest seqNum for the region, and let the the next edit inserted in this
+   * <p>We stash the oldest seqNum for the region, and let the the next edit inserted in this
    * region be recorded in {@link #append(HRegionInfo, TableName, WALEdit, long, HTableDescriptor,
    * AtomicLong)} as new oldest seqnum.
    * In case of flush being aborted, we put the stashed value back; in case of flush succeeding,

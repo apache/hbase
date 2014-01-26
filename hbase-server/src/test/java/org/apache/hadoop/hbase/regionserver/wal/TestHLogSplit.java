@@ -1097,7 +1097,7 @@ public class TestHLogSplit {
       }
       // Send the data to HDFS datanodes and close the HDFS writer
       log.sync();
-      ((FSHLog) log).cleanupCurrentWriter(log.getFilenum());
+      ((FSHLog) log).replaceWriter(((FSHLog)log).getOldPath(), null, null, null);
 
       /* code taken from ProcessServerShutdown.process()
        * handles RS shutdowns (as observed by the Master)

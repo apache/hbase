@@ -446,7 +446,11 @@
     <dependency>
       <groupId>org.cloudera.htrace</groupId>
       <artifactId>htrace-core</artifactId>
-   </dependency>
+    </dependency>
+    <dependency>
+      <groupId>com.lmax</groupId>
+      <artifactId>disruptor</artifactId>
+    </dependency>
   </dependencies>
   <profiles>
     <!-- Skip the tests in this module -->

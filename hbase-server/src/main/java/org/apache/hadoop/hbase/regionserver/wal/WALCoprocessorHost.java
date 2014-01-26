@@ -103,6 +103,7 @@ public class WALCoprocessorHost
   public boolean preWALWrite(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
       throws IOException {
     boolean bypass = false;
+    if (this.coprocessors == null || this.coprocessors.isEmpty()) return bypass;
     ObserverContext<WALCoprocessorEnvironment> ctx = null;
     for (WALEnvironment env: coprocessors) {
       if (env.getInstance() instanceof
@@ -136,6 +137,7 @@ public class WALCoprocessorHost
    */
   public void postWALWrite(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
       throws IOException {
+    if (this.coprocessors == null || this.coprocessors.isEmpty()) return;
     ObserverContext<WALCoprocessorEnvironment> ctx = null;
     for (WALEnvironment env: coprocessors) {
       if (env.getInstance() instanceof

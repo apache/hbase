@@ -190,6 +190,14 @@ public class HLogKey implements WritableComparable<HLogKey> {
   }
 
   /**
+   * Allow that the log sequence id to be set post-construction.
+   * @param sequence
+   */
+  void setLogSeqNum(final long sequence) {
+    this.logSeqNum = sequence;
+  }
+
+  /**
    * @return the write time
    */
   public long getWriteTime() {
@@ -439,17 +447,17 @@ public class HLogKey implements WritableComparable<HLogKey> {
     // Do not need to read the clusters information as we are using protobufs from 0.95
   }
 
-  public WALKey.Builder getBuilder(
-      WALCellCodec.ByteStringCompressor compressor) throws IOException {
+  public WALKey.Builder getBuilder(WALCellCodec.ByteStringCompressor compressor)
+  throws IOException {
     WALKey.Builder builder = WALKey.newBuilder();
     if (compressionContext == null) {
       builder.setEncodedRegionName(ZeroCopyLiteralByteString.wrap(this.encodedRegionName));
       builder.setTableName(ZeroCopyLiteralByteString.wrap(this.tablename.getName()));
     } else {
-      builder.setEncodedRegionName(
-          compressor.compress(this.encodedRegionName, compressionContext.regionDict));
+      builder.setEncodedRegionName(compressor.compress(this.encodedRegionName,
+        compressionContext.regionDict));
       builder.setTableName(compressor.compress(this.tablename.getName(),
-          compressionContext.tableDict));
+        compressionContext.tableDict));
     }
     builder.setLogSequenceNumber(this.logSeqNum);
     builder.setWriteTime(writeTime);
@@ -467,7 +475,8 @@ public class HLogKey implements WritableComparable<HLogKey> {
     }
     if (scopes != null) {
       for (Map.Entry<byte[], Integer> e : scopes.entrySet()) {
-        ByteString family = (compressionContext == null) ? ZeroCopyLiteralByteString.wrap(e.getKey())
+        ByteString family = (compressionContext == null) ?
+            ZeroCopyLiteralByteString.wrap(e.getKey())
             : compressor.compress(e.getKey(), compressionContext.familyDict);
         builder.addScopes(FamilyScope.newBuilder()
             .setFamily(family).setScopeType(ScopeType.valueOf(e.getValue())));
