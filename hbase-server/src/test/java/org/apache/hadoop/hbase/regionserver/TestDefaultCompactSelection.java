@@ -130,6 +130,8 @@ public class TestDefaultCompactSelection extends TestCase {
     boolean isRef = false;
     long ageInDisk;
     long sequenceid;
+    TimeRangeTracker timeRangeTracker;
+    long entryCount;
 
     MockStoreFile(long length, long ageInDisk, boolean isRef, long sequenceid) throws IOException {
       super(TEST_UTIL.getTestFileSystem(), TEST_FILE, TEST_UTIL.getConfiguration(),
@@ -159,13 +161,34 @@ public class TestDefaultCompactSelection extends TestCase {
       return this.isRef;
     }
 
+    void setTimeRangeTracker(TimeRangeTracker timeRangeTracker) {
+      this.timeRangeTracker = timeRangeTracker;
+    }
+
+    void setEntries(long entryCount) {
+      this.entryCount = entryCount;
+    }
+
     @Override
     public StoreFile.Reader getReader() {
       final long len = this.length;
+      final TimeRangeTracker timeRange = this.timeRangeTracker;
+      final long entries = this.entryCount;
       return new StoreFile.Reader() {
         @Override
         public long length() {
           return len;
+        }
+
+        @Override
+        public long getMaxTimestamp() {
+          return timeRange == null ? Long.MAX_VALUE
+              : timeRange.maximumTimestamp;
+        }
+
+        @Override
+        public long getEntries() {
+          return entries;
         }
       };
     }
@@ -358,5 +381,30 @@ public class TestDefaultCompactSelection extends TestCase {
     compactEquals(sfCreate(99,99,99,99, 30,26,26,29,25,25), 30, 26, 26);
     // Prefer later compaction if the benefit is significant.
     compactEquals(sfCreate(99,99,99,99, 27,27,27,20,20,20), 20, 20, 20);
+  }
+
+  public void testCompactionEmptyHFile() throws IOException {
+    // Set TTL
+    ScanInfo oldScanInfo = store.getScanInfo();
+    ScanInfo newScanInfo = new ScanInfo(oldScanInfo.getFamily(),
+        oldScanInfo.getMinVersions(), oldScanInfo.getMaxVersions(), 600,
+        oldScanInfo.getKeepDeletedCells(), oldScanInfo.getTimeToPurgeDeletes(),
+        oldScanInfo.getComparator());
+    store.setScanInfo(newScanInfo);
+    // Do not compact empty store file
+    List<StoreFile> candidates = sfCreate(0);
+    for (StoreFile file : candidates) {
+      if (file instanceof MockStoreFile) {
+        MockStoreFile mockFile = (MockStoreFile) file;
+        mockFile.setTimeRangeTracker(new TimeRangeTracker(-1, -1));
+        mockFile.setEntries(0);
+      }
+    }
+    // Test Default compactions
+    CompactionRequest result = ((RatioBasedCompactionPolicy) store.storeEngine
+        .getCompactionPolicy()).selectCompaction(candidates,
+        new ArrayList<StoreFile>(), false, false, false);
+    assertTrue(result.getFiles().size() == 0);
+    store.setScanInfo(oldScanInfo);
   }
 }

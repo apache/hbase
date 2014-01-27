@@ -156,7 +156,11 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
         expiredStoreFiles.add(storeFile);
       }
     }
-
+    if (expiredStoreFiles != null && expiredStoreFiles.size() == 1
+        && expiredStoreFiles.get(0).getReader().getEntries() == 0) {
+      // If just one empty store file, do not select for compaction.
+      return null;
+    }
     return expiredStoreFiles;
   }
 
