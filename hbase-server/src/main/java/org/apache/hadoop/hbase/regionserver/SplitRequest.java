@@ -102,7 +102,7 @@ class SplitRequest implements Runnable {
             parent.getRegionNameAsString() + " -- aborting server";
           // If failed rollback, kill this server to avoid having a hole in table.
           LOG.info(msg, ee);
-          this.server.abort(msg);
+          this.server.abort(msg + " -- Cause: " + ee.getMessage());
         }
         return;
       }
