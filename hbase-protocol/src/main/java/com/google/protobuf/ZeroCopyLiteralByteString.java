@@ -57,7 +57,12 @@ public final class ZeroCopyLiteralByteString extends LiteralByteString {
    * @param buf A buffer from which to extract the array.  This buffer must be
    * actually an instance of a {@code LiteralByteString}.
    */
-  public static byte[] zeroCopyGetBytes(final LiteralByteString buf) {
-    return buf.bytes;
+  public static byte[] zeroCopyGetBytes(final ByteString buf) {
+    if (buf instanceof LiteralByteString) {
+      return ((LiteralByteString) buf).bytes;
+    }
+    throw new UnsupportedOperationException("Need a LiteralByteString, got a "
+                                            + buf.getClass().getName());
   }
+
 }
