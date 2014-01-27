@@ -33,15 +33,20 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
-import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestCompactSelection extends TestCase {
@@ -100,6 +105,8 @@ public class TestCompactSelection extends TestCase {
   static class MockStoreFile extends StoreFile {
     long length = 0;
     boolean isRef = false;
+    TimeRangeTracker timeRangeTracker;
+    long entryCount;
 
     MockStoreFile(long length, boolean isRef) throws IOException {
       super(TEST_UTIL.getTestFileSystem(), TEST_FILE,
@@ -124,13 +131,34 @@ public class TestCompactSelection extends TestCase {
       return this.isRef;
     }
 
+    void setTimeRangeTracker(TimeRangeTracker timeRangeTracker) {
+      this.timeRangeTracker = timeRangeTracker;
+    }
+
+    void setEntries(long entryCount) {
+      this.entryCount = entryCount;
+    }
+
     @Override
     public StoreFile.Reader getReader() {
       final long len = this.length;
+      final TimeRangeTracker timeRange = this.timeRangeTracker;
+      final long entries = this.entryCount;
       return new StoreFile.Reader() {
         @Override
         public long length() {
           return len;
+        }
+
+        @Override
+        public long getMaxTimestamp() {
+          return timeRange == null ? Long.MAX_VALUE
+              : timeRange.maximumTimestamp;
+        }
+
+        @Override
+        public long getEntries() {
+          return entries;
         }
       };
     }
@@ -280,6 +308,23 @@ public class TestCompactSelection extends TestCase {
     LOG.debug("Testing compact selection with off-peak settings (" +
         hourMinusTwo + ", " + hourMinusOne + ")");
     compactEquals(sfCreate(999,50,12,12, 1), 12, 12, 1);
+  }
+
+  public void testCompactionEmptyHFile() throws IOException {
+    // Do not compact empty store file
+    List<StoreFile> candidates = sfCreate(0);
+    for (StoreFile file : candidates) {
+      if (file instanceof MockStoreFile) {
+        MockStoreFile mockFile = (MockStoreFile) file;
+        mockFile.setTimeRangeTracker(new TimeRangeTracker(-1, -1));
+        mockFile.setEntries(0);
+      }
+    }
+    // Test Default compactions
+    CompactSelection compactSelection = new CompactSelection(conf, candidates);
+    CompactSelection result = compactSelection
+        .selectExpiredStoreFilesToCompact(600L);
+    assertTrue(result == null);
   }
 
   @org.junit.Rule

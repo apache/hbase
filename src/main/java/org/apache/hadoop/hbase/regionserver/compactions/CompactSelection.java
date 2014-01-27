@@ -112,6 +112,11 @@ public class CompactSelection {
     }
 
     if (hasExpiredStoreFiles) {
+      if (expiredStoreFiles.size() == 1
+          && expiredStoreFiles.get(0).getReader().getEntries() == 0) {
+        // If just one empty store file, do not select for compaction.
+        return expiredSFSelection;
+      }
       expiredSFSelection = new CompactSelection(conf, expiredStoreFiles);
     }
     return expiredSFSelection;
