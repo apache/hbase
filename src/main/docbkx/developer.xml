@@ -262,11 +262,26 @@ mvn compile -Dcompile-protobuf -Dprotoc.path=/opt/local/bin/protoc
          <title>Making a Release Candidate</title>
          <para>I'll explain by running through the process.  See later in this section for more detail on particular steps.
          </para>
+	 <para>If you are making a point release (for example to quickly address a critical incompatability or security
+             problem) off of a release branch instead of a development branch the tagging instructions are slightly different.
+             I'll prefix those special steps with "Point Release Only".
+	 </para>
+
          <para>I would advise before you go about making a release candidate, do a practise run by deploying a SNAPSHOT.
              Also, make sure builds have been passing recently for the branch from where you are going to take your
              release.  You should also have tried recent branch tips out on a cluster under load running for instance
              our hbase-it integration test suite for a few hours to 'burn in' the near-candidate bits.
          </para>
+	 <note>
+	 <para>Point Release Only: At this point you should make svn copy of the previous release branch (ex: 0.96.1) with
+             the new point release tag (e.g. 0.96.1.1 tag).  Any commits with changes or mentioned below for the point release
+	     should be appled to the new tag. 
+	 </para>
+	 <para><programlisting>
+$ svn copy http://svn.apache.org/repos/asf/hbase/tags/0.96.1 http://svn.apache.org/repos/asf/hbase/tags/0.96.1.1
+$ svn checkout http://svn.apache.org/repos/asf/hbase/tags/0.96.1.1
+	 </programlisting></para>
+	 </note>
          <para>The script <filename>dev-support/make_rc.sh</filename> automates most of this.  It does all but the close of the
              staging repository up in apache maven, the checking of the produced artifacts to ensure they are 'good' -- e.g.
              undoing the produced tarballs, eyeballing them to make sure they look right then starting and checking all is
@@ -333,6 +348,7 @@ $ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 install -DskipTests site assembly:s
 Undo the generated tarball and check it out.  Look at doc. and see if it runs, etc.  Are the set of modules appropriate: e.g. do we have a hbase-hadoop2-compat in the hadoop1 tarball?
 If good, copy the tarball to the above mentioned <emphasis>version directory</emphasis>.
 </para>
+<note><para>Point Release Only: The following step that creates a new tag can be skipped since you've already created the point release tag</para></note>
 <para>I'll tag the release at this point since its looking good.  If we find an issue later, we can delete the tag and start over.  Release needs to be tagged when we do next step.</para>
 <para>Now deploy hadoop1 hbase to mvn. Do the mvn deploy and tgz for a particular version all together in the one go else if you flip between hadoop1 and hadoop2 builds,
 you might mal-publish poms and hbase-default.xml's (the version interpolations won't match).
