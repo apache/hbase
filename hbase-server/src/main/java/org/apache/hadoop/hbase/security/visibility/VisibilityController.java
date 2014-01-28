@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -178,6 +179,10 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       // if running at region
       regionEnv = (RegionCoprocessorEnvironment) env;
       zk = regionEnv.getRegionServerServices().getZooKeeper();
+    } else if (env instanceof RegionServerCoprocessorEnvironment) {
+      throw new RuntimeException(
+          "Visibility controller should not be configured as " +
+          "'hbase.coprocessor.regionserver.classes'.");
     }
 
     // If zk is null or IOException while obtaining auth manager,
