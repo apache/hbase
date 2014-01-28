@@ -250,7 +250,7 @@
         <varname>NONE</varname> for no bloom filters. If
         <varname>ROW</varname>, the hash of the row will be added to the bloom
         on each insert. If <varname>ROWCOL</varname>, the hash of the row +
-        column family + column family qualifier will be added to the bloom on
+        column family name + column family qualifier will be added to the bloom on
         each key insert.</para>
     <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> and
     <xref linkend="blooms"/> for more information or this answer up in quora,
@@ -529,7 +529,7 @@ htable.close();</programlisting></para>
      <section xml:id="blooms">
      <title>Bloom Filters</title>
          <para>Enabling Bloom Filters can save your having to go to disk and
-         can help improve read latencys.</para>
+         can help improve read latencies.</para>
          <para><link xlink:href="http://en.wikipedia.org/wiki/Bloom_filter">Bloom filters</link> were developed over in <link
     xlink:href="https://issues.apache.org/jira/browse/HBASE-1200">HBase-1200
     Add bloomfilters</link>.<footnote>

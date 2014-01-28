@@ -39,14 +39,14 @@
            </inlinemediaobject>
        </link>
     </subtitle>
-    <copyright><year>2013</year><holder>Apache Software Foundation.
+    <copyright><year>2014</year><holder>Apache Software Foundation.
         All Rights Reserved.  Apache Hadoop, Hadoop, MapReduce, HDFS, Zookeeper, HBase, and the HBase project logo are trademarks of the Apache Software Foundation.
         </holder>
     </copyright>
       <abstract>
     <para>This is the official reference guide of
     <link xlink:href="http://www.hbase.org">Apache HBase&#153;</link>,
-    a distributed, versioned, column-oriented database built on top of
+    a distributed, versioned, big data store built on top of
     <link xlink:href="http://hadoop.apache.org/">Apache Hadoop&#153;</link> and
     <link xlink:href="http://zookeeper.apache.org/">Apache ZooKeeper&#153;</link>.
       </para>
@@ -1846,6 +1846,7 @@ rs.close();
              <listitem>Third replica is written on the same rack as the second, but on a different node chosen randomly
              </listitem>
              <listitem>Subsequent replicas are written on random nodes on the cluster
+<footnote><para>See <emphasis>Replica Placement: The First Baby Steps</emphasis> on this page: <link xlink:href="http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html">HDFS Architecture</link></para></footnote>
              </listitem>
            </orderedlist>
           Thus, HBase eventually achieves locality for a region after a flush or a compaction.
@@ -1854,7 +1855,7 @@ rs.close();
           in the region, or the table is compacted and StoreFiles are re-written, they will become "local"
           to the RegionServer.
         </para>
-        <para>For more information, see <link xlink:href="http://hadoop.apache.org/common/docs/r0.20.205.0/hdfs_design.html#Replica+Placement%3A+The+First+Baby+Steps">HDFS Design on Replica Placement</link>
+        <para>For more information, see <emphasis>Replica Placement: The First Baby Steps</emphasis> on this page: <link xlink:href="http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html">HDFS Architecture</link>
         and also Lars George's blog on <link xlink:href="http://www.larsgeorge.com/2010/05/hbase-file-locality-in-hdfs.html">HBase and HDFS locality</link>.
         </para>
       </section>
