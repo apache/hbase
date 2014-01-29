@@ -114,11 +114,15 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
 
   @Override
   protected void initAfterCompression() throws IOException {
-    WALCellCodec codec = SecureWALCellCodec.getCodec(this.conf, decryptor);
-    this.cellDecoder = codec.getDecoder(this.inputStream);
-    // We do not support compression
-    this.compressionContext = null;
-    this.hasCompression = false;
+    if (decryptor != null) {
+      WALCellCodec codec = SecureWALCellCodec.getCodec(this.conf, decryptor);
+      this.cellDecoder = codec.getDecoder(this.inputStream);
+      // We do not support compression with WAL encryption
+      this.compressionContext = null;
+      this.hasCompression = false;
+    } else {
+      super.initAfterCompression();
+    }
   }
 
 }
