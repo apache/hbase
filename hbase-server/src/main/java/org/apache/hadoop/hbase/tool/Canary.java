@@ -425,7 +425,7 @@ public final class Canary implements Tool {
         if(tmpTables.size() > 0) {
           returnTables = tmpTables.toArray(new String[tmpTables.size()]);
         } else {
-          String msg = "No any HTable found, tablePattern:"
+          String msg = "No HTable found, tablePattern:"
               + Arrays.toString(monitorTargets);
           LOG.error(msg);
           this.errorCode = INIT_ERROR_EXIT_CODE;
@@ -729,14 +729,14 @@ public final class Canary implements Tool {
               }
             }
             if (!regExpFound) {
-              LOG.error("No any RegionServerInfo found, regionServerPattern:" + rsName);
+              LOG.info("No RegionServerInfo found, regionServerPattern:" + rsName);
               this.errorCode = INIT_ERROR_EXIT_CODE;
             }
           } else {
             if (fullRsAndRMap.containsKey(rsName)) {
               filteredRsAndRMap.put(rsName, fullRsAndRMap.get(rsName));
             } else {
-              LOG.error("No any RegionServerInfo found, regionServerName:" + rsName);
+              LOG.info("No RegionServerInfo found, regionServerName:" + rsName);
               this.errorCode = INIT_ERROR_EXIT_CODE;
             }
           }
