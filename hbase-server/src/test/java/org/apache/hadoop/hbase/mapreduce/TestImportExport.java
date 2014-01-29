@@ -40,11 +40,13 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -56,6 +58,10 @@ import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.Import.KeyValueImporter;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Job;
@@ -353,6 +359,13 @@ public class TestImportExport {
     p.add(FAMILYA, QUAL, now + 4, QUAL);
     exportTable.put(p);
 
+    // Having another row would actually test the filter.
+    p = new Put(ROW2);
+    p.add(FAMILYA, QUAL, now, QUAL);
+    exportTable.put(p);
+    // Flush the commits.
+    exportTable.flushCommits();
+
     // Export the simple table
     String[] args = new String[] { EXPORT_TABLE, FQ_OUTPUT_DIR, "1000" };
     assertTrue(runExport(args));
@@ -512,7 +525,7 @@ public class TestImportExport {
    * parameters into Configuration
    */
   @Test
-  public void testAddFilterAndArguments() {
+  public void testAddFilterAndArguments() throws IOException {
     Configuration configuration = new Configuration();
 
     List<String> args = new ArrayList<String>();
@@ -524,4 +537,120 @@ public class TestImportExport {
         configuration.get(Import.FILTER_CLASS_CONF_KEY));
     assertEquals("param1,param2", configuration.get(Import.FILTER_ARGS_CONF_KEY));
   }
+
+  @Test
+  public void testDurability() throws IOException, InterruptedException, ClassNotFoundException {
+    // Create an export table.
+    String exportTableName = "exporttestDurability";
+    HTable exportTable = UTIL.createTable(Bytes.toBytes(exportTableName), FAMILYA, 3);
+
+    // Insert some data
+    Put put = new Put(ROW1);
+    put.add(FAMILYA, QUAL, now, QUAL);
+    put.add(FAMILYA, QUAL, now + 1, QUAL);
+    put.add(FAMILYA, QUAL, now + 2, QUAL);
+    exportTable.put(put);
+
+    put = new Put(ROW2);
+    put.add(FAMILYA, QUAL, now, QUAL);
+    put.add(FAMILYA, QUAL, now + 1, QUAL);
+    put.add(FAMILYA, QUAL, now + 2, QUAL);
+    exportTable.put(put);
+
+    // Run the export
+    String[] args = new String[] { exportTableName, FQ_OUTPUT_DIR, "1000"};
+    assertTrue(runExport(args));
+
+    // Create the table for import
+    String importTableName = "importTestDurability1";
+    HTable importTable = UTIL.createTable(Bytes.toBytes(importTableName), FAMILYA, 3);
+
+    // Register the hlog listener for the import table
+    TableWALActionListener walListener = new TableWALActionListener(importTableName);
+    HLog hLog = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL();
+    hLog.registerWALActionsListener(walListener);
+
+    // Run the import with SKIP_WAL
+    args =
+        new String[] { "-D" + Import.WAL_DURABILITY + "=" + Durability.SKIP_WAL.name(),
+            importTableName, FQ_OUTPUT_DIR };
+    assertTrue(runImport(args));
+    //Assert that the wal is not visisted
+    assertTrue(!walListener.isWALVisited());
+    //Ensure that the count is 2 (only one version of key value is obtained)
+    assertTrue(getCount(importTable, null) == 2);
+
+    // Run the import with the default durability option
+    importTableName = "importTestDurability2";
+    importTable = UTIL.createTable(Bytes.toBytes(importTableName), FAMILYA, 3);
+    hLog.unregisterWALActionsListener(walListener);    
+    walListener = new TableWALActionListener(importTableName);
+    hLog.registerWALActionsListener(walListener);
+    args = new String[] { importTableName, FQ_OUTPUT_DIR };
+    assertTrue(runImport(args));
+    //Assert that the wal is visisted
+    assertTrue(walListener.isWALVisited());
+    //Ensure that the count is 2 (only one version of key value is obtained)
+    assertTrue(getCount(importTable, null) == 2);
+  }
+
+  /**
+   * This listens to the {@link #visitLogEntryBeforeWrite(HTableDescriptor, HLogKey, WALEdit)} to
+   * identify that an entry is written to the Write Ahead Log for the given table.
+   */
+  private static class TableWALActionListener implements WALActionsListener {
+
+    private String tableName;
+    private boolean isVisited = false;
+
+    public TableWALActionListener(String tableName) {
+      this.tableName = tableName;
+    }
+
+    @Override
+    public void preLogRoll(Path oldPath, Path newPath) throws IOException {
+      // Not interested in this method.
+    }
+
+    @Override
+    public void postLogRoll(Path oldPath, Path newPath) throws IOException {
+      // Not interested in this method.
+    }
+
+    @Override
+    public void preLogArchive(Path oldPath, Path newPath) throws IOException {
+      // Not interested in this method.
+    }
+
+    @Override
+    public void postLogArchive(Path oldPath, Path newPath) throws IOException {
+      // Not interested in this method.
+    }
+
+    @Override
+    public void logRollRequested() {
+      // Not interested in this method.
+    }
+
+    @Override
+    public void logCloseRequested() {
+      // Not interested in this method.
+    }
+
+    @Override
+    public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit) {
+      // Not interested in this method.
+    }
+
+    @Override
+    public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey, WALEdit logEdit) {
+      if (tableName.equalsIgnoreCase(htd.getNameAsString())) {
+        isVisited = true;
+      }
+    }
+
+    public boolean isWALVisited() {
+      return isVisited;
+    }
+  }  
 }
