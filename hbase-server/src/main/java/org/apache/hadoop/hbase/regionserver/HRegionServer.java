@@ -50,6 +50,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.ObjectName;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -194,7 +195,6 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
-import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -239,7 +239,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import com.google.protobuf.TextFormat;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * HRegionServer makes a set of HRegions available to clients. It checks in with
@@ -1340,7 +1339,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     RegionLoad.Builder regionLoad = RegionLoad.newBuilder();
     RegionSpecifier.Builder regionSpecifier = RegionSpecifier.newBuilder();
     regionSpecifier.setType(RegionSpecifierType.REGION_NAME);
-    regionSpecifier.setValue(ZeroCopyLiteralByteString.wrap(name));
+    regionSpecifier.setValue(HBaseZeroCopyByteString.wrap(name));
     regionLoad.setRegionSpecifier(regionSpecifier.build())
       .setStores(stores)
       .setStorefiles(storefiles)
@@ -4005,7 +4004,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       RollWALWriterResponse.Builder builder = RollWALWriterResponse.newBuilder();
       if (regionsToFlush != null) {
         for (byte[] region: regionsToFlush) {
-          builder.addRegionToFlush(ZeroCopyLiteralByteString.wrap(region));
+          builder.addRegionToFlush(HBaseZeroCopyByteString.wrap(region));
         }
       }
       return builder.build();

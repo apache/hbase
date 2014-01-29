@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -59,7 +60,6 @@ import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * TestEndpoint: test cases to verify coprocessor Endpoint
@@ -125,9 +125,9 @@ public class TestCoprocessorEndpoint {
               new BlockingRpcCallback<ColumnAggregationProtos.SumResponse>();
           ColumnAggregationProtos.SumRequest.Builder builder =
             ColumnAggregationProtos.SumRequest.newBuilder();
-          builder.setFamily(ZeroCopyLiteralByteString.wrap(family));
+          builder.setFamily(HBaseZeroCopyByteString.wrap(family));
           if (qualifier != null && qualifier.length > 0) {
-            builder.setQualifier(ZeroCopyLiteralByteString.wrap(qualifier));
+            builder.setQualifier(HBaseZeroCopyByteString.wrap(qualifier));
           }
           instance.sum(null, builder.build(), rpcCallback);
           return rpcCallback.get().getSum();

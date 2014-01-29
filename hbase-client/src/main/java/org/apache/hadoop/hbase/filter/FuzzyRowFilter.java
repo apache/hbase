@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -147,8 +147,8 @@ public class FuzzyRowFilter extends FilterBase {
       FilterProtos.FuzzyRowFilter.newBuilder();
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
       BytesBytesPair.Builder bbpBuilder = BytesBytesPair.newBuilder();
-      bbpBuilder.setFirst(ZeroCopyLiteralByteString.wrap(fuzzyData.getFirst()));
-      bbpBuilder.setSecond(ZeroCopyLiteralByteString.wrap(fuzzyData.getSecond()));
+      bbpBuilder.setFirst(HBaseZeroCopyByteString.wrap(fuzzyData.getFirst()));
+      bbpBuilder.setSecond(HBaseZeroCopyByteString.wrap(fuzzyData.getSecond()));
       builder.addFuzzyKeysData(bbpBuilder);
     }
     return builder.build().toByteArray();

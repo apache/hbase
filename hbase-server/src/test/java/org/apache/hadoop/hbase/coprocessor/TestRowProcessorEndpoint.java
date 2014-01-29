@@ -33,6 +33,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -70,7 +71,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.Message;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 import com.sun.org.apache.commons.logging.Log;
 import com.sun.org.apache.commons.logging.LogFactory;
 
@@ -362,7 +362,7 @@ public class TestRowProcessorEndpoint {
       public IncCounterProcessorRequest getRequestData() throws IOException {
         IncCounterProcessorRequest.Builder builder = IncCounterProcessorRequest.newBuilder();
         builder.setCounter(counter);
-        builder.setRow(ZeroCopyLiteralByteString.wrap(row));
+        builder.setRow(HBaseZeroCopyByteString.wrap(row));
         return builder.build();
       }
 
@@ -441,8 +441,8 @@ public class TestRowProcessorEndpoint {
       public FriendsOfFriendsProcessorRequest getRequestData() throws IOException {
         FriendsOfFriendsProcessorRequest.Builder builder =
             FriendsOfFriendsProcessorRequest.newBuilder();
-        builder.setPerson(ZeroCopyLiteralByteString.wrap(person));
-        builder.setRow(ZeroCopyLiteralByteString.wrap(row));
+        builder.setPerson(HBaseZeroCopyByteString.wrap(person));
+        builder.setRow(HBaseZeroCopyByteString.wrap(row));
         builder.addAllResult(result);
         FriendsOfFriendsProcessorRequest f = builder.build();
         return f;
@@ -546,8 +546,8 @@ public class TestRowProcessorEndpoint {
       @Override
       public RowSwapProcessorRequest getRequestData() throws IOException {
         RowSwapProcessorRequest.Builder builder = RowSwapProcessorRequest.newBuilder();
-        builder.setRow1(ZeroCopyLiteralByteString.wrap(row1));
-        builder.setRow2(ZeroCopyLiteralByteString.wrap(row2));
+        builder.setRow1(HBaseZeroCopyByteString.wrap(row1));
+        builder.setRow2(HBaseZeroCopyByteString.wrap(row2));
         return builder.build();
       }
 
@@ -606,7 +606,7 @@ public class TestRowProcessorEndpoint {
       @Override
       public TimeoutProcessorRequest getRequestData() throws IOException {
         TimeoutProcessorRequest.Builder builder = TimeoutProcessorRequest.newBuilder();
-        builder.setRow(ZeroCopyLiteralByteString.wrap(row));
+        builder.setRow(HBaseZeroCopyByteString.wrap(row));
         return builder.build();
       }
 

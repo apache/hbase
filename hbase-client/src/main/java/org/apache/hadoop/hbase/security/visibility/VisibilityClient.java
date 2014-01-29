@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LA
 import java.io.IOException;
 import java.util.Map;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -40,7 +41,6 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.Visibil
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.ServiceException;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Utility client for doing visibility labels admin operations.
@@ -86,7 +86,7 @@ public class VisibilityClient {
           for (String label : labels) {
             if (label.length() > 0) {
               VisibilityLabel.Builder newBuilder = VisibilityLabel.newBuilder();
-              newBuilder.setLabel(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(label)));
+              newBuilder.setLabel(HBaseZeroCopyByteString.wrap(Bytes.toBytes(label)));
               builder.addVisLabel(newBuilder.build());
             }
           }
@@ -137,7 +137,7 @@ public class VisibilityClient {
 
         public GetAuthsResponse call(VisibilityLabelsService service) throws IOException {
           GetAuthsRequest.Builder getAuthReqBuilder = GetAuthsRequest.newBuilder();
-          getAuthReqBuilder.setUser(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(user)));
+          getAuthReqBuilder.setUser(HBaseZeroCopyByteString.wrap(Bytes.toBytes(user)));
           service.getAuths(controller, getAuthReqBuilder.build(), rpcCallback);
           return rpcCallback.get();
         }
@@ -179,10 +179,10 @@ public class VisibilityClient {
 
         public VisibilityLabelsResponse call(VisibilityLabelsService service) throws IOException {
           SetAuthsRequest.Builder setAuthReqBuilder = SetAuthsRequest.newBuilder();
-          setAuthReqBuilder.setUser(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(user)));
+          setAuthReqBuilder.setUser(HBaseZeroCopyByteString.wrap(Bytes.toBytes(user)));
           for (String auth : auths) {
             if (auth.length() > 0) {
-              setAuthReqBuilder.addAuth(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(auth)));
+              setAuthReqBuilder.addAuth(HBaseZeroCopyByteString.wrap(Bytes.toBytes(auth)));
             }
           }
           if (setOrClear) {

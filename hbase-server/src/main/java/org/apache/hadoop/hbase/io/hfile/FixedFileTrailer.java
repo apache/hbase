@@ -26,6 +26,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.KeyValue;
@@ -33,8 +34,6 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * The {@link HFile} has a fixed trailer which contains offsets to other
@@ -206,7 +205,7 @@ public class FixedFileTrailer {
       .setComparatorClassName(comparatorClassName)
       .setCompressionCodec(compressionCodec.ordinal());
     if (encryptionKey != null) {
-      builder.setEncryptionKey(ZeroCopyLiteralByteString.wrap(encryptionKey));
+      builder.setEncryptionKey(HBaseZeroCopyByteString.wrap(encryptionKey));
     }
     // We need this extra copy unfortunately to determine the final size of the
     // delimited output, see use of baos.size() below.

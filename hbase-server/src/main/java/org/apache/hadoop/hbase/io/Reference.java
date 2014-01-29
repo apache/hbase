@@ -24,6 +24,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,9 +33,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * A reference to the top or bottom half of a store file where 'bottom' is the first half
@@ -195,7 +193,7 @@ public class Reference {
     FSProtos.Reference.Builder builder = FSProtos.Reference.newBuilder();
     builder.setRange(isTopFileRegion(getFileRegion())?
       FSProtos.Reference.Range.TOP: FSProtos.Reference.Range.BOTTOM);
-    builder.setSplitkey(ZeroCopyLiteralByteString.wrap(getSplitKey()));
+    builder.setSplitkey(HBaseZeroCopyByteString.wrap(getSplitKey()));
     return builder.build();
   }
 

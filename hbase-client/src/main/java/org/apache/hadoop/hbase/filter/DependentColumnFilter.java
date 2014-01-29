@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
@@ -37,7 +38,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * A filter for adding inter-column timestamp matching
@@ -225,10 +225,10 @@ public class DependentColumnFilter extends CompareFilter {
       FilterProtos.DependentColumnFilter.newBuilder();
     builder.setCompareFilter(super.convert());
     if (this.columnFamily != null) {
-      builder.setColumnFamily(ZeroCopyLiteralByteString.wrap(this.columnFamily));
+      builder.setColumnFamily(HBaseZeroCopyByteString.wrap(this.columnFamily));
     }
     if (this.columnQualifier != null) {
-      builder.setColumnQualifier(ZeroCopyLiteralByteString.wrap(this.columnQualifier));
+      builder.setColumnQualifier(HBaseZeroCopyByteString.wrap(this.columnQualifier));
     }
     builder.setDropDependentColumn(this.dropDependentColumn);
     return builder.build().toByteArray();

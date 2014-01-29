@@ -29,13 +29,12 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet;
-
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Representation of a grouping of cells. May contain cells from more than
@@ -115,11 +114,11 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
     CellSet.Builder builder = CellSet.newBuilder();
     for (RowModel row: getRows()) {
       CellSet.Row.Builder rowBuilder = CellSet.Row.newBuilder();
-      rowBuilder.setKey(ZeroCopyLiteralByteString.wrap(row.getKey()));
+      rowBuilder.setKey(HBaseZeroCopyByteString.wrap(row.getKey()));
       for (CellModel cell: row.getCells()) {
         Cell.Builder cellBuilder = Cell.newBuilder();
-        cellBuilder.setColumn(ZeroCopyLiteralByteString.wrap(cell.getColumn()));
-        cellBuilder.setData(ZeroCopyLiteralByteString.wrap(cell.getValue()));
+        cellBuilder.setColumn(HBaseZeroCopyByteString.wrap(cell.getColumn()));
+        cellBuilder.setData(HBaseZeroCopyByteString.wrap(cell.getValue()));
         if (cell.hasUserTimestamp()) {
           cellBuilder.setTimestamp(cell.getTimestamp());
         }

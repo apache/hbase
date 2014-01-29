@@ -33,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -84,7 +85,6 @@ import com.google.common.base.Stopwatch;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Test client behavior w/o setting up a cluster.
@@ -510,7 +510,7 @@ public class TestClientNoCluster extends Configured implements Tool {
       if (max <= 0) break;
       if (++count > max) break;
       HRegionInfo hri = e.getValue().getFirst();
-      ByteString row = ZeroCopyLiteralByteString.wrap(hri.getRegionName());
+      ByteString row = HBaseZeroCopyByteString.wrap(hri.getRegionName());
       resultBuilder.clear();
       resultBuilder.addCell(getRegionInfo(row, hri));
       resultBuilder.addCell(getServer(row, e.getValue().getSecond()));
@@ -565,11 +565,11 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   private final static ByteString CATALOG_FAMILY_BYTESTRING =
-      ZeroCopyLiteralByteString.wrap(HConstants.CATALOG_FAMILY);
+      HBaseZeroCopyByteString.wrap(HConstants.CATALOG_FAMILY);
   private final static ByteString REGIONINFO_QUALIFIER_BYTESTRING =
-      ZeroCopyLiteralByteString.wrap(HConstants.REGIONINFO_QUALIFIER);
+      HBaseZeroCopyByteString.wrap(HConstants.REGIONINFO_QUALIFIER);
   private final static ByteString SERVER_QUALIFIER_BYTESTRING =
-      ZeroCopyLiteralByteString.wrap(HConstants.SERVER_QUALIFIER);
+      HBaseZeroCopyByteString.wrap(HConstants.SERVER_QUALIFIER);
 
   static CellProtos.Cell.Builder getBaseCellBuilder(final ByteString row) {
     CellProtos.Cell.Builder cellBuilder = CellProtos.Cell.newBuilder();
@@ -582,7 +582,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   static CellProtos.Cell getRegionInfo(final ByteString row, final HRegionInfo hri) {
     CellProtos.Cell.Builder cellBuilder = getBaseCellBuilder(row);
     cellBuilder.setQualifier(REGIONINFO_QUALIFIER_BYTESTRING);
-    cellBuilder.setValue(ZeroCopyLiteralByteString.wrap(hri.toByteArray()));
+    cellBuilder.setValue(HBaseZeroCopyByteString.wrap(hri.toByteArray()));
     return cellBuilder.build();
   }
 
@@ -595,9 +595,9 @@ public class TestClientNoCluster extends Configured implements Tool {
 
   static CellProtos.Cell getStartCode(final ByteString row) {
     CellProtos.Cell.Builder cellBuilder = getBaseCellBuilder(row);
-    cellBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(HConstants.STARTCODE_QUALIFIER));
+    cellBuilder.setQualifier(HBaseZeroCopyByteString.wrap(HConstants.STARTCODE_QUALIFIER));
     // TODO:
-    cellBuilder.setValue(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(META_SERVERNAME.getStartcode())));
+    cellBuilder.setValue(HBaseZeroCopyByteString.wrap(Bytes.toBytes(META_SERVERNAME.getStartcode())));
     return cellBuilder.build();
   }
 

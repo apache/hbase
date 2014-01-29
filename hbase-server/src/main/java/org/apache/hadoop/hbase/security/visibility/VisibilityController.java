@@ -35,6 +35,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -116,7 +117,6 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Coprocessor that has both the MasterObserver and RegionObserver implemented that supports in
@@ -1239,7 +1239,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     try {
       List<String> labels = getUserAuthsFromLabelsTable(user);
       for (String label : labels) {
-        response.addAuth(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(label)));
+        response.addAuth(HBaseZeroCopyByteString.wrap(Bytes.toBytes(label)));
       }
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);

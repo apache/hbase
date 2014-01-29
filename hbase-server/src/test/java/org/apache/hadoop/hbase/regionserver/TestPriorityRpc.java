@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,7 +43,7 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.ZeroCopyLiteralByteString;
+
 /**
  * Tests that verify certain RPCs get a higher QoS.
  */
@@ -70,12 +71,12 @@ public class TestPriorityRpc {
     GetRequest.Builder getRequestBuilder = GetRequest.newBuilder();
     RegionSpecifier.Builder regionSpecifierBuilder = RegionSpecifier.newBuilder();
     regionSpecifierBuilder.setType(RegionSpecifierType.REGION_NAME);
-    ByteString name = ZeroCopyLiteralByteString.wrap(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+    ByteString name = HBaseZeroCopyByteString.wrap(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
     regionSpecifierBuilder.setValue(name);
     RegionSpecifier regionSpecifier = regionSpecifierBuilder.build();
     getRequestBuilder.setRegion(regionSpecifier);
     Get.Builder getBuilder = Get.newBuilder();
-    getBuilder.setRow(ZeroCopyLiteralByteString.wrap("somerow".getBytes()));
+    getBuilder.setRow(HBaseZeroCopyByteString.wrap("somerow".getBytes()));
     getRequestBuilder.setGet(getBuilder.build());
     GetRequest getRequest = getRequestBuilder.build();
     RequestHeader header = headerBuilder.build();
