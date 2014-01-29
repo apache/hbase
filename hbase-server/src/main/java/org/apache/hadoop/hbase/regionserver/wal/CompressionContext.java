@@ -22,7 +22,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 
@@ -44,8 +43,8 @@ class CompressionContext {
   TagCompressionContext tagCompressionContext = null;
 
   public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits,
-      Configuration conf) throws SecurityException, NoSuchMethodException, InstantiationException,
-      IllegalAccessException, InvocationTargetException {
+      boolean hasTagCompression) throws SecurityException, NoSuchMethodException,
+      InstantiationException, IllegalAccessException, InvocationTargetException {
     Constructor<? extends Dictionary> dictConstructor =
         dictType.getConstructor();
     regionDict = dictConstructor.newInstance();
@@ -64,7 +63,7 @@ class CompressionContext {
     rowDict.init(Short.MAX_VALUE);
     familyDict.init(Byte.MAX_VALUE);
     qualifierDict.init(Byte.MAX_VALUE);
-    if (conf != null && conf.getBoolean(ENABLE_WAL_TAGS_COMPRESSION, true)) {
+    if (hasTagCompression) {
       tagCompressionContext = new TagCompressionContext(dictType);
     }
   }

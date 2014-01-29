@@ -26,6 +26,7 @@ import "HBase.proto";
 message WALHeader {
   optional bool has_compression = 1;
   optional bytes encryption_key = 2;
+  optional bool has_tag_compression = 3;
 }
 
 // Protocol buffer version of HLogKey; see HLogKey comment, not really a key but WALEdit header for some KVs

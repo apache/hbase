@@ -61,6 +61,7 @@ public class ProtobufLogReader extends ReaderBase {
   protected Codec.Decoder cellDecoder;
   protected WALCellCodec.ByteStringUncompressor byteStringUncompressor;
   protected boolean hasCompression = false;
+  protected boolean hasTagCompression = false;
   // walEditsStopOffset is the position of the last byte to read. After reading the last WALEdit entry
   // in the hlog, the inputstream's position is equal to walEditsStopOffset.
   private long walEditsStopOffset;
@@ -117,6 +118,7 @@ public class ProtobufLogReader extends ReaderBase {
     if (isFirst) {
       WALProtos.WALHeader header = builder.build();
       this.hasCompression = header.hasHasCompression() && header.getHasCompression();
+      this.hasTagCompression = header.hasHasTagCompression() && header.getHasTagCompression();
     }
     this.inputStream = stream;
     this.walEditsStopOffset = this.fileLength;
@@ -199,6 +201,11 @@ public class ProtobufLogReader extends ReaderBase {
   @Override
   protected boolean hasCompression() {
     return this.hasCompression;
+  }
+
+  @Override
+  protected boolean hasTagCompression() {
+    return this.hasTagCompression;
   }
 
   @Override

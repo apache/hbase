@@ -74,7 +74,7 @@ public abstract class ReaderBase implements HLog.Reader {
       try {
         if (compressionContext == null) {
           compressionContext = new CompressionContext(LRUDictionary.class,
-              FSUtils.isRecoveredEdits(path), conf);
+              FSUtils.isRecoveredEdits(path), hasTagCompression());
         } else {
           compressionContext.clear();
         }
@@ -146,6 +146,11 @@ public abstract class ReaderBase implements HLog.Reader {
    * @return Whether compression is enabled for this log.
    */
   protected abstract boolean hasCompression();
+
+  /**
+   * @return Whether tag compression is enabled for this log.
+   */
+  protected abstract boolean hasTagCompression();
 
   /**
    * Read next entry.

@@ -48,7 +48,8 @@ public abstract class WriterBase implements HLog.Writer {
     if (doCompress) {
       try {
         this.compressionContext = new CompressionContext(LRUDictionary.class,
-            FSUtils.isRecoveredEdits(path), conf);
+            FSUtils.isRecoveredEdits(path), conf.getBoolean(
+                CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true));
       } catch (Exception e) {
         throw new IOException("Failed to initiate CompressionContext", e);
       }

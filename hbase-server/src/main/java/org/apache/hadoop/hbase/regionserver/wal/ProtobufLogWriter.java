@@ -77,7 +77,11 @@ public class ProtobufLogWriter extends WriterBase {
         FSUtils.getDefaultBlockSize(fs, path));
     output = fs.createNonRecursive(path, overwritable, bufferSize, replication, blockSize, null);
     output.write(ProtobufLogReader.PB_WAL_MAGIC);
-    buildWALHeader(WALHeader.newBuilder().setHasCompression(doCompress)).writeDelimitedTo(output);
+    boolean doTagCompress = doCompress
+        && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
+    buildWALHeader(
+        WALHeader.newBuilder().setHasCompression(doCompress).setHasTagCompression(doTagCompress))
+        .writeDelimitedTo(output);
 
     initAfterHeader(doCompress);
 

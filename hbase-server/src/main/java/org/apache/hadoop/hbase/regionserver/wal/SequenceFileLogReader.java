@@ -193,6 +193,12 @@ public class SequenceFileLogReader extends ReaderBase {
     return isWALCompressionEnabled(reader.getMetadata());
   }
 
+  @Override
+  protected boolean hasTagCompression() {
+    // Tag compression not supported with old SequenceFileLog Reader/Writer
+    return false;
+  }
+
   /**
    * Call this method after init() has been executed
    * @return whether WAL compression is enabled
