@@ -82,14 +82,12 @@ public class MetricMutableQuantiles extends MutableMetric implements MetricHisto
         "Number of %s for %s with %ds interval", lsName, desc, interval));
     // Construct the MetricsInfos for the quantiles, converting to percentiles
     quantileInfos = new MetricsInfo[quantiles.length];
-    String nameTemplate = ucName + "%dthPercentile" + interval + "sInterval"
-        + uvName;
-    String descTemplate = "%d percentile " + lvName + " with " + interval
-        + " second interval for " + desc;
+    String nameTemplate = "%s%dthPercentile%dsInterval%s";
+    String descTemplate = "%d percentile %s with %d second interval for %s";
     for (int i = 0; i < quantiles.length; i++) {
       int percentile = (int) (100 * quantiles[i].quantile);
-      quantileInfos[i] = info(String.format(nameTemplate, percentile),
-          String.format(descTemplate, percentile));
+      quantileInfos[i] = info(String.format(nameTemplate, ucName, percentile, interval, uvName),
+          String.format(descTemplate, percentile, lvName, interval, desc));
     }
 
     estimator = new MetricSampleQuantiles(quantiles);
