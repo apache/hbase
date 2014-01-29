@@ -183,6 +183,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public void setCurrentBuffer(ByteBuffer buffer) {
+      if (this.tagCompressionContext != null) {
+        this.tagCompressionContext.clear();
+      }
       currentBuffer = buffer;
       decodeFirst();
       previous.invalidate();
