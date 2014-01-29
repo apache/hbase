@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
@@ -30,7 +31,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * A filter, based on the ColumnCountGetFilter, takes two arguments: limit and offset.
@@ -175,7 +175,7 @@ public class ColumnPaginationFilter extends FilterBase
       builder.setOffset(this.offset);
     }
     if (this.columnOffset != null) {
-      builder.setColumnOffset(ZeroCopyLiteralByteString.wrap(this.columnOffset));
+      builder.setColumnOffset(HBaseZeroCopyByteString.wrap(this.columnOffset));
     }
     return builder.build().toByteArray();
   }

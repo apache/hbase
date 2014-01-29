@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.access;
 import java.io.IOException;
 import java.util.Map;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -39,7 +40,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequ
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Utility client for doing access control admin operations.
@@ -86,10 +86,10 @@ public class AccessControlClient {
           permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
 
           if (family != null) {
-            permissionBuilder.setFamily(ZeroCopyLiteralByteString.wrap(family));
+            permissionBuilder.setFamily(HBaseZeroCopyByteString.wrap(family));
           }
           if (qual != null) {
-            permissionBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(qual));
+            permissionBuilder.setQualifier(HBaseZeroCopyByteString.wrap(qual));
           }
           ret.setType(AccessControlProtos.Permission.Type.Table).setTablePermission(
               permissionBuilder);
@@ -150,10 +150,10 @@ public class AccessControlClient {
             permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
           }
           if (family != null) {
-            permissionBuilder.setFamily(ZeroCopyLiteralByteString.wrap(family));
+            permissionBuilder.setFamily(HBaseZeroCopyByteString.wrap(family));
           }
           if (qualifier != null) {
-            permissionBuilder.setQualifier(ZeroCopyLiteralByteString.wrap(qualifier));
+            permissionBuilder.setQualifier(HBaseZeroCopyByteString.wrap(qualifier));
           }
           ret.setType(AccessControlProtos.Permission.Type.Table).setTablePermission(
               permissionBuilder);

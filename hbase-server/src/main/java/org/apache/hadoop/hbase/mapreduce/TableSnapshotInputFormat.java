@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -69,7 +70,6 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * TableSnapshotInputFormat allows a MapReduce job to run over a table snapshot. The job
@@ -157,7 +157,7 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       MapReduceProtos.TableSnapshotRegionSplit.newBuilder()
         .setRegion(RegionSpecifier.newBuilder()
           .setType(RegionSpecifierType.ENCODED_REGION_NAME)
-          .setValue(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(regionName))).build());
+          .setValue(HBaseZeroCopyByteString.wrap(Bytes.toBytes(regionName))).build());
 
       for (String location : locations) {
         builder.addLocations(location);

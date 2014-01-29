@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -49,8 +50,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 @Category(MediumTests.class)
 public class TestReplicationSink {
@@ -262,9 +261,9 @@ public class TestReplicationSink {
     uuidBuilder.setLeastSigBits(HConstants.DEFAULT_CLUSTER_ID.getLeastSignificantBits());
     uuidBuilder.setMostSigBits(HConstants.DEFAULT_CLUSTER_ID.getMostSignificantBits());
     keyBuilder.setClusterId(uuidBuilder.build());
-    keyBuilder.setTableName(ZeroCopyLiteralByteString.wrap(table));
+    keyBuilder.setTableName(HBaseZeroCopyByteString.wrap(table));
     keyBuilder.setWriteTime(now);
-    keyBuilder.setEncodedRegionName(ZeroCopyLiteralByteString.wrap(HConstants.EMPTY_BYTE_ARRAY));
+    keyBuilder.setEncodedRegionName(HBaseZeroCopyByteString.wrap(HConstants.EMPTY_BYTE_ARRAY));
     keyBuilder.setLogSequenceNumber(-1);
     builder.setKey(keyBuilder.build());
     cells.add(kv);

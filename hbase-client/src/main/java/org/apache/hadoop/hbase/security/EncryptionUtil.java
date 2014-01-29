@@ -26,6 +26,7 @@ import java.security.SecureRandom;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -34,8 +35,6 @@ import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Some static utility methods for encryption uses in hbase-client.
@@ -84,15 +83,15 @@ public class EncryptionUtil {
     if (cipher.getIvLength() > 0) {
       iv = new byte[cipher.getIvLength()];
       RNG.nextBytes(iv);
-      builder.setIv(ZeroCopyLiteralByteString.wrap(iv));
+      builder.setIv(HBaseZeroCopyByteString.wrap(iv));
     }
     byte[] keyBytes = key.getEncoded();
     builder.setLength(keyBytes.length);
-    builder.setHash(ZeroCopyLiteralByteString.wrap(Encryption.hash128(keyBytes)));
+    builder.setHash(HBaseZeroCopyByteString.wrap(Encryption.hash128(keyBytes)));
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Encryption.encryptWithSubjectKey(out, new ByteArrayInputStream(keyBytes), subject,
       conf, cipher, iv);
-    builder.setData(ZeroCopyLiteralByteString.wrap(out.toByteArray()));
+    builder.setData(HBaseZeroCopyByteString.wrap(out.toByteArray()));
     // Build and return the protobuf message
     out.reset();
     builder.build().writeDelimitedTo(out);

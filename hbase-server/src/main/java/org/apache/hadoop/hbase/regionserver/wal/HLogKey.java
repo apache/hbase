@@ -31,6 +31,7 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -47,7 +48,6 @@ import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * A Key for an entry in the change log.
@@ -443,8 +443,8 @@ public class HLogKey implements WritableComparable<HLogKey> {
       WALCellCodec.ByteStringCompressor compressor) throws IOException {
     WALKey.Builder builder = WALKey.newBuilder();
     if (compressionContext == null) {
-      builder.setEncodedRegionName(ZeroCopyLiteralByteString.wrap(this.encodedRegionName));
-      builder.setTableName(ZeroCopyLiteralByteString.wrap(this.tablename.getName()));
+      builder.setEncodedRegionName(HBaseZeroCopyByteString.wrap(this.encodedRegionName));
+      builder.setTableName(HBaseZeroCopyByteString.wrap(this.tablename.getName()));
     } else {
       builder.setEncodedRegionName(
           compressor.compress(this.encodedRegionName, compressionContext.regionDict));
@@ -467,7 +467,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
     }
     if (scopes != null) {
       for (Map.Entry<byte[], Integer> e : scopes.entrySet()) {
-        ByteString family = (compressionContext == null) ? ZeroCopyLiteralByteString.wrap(e.getKey())
+        ByteString family = (compressionContext == null) ? HBaseZeroCopyByteString.wrap(e.getKey())
             : compressor.compress(e.getKey(), compressionContext.familyDict);
         builder.addScopes(FamilyScope.newBuilder()
             .setFamily(family).setScopeType(ScopeType.valueOf(e.getValue())));

@@ -18,13 +18,12 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 
 /** Base class for byte array comparators */
@@ -54,7 +53,7 @@ public abstract class ByteArrayComparable implements Comparable<byte[]> {
   ComparatorProtos.ByteArrayComparable convert() {
     ComparatorProtos.ByteArrayComparable.Builder builder =
       ComparatorProtos.ByteArrayComparable.newBuilder();
-    if (value != null) builder.setValue(ZeroCopyLiteralByteString.wrap(value));
+    if (value != null) builder.setValue(HBaseZeroCopyByteString.wrap(value));
     return builder.build();
   }
 

@@ -21,8 +21,7 @@ package org.apache.hadoop.hbase.client.coprocessor;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.HConstants.LAST_ROW;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ZeroCopyLiteralByteString;
+import com.google.protobuf.HBaseZeroCopyByteString;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
@@ -137,8 +136,8 @@ public class SecureBulkLoadClient {
       if(userToken != null) {
         protoDT =
             SecureBulkLoadProtos.DelegationToken.newBuilder()
-              .setIdentifier(ZeroCopyLiteralByteString.wrap(userToken.getIdentifier()))
-              .setPassword(ZeroCopyLiteralByteString.wrap(userToken.getPassword()))
+              .setIdentifier(HBaseZeroCopyByteString.wrap(userToken.getIdentifier()))
+              .setPassword(HBaseZeroCopyByteString.wrap(userToken.getPassword()))
               .setKind(userToken.getKind().toString())
               .setService(userToken.getService().toString()).build();
       }
@@ -147,7 +146,7 @@ public class SecureBulkLoadClient {
           new ArrayList<ClientProtos.BulkLoadHFileRequest.FamilyPath>();
       for(Pair<byte[], String> el: familyPaths) {
         protoFamilyPaths.add(ClientProtos.BulkLoadHFileRequest.FamilyPath.newBuilder()
-          .setFamily(ZeroCopyLiteralByteString.wrap(el.getFirst()))
+          .setFamily(HBaseZeroCopyByteString.wrap(el.getFirst()))
           .setPath(el.getSecond()).build());
       }
 

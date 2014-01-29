@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -34,7 +35,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Provides clients with an RPC connection to call coprocessor endpoint {@link com.google.protobuf.Service}s
@@ -76,7 +76,7 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
 
     final ClientProtos.CoprocessorServiceCall call =
         ClientProtos.CoprocessorServiceCall.newBuilder()
-            .setRow(ZeroCopyLiteralByteString.wrap(row))
+            .setRow(HBaseZeroCopyByteString.wrap(row))
             .setServiceName(method.getService().getFullName())
             .setMethodName(method.getName())
             .setRequest(request.toByteString()).build();
