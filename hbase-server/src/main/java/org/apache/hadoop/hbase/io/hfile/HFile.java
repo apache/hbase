@@ -40,6 +40,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -70,7 +71,6 @@ import org.apache.hadoop.io.Writable;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * File format for hbase.
@@ -763,8 +763,8 @@ public class HFile {
       HFileProtos.FileInfoProto.Builder builder = HFileProtos.FileInfoProto.newBuilder();
       for (Map.Entry<byte [], byte[]> e: this.map.entrySet()) {
         HBaseProtos.BytesBytesPair.Builder bbpBuilder = HBaseProtos.BytesBytesPair.newBuilder();
-        bbpBuilder.setFirst(ZeroCopyLiteralByteString.wrap(e.getKey()));
-        bbpBuilder.setSecond(ZeroCopyLiteralByteString.wrap(e.getValue()));
+        bbpBuilder.setFirst(HBaseZeroCopyByteString.wrap(e.getKey()));
+        bbpBuilder.setSecond(HBaseZeroCopyByteString.wrap(e.getValue()));
         builder.addMapEntry(bbpBuilder.build());
       }
       out.write(ProtobufUtil.PB_MAGIC);

@@ -23,6 +23,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,7 +43,7 @@ import org.mockito.Mockito;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
-import com.google.protobuf.ZeroCopyLiteralByteString;
+
 /**
  * Tests that verify certain RPCs get a higher QoS.
  */
@@ -70,12 +71,12 @@ public class TestPriorityRpc {
     GetRequest.Builder getRequestBuilder = GetRequest.newBuilder();
     RegionSpecifier.Builder regionSpecifierBuilder = RegionSpecifier.newBuilder();
     regionSpecifierBuilder.setType(RegionSpecifierType.REGION_NAME);
-    ByteString name = ZeroCopyLiteralByteString.wrap(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+    ByteString name = HBaseZeroCopyByteString.wrap(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
     regionSpecifierBuilder.setValue(name);
     RegionSpecifier regionSpecifier = regionSpecifierBuilder.build();
     getRequestBuilder.setRegion(regionSpecifier);
     Get.Builder getBuilder = Get.newBuilder();
-    getBuilder.setRow(ZeroCopyLiteralByteString.wrap("somerow".getBytes()));
+    getBuilder.setRow(HBaseZeroCopyByteString.wrap("somerow".getBytes()));
     getRequestBuilder.setGet(getBuilder.build());
     GetRequest getRequest = getRequestBuilder.build();
     RequestHeader header = headerBuilder.build();
@@ -86,8 +87,8 @@ public class TestPriorityRpc {
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
     Mockito.when(mockRegionInfo.isMetaTable()).thenReturn(true);
     qosFunction.setRegionServer(mockRS);
-    assertTrue (qosFunction.apply(new Pair<RequestHeader, Message>(header, getRequest)) ==
-      HConstants.HIGH_QOS);
+    assertTrue(qosFunction.apply(new Pair<RequestHeader, Message>(header, getRequest)) ==
+        HConstants.HIGH_QOS);
   }
 
   @Test
@@ -100,8 +101,8 @@ public class TestPriorityRpc {
     headerBuilder.setMethodName("foo");
     RequestHeader header = headerBuilder.build();
     QosFunction qosFunc = regionServer.getQosFunction();
-    assertTrue (qosFunc.apply(new Pair<RequestHeader, Message>(header, null)) ==
-      HConstants.NORMAL_QOS);
+    assertTrue(qosFunc.apply(new Pair<RequestHeader, Message>(header, null)) ==
+        HConstants.NORMAL_QOS);
   }
 
   @Test
@@ -131,18 +132,18 @@ public class TestPriorityRpc {
     RegionScanner mockRegionScanner = Mockito.mock(RegionScanner.class);
     Mockito.when(mockRS.getScanner(12345)).thenReturn(mockRegionScanner);
     Mockito.when(mockRegionScanner.getRegionInfo()).thenReturn(mockRegionInfo);
-    Mockito.when(mockRS.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
+    Mockito.when(mockRS.getRegion((RegionSpecifier) Mockito.any())).thenReturn(mockRegion);
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
     Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(true);
 
     qosFunction.setRegionServer(mockRS);
 
-    assertTrue (qosFunction.apply(new Pair<RequestHeader, Message>(header, scanRequest)) ==
-      HConstants.HIGH_QOS);
+    assertTrue(qosFunction.apply(new Pair<RequestHeader, Message>(header, scanRequest)) ==
+        HConstants.HIGH_QOS);
 
     //the same as above but with non-meta region
     Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(false);
-    assertTrue (qosFunction.apply(new Pair<RequestHeader, Message>(header, scanRequest)) ==
-      HConstants.NORMAL_QOS);
+    assertTrue(qosFunction.apply(new Pair<RequestHeader, Message>(header, scanRequest)) ==
+        HConstants.NORMAL_QOS);
   }
 }

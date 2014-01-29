@@ -35,6 +35,7 @@ import java.util.Properties;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -70,7 +71,6 @@ import org.apache.zookeeper.proto.SetDataRequest;
 import org.apache.zookeeper.server.ZooKeeperSaslServer;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * Internal HBase utility class for ZooKeeper.
@@ -1941,7 +1941,7 @@ public class ZKUtil {
       for (Map.Entry<byte[], Long> e : storeSequenceIds.entrySet()){
         byte[] columnFamilyName = e.getKey();
         Long curSeqId = e.getValue();
-        storeSequenceIdBuilder.setFamilyName(ZeroCopyLiteralByteString.wrap(columnFamilyName));
+        storeSequenceIdBuilder.setFamilyName(HBaseZeroCopyByteString.wrap(columnFamilyName));
         storeSequenceIdBuilder.setSequenceId(curSeqId);
         regionSequenceIdsBuilder.addStoreSequenceId(storeSequenceIdBuilder.build());
         storeSequenceIdBuilder.clear();

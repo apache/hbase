@@ -32,6 +32,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
@@ -43,7 +44,6 @@ import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONMarshaller;
@@ -708,13 +708,13 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   public byte[] createProtobufOutput() {
     Scanner.Builder builder = Scanner.newBuilder();
     if (!Bytes.equals(startRow, HConstants.EMPTY_START_ROW)) {
-      builder.setStartRow(ZeroCopyLiteralByteString.wrap(startRow));
+      builder.setStartRow(HBaseZeroCopyByteString.wrap(startRow));
     }
     if (!Bytes.equals(endRow, HConstants.EMPTY_START_ROW)) {
-      builder.setEndRow(ZeroCopyLiteralByteString.wrap(endRow));
+      builder.setEndRow(HBaseZeroCopyByteString.wrap(endRow));
     }
     for (byte[] column: columns) {
-      builder.addColumns(ZeroCopyLiteralByteString.wrap(column));
+      builder.addColumns(HBaseZeroCopyByteString.wrap(column));
     }
     if (startTime != 0) {
       builder.setStartTime(startTime);

@@ -49,6 +49,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.ObjectName;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -232,7 +233,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import com.google.protobuf.TextFormat;
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * HRegionServer makes a set of HRegions available to clients. It checks in with
@@ -1268,7 +1268,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     RegionLoad.Builder regionLoad = RegionLoad.newBuilder();
     RegionSpecifier.Builder regionSpecifier = RegionSpecifier.newBuilder();
     regionSpecifier.setType(RegionSpecifierType.REGION_NAME);
-    regionSpecifier.setValue(ZeroCopyLiteralByteString.wrap(name));
+    regionSpecifier.setValue(HBaseZeroCopyByteString.wrap(name));
     regionLoad.setRegionSpecifier(regionSpecifier.build())
       .setStores(stores)
       .setStorefiles(storefiles)
@@ -3904,7 +3904,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       RollWALWriterResponse.Builder builder = RollWALWriterResponse.newBuilder();
       if (regionsToFlush != null) {
         for (byte[] region: regionsToFlush) {
-          builder.addRegionToFlush(ZeroCopyLiteralByteString.wrap(region));
+          builder.addRegionToFlush(HBaseZeroCopyByteString.wrap(region));
         }
       }
       return builder.build();

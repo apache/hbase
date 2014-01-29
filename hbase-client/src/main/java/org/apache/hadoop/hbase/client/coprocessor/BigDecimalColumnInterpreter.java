@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -29,8 +30,6 @@ import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BigDecimalMsg;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.ZeroCopyLiteralByteString;
 
 /**
  * ColumnInterpreter for doing Aggregation's with BigDecimal columns. This class
@@ -122,7 +121,7 @@ public class BigDecimalColumnInterpreter extends ColumnInterpreter<BigDecimal, B
 
   private BigDecimalMsg getProtoForType(BigDecimal t) {
     BigDecimalMsg.Builder builder = BigDecimalMsg.newBuilder();
-    return builder.setBigdecimalMsg(ZeroCopyLiteralByteString.wrap(Bytes.toBytes(t))).build();
+    return builder.setBigdecimalMsg(HBaseZeroCopyByteString.wrap(Bytes.toBytes(t))).build();
   }
   
   @Override
