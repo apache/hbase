@@ -249,6 +249,11 @@ public class CoprocessorHConnection implements HConnection {
   }
 
   public void updateCachedLocations(TableName tableName, byte[] rowkey, Object exception,
+      ServerName source) {
+    delegate.updateCachedLocations(tableName, rowkey, exception, source);
+  }
+
+  public void updateCachedLocations(TableName tableName, byte[] rowkey, Object exception,
       HRegionLocation source) {
     delegate.updateCachedLocations(tableName, rowkey, exception, source);
   }

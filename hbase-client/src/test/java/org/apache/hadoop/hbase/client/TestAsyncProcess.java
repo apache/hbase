@@ -104,8 +104,8 @@ public class TestAsyncProcess {
 
     @Override
     protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
-      final MultiResponse mr = createMultiResponse(callable.getLocation(), callable.getMulti(),
-          nbMultiResponse, nbActions);
+      final MultiResponse mr = createMultiResponse(
+          callable.getMulti(), nbMultiResponse, nbActions);
       return new RpcRetryingCaller<MultiResponse>(conf) {
         @Override
         public MultiResponse callWithoutRetries( RetryingCallable<MultiResponse> callable)
@@ -123,17 +123,18 @@ public class TestAsyncProcess {
     }
   }
 
-  static MultiResponse createMultiResponse(final HRegionLocation loc,
+  static MultiResponse createMultiResponse(
       final MultiAction<Row> multi, AtomicInteger nbMultiResponse, AtomicInteger nbActions) {
     final MultiResponse mr = new MultiResponse();
     nbMultiResponse.incrementAndGet();
     for (Map.Entry<byte[], List<Action<Row>>> entry : multi.actions.entrySet()) {
-      for (Action a : entry.getValue()) {
+      byte[] regionName = entry.getKey();
+      for (Action<Row> a : entry.getValue()) {
         nbActions.incrementAndGet();
         if (Arrays.equals(FAILS, a.getAction().getRow())) {
-          mr.add(loc.getRegionInfo().getRegionName(), a.getOriginalIndex(), failure);
+          mr.add(regionName, a.getOriginalIndex(), failure);
         } else {
-          mr.add(loc.getRegionInfo().getRegionName(), a.getOriginalIndex(), success);
+          mr.add(regionName, a.getOriginalIndex(), success);
         }
       }
     }
@@ -387,9 +388,11 @@ public class TestAsyncProcess {
     ap.submit(puts, false);
     Assert.assertTrue(puts.isEmpty());
 
-    while (!ap.hasError()) {
+    long cutoff = System.currentTimeMillis() + 60000;
+    while (!ap.hasError() && System.currentTimeMillis() < cutoff) {
       Thread.sleep(1);
     }
+    Assert.assertTrue(ap.hasError());
     ap.waitUntilDone();
  
     Assert.assertEquals(mcb.successCalled.get(), 2);
@@ -496,14 +499,13 @@ public class TestAsyncProcess {
     }
 
     @Override
-    public boolean failure(int originalIndex, byte[] region, Row row, Throwable t) {
+    public boolean failure(int originalIndex, Row row, Throwable t) {
       failureCalled.incrementAndGet();
       return true;
     }
 
     @Override
-    public boolean retriableFailure(int originalIndex, Row row, byte[] region,
-                                    Throwable exception) {
+    public boolean retriableFailure(int originalIndex, Row row, Throwable exception) {
       // We retry once only.
       return (retriableFailure.incrementAndGet() < 2);
     }

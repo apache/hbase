@@ -296,6 +296,10 @@ public interface HConnection extends Abortable, Closeable {
   HRegionLocation relocateRegion(final byte[] tableName,
       final byte [] row) throws IOException;
 
+  @Deprecated
+  void updateCachedLocations(TableName tableName, byte[] rowkey,
+                                    Object exception, HRegionLocation source);
+
   /**
    * Update the location cache. This is used internally by HBase, in most cases it should not be
    *  used by the client application.
@@ -305,7 +309,7 @@ public interface HConnection extends Abortable, Closeable {
    * @param source the previous location
    */
   void updateCachedLocations(TableName tableName, byte[] rowkey,
-                                    Object exception, HRegionLocation source);
+                                    Object exception, ServerName source);
 
   @Deprecated
   void updateCachedLocations(byte[] tableName, byte[] rowkey,

@@ -1444,7 +1444,7 @@ public class HConnectionManager {
      * @param source the source of the new location, if it's not coming from meta
      * @param location the new location
      */
-    private void cacheLocation(final TableName tableName, final HRegionLocation source,
+    private void cacheLocation(final TableName tableName, final ServerName source,
         final HRegionLocation location) {
       boolean isFromMeta = (source == null);
       byte [] startKey = location.getRegionInfo().getStartKey();
@@ -1457,7 +1457,7 @@ public class HConnectionManager {
       }
       boolean updateCache;
       // If the server in cache sends us a redirect, assume it's always valid.
-      if (oldLocation.equals(source)) {
+      if (oldLocation.getServerName().equals(source)) {
         updateCache = true;
       } else {
         long newLocationSeqNum = location.getSeqNum();
@@ -2193,7 +2193,7 @@ public class HConnectionManager {
       }
     }
 
-    void updateCachedLocation(HRegionInfo hri, HRegionLocation source,
+    void updateCachedLocation(HRegionInfo hri, ServerName source,
                               ServerName serverName, long seqNum) {
       HRegionLocation newHrl = new HRegionLocation(hri, serverName, seqNum);
       cacheLocation(hri.getTable(), source, newHrl);
@@ -2204,14 +2204,13 @@ public class HConnectionManager {
     * @param hri The region in question.
     * @param source The source of the error that prompts us to invalidate cache.
     */
-   void deleteCachedLocation(HRegionInfo hri, HRegionLocation source) {
-     ConcurrentMap<byte[], HRegionLocation> tableLocations = getTableLocations(hri.getTable());
-     tableLocations.remove(hri.getStartKey(), source);
+   void deleteCachedLocation(HRegionInfo hri, ServerName source) {
+     getTableLocations(hri.getTable()).remove(hri.getStartKey());
    }
 
     @Override
     public void deleteCachedRegionLocation(final HRegionLocation location) {
-      if (location == null) {
+      if (location == null || location.getRegionInfo() == null) {
         return;
       }
 
@@ -2227,6 +2226,12 @@ public class HConnectionManager {
       }
     }
 
+    @Override
+    public void updateCachedLocations(final TableName tableName, byte[] rowkey,
+      final Object exception, final HRegionLocation source) {
+      updateCachedLocations(tableName, rowkey, exception, source.getServerName());
+    }
+
     /**
      * Update the location with the new value (if the exception is a RegionMovedException)
      * or delete it from the cache. Does nothing if we can be sure from the exception that
@@ -2237,21 +2242,21 @@ public class HConnectionManager {
      */
     @Override
     public void updateCachedLocations(final TableName tableName, byte[] rowkey,
-      final Object exception, final HRegionLocation source) {
+      final Object exception, final ServerName source) {
       if (rowkey == null || tableName == null) {
         LOG.warn("Coding error, see method javadoc. row=" + (rowkey == null ? "null" : rowkey) +
             ", tableName=" + (tableName == null ? "null" : tableName));
         return;
       }
 
-      if (source == null || source.getServerName() == null){
+      if (source == null) {
         // This should not happen, but let's secure ourselves.
         return;
       }
 
       // Is it something we have already updated?
       final HRegionLocation oldLocation = getCachedLocation(tableName, rowkey);
-      if (oldLocation == null || !source.getServerName().equals(oldLocation.getServerName())) {
+      if (oldLocation == null || !source.equals(oldLocation.getServerName())) {
         // There is no such location in the cache (it's been removed already) or
         // the cache has already been refreshed with a different location.  => nothing to do
         return;
@@ -2270,7 +2275,7 @@ public class HConnectionManager {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Region " + regionInfo.getRegionNameAsString() + " moved to " +
                 rme.getHostname() + ":" + rme.getPort() +
-                " according to " + source.getHostnamePort());
+                " according to " + source.getHostAndPort());
           }
           // We know that the region is not anymore on this region server, but we know
           //  the new location.
@@ -2391,7 +2396,7 @@ public class HConnectionManager {
       }
 
       @Override
-      public boolean failure(int pos, byte[] region, Row row, Throwable t) {
+      public boolean failure(int pos, Row row, Throwable t) {
         assert pos < results.length;
         results[pos] = t;
         //Batch.Callback<Res> was not called on failure in 0.94. We keep this.
@@ -2399,8 +2404,7 @@ public class HConnectionManager {
       }
 
       @Override
-      public boolean retriableFailure(int originalIndex, Row row, byte[] region,
-                                      Throwable exception) {
+      public boolean retriableFailure(int originalIndex, Row row, Throwable exception) {
         return true; // we retry
       }
     }
@@ -2681,8 +2685,8 @@ public class HConnectionManager {
    */
   static class ServerErrorTracker {
     // We need a concurrent map here, as we could have multiple threads updating it in parallel.
-    private final ConcurrentMap<HRegionLocation, ServerErrors> errorsByServer =
-        new ConcurrentHashMap<HRegionLocation, ServerErrors>();
+    private final ConcurrentMap<ServerName, ServerErrors> errorsByServer =
+        new ConcurrentHashMap<ServerName, ServerErrors>();
     private final long canRetryUntil;
     private final int maxRetries;
     private final String startTrackingTime;
@@ -2709,7 +2713,7 @@ public class HConnectionManager {
      * @param basePause The default hci pause.
      * @return The time to wait before sending next request.
      */
-    long calculateBackoffTime(HRegionLocation server, long basePause) {
+    long calculateBackoffTime(ServerName server, long basePause) {
       long result;
       ServerErrors errorStats = errorsByServer.get(server);
       if (errorStats != null) {
@@ -2725,7 +2729,7 @@ public class HConnectionManager {
      *
      * @param server The server in question.
      */
-    void reportServerError(HRegionLocation server) {
+    void reportServerError(ServerName server) {
       ServerErrors errors = errorsByServer.get(server);
       if (errors != null) {
         errors.addError();

@@ -27,7 +27,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -52,12 +54,25 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
   private final boolean cellBlock;
 
   MultiServerCallable(final HConnection connection, final TableName tableName,
-      final HRegionLocation location, final MultiAction<R> multi) {
+      final ServerName location, final MultiAction<R> multi) {
     super(connection, tableName, null);
     this.multiAction = multi;
-    setLocation(location);
+    // RegionServerCallable has HRegionLocation field, but this is a multi-region request.
+    // Using region info from parent HRegionLocation would be a mistake for this class; so
+    // we will store the server here, and throw if someone tries to obtain location/regioninfo.
+    this.location = new HRegionLocation(null, location);
     this.cellBlock = isCellBlock();
   }
+
+  @Override
+  protected HRegionLocation getLocation() {
+    throw new RuntimeException("Cannot get region location for multi-region request");
+  }
+
+  @Override
+  public HRegionInfo getHRegionInfo() {
+    throw new RuntimeException("Cannot get region info for multi-region request");
+  };
 
   MultiAction<R> getMulti() {
     return this.multiAction;
@@ -133,6 +148,6 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
   @Override
   public void prepare(boolean reload) throws IOException {
     // Use the location we were given in the constructor rather than go look it up.
-    setStub(getConnection().getClient(getLocation().getServerName()));
+    setStub(getConnection().getClient(this.location.getServerName()));
   }
 }

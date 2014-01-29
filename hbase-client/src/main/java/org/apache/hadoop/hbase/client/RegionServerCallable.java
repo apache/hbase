@@ -37,6 +37,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Implementations call a RegionServer and implement {@link #call()}.
  * Passed to a {@link RpcRetryingCaller} so we retry on fail.
+ * TODO: this class is actually tied to one region, because most of the paths make use of
+ *       the regioninfo part of location when building requests. The only reason it works for
+ *       multi-region requests (e.g. batch) is that they happen to not use the region parts.
+ *       This could be done cleaner (e.g. having a generic parameter and 2 derived classes,
+ *       RegionCallable and actual RegionServerCallable with ServerName.
  * @param <T> the class that the ServerCallable handles
  */
 @InterfaceAudience.Private
@@ -74,7 +79,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
       throw new IOException("Failed to find location, tableName=" + tableName +
         ", row=" + Bytes.toString(row) + ", reload=" + reload);
     }
-    setStub(getConnection().getClient(getLocation().getServerName()));
+    setStub(getConnection().getClient(this.location.getServerName()));
   }
 
   /**
@@ -119,7 +124,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
       // hbase:meta again to find the new location
       if (this.location != null) getConnection().clearCaches(location.getServerName());
     } else if (t instanceof RegionMovedException) {
-      getConnection().updateCachedLocations(tableName, row, t, location);
+      getConnection().updateCachedLocations(tableName, row, t, location.getServerName());
     } else if (t instanceof NotServingRegionException && !retrying) {
       // Purge cache entries for this specific region from hbase:meta cache
       // since we don't call connect(true) when number of retries is 1.

@@ -157,7 +157,7 @@ class AsyncProcess<CResult> {
      *         the current process to be stopped without proceeding with the other operations in
      *         the queue.
      */
-    boolean failure(int originalIndex, byte[] region, Row row, Throwable t);
+    boolean failure(int originalIndex, Row row, Throwable t);
 
     /**
      * Called on a failure we plan to retry. This allows the user to stop retrying. Will be
@@ -165,7 +165,7 @@ class AsyncProcess<CResult> {
      *
      * @return false if we should retry, true otherwise.
      */
-    boolean retriableFailure(int originalIndex, Row row, byte[] region, Throwable exception);
+    boolean retriableFailure(int originalIndex, Row row, Throwable exception);
   }
 
   private static class BatchErrors {
@@ -173,14 +173,14 @@ class AsyncProcess<CResult> {
     private final List<Row> actions = new ArrayList<Row>();
     private final List<String> addresses = new ArrayList<String>();
 
-    public synchronized void add(Throwable ex, Row row, HRegionLocation location) {
+    public synchronized void add(Throwable ex, Row row, ServerName serverName) {
       if (row == null){
-        throw new IllegalArgumentException("row cannot be null. location=" + location);
+        throw new IllegalArgumentException("row cannot be null. location=" + serverName);
       }
 
       throwables.add(ex);
       actions.add(row);
-      addresses.add(location != null ? location.getServerName().toString() : "null location");
+      addresses.add(serverName != null ? serverName.toString() : "null");
     }
 
     private synchronized RetriesExhaustedWithDetailsException makeException() {
@@ -267,10 +267,8 @@ class AsyncProcess<CResult> {
       return;
     }
 
-    // This looks like we are keying by region but HRegionLocation has a comparator that compares
-    // on the server portion only (hostname + port) so this Map collects regions by server.
-    Map<HRegionLocation, MultiAction<Row>> actionsByServer =
-      new HashMap<HRegionLocation, MultiAction<Row>>();
+    Map<ServerName, MultiAction<Row>> actionsByServer =
+        new HashMap<ServerName, MultiAction<Row>>();
     List<Action<Row>> retainedActions = new ArrayList<Action<Row>>(rows.size());
 
     long currentTaskCnt = tasksDone.get();
@@ -324,13 +322,13 @@ class AsyncProcess<CResult> {
    * @param actionsByServer the multiaction per server
    * @param ng Nonce generator, or null if no nonces are needed.
    */
-  private void addAction(HRegionLocation loc, Action<Row> action, Map<HRegionLocation,
-      MultiAction<Row>> actionsByServer, NonceGenerator ng) {
+  private void addAction(HRegionLocation loc, Action<Row> action,
+      Map<ServerName, MultiAction<Row>> actionsByServer, NonceGenerator ng) {
     final byte[] regionName = loc.getRegionInfo().getRegionName();
-    MultiAction<Row> multiAction = actionsByServer.get(loc);
+    MultiAction<Row> multiAction = actionsByServer.get(loc.getServerName());
     if (multiAction == null) {
       multiAction = new MultiAction<Row>();
-      actionsByServer.put(loc, multiAction);
+      actionsByServer.put(loc.getServerName(), multiAction);
     }
     if (action.hasNonce() && !multiAction.hasNonceGroup()) {
       // TODO: this code executes for every (re)try, and calls getNonceGroup again
@@ -484,8 +482,8 @@ class AsyncProcess<CResult> {
     }
 
     // group per location => regions server
-    final Map<HRegionLocation, MultiAction<Row>> actionsByServer =
-        new HashMap<HRegionLocation, MultiAction<Row>>();
+    final Map<ServerName, MultiAction<Row>> actionsByServer =
+        new HashMap<ServerName, MultiAction<Row>>();
 
     NonceGenerator ng = this.hConnection.getNonceGenerator();
     for (Action<Row> action : currentActions) {
@@ -509,43 +507,43 @@ class AsyncProcess<CResult> {
    * @param numAttempt      the attempt number.
    */
   public void sendMultiAction(final List<Action<Row>> initialActions,
-                              Map<HRegionLocation, MultiAction<Row>> actionsByServer,
+                              Map<ServerName, MultiAction<Row>> actionsByServer,
                               final int numAttempt,
                               final HConnectionManager.ServerErrorTracker errorsByServer) {
     // Send the queries and add them to the inProgress list
     // This iteration is by server (the HRegionLocation comparator is by server portion only).
-    for (Map.Entry<HRegionLocation, MultiAction<Row>> e : actionsByServer.entrySet()) {
-      final HRegionLocation loc = e.getKey();
+    for (Map.Entry<ServerName, MultiAction<Row>> e : actionsByServer.entrySet()) {
+      final ServerName server = e.getKey();
       final MultiAction<Row> multiAction = e.getValue();
-      incTaskCounters(multiAction.getRegions(), loc.getServerName());
+      incTaskCounters(multiAction.getRegions(), server);
       Runnable runnable = Trace.wrap("AsyncProcess.sendMultiAction", new Runnable() {
         @Override
         public void run() {
           MultiResponse res;
           try {
-            MultiServerCallable<Row> callable = createCallable(loc, multiAction);
+            MultiServerCallable<Row> callable = createCallable(server, multiAction);
             try {
               res = createCaller(callable).callWithoutRetries(callable);
             } catch (IOException e) {
               // The service itself failed . It may be an error coming from the communication
               //   layer, but, as well, a functional error raised by the server.
-              receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, e,
+              receiveGlobalFailure(initialActions, multiAction, server, numAttempt, e,
                   errorsByServer);
               return;
             } catch (Throwable t) {
               // This should not happen. Let's log & retry anyway.
               LOG.error("#" + id + ", Caught throwable while calling. This is unexpected." +
-                  " Retrying. Server is " + loc.getServerName() + ", tableName=" + tableName, t);
-              receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, t,
+                  " Retrying. Server is " + server.getServerName() + ", tableName=" + tableName, t);
+              receiveGlobalFailure(initialActions, multiAction, server, numAttempt, t,
                   errorsByServer);
               return;
             }
 
             // Nominal case: we received an answer from the server, and it's not an exception.
-            receiveMultiAction(initialActions, multiAction, loc, res, numAttempt, errorsByServer);
+            receiveMultiAction(initialActions, multiAction, server, res, numAttempt, errorsByServer);
 
           } finally {
-            decTaskCounters(multiAction.getRegions(), loc.getServerName());
+            decTaskCounters(multiAction.getRegions(), server);
           }
         }
       });
@@ -555,12 +553,12 @@ class AsyncProcess<CResult> {
       } catch (RejectedExecutionException ree) {
         // This should never happen. But as the pool is provided by the end user, let's secure
         //  this a little.
-        decTaskCounters(multiAction.getRegions(), loc.getServerName());
+        decTaskCounters(multiAction.getRegions(), server);
         LOG.warn("#" + id + ", the task was rejected by the pool. This is unexpected." +
-            " Server is " + loc.getServerName(), ree);
+            " Server is " + server.getServerName(), ree);
         // We're likely to fail again, but this will increment the attempt counter, so it will
         //  finish.
-        receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, ree, errorsByServer);
+        receiveGlobalFailure(initialActions, multiAction, server, numAttempt, ree, errorsByServer);
       }
     }
   }
@@ -568,9 +566,9 @@ class AsyncProcess<CResult> {
   /**
    * Create a callable. Isolated to be easily overridden in the tests.
    */
-  protected MultiServerCallable<Row> createCallable(final HRegionLocation location,
-      final MultiAction<Row> multi) {
-    return new MultiServerCallable<Row>(hConnection, tableName, location, multi);
+  protected MultiServerCallable<Row> createCallable(
+      final ServerName server, final MultiAction<Row> multi) {
+    return new MultiServerCallable<Row>(hConnection, tableName, server, multi);
   }
 
   /**
@@ -589,29 +587,24 @@ class AsyncProcess<CResult> {
    * @param row           the row
    * @param canRetry      if false, we won't retry whatever the settings.
    * @param throwable     the throwable, if any (can be null)
-   * @param location      the location, if any (can be null)
+   * @param server      the location, if any (can be null)
    * @return true if the action can be retried, false otherwise.
    */
-  private boolean manageError(int originalIndex, Row row, boolean canRetry,
-                              Throwable throwable, HRegionLocation location) {
+  private boolean manageError(int originalIndex, Row row,
+      boolean canRetry, Throwable throwable, ServerName server) {
     if (canRetry && throwable != null && throwable instanceof DoNotRetryIOException) {
       canRetry = false;
     }
 
-    byte[] region = null;
     if (canRetry && callback != null) {
-      region = location == null ? null : location.getRegionInfo().getEncodedNameAsBytes();
-      canRetry = callback.retriableFailure(originalIndex, row, region, throwable);
+      canRetry = callback.retriableFailure(originalIndex, row, throwable);
     }
 
     if (!canRetry) {
       if (callback != null) {
-        if (region == null && location != null) {
-          region = location.getRegionInfo().getEncodedNameAsBytes();
-        }
-        callback.failure(originalIndex, region, row, throwable);
+        callback.failure(originalIndex, row, throwable);
       }
-      errors.add(throwable, row, location);
+      errors.add(throwable, row, server);
       this.hasError.set(true);
     }
 
@@ -623,29 +616,29 @@ class AsyncProcess<CResult> {
    *
    * @param initialActions the full initial action list
    * @param rsActions  the actions still to do from the initial list
-   * @param location   the destination
+   * @param server   the destination
    * @param numAttempt the number of attempts so far
    * @param t the throwable (if any) that caused the resubmit
    */
   private void receiveGlobalFailure(List<Action<Row>> initialActions, MultiAction<Row> rsActions,
-                                    HRegionLocation location, int numAttempt, Throwable t,
+                                    ServerName server, int numAttempt, Throwable t,
                                     HConnectionManager.ServerErrorTracker errorsByServer) {
     // Do not use the exception for updating cache because it might be coming from
     // any of the regions in the MultiAction.
     hConnection.updateCachedLocations(tableName,
-      rsActions.actions.values().iterator().next().get(0).getAction().getRow(), null, location);
-    errorsByServer.reportServerError(location);
+      rsActions.actions.values().iterator().next().get(0).getAction().getRow(), null, server);
+    errorsByServer.reportServerError(server);
 
     List<Action<Row>> toReplay = new ArrayList<Action<Row>>(initialActions.size());
     for (Map.Entry<byte[], List<Action<Row>>> e : rsActions.actions.entrySet()) {
       for (Action<Row> action : e.getValue()) {
-        if (manageError(action.getOriginalIndex(), action.getAction(), true, t, location)) {
+        if (manageError(action.getOriginalIndex(), action.getAction(), true, t, server)) {
           toReplay.add(action);
         }
       }
     }
 
-    logAndResubmit(initialActions, location, toReplay, numAttempt, rsActions.size(),
+    logAndResubmit(initialActions, server, toReplay, numAttempt, rsActions.size(),
         t, errorsByServer);
   }
 
@@ -653,7 +646,7 @@ class AsyncProcess<CResult> {
    * Log as many info as possible, and, if there is something to replay, submit it again after
    *  a back off sleep.
    */
-  private void logAndResubmit(List<Action<Row>> initialActions, HRegionLocation oldLocation,
+  private void logAndResubmit(List<Action<Row>> initialActions, ServerName oldLocation,
                               List<Action<Row>> toReplay, int numAttempt, int failureCount,
                               Throwable throwable,
                               HConnectionManager.ServerErrorTracker errorsByServer) {
@@ -662,13 +655,11 @@ class AsyncProcess<CResult> {
       if (failureCount != 0) {
         // We have a failure but nothing to retry. We're done, it's a final failure..
         LOG.warn(createLog(numAttempt, failureCount, toReplay.size(),
-            oldLocation.getServerName(), throwable, -1, false,
-            errorsByServer.getStartTrackingTime()));
+            oldLocation, throwable, -1, false, errorsByServer.getStartTrackingTime()));
       } else if (numAttempt > startLogErrorsCnt + 1) {
         // The operation was successful, but needed several attempts. Let's log this.
         LOG.info(createLog(numAttempt, failureCount, 0,
-            oldLocation.getServerName(), throwable, -1, false,
-            errorsByServer.getStartTrackingTime()));
+            oldLocation, throwable, -1, false, errorsByServer.getStartTrackingTime()));
       }
       return;
     }
@@ -686,8 +677,7 @@ class AsyncProcess<CResult> {
       // We use this value to have some logs when we have multiple failures, but not too many
       //  logs, as errors are to be expected when a region moves, splits and so on
       LOG.info(createLog(numAttempt, failureCount, toReplay.size(),
-          oldLocation.getServerName(), throwable, backOffTime, true,
-          errorsByServer.getStartTrackingTime()));
+          oldLocation, throwable, backOffTime, true, errorsByServer.getStartTrackingTime()));
     }
 
     try {
@@ -706,12 +696,12 @@ class AsyncProcess<CResult> {
    *
    * @param initialActions - the whole action list
    * @param multiAction    - the multiAction we sent
-   * @param location       - the location. It's used as a server name.
+   * @param server       - the location.
    * @param responses      - the response, if any
    * @param numAttempt     - the attempt
    */
   private void receiveMultiAction(List<Action<Row>> initialActions, MultiAction<Row> multiAction,
-                                  HRegionLocation location,
+                                  ServerName server,
                                   MultiResponse responses, int numAttempt,
                                   HConnectionManager.ServerErrorTracker errorsByServer) {
      assert responses != null;
@@ -743,15 +733,15 @@ class AsyncProcess<CResult> {
           if (!regionFailureRegistered) { // We're doing this once per location.
             regionFailureRegistered= true;
             // The location here is used as a server name.
-            hConnection.updateCachedLocations(this.tableName, row.getRow(), result, location);
+            hConnection.updateCachedLocations(this.tableName, row.getRow(), result, server);
             if (failureCount == 1) {
-              errorsByServer.reportServerError(location);
+              errorsByServer.reportServerError(server);
               canRetry = errorsByServer.canRetryMore(numAttempt);
             }
           }
 
           if (manageError(correspondingAction.getOriginalIndex(), row, canRetry,
-              throwable, location)) {
+              throwable, server)) {
             toReplay.add(correspondingAction);
           }
         } else { // success
@@ -779,22 +769,22 @@ class AsyncProcess<CResult> {
       }
 
       if (failureCount == 0) {
-        errorsByServer.reportServerError(location);
+        errorsByServer.reportServerError(server);
         canRetry = errorsByServer.canRetryMore(numAttempt);
       }
       hConnection.updateCachedLocations(this.tableName, actions.get(0).getAction().getRow(),
-          throwable, location);
+          throwable, server);
       failureCount += actions.size();
 
       for (Action<Row> action : actions) {
         Row row = action.getAction();
-        if (manageError(action.getOriginalIndex(), row, canRetry, throwable, location)) {
+        if (manageError(action.getOriginalIndex(), row, canRetry, throwable, server)) {
           toReplay.add(action);
         }
       }
     }
 
-    logAndResubmit(initialActions, location, toReplay, numAttempt, failureCount,
+    logAndResubmit(initialActions, server, toReplay, numAttempt, failureCount,
         throwable, errorsByServer);
   }
 

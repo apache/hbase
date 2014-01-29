@@ -361,7 +361,8 @@ public class TestHCM {
 
     final int nextPort = conn.getCachedLocation(TABLE_NAME, ROW).getPort() + 1;
     HRegionLocation loc = conn.getCachedLocation(TABLE_NAME, ROW);
-    conn.updateCachedLocation(loc.getRegionInfo(), loc, ServerName.valueOf("127.0.0.1", nextPort,
+    conn.updateCachedLocation(loc.getRegionInfo(), loc.getServerName(),
+        ServerName.valueOf("127.0.0.1", nextPort,
         HConstants.LATEST_TIMESTAMP), HConstants.LATEST_TIMESTAMP);
     Assert.assertEquals(conn.getCachedLocation(TABLE_NAME, ROW).getPort(), nextPort);
 
@@ -553,19 +554,18 @@ public class TestHCM {
     HRegionLocation location = conn.getCachedLocation(TABLE_NAME2, ROW);
     assertNotNull(location);
 
-    HRegionLocation anySource = new HRegionLocation(location.getRegionInfo(), ServerName.valueOf(
-        location.getHostname(), location.getPort() - 1, 0L));
+    ServerName anySource = ServerName.valueOf(location.getHostname(), location.getPort() - 1, 0L);
 
     // Same server as already in cache reporting - overwrites any value despite seqNum.
     int nextPort = location.getPort() + 1;
-    conn.updateCachedLocation(location.getRegionInfo(), location,
+    conn.updateCachedLocation(location.getRegionInfo(), location.getServerName(),
         ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() - 1);
     location = conn.getCachedLocation(TABLE_NAME2, ROW);
     Assert.assertEquals(nextPort, location.getPort());
 
     // No source specified - same.
     nextPort = location.getPort() + 1;
-    conn.updateCachedLocation(location.getRegionInfo(), location,
+    conn.updateCachedLocation(location.getRegionInfo(), location.getServerName(),
         ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() - 1);
     location = conn.getCachedLocation(TABLE_NAME2, ROW);
     Assert.assertEquals(nextPort, location.getPort());
@@ -867,9 +867,8 @@ public class TestHCM {
   public void testErrorBackoffTimeCalculation() throws Exception {
     // TODO: This test would seem to presume hardcoded RETRY_BACKOFF which it should not.
     final long ANY_PAUSE = 100;
-    HRegionInfo ri = new HRegionInfo(TABLE_NAME);
-    HRegionLocation location = new HRegionLocation(ri, ServerName.valueOf("127.0.0.1", 1, 0));
-    HRegionLocation diffLocation = new HRegionLocation(ri, ServerName.valueOf("127.0.0.1", 2, 0));
+    ServerName location = ServerName.valueOf("127.0.0.1", 1, 0);
+    ServerName diffLocation = ServerName.valueOf("127.0.0.1", 2, 0);
 
     ManualEnvironmentEdge timeMachine = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(timeMachine);
@@ -891,15 +890,9 @@ public class TestHCM {
       assertEqualsWithJitter(ANY_PAUSE * 5, tracker.calculateBackoffTime(location, ANY_PAUSE));
 
       // All of this shouldn't affect backoff for different location.
-
       assertEquals(0, tracker.calculateBackoffTime(diffLocation, ANY_PAUSE));
       tracker.reportServerError(diffLocation);
       assertEqualsWithJitter(ANY_PAUSE, tracker.calculateBackoffTime(diffLocation, ANY_PAUSE));
-
-      // But should still work for a different region in the same location.
-      HRegionInfo ri2 = new HRegionInfo(TABLE_NAME2);
-      HRegionLocation diffRegion = new HRegionLocation(ri2, location.getServerName());
-      assertEqualsWithJitter(ANY_PAUSE * 5, tracker.calculateBackoffTime(diffRegion, ANY_PAUSE));
 
       // Check with different base.
       assertEqualsWithJitter(ANY_PAUSE * 10,
