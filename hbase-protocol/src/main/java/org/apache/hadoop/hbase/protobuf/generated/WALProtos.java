@@ -112,6 +112,16 @@ public final class WALProtos {
      * <code>optional bytes encryption_key = 2;</code>
      */
     com.google.protobuf.ByteString getEncryptionKey();
+
+    // optional bool has_tag_compression = 3;
+    /**
+     * <code>optional bool has_tag_compression = 3;</code>
+     */
+    boolean hasHasTagCompression();
+    /**
+     * <code>optional bool has_tag_compression = 3;</code>
+     */
+    boolean getHasTagCompression();
   }
   /**
    * Protobuf type {@code WALHeader}
@@ -172,6 +182,11 @@ public final class WALProtos {
             case 18: {
               bitField0_ |= 0x00000002;
               encryptionKey_ = input.readBytes();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              hasTagCompression_ = input.readBool();
               break;
             }
           }
@@ -246,9 +261,26 @@ public final class WALProtos {
       return encryptionKey_;
     }
 
+    // optional bool has_tag_compression = 3;
+    public static final int HAS_TAG_COMPRESSION_FIELD_NUMBER = 3;
+    private boolean hasTagCompression_;
+    /**
+     * <code>optional bool has_tag_compression = 3;</code>
+     */
+    public boolean hasHasTagCompression() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional bool has_tag_compression = 3;</code>
+     */
+    public boolean getHasTagCompression() {
+      return hasTagCompression_;
+    }
+
     private void initFields() {
       hasCompression_ = false;
       encryptionKey_ = com.google.protobuf.ByteString.EMPTY;
+      hasTagCompression_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -268,6 +300,9 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeBytes(2, encryptionKey_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBool(3, hasTagCompression_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -284,6 +319,10 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(2, encryptionKey_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(3, hasTagCompression_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -318,6 +357,11 @@ public final class WALProtos {
         result = result && getEncryptionKey()
             .equals(other.getEncryptionKey());
       }
+      result = result && (hasHasTagCompression() == other.hasHasTagCompression());
+      if (hasHasTagCompression()) {
+        result = result && (getHasTagCompression()
+            == other.getHasTagCompression());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -338,6 +382,10 @@ public final class WALProtos {
       if (hasEncryptionKey()) {
         hash = (37 * hash) + ENCRYPTION_KEY_FIELD_NUMBER;
         hash = (53 * hash) + getEncryptionKey().hashCode();
+      }
+      if (hasHasTagCompression()) {
+        hash = (37 * hash) + HAS_TAG_COMPRESSION_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getHasTagCompression());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -452,6 +500,8 @@ public final class WALProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         encryptionKey_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000002);
+        hasTagCompression_ = false;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -488,6 +538,10 @@ public final class WALProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.encryptionKey_ = encryptionKey_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.hasTagCompression_ = hasTagCompression_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -509,6 +563,9 @@ public final class WALProtos {
         }
         if (other.hasEncryptionKey()) {
           setEncryptionKey(other.getEncryptionKey());
+        }
+        if (other.hasHasTagCompression()) {
+          setHasTagCompression(other.getHasTagCompression());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -602,6 +659,39 @@ public final class WALProtos {
       public Builder clearEncryptionKey() {
         bitField0_ = (bitField0_ & ~0x00000002);
         encryptionKey_ = getDefaultInstance().getEncryptionKey();
+        onChanged();
+        return this;
+      }
+
+      // optional bool has_tag_compression = 3;
+      private boolean hasTagCompression_ ;
+      /**
+       * <code>optional bool has_tag_compression = 3;</code>
+       */
+      public boolean hasHasTagCompression() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional bool has_tag_compression = 3;</code>
+       */
+      public boolean getHasTagCompression() {
+        return hasTagCompression_;
+      }
+      /**
+       * <code>optional bool has_tag_compression = 3;</code>
+       */
+      public Builder setHasTagCompression(boolean value) {
+        bitField0_ |= 0x00000004;
+        hasTagCompression_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool has_tag_compression = 3;</code>
+       */
+      public Builder clearHasTagCompression() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        hasTagCompression_ = false;
         onChanged();
         return this;
       }
@@ -5084,25 +5174,26 @@ public final class WALProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\tWAL.proto\032\013HBase.proto\"<\n\tWALHeader\022\027\n" +
+      "\n\tWAL.proto\032\013HBase.proto\"Y\n\tWALHeader\022\027\n" +
       "\017has_compression\030\001 \001(\010\022\026\n\016encryption_key" +
-      "\030\002 \001(\014\"\202\002\n\006WALKey\022\033\n\023encoded_region_name" +
-      "\030\001 \002(\014\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023log_sequen" +
-      "ce_number\030\003 \002(\004\022\022\n\nwrite_time\030\004 \002(\004\022\035\n\nc" +
-      "luster_id\030\005 \001(\0132\005.UUIDB\002\030\001\022\034\n\006scopes\030\006 \003" +
-      "(\0132\014.FamilyScope\022\032\n\022following_kv_count\030\007" +
-      " \001(\r\022\032\n\013cluster_ids\030\010 \003(\0132\005.UUID\022\022\n\nnonc" +
-      "eGroup\030\t \001(\004\022\r\n\005nonce\030\n \001(\004\"=\n\013FamilySco" +
-      "pe\022\016\n\006family\030\001 \002(\014\022\036\n\nscope_type\030\002 \002(\0162\n",
-      ".ScopeType\"\251\001\n\024CompactionDescriptor\022\022\n\nt" +
-      "able_name\030\001 \002(\014\022\033\n\023encoded_region_name\030\002" +
-      " \002(\014\022\023\n\013family_name\030\003 \002(\014\022\030\n\020compaction_" +
-      "input\030\004 \003(\t\022\031\n\021compaction_output\030\005 \003(\t\022\026" +
-      "\n\016store_home_dir\030\006 \002(\t\"\014\n\nWALTrailer*F\n\t" +
-      "ScopeType\022\033\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034" +
-      "\n\030REPLICATION_SCOPE_GLOBAL\020\001B?\n*org.apac" +
-      "he.hadoop.hbase.protobuf.generatedB\tWALP" +
-      "rotosH\001\210\001\000\240\001\001"
+      "\030\002 \001(\014\022\033\n\023has_tag_compression\030\003 \001(\010\"\202\002\n\006" +
+      "WALKey\022\033\n\023encoded_region_name\030\001 \002(\014\022\022\n\nt" +
+      "able_name\030\002 \002(\014\022\033\n\023log_sequence_number\030\003" +
+      " \002(\004\022\022\n\nwrite_time\030\004 \002(\004\022\035\n\ncluster_id\030\005" +
+      " \001(\0132\005.UUIDB\002\030\001\022\034\n\006scopes\030\006 \003(\0132\014.Family" +
+      "Scope\022\032\n\022following_kv_count\030\007 \001(\r\022\032\n\013clu" +
+      "ster_ids\030\010 \003(\0132\005.UUID\022\022\n\nnonceGroup\030\t \001(" +
+      "\004\022\r\n\005nonce\030\n \001(\004\"=\n\013FamilyScope\022\016\n\006famil",
+      "y\030\001 \002(\014\022\036\n\nscope_type\030\002 \002(\0162\n.ScopeType\"" +
+      "\251\001\n\024CompactionDescriptor\022\022\n\ntable_name\030\001" +
+      " \002(\014\022\033\n\023encoded_region_name\030\002 \002(\014\022\023\n\013fam" +
+      "ily_name\030\003 \002(\014\022\030\n\020compaction_input\030\004 \003(\t" +
+      "\022\031\n\021compaction_output\030\005 \003(\t\022\026\n\016store_hom" +
+      "e_dir\030\006 \002(\t\"\014\n\nWALTrailer*F\n\tScopeType\022\033" +
+      "\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATI" +
+      "ON_SCOPE_GLOBAL\020\001B?\n*org.apache.hadoop.h" +
+      "base.protobuf.generatedB\tWALProtosH\001\210\001\000\240" +
+      "\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -5114,7 +5205,7 @@ public final class WALProtos {
           internal_static_WALHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_WALHeader_descriptor,
-              new java.lang.String[] { "HasCompression", "EncryptionKey", });
+              new java.lang.String[] { "HasCompression", "EncryptionKey", "HasTagCompression", });
           internal_static_WALKey_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_WALKey_fieldAccessorTable = new

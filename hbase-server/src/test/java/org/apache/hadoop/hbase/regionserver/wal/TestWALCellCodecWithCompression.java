@@ -55,7 +55,7 @@ public class TestWALCellCodecWithCompression {
     Configuration conf = new Configuration(false);
     conf.setBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, compressTags);
     WALCellCodec codec = new WALCellCodec(conf, new CompressionContext(LRUDictionary.class, false,
-        conf));
+        compressTags));
     ByteArrayOutputStream bos = new ByteArrayOutputStream(1024);
     Encoder encoder = codec.getEncoder(bos);
     encoder.write(createKV(1));
