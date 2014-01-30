@@ -2164,7 +2164,12 @@ public class HRegion implements HeapSize { // , Writable{
             batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
           }
         } else if (m instanceof Delete) {
-          if (coprocessorHost.preDelete((Delete) m, walEdit, m.getDurability())) {
+          Delete curDel = (Delete) m;
+          if (curDel.getFamilyCellMap().isEmpty()) {
+            // handle deleting a row case
+            prepareDelete(curDel);
+          }
+          if (coprocessorHost.preDelete(curDel, walEdit, m.getDurability())) {
             // pre hook says skip this Delete
             // mark as success and skip in doMiniBatchMutation
             batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
