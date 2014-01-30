@@ -55,6 +55,11 @@ public abstract class StateDumpServlet extends HttpServlet {
 
   protected void dumpExecutors(ExecutorService service, PrintWriter out)
       throws IOException {
+    if (service == null) {
+      out.println("ExecutorService is not initialized");
+      return;
+    }
+
     Map<String, ExecutorStatus> statuses = service.getAllExecutorStatuses();
     for (ExecutorStatus status : statuses.values()) {
       status.dumpTo(out, "  ");

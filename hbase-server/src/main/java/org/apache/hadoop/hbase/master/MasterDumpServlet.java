@@ -100,8 +100,14 @@ public class MasterDumpServlet extends StateDumpServlet {
   
 
   private void dumpRIT(HMaster master, PrintWriter out) {
+    AssignmentManager am = master.getAssignmentManager();
+    if (am == null) {
+      out.println("AssignmentManager is not initialized");
+      return;
+    }
+
     Map<String, RegionState> regionsInTransition =
-      master.getAssignmentManager().getRegionStates().getRegionsInTransition();
+      am.getRegionStates().getRegionsInTransition();
     for (Map.Entry<String, RegionState> e : regionsInTransition.entrySet()) {
       String rid = e.getKey();
       RegionState rs = e.getValue();
@@ -110,8 +116,13 @@ public class MasterDumpServlet extends StateDumpServlet {
   }
 
   private void dumpServers(HMaster master, PrintWriter out) {
-    Map<ServerName, ServerLoad> servers =
-      master.getServerManager().getOnlineServers();
+    ServerManager sm = master.getServerManager();
+    if (sm == null) {
+      out.println("ServerManager is not initialized");
+      return;
+    }
+
+    Map<ServerName, ServerLoad> servers = sm.getOnlineServers();
     for (Map.Entry<ServerName, ServerLoad> e : servers.entrySet()) {
       out.println(e.getKey() + ": " + e.getValue());
     }
