@@ -129,7 +129,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
         Assert.fail(errorMsg);
       }
 
-      ret = loadTool.run(getArgsForLoadTestTool("-update", String.format("60:%d", writeThreads),
+      ret = loadTool.run(getArgsForLoadTestTool("-update", String.format("60:%d:1", writeThreads),
           startKey, numKeys));
       if (0 != ret) {
         String errorMsg = "Update failed with error code " + ret;
