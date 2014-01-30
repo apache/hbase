@@ -92,7 +92,8 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   /** Usage string for the update option */
   protected static final String OPT_USAGE_UPDATE =
-      "<update_percent>[:<#threads=" + DEFAULT_NUM_THREADS + ">]";
+      "<update_percent>[:<#threads=" + DEFAULT_NUM_THREADS
+      + ">][:<#whether to ignore nonce collisions=0>]";
 
   protected static final String OPT_USAGE_BLOOM = "Bloom filter type, one of " +
       Arrays.toString(BloomType.values());
@@ -168,6 +169,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   // Updater options
   protected int numUpdaterThreads = DEFAULT_NUM_THREADS;
   protected int updatePercent;
+  protected boolean ignoreConflicts = false;
   protected boolean isBatchUpdate;
 
   // Reader options
@@ -353,11 +355,14 @@ public class LoadTestTool extends AbstractHBaseTool {
     }
 
     if (isUpdate) {
-      String[] mutateOpts = splitColonSeparated(OPT_UPDATE, 1, 2);
+      String[] mutateOpts = splitColonSeparated(OPT_UPDATE, 1, 3);
       int colIndex = 0;
       updatePercent = parseInt(mutateOpts[colIndex++], 0, 100);
       if (colIndex < mutateOpts.length) {
         numUpdaterThreads = getNumThreads(mutateOpts[colIndex++]);
+      }
+      if (colIndex < mutateOpts.length) {
+        ignoreConflicts = parseInt(mutateOpts[colIndex++], 0, 1) == 1;
       }
 
       isBatchUpdate = cmd.hasOption(OPT_BATCHUPDATE);
@@ -365,6 +370,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       System.out.println("Batch updates: " + isBatchUpdate);
       System.out.println("Percent of keys to update: " + updatePercent);
       System.out.println("Updater threads: " + numUpdaterThreads);
+      System.out.println("Ignore nonce conflicts: " + ignoreConflicts);
     }
 
     if (isRead) {
@@ -499,6 +505,7 @@ public class LoadTestTool extends AbstractHBaseTool {
         updaterThreads = new MultiThreadedUpdater(dataGen, conf, tableName, updatePercent);
       }
       updaterThreads.setBatchUpdate(isBatchUpdate);
+      updaterThreads.setIgnoreNonceConflicts(ignoreConflicts);
     }
 
     if (isRead) {
