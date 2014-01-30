@@ -262,11 +262,26 @@ mvn compile -Dcompile-protobuf -Dprotoc.path=/opt/local/bin/protoc
          <title>Making a Release Candidate</title>
          <para>I'll explain by running through the process.  See later in this section for more detail on particular steps.
          </para>
+	 <para>If you are making a point release (for example to quickly address a critical incompatability or security
+             problem) off of a release branch instead of a development branch the tagging instructions are slightly different.
+             I'll prefix those special steps with "Point Release Only".
+	 </para>
+
          <para>I would advise before you go about making a release candidate, do a practise run by deploying a SNAPSHOT.
              Also, make sure builds have been passing recently for the branch from where you are going to take your
              release.  You should also have tried recent branch tips out on a cluster under load running for instance
              our hbase-it integration test suite for a few hours to 'burn in' the near-candidate bits.
          </para>
+	 <note>
+	 <para>Point Release Only: At this point you should make svn copy of the previous release branch (ex: 0.96.1) with
+             the new point release tag (e.g. 0.96.1.1 tag).  Any commits with changes or mentioned below for the point release
+	     should be appled to the new tag. 
+	 </para>
+	 <para><programlisting>
+$ svn copy http://svn.apache.org/repos/asf/hbase/tags/0.96.1 http://svn.apache.org/repos/asf/hbase/tags/0.96.1.1
+$ svn checkout http://svn.apache.org/repos/asf/hbase/tags/0.96.1.1
+	 </programlisting></para>
+	 </note>
          <para>The script <filename>dev-support/make_rc.sh</filename> automates most of this.  It does all but the close of the
              staging repository up in apache maven, the checking of the produced artifacts to ensure they are 'good' -- e.g.
              undoing the produced tarballs, eyeballing them to make sure they look right then starting and checking all is
@@ -333,6 +348,7 @@ $ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 install -DskipTests site assembly:s
 Undo the generated tarball and check it out.  Look at doc. and see if it runs, etc.  Are the set of modules appropriate: e.g. do we have a hbase-hadoop2-compat in the hadoop1 tarball?
 If good, copy the tarball to the above mentioned <emphasis>version directory</emphasis>.
 </para>
+<note><para>Point Release Only: The following step that creates a new tag can be skipped since you've already created the point release tag</para></note>
 <para>I'll tag the release at this point since its looking good.  If we find an issue later, we can delete the tag and start over.  Release needs to be tagged when we do next step.</para>
 <para>Now deploy hadoop1 hbase to mvn. Do the mvn deploy and tgz for a particular version all together in the one go else if you flip between hadoop1 and hadoop2 builds,
 you might mal-publish poms and hbase-default.xml's (the version interpolations won't match).
@@ -963,14 +979,25 @@ mvn compile
        <section xml:id="maven.build.hadoop">
           <title>Building against various hadoop versions.</title>
           <para>As of 0.96, Apache HBase supports building against Apache Hadoop versions: 1.0.3, 2.0.0-alpha and 3.0.0-SNAPSHOT.
-          By default, we will build with Hadoop-1.0.3. To change the version to run with Hadoop-2.0.0-alpha, you would run:</para>
-         <programlisting>mvn -Dhadoop.profile=2.0 ...</programlisting>
+	  By default, in 0.96 and earlier, we will build with Hadoop-1.0.x. 
+          As of 0.98, Hadoop 1.x is deprecated and Hadoop 2.x is the default.
+          To change the version to build against, add a hadoop.profile property when you invoke <command>mvn</command>:</para>
+         <programlisting>mvn -Dhadoop.profile=1.0 ...</programlisting>
          <para>
-         That is, designate build with hadoop.profile 2.0.  Pass 2.0 for hadoop.profile to build against hadoop 2.0.
-         Tests may not all pass as of this writing so you may need to pass <code>-DskipTests</code> unless you are inclined
-          to fix the failing tests.</para>
+         The above will build against whatever explicit hadoop 1.x version we have in our <filename>pom.xml</filename> as our '1.0' version.
+         Tests may not all pass so you may need to pass <code>-DskipTests</code> unless you are inclined to fix the failing tests.</para>
+<note id="maven.build.passing.default.profile">
+<title>'dependencyManagement.dependencies.dependency.artifactId' for org.apache.hbase:${compat.module}:test-jar with value '${compat.module}' does not match a valid id pattern</title>
+<para>You will see ERRORs like the above title if you pass the <emphasis>default</emphasis> profile; e.g. if
+you pass <property>hadoop.profile=1.1</property> when building 0.96 or
+<property>hadoop.profile=2.0</property> when building hadoop 0.98; just drop the
+hadoop.profile stipulation in this case to get your build to run again.  This seems to be a maven
+pecularity that is probably fixable but we've not spent the time trying to figure it.</para>
+</note>
+
           <para>
-         Similarly, for 3.0, you would just replace the profile value. Note that Hadoop-3.0.0-SNAPSHOT does not currently have a deployed maven artificat - you will need to build and install your own in your local maven repository if you want to run against this profile.
+         Similarly, for 3.0, you would just replace the profile value. Note that Hadoop-3.0.0-SNAPSHOT does not currently have a
+         deployed maven artificat - you will need to build and install your own in your local maven repository if you want to run against this profile.
          </para>
          <para>
          In earilier verions of Apache HBase, you can build against older versions of Apache Hadoop, notably, Hadoop 0.22.x and 0.23.x.
