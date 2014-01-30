@@ -257,7 +257,8 @@ export SERVER_GC_OPTS="$SERVER_GC_OPTS -XX:NewSize=64m -XX:MaxNewSize=64m"
            <title>Builtin Tools</title>
             <section xml:id="trouble.tools.builtin.webmaster">
               <title>Master Web Interface</title>
-              <para>The Master starts a web-interface on port 60010 by default.
+              <para>The Master starts a web-interface on port 16010 by default.
+	      (Up to and including 0.98 this was port 60010)
               </para>
               <para>The Master web UI lists created tables and their definition (e.g., ColumnFamilies, blocksize, etc.).  Additionally,
               the available RegionServers in the cluster are listed along with selected high-level metrics (requests, number of regions, usedHeap, maxHeap).
@@ -266,7 +267,8 @@ export SERVER_GC_OPTS="$SERVER_GC_OPTS -XX:NewSize=64m -XX:MaxNewSize=64m"
             </section>
             <section xml:id="trouble.tools.builtin.webregion">
               <title>RegionServer Web Interface</title>
-              <para>RegionServers starts a web-interface on port 60030 by default.
+              <para>RegionServers starts a web-interface on port 16030 by default.
+              (Up to an including 0.98 this was port 60030)
               </para>
               <para>The RegionServer web UI lists online regions and their start/end keys, as well as point-in-time RegionServer metrics (requests, regions, storeFileIndexSize, compactionQueueSize, etc.).
               </para>
@@ -1152,6 +1154,31 @@ at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniCluster
       <title>Case Studies</title>
       <para>For Performance and Troubleshooting Case Studies, see <xref linkend="casestudies"/>.
       </para>
+    </section>
+
+    <section xml:id="trouble.crypto">
+      <title>Cryptographic Features</title>
+        <section xml:id="trouble.crypto.HBASE-10132">
+           <title>sun.security.pkcs11.wrapper.PKCS11Exception: CKR_ARGUMENTS_BAD</title>
+<para>This problem manifests as exceptions ultimately caused by:</para>
+<programlisting>
+Caused by: sun.security.pkcs11.wrapper.PKCS11Exception: CKR_ARGUMENTS_BAD
+	at sun.security.pkcs11.wrapper.PKCS11.C_DecryptUpdate(Native Method)
+	at sun.security.pkcs11.P11Cipher.implDoFinal(P11Cipher.java:795)
+</programlisting>
+<para>
+This problem appears to affect some versions of OpenJDK 7 shipped by some Linux vendors. NSS is configured as the default provider. If the host has an x86_64 architecture, depending on if the vendor packages contain the defect, the NSS provider will not function correctly.
+</para>
+<para>
+To work around this problem, find the JRE home directory and edit the file <filename>lib/security/java.security</filename>. Edit the file to comment out the line:
+</para>
+<programlisting>
+security.provider.1=sun.security.pkcs11.SunPKCS11 ${java.home}/lib/security/nss.cfg
+</programlisting>
+<para>
+Then renumber the remaining providers accordingly.
+</para>
+        </section>
     </section>
 
   </chapter>
