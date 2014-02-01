@@ -999,20 +999,21 @@ public class ZKUtil {
   public static boolean createEphemeralNodeAndWatch(ZooKeeperWatcher zkw,
       String znode, byte [] data)
   throws KeeperException {
+    boolean ret = true;
     try {
       zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
           CreateMode.EPHEMERAL);
     } catch (KeeperException.NodeExistsException nee) {
-      if(!watchAndCheckExists(zkw, znode)) {
-        // It did exist but now it doesn't, try again
-        return createEphemeralNodeAndWatch(zkw, znode, data);
-      }
-      return false;
+      ret = false;
     } catch (InterruptedException e) {
       LOG.info("Interrupted", e);
       Thread.currentThread().interrupt();
     }
-    return true;
+    if(!watchAndCheckExists(zkw, znode)) {
+      // It did exist but now it doesn't, try again
+      return createEphemeralNodeAndWatch(zkw, znode, data);
+    }
+    return ret;
   }
 
   /**
@@ -1038,22 +1039,23 @@ public class ZKUtil {
   public static boolean createNodeIfNotExistsAndWatch(
       ZooKeeperWatcher zkw, String znode, byte [] data)
   throws KeeperException {
+    boolean ret = true;
     try {
       zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
           CreateMode.PERSISTENT);
     } catch (KeeperException.NodeExistsException nee) {
-      try {
-        zkw.getRecoverableZooKeeper().exists(znode, zkw);
-      } catch (InterruptedException e) {
-        zkw.interruptedException(e);
-        return false;
-      }
-      return false;
+      ret = false;
     } catch (InterruptedException e) {
       zkw.interruptedException(e);
       return false;
     }
-    return true;
+    try {
+      zkw.getRecoverableZooKeeper().exists(znode, zkw);
+    } catch (InterruptedException e) {
+      zkw.interruptedException(e);
+      return false;
+    }
+    return ret;
   }
 
   /**
