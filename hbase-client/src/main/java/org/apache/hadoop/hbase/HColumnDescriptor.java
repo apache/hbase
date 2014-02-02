@@ -18,9 +18,14 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.HBaseZeroCopyByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -37,14 +42,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import com.google.common.base.Preconditions;
+import com.google.protobuf.HBaseZeroCopyByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * An HColumnDescriptor contains information about a column family such as the
@@ -194,9 +194,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final boolean DEFAULT_EVICT_BLOCKS_ON_CLOSE = false;
 
   /**
-   * Default compress tags along with any type of DataBlockEncoding
+   * Default compress tags along with any type of DataBlockEncoding.
+   * Disabled to false by default in 0.98.0
    */
-  public static final boolean DEFAULT_COMPRESS_TAGS = true;
+  public static final boolean DEFAULT_COMPRESS_TAGS = false;
 
   private final static Map<String, String> DEFAULT_VALUES
     = new HashMap<String, String>();

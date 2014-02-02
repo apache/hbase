@@ -42,7 +42,7 @@ public class HFileContextBuilder {
   /** Compression algorithm used **/
   private Algorithm compression = Algorithm.NONE;
   /** Whether tags to be compressed or not **/
-  private boolean compressTags;
+  private boolean compressTags = false;
   /** the checksum type **/
   private ChecksumType checksumType = DEFAULT_CHECKSUM_TYPE;
   /** the number of bytes per checksum value **/
