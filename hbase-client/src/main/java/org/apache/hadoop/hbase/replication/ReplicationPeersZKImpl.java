@@ -83,7 +83,9 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   @Override
   public void init() throws ReplicationException {
     try {
-      ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
+      if (ZKUtil.checkExists(this.zookeeper, this.peersZNode) < 0) {
+        ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
+      }
     } catch (KeeperException e) {
       throw new ReplicationException("Could not initialize replication peers", e);
     }

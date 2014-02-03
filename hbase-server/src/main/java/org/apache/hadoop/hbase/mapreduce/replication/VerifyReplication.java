@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 
@@ -106,35 +107,13 @@ public class VerifyReplication {
         HConnectionManager.execute(new HConnectable<Void>(conf) {
           @Override
           public Void connect(HConnection conn) throws IOException {
-            ZooKeeperWatcher localZKW = null;
-            ReplicationPeer peer = null;
-            try {
-              localZKW = new ZooKeeperWatcher(
-                conf, "VerifyReplication", new Abortable() {
-                @Override public void abort(String why, Throwable e) {}
-                @Override public boolean isAborted() {return false;}
-              });
-              ReplicationPeers rp =
-                  ReplicationFactory.getReplicationPeers(localZKW, conf, localZKW);
-              rp.init();
-              Configuration peerConf = rp.getPeerConf(peerId);
-              if (peerConf == null) {
-                throw new IOException("Couldn't get peer conf!");
-              }
-              HTable replicatedTable = new HTable(peerConf, conf.get(NAME + ".tableName"));
-              scan.setStartRow(value.getRow());
-              replicatedScanner = replicatedTable.getScanner(scan);
-            } catch (ReplicationException e) {
-              throw new IOException(
-                  "An error occured while trying to connect to the remove peer cluster", e);
-            } finally {
-              if (peer != null) {
-                peer.close();
-              }
-              if (localZKW != null) {
-                localZKW.close();
-              }
-            }
+            String zkClusterKey = conf.get(NAME + ".peerQuorumAddress");
+            Configuration peerConf = HBaseConfiguration.create(conf);
+            ZKUtil.applyClusterKeyToConf(peerConf, zkClusterKey);
+
+            HTable replicatedTable = new HTable(peerConf, conf.get(NAME + ".tableName"));
+            scan.setStartRow(value.getRow());
+            replicatedScanner = replicatedTable.getScanner(scan);
             return null;
           }
         });
@@ -153,6 +132,38 @@ public class VerifyReplication {
       if (replicatedScanner != null) {
         replicatedScanner.close();
         replicatedScanner = null;
+      }
+    }
+  }
+
+  private static String getPeerQuorumAddress(final Configuration conf) throws IOException {
+    ZooKeeperWatcher localZKW = null;
+    ReplicationPeer peer = null;
+    try {
+      localZKW = new ZooKeeperWatcher(conf, "VerifyReplication",
+          new Abortable() {
+            @Override public void abort(String why, Throwable e) {}
+            @Override public boolean isAborted() {return false;}
+          });
+
+      ReplicationPeers rp = ReplicationFactory.getReplicationPeers(localZKW, conf, localZKW);
+      rp.init();
+
+      Configuration peerConf = rp.getPeerConf(peerId);
+      if (peerConf == null) {
+        throw new IOException("Couldn't get peer conf!");
+      }
+
+      return ZKUtil.getZooKeeperClusterKey(peerConf);
+    } catch (ReplicationException e) {
+      throw new IOException(
+          "An error occured while trying to connect to the remove peer cluster", e);
+    } finally {
+      if (peer != null) {
+        peer.close();
+      }
+      if (localZKW != null) {
+        localZKW.close();
       }
     }
   }
@@ -181,6 +192,11 @@ public class VerifyReplication {
     if (families != null) {
       conf.set(NAME+".families", families);
     }
+
+    String peerQuorumAddress = getPeerQuorumAddress(conf);
+    conf.set(NAME + ".peerQuorumAddress", peerQuorumAddress);
+    LOG.info("Peer Quorum Address: " + peerQuorumAddress);
+
     Job job = new Job(conf, NAME + "_" + tableName);
     job.setJarByClass(VerifyReplication.class);
 
@@ -194,6 +210,10 @@ public class VerifyReplication {
     }
     TableMapReduceUtil.initTableMapperJob(tableName, scan,
         Verifier.class, null, null, job);
+
+    // Obtain the auth token from peer cluster
+    TableMapReduceUtil.initCredentialsForCluster(job, peerQuorumAddress);
+
     job.setOutputFormatClass(NullOutputFormat.class);
     job.setNumReduceTasks(0);
     return job;
