@@ -395,6 +395,32 @@ public class TableMapReduceUtil {
     }
   }
 
+  /**
+   * Obtain an authentication token, for the specified cluster, on behalf of the current user
+   * and add it to the credentials for the given map reduce job.
+   *
+   * The quorumAddress is the key to the ZK ensemble, which contains:
+   * hbase.zookeeper.quorum, hbase.zookeeper.client.port and zookeeper.znode.parent
+   *
+   * @param job The job that requires the permission.
+   * @param quorumAddress string that contains the 3 required configuratins
+   * @throws IOException When the authentication token cannot be obtained.
+   */
+  public static void initCredentialsForCluster(Job job, String quorumAddress)
+      throws IOException {
+    UserProvider userProvider = UserProvider.instantiate(job.getConfiguration());
+    if (userProvider.isHBaseSecurityEnabled()) {
+      try {
+        Configuration peerConf = HBaseConfiguration.create(job.getConfiguration());
+        ZKUtil.applyClusterKeyToConf(peerConf, quorumAddress);
+        obtainAuthTokenForJob(job, peerConf, userProvider.getCurrent());
+      } catch (InterruptedException e) {
+        LOG.info("Interrupted obtaining user authentication token");
+        Thread.interrupted();
+      }
+    }
+  }
+
   private static void obtainAuthTokenForJob(Job job, Configuration conf, User user)
       throws IOException, InterruptedException {
     Token<AuthenticationTokenIdentifier> authToken = getAuthToken(conf, user);
