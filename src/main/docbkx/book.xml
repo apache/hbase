@@ -1112,7 +1112,7 @@ if (!b) {
       <section xml:id="arch.overview.hbasehdfs">
         <title>What Is The Difference Between HBase and Hadoop/HDFS?</title>
           <para><link xlink:href="http://hadoop.apache.org/hdfs/">HDFS</link> is a distributed file system that is well suited for the storage of large files.
-          It's documentation states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files.
+          Its documentation states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files.
           HBase, on the other hand, is built on top of HDFS and provides fast record lookups (and updates) for large tables.
           This can sometimes be a point of conceptual confusion.  HBase internally puts your data in indexed "StoreFiles" that exist
           on HDFS for high-speed lookups.  See the <xref linkend="datamodel" /> and the rest of this chapter for more information on how HBase achieves its goals.
