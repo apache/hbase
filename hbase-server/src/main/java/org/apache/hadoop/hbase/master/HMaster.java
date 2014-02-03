@@ -1419,12 +1419,12 @@ MasterServices, Server {
       LOG.debug("Master has not been initialized, don't run balancer.");
       return false;
     }
-    // If balance not true, don't run balancer.
-    if (!this.loadBalancerTracker.isBalancerOn()) return false;
     // Do this call outside of synchronized block.
     int maximumBalanceTime = getBalancerCutoffTime();
     boolean balancerRan;
     synchronized (this.balancer) {
+      // If balance not true, don't run balancer.
+      if (!this.loadBalancerTracker.isBalancerOn()) return false;
       // Only allow one balance run at at time.
       if (this.assignmentManager.getRegionStates().isRegionsInTransition()) {
         Map<String, RegionState> regionsInTransition =
