@@ -233,8 +233,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           earliestPutTs, oldestUnexpiredTS, dropDeletesFromRow, dropDeletesToRow);
     }
 
-    this.store.addChangedReaderObserver(this);
-
     // Filter the list of scanners using Bloom filters, time range, TTL, etc.
     scanners = selectScannersFrom(scanners);
 
