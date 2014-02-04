@@ -172,8 +172,13 @@ public abstract class TableEventHandler extends EventHandler {
     HTable table = new HTable(masterServices.getConfiguration(), tableName);
     TreeMap<ServerName, List<HRegionInfo>> serverToRegions = Maps
         .newTreeMap();
-    NavigableMap<HRegionInfo, ServerName> hriHserverMapping = table.getRegionLocations();
-    table.close();
+    NavigableMap<HRegionInfo, ServerName> hriHserverMapping;
+    try {
+      hriHserverMapping = table.getRegionLocations();
+    } finally {
+      table.close();
+    }
+
     List<HRegionInfo> reRegions = new ArrayList<HRegionInfo>();
     for (HRegionInfo hri : regions) {
       ServerName rsLocation = hriHserverMapping.get(hri);
