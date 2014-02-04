@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.SocketException;
@@ -1308,8 +1309,7 @@ public class HConnectionManager {
         try{
           Thread.sleep(ConnectionUtils.getPauseTime(this.pause, tries));
         } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new IOException("Giving up trying to location region in " +
+          throw new InterruptedIOException("Giving up trying to location region in " +
             "meta: thread is interrupted.");
         }
       }
@@ -1631,7 +1631,6 @@ public class HConnectionManager {
                 try {
                   Thread.sleep(pauseTime);
                 } catch (InterruptedException e) {
-                  Thread.currentThread().interrupt();
                   throw new RuntimeException(
                       "Thread was interrupted while trying to connect to master.", e);
                 }

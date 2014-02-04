@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -341,7 +342,7 @@ public class MetaReader {
       result = getTableRegionsAndLocations(catalogTracker, tableName,
         excludeOfflinedSplitParents);
     } catch (InterruptedException e) {
-      throw new RuntimeException(e);
+      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     }
     return getListOfHRegionInfos(result);
   }

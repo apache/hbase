@@ -735,7 +735,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     try {
       latch.await();
     } catch (InterruptedException ie) {
-      throw new InterruptedIOException(ie.getMessage());
+      throw (InterruptedIOException)new InterruptedIOException().initCause(ie);
     }
 
     for (ParallelSeekHandler handler : handlers) {

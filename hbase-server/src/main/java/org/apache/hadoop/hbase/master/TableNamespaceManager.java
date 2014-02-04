@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.NavigableSet;
 
 import org.apache.commons.logging.Log;
@@ -99,7 +100,7 @@ public class TableNamespaceManager {
         Thread.sleep(100);
       }
     } catch (InterruptedException e) {
-      throw new IOException("Wait for namespace table assignment interrupted", e);
+      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     }
 
     // initialize namespace table

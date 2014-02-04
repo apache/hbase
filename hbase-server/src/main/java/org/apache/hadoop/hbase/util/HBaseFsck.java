@@ -2613,7 +2613,6 @@ public class HBaseFsck extends Configured {
       try {
         rets = executor.invokeAll(merges);
       } catch (InterruptedException e) {
-        e.printStackTrace();
         LOG.error("Overlap merges were interrupted", e);
         return false;
       }

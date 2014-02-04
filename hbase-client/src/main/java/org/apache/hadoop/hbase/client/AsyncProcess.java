@@ -694,7 +694,7 @@ class AsyncProcess<CResult> {
       Thread.sleep(backOffTime);
     } catch (InterruptedException e) {
       LOG.warn("#" + id + ", not sent: " + toReplay.size() + " operations, " + oldLocation, e);
-      Thread.interrupted();
+      Thread.currentThread().interrupt();
       return;
     }
 

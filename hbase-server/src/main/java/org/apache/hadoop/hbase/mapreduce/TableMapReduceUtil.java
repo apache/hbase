@@ -390,7 +390,7 @@ public class TableMapReduceUtil {
         obtainAuthTokenForJob(job, job.getConfiguration(), user);
       } catch (InterruptedException ie) {
         LOG.info("Interrupted obtaining user authentication token");
-        Thread.interrupted();
+        Thread.currentThread().interrupt();
       }
     }
   }

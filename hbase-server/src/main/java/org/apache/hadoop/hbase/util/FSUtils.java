@@ -24,6 +24,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
@@ -676,15 +677,13 @@ public abstract class FSUtils {
           try {
             Thread.sleep(wait);
           } catch (InterruptedException ie) {
-            Thread.interrupted();
-            break;
+            throw (InterruptedIOException)new InterruptedIOException().initCause(ie);
           }
         } else {
           throw ioe;
         }
       }
     }
-    return false;
   }
 
   /**
@@ -785,7 +784,7 @@ public abstract class FSUtils {
           try {
             Thread.sleep(wait);
           } catch (InterruptedException ie) {
-            Thread.interrupted();
+            Thread.currentThread().interrupt();
             break;
           }
         } else {
@@ -1866,7 +1865,7 @@ public abstract class FSUtils {
               + tpe.getTaskCount() + " }");
         }
       } catch (InterruptedException e) {
-        throw new IOException(e);
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
     }
 

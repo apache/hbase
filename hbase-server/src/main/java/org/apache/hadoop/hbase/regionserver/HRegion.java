@@ -726,7 +726,7 @@ public class HRegion implements HeapSize { // , Writable{
         }
         allStoresOpened = true;
       } catch (InterruptedException e) {
-        throw new IOException(e);
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       } catch (ExecutionException e) {
         throw new IOException(e.getCause());
       } finally {
@@ -1096,7 +1096,7 @@ public class HRegion implements HeapSize { // , Writable{
             familyFiles.addAll(storeFiles.getSecond());
           }
         } catch (InterruptedException e) {
-          throw new IOException(e);
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
         } catch (ExecutionException e) {
           throw new IOException(e.getCause());
         } finally {

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -676,8 +677,7 @@ public class MasterFileSystem {
         this.master.getCatalogTracker().waitForMeta();
         return MetaReader.getServerUserRegions(this.master.getCatalogTracker(), serverName);
       } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new IOException("Interrupted", e);
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
     }
     return null;

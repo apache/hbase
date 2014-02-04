@@ -4136,7 +4136,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     try {
       canProceed = nonceManager.startOperation(nonceGroup, mutation.getNonce(), this);
     } catch (InterruptedException ex) {
-      // Probably should not happen.
       throw new InterruptedIOException("Nonce start operation interrupted");
     }
     if (!canProceed) {

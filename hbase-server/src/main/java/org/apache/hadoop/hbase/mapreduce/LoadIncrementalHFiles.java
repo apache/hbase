@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -370,7 +371,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         throw new IllegalStateException(t);
       } catch (InterruptedException e1) {
         LOG.error("Unexpected interrupted exception during bulk load", e1);
-        throw new IllegalStateException(e1);
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e1);
       }
     }
   }
@@ -418,7 +419,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         throw new IllegalStateException(t);
       } catch (InterruptedException e1) {
         LOG.error("Unexpected interrupted exception during splitting", e1);
-        throw new IllegalStateException(e1);
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e1);
       }
     }
     return regionGroups;
