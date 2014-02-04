@@ -265,6 +265,7 @@ public final class SnapshotInfo extends Configured implements Tool {
           snapshotName = args[++i];
         } else if (cmd.equals("-files")) {
           showFiles = true;
+          showStats = true;
         } else if (cmd.equals("-stats")) {
           showStats = true;
         } else if (cmd.equals("-schema")) {
@@ -298,7 +299,7 @@ public final class SnapshotInfo extends Configured implements Tool {
 
     printInfo();
     if (showSchema) printSchema();
-    if (showFiles || showStats) printFiles(showFiles);
+    printFiles(showFiles, showStats);
 
     return 0;
   }
@@ -349,7 +350,7 @@ public final class SnapshotInfo extends Configured implements Tool {
    * Collect the hfiles and logs statistics of the snapshot and
    * dump the file list if requested and the collected information.
    */
-  private void printFiles(final boolean showFiles) throws IOException {
+  private void printFiles(final boolean showFiles, final boolean showStats) throws IOException {
     if (showFiles) {
       System.out.println("Snapshot Files");
       System.out.println("----------------------------------------");
@@ -404,15 +405,17 @@ public final class SnapshotInfo extends Configured implements Tool {
       System.out.println("**************************************************************");
     }
 
-    System.out.printf("%d HFiles (%d in archive), total size %s (%.2f%% %s shared with the source table)%n",
-      stats.getStoreFilesCount(), stats.getArchivedStoreFilesCount(),
-      StringUtils.humanReadableInt(stats.getStoreFilesSize()),
-      stats.getSharedStoreFilePercentage(),
-      StringUtils.humanReadableInt(stats.getSharedStoreFilesSize())
-    );
-    System.out.printf("%d Logs, total size %s%n",
-      stats.getLogsCount(), StringUtils.humanReadableInt(stats.getLogsSize()));
-    System.out.println();
+    if (showStats) {
+      System.out.printf("%d HFiles (%d in archive), total size %s (%.2f%% %s shared with the source table)%n",
+        stats.getStoreFilesCount(), stats.getArchivedStoreFilesCount(),
+        StringUtils.humanReadableInt(stats.getStoreFilesSize()),
+        stats.getSharedStoreFilePercentage(),
+        StringUtils.humanReadableInt(stats.getSharedStoreFilesSize())
+      );
+      System.out.printf("%d Logs, total size %s%n",
+        stats.getLogsCount(), StringUtils.humanReadableInt(stats.getLogsSize()));
+      System.out.println();
+    }
   }
 
   private void printUsageAndExit() {
