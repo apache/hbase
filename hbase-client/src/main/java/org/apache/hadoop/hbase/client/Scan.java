@@ -760,9 +760,8 @@ public class Scan extends Query {
    * @param small
    * @return this instance
    */
-  public Scan setSmall(boolean small) {
+  public void setSmall(boolean small) {
     this.small = small;
-    return this;
   }
 
   /**
