@@ -30,6 +30,10 @@
     <para>You cannot skip major verisons upgrading.  If you are upgrading from
     version 0.90.x to 0.94.x, you must first go from 0.90.x to 0.92.x and then go
     from 0.92.x to 0.94.x.</para>
+    <note><para>It may be possible to skip across versions -- for example go from
+    0.92.2 straight to 0.98.0 just following the 0.96.x upgrade instructions --
+    but we have not tried it so cannot say whether it works or not.</para>
+    </note>
     <para>
         Review <xref linkend="configuration" />, in particular the section on Hadoop version.
     </para>
@@ -81,6 +85,11 @@
         </section>
 </section>
 
+    <section xml:id="upgrade0.98">
+      <title>Upgrading from 0.96.x to 0.98.x</title>
+      <para>A rolling upgrade from 0.96.x to 0.98.x works.  The two versions are not binary compatible.
+      TODO: List of changes.</para> 
+    </section>
     <section xml:id="upgrade0.96">
       <title>Upgrading from 0.94.x to 0.96.x</title>
       <subtitle>The Singularity</subtitle>
@@ -200,7 +209,9 @@
          </programlisting>
          </para>
          <para>
-             If the output from the execute step looks good, start hbase-0.96.0.
+             If the output from the execute step looks good, stop the zookeeper instance you started
+             to do the upgrade: <programlisting>$ ./hbase/bin/hbase-daemon.sh stop zookeeper</programlisting>
+             Now start up hbase-0.96.0.
          </para>
      </section>
      <section xml:id="096.migration.troubleshooting"><title>Troubleshooting</title>
