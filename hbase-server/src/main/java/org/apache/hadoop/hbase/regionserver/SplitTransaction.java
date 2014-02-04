@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.executor.EventType.RS_ZK_REGION_SPLIT;
 import static org.apache.hadoop.hbase.executor.EventType.RS_ZK_REGION_SPLITTING;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -398,8 +399,7 @@ public class SplitTransaction {
         aOpener.join();
         bOpener.join();
       } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new IOException("Interrupted " + e.getMessage());
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
       if (aOpener.getException() != null) {
         throw new IOException("Failed " +
@@ -731,8 +731,7 @@ public class SplitTransaction {
             " files and create the references, aborting split");
       }
     } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new IOException("Interrupted while waiting for file splitters", e);
+      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     }
 
     // Look for any exception
@@ -740,9 +739,7 @@ public class SplitTransaction {
       try {
         future.get();
       } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new IOException(
-            "Interrupted while trying to get the results of file splitters", e);
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       } catch (ExecutionException e) {
         throw new IOException(e);
       }

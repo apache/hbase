@@ -1635,8 +1635,7 @@ public class HLogSplitter {
         try {
           Thread.sleep(expectedSleep);
         } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new IOException("Interrupted when waiting regon " +
+          throw new IOException("Interrupted when waiting region " +
               loc.getRegionInfo().getEncodedName() + " online.", e);
         }
         tries++;

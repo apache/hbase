@@ -781,7 +781,7 @@ public class HTable implements HTableInterface {
 
       return results;
     } catch (InterruptedException e) {
-      throw new IOException(e);
+      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     }
   }
 
@@ -863,7 +863,7 @@ public class HTable implements HTableInterface {
     try {
       batch(deletes, results);
     } catch (InterruptedException e) {
-      throw new IOException(e);
+      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     } finally {
       // mutate list so that it is empty for complete success, or contains only failed records
       // results are returned in the same order as the requests in list
@@ -1253,7 +1253,7 @@ public class HTable implements HTableInterface {
     try {
       r1 = batch(gets);
     } catch (InterruptedException e) {
-      throw new IOException(e);
+      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     }
 
     // translate.
@@ -1581,7 +1581,6 @@ public class HTable implements HTableInterface {
             + Bytes.toStringBinary(e.getKey()), ee);
         throw ee.getCause();
       } catch (InterruptedException ie) {
-        Thread.currentThread().interrupt();
         throw new InterruptedIOException("Interrupted calling coprocessor service " + service.getName()
             + " for row " + Bytes.toStringBinary(e.getKey()))
             .initCause(ie);

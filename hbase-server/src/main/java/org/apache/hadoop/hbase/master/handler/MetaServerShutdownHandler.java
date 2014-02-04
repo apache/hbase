@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -179,7 +180,7 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
         } catch (InterruptedException e1) {
           LOG.warn("Interrupted when is the thread sleep", e1);
           Thread.currentThread().interrupt();
-          throw new IOException("Interrupted", e1);
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e1);
         }
         iFlag++;
       }

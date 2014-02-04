@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HRegionLocation;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -96,7 +97,7 @@ public class HTableUtil {
         htable.batch( rsRows );
       }
     } catch (InterruptedException e) {
-      throw new IOException(e); 
+      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     }
 		
   }

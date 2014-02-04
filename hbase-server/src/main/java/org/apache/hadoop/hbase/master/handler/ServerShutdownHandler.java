@@ -173,7 +173,7 @@ public class ServerShutdownHandler extends EventHandler {
           break;
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
-          throw new IOException("Interrupted", e);
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
         } catch (IOException ioe) {
           LOG.info("Received exception accessing hbase:meta during server shutdown of " +
             serverName + ", retrying hbase:meta read", ioe);
@@ -282,7 +282,7 @@ public class ServerShutdownHandler extends EventHandler {
         am.assign(toAssignRegions);
       } catch (InterruptedException ie) {
         LOG.error("Caught " + ie + " during round-robin assignment");
-        throw new IOException(ie);
+        throw (InterruptedIOException)new InterruptedIOException().initCause(ie);
       }
 
       if (this.shouldSplitHlog && this.distributedLogReplay) {

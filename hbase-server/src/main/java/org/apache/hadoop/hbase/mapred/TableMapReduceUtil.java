@@ -204,7 +204,7 @@ public class TableMapReduceUtil {
         }
       } catch (InterruptedException ie) {
         ie.printStackTrace();
-        Thread.interrupted();
+        Thread.currentThread().interrupt();
       }
     }
   }

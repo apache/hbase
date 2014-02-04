@@ -159,7 +159,7 @@ public class SimpleRpcScheduler implements RpcScheduler {
         CallRunner task = myQueue.take();
         task.run();
       } catch (InterruptedException e) {
-        Thread.interrupted();
+        Thread.currentThread().interrupt();
       }
     }
   }

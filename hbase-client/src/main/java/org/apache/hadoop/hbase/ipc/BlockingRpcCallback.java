@@ -61,7 +61,6 @@ public class BlockingRpcCallback<R> implements RpcCallback<R> {
       try {
         this.wait();
       } catch (InterruptedException ie) {
-        Thread.currentThread().interrupt();
         InterruptedIOException exception = new InterruptedIOException(ie.getMessage());
         exception.initCause(ie);
         throw exception;

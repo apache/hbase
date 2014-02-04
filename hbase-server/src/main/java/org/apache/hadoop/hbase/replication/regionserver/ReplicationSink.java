@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -236,7 +237,7 @@ public class ReplicationSink {
         table.batch(rows);
       }
     } catch (InterruptedException ix) {
-      throw new IOException(ix);
+      throw (InterruptedIOException)new InterruptedIOException().initCause(ix);
     } finally {
       if (table != null) {
         table.close();

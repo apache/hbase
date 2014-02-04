@@ -309,7 +309,6 @@ public abstract class TableLockManager {
           lock.release();
         } catch (InterruptedException e) {
           LOG.warn("Interrupted while releasing a lock for " + tableName);
-          Thread.currentThread().interrupt();
           throw new InterruptedIOException();
         }
         if (LOG.isTraceEnabled()) {

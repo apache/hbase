@@ -229,8 +229,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       ct.start();
     } catch (InterruptedException e) {
       // Let it out as an IOE for now until we redo all so tolerate IEs
-      Thread.currentThread().interrupt();
-      throw new IOException("Interrupted", e);
+      throw (InterruptedIOException)new InterruptedIOException("Interrupted").initCause(e);
     }
     return ct;
   }
@@ -808,10 +807,9 @@ public class HBaseAdmin implements Abortable, Closeable {
       try {
         Thread.sleep(sleep);
       } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
         // Do this conversion rather than let it out because do not want to
         // change the method signature.
-        throw new IOException("Interrupted", e);
+        throw (InterruptedIOException)new InterruptedIOException("Interrupted").initCause(e);
       }
     }
     if (!enabled) {
@@ -961,8 +959,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       } catch (InterruptedException e) {
         // Do this conversion rather than let it out because do not want to
         // change the method signature.
-        Thread.currentThread().interrupt();
-        throw new IOException("Interrupted", e);
+        throw (InterruptedIOException)new InterruptedIOException("Interrupted").initCause(e);
       }
     }
     if (!disabled) {
@@ -2344,8 +2341,8 @@ public class HBaseAdmin implements Abortable, Closeable {
       } catch (IOException e) {
         throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
       } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
+        throw (InterruptedIOException)
+            new InterruptedIOException("Can't connect to ZooKeeper").initCause(e);
       } catch (KeeperException e) {
         throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
       } finally {
