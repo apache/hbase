@@ -92,8 +92,9 @@ class LogRoller extends HasThread implements WALActionsListener {
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
         this.lastrolltime = now;
-        // This is array of actual region names.
-        byte [][] regionsToFlush = getWAL().rollWriter(rollLog.get());
+        // Force the roll if the logroll.period is elapsed or if a roll was requested.
+        // The returned value is an array of actual region names.
+        byte [][] regionsToFlush = getWAL().rollWriter(periodic || rollLog.get());
         if (regionsToFlush != null) {
           for (byte [] r: regionsToFlush) scheduleFlush(r);
         }
