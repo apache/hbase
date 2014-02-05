@@ -1026,7 +1026,7 @@ class FSHLog implements HLog, Syncable {
           this.numEntries.incrementAndGet();
           this.asyncWriter.setPendingTxid(txid);
 
-          if (htd.isAsyncLogFlush()) {
+          if (htd.isDeferredLogFlush()) {
             lastUnSyncedTxid = txid;
           }
           this.latestSequenceNums.put(encodedRegionName, seqNum);
@@ -1037,7 +1037,7 @@ class FSHLog implements HLog, Syncable {
         // deferred log flushing
         if (doSync &&
             (info.isMetaRegion() ||
-            !htd.isAsyncLogFlush())) {
+            !htd.isDeferredLogFlush())) {
           // sync txn to file system
           this.sync(txid);
         }
