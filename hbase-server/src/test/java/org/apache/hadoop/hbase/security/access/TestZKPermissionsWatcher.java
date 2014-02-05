@@ -123,7 +123,7 @@ public class TestZKPermissionsWatcher {
         return AUTH_B.getMTime() > mtimeB;
       }
     });
-    Thread.sleep(100);
+    Thread.sleep(1000);
 
     // check it
     assertTrue(AUTH_A.authorizeUser(george, TEST_TABLE, null,
@@ -155,7 +155,7 @@ public class TestZKPermissionsWatcher {
         return AUTH_A.getMTime() > mtimeA;
       }
     });
-    Thread.sleep(100);
+    Thread.sleep(1000);
 
     // check it
     assertTrue(AUTH_A.authorizeUser(george, TEST_TABLE, null,

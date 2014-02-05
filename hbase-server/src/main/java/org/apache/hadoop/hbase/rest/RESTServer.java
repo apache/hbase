@@ -35,9 +35,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
-import org.apache.hadoop.hbase.rest.filter.GzipFilter;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.util.HttpServerUtil;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -235,6 +234,7 @@ public class RESTServer implements Constants {
       filter = filter.trim();
       context.addFilter(Class.forName(filter), "/*", 0);
     }
+    HttpServerUtil.constrainHttpMethods(context);
 
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);
