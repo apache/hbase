@@ -753,7 +753,7 @@ reasonable spread in the keyspace, similar options appear:
 	  </para>
 	  <section xml:id="schema.smackdown.rowsversions"><title>Rows vs. Versions</title>
 	    <para>A common question is whether one should prefer rows or HBase's built-in-versioning.  The context is typically where there are
-	    "a lot" of versions of a row to be retained (e.g., where it is significantly above the HBase default of 3 max versions).  The
+	    "a lot" of versions of a row to be retained (e.g., where it is significantly above the HBase default of 1 max versions).  The
 	    rows-approach would require storing a timstamp in some portion of the rowkey so that they would not overwite with each successive update.
 	    </para>
 	    <para>Preference:  Rows (generally speaking).
