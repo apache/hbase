@@ -247,13 +247,12 @@ public class Import {
     // apply the filter and skip this kv if the filter doesn't apply
     if (filter != null) {
       Filter.ReturnCode code = filter.filterKeyValue(kv);
-      System.out.println("Filter returned:" + code);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Filter returned:" + code + " for the key value:" + kv);
+      }
       // if its not an accept type, then skip this kv
       if (!(code.equals(Filter.ReturnCode.INCLUDE) || code
           .equals(Filter.ReturnCode.INCLUDE_AND_NEXT_COL))) {
-        if (LOG.isDebugEnabled()) {
-          System.out.println("Skipping key: " + kv + " from filter decision: " + code);
-        }
         return null;
       }
     }
