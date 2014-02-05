@@ -79,8 +79,8 @@ public class TestDurability {
     HLog wal = HLogFactory.createHLog(FS, DIR, "hlogdir",
         "hlogdir_archive", CONF);
     byte[] tableName = Bytes.toBytes("TestDurability");
-    HRegion region = createHRegion(tableName, "region", wal, false);
-    HRegion deferredRegion = createHRegion(tableName, "deferredRegion", wal, true);
+    HRegion region = createHRegion(tableName, "region", wal, Durability.USE_DEFAULT);
+    HRegion deferredRegion = createHRegion(tableName, "deferredRegion", wal, Durability.ASYNC_WAL);
 
     region.put(newPut(null));
     verifyHLogCount(wal, 1);
@@ -142,7 +142,7 @@ public class TestDurability {
     HLog wal = HLogFactory.createHLog(FS, DIR, "myhlogdir",
         "myhlogdir_archive", CONF);
     byte[] tableName = Bytes.toBytes("TestIncrement");
-    HRegion region = createHRegion(tableName, "increment", wal, false);
+    HRegion region = createHRegion(tableName, "increment", wal, Durability.USE_DEFAULT);
 
     // col1: amount = 1, 1 write back to WAL
     Increment inc1 = new Increment(row1);
@@ -208,10 +208,10 @@ public class TestDurability {
 
   // lifted from TestAtomicOperation
   private HRegion createHRegion (byte [] tableName, String callingMethod,
-      HLog log, boolean isAsyncLogFlush)
+      HLog log, Durability durability)
     throws IOException {
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
-      htd.setAsyncLogFlush(isAsyncLogFlush);
+      htd.setDurability(durability);
       HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
       htd.addFamily(hcd);
       HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
