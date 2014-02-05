@@ -26,6 +26,7 @@ import java.io.DataOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -76,6 +77,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSelector;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
@@ -642,18 +644,19 @@ public class RpcClient {
      */
     private void handleConnectionFailure(int curRetries, int maxRetries, IOException ioe)
     throws IOException {
-
       closeConnection();
 
       // throw the exception if the maximum number of retries is reached
-      if (curRetries >= maxRetries) {
+      if (curRetries >= maxRetries || ExceptionUtil.isInterrupt(ioe)) {
         throw ioe;
       }
 
       // otherwise back off and retry
       try {
         Thread.sleep(failureSleep);
-      } catch (InterruptedException ignored) {}
+      } catch (InterruptedException ie) {
+        ExceptionUtil.rethrowIfInterrupt(ie);
+      }
 
       LOG.info("Retrying connect to server: " + remoteId.getAddress() +
         " after sleeping " + failureSleep + "ms. Already tried " + curRetries +
@@ -672,7 +675,9 @@ public class RpcClient {
         if (timeout>0) {
           try {
             wait(timeout);
-          } catch (InterruptedException ignored) {}
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+          }
         }
       }
 
@@ -1112,6 +1117,8 @@ public class RpcClient {
           // since we expect certain responses to not make it by the specified
           // {@link ConnectionId#rpcTimeout}.
           closeException = e;
+        } if (ExceptionUtil.isInterrupt(e)){
+
         } else {
           // Treat this as a fatal condition and close this connection
           markClosed(e);
@@ -1425,24 +1432,14 @@ public class RpcClient {
     Connection connection =
       getConnection(ticket, call, addr, rpcTimeout, this.codec, this.compressor);
     connection.writeRequest(call, priority);                 // send the parameter
-    boolean interrupted = false;
+
     //noinspection SynchronizationOnLocalVariableOrMethodParameter
     synchronized (call) {
       while (!call.done) {
         if (connection.shouldCloseConnection.get()) {
           throw new IOException("Unexpected closed connection");
         }
-        try {
-          call.wait(1000);                       // wait for the result
-        } catch (InterruptedException ignored) {
-          // save the fact that we were interrupted
-          interrupted = true;
-        }
-      }
-
-      if (interrupted) {
-        // set the interrupt flag now that we are done waiting
-        Thread.currentThread().interrupt();
+        call.wait(1000);                       // wait for the result
       }
 
       if (call.error != null) {

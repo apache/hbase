@@ -125,6 +125,7 @@ import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
@@ -276,8 +277,11 @@ public final class ProtobufUtil {
     if (e == null) {
       return new IOException(se);
     }
+    if (ExceptionUtil.isInterrupt(e)) {
+      return ExceptionUtil.asInterrupt(e);
+    }
     if (e instanceof RemoteException) {
-      e = ((RemoteException)e).unwrapRemoteException();
+      e = ((RemoteException) e).unwrapRemoteException();
     }
     return e instanceof IOException ? (IOException) e : new IOException(se);
   }

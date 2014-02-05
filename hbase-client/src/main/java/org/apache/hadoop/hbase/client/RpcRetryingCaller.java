@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
 
 import com.google.protobuf.ServiceException;
@@ -130,6 +131,7 @@ public class RpcRetryingCaller<T> {
             new RetriesExhaustedException.ThrowableWithExtraContext(t,
                 EnvironmentEdgeManager.currentTimeMillis(), toString());
         exceptions.add(qt);
+        ExceptionUtil.rethrowIfInterrupt(t);
         if (tries >= retries - 1) {
           throw new RetriesExhaustedException(tries, exceptions);
         }
@@ -184,6 +186,7 @@ public class RpcRetryingCaller<T> {
       return callable.call();
     } catch (Throwable t) {
       Throwable t2 = translateException(t);
+      ExceptionUtil.rethrowIfInterrupt(t2);
       // It would be nice to clear the location cache here.
       if (t2 instanceof IOException) {
         throw (IOException)t2;

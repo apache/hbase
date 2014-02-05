@@ -118,6 +118,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -555,6 +556,7 @@ public class HConnectionManager {
       try {
         connection.close();
       } catch (Exception e) {
+        ExceptionUtil.rethrowIfInterrupt(e);
         if (connectSucceeded) {
           throw new IOException("The connection to " + connection
               + " could not be deleted.", e);
@@ -1156,7 +1158,11 @@ public class HConnectionManager {
         MetaScanner.metaScan(conf, this, visitor, tableName, row,
             this.prefetchRegionLimit, TableName.META_TABLE_NAME);
       } catch (IOException e) {
-        LOG.warn("Encountered problems when prefetch hbase:meta table: ", e);
+        if (ExceptionUtil.isInterrupt(e)) {
+          Thread.currentThread().interrupt();
+        } else {
+          LOG.warn("Encountered problems when prefetch hbase:meta table: ", e);
+        }
       }
     }
 
@@ -1285,6 +1291,8 @@ public class HConnectionManager {
           // from the HTable constructor.
           throw e;
         } catch (IOException e) {
+          ExceptionUtil.rethrowIfInterrupt(e);
+
           if (e instanceof RemoteException) {
             e = ((RemoteException)e).unwrapRemoteException();
           }
@@ -1561,6 +1569,7 @@ public class HConnectionManager {
         try {
           zkw = getKeepAliveZooKeeperWatcher();
         } catch (IOException e) {
+          ExceptionUtil.rethrowIfInterrupt(e);
           throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
         }
         try {
@@ -1621,7 +1630,7 @@ public class HConnectionManager {
 
             if (exceptionCaught != null)
               // It failed. If it's not the last try, we're going to wait a little
-              if (tries < numTries) {
+              if (tries < numTries && !ExceptionUtil.isInterrupt(exceptionCaught)) {
                 // tries at this point is 1 or more; decrement to start from 0.
                 long pauseTime = ConnectionUtils.getPauseTime(pause, tries - 1);
                 LOG.info("getMaster attempt " + tries + " of " + numTries +
@@ -1631,7 +1640,7 @@ public class HConnectionManager {
                 try {
                   Thread.sleep(pauseTime);
                 } catch (InterruptedException e) {
-                  throw new RuntimeException(
+                  throw new MasterNotRunningException(
                       "Thread was interrupted while trying to connect to master.", e);
                 }
               } else {
