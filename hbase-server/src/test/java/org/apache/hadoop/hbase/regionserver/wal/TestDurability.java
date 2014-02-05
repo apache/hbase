@@ -211,7 +211,7 @@ public class TestDurability {
       HLog log, boolean isAsyncLogFlush)
     throws IOException {
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
-      htd.setAsyncLogFlush(isAsyncLogFlush);
+      htd.setDeferredLogFlush(isAsyncLogFlush);
       HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
       htd.addFamily(hcd);
       HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
