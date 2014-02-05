@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.UserProvider;
+import org.apache.hadoop.hbase.util.HttpServerUtil;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -198,6 +199,7 @@ public class Main implements Constants {
     context.addServlet(shPojoMap, "/status/cluster");
     context.addServlet(sh, "/*");
     context.addFilter(GzipFilter.class, "/*", 0);
+    HttpServerUtil.constrainHttpMethods(context);
 
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);

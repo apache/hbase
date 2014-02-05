@@ -90,6 +90,7 @@ public class InfoServer extends HttpServer {
           logsContextPath);
       logContext.setResourceBase(logDir);
       logContext.addServlet(DefaultServlet.class, "/");
+      HttpServerUtil.constrainHttpMethods(logContext);
       defaultContexts.put(logContext, true);
     }
   }
