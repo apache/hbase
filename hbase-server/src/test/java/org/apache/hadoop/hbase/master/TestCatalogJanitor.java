@@ -62,8 +62,13 @@ import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -73,6 +78,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
@@ -102,6 +109,18 @@ public class TestCatalogJanitor {
         Mockito.when(ri.mutate(
           (RpcController)Mockito.any(), (MutateRequest)Mockito.any())).
             thenReturn(builder.build());
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      }
+      try {
+        Mockito.when(ri.multi(
+          (RpcController)Mockito.any(), (MultiRequest)Mockito.any())).
+            thenAnswer(new Answer<MultiResponse>() {
+              @Override
+              public MultiResponse answer(InvocationOnMock invocation) throws Throwable {
+                return buildMultiResponse( (MultiRequest)invocation.getArguments()[1]);
+              }
+            });
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
       }
@@ -938,6 +957,24 @@ public class TestCatalogJanitor {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("t"));
     htd.addFamily(new HColumnDescriptor("f"));
     return htd;
+  }
+
+  private MultiResponse buildMultiResponse(MultiRequest req) {
+    MultiResponse.Builder builder = MultiResponse.newBuilder();
+    RegionActionResult.Builder regionActionResultBuilder =
+        RegionActionResult.newBuilder();
+    ResultOrException.Builder roeBuilder = ResultOrException.newBuilder();
+    for (RegionAction regionAction: req.getRegionActionList()) {
+      regionActionResultBuilder.clear();
+      for (ClientProtos.Action action: regionAction.getActionList()) {
+        roeBuilder.clear();
+        roeBuilder.setResult(ClientProtos.Result.getDefaultInstance());
+        roeBuilder.setIndex(action.getIndex());
+        regionActionResultBuilder.addResultOrException(roeBuilder.build());
+      }
+      builder.addRegionActionResult(regionActionResultBuilder.build());
+    }
+    return builder.build();
   }
 
 }

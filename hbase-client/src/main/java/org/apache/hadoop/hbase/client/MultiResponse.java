@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -35,10 +36,9 @@ import org.apache.hadoop.hbase.util.Pair;
 @InterfaceAudience.Private
 public class MultiResponse {
 
-  // map of regionName to list of (Results paired to the original index for that
-  // Result)
-  private Map<byte[], List<Pair<Integer, Object>>> results =
-      new TreeMap<byte[], List<Pair<Integer, Object>>>(Bytes.BYTES_COMPARATOR);
+  // map of regionName to map of Results by the original index for that Result
+  private Map<byte[], Map<Integer, Object>> results =
+      new TreeMap<byte[], Map<Integer, Object>>(Bytes.BYTES_COMPARATOR);
 
   /**
    * The server can send us a failure for the region itself, instead of individual failure.
@@ -56,7 +56,7 @@ public class MultiResponse {
    */
   public int size() {
     int size = 0;
-    for (Collection<?> c : results.values()) {
+    for (Map<?,?> c : results.values()) {
       size += c.size();
     }
     return size;
@@ -66,25 +66,19 @@ public class MultiResponse {
    * Add the pair to the container, grouped by the regionName
    *
    * @param regionName
-   * @param r
-   *          First item in the pair is the original index of the Action
-   *          (request). Second item is the Result. Result will be empty for
-   *          successful Put and Delete actions.
+   * @param index the original index of the Action (request).
+   * @param result the result; will be empty for successful Put and Delete actions.
    */
-  public void add(byte[] regionName, Pair<Integer, Object> r) {
-    List<Pair<Integer, Object>> rs = results.get(regionName);
+  public void add(byte[] regionName, int originalIndex, Object resOrEx) {
+    Map<Integer, Object> rs = results.get(regionName);
     if (rs == null) {
-      rs = new ArrayList<Pair<Integer, Object>>();
+      rs = new HashMap<Integer, Object>();
       results.put(regionName, rs);
     }
-    rs.add(r);
+    rs.put(originalIndex, resOrEx);
   }
 
-  public void add(byte []regionName, int originalIndex, Object resOrEx) {
-    add(regionName, new Pair<Integer,Object>(originalIndex, resOrEx));
-  }
-
-  public Map<byte[], List<Pair<Integer, Object>>> getResults() {
+  public Map<byte[], Map<Integer, Object>> getResults() {
     return results;
   }
 

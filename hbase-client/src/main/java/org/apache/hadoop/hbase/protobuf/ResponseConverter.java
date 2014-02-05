@@ -103,7 +103,7 @@ public final class ResponseConverter {
       }
       byte[] regionName = rs.getValue().toByteArray();
 
-      if (actionResult.hasException()){
+      if (actionResult.hasException()) {
         Throwable regionException =  ProtobufUtil.toException(actionResult.getException());
         results.addException(regionName, regionException);
         continue;
@@ -117,11 +117,9 @@ public final class ResponseConverter {
 
       for (ResultOrException roe : actionResult.getResultOrExceptionList()) {
         if (roe.hasException()) {
-          results.add(regionName, new Pair<Integer, Object>(roe.getIndex(),
-              ProtobufUtil.toException(roe.getException())));
+          results.add(regionName, roe.getIndex(), ProtobufUtil.toException(roe.getException()));
         } else if (roe.hasResult()) {
-          results.add(regionName, new Pair<Integer, Object>(roe.getIndex(),
-              ProtobufUtil.toResult(roe.getResult(), cells)));
+          results.add(regionName, roe.getIndex(), ProtobufUtil.toResult(roe.getResult(), cells));
         } else {
           // no result & no exception. Unexpected.
           throw new IllegalStateException("No result & no exception roe=" + roe +

@@ -63,6 +63,7 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CoprocessorHConnection implements HConnection {
+  private static final NonceGenerator ng = new HConnectionManager.NoNonceGenerator();
 
   /**
    * Create an unmanaged {@link HConnection} based on the environment in which we are running the
@@ -388,6 +389,11 @@ public class CoprocessorHConnection implements HConnection {
 
   @Override
   public NonceGenerator getNonceGenerator() {
-    return null; // don't use nonces for coprocessor connection
+    return ng; // don't use nonces for coprocessor connection
+  }
+
+  @Override
+  public AsyncProcess getAsyncProcess() {
+    return delegate.getAsyncProcess();
   }
 }

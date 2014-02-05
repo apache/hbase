@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -76,42 +77,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.*;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
@@ -231,6 +196,18 @@ public class HConnectionManager {
          return size() > MAX_CACHED_CONNECTION_INSTANCES;
        }
     };
+  }
+
+  /** Dummy nonce generator for disabled nonces. */
+  static class NoNonceGenerator implements NonceGenerator {
+    @Override
+    public long getNonceGroup() {
+      return HConstants.NO_NONCE;
+    }
+    @Override
+    public long newNonce() {
+      return HConstants.NO_NONCE;
+    }
   }
 
   /*
@@ -574,6 +551,7 @@ public class HConnectionManager {
     final int rpcTimeout;
     private NonceGenerator nonceGenerator = null;
     private final int prefetchRegionLimit;
+    private final AsyncProcess asyncProcess;
 
     private volatile boolean closed;
     private volatile boolean aborted;
@@ -687,18 +665,6 @@ public class HConnectionManager {
       }
     }
 
-    /** Dummy nonce generator for disabled nonces. */
-    private static class NoNonceGenerator implements NonceGenerator {
-      @Override
-      public long getNonceGroup() {
-        return HConstants.NO_NONCE;
-      }
-      @Override
-      public long newNonce() {
-        return HConstants.NO_NONCE;
-      }
-    }
-
     /**
      * For tests.
      */
@@ -722,6 +688,7 @@ public class HConnectionManager {
       } else {
         this.nonceGenerator = new NoNonceGenerator();
       }
+      this.asyncProcess = createAsyncProcess(this.conf);
 
       this.prefetchRegionLimit = conf.getInt(
           HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
@@ -2342,17 +2309,11 @@ public class HConnectionManager {
       Batch.Callback<R> callback)
       throws IOException, InterruptedException {
 
-      // To fulfill the original contract, we have a special callback. This callback
-      //  will set the results in the Object array.
-      ObjectResultFiller<R> cb = new ObjectResultFiller<R>(results, callback);
-      AsyncProcess<?> asyncProcess = createAsyncProcess(tableName, pool, cb, conf);
-
-      // We're doing a submit all. This way, the originalIndex will match the initial list.
-      asyncProcess.submitAll(list);
-      asyncProcess.waitUntilDone();
-
-      if (asyncProcess.hasError()) {
-        throw asyncProcess.getErrors();
+      AsyncRequestFuture ars = this.asyncProcess.submitAll(
+          pool, tableName, list, callback, results);
+      ars.waitUntilDone();
+      if (ars.hasError()) {
+        throw ars.getErrors();
       }
     }
 
@@ -2368,51 +2329,17 @@ public class HConnectionManager {
       processBatchCallback(list, TableName.valueOf(tableName), pool, results, callback);
     }
 
-    // For tests.
-    protected <R> AsyncProcess createAsyncProcess(TableName tableName, ExecutorService pool,
-           AsyncProcess.AsyncProcessCallback<R> callback, Configuration conf) {
-      return new AsyncProcess<R>(this, tableName, pool, callback, conf,
-          RpcRetryingCallerFactory.instantiate(conf));
+    // For tests to override.
+    protected AsyncProcess createAsyncProcess(Configuration conf) {
+      // No default pool available.
+      return new AsyncProcess(
+          this, conf, this.batchPool, RpcRetryingCallerFactory.instantiate(conf), false);
     }
 
-
-    /**
-     * Fill the result array for the interfaces using it.
-     */
-    private static class ObjectResultFiller<Res>
-        implements AsyncProcess.AsyncProcessCallback<Res> {
-
-      private final Object[] results;
-      private Batch.Callback<Res> callback;
-
-      ObjectResultFiller(Object[] results, Batch.Callback<Res> callback) {
-        this.results = results;
-        this.callback = callback;
-      }
-
-      @Override
-      public void success(int pos, byte[] region, Row row, Res result) {
-        assert pos < results.length;
-        results[pos] = result;
-        if (callback != null) {
-          callback.update(region, row.getRow(), result);
-        }
-      }
-
-      @Override
-      public boolean failure(int pos, Row row, Throwable t) {
-        assert pos < results.length;
-        results[pos] = t;
-        //Batch.Callback<Res> was not called on failure in 0.94. We keep this.
-        return true; // we want to have this failure in the failures list.
-      }
-
-      @Override
-      public boolean retriableFailure(int originalIndex, Row row, Throwable exception) {
-        return true; // we retry
-      }
+    @Override
+    public AsyncProcess getAsyncProcess() {
+      return asyncProcess;
     }
-
 
     /*
      * Return the number of cached region for a table. It will only be called

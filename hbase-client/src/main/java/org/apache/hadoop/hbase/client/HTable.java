@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -133,7 +134,9 @@ public class HTable implements HTableInterface {
   private final boolean cleanupConnectionOnClose; // close the connection in close()
 
   /** The Async process for puts with autoflush set to false or multiputs */
-  protected AsyncProcess<Object> ap;
+  protected AsyncProcess ap;
+  /** The Async process for batch */
+  protected AsyncProcess multiAp;
   private RpcRetryingCallerFactory rpcCallerFactory;
 
   /**
@@ -211,7 +214,7 @@ public class HTable implements HTableInterface {
     this.pool = getDefaultExecutor(this.configuration);
     this.finishSetup();
   }
-   
+
   public static ThreadPoolExecutor getDefaultExecutor(Configuration conf) {
     int maxThreads = conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE);
     if (maxThreads == 0) {
@@ -314,7 +317,7 @@ public class HTable implements HTableInterface {
   /**
    * For internal testing.
    */
-  protected HTable(){
+  protected HTable() {
     tableName = null;
     cleanupPoolOnClose = false;
     cleanupConnectionOnClose = false;
@@ -340,8 +343,9 @@ public class HTable implements HTableInterface {
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
 
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(configuration);
-    ap = new AsyncProcess<Object>(connection, tableName, pool, null,
-        configuration, rpcCallerFactory);
+    // puts need to track errors globally due to how the APIs currently work.
+    ap = new AsyncProcess(connection, configuration, pool, rpcCallerFactory, true);
+    multiAp = this.connection.getAsyncProcess();
 
     this.maxKeyValueSize = this.configuration.getInt(
         "hbase.client.keyvalue.maxsize", -1);
@@ -789,9 +793,13 @@ public class HTable implements HTableInterface {
    * {@inheritDoc}
    */
   @Override
-  public void batch(final List<?extends Row> actions, final Object[] results)
+  public void batch(final List<? extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
-    batchCallback(actions, results, null);
+    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, actions, null, results);
+    ars.waitUntilDone();
+    if (ars.hasError()) {
+      throw ars.getErrors();
+    }
   }
 
   /**
@@ -802,7 +810,9 @@ public class HTable implements HTableInterface {
   @Override
   public Object[] batch(final List<? extends Row> actions)
      throws InterruptedException, IOException {
-    return batchCallback(actions, null);
+    Object[] results = new Object[actions.size()];
+    batch(actions, results);
+    return results;
   }
 
   /**
@@ -911,7 +921,10 @@ public class HTable implements HTableInterface {
    * @throws InterruptedIOException if we were interrupted.
    */
   private void doPut(Put put) throws InterruptedIOException, RetriesExhaustedWithDetailsException {
-    if (ap.hasError()){
+    // This behavior is highly non-intuitive... it does not protect us against
+    // 94-incompatible behavior, which is a timing issue because hasError, the below code
+    // and setter of hasError are not synchronized. Perhaps it should be removed.
+    if (ap.hasError()) {
       writeAsyncBuffer.add(put);
       backgroundFlushCommits(true);
     }
@@ -938,30 +951,22 @@ public class HTable implements HTableInterface {
       InterruptedIOException, RetriesExhaustedWithDetailsException {
 
     try {
-      do {
-        ap.submit(writeAsyncBuffer, true);
-      } while (synchronous && !writeAsyncBuffer.isEmpty());
-
-      if (synchronous) {
-        ap.waitUntilDone();
+      if (!synchronous) {
+        ap.submit(tableName, writeAsyncBuffer, true, null, false);
+        if (ap.hasError()) {
+          LOG.debug(tableName + ": One or more of the operations have failed -" +
+              " waiting for all operation in progress to finish (successfully or not)");
+        }
       }
-
-      if (ap.hasError()) {
-        LOG.debug(tableName + ": One or more of the operations have failed -" +
-            " waiting for all operation in progress to finish (successfully or not)");
+      if (synchronous || ap.hasError()) {
         while (!writeAsyncBuffer.isEmpty()) {
-          ap.submit(writeAsyncBuffer, true);
+          ap.submit(tableName, writeAsyncBuffer, true, null, false);
         }
-        ap.waitUntilDone();
-
-        if (!clearBufferOnFail) {
-          // if clearBufferOnFailed is not set, we're supposed to keep the failed operation in the
-          //  write buffer. This is a questionable feature kept here for backward compatibility
-          writeAsyncBuffer.addAll(ap.getFailedOperations());
+        List<Row> failedRows = clearBufferOnFail ? null : writeAsyncBuffer;
+        RetriesExhaustedWithDetailsException error = ap.waitForAllPreviousOpsAndReset(failedRows);
+        if (error != null) {
+          throw error;
         }
-        RetriesExhaustedWithDetailsException e = ap.getErrors();
-        ap.clearErrors();
-        throw e;
       }
     } finally {
       currentWriteBufferSize = 0;
@@ -1301,8 +1306,7 @@ public class HTable implements HTableInterface {
    */
   public void processBatch(final List<? extends Row> list, final Object[] results)
     throws IOException, InterruptedException {
-
-    this.processBatchCallback(list, results, null);
+    this.batch(list, results);
   }
 
 

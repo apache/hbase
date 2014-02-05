@@ -46,10 +46,13 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.cloudera.htrace.Trace;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class  allows a continuous flow of requests. It's written to be compatible with a
@@ -59,26 +62,25 @@ import org.cloudera.htrace.Trace;
  * the operations it can send, i.e. the operations that are on region that are not considered
  * as busy. The process is asynchronous, i.e. it returns immediately when if has finished to
  * iterate on the list. If, and only if, the maximum number of current task is reached, the call
- * to submit will block.
+ * to submit will block. Alternatively, the caller can call submitAll, in which case all the
+ * operations will be sent. Each call to submit returns a future-like object that can be used
+ * to track operation progress.
  * </p>
  * <p>
  * The class manages internally the retries.
  * </p>
  * <p>
- * The class includes an error marker: it allows to know if an operation has failed or not, and
- * to get the exception details, i.e. the full list of throwables for each attempt. This marker
- * is here to help the backward compatibility in HTable. In most (new) cases, it should be
- * managed by the callbacks.
+ * The class can be constructed in regular mode, or "global error" mode. In global error mode,
+ * AP tracks errors across all calls (each "future" also has global view of all errors). That
+ * mode is necessary for backward compat with HTable behavior, where multiple submissions are
+ * made and the errors can propagate using any put/flush call, from previous calls.
+ * In "regular" mode, the errors are tracked inside the Future object that is returned.
+ * The results are always tracked inside the Future object and can be retrieved when the call
+ * has finished. Partial results can also be retrieved if some part of multi-request failed.
  * </p>
  * <p>
- * A callback is available, in order to: <list>
- * <li>Get the result of the operation (failure or success)</li>
- * <li>When an operation fails but could be retried, allows or not to retry</li>
- * <li>When an operation fails for good (can't be retried or already retried the maximum number
- * time), register the error or not.
- * </list>
- * <p>
- * This class is not thread safe externally; only one thread should submit operations at a time.
+ * This class is thread safe in regular mode; in global error code, submitting operations and
+ * retrieving errors from different threads may be not thread safe.
  * Internally, the class is thread safe enough to manage simultaneously new submission and results
  * arising from older operations.
  * </p>
@@ -87,24 +89,52 @@ import org.cloudera.htrace.Trace;
  * gets as well.
  * </p>
  */
-class AsyncProcess<CResult> {
+class AsyncProcess {
   private static final Log LOG = LogFactory.getLog(AsyncProcess.class);
   protected static final AtomicLong COUNTER = new AtomicLong();
+
+  /** 
+   * The context used to wait for results from one submit call.
+   * 1) If AsyncProcess is set to track errors globally, and not per call (for HTable puts),
+   *    then errors and failed operations in this object will reflect global errors.
+   * 2) If submit call is made with needResults false, results will not be saved.
+   *  */
+  public static interface AsyncRequestFuture {
+    public boolean hasError();
+    public RetriesExhaustedWithDetailsException getErrors();
+    public List<? extends Row> getFailedOperations();
+    public Object[] getResults();
+    /** Wait until all tasks are executed, successfully or not. */
+    public void waitUntilDone() throws InterruptedIOException;
+  }
+
+  /** Return value from a submit that didn't contain any requests. */
+  private static final AsyncRequestFuture NO_REQS_RESULT = new AsyncRequestFuture() {
+    public final Object[] result = new Object[0];
+    public boolean hasError() { return false; }
+    public RetriesExhaustedWithDetailsException getErrors() { return null; }
+    public List<? extends Row> getFailedOperations() { return null; }
+    public Object[] getResults() { return result; }
+    public void waitUntilDone() throws InterruptedIOException {}
+  };
+
+
+  // TODO: many of the fields should be made private
   protected final long id;
-  private final int startLogErrorsCnt;
+
   protected final HConnection hConnection;
-  protected final TableName tableName;
+  protected final RpcRetryingCallerFactory rpcCallerFactory;
+  protected final BatchErrors globalErrors;
   protected final ExecutorService pool;
-  protected final AsyncProcessCallback<CResult> callback;
-  protected final BatchErrors errors = new BatchErrors();
-  protected final AtomicBoolean hasError = new AtomicBoolean(false);
-  protected final AtomicLong tasksSent = new AtomicLong(0);
-  protected final AtomicLong tasksDone = new AtomicLong(0);
-  protected final AtomicLong retriesCnt = new AtomicLong(0);
+
+  protected final AtomicLong tasksInProgress = new AtomicLong(0);
   protected final ConcurrentMap<byte[], AtomicInteger> taskCounterPerRegion =
       new ConcurrentSkipListMap<byte[], AtomicInteger>(Bytes.BYTES_COMPARATOR);
   protected final ConcurrentMap<ServerName, AtomicInteger> taskCounterPerServer =
       new ConcurrentHashMap<ServerName, AtomicInteger>();
+
+  // Start configuration settings.
+  private final int startLogErrorsCnt;
 
   /**
    * The number of tasks simultaneously executed on the cluster.
@@ -126,49 +156,9 @@ class AsyncProcess<CResult> {
   protected final long pause;
   protected int numTries;
   protected int serverTrackerTimeout;
-  protected RpcRetryingCallerFactory rpcCallerFactory;
+  // End configuration settings.
 
-
-  /**
-   * This interface allows to keep the interface of the previous synchronous interface, that uses
-   * an array of object to return the result.
-   * <p/>
-   * This interface allows the caller to specify the behavior on errors: <list>
-   * <li>If we have not yet reach the maximum number of retries, the user can nevertheless
-   * specify if this specific operation should be retried or not.
-   * </li>
-   * <li>If an operation fails (i.e. is not retried or fails after all retries), the user can
-   * specify is we should mark this AsyncProcess as in error or not.
-   * </li>
-   * </list>
-   */
-  interface AsyncProcessCallback<CResult> {
-
-    /**
-     * Called on success. originalIndex holds the index in the action list.
-     */
-    void success(int originalIndex, byte[] region, Row row, CResult result);
-
-    /**
-     * called on failure, if we don't retry (i.e. called once per failed operation).
-     *
-     * @return true if we should store the error and tag this async process as being in error.
-     *         false if the failure of this operation can be safely ignored, and does not require
-     *         the current process to be stopped without proceeding with the other operations in
-     *         the queue.
-     */
-    boolean failure(int originalIndex, Row row, Throwable t);
-
-    /**
-     * Called on a failure we plan to retry. This allows the user to stop retrying. Will be
-     * called multiple times for a single action if it fails multiple times.
-     *
-     * @return false if we should retry, true otherwise.
-     */
-    boolean retriableFailure(int originalIndex, Row row, Throwable exception);
-  }
-
-  private static class BatchErrors {
+  protected static class BatchErrors {
     private final List<Throwable> throwables = new ArrayList<Throwable>();
     private final List<Row> actions = new ArrayList<Row>();
     private final List<String> addresses = new ArrayList<String>();
@@ -181,6 +171,10 @@ class AsyncProcess<CResult> {
       throwables.add(ex);
       actions.add(row);
       addresses.add(serverName != null ? serverName.toString() : "null");
+    }
+
+    public boolean hasErrors() {
+      return !throwables.isEmpty();
     }
 
     private synchronized RetriesExhaustedWithDetailsException makeException() {
@@ -196,17 +190,15 @@ class AsyncProcess<CResult> {
     }
   }
 
-  public AsyncProcess(HConnection hc, TableName tableName, ExecutorService pool,
-      AsyncProcessCallback<CResult> callback, Configuration conf,
-      RpcRetryingCallerFactory rpcCaller) {
-    if (hc == null){
+  public AsyncProcess(HConnection hc, Configuration conf, ExecutorService pool,
+      RpcRetryingCallerFactory rpcCaller, boolean useGlobalErrors) {
+    if (hc == null) {
       throw new IllegalArgumentException("HConnection cannot be null.");
     }
 
     this.hConnection = hc;
-    this.tableName = tableName;
     this.pool = pool;
-    this.callback = callback;
+    this.globalErrors = useGlobalErrors ? new BatchErrors() : null;
 
     this.id = COUNTER.incrementAndGet();
 
@@ -255,35 +247,50 @@ class AsyncProcess<CResult> {
     this.rpcCallerFactory = rpcCaller;
   }
 
+  private ExecutorService getPool(ExecutorService pool) {
+    if (pool != null) return pool;
+    if (this.pool != null) return this.pool;
+    throw new RuntimeException("Neither AsyncProcess nor request have ExecutorService");
+  }
+
+  /**
+   * See {@link #submit(ExecutorService, TableName, List, boolean, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback, boolean)}.
+   * Uses default ExecutorService for this AP (must have been created with one).
+   */
+  public <CResult> AsyncRequestFuture submit(TableName tableName, List<? extends Row> rows,
+      boolean atLeastOne, Batch.Callback<CResult> callback, boolean needResults) throws InterruptedIOException {
+    return submit(null, tableName, rows, atLeastOne, callback, needResults);
+  }
+
   /**
    * Extract from the rows list what we can submit. The rows we can not submit are kept in the
    * list.
    *
+   * @param pool ExecutorService to use.
+   * @param tableName The table for which this request is needed.
+   * @param callback Batch callback. Only called on success (94 behavior).
+   * @param needResults Whether results are needed, or can be discarded.
    * @param rows - the submitted row. Modified by the method: we remove the rows we took.
    * @param atLeastOne true if we should submit at least a subset.
    */
-  public void submit(List<? extends Row> rows, boolean atLeastOne) throws InterruptedIOException {
+  public <CResult> AsyncRequestFuture submit(ExecutorService pool, TableName tableName,
+      List<? extends Row> rows, boolean atLeastOne, Batch.Callback<CResult> callback,
+      boolean needResults) throws InterruptedIOException {
     if (rows.isEmpty()) {
-      return;
+      return NO_REQS_RESULT;
     }
 
     Map<ServerName, MultiAction<Row>> actionsByServer =
         new HashMap<ServerName, MultiAction<Row>>();
     List<Action<Row>> retainedActions = new ArrayList<Action<Row>>(rows.size());
 
-    long currentTaskCnt = tasksDone.get();
-    boolean alreadyLooped = false;
-
     NonceGenerator ng = this.hConnection.getNonceGenerator();
-    do {
-      if (alreadyLooped){
-        // if, for whatever reason, we looped, we want to be sure that something has changed.
-        waitForNextTaskDone(currentTaskCnt);
-        currentTaskCnt = tasksDone.get();
-      } else {
-        alreadyLooped = true;
-      }
+    long nonceGroup = ng.getNonceGroup(); // Currently, nonce group is per entire client.
 
+    // Location errors that happen before we decide what requests to take.
+    List<Exception> locationErrors = null;
+    List<Integer> locationErrorRows = null;
+    do {
       // Wait until there is at least one slot for a new task.
       waitForMaximumCurrentTasks(maxTotalConcurrentTasks - 1);
 
@@ -296,34 +303,60 @@ class AsyncProcess<CResult> {
       Iterator<? extends Row> it = rows.iterator();
       while (it.hasNext()) {
         Row r = it.next();
-        HRegionLocation loc = findDestLocation(r, posInList);
-
-        if (loc == null) { // loc is null if there is an error such as meta not available.
+        HRegionLocation loc = null;
+        try {
+          loc = findDestLocation(tableName, r);
+        } catch (IOException ex) {
+          if (locationErrors == null) {
+            locationErrors = new ArrayList<Exception>();
+            locationErrorRows = new ArrayList<Integer>();
+          }
+          LOG.error("Failed to get region location ", ex);
+          // This action failed before creating ars. Add it to retained but do not add to submit list.
+          // We will then add it to ars in an already-failed state.
+          retainedActions.add(new Action<Row>(r, ++posInList));
+          locationErrors.add(ex);
+          locationErrorRows.add(posInList);
           it.remove();
-        } else if (canTakeOperation(loc, regionIncluded, serverIncluded)) {
+          break; // Backward compat: we stop considering actions on location error.
+        }
+
+        if (canTakeOperation(loc, regionIncluded, serverIncluded)) {
           Action<Row> action = new Action<Row>(r, ++posInList);
           setNonce(ng, r, action);
           retainedActions.add(action);
-          addAction(loc, action, actionsByServer, ng);
+          addAction(loc, action, actionsByServer, nonceGroup);
           it.remove();
         }
       }
-    } while (retainedActions.isEmpty() && atLeastOne && !hasError());
+    } while (retainedActions.isEmpty() && atLeastOne && (locationErrors == null));
 
-    HConnectionManager.ServerErrorTracker errorsByServer = createServerErrorTracker();
-    sendMultiAction(retainedActions, actionsByServer, 1, errorsByServer);
+    if (retainedActions.isEmpty()) return NO_REQS_RESULT;
+
+    AsyncRequestFutureImpl<CResult> ars = createAsyncRequestFuture(
+        tableName, retainedActions, nonceGroup, pool, callback, null, needResults);
+    // Add location errors if any
+    if (locationErrors != null) {
+      for (int i = 0; i < locationErrors.size(); ++i) {
+        int originalIndex = locationErrorRows.get(i);
+        Row row = retainedActions.get(originalIndex).getAction();
+        ars.manageError(originalIndex, row, false, locationErrors.get(i), null);
+      }
+    }
+    ars.sendMultiAction(actionsByServer, 1);
+    return ars;
   }
 
   /**
-   * Group the actions per region server.
+   * Helper that is used when grouping the actions per region server.
    *
    * @param loc - the destination. Must not be null.
    * @param action - the action to add to the multiaction
    * @param actionsByServer the multiaction per server
-   * @param ng Nonce generator, or null if no nonces are needed.
+   * @param nonceGroup Nonce group.
    */
   private void addAction(HRegionLocation loc, Action<Row> action,
-      Map<ServerName, MultiAction<Row>> actionsByServer, NonceGenerator ng) {
+      Map<ServerName, MultiAction<Row>> actionsByServer, long nonceGroup) {
     final byte[] regionName = loc.getRegionInfo().getRegionName();
     MultiAction<Row> multiAction = actionsByServer.get(loc.getServerName());
     if (multiAction == null) {
@@ -331,9 +364,7 @@ class AsyncProcess<CResult> {
       actionsByServer.put(loc.getServerName(), multiAction);
     }
     if (action.hasNonce() && !multiAction.hasNonceGroup()) {
-      // TODO: this code executes for every (re)try, and calls getNonceGroup again
-      //       for the same action. It must return the same value across calls.
-      multiAction.setNonceGroup(ng.getNonceGroup());
+      multiAction.setNonceGroup(nonceGroup);
     }
 
     multiAction.add(regionName, action);
@@ -341,32 +372,17 @@ class AsyncProcess<CResult> {
 
   /**
    * Find the destination.
-   *
-   * @param row          the row
-   * @param posInList    the position in the list
-   * @return the destination. Null if we couldn't find it.
+   * @param tableName the requisite table.
+   * @param row the row
+   * @return the destination.
    */
-  private HRegionLocation findDestLocation(Row row, int posInList) {
+  private HRegionLocation findDestLocation(TableName tableName, Row row) throws IOException {
     if (row == null) throw new IllegalArgumentException("#" + id + ", row cannot be null");
-    HRegionLocation loc = null;
-    IOException locationException = null;
-    try {
-      loc = hConnection.locateRegion(this.tableName, row.getRow());
-      if (loc == null) {
-        locationException = new IOException("#" + id + ", no location found, aborting submit for" +
-            " tableName=" + tableName +
-            " rowkey=" + Arrays.toString(row.getRow()));
-      }
-    } catch (IOException e) {
-      locationException = e;
+    HRegionLocation loc = hConnection.locateRegion(tableName, row.getRow());
+    if (loc == null) {
+      throw new IOException("#" + id + ", no location found, aborting submit for" +
+          " tableName=" + tableName + " rowkey=" + Arrays.toString(row.getRow()));
     }
-    if (locationException != null) {
-      // There are multiple retries in locateRegion already. No need to add new.
-      // We can't continue with this row, hence it's the last retry.
-      manageError(posInList, row, false, locationException, null);
-      return null;
-    }
-
     return loc;
   }
 
@@ -413,7 +429,7 @@ class AsyncProcess<CResult> {
       }
 
       // Do we have too many total tasks already?
-      boolean ok = (newServers + getCurrentTasksCount()) < maxTotalConcurrentTasks;
+      boolean ok = (newServers + tasksInProgress.get()) < maxTotalConcurrentTasks;
 
       if (ok) {
         // If the total is fine, is it ok for this individual server?
@@ -438,12 +454,26 @@ class AsyncProcess<CResult> {
   }
 
   /**
+   * See {@link #submitAll(ExecutorService, TableName, List, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback, Object[])}.
+   * Uses default ExecutorService for this AP (must have been created with one).
+   */
+  public <CResult> AsyncRequestFuture submitAll(TableName tableName,
+      List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results) {
+    return submitAll(null, tableName, rows, callback, results);
+  }
+
+  /**
    * Submit immediately the list of rows, whatever the server status. Kept for backward
    * compatibility: it allows to be used with the batch interface that return an array of objects.
    *
+   * @param pool ExecutorService to use.
+   * @param tableName name of the table for which the submission is made.
    * @param rows the list of rows.
+   * @param callback the callback.
+   * @param results Optional array to return the results thru; backward compat.
    */
-  public void submitAll(List<? extends Row> rows) {
+  public <CResult> AsyncRequestFuture submitAll(ExecutorService pool, TableName tableName,
+      List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results) {
     List<Action<Row>> actions = new ArrayList<Action<Row>>(rows.size());
 
     // The position will be used by the processBatch to match the object array returned.
@@ -455,8 +485,10 @@ class AsyncProcess<CResult> {
       setNonce(ng, r, action);
       actions.add(action);
     }
-    HConnectionManager.ServerErrorTracker errorsByServer = createServerErrorTracker();
-    submit(actions, actions, 1, errorsByServer);
+    AsyncRequestFutureImpl<CResult> ars = createAsyncRequestFuture(
+        tableName, actions, ng.getNonceGroup(), getPool(pool), callback, results, results != null);
+    ars.groupAndSendMultiAction(actions, 1);
+    return ars;
   }
 
   private void setNonce(NonceGenerator ng, Row r, Action<Row> action) {
@@ -464,434 +496,536 @@ class AsyncProcess<CResult> {
     action.setNonce(ng.newNonce()); // Action handles NO_NONCE, so it's ok if ng is disabled.
   }
 
-
   /**
-   * Group a list of actions per region servers, and send them. The created MultiActions are
-   * added to the inProgress list. Does not take into account the region/server load.
-   *
-   * @param initialActions - the full list of the actions in progress
-   * @param currentActions - the list of row to submit
-   * @param numAttempt - the current numAttempt (first attempt is 1)
+   * The context, and return value, for a single submit/submitAll call.
+   * Note on how this class (one AP submit) works. Initially, all requests are split into groups
+   * by server; request is sent to each server in parallel; the RPC calls are not async so a
+   * thread per server is used. Every time some actions fail, regions/locations might have
+   * changed, so we re-group them by server and region again and send these groups in parallel
+   * too. The result, in case of retries, is a "tree" of threads, with parent exiting after
+   * scheduling children. This is why lots of code doesn't require any synchronization.
    */
-  private void submit(List<Action<Row>> initialActions,
-                      List<Action<Row>> currentActions, int numAttempt,
-                      final HConnectionManager.ServerErrorTracker errorsByServer) {
+  protected class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
+    private final Batch.Callback<CResult> callback;
+    private final BatchErrors errors;
+    private final HConnectionManager.ServerErrorTracker errorsByServer;
+    private final ExecutorService pool;
 
-    if (numAttempt > 1){
-      retriesCnt.incrementAndGet();
+
+    private final TableName tableName;
+    private final AtomicLong actionsInProgress = new AtomicLong(-1);
+    private final Object[] results;
+    private final long nonceGroup;
+
+    @VisibleForTesting
+    protected AtomicInteger hardRetryLimit = null; // used for tests to stop retries.
+
+    public AsyncRequestFutureImpl(TableName tableName, List<Action<Row>> actions, long nonceGroup,
+        ExecutorService pool, boolean needResults, Object[] results,
+        Batch.Callback<CResult> callback) {
+      this.pool = pool;
+      this.callback = callback;
+      this.nonceGroup = nonceGroup;
+      this.tableName = tableName;
+      this.actionsInProgress.set(actions.size());
+      if (results != null) {
+        assert needResults;
+        if (results.length != actions.size()) throw new AssertionError("results.length");
+        this.results = results;
+        for (int i = 0; i != this.results.length; ++i) {
+          results[i] = null;
+        }
+      } else {
+        this.results = needResults ? new Object[actions.size()] : null;
+      }
+      this.errorsByServer = createServerErrorTracker();
+      this.errors = (globalErrors != null) ? globalErrors : new BatchErrors();
     }
 
-    // group per location => regions server
-    final Map<ServerName, MultiAction<Row>> actionsByServer =
-        new HashMap<ServerName, MultiAction<Row>>();
+    /**
+     * Group a list of actions per region servers, and send them.
+     *
+     * @param currentActions - the list of row to submit
+     * @param numAttempt - the current numAttempt (first attempt is 1)
+     */
+    private void groupAndSendMultiAction(List<Action<Row>> currentActions, int numAttempt) {
+      // group per location => regions server
+      final Map<ServerName, MultiAction<Row>> actionsByServer =
+          new HashMap<ServerName, MultiAction<Row>>();
 
-    NonceGenerator ng = this.hConnection.getNonceGenerator();
-    for (Action<Row> action : currentActions) {
-      HRegionLocation loc = findDestLocation(action.getAction(), action.getOriginalIndex());
-      if (loc != null) {
-        addAction(loc, action, actionsByServer, ng);
+      HRegionLocation loc = null;
+      for (Action<Row> action : currentActions) {
+        try {
+          loc = findDestLocation(tableName, action.getAction());
+        } catch (IOException ex) {
+          // There are multiple retries in locateRegion already. No need to add new.
+          // We can't continue with this row, hence it's the last retry.
+          manageError(action.getOriginalIndex(), action.getAction(), false, ex, null);
+          continue;
+        }
+        addAction(loc, action, actionsByServer, nonceGroup);
+      }
+
+      if (!actionsByServer.isEmpty()) {
+        sendMultiAction(actionsByServer, numAttempt);
       }
     }
 
-    if (!actionsByServer.isEmpty()) {
-      sendMultiAction(initialActions, actionsByServer, numAttempt, errorsByServer);
+    /**
+     * Send a multi action structure to the servers, after a delay depending on the attempt
+     * number. Asynchronous.
+     *
+     * @param actionsByServer the actions structured by regions
+     * @param numAttempt      the attempt number.
+     */
+    private void sendMultiAction(
+        Map<ServerName, MultiAction<Row>> actionsByServer, final int numAttempt) {
+      // Run the last item on the same thread if we are already on a send thread.
+      // We hope most of the time it will be the only item, so we can cut down on threads.
+      int reuseThreadCountdown = (numAttempt > 1) ? actionsByServer.size() : Integer.MAX_VALUE;
+      for (Map.Entry<ServerName, MultiAction<Row>> e : actionsByServer.entrySet()) {
+        final ServerName server = e.getKey();
+        final MultiAction<Row> multiAction = e.getValue();
+        incTaskCounters(multiAction.getRegions(), server);
+        Runnable runnable = Trace.wrap("AsyncProcess.sendMultiAction", new Runnable() {
+          @Override
+          public void run() {
+            MultiResponse res;
+            try {
+              MultiServerCallable<Row> callable = createCallable(server, tableName, multiAction);
+              try {
+                res = createCaller(callable).callWithoutRetries(callable);
+              } catch (IOException e) {
+                // The service itself failed . It may be an error coming from the communication
+                //   layer, but, as well, a functional error raised by the server.
+                receiveGlobalFailure(multiAction, server, numAttempt, e);
+                return;
+              } catch (Throwable t) {
+                // This should not happen. Let's log & retry anyway.
+                LOG.error("#" + id + ", Caught throwable while calling. This is unexpected." +
+                    " Retrying. Server is " + server.getServerName() + ", tableName=" + tableName, t);
+                receiveGlobalFailure(multiAction, server, numAttempt, t);
+                return;
+              }
+
+              // Normal case: we received an answer from the server, and it's not an exception.
+              receiveMultiAction(multiAction, server, res, numAttempt);
+            } catch (Throwable t) {
+              // Something really bad happened. We are on the send thread that will now die.
+              LOG.error("Internal AsyncProcess #" + id + " error for "
+                  + tableName + " processing for " + server, t);
+              throw new RuntimeException(t);
+            } finally {
+              decTaskCounters(multiAction.getRegions(), server);
+            }
+          }
+        });
+        --reuseThreadCountdown;
+        if (reuseThreadCountdown == 0) {
+          runnable.run();
+        } else {
+          try {
+            pool.submit(runnable);
+          } catch (RejectedExecutionException ree) {
+            // This should never happen. But as the pool is provided by the end user, let's secure
+            //  this a little.
+            decTaskCounters(multiAction.getRegions(), server);
+            LOG.warn("#" + id + ", the task was rejected by the pool. This is unexpected." +
+                " Server is " + server.getServerName(), ree);
+            // We're likely to fail again, but this will increment the attempt counter, so it will
+            //  finish.
+            receiveGlobalFailure(multiAction, server, numAttempt, ree);
+          }
+        }
+      }
+    }
+
+    /**
+     * Check that we can retry acts accordingly: logs, set the error status.
+     *
+     * @param originalIndex the position in the list sent
+     * @param row           the row
+     * @param canRetry      if false, we won't retry whatever the settings.
+     * @param throwable     the throwable, if any (can be null)
+     * @param server        the location, if any (can be null)
+     * @return true if the action can be retried, false otherwise.
+     */
+    public boolean manageError(int originalIndex, Row row, boolean canRetry,
+                                Throwable throwable, ServerName server) {
+      if (canRetry && throwable != null && throwable instanceof DoNotRetryIOException) {
+        canRetry = false;
+      }
+
+      if (canRetry && hardRetryLimit != null) {
+        canRetry = hardRetryLimit.decrementAndGet() >= 0;
+      }
+
+      if (!canRetry) {
+        // Batch.Callback<Res> was not called on failure in 0.94. We keep this.
+        errors.add(throwable, row, server);
+        if (results != null) {
+          setResult(originalIndex, row, throwable);
+        }
+        decActionCounter();
+      }
+
+      return canRetry;
+    }
+
+    /**
+     * Resubmit all the actions from this multiaction after a failure.
+     *
+     * @param rsActions  the actions still to do from the initial list
+     * @param server   the destination
+     * @param numAttempt the number of attempts so far
+     * @param t the throwable (if any) that caused the resubmit
+     */
+    private void receiveGlobalFailure(
+        MultiAction<Row> rsActions, ServerName server, int numAttempt, Throwable t) {
+      // Do not use the exception for updating cache because it might be coming from
+      // any of the regions in the MultiAction.
+      byte[] row = rsActions.actions.values().iterator().next().get(0).getAction().getRow();
+      hConnection.updateCachedLocations(tableName, row, null, server);
+      errorsByServer.reportServerError(server);
+
+      List<Action<Row>> toReplay = new ArrayList<Action<Row>>();
+      for (Map.Entry<byte[], List<Action<Row>>> e : rsActions.actions.entrySet()) {
+        for (Action<Row> action : e.getValue()) {
+          if (manageError(action.getOriginalIndex(), action.getAction(), true, t, server)) {
+            toReplay.add(action);
+          }
+        }
+      }
+
+      logAndResubmit(server, toReplay, numAttempt, rsActions.size(), t);
+    }
+
+    /**
+     * Log as much info as possible, and, if there is something to replay,
+     * submit it again after a back off sleep.
+     */
+    private void logAndResubmit(ServerName oldServer, List<Action<Row>> toReplay,
+        int numAttempt, int failureCount, Throwable throwable) {
+      if (toReplay.isEmpty()) {
+        // it's either a success or a last failure
+        if (failureCount != 0) {
+          // We have a failure but nothing to retry. We're done, it's a final failure..
+          LOG.warn(createLog(numAttempt, failureCount, toReplay.size(),
+              oldServer, throwable, -1, false, errorsByServer.getStartTrackingTime()));
+        } else if (numAttempt > startLogErrorsCnt + 1) {
+          // The operation was successful, but needed several attempts. Let's log this.
+          LOG.info(createLog(numAttempt, failureCount, 0,
+              oldServer, throwable, -1, false, errorsByServer.getStartTrackingTime()));
+        }
+        return;
+      }
+
+      // We have something to replay. We're going to sleep a little before.
+
+      // We have two contradicting needs here:
+      //  1) We want to get the new location after having slept, as it may change.
+      //  2) We want to take into account the location when calculating the sleep time.
+      // It should be possible to have some heuristics to take the right decision. Short term,
+      //  we go for one.
+      long backOffTime = errorsByServer.calculateBackoffTime(oldServer, pause);
+      if (numAttempt > startLogErrorsCnt) {
+        // We use this value to have some logs when we have multiple failures, but not too many
+        //  logs, as errors are to be expected when a region moves, splits and so on
+        LOG.info(createLog(numAttempt, failureCount, toReplay.size(),
+            oldServer, throwable, backOffTime, true, errorsByServer.getStartTrackingTime()));
+      }
+
+      try {
+        Thread.sleep(backOffTime);
+      } catch (InterruptedException e) {
+        LOG.warn("#" + id + ", not sent: " + toReplay.size() + " operations, " + oldServer, e);
+        Thread.currentThread().interrupt();
+        return;
+      }
+
+      groupAndSendMultiAction(toReplay, numAttempt + 1);
+    }
+
+    /**
+     * Called when we receive the result of a server query.
+     *
+     * @param multiAction    - the multiAction we sent
+     * @param server       - the location. It's used as a server name.
+     * @param responses      - the response, if any
+     * @param numAttempt     - the attempt
+     */
+    private void receiveMultiAction(MultiAction<Row> multiAction,
+        ServerName server, MultiResponse responses, int numAttempt) {
+       assert responses != null;
+
+      // Success or partial success
+      // Analyze detailed results. We can still have individual failures to be redo.
+      // two specific throwables are managed:
+      //  - DoNotRetryIOException: we continue to retry for other actions
+      //  - RegionMovedException: we update the cache with the new region location
+
+      List<Action<Row>> toReplay = new ArrayList<Action<Row>>();
+      Throwable throwable = null;
+      int failureCount = 0;
+      boolean canRetry = true;
+
+      // Go by original action.
+      for (Map.Entry<byte[], List<Action<Row>>> regionEntry : multiAction.actions.entrySet()) {
+        byte[] regionName = regionEntry.getKey();
+        Map<Integer, Object> regionResults = responses.getResults().get(regionName);
+        if (regionResults == null) {
+          if (!responses.getExceptions().containsKey(regionName)) {
+            LOG.error("Server sent us neither results nor exceptions for "
+                + Bytes.toStringBinary(regionName));
+            responses.getExceptions().put(regionName, new RuntimeException("Invalid response"));
+          }
+          continue;
+        }
+        boolean regionFailureRegistered = false;
+        for (Action<Row> sentAction : regionEntry.getValue()) {
+          Object result = regionResults.get(sentAction.getOriginalIndex());
+          // Failure: retry if it's make sense else update the errors lists
+          if (result == null || result instanceof Throwable) {
+            Row row = sentAction.getAction();
+            if (!regionFailureRegistered) { // We're doing this once per location.
+              regionFailureRegistered = true;
+              // The location here is used as a server name.
+              hConnection.updateCachedLocations(tableName, row.getRow(), result, server);
+              if (failureCount == 0) {
+                errorsByServer.reportServerError(server);
+                canRetry = errorsByServer.canRetryMore(numAttempt);
+              }
+            }
+            ++failureCount;
+            if (manageError(
+                sentAction.getOriginalIndex(), row, canRetry, (Throwable)result, server)) {
+              toReplay.add(sentAction);
+            }
+          } else {
+            if (callback != null) {
+              try {
+                //noinspection unchecked
+                this.callback.update(regionName, sentAction.getAction().getRow(), (CResult)result);
+              } catch (Throwable t) {
+                LOG.error("User callback threw an exception for "
+                    + Bytes.toStringBinary(regionName) + ", ignoring", t);
+              }
+            }
+            if (results != null) {
+              setResult(sentAction.getOriginalIndex(), sentAction.getAction(), result);
+            }
+            decActionCounter();
+          }
+        }
+      }
+
+      // The failures global to a region. We will use for multiAction we sent previously to find the
+      //   actions to replay.
+      for (Map.Entry<byte[], Throwable> throwableEntry : responses.getExceptions().entrySet()) {
+        throwable = throwableEntry.getValue();
+        byte[] region = throwableEntry.getKey();
+        List<Action<Row>> actions = multiAction.actions.get(region);
+        if (actions == null || actions.isEmpty()) {
+          throw new IllegalStateException("Wrong response for the region: " +
+              HRegionInfo.encodeRegionName(region));
+        }
+
+        if (failureCount == 0) {
+          errorsByServer.reportServerError(server);
+          canRetry = errorsByServer.canRetryMore(numAttempt);
+        }
+        hConnection.updateCachedLocations(
+            tableName, actions.get(0).getAction().getRow(), throwable, server);
+        failureCount += actions.size();
+
+        for (Action<Row> action : actions) {
+          Row row = action.getAction();
+          if (manageError(action.getOriginalIndex(), row, canRetry, throwable, server)) {
+            toReplay.add(action);
+          }
+        }
+      }
+
+      logAndResubmit(server, toReplay, numAttempt, failureCount, throwable);
+    }
+
+    private String createLog(int numAttempt, int failureCount, int replaySize, ServerName sn,
+                             Throwable error, long backOffTime, boolean willRetry, String startTime){
+      StringBuilder sb = new StringBuilder();
+
+      sb.append("#").append(id).append(", table=").append(tableName).
+          append(", attempt=").append(numAttempt).append("/").append(numTries).append(" ");
+
+      if (failureCount > 0 || error != null){
+        sb.append("failed ").append(failureCount).append(" ops").append(", last exception: ").
+            append(error == null ? "null" : error);
+      } else {
+        sb.append("SUCCEEDED");
+      }
+
+      sb.append(" on ").append(sn);
+
+      sb.append(", tracking started ").append(startTime);
+
+      if (willRetry) {
+        sb.append(", retrying after ").append(backOffTime).append(" ms").
+            append(", replay ").append(replaySize).append(" ops.");
+      } else if (failureCount > 0) {
+        sb.append(" - FAILED, NOT RETRYING ANYMORE");
+      }
+
+      return sb.toString();
+    }
+
+    private void setResult(int index, Row row, Object result) {
+      if (result == null) throw new RuntimeException("Result cannot be set to null");
+      if (results[index] != null) throw new RuntimeException("Result was already set");
+      results[index] = result;
+    }
+
+    private void decActionCounter() {
+      actionsInProgress.decrementAndGet();
+      synchronized (actionsInProgress) {
+        actionsInProgress.notifyAll();
+      }
+    }
+
+    @Override
+    public void waitUntilDone() throws InterruptedIOException {
+      long lastLog = EnvironmentEdgeManager.currentTimeMillis();
+      long currentInProgress;
+      try {
+        while (0 != (currentInProgress = actionsInProgress.get())) {
+          long now = EnvironmentEdgeManager.currentTimeMillis();
+          if (now > lastLog + 10000) {
+            lastLog = now;
+            LOG.info("#" + id + ", waiting for " + currentInProgress + "  actions to finish");
+          }
+          synchronized (actionsInProgress) {
+            actionsInProgress.wait(100);
+          }
+        }
+      } catch (InterruptedException iex) {
+        throw new InterruptedIOException(iex.getMessage());
+      }
+    }
+
+    @Override
+    public boolean hasError() {
+      return errors.hasErrors();
+    }
+
+    @Override
+    public List<? extends Row> getFailedOperations() {
+      return errors.actions;
+    }
+
+    @Override
+    public RetriesExhaustedWithDetailsException getErrors() {
+      return errors.makeException();
+    }
+
+    @Override
+    public Object[] getResults() {
+      return results;
     }
   }
 
-  /**
-   * Send a multi action structure to the servers, after a delay depending on the attempt
-   * number. Asynchronous.
-   *
-   * @param initialActions  the list of the actions, flat.
-   * @param actionsByServer the actions structured by regions
-   * @param numAttempt      the attempt number.
-   */
-  public void sendMultiAction(final List<Action<Row>> initialActions,
-                              Map<ServerName, MultiAction<Row>> actionsByServer,
-                              final int numAttempt,
-                              final HConnectionManager.ServerErrorTracker errorsByServer) {
-    // Send the queries and add them to the inProgress list
-    // This iteration is by server (the HRegionLocation comparator is by server portion only).
-    for (Map.Entry<ServerName, MultiAction<Row>> e : actionsByServer.entrySet()) {
-      final ServerName server = e.getKey();
-      final MultiAction<Row> multiAction = e.getValue();
-      incTaskCounters(multiAction.getRegions(), server);
-      Runnable runnable = Trace.wrap("AsyncProcess.sendMultiAction", new Runnable() {
-        @Override
-        public void run() {
-          MultiResponse res;
-          try {
-            MultiServerCallable<Row> callable = createCallable(server, multiAction);
-            try {
-              res = createCaller(callable).callWithoutRetries(callable);
-            } catch (IOException e) {
-              // The service itself failed . It may be an error coming from the communication
-              //   layer, but, as well, a functional error raised by the server.
-              receiveGlobalFailure(initialActions, multiAction, server, numAttempt, e,
-                  errorsByServer);
-              return;
-            } catch (Throwable t) {
-              // This should not happen. Let's log & retry anyway.
-              LOG.error("#" + id + ", Caught throwable while calling. This is unexpected." +
-                  " Retrying. Server is " + server.getServerName() + ", tableName=" + tableName, t);
-              receiveGlobalFailure(initialActions, multiAction, server, numAttempt, t,
-                  errorsByServer);
-              return;
-            }
 
-            // Nominal case: we received an answer from the server, and it's not an exception.
-            receiveMultiAction(initialActions, multiAction, server, res, numAttempt, errorsByServer);
-
-          } finally {
-            decTaskCounters(multiAction.getRegions(), server);
-          }
-        }
-      });
-
-      try {
-        this.pool.submit(runnable);
-      } catch (RejectedExecutionException ree) {
-        // This should never happen. But as the pool is provided by the end user, let's secure
-        //  this a little.
-        decTaskCounters(multiAction.getRegions(), server);
-        LOG.warn("#" + id + ", the task was rejected by the pool. This is unexpected." +
-            " Server is " + server.getServerName(), ree);
-        // We're likely to fail again, but this will increment the attempt counter, so it will
-        //  finish.
-        receiveGlobalFailure(initialActions, multiAction, server, numAttempt, ree, errorsByServer);
-      }
-    }
+  @VisibleForTesting
+  /** Create AsyncRequestFuture. Isolated to be easily overridden in the tests. */
+  protected <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
+      TableName tableName, List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
+      Batch.Callback<CResult> callback, Object[] results, boolean needResults) {
+    return new AsyncRequestFutureImpl<CResult>(
+        tableName, actions, nonceGroup, getPool(pool), needResults, results, callback);
   }
 
   /**
    * Create a callable. Isolated to be easily overridden in the tests.
    */
-  protected MultiServerCallable<Row> createCallable(
-      final ServerName server, final MultiAction<Row> multi) {
+  @VisibleForTesting
+  protected MultiServerCallable<Row> createCallable(final ServerName server,
+      TableName tableName, final MultiAction<Row> multi) {
     return new MultiServerCallable<Row>(hConnection, tableName, server, multi);
   }
 
   /**
-   * For tests.
-   * @param callable: used in tests.
-   * @return Returns a caller.
+   * Create a caller. Isolated to be easily overridden in the tests.
    */
+  @VisibleForTesting
   protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
     return rpcCallerFactory.<MultiResponse> newCaller();
   }
 
-  /**
-   * Check that we can retry acts accordingly: logs, set the error status, call the callbacks.
-   *
-   * @param originalIndex the position in the list sent
-   * @param row           the row
-   * @param canRetry      if false, we won't retry whatever the settings.
-   * @param throwable     the throwable, if any (can be null)
-   * @param server      the location, if any (can be null)
-   * @return true if the action can be retried, false otherwise.
-   */
-  private boolean manageError(int originalIndex, Row row,
-      boolean canRetry, Throwable throwable, ServerName server) {
-    if (canRetry && throwable != null && throwable instanceof DoNotRetryIOException) {
-      canRetry = false;
-    }
-
-    if (canRetry && callback != null) {
-      canRetry = callback.retriableFailure(originalIndex, row, throwable);
-    }
-
-    if (!canRetry) {
-      if (callback != null) {
-        callback.failure(originalIndex, row, throwable);
-      }
-      errors.add(throwable, row, server);
-      this.hasError.set(true);
-    }
-
-    return canRetry;
-  }
-
-  /**
-   * Resubmit all the actions from this multiaction after a failure.
-   *
-   * @param initialActions the full initial action list
-   * @param rsActions  the actions still to do from the initial list
-   * @param server   the destination
-   * @param numAttempt the number of attempts so far
-   * @param t the throwable (if any) that caused the resubmit
-   */
-  private void receiveGlobalFailure(List<Action<Row>> initialActions, MultiAction<Row> rsActions,
-                                    ServerName server, int numAttempt, Throwable t,
-                                    HConnectionManager.ServerErrorTracker errorsByServer) {
-    // Do not use the exception for updating cache because it might be coming from
-    // any of the regions in the MultiAction.
-    hConnection.updateCachedLocations(tableName,
-      rsActions.actions.values().iterator().next().get(0).getAction().getRow(), null, server);
-    errorsByServer.reportServerError(server);
-
-    List<Action<Row>> toReplay = new ArrayList<Action<Row>>(initialActions.size());
-    for (Map.Entry<byte[], List<Action<Row>>> e : rsActions.actions.entrySet()) {
-      for (Action<Row> action : e.getValue()) {
-        if (manageError(action.getOriginalIndex(), action.getAction(), true, t, server)) {
-          toReplay.add(action);
-        }
-      }
-    }
-
-    logAndResubmit(initialActions, server, toReplay, numAttempt, rsActions.size(),
-        t, errorsByServer);
-  }
-
-  /**
-   * Log as many info as possible, and, if there is something to replay, submit it again after
-   *  a back off sleep.
-   */
-  private void logAndResubmit(List<Action<Row>> initialActions, ServerName oldLocation,
-                              List<Action<Row>> toReplay, int numAttempt, int failureCount,
-                              Throwable throwable,
-                              HConnectionManager.ServerErrorTracker errorsByServer) {
-    if (toReplay.isEmpty()) {
-      // it's either a success or a last failure
-      if (failureCount != 0) {
-        // We have a failure but nothing to retry. We're done, it's a final failure..
-        LOG.warn(createLog(numAttempt, failureCount, toReplay.size(),
-            oldLocation, throwable, -1, false, errorsByServer.getStartTrackingTime()));
-      } else if (numAttempt > startLogErrorsCnt + 1) {
-        // The operation was successful, but needed several attempts. Let's log this.
-        LOG.info(createLog(numAttempt, failureCount, 0,
-            oldLocation, throwable, -1, false, errorsByServer.getStartTrackingTime()));
-      }
-      return;
-    }
-
-    // We have something to replay. We're going to sleep a little before.
-
-    // We have two contradicting needs here:
-    //  1) We want to get the new location after having slept, as it may change.
-    //  2) We want to take into account the location when calculating the sleep time.
-    // It should be possible to have some heuristics to take the right decision. Short term,
-    //  we go for one.
-    long backOffTime = errorsByServer.calculateBackoffTime(oldLocation, pause);
-
-    if (numAttempt > startLogErrorsCnt) {
-      // We use this value to have some logs when we have multiple failures, but not too many
-      //  logs, as errors are to be expected when a region moves, splits and so on
-      LOG.info(createLog(numAttempt, failureCount, toReplay.size(),
-          oldLocation, throwable, backOffTime, true, errorsByServer.getStartTrackingTime()));
-    }
-
-    try {
-      Thread.sleep(backOffTime);
-    } catch (InterruptedException e) {
-      LOG.warn("#" + id + ", not sent: " + toReplay.size() + " operations, " + oldLocation, e);
-      Thread.currentThread().interrupt();
-      return;
-    }
-
-    submit(initialActions, toReplay, numAttempt + 1, errorsByServer);
-  }
-
-  /**
-   * Called when we receive the result of a server query.
-   *
-   * @param initialActions - the whole action list
-   * @param multiAction    - the multiAction we sent
-   * @param server       - the location.
-   * @param responses      - the response, if any
-   * @param numAttempt     - the attempt
-   */
-  private void receiveMultiAction(List<Action<Row>> initialActions, MultiAction<Row> multiAction,
-                                  ServerName server,
-                                  MultiResponse responses, int numAttempt,
-                                  HConnectionManager.ServerErrorTracker errorsByServer) {
-     assert responses != null;
-
-    // Success or partial success
-    // Analyze detailed results. We can still have individual failures to be redo.
-    // two specific throwables are managed:
-    //  - DoNotRetryIOException: we continue to retry for other actions
-    //  - RegionMovedException: we update the cache with the new region location
-
-    List<Action<Row>> toReplay = new ArrayList<Action<Row>>();
-    Throwable throwable = null;
-    int failureCount = 0;
-    boolean canRetry = true;
-
-    for (Map.Entry<byte[], List<Pair<Integer, Object>>> resultsForRS :
-        responses.getResults().entrySet()) {
-
-      boolean regionFailureRegistered = false;
-      for (Pair<Integer, Object> regionResult : resultsForRS.getValue()) {
-        Object result = regionResult.getSecond();
-
-        // Failure: retry if it's make sense else update the errors lists
-        if (result == null || result instanceof Throwable) {
-          throwable = (Throwable) result;
-          Action<Row> correspondingAction = initialActions.get(regionResult.getFirst());
-          Row row = correspondingAction.getAction();
-          failureCount++;
-          if (!regionFailureRegistered) { // We're doing this once per location.
-            regionFailureRegistered= true;
-            // The location here is used as a server name.
-            hConnection.updateCachedLocations(this.tableName, row.getRow(), result, server);
-            if (failureCount == 1) {
-              errorsByServer.reportServerError(server);
-              canRetry = errorsByServer.canRetryMore(numAttempt);
-            }
-          }
-
-          if (manageError(correspondingAction.getOriginalIndex(), row, canRetry,
-              throwable, server)) {
-            toReplay.add(correspondingAction);
-          }
-        } else { // success
-          if (callback != null) {
-            int index = regionResult.getFirst();
-            Action<Row> correspondingAction = initialActions.get(index);
-            Row row = correspondingAction.getAction();
-            //noinspection unchecked
-            this.callback.success(index, resultsForRS.getKey(), row, (CResult) result);
-          }
-        }
-      }
-    }
-
-    // The failures global to a region. We will use for multiAction we sent previously to find the
-    //   actions to replay.
-
-    for (Map.Entry<byte[], Throwable> throwableEntry : responses.getExceptions().entrySet()) {
-      throwable = throwableEntry.getValue();
-      byte[] region =throwableEntry.getKey();
-      List<Action<Row>> actions = multiAction.actions.get(region);
-      if (actions == null || actions.isEmpty()) {
-        throw new IllegalStateException("Wrong response for the region: " +
-            HRegionInfo.encodeRegionName(region));
-      }
-
-      if (failureCount == 0) {
-        errorsByServer.reportServerError(server);
-        canRetry = errorsByServer.canRetryMore(numAttempt);
-      }
-      hConnection.updateCachedLocations(this.tableName, actions.get(0).getAction().getRow(),
-          throwable, server);
-      failureCount += actions.size();
-
-      for (Action<Row> action : actions) {
-        Row row = action.getAction();
-        if (manageError(action.getOriginalIndex(), row, canRetry, throwable, server)) {
-          toReplay.add(action);
-        }
-      }
-    }
-
-    logAndResubmit(initialActions, server, toReplay, numAttempt, failureCount,
-        throwable, errorsByServer);
-  }
-
-  private String createLog(int numAttempt, int failureCount, int replaySize, ServerName sn,
-                           Throwable error, long backOffTime, boolean willRetry, String startTime){
-    StringBuilder sb = new StringBuilder();
-
-    sb.append("#").append(id).append(", table=").append(tableName).
-        append(", attempt=").append(numAttempt).append("/").append(numTries).append(" ");
-
-    if (failureCount > 0 || error != null){
-      sb.append("failed ").append(failureCount).append(" ops").append(", last exception: ").
-          append(error == null ? "null" : error);
-    } else {
-      sb.append("SUCCEEDED");
-    }
-
-    sb.append(" on ").append(sn);
-
-    sb.append(", tracking started ").append(startTime);
-
-    if (willRetry) {
-      sb.append(", retrying after ").append(backOffTime).append(" ms").
-          append(", replay ").append(replaySize).append(" ops.");
-    } else if (failureCount > 0) {
-      sb.append(" - FAILED, NOT RETRYING ANYMORE");
-    }
-
-    return sb.toString();
-  }
-
-  /**
-   * Waits for another task to finish.
-   * @param currentNumberOfTask - the number of task finished when calling the method.
-   */
-  protected void waitForNextTaskDone(long currentNumberOfTask) throws InterruptedIOException {
-    while (currentNumberOfTask == tasksDone.get()) {
-      try {
-        synchronized (this.tasksDone) {
-          this.tasksDone.wait(100);
-        }
-      } catch (InterruptedException e) {
-        throw new InterruptedIOException("#" + id + ", interrupted." +
-            " currentNumberOfTask=" + currentNumberOfTask +
-            ",  tableName=" + tableName + ", tasksDone=" + tasksDone.get());
-      }
-    }
-  }
-
-  /**
-   * Wait until the async does not have more than max tasks in progress.
-   */
-  private void waitForMaximumCurrentTasks(int max) throws InterruptedIOException {
-    long lastLog = EnvironmentEdgeManager.currentTimeMillis();
-    long currentTasksDone = this.tasksDone.get();
-
-    while ((tasksSent.get() - currentTasksDone) > max) {
-      long now = EnvironmentEdgeManager.currentTimeMillis();
-      if (now > lastLog + 10000) {
-        lastLog = now;
-        LOG.info("#" + id + ", waiting for some tasks to finish. Expected max="
-            + max + ", tasksSent=" + tasksSent.get() + ", tasksDone=" + tasksDone.get() +
-            ", currentTasksDone=" + currentTasksDone + ", retries=" + retriesCnt.get() +
-            " hasError=" + hasError() + ", tableName=" + tableName);
-      }
-      waitForNextTaskDone(currentTasksDone);
-      currentTasksDone = this.tasksDone.get();
-    }
-  }
-
-  private long getCurrentTasksCount(){
-    return  tasksSent.get() - tasksDone.get();
-  }
-
-  /**
-   * Wait until all tasks are executed, successfully or not.
-   */
-  public void waitUntilDone() throws InterruptedIOException {
+  @VisibleForTesting
+  /** Waits until all outstanding tasks are done. Used in tests. */
+  void waitUntilDone() throws InterruptedIOException {
     waitForMaximumCurrentTasks(0);
   }
 
-
-  public boolean hasError() {
-    return hasError.get();
+  /** Wait until the async does not have more than max tasks in progress. */
+  private void waitForMaximumCurrentTasks(int max) throws InterruptedIOException {
+    long lastLog = EnvironmentEdgeManager.currentTimeMillis();
+    long currentInProgress, oldInProgress = Long.MAX_VALUE;
+    while ((currentInProgress = this.tasksInProgress.get()) > max) {
+      if (oldInProgress != currentInProgress) { // Wait for in progress to change.
+        long now = EnvironmentEdgeManager.currentTimeMillis();
+        if (now > lastLog + 10000) {
+          lastLog = now;
+          LOG.info("#" + id + ", waiting for some tasks to finish. Expected max="
+              + max + ", tasksInProgress=" + currentInProgress);
+        }
+      }
+      oldInProgress = currentInProgress;
+      try {
+        synchronized (this.tasksInProgress) {
+          this.tasksInProgress.wait(100);
+        }
+      } catch (InterruptedException e) {
+        throw new InterruptedIOException("#" + id + ", interrupted." +
+            " currentNumberOfTask=" + currentInProgress);
+      }
+    }
   }
 
-  public List<? extends Row> getFailedOperations() {
-    return errors.actions;
+  /** 
+   * Only used w/useGlobalErrors ctor argument, for HTable backward compat.
+   * @return Whether there were any errors in any request since the last time
+   *          {@link #waitForAllPreviousOpsAndReset(List)} was called, or AP was created.
+   */
+  public boolean hasError() {
+    return globalErrors.hasErrors();
   }
 
   /**
-   * Clean the errors stacks. Should be called only when there are no actions in progress.
+   * Only used w/useGlobalErrors ctor argument, for HTable backward compat.
+   * Waits for all previous operations to finish, and returns errors and (optionally)
+   * failed operations themselves.
+   * @param failedRows an optional list into which the rows that failed since the last time
+   *        {@link #waitForAllPreviousOpsAndReset(List)} was called, or AP was created, are saved.
+   * @returns all the errors since the last time {@link #waitForAllPreviousOpsAndReset(List)}
+   *          was called, or AP was created.
    */
-  public void clearErrors() {
-    errors.clear();
-    hasError.set(false);
-  }
-
-  public RetriesExhaustedWithDetailsException getErrors() {
-    return errors.makeException();
+  public RetriesExhaustedWithDetailsException waitForAllPreviousOpsAndReset(
+      List<Row> failedRows) throws InterruptedIOException {
+    waitForMaximumCurrentTasks(0);
+    if (!globalErrors.hasErrors()) {
+      return null;
+    }
+    if (failedRows != null) {
+      failedRows.addAll(globalErrors.actions);
+    }
+    RetriesExhaustedWithDetailsException result = globalErrors.makeException();
+    globalErrors.clear();
+    return result;
   }
 
   /**
    * increment the tasks counters for a given set of regions. MT safe.
    */
   protected void incTaskCounters(Collection<byte[]> regions, ServerName sn) {
-    tasksSent.incrementAndGet();
+    tasksInProgress.incrementAndGet();
 
     AtomicInteger serverCnt = taskCounterPerServer.get(sn);
     if (serverCnt == null) {
@@ -923,10 +1057,9 @@ class AsyncProcess<CResult> {
     }
 
     taskCounterPerServer.get(sn).decrementAndGet();
-
-    tasksDone.incrementAndGet();
-    synchronized (tasksDone) {
-      tasksDone.notifyAll();
+    tasksInProgress.decrementAndGet();
+    synchronized (tasksInProgress) {
+      tasksInProgress.notifyAll();
     }
   }
 

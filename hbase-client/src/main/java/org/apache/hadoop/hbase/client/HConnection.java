@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
@@ -524,4 +525,9 @@ public interface HConnection extends Abortable, Closeable {
    * @return Nonce generator for this HConnection; may be null if disabled in configuration.
    */
   public NonceGenerator getNonceGenerator();
+
+  /**
+   * @return Default AsyncProcess associated with this connection.
+   */
+  AsyncProcess getAsyncProcess();
 }
