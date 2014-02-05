@@ -81,6 +81,8 @@ public class Import {
   public static class KeyValueImporter extends TableMapper<ImmutableBytesWritable, KeyValue> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;
+    private static final Log LOG = LogFactory.getLog(KeyValueImporter.class);
+
     /**
      * @param row  The current table row key.
      * @param value  The columns.
@@ -92,6 +94,10 @@ public class Import {
       Context context)
     throws IOException {
       try {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Considering the row."
+              + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
+        }
         if (filter == null || !filter.filterRowKey(row.get(), row.getOffset(), row.getLength())) {
           for (Cell kv : value.rawCells()) {
             kv = filterKv(filter, kv);
@@ -143,6 +149,10 @@ public class Import {
     throws IOException, InterruptedException {
       Put put = null;
       Delete delete = null;
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Considering the row."
+            + Bytes.toString(key.get(), key.getOffset(), key.getLength()));
+      }
       if (filter == null || !filter.filterRowKey(key.get(), key.getOffset(), key.getLength())) {
         for (Cell kv : result.rawCells()) {
           kv = filterKv(filter, kv);
@@ -264,11 +274,12 @@ public class Import {
     // apply the filter and skip this kv if the filter doesn't apply
     if (filter != null) {
       Filter.ReturnCode code = filter.filterKeyValue(kv);
-      LOG.debug("Filter returned:" + code);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Filter returned:" + code + " for the key value:" + kv);
+      }
       // if its not an accept type, then skip this kv
       if (!(code.equals(Filter.ReturnCode.INCLUDE) || code
           .equals(Filter.ReturnCode.INCLUDE_AND_NEXT_COL))) {
-        LOG.debug("Skipping key: " + kv + " from filter decision: " + code);
         return null;
       }
     }
