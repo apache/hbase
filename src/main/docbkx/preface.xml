@@ -48,7 +48,7 @@
   xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>
 
   <note xml:id="headsup">
-      <title>Heads-up</title>
+      <title>Heads-up if this is your first foray into the world of distributed computing...</title>
       <para>
           If this is your first foray into the wonderful world of
           Distributed Computing, then you are in for
@@ -65,6 +65,7 @@
           computing has been bound to a single box.  Here is one good
           starting point:
           <link xlink:href="http://en.wikipedia.org/wiki/Fallacies_of_Distributed_Computing">Fallacies of Distributed Computing</link>.
+          That said, you are welcome.  Its a fun place to be.  Yours, the HBase Community.
       </para>
   </note>
 </preface>
