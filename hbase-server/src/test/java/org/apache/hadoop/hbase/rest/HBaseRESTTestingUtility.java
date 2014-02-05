@@ -22,8 +22,8 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.HttpServerUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
@@ -75,6 +75,7 @@ public class HBaseRESTTestingUtility {
       filter = filter.trim();
       context.addFilter(Class.forName(filter), "/*", 0);
     }
+    HttpServerUtil.constrainHttpMethods(context);
     LOG.info("Loaded filter classes :" + filterClasses);
       // start the server
     server.start();
