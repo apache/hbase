@@ -758,7 +758,6 @@ public class Scan extends Query {
    * considered as a small scan.
    * 
    * @param small
-   * @return this instance
    */
   public void setSmall(boolean small) {
     this.small = small;
