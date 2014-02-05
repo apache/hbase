@@ -122,7 +122,7 @@ public class TestLogRollAbort {
     String tableName = this.getClass().getSimpleName();
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    desc.setAsyncLogFlush(true);
+    desc.setDeferredLogFlush(true);
 
     admin.createTable(desc);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
