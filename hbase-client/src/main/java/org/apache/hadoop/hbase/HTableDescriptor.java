@@ -603,7 +603,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    *
    * @see #setAsyncLogFlush(boolean)
    */
-  public synchronized boolean isAsyncLogFlush() {
+  @Deprecated
+  public synchronized boolean isDeferredLogFlush() {
     return getDurability() == Durability.ASYNC_WAL;
   }
 
@@ -620,7 +621,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    *
    * @param isAsyncLogFlush
    */
-  public synchronized void setAsyncLogFlush(final boolean isAsyncLogFlush) {
+  @Deprecated
+  public synchronized void setDeferredLogFlush(final boolean isAsyncLogFlush) {
     this.setDurability(isAsyncLogFlush ? Durability.ASYNC_WAL : DEFAULT_DURABLITY);
   }
 
