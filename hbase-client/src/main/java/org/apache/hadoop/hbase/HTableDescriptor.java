@@ -600,16 +600,15 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * Check if async log edits are enabled on the table.
    *
    * @return true if that async log flush is enabled on the table
-   * @deprecated Since 0.96 we no longer have an explicitly deferred log flush/sync functionality.
+   * @deprecated Since 0.96 we no longer have an explicity deferred log flush/sync functionality.
    * Use {@link #getDurability()}.
    */
-  @Deprecated
-  public synchronized boolean isDeferredLogFlush() {
+  public synchronized boolean isAsyncLogFlush() {
     return getDurability() == Durability.ASYNC_WAL;
   }
 
   /**
-   * This is used to allow the log edits syncing to the file system. Everytime
+   * This is used to allowing the log edits syncing to the file system. Everytime
    * an edit is sent to the server it is first sync'd to the file system by the
    * log writer. This sync is an expensive operation and thus can be deferred so
    * that the edits are kept in memory until the background async writer-sync-notifier
@@ -621,8 +620,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    *
    * @param isAsyncLogFlush
    */
-  @Deprecated
-  public synchronized void setDeferredLogFlush(final boolean isAsyncLogFlush) {
+  public synchronized void setAsyncLogFlush(final boolean isAsyncLogFlush) {
     this.setDurability(isAsyncLogFlush ? Durability.ASYNC_WAL : DEFAULT_DURABLITY);
   }
 
