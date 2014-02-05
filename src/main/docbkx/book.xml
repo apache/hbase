@@ -1251,7 +1251,7 @@ connection.close();</programlisting>
 	      </para>
 	      <para>Note: <code>htable.delete(Delete);</code> does not go in the writebuffer!  This only applies to Puts.
 	      </para>
-	      <para>For additional information on write durability, review the <link xlink:href="acid-semantics.html">ACID semantics</link> page.
+	      <para>For additional information on write durability, review the <link xlink:href="../acid-semantics.html">ACID semantics</link> page.
 	      </para>
        <para>For fine-grained control of batching of
            <classname>Put</classname>s or <classname>Delete</classname>s,
