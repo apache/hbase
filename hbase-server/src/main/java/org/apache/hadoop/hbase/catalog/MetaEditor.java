@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.catalog;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,11 +46,10 @@ import com.google.protobuf.ServiceException;
 
 /**
  * Writes region and assignment information to <code>hbase:meta</code>.
- * TODO: Put MetaReader and MetaEditor together; doesn't make sense having
- * them distinct. see HBASE-3475.
  */
 @InterfaceAudience.Private
-public class MetaEditor {
+public class MetaEditor extends MetaReader {
+
   // TODO: Strip CatalogTracker from this class.  Its all over and in the end
   // its only used to get its Configuration so we can get associated
   // Connection.
@@ -290,7 +288,7 @@ public class MetaEditor {
     Put put = new Put(regionInfo.getRegionName());
     addRegionInfo(put, regionInfo);
     if (sn != null) {
-      addLocation(put, sn, openSeqNum);
+      addLocation(put, sn, openSeqNum, regionInfo.getReplicaId());
     }
     putToMetaTable(catalogTracker, put);
     LOG.info("Added daughter " + regionInfo.getEncodedName() +
@@ -327,7 +325,7 @@ public class MetaEditor {
       Delete deleteB = makeDeleteFromRegionInfo(regionB);
 
       // The merged is a new region, openSeqNum = 1 is fine.
-      addLocation(putOfMerged, sn, 1);
+      addLocation(putOfMerged, sn, 1, mergedRegion.getReplicaId());
 
       byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString()
           + HConstants.DELIMITER);
@@ -365,8 +363,8 @@ public class MetaEditor {
       Put putA = makePutFromRegionInfo(splitA);
       Put putB = makePutFromRegionInfo(splitB);
 
-      addLocation(putA, sn, 1); //these are new regions, openSeqNum = 1 is fine.
-      addLocation(putB, sn, 1);
+      addLocation(putA, sn, 1, splitA.getReplicaId()); //new regions, openSeqNum = 1 is fine.
+      addLocation(putB, sn, 1, splitB.getReplicaId());
 
       byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
       multiMutate(meta, tableRow, putParent, putA, putB);
@@ -399,29 +397,6 @@ public class MetaEditor {
     } catch (ServiceException ex) {
       ProtobufUtil.toIOException(ex);
     }
-  }
-
-
-  /**
-   * Updates the location of the specified hbase:meta region in ROOT to be the
-   * specified server hostname and startcode.
-   * <p>
-   * Uses passed catalog tracker to get a connection to the server hosting
-   * ROOT and makes edits to that region.
-   *
-   * @param catalogTracker catalog tracker
-   * @param regionInfo region to update location of
-   * @param sn Server name
-   * @param openSeqNum the latest sequence number obtained when the region was open
-   * @throws IOException
-   * @throws ConnectException Usually because the regionserver carrying hbase:meta
-   * is down.
-   * @throws NullPointerException Because no -ROOT- server connection
-   */
-  public static void updateMetaLocation(CatalogTracker catalogTracker,
-      HRegionInfo regionInfo, ServerName sn, long openSeqNum)
-  throws IOException, ConnectException {
-    updateLocation(catalogTracker, regionInfo, sn, openSeqNum);
   }
 
   /**
@@ -458,8 +433,9 @@ public class MetaEditor {
   private static void updateLocation(final CatalogTracker catalogTracker,
       HRegionInfo regionInfo, ServerName sn, long openSeqNum)
   throws IOException {
-    Put put = new Put(regionInfo.getRegionName());
-    addLocation(put, sn, openSeqNum);
+    // region replicas are kept in the primary region's row
+    Put put = new Put(getMetaKeyForRegion(regionInfo));
+    addLocation(put, sn, openSeqNum, regionInfo.getReplicaId());
     putToCatalogTable(catalogTracker, put);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
       " with server=" + sn);
@@ -568,12 +544,12 @@ public class MetaEditor {
     return p;
   }
 
-  private static Put addLocation(final Put p, final ServerName sn, long openSeqNum) {
-    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+  private static Put addLocation(final Put p, final ServerName sn, long openSeqNum, int replicaId){
+    p.addImmutable(HConstants.CATALOG_FAMILY, MetaReader.getServerColumn(replicaId),
       Bytes.toBytes(sn.getHostAndPort()));
-    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+    p.addImmutable(HConstants.CATALOG_FAMILY, MetaReader.getStartCodeColumn(replicaId),
       Bytes.toBytes(sn.getStartcode()));
-    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER,
+    p.addImmutable(HConstants.CATALOG_FAMILY, MetaReader.getSeqNumColumn(replicaId),
         Bytes.toBytes(openSeqNum));
     return p;
   }

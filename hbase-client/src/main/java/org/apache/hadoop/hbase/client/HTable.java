@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
@@ -69,6 +70,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
@@ -585,12 +587,15 @@ public class HTable implements HTableInterface {
    * @return Pair of arrays of region starting and ending row keys
    * @throws IOException if a remote or network exception occurs
    */
+  // TODO: these are not in HTableInterface. Should we add them there or move these to HBaseAdmin?
   public Pair<byte[][],byte[][]> getStartEndKeys() throws IOException {
-    NavigableMap<HRegionInfo, ServerName> regions = getRegionLocations();
+
+    List<RegionLocations> regions = listRegionLocations();
     final List<byte[]> startKeyList = new ArrayList<byte[]>(regions.size());
     final List<byte[]> endKeyList = new ArrayList<byte[]>(regions.size());
 
-    for (HRegionInfo region : regions.keySet()) {
+    for (RegionLocations locations : regions) {
+      HRegionInfo region = locations.getRegionLocation().getRegionInfo();
       startKeyList.add(region.getStartKey());
       endKeyList.add(region.getEndKey());
     }
@@ -600,13 +605,20 @@ public class HTable implements HTableInterface {
       endKeyList.toArray(new byte[endKeyList.size()][]));
   }
 
+  @VisibleForTesting
+  List<RegionLocations> listRegionLocations() throws IOException {
+    return MetaScanner.listTableRegionLocations(getConfiguration(), this.connection, getName());
+  }
+
   /**
    * Gets all the regions and their address for this table.
    * <p>
    * This is mainly useful for the MapReduce integration.
    * @return A map of HRegionInfo with it's server address
    * @throws IOException if a remote or network exception occurs
+   * @deprecated This is no longer a public API
    */
+  @Deprecated
   public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
     // TODO: Odd that this returns a Map of HRI to SN whereas getRegionLocation, singular, returns an HRegionLocation.
     return MetaScanner.allTableRegions(getConfiguration(), this.connection, getName(), false);
@@ -620,7 +632,9 @@ public class HTable implements HTableInterface {
    * @return A list of HRegionLocations corresponding to the regions that
    * contain the specified range
    * @throws IOException if a remote or network exception occurs
+   * @deprecated This is no longer a public API
    */
+  @Deprecated
   public List<HRegionLocation> getRegionsInRange(final byte [] startKey,
     final byte [] endKey) throws IOException {
     return getRegionsInRange(startKey, endKey, false);
@@ -635,7 +649,9 @@ public class HTable implements HTableInterface {
    * @return A list of HRegionLocations corresponding to the regions that
    * contain the specified range
    * @throws IOException if a remote or network exception occurs
+   * @deprecated This is no longer a public API
    */
+  @Deprecated
   public List<HRegionLocation> getRegionsInRange(final byte [] startKey,
       final byte [] endKey, final boolean reload) throws IOException {
     return getKeysAndRegionsInRange(startKey, endKey, false, reload).getSecond();
@@ -651,7 +667,9 @@ public class HTable implements HTableInterface {
    * @return A pair of list of start keys and list of HRegionLocations that
    *         contain the specified range
    * @throws IOException if a remote or network exception occurs
+   * @deprecated This is no longer a public API
    */
+  @Deprecated
   private Pair<List<byte[]>, List<HRegionLocation>> getKeysAndRegionsInRange(
       final byte[] startKey, final byte[] endKey, final boolean includeEndKey)
       throws IOException {
@@ -669,7 +687,9 @@ public class HTable implements HTableInterface {
    * @return A pair of list of start keys and list of HRegionLocations that
    *         contain the specified range
    * @throws IOException if a remote or network exception occurs
+   * @deprecated This is no longer a public API
    */
+  @Deprecated
   private Pair<List<byte[]>, List<HRegionLocation>> getKeysAndRegionsInRange(
       final byte[] startKey, final byte[] endKey, final boolean includeEndKey,
       final boolean reload) throws IOException {
@@ -702,7 +722,8 @@ public class HTable implements HTableInterface {
    throws IOException {
      RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
          tableName, row) {
-       public Result call() throws IOException {
+       @Override
+      public Result call() throws IOException {
          return ProtobufUtil.getRowOrBefore(getStub(),
            getLocation().getRegionInfo().getRegionName(), row, family);
        }
@@ -757,6 +778,7 @@ public class HTable implements HTableInterface {
   public Result get(final Get get) throws IOException {
     RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
         getName(), get.getRow()) {
+      @Override
       public Result call() throws IOException {
         return ProtobufUtil.get(getStub(), getLocation().getRegionInfo().getRegionName(), get);
       }
@@ -807,6 +829,7 @@ public class HTable implements HTableInterface {
    * @deprecated If any exception is thrown by one of the actions, there is no way to
    * retrieve the partially executed results. Use {@link #batch(List, Object[])} instead.
    */
+  @Deprecated
   @Override
   public Object[] batch(final List<? extends Row> actions)
      throws InterruptedException, IOException {
@@ -832,6 +855,7 @@ public class HTable implements HTableInterface {
    * {@link #batchCallback(List, Object[], org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
    * instead.
    */
+  @Deprecated
   @Override
   public <R> Object[] batchCallback(
     final List<? extends Row> actions, final Batch.Callback<R> callback) throws IOException,
@@ -849,6 +873,7 @@ public class HTable implements HTableInterface {
   throws IOException {
     RegionServerCallable<Boolean> callable = new RegionServerCallable<Boolean>(connection,
         tableName, delete.getRow()) {
+      @Override
       public Boolean call() throws IOException {
         try {
           MutateRequest request = RequestConverter.buildMutateRequest(
@@ -985,6 +1010,7 @@ public class HTable implements HTableInterface {
   public void mutateRow(final RowMutations rm) throws IOException {
     RegionServerCallable<Void> callable =
         new RegionServerCallable<Void>(connection, getName(), rm.getRow()) {
+      @Override
       public Void call() throws IOException {
         try {
           RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
@@ -1018,6 +1044,7 @@ public class HTable implements HTableInterface {
     final long nonceGroup = ng.getNonceGroup(), nonce = ng.newNonce();
     RegionServerCallable<Result> callable =
       new RegionServerCallable<Result>(this.connection, getName(), append.getRow()) {
+        @Override
         public Result call() throws IOException {
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
@@ -1048,6 +1075,7 @@ public class HTable implements HTableInterface {
     final long nonceGroup = ng.getNonceGroup(), nonce = ng.newNonce();
     RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
         getName(), increment.getRow()) {
+      @Override
       public Result call() throws IOException {
         try {
           MutateRequest request = RequestConverter.buildMutateRequest(
@@ -1110,6 +1138,7 @@ public class HTable implements HTableInterface {
     final long nonceGroup = ng.getNonceGroup(), nonce = ng.newNonce();
     RegionServerCallable<Long> callable =
       new RegionServerCallable<Long>(connection, getName(), row) {
+        @Override
         public Long call() throws IOException {
           try {
             MutateRequest request = RequestConverter.buildIncrementRequest(
@@ -1139,6 +1168,7 @@ public class HTable implements HTableInterface {
   throws IOException {
     RegionServerCallable<Boolean> callable =
       new RegionServerCallable<Boolean>(connection, getName(), row) {
+        @Override
         public Boolean call() throws IOException {
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
@@ -1164,6 +1194,7 @@ public class HTable implements HTableInterface {
   throws IOException {
     RegionServerCallable<Boolean> callable =
       new RegionServerCallable<Boolean>(connection, getName(), row) {
+        @Override
         public Boolean call() throws IOException {
           try {
             CompareType compareType = CompareType.valueOf(compareOp.name());
@@ -1190,6 +1221,7 @@ public class HTable implements HTableInterface {
   throws IOException {
     RegionServerCallable<Boolean> callable =
       new RegionServerCallable<Boolean>(connection, getName(), row) {
+        @Override
         public Boolean call() throws IOException {
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
@@ -1215,6 +1247,7 @@ public class HTable implements HTableInterface {
   throws IOException {
     RegionServerCallable<Boolean> callable =
       new RegionServerCallable<Boolean>(connection, getName(), row) {
+        @Override
         public Boolean call() throws IOException {
           try {
             CompareType compareType = CompareType.valueOf(compareOp.name());
@@ -1399,6 +1432,7 @@ public class HTable implements HTableInterface {
    * @param writeBufferSize The new write buffer size, in bytes.
    * @throws IOException if a remote or network exception occurs.
    */
+  @Override
   public void setWriteBufferSize(long writeBufferSize) throws IOException {
     this.writeBufferSize = writeBufferSize;
     if(currentWriteBufferSize > writeBufferSize) {
@@ -1524,6 +1558,7 @@ public class HTable implements HTableInterface {
   /**
    * {@inheritDoc}
    */
+  @Override
   public CoprocessorRpcChannel coprocessorService(byte[] row) {
     return new RegionCoprocessorRpcChannel(connection, tableName, row);
   }
@@ -1538,6 +1573,7 @@ public class HTable implements HTableInterface {
     final Map<byte[],R> results =  Collections.synchronizedMap(
         new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
     coprocessorService(service, startKey, endKey, callable, new Batch.Callback<R>() {
+      @Override
       public void update(byte[] region, byte[] row, R value) {
         if (region != null) {
           results.put(region, value);
@@ -1565,6 +1601,7 @@ public class HTable implements HTableInterface {
           new RegionCoprocessorRpcChannel(connection, tableName, r);
       Future<R> future = pool.submit(
           new Callable<R>() {
+            @Override
             public R call() throws Exception {
               T instance = ProtobufUtil.newServiceStub(service, channel);
               R result = callable.call(instance);

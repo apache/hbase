@@ -26,6 +26,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -60,6 +62,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
@@ -85,14 +88,15 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.log4j.Level;
 import org.junit.After;
@@ -5970,4 +5974,44 @@ public class TestFromClientSide {
     assertEquals(insertNum, count);
     table.close();
   }
+
+  @Test
+  public void testGetStartEndKeysWithRegionReplicas() throws IOException {
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testGetStartEndKeys"));
+    HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
+    htd.addFamily(fam);
+    byte[][] KEYS = HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE;
+    TEST_UTIL.getHBaseAdmin().createTable(htd, KEYS);
+    List<HRegionInfo> regions = TEST_UTIL.getHBaseAdmin().getTableRegions(htd.getTableName());
+
+    for (int regionReplication = 1; regionReplication < 4 ; regionReplication++) {
+      List<RegionLocations> regionLocations = new ArrayList<RegionLocations>();
+
+      // mock region locations coming from meta with multiple replicas
+      for (HRegionInfo region : regions) {
+        HRegionLocation[] arr = new HRegionLocation[regionReplication];
+        for (int i = 0; i < arr.length; i++) {
+          arr[i] = new HRegionLocation(RegionReplicaUtil.getRegionInfoForReplica(region, i), null);
+        }
+        regionLocations.add(new RegionLocations(arr));
+      }
+
+      HTable table = spy(new HTable(TEST_UTIL.getConfiguration(), htd.getTableName()));
+      when(table.listRegionLocations()).thenReturn(regionLocations);
+
+      Pair<byte[][], byte[][]> startEndKeys = table.getStartEndKeys();
+
+      assertEquals(KEYS.length + 1, startEndKeys.getFirst().length);
+
+      for (int i = 0; i < KEYS.length + 1; i++) {
+        byte[] startKey = i == 0 ? HConstants.EMPTY_START_ROW : KEYS[i - 1];
+        byte[] endKey = i == KEYS.length ? HConstants.EMPTY_END_ROW : KEYS[i];
+        assertArrayEquals(startKey, startEndKeys.getFirst()[i]);
+        assertArrayEquals(endKey, startEndKeys.getSecond()[i]);
+      }
+
+      table.close();
+    }
+  }
+
 }

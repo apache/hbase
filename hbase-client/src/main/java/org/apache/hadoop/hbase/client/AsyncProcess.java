@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -49,7 +48,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.cloudera.htrace.Trace;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -93,7 +91,7 @@ class AsyncProcess {
   private static final Log LOG = LogFactory.getLog(AsyncProcess.class);
   protected static final AtomicLong COUNTER = new AtomicLong();
 
-  /** 
+  /**
    * The context used to wait for results from one submit call.
    * 1) If AsyncProcess is set to track errors globally, and not per call (for HTable puts),
    *    then errors and failed operations in this object will reflect global errors.
@@ -111,10 +109,15 @@ class AsyncProcess {
   /** Return value from a submit that didn't contain any requests. */
   private static final AsyncRequestFuture NO_REQS_RESULT = new AsyncRequestFuture() {
     public final Object[] result = new Object[0];
+    @Override
     public boolean hasError() { return false; }
+    @Override
     public RetriesExhaustedWithDetailsException getErrors() { return null; }
+    @Override
     public List<? extends Row> getFailedOperations() { return null; }
+    @Override
     public Object[] getResults() { return result; }
+    @Override
     public void waitUntilDone() throws InterruptedIOException {}
   };
 
@@ -685,7 +688,7 @@ class AsyncProcess {
       // Do not use the exception for updating cache because it might be coming from
       // any of the regions in the MultiAction.
       byte[] row = rsActions.actions.values().iterator().next().get(0).getAction().getRow();
-      hConnection.updateCachedLocations(tableName, row, null, server);
+      hConnection.updateCachedLocations(tableName, null, row, null, server);
       errorsByServer.reportServerError(server);
 
       List<Action<Row>> toReplay = new ArrayList<Action<Row>>();
@@ -790,7 +793,7 @@ class AsyncProcess {
             if (!regionFailureRegistered) { // We're doing this once per location.
               regionFailureRegistered = true;
               // The location here is used as a server name.
-              hConnection.updateCachedLocations(tableName, row.getRow(), result, server);
+              hConnection.updateCachedLocations(tableName, regionName, row.getRow(), result, server);
               if (failureCount == 0) {
                 errorsByServer.reportServerError(server);
                 canRetry = errorsByServer.canRetryMore(numAttempt);
@@ -835,7 +838,7 @@ class AsyncProcess {
           canRetry = errorsByServer.canRetryMore(numAttempt);
         }
         hConnection.updateCachedLocations(
-            tableName, actions.get(0).getAction().getRow(), throwable, server);
+            tableName, region, actions.get(0).getAction().getRow(), throwable, server);
         failureCount += actions.size();
 
         for (Action<Row> action : actions) {
@@ -989,7 +992,7 @@ class AsyncProcess {
     }
   }
 
-  /** 
+  /**
    * Only used w/useGlobalErrors ctor argument, for HTable backward compat.
    * @return Whether there were any errors in any request since the last time
    *          {@link #waitForAllPreviousOpsAndReset(List)} was called, or AP was created.

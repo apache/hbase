@@ -46,9 +46,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -359,15 +359,16 @@ public class TestHCM {
 
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
 
-    final int nextPort = conn.getCachedLocation(TABLE_NAME, ROW).getPort() + 1;
-    HRegionLocation loc = conn.getCachedLocation(TABLE_NAME, ROW);
+    final int nextPort = conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort() + 1;
+    HRegionLocation loc = conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation();
     conn.updateCachedLocation(loc.getRegionInfo(), loc.getServerName(),
         ServerName.valueOf("127.0.0.1", nextPort,
         HConstants.LATEST_TIMESTAMP), HConstants.LATEST_TIMESTAMP);
-    Assert.assertEquals(conn.getCachedLocation(TABLE_NAME, ROW).getPort(), nextPort);
+    Assert.assertEquals(conn.getCachedLocation(TABLE_NAME, ROW)
+      .getRegionLocation().getPort(), nextPort);
 
-    conn.forceDeleteCachedLocation(TABLE_NAME, ROW.clone());
-    HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
+    conn.clearRegionCache(TABLE_NAME, ROW.clone());
+    RegionLocations rl = conn.getCachedLocation(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
 
     // We're now going to move the region and check that it works for the client
@@ -389,7 +390,7 @@ public class TestHCM {
     }
 
     // Now moving the region to the second server
-    HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME, ROW);
+    HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation();
     byte[] regionName = toMove.getRegionInfo().getRegionName();
     byte[] encodedRegionNameBytes = toMove.getRegionInfo().getEncodedNameAsBytes();
 
@@ -438,7 +439,8 @@ public class TestHCM {
 
     // Cache was NOT updated and points to the wrong server
     Assert.assertFalse(
-        conn.getCachedLocation(TABLE_NAME, ROW).getPort() == destServerName.getPort());
+        conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation()
+          .getPort() == destServerName.getPort());
 
     // This part relies on a number of tries equals to 1.
     // We do a put and expect the cache to be updated, even if we don't retry
@@ -462,10 +464,13 @@ public class TestHCM {
     Assert.assertNotNull("Cached connection is null", conn.getCachedLocation(TABLE_NAME, ROW));
     Assert.assertEquals(
         "Previous server was " + curServer.getServerName().getHostAndPort(),
-        destServerName.getPort(), conn.getCachedLocation(TABLE_NAME, ROW).getPort());
+        destServerName.getPort(),
+        conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort());
 
-    Assert.assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
-    Assert.assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+    Assert.assertFalse(destServer.getRegionsInTransitionInRS()
+      .containsKey(encodedRegionNameBytes));
+    Assert.assertFalse(curServer.getRegionsInTransitionInRS()
+      .containsKey(encodedRegionNameBytes));
 
     // We move it back to do another test with a scan
     LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
@@ -488,7 +493,7 @@ public class TestHCM {
     LOG.info("Move finished for region=" + toMove.getRegionInfo().getRegionNameAsString());
 
     // Cache was NOT updated and points to the wrong server
-    Assert.assertFalse(conn.getCachedLocation(TABLE_NAME, ROW).getPort() ==
+    Assert.assertFalse(conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort() ==
       curServer.getServerName().getPort());
 
     Scan sc = new Scan();
@@ -512,7 +517,8 @@ public class TestHCM {
     Assert.assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
     Assert.assertEquals(
       "Previous server was "+destServer.getServerName().getHostAndPort(),
-      curServer.getServerName().getPort(), conn.getCachedLocation(TABLE_NAME, ROW).getPort());
+      curServer.getServerName().getPort(),
+      conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort());
 
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
@@ -551,7 +557,7 @@ public class TestHCM {
     HConnectionManager.HConnectionImplementation conn =
       (HConnectionManager.HConnectionImplementation)table.getConnection();
 
-    HRegionLocation location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    HRegionLocation location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
     assertNotNull(location);
 
     ServerName anySource = ServerName.valueOf(location.getHostname(), location.getPort() - 1, 0L);
@@ -560,28 +566,28 @@ public class TestHCM {
     int nextPort = location.getPort() + 1;
     conn.updateCachedLocation(location.getRegionInfo(), location.getServerName(),
         ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() - 1);
-    location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
     Assert.assertEquals(nextPort, location.getPort());
 
     // No source specified - same.
     nextPort = location.getPort() + 1;
     conn.updateCachedLocation(location.getRegionInfo(), location.getServerName(),
         ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() - 1);
-    location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
     Assert.assertEquals(nextPort, location.getPort());
 
     // Higher seqNum - overwrites lower seqNum.
     nextPort = location.getPort() + 1;
     conn.updateCachedLocation(location.getRegionInfo(), anySource,
         ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() + 1);
-    location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
     Assert.assertEquals(nextPort, location.getPort());
 
     // Lower seqNum - does not overwrite higher seqNum.
     nextPort = location.getPort() + 1;
     conn.updateCachedLocation(location.getRegionInfo(), anySource,
         ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() - 1);
-    location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
     Assert.assertEquals(nextPort - 1, location.getPort());
   }
 
@@ -778,7 +784,7 @@ public class TestHCM {
     table.put(put);
 
     // Now moving the region to the second server
-    HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME3, ROW_X);
+    HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME3, ROW_X).getRegionLocation();
     byte[] regionName = toMove.getRegionInfo().getRegionName();
     byte[] encodedRegionNameBytes = toMove.getRegionInfo().getEncodedNameAsBytes();
 
@@ -844,7 +850,8 @@ public class TestHCM {
 
     // Cache was NOT updated and points to the wrong server
     Assert.assertFalse(
-        conn.getCachedLocation(TABLE_NAME3, ROW_X).getPort() == destServerName.getPort());
+        conn.getCachedLocation(TABLE_NAME3, ROW_X).getRegionLocation()
+          .getPort() == destServerName.getPort());
 
     // Hijack the number of retry to fail after 2 tries
     final int prevNumRetriesVal = setNumTries(conn, 2);
