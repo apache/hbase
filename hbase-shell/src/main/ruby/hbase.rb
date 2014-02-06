@@ -61,6 +61,7 @@ module HBaseConstants
   ATTRIBUTES="ATTRIBUTES"
   VISIBILITY="VISIBILITY"
   AUTHORIZATIONS = "AUTHORIZATIONS"
+  CONSISTENCY = "CONSISTENCY"
 
   # Load constants from hbase java API
   def self.promote_constants(constants)

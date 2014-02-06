@@ -269,6 +269,7 @@ EOF
       filter = args.delete(FILTER) if args[FILTER]
       attributes = args[ATTRIBUTES]
       authorizations = args[AUTHORIZATIONS]
+      consistency = args.delete(CONSISTENCY) if args[CONSISTENCY]
       unless args.empty?
         columns = args[COLUMN] || args[COLUMNS]
         if args[VERSIONS]
@@ -316,8 +317,8 @@ EOF
           get.setTimeStamp(ts.to_i) if args[TIMESTAMP]
           get.setTimeRange(args[TIMERANGE][0], args[TIMERANGE][1]) if args[TIMERANGE]
         end
-          set_attributes(get, attributes) if attributes
-          set_authorizations(get, authorizations) if authorizations  
+        set_attributes(get, attributes) if attributes
+        set_authorizations(get, authorizations) if authorizations
       end
 
       unless filter.class == String
@@ -325,6 +326,8 @@ EOF
       else
         get.setFilter(org.apache.hadoop.hbase.filter.ParseFilter.new.parseFilterString(filter))
       end
+
+      get.setConsistency(org.apache.hadoop.hbase.client.Consistency.valueOf(consistency)) if consistency
 
       # Call hbase for the results
       result = @table.get(get)
@@ -393,6 +396,7 @@ EOF
         raw = args["RAW"] || false
         attributes = args[ATTRIBUTES]
         authorizations = args[AUTHORIZATIONS]
+        consistency = args[CONSISTENCY]
         # Normalize column names
         columns = [columns] if columns.class == String
         unless columns.kind_of?(Array)
@@ -429,6 +433,7 @@ EOF
         scan.setRaw(raw)
         set_attributes(scan, attributes) if attributes
         set_authorizations(scan, authorizations) if authorizations
+        scan.setConsistency(org.apache.hadoop.hbase.client.Consistency.valueOf(consistency)) if consistency
       else
         scan = org.apache.hadoop.hbase.client.Scan.new
       end

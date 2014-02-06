@@ -10,7 +10,7 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distr=ibuted on an "AS IS" BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -54,6 +53,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -136,6 +136,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.Parser;
@@ -167,10 +168,19 @@ public final class ProtobufUtil {
   private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
   private final static Result EMPTY_RESULT_EXISTS_TRUE = Result.create(null, true);
   private final static Result EMPTY_RESULT_EXISTS_FALSE = Result.create(null, false);
+  private final static Result EMPTY_RESULT_STALE = Result.create(EMPTY_CELL_ARRAY, null, true);
+  private final static Result EMPTY_RESULT_EXISTS_TRUE_STALE
+    = Result.create((Cell[])null, true, true);
+  private final static Result EMPTY_RESULT_EXISTS_FALSE_STALE
+    = Result.create((Cell[])null, false, true);
 
   private final static ClientProtos.Result EMPTY_RESULT_PB;
   private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_TRUE;
   private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_FALSE;
+  private final static ClientProtos.Result EMPTY_RESULT_PB_STALE;
+  private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_TRUE_STALE;
+  private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_FALSE_STALE;
+
 
   static {
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
@@ -179,15 +189,21 @@ public final class ProtobufUtil {
     builder.setAssociatedCellCount(0);
     EMPTY_RESULT_PB_EXISTS_TRUE =  builder.build();
 
+    builder.setStale(true);
+    EMPTY_RESULT_PB_EXISTS_TRUE_STALE = builder.build();
     builder.clear();
 
     builder.setExists(false);
     builder.setAssociatedCellCount(0);
     EMPTY_RESULT_PB_EXISTS_FALSE =  builder.build();
+    builder.setStale(true);
+    EMPTY_RESULT_PB_EXISTS_FALSE_STALE = builder.build();
 
     builder.clear();
     builder.setAssociatedCellCount(0);
     EMPTY_RESULT_PB =  builder.build();
+    builder.setStale(true);
+    EMPTY_RESULT_PB_STALE = builder.build();
   }
 
   /**
@@ -461,7 +477,26 @@ public final class ProtobufUtil {
     if (proto.hasClosestRowBefore() && proto.getClosestRowBefore()){
       get.setClosestRowBefore(true);
     }
+    if (proto.hasConsistency()) {
+      get.setConsistency(toConsistency(proto.getConsistency()));
+    }
     return get;
+  }
+
+  public static Consistency toConsistency(ClientProtos.Consistency consistency) {
+    switch (consistency) {
+      case STRONG : return Consistency.STRONG;
+      case TIMELINE : return Consistency.TIMELINE;
+      default : return Consistency.STRONG;
+    }
+  }
+
+  public static ClientProtos.Consistency toConsistency(Consistency consistency) {
+    switch (consistency) {
+      case STRONG : return ClientProtos.Consistency.STRONG;
+      case TIMELINE : return ClientProtos.Consistency.TIMELINE;
+      default : return ClientProtos.Consistency.STRONG;
+    }
   }
 
   /**
@@ -642,7 +677,7 @@ public final class ProtobufUtil {
    * @param cellScanner
    * @param proto the protocol buffer Mutate to convert
    * @return the converted client Append
-   * @throws IOException 
+   * @throws IOException
    */
   public static Append toAppend(final MutationProto proto, final CellScanner cellScanner)
   throws IOException {
@@ -1006,6 +1041,10 @@ public final class ProtobufUtil {
     if (get.isClosestRowBefore()){
       builder.setClosestRowBefore(true);
     }
+    if (get.getConsistency() != null && get.getConsistency() != Consistency.STRONG) {
+      builder.setConsistency(toConsistency(get.getConsistency()));
+    }
+
     return builder.build();
   }
 
@@ -1197,13 +1236,15 @@ public final class ProtobufUtil {
 
     Cell[] cells = result.rawCells();
     if (cells == null || cells.length == 0) {
-      return EMPTY_RESULT_PB;
+      return result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB;
     }
 
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
     for (Cell c : cells) {
       builder.addCell(toCell(c));
     }
+
+    builder.setStale(result.isStale());
 
     return builder.build();
   }
@@ -1228,9 +1269,10 @@ public final class ProtobufUtil {
   public static ClientProtos.Result toResultNoData(final Result result) {
     if (result.getExists() != null) return toResult(result.getExists());
     int size = result.size();
-    if (size == 0) return EMPTY_RESULT_PB;
+    if (size == 0) return result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB;
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
     builder.setAssociatedCellCount(size);
+    builder.setStale(result.isStale());
     return builder.build();
   }
 
@@ -1242,19 +1284,22 @@ public final class ProtobufUtil {
    */
   public static Result toResult(final ClientProtos.Result proto) {
     if (proto.hasExists()) {
+      if (proto.getStale()) {
+        return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE :EMPTY_RESULT_EXISTS_FALSE_STALE;
+      }
       return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE : EMPTY_RESULT_EXISTS_FALSE;
     }
 
     List<CellProtos.Cell> values = proto.getCellList();
     if (values.isEmpty()){
-      return EMPTY_RESULT;
+      return proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT;
     }
 
     List<Cell> cells = new ArrayList<Cell>(values.size());
     for (CellProtos.Cell c : values) {
       cells.add(toCell(c));
     }
-    return Result.create(cells, null);
+    return Result.create(cells, null, proto.getStale());
   }
 
   /**
@@ -1273,6 +1318,9 @@ public final class ProtobufUtil {
       if ((values != null && !values.isEmpty()) ||
           (proto.hasAssociatedCellCount() && proto.getAssociatedCellCount() > 0)) {
         throw new IllegalArgumentException("bad proto: exists with cells is no allowed " + proto);
+      }
+      if (proto.getStale()) {
+        return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE :EMPTY_RESULT_EXISTS_FALSE_STALE;
       }
       return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE : EMPTY_RESULT_EXISTS_FALSE;
     }
@@ -1295,7 +1343,9 @@ public final class ProtobufUtil {
       }
     }
 
-    return (cells == null || cells.isEmpty()) ? EMPTY_RESULT : Result.create(cells, null);
+    return (cells == null || cells.isEmpty())
+        ? (proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT)
+        : Result.create(cells, null, proto.getStale());
   }
 
 
@@ -2511,7 +2561,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer CellVisibility to a client CellVisibility
-   * 
+   *
    * @param proto
    * @return the converted client CellVisibility
    */
@@ -2522,7 +2572,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer CellVisibility bytes to a client CellVisibility
-   * 
+   *
    * @param protoBytes
    * @return the converted client CellVisibility
    * @throws DeserializationException
@@ -2541,7 +2591,7 @@ public final class ProtobufUtil {
 
   /**
    * Create a protocol buffer CellVisibility based on a client CellVisibility.
-   * 
+   *
    * @param cellVisibility
    * @return a protocol buffer CellVisibility
    */
@@ -2553,7 +2603,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Authorizations to a client Authorizations
-   * 
+   *
    * @param proto
    * @return the converted client Authorizations
    */
@@ -2564,7 +2614,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Authorizations bytes to a client Authorizations
-   * 
+   *
    * @param protoBytes
    * @return the converted client Authorizations
    * @throws DeserializationException
@@ -2583,7 +2633,7 @@ public final class ProtobufUtil {
 
   /**
    * Create a protocol buffer Authorizations based on a client Authorizations.
-   * 
+   *
    * @param authorizations
    * @return a protocol buffer Authorizations
    */
