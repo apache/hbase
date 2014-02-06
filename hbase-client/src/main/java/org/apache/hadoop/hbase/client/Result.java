@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class Result implements CellScannable {
   private Cell[] cells;
   private Boolean exists; // if the query was just to check existence.
+  private boolean stale = false;
   // We're not using java serialization.  Transient here is just a marker to say
   // that this is where we cache row if we're ever asked for it.
   private transient byte [] row = null;
@@ -109,7 +110,7 @@ public class Result implements CellScannable {
   @Deprecated
   public Result(List<KeyValue> kvs) {
     // TODO: Here we presume the passed in Cells are KVs.  One day this won't always be so.
-    this(kvs.toArray(new Cell[kvs.size()]), null);
+    this(kvs.toArray(new Cell[kvs.size()]), null, false);
   }
 
   /**
@@ -118,14 +119,18 @@ public class Result implements CellScannable {
    * @param cells List of cells
    */
   public static Result create(List<Cell> cells) {
-    return new Result(cells.toArray(new Cell[cells.size()]), null);
+    return new Result(cells.toArray(new Cell[cells.size()]), null, false);
   }
 
   public static Result create(List<Cell> cells, Boolean exists) {
+    return create(cells, exists, false);
+  }
+
+  public static Result create(List<Cell> cells, Boolean exists, boolean stale) {
     if (exists != null){
-      return new Result(null, exists);
+      return new Result(null, exists, stale);
     }
-    return new Result(cells.toArray(new Cell[cells.size()]), null);
+    return new Result(cells.toArray(new Cell[cells.size()]), null, stale);
   }
 
   /**
@@ -134,13 +139,21 @@ public class Result implements CellScannable {
    * @param cells array of cells
    */
   public static Result create(Cell[] cells) {
-    return new Result(cells, null);
+    return new Result(cells, null, false);
+  }
+
+  public static Result create(Cell[] cells, Boolean exists, boolean stale) {
+    if (exists != null){
+      return new Result(null, exists, stale);
+    }
+    return new Result(cells, null, stale);
   }
 
   /** Private ctor. Use {@link #create(Cell[])}. */
-  private Result(Cell[] cells, Boolean exists) {
+  private Result(Cell[] cells, Boolean exists, boolean stale) {
     this.cells = cells;
     this.exists = exists;
+    this.stale = stale;
   }
 
   /**
@@ -180,13 +193,13 @@ public class Result implements CellScannable {
   }
 
   /**
-   * Return an cells of a Result as an array of KeyValues 
-   * 
+   * Return an cells of a Result as an array of KeyValues
+   *
    * WARNING do not use, expensive.  This does an arraycopy of the cell[]'s value.
    *
    * Added to ease transition from  0.94 -> 0.96.
-   * 
-   * @deprecated as of 0.96, use {@link #rawCells()}  
+   *
+   * @deprecated as of 0.96, use {@link #rawCells()}
    * @return array of KeyValues, empty array if nothing in result.
    */
   @Deprecated
@@ -208,15 +221,15 @@ public class Result implements CellScannable {
   public List<Cell> listCells() {
     return isEmpty()? null: Arrays.asList(rawCells());
   }
-  
+
   /**
-   * Return an cells of a Result as an array of KeyValues 
-   * 
+   * Return an cells of a Result as an array of KeyValues
+   *
    * WARNING do not use, expensive.  This does  an arraycopy of the cell[]'s value.
    *
    * Added to ease transition from  0.94 -> 0.96.
-   * 
-   * @deprecated as of 0.96, use {@link #listCells()}  
+   *
+   * @deprecated as of 0.96, use {@link #listCells()}
    * @return all sorted List of KeyValues; can be null if no cells in the result
    */
   @Deprecated
@@ -634,6 +647,7 @@ public class Result implements CellScannable {
       NavigableMap<Long, byte[]> versionMap = columnMap.get(qualifier);
       if(versionMap == null) {
         versionMap = new TreeMap<Long, byte[]>(new Comparator<Long>() {
+          @Override
           public int compare(Long l1, Long l2) {
             return l2.compareTo(l1);
           }
@@ -823,4 +837,14 @@ public class Result implements CellScannable {
   public void setExists(Boolean exists) {
     this.exists = exists;
   }
+
+  /**
+   * Whether or not the results are coming from possibly stale data. Stale results
+   * might be returned if {@link Consistency} is not STRONG for the query.
+   * @return Whether or not the results are coming from possibly stale data.
+   */
+  public boolean isStale() {
+    return stale;
+  }
+
 }

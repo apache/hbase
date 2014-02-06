@@ -8,6 +8,93 @@ public final class ClientProtos {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
+  /**
+   * Protobuf enum {@code Consistency}
+   *
+   * <pre>
+   **
+   * Consistency defines the expected consistency level for an operation.
+   * </pre>
+   */
+  public enum Consistency
+      implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>STRONG = 0;</code>
+     */
+    STRONG(0, 0),
+    /**
+     * <code>TIMELINE = 1;</code>
+     */
+    TIMELINE(1, 1),
+    ;
+
+    /**
+     * <code>STRONG = 0;</code>
+     */
+    public static final int STRONG_VALUE = 0;
+    /**
+     * <code>TIMELINE = 1;</code>
+     */
+    public static final int TIMELINE_VALUE = 1;
+
+
+    public final int getNumber() { return value; }
+
+    public static Consistency valueOf(int value) {
+      switch (value) {
+        case 0: return STRONG;
+        case 1: return TIMELINE;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<Consistency>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static com.google.protobuf.Internal.EnumLiteMap<Consistency>
+        internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<Consistency>() {
+            public Consistency findValueByNumber(int number) {
+              return Consistency.valueOf(number);
+            }
+          };
+
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(index);
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor().getEnumTypes().get(0);
+    }
+
+    private static final Consistency[] VALUES = values();
+
+    public static Consistency valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int index;
+    private final int value;
+
+    private Consistency(int index, int value) {
+      this.index = index;
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:Consistency)
+  }
+
   public interface AuthorizationsOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -1858,6 +1945,16 @@ public final class ClientProtos {
      * </pre>
      */
     boolean getClosestRowBefore();
+
+    // optional .Consistency consistency = 12 [default = STRONG];
+    /**
+     * <code>optional .Consistency consistency = 12 [default = STRONG];</code>
+     */
+    boolean hasConsistency();
+    /**
+     * <code>optional .Consistency consistency = 12 [default = STRONG];</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency getConsistency();
   }
   /**
    * Protobuf type {@code Get}
@@ -1993,6 +2090,17 @@ public final class ClientProtos {
             case 88: {
               bitField0_ |= 0x00000100;
               closestRowBefore_ = input.readBool();
+              break;
+            }
+            case 96: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency value = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(12, rawValue);
+              } else {
+                bitField0_ |= 0x00000200;
+                consistency_ = value;
+              }
               break;
             }
           }
@@ -2289,6 +2397,22 @@ public final class ClientProtos {
       return closestRowBefore_;
     }
 
+    // optional .Consistency consistency = 12 [default = STRONG];
+    public static final int CONSISTENCY_FIELD_NUMBER = 12;
+    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency consistency_;
+    /**
+     * <code>optional .Consistency consistency = 12 [default = STRONG];</code>
+     */
+    public boolean hasConsistency() {
+      return ((bitField0_ & 0x00000200) == 0x00000200);
+    }
+    /**
+     * <code>optional .Consistency consistency = 12 [default = STRONG];</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency getConsistency() {
+      return consistency_;
+    }
+
     private void initFields() {
       row_ = com.google.protobuf.ByteString.EMPTY;
       column_ = java.util.Collections.emptyList();
@@ -2301,6 +2425,7 @@ public final class ClientProtos {
       storeOffset_ = 0;
       existenceOnly_ = false;
       closestRowBefore_ = false;
+      consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2369,6 +2494,9 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         output.writeBool(11, closestRowBefore_);
       }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        output.writeEnum(12, consistency_.getNumber());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -2421,6 +2549,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(11, closestRowBefore_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(12, consistency_.getNumber());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2494,6 +2626,11 @@ public final class ClientProtos {
         result = result && (getClosestRowBefore()
             == other.getClosestRowBefore());
       }
+      result = result && (hasConsistency() == other.hasConsistency());
+      if (hasConsistency()) {
+        result = result &&
+            (getConsistency() == other.getConsistency());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -2550,6 +2687,10 @@ public final class ClientProtos {
       if (hasClosestRowBefore()) {
         hash = (37 * hash) + CLOSEST_ROW_BEFORE_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getClosestRowBefore());
+      }
+      if (hasConsistency()) {
+        hash = (37 * hash) + CONSISTENCY_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getConsistency());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -2710,6 +2851,8 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000200);
         closestRowBefore_ = false;
         bitField0_ = (bitField0_ & ~0x00000400);
+        consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
+        bitField0_ = (bitField0_ & ~0x00000800);
         return this;
       }
 
@@ -2800,6 +2943,10 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000100;
         }
         result.closestRowBefore_ = closestRowBefore_;
+        if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
+          to_bitField0_ |= 0x00000200;
+        }
+        result.consistency_ = consistency_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -2894,6 +3041,9 @@ public final class ClientProtos {
         }
         if (other.hasClosestRowBefore()) {
           setClosestRowBefore(other.getClosestRowBefore());
+        }
+        if (other.hasConsistency()) {
+          setConsistency(other.getConsistency());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -3932,6 +4082,42 @@ public final class ClientProtos {
         return this;
       }
 
+      // optional .Consistency consistency = 12 [default = STRONG];
+      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
+      /**
+       * <code>optional .Consistency consistency = 12 [default = STRONG];</code>
+       */
+      public boolean hasConsistency() {
+        return ((bitField0_ & 0x00000800) == 0x00000800);
+      }
+      /**
+       * <code>optional .Consistency consistency = 12 [default = STRONG];</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency getConsistency() {
+        return consistency_;
+      }
+      /**
+       * <code>optional .Consistency consistency = 12 [default = STRONG];</code>
+       */
+      public Builder setConsistency(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000800;
+        consistency_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .Consistency consistency = 12 [default = STRONG];</code>
+       */
+      public Builder clearConsistency() {
+        bitField0_ = (bitField0_ & ~0x00000800);
+        consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:Get)
     }
 
@@ -4043,6 +4229,24 @@ public final class ClientProtos {
      * </pre>
      */
     boolean getExists();
+
+    // optional bool stale = 4 [default = false];
+    /**
+     * <code>optional bool stale = 4 [default = false];</code>
+     *
+     * <pre>
+     * Whether or not the results are coming from possibly stale data 
+     * </pre>
+     */
+    boolean hasStale();
+    /**
+     * <code>optional bool stale = 4 [default = false];</code>
+     *
+     * <pre>
+     * Whether or not the results are coming from possibly stale data 
+     * </pre>
+     */
+    boolean getStale();
   }
   /**
    * Protobuf type {@code Result}
@@ -4111,6 +4315,11 @@ public final class ClientProtos {
             case 24: {
               bitField0_ |= 0x00000002;
               exists_ = input.readBool();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000004;
+              stale_ = input.readBool();
               break;
             }
           }
@@ -4277,10 +4486,35 @@ public final class ClientProtos {
       return exists_;
     }
 
+    // optional bool stale = 4 [default = false];
+    public static final int STALE_FIELD_NUMBER = 4;
+    private boolean stale_;
+    /**
+     * <code>optional bool stale = 4 [default = false];</code>
+     *
+     * <pre>
+     * Whether or not the results are coming from possibly stale data 
+     * </pre>
+     */
+    public boolean hasStale() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional bool stale = 4 [default = false];</code>
+     *
+     * <pre>
+     * Whether or not the results are coming from possibly stale data 
+     * </pre>
+     */
+    public boolean getStale() {
+      return stale_;
+    }
+
     private void initFields() {
       cell_ = java.util.Collections.emptyList();
       associatedCellCount_ = 0;
       exists_ = false;
+      stale_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4303,6 +4537,9 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeBool(3, exists_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBool(4, stale_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -4323,6 +4560,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(3, exists_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(4, stale_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4359,6 +4600,11 @@ public final class ClientProtos {
         result = result && (getExists()
             == other.getExists());
       }
+      result = result && (hasStale() == other.hasStale());
+      if (hasStale()) {
+        result = result && (getStale()
+            == other.getStale());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4383,6 +4629,10 @@ public final class ClientProtos {
       if (hasExists()) {
         hash = (37 * hash) + EXISTS_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getExists());
+      }
+      if (hasStale()) {
+        hash = (37 * hash) + STALE_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getStale());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -4504,6 +4754,8 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         exists_ = false;
         bitField0_ = (bitField0_ & ~0x00000004);
+        stale_ = false;
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -4549,6 +4801,10 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.exists_ = exists_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.stale_ = stale_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4596,6 +4852,9 @@ public final class ClientProtos {
         }
         if (other.hasExists()) {
           setExists(other.getExists());
+        }
+        if (other.hasStale()) {
+          setStale(other.getStale());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -5072,6 +5331,55 @@ public final class ClientProtos {
       public Builder clearExists() {
         bitField0_ = (bitField0_ & ~0x00000004);
         exists_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional bool stale = 4 [default = false];
+      private boolean stale_ ;
+      /**
+       * <code>optional bool stale = 4 [default = false];</code>
+       *
+       * <pre>
+       * Whether or not the results are coming from possibly stale data 
+       * </pre>
+       */
+      public boolean hasStale() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional bool stale = 4 [default = false];</code>
+       *
+       * <pre>
+       * Whether or not the results are coming from possibly stale data 
+       * </pre>
+       */
+      public boolean getStale() {
+        return stale_;
+      }
+      /**
+       * <code>optional bool stale = 4 [default = false];</code>
+       *
+       * <pre>
+       * Whether or not the results are coming from possibly stale data 
+       * </pre>
+       */
+      public Builder setStale(boolean value) {
+        bitField0_ |= 0x00000008;
+        stale_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool stale = 4 [default = false];</code>
+       *
+       * <pre>
+       * Whether or not the results are coming from possibly stale data 
+       * </pre>
+       */
+      public Builder clearStale() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        stale_ = false;
         onChanged();
         return this;
       }
@@ -13340,6 +13648,16 @@ public final class ClientProtos {
      * <code>optional bool reversed = 15 [default = false];</code>
      */
     boolean getReversed();
+
+    // optional .Consistency consistency = 16 [default = STRONG];
+    /**
+     * <code>optional .Consistency consistency = 16 [default = STRONG];</code>
+     */
+    boolean hasConsistency();
+    /**
+     * <code>optional .Consistency consistency = 16 [default = STRONG];</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency getConsistency();
   }
   /**
    * Protobuf type {@code Scan}
@@ -13498,6 +13816,17 @@ public final class ClientProtos {
             case 120: {
               bitField0_ |= 0x00001000;
               reversed_ = input.readBool();
+              break;
+            }
+            case 128: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency value = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(16, rawValue);
+              } else {
+                bitField0_ |= 0x00002000;
+                consistency_ = value;
+              }
               break;
             }
           }
@@ -13846,6 +14175,22 @@ public final class ClientProtos {
       return reversed_;
     }
 
+    // optional .Consistency consistency = 16 [default = STRONG];
+    public static final int CONSISTENCY_FIELD_NUMBER = 16;
+    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency consistency_;
+    /**
+     * <code>optional .Consistency consistency = 16 [default = STRONG];</code>
+     */
+    public boolean hasConsistency() {
+      return ((bitField0_ & 0x00002000) == 0x00002000);
+    }
+    /**
+     * <code>optional .Consistency consistency = 16 [default = STRONG];</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency getConsistency() {
+      return consistency_;
+    }
+
     private void initFields() {
       column_ = java.util.Collections.emptyList();
       attribute_ = java.util.Collections.emptyList();
@@ -13862,6 +14207,7 @@ public final class ClientProtos {
       loadColumnFamiliesOnDemand_ = false;
       small_ = false;
       reversed_ = false;
+      consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -13938,6 +14284,9 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00001000) == 0x00001000)) {
         output.writeBool(15, reversed_);
       }
+      if (((bitField0_ & 0x00002000) == 0x00002000)) {
+        output.writeEnum(16, consistency_.getNumber());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -14006,6 +14355,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00001000) == 0x00001000)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(15, reversed_);
+      }
+      if (((bitField0_ & 0x00002000) == 0x00002000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(16, consistency_.getNumber());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -14099,6 +14452,11 @@ public final class ClientProtos {
         result = result && (getReversed()
             == other.getReversed());
       }
+      result = result && (hasConsistency() == other.hasConsistency());
+      if (hasConsistency()) {
+        result = result &&
+            (getConsistency() == other.getConsistency());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -14171,6 +14529,10 @@ public final class ClientProtos {
       if (hasReversed()) {
         hash = (37 * hash) + REVERSED_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getReversed());
+      }
+      if (hasConsistency()) {
+        hash = (37 * hash) + CONSISTENCY_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getConsistency());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -14342,6 +14704,8 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00002000);
         reversed_ = false;
         bitField0_ = (bitField0_ & ~0x00004000);
+        consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
+        bitField0_ = (bitField0_ & ~0x00008000);
         return this;
       }
 
@@ -14448,6 +14812,10 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00001000;
         }
         result.reversed_ = reversed_;
+        if (((from_bitField0_ & 0x00008000) == 0x00008000)) {
+          to_bitField0_ |= 0x00002000;
+        }
+        result.consistency_ = consistency_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -14554,6 +14922,9 @@ public final class ClientProtos {
         }
         if (other.hasReversed()) {
           setReversed(other.getReversed());
+        }
+        if (other.hasConsistency()) {
+          setConsistency(other.getConsistency());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -15695,6 +16066,42 @@ public final class ClientProtos {
       public Builder clearReversed() {
         bitField0_ = (bitField0_ & ~0x00004000);
         reversed_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional .Consistency consistency = 16 [default = STRONG];
+      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
+      /**
+       * <code>optional .Consistency consistency = 16 [default = STRONG];</code>
+       */
+      public boolean hasConsistency() {
+        return ((bitField0_ & 0x00008000) == 0x00008000);
+      }
+      /**
+       * <code>optional .Consistency consistency = 16 [default = STRONG];</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency getConsistency() {
+        return consistency_;
+      }
+      /**
+       * <code>optional .Consistency consistency = 16 [default = STRONG];</code>
+       */
+      public Builder setConsistency(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00008000;
+        consistency_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .Consistency consistency = 16 [default = STRONG];</code>
+       */
+      public Builder clearConsistency() {
+        bitField0_ = (bitField0_ & ~0x00008000);
+        consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
         onChanged();
         return this;
       }
@@ -30103,7 +30510,7 @@ public final class ClientProtos {
       "o\032\nCell.proto\032\020Comparator.proto\"\037\n\016Autho" +
       "rizations\022\r\n\005label\030\001 \003(\t\"$\n\016CellVisibili" +
       "ty\022\022\n\nexpression\030\001 \002(\t\"+\n\006Column\022\016\n\006fami" +
-      "ly\030\001 \002(\014\022\021\n\tqualifier\030\002 \003(\014\"\251\002\n\003Get\022\013\n\003r" +
+      "ly\030\001 \002(\014\022\021\n\tqualifier\030\002 \003(\014\"\324\002\n\003Get\022\013\n\003r" +
       "ow\030\001 \002(\014\022\027\n\006column\030\002 \003(\0132\007.Column\022!\n\tatt" +
       "ribute\030\003 \003(\0132\016.NameBytesPair\022\027\n\006filter\030\004" +
       " \001(\0132\007.Filter\022\036\n\ntime_range\030\005 \001(\0132\n.Time" +
@@ -30111,96 +30518,100 @@ public final class ClientProtos {
       "blocks\030\007 \001(\010:\004true\022\023\n\013store_limit\030\010 \001(\r\022",
       "\024\n\014store_offset\030\t \001(\r\022\035\n\016existence_only\030" +
       "\n \001(\010:\005false\022!\n\022closest_row_before\030\013 \001(\010" +
-      ":\005false\"L\n\006Result\022\023\n\004cell\030\001 \003(\0132\005.Cell\022\035" +
-      "\n\025associated_cell_count\030\002 \001(\005\022\016\n\006exists\030" +
-      "\003 \001(\010\"A\n\nGetRequest\022 \n\006region\030\001 \002(\0132\020.Re" +
-      "gionSpecifier\022\021\n\003get\030\002 \002(\0132\004.Get\"&\n\013GetR" +
-      "esponse\022\027\n\006result\030\001 \001(\0132\007.Result\"\200\001\n\tCon" +
-      "dition\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n\tq" +
-      "ualifier\030\003 \002(\014\022\"\n\014compare_type\030\004 \002(\0162\014.C" +
-      "ompareType\022\037\n\ncomparator\030\005 \002(\0132\013.Compara",
-      "tor\"\265\006\n\rMutationProto\022\013\n\003row\030\001 \001(\014\0220\n\013mu" +
-      "tate_type\030\002 \001(\0162\033.MutationProto.Mutation" +
-      "Type\0220\n\014column_value\030\003 \003(\0132\032.MutationPro" +
-      "to.ColumnValue\022\021\n\ttimestamp\030\004 \001(\004\022!\n\tatt" +
-      "ribute\030\005 \003(\0132\016.NameBytesPair\022:\n\ndurabili" +
-      "ty\030\006 \001(\0162\031.MutationProto.Durability:\013USE" +
-      "_DEFAULT\022\036\n\ntime_range\030\007 \001(\0132\n.TimeRange" +
-      "\022\035\n\025associated_cell_count\030\010 \001(\005\022\r\n\005nonce" +
-      "\030\t \001(\004\032\347\001\n\013ColumnValue\022\016\n\006family\030\001 \002(\014\022B" +
-      "\n\017qualifier_value\030\002 \003(\0132).MutationProto.",
-      "ColumnValue.QualifierValue\032\203\001\n\016Qualifier" +
-      "Value\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 \001(\014\022" +
-      "\021\n\ttimestamp\030\003 \001(\004\022.\n\013delete_type\030\004 \001(\0162" +
-      "\031.MutationProto.DeleteType\022\014\n\004tags\030\005 \001(\014" +
-      "\"W\n\nDurability\022\017\n\013USE_DEFAULT\020\000\022\014\n\010SKIP_" +
-      "WAL\020\001\022\r\n\tASYNC_WAL\020\002\022\014\n\010SYNC_WAL\020\003\022\r\n\tFS" +
-      "YNC_WAL\020\004\">\n\014MutationType\022\n\n\006APPEND\020\000\022\r\n" +
-      "\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE\020\003\"p\n\nDel" +
-      "eteType\022\026\n\022DELETE_ONE_VERSION\020\000\022\034\n\030DELET" +
-      "E_MULTIPLE_VERSIONS\020\001\022\021\n\rDELETE_FAMILY\020\002",
-      "\022\031\n\025DELETE_FAMILY_VERSION\020\003\"\207\001\n\rMutateRe" +
-      "quest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022" +
-      " \n\010mutation\030\002 \002(\0132\016.MutationProto\022\035\n\tcon" +
-      "dition\030\003 \001(\0132\n.Condition\022\023\n\013nonce_group\030" +
-      "\004 \001(\004\"<\n\016MutateResponse\022\027\n\006result\030\001 \001(\0132" +
-      "\007.Result\022\021\n\tprocessed\030\002 \001(\010\"\375\002\n\004Scan\022\027\n\006" +
-      "column\030\001 \003(\0132\007.Column\022!\n\tattribute\030\002 \003(\013" +
-      "2\016.NameBytesPair\022\021\n\tstart_row\030\003 \001(\014\022\020\n\010s" +
-      "top_row\030\004 \001(\014\022\027\n\006filter\030\005 \001(\0132\007.Filter\022\036" +
-      "\n\ntime_range\030\006 \001(\0132\n.TimeRange\022\027\n\014max_ve",
-      "rsions\030\007 \001(\r:\0011\022\032\n\014cache_blocks\030\010 \001(\010:\004t" +
-      "rue\022\022\n\nbatch_size\030\t \001(\r\022\027\n\017max_result_si" +
-      "ze\030\n \001(\004\022\023\n\013store_limit\030\013 \001(\r\022\024\n\014store_o" +
-      "ffset\030\014 \001(\r\022&\n\036load_column_families_on_d" +
-      "emand\030\r \001(\010\022\r\n\005small\030\016 \001(\010\022\027\n\010reversed\030\017" +
-      " \001(\010:\005false\"\236\001\n\013ScanRequest\022 \n\006region\030\001 " +
-      "\001(\0132\020.RegionSpecifier\022\023\n\004scan\030\002 \001(\0132\005.Sc" +
-      "an\022\022\n\nscanner_id\030\003 \001(\004\022\026\n\016number_of_rows" +
-      "\030\004 \001(\r\022\025\n\rclose_scanner\030\005 \001(\010\022\025\n\rnext_ca" +
-      "ll_seq\030\006 \001(\004\"y\n\014ScanResponse\022\030\n\020cells_pe",
-      "r_result\030\001 \003(\r\022\022\n\nscanner_id\030\002 \001(\004\022\024\n\014mo" +
-      "re_results\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\022\030\n\007results" +
-      "\030\005 \003(\0132\007.Result\"\263\001\n\024BulkLoadHFileRequest" +
-      "\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\0225\n\013fa" +
-      "mily_path\030\002 \003(\0132 .BulkLoadHFileRequest.F" +
-      "amilyPath\022\026\n\016assign_seq_num\030\003 \001(\010\032*\n\nFam" +
-      "ilyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n" +
-      "\025BulkLoadHFileResponse\022\016\n\006loaded\030\001 \002(\010\"a" +
-      "\n\026CoprocessorServiceCall\022\013\n\003row\030\001 \002(\014\022\024\n" +
-      "\014service_name\030\002 \002(\t\022\023\n\013method_name\030\003 \002(\t",
-      "\022\017\n\007request\030\004 \002(\014\"9\n\030CoprocessorServiceR" +
-      "esult\022\035\n\005value\030\001 \001(\0132\016.NameBytesPair\"d\n\031" +
-      "CoprocessorServiceRequest\022 \n\006region\030\001 \002(" +
-      "\0132\020.RegionSpecifier\022%\n\004call\030\002 \002(\0132\027.Copr" +
-      "ocessorServiceCall\"]\n\032CoprocessorService" +
-      "Response\022 \n\006region\030\001 \002(\0132\020.RegionSpecifi" +
-      "er\022\035\n\005value\030\002 \002(\0132\016.NameBytesPair\"{\n\006Act" +
-      "ion\022\r\n\005index\030\001 \001(\r\022 \n\010mutation\030\002 \001(\0132\016.M" +
-      "utationProto\022\021\n\003get\030\003 \001(\0132\004.Get\022-\n\014servi" +
-      "ce_call\030\004 \001(\0132\027.CoprocessorServiceCall\"Y",
-      "\n\014RegionAction\022 \n\006region\030\001 \002(\0132\020.RegionS" +
-      "pecifier\022\016\n\006atomic\030\002 \001(\010\022\027\n\006action\030\003 \003(\013" +
-      "2\007.Action\"\221\001\n\021ResultOrException\022\r\n\005index" +
-      "\030\001 \001(\r\022\027\n\006result\030\002 \001(\0132\007.Result\022!\n\texcep" +
-      "tion\030\003 \001(\0132\016.NameBytesPair\0221\n\016service_re" +
-      "sult\030\004 \001(\0132\031.CoprocessorServiceResult\"f\n" +
-      "\022RegionActionResult\022-\n\021resultOrException" +
-      "\030\001 \003(\0132\022.ResultOrException\022!\n\texception\030" +
-      "\002 \001(\0132\016.NameBytesPair\"G\n\014MultiRequest\022#\n" +
-      "\014regionAction\030\001 \003(\0132\r.RegionAction\022\022\n\nno",
-      "nceGroup\030\002 \001(\004\"@\n\rMultiResponse\022/\n\022regio" +
-      "nActionResult\030\001 \003(\0132\023.RegionActionResult" +
-      "2\261\002\n\rClientService\022 \n\003Get\022\013.GetRequest\032\014" +
-      ".GetResponse\022)\n\006Mutate\022\016.MutateRequest\032\017" +
-      ".MutateResponse\022#\n\004Scan\022\014.ScanRequest\032\r." +
-      "ScanResponse\022>\n\rBulkLoadHFile\022\025.BulkLoad" +
-      "HFileRequest\032\026.BulkLoadHFileResponse\022F\n\013" +
-      "ExecService\022\032.CoprocessorServiceRequest\032" +
-      "\033.CoprocessorServiceResponse\022&\n\005Multi\022\r." +
-      "MultiRequest\032\016.MultiResponseBB\n*org.apac",
-      "he.hadoop.hbase.protobuf.generatedB\014Clie" +
-      "ntProtosH\001\210\001\001\240\001\001"
+      ":\005false\022)\n\013consistency\030\014 \001(\0162\014.Consisten" +
+      "cy:\006STRONG\"b\n\006Result\022\023\n\004cell\030\001 \003(\0132\005.Cel" +
+      "l\022\035\n\025associated_cell_count\030\002 \001(\005\022\016\n\006exis" +
+      "ts\030\003 \001(\010\022\024\n\005stale\030\004 \001(\010:\005false\"A\n\nGetReq" +
+      "uest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\021" +
+      "\n\003get\030\002 \002(\0132\004.Get\"&\n\013GetResponse\022\027\n\006resu" +
+      "lt\030\001 \001(\0132\007.Result\"\200\001\n\tCondition\022\013\n\003row\030\001" +
+      " \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022",
+      "\"\n\014compare_type\030\004 \002(\0162\014.CompareType\022\037\n\nc" +
+      "omparator\030\005 \002(\0132\013.Comparator\"\265\006\n\rMutatio" +
+      "nProto\022\013\n\003row\030\001 \001(\014\0220\n\013mutate_type\030\002 \001(\016" +
+      "2\033.MutationProto.MutationType\0220\n\014column_" +
+      "value\030\003 \003(\0132\032.MutationProto.ColumnValue\022" +
+      "\021\n\ttimestamp\030\004 \001(\004\022!\n\tattribute\030\005 \003(\0132\016." +
+      "NameBytesPair\022:\n\ndurability\030\006 \001(\0162\031.Muta" +
+      "tionProto.Durability:\013USE_DEFAULT\022\036\n\ntim" +
+      "e_range\030\007 \001(\0132\n.TimeRange\022\035\n\025associated_" +
+      "cell_count\030\010 \001(\005\022\r\n\005nonce\030\t \001(\004\032\347\001\n\013Colu",
+      "mnValue\022\016\n\006family\030\001 \002(\014\022B\n\017qualifier_val" +
+      "ue\030\002 \003(\0132).MutationProto.ColumnValue.Qua" +
+      "lifierValue\032\203\001\n\016QualifierValue\022\021\n\tqualif" +
+      "ier\030\001 \001(\014\022\r\n\005value\030\002 \001(\014\022\021\n\ttimestamp\030\003 " +
+      "\001(\004\022.\n\013delete_type\030\004 \001(\0162\031.MutationProto" +
+      ".DeleteType\022\014\n\004tags\030\005 \001(\014\"W\n\nDurability\022" +
+      "\017\n\013USE_DEFAULT\020\000\022\014\n\010SKIP_WAL\020\001\022\r\n\tASYNC_" +
+      "WAL\020\002\022\014\n\010SYNC_WAL\020\003\022\r\n\tFSYNC_WAL\020\004\">\n\014Mu" +
+      "tationType\022\n\n\006APPEND\020\000\022\r\n\tINCREMENT\020\001\022\007\n" +
+      "\003PUT\020\002\022\n\n\006DELETE\020\003\"p\n\nDeleteType\022\026\n\022DELE",
+      "TE_ONE_VERSION\020\000\022\034\n\030DELETE_MULTIPLE_VERS" +
+      "IONS\020\001\022\021\n\rDELETE_FAMILY\020\002\022\031\n\025DELETE_FAMI" +
+      "LY_VERSION\020\003\"\207\001\n\rMutateRequest\022 \n\006region" +
+      "\030\001 \002(\0132\020.RegionSpecifier\022 \n\010mutation\030\002 \002" +
+      "(\0132\016.MutationProto\022\035\n\tcondition\030\003 \001(\0132\n." +
+      "Condition\022\023\n\013nonce_group\030\004 \001(\004\"<\n\016Mutate" +
+      "Response\022\027\n\006result\030\001 \001(\0132\007.Result\022\021\n\tpro" +
+      "cessed\030\002 \001(\010\"\250\003\n\004Scan\022\027\n\006column\030\001 \003(\0132\007." +
+      "Column\022!\n\tattribute\030\002 \003(\0132\016.NameBytesPai" +
+      "r\022\021\n\tstart_row\030\003 \001(\014\022\020\n\010stop_row\030\004 \001(\014\022\027",
+      "\n\006filter\030\005 \001(\0132\007.Filter\022\036\n\ntime_range\030\006 " +
+      "\001(\0132\n.TimeRange\022\027\n\014max_versions\030\007 \001(\r:\0011" +
+      "\022\032\n\014cache_blocks\030\010 \001(\010:\004true\022\022\n\nbatch_si" +
+      "ze\030\t \001(\r\022\027\n\017max_result_size\030\n \001(\004\022\023\n\013sto" +
+      "re_limit\030\013 \001(\r\022\024\n\014store_offset\030\014 \001(\r\022&\n\036" +
+      "load_column_families_on_demand\030\r \001(\010\022\r\n\005" +
+      "small\030\016 \001(\010\022\027\n\010reversed\030\017 \001(\010:\005false\022)\n\013" +
+      "consistency\030\020 \001(\0162\014.Consistency:\006STRONG\"" +
+      "\236\001\n\013ScanRequest\022 \n\006region\030\001 \001(\0132\020.Region" +
+      "Specifier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\022\n\nscanne",
+      "r_id\030\003 \001(\004\022\026\n\016number_of_rows\030\004 \001(\r\022\025\n\rcl" +
+      "ose_scanner\030\005 \001(\010\022\025\n\rnext_call_seq\030\006 \001(\004" +
+      "\"y\n\014ScanResponse\022\030\n\020cells_per_result\030\001 \003" +
+      "(\r\022\022\n\nscanner_id\030\002 \001(\004\022\024\n\014more_results\030\003" +
+      " \001(\010\022\013\n\003ttl\030\004 \001(\r\022\030\n\007results\030\005 \003(\0132\007.Res" +
+      "ult\"\263\001\n\024BulkLoadHFileRequest\022 \n\006region\030\001" +
+      " \002(\0132\020.RegionSpecifier\0225\n\013family_path\030\002 " +
+      "\003(\0132 .BulkLoadHFileRequest.FamilyPath\022\026\n" +
+      "\016assign_seq_num\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006f" +
+      "amily\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFi",
+      "leResponse\022\016\n\006loaded\030\001 \002(\010\"a\n\026Coprocesso" +
+      "rServiceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014service_nam" +
+      "e\030\002 \002(\t\022\023\n\013method_name\030\003 \002(\t\022\017\n\007request\030" +
+      "\004 \002(\014\"9\n\030CoprocessorServiceResult\022\035\n\005val" +
+      "ue\030\001 \001(\0132\016.NameBytesPair\"d\n\031CoprocessorS" +
+      "erviceRequest\022 \n\006region\030\001 \002(\0132\020.RegionSp" +
+      "ecifier\022%\n\004call\030\002 \002(\0132\027.CoprocessorServi" +
+      "ceCall\"]\n\032CoprocessorServiceResponse\022 \n\006" +
+      "region\030\001 \002(\0132\020.RegionSpecifier\022\035\n\005value\030" +
+      "\002 \002(\0132\016.NameBytesPair\"{\n\006Action\022\r\n\005index",
+      "\030\001 \001(\r\022 \n\010mutation\030\002 \001(\0132\016.MutationProto" +
+      "\022\021\n\003get\030\003 \001(\0132\004.Get\022-\n\014service_call\030\004 \001(" +
+      "\0132\027.CoprocessorServiceCall\"Y\n\014RegionActi" +
+      "on\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006" +
+      "atomic\030\002 \001(\010\022\027\n\006action\030\003 \003(\0132\007.Action\"\221\001" +
+      "\n\021ResultOrException\022\r\n\005index\030\001 \001(\r\022\027\n\006re" +
+      "sult\030\002 \001(\0132\007.Result\022!\n\texception\030\003 \001(\0132\016" +
+      ".NameBytesPair\0221\n\016service_result\030\004 \001(\0132\031" +
+      ".CoprocessorServiceResult\"f\n\022RegionActio" +
+      "nResult\022-\n\021resultOrException\030\001 \003(\0132\022.Res",
+      "ultOrException\022!\n\texception\030\002 \001(\0132\016.Name" +
+      "BytesPair\"G\n\014MultiRequest\022#\n\014regionActio" +
+      "n\030\001 \003(\0132\r.RegionAction\022\022\n\nnonceGroup\030\002 \001" +
+      "(\004\"@\n\rMultiResponse\022/\n\022regionActionResul" +
+      "t\030\001 \003(\0132\023.RegionActionResult*\'\n\013Consiste" +
+      "ncy\022\n\n\006STRONG\020\000\022\014\n\010TIMELINE\020\0012\261\002\n\rClient" +
+      "Service\022 \n\003Get\022\013.GetRequest\032\014.GetRespons" +
+      "e\022)\n\006Mutate\022\016.MutateRequest\032\017.MutateResp" +
+      "onse\022#\n\004Scan\022\014.ScanRequest\032\r.ScanRespons" +
+      "e\022>\n\rBulkLoadHFile\022\025.BulkLoadHFileReques",
+      "t\032\026.BulkLoadHFileResponse\022F\n\013ExecService" +
+      "\022\032.CoprocessorServiceRequest\032\033.Coprocess" +
+      "orServiceResponse\022&\n\005Multi\022\r.MultiReques" +
+      "t\032\016.MultiResponseBB\n*org.apache.hadoop.h" +
+      "base.protobuf.generatedB\014ClientProtosH\001\210" +
+      "\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -30230,13 +30641,13 @@ public final class ClientProtos {
           internal_static_Get_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Get_descriptor,
-              new java.lang.String[] { "Row", "Column", "Attribute", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "StoreLimit", "StoreOffset", "ExistenceOnly", "ClosestRowBefore", });
+              new java.lang.String[] { "Row", "Column", "Attribute", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "StoreLimit", "StoreOffset", "ExistenceOnly", "ClosestRowBefore", "Consistency", });
           internal_static_Result_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_Result_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Result_descriptor,
-              new java.lang.String[] { "Cell", "AssociatedCellCount", "Exists", });
+              new java.lang.String[] { "Cell", "AssociatedCellCount", "Exists", "Stale", });
           internal_static_GetRequest_descriptor =
             getDescriptor().getMessageTypes().get(5);
           internal_static_GetRequest_fieldAccessorTable = new
@@ -30290,7 +30701,7 @@ public final class ClientProtos {
           internal_static_Scan_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Scan_descriptor,
-              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", "StoreLimit", "StoreOffset", "LoadColumnFamiliesOnDemand", "Small", "Reversed", });
+              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", "StoreLimit", "StoreOffset", "LoadColumnFamiliesOnDemand", "Small", "Reversed", "Consistency", });
           internal_static_ScanRequest_descriptor =
             getDescriptor().getMessageTypes().get(12);
           internal_static_ScanRequest_fieldAccessorTable = new

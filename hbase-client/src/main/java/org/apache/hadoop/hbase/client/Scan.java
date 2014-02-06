@@ -119,12 +119,12 @@ public class Scan extends Query {
   // call scan.setAttribute(SCAN_ATTRIBUTES_ENABLE, Bytes.toBytes(Boolean.TRUE))
   static public final String SCAN_ATTRIBUTES_METRICS_ENABLE = "scan.attributes.metrics.enable";
   static public final String SCAN_ATTRIBUTES_METRICS_DATA = "scan.attributes.metrics.data";
-  
+
   // If an application wants to use multiple scans over different tables each scan must
   // define this attribute with the appropriate table name by calling
   // scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, Bytes.toBytes(tableName))
   static public final String SCAN_ATTRIBUTES_TABLE_NAME = "scan.attributes.table.name";
-  
+
   /*
    * -1 means no caching
    */
@@ -136,22 +136,23 @@ public class Scan extends Query {
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
   private Boolean loadColumnFamiliesOnDemand = null;
+  private Consistency consistency = null;
 
   /**
    * Set it true for small scan to get better performance
-   * 
+   *
    * Small scan should use pread and big scan can use seek + read
-   * 
+   *
    * seek + read is fast but can cause two problem (1) resource contention (2)
    * cause too much network io
-   * 
+   *
    * [89-fb] Using pread for non-compaction read request
    * https://issues.apache.org/jira/browse/HBASE-7266
-   * 
+   *
    * On the other hand, if setting it true, we would do
    * openScanner,next,closeScanner in one RPC call. It means the better
    * performance for small scan. [HBASE-9488].
-   * 
+   *
    * Generally, if the scan range is within one data block(64KB), it could be
    * considered as a small scan.
    */
@@ -209,6 +210,7 @@ public class Scan extends Query {
     getScan = scan.isGetScan();
     filter = scan.getFilter(); // clone?
     loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
+    consistency = scan.getConsistency();
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
@@ -243,6 +245,7 @@ public class Scan extends Query {
     this.tr = get.getTimeRange();
     this.familyMap = get.getFamilyMap();
     this.getScan = true;
+    this.consistency = get.getConsistency();
     for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
       setAttribute(attr.getKey(), attr.getValue());
     }
@@ -540,6 +543,7 @@ public class Scan extends Query {
   /**
    * @return RowFilter
    */
+  @Override
   public Filter getFilter() {
     return filter;
   }
@@ -578,7 +582,7 @@ public class Scan extends Query {
    * Set whether this scan is a reversed one
    * <p>
    * This is false by default which means forward(normal) scan.
-   * 
+   *
    * @param reversed if true, scan will be backward order
    * @return this
    */
@@ -628,6 +632,22 @@ public class Scan extends Query {
   public boolean doLoadColumnFamiliesOnDemand() {
     return (this.loadColumnFamiliesOnDemand != null)
       && this.loadColumnFamiliesOnDemand.booleanValue();
+  }
+
+  /**
+   * Returns the consistency level for this operation
+   * @return the consistency level
+   */
+  public Consistency getConsistency() {
+    return consistency;
+  }
+
+  /**
+   * Sets the consistency level for this operation
+   * @param consistency the consistency level
+   */
+  public void setConsistency(Consistency consistency) {
+    this.consistency = consistency;
   }
 
   /**
@@ -695,15 +715,15 @@ public class Scan extends Query {
         colCount += entry.getValue().size();
         if (maxCols <= 0) {
           continue;
-        } 
+        }
         for (byte [] column : entry.getValue()) {
           if (--maxCols <= 0) {
             continue;
           }
           columns.add(Bytes.toStringBinary(column));
         }
-      } 
-    }       
+      }
+    }
     map.put("totalColumns", colCount);
     if (this.filter != null) {
       map.put("filter", this.filter.toString());
@@ -741,10 +761,10 @@ public class Scan extends Query {
    * Set the isolation level for this scan. If the
    * isolation level is set to READ_UNCOMMITTED, then
    * this scan will return data from committed and
-   * uncommitted transactions. If the isolation level 
-   * is set to READ_COMMITTED, then this scan will return 
+   * uncommitted transactions. If the isolation level
+   * is set to READ_COMMITTED, then this scan will return
    * data from committed transactions only. If a isolation
-   * level is not explicitly set on a Scan, then it 
+   * level is not explicitly set on a Scan, then it
    * is assumed to be READ_COMMITTED.
    * @param level IsolationLevel for this scan
    */
@@ -753,7 +773,7 @@ public class Scan extends Query {
   }
   /*
    * @return The isolation level of this scan.
-   * If no isolation level was set for this scan object, 
+   * If no isolation level was set for this scan object,
    * then it returns READ_COMMITTED.
    * @return The IsolationLevel for this scan
    */
@@ -767,20 +787,20 @@ public class Scan extends Query {
    * Set whether this scan is a small scan
    * <p>
    * Small scan should use pread and big scan can use seek + read
-   * 
+   *
    * seek + read is fast but can cause two problem (1) resource contention (2)
    * cause too much network io
-   * 
+   *
    * [89-fb] Using pread for non-compaction read request
    * https://issues.apache.org/jira/browse/HBASE-7266
-   * 
+   *
    * On the other hand, if setting it true, we would do
    * openScanner,next,closeScanner in one RPC call. It means the better
    * performance for small scan. [HBASE-9488].
-   * 
+   *
    * Generally, if the scan range is within one data block(64KB), it could be
    * considered as a small scan.
-   * 
+   *
    * @param small
    */
   public void setSmall(boolean small) {
