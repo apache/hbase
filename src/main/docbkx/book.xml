@@ -2902,7 +2902,13 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
             <listitem>
                 <para>
                     Build and install <link xlink:href="http://code.google.com/p/snappy/">snappy</link> on all nodes
-                    of your cluster (see below)
+                    of your cluster (see below).  HBase nor Hadoop cannot include snappy because of licensing issues (The
+                    hadoop libhadoop.so under its native dir does not include snappy; of note, the shipped .so
+                    may be for 32-bit architectures -- this fact has tripped up folks in the past with them thinking
+                    it 64-bit).  The notes below are about installing snappy for HBase use.  You may want snappy
+                    available in your hadoop context also.  That is not covered here.
+                    HBase and Hadoop find the snappy .so in different locations currently: Hadoop picks those files in
+                    <filename>./lib</filename> while HBase finds the .so in <filename>./lib/[PLATFORM]</filename>.
                 </para>
             </listitem>
             <listitem>
@@ -2927,6 +2933,8 @@ hbase> describe 't1'</programlisting>
     <title>
     Installation
     </title>
+    <para>Snappy is used by hbase to compress HFiles on flush and when compacting.
+    </para>
     <para>
         You will find the snappy library file under the .libs directory from your Snappy build (For example
         /home/hbase/snappy-1.0.5/.libs/). The file is called libsnappy.so.1.x.x where 1.x.x is the version of the snappy
