@@ -136,8 +136,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     // from external packages
     RegionCoprocessorEnvironment re = (RegionCoprocessorEnvironment)e;
     Leases leases = re.getRegionServerServices().getLeases();
-    leases.createLease("x", 2000, null);
-    leases.cancelLease("x");
+    leases.createLease(re.getRegion().getRegionNameAsString(), 2000, null);
+    leases.cancelLease(re.getRegion().getRegionNameAsString());
   }
 
   @Override
