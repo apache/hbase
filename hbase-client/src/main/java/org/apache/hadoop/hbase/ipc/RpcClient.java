@@ -1117,8 +1117,6 @@ public class RpcClient {
           // since we expect certain responses to not make it by the specified
           // {@link ConnectionId#rpcTimeout}.
           closeException = e;
-        } if (ExceptionUtil.isInterrupt(e)){
-
         } else {
           // Treat this as a fatal condition and close this connection
           markClosed(e);
