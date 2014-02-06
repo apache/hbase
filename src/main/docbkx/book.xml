@@ -3471,7 +3471,7 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
          </para>
        </section>
        <section xml:id="other.info.pres"><title>HBase Presentations (Slides)</title>
-         <para><link xlink:href="http://www.cloudera.com/resource/hadoop-world-2011-presentation-slides-advanced-hbase-schema-design">Advanced HBase Schema Design</link> by Lars George (Hadoop World 2011).
+         <para><link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/hadoopworld/hadoop-world-2011-presentation-video-advanced-hbase-schema-design.html">Advanced HBase Schema Design</link> by Lars George (Hadoop World 2011).
          </para>
          <para><link xlink:href="http://www.slideshare.net/cloudera/chicago-data-summit-apache-hbase-an-introduction">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
          </para>
