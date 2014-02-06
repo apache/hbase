@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 interface ClusterConnection extends HConnection {
 
   /** @return - true if the master server is running */
+  @Override
   boolean isMasterRunning()
       throws MasterNotRunningException, ZooKeeperConnectionException;
 
@@ -52,9 +53,10 @@ interface ClusterConnection extends HConnection {
    * @throws IOException
    *           if a remote or network exception occurs
    */
+  @Override
   boolean isTableAvailable(TableName tableName, byte[][] splitKeys) throws
       IOException;
-  
+
   /**
    * Find the location of the region of <i>tableName</i> that <i>row</i>
    * lives in.
@@ -64,12 +66,14 @@ interface ClusterConnection extends HConnection {
    * question
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public HRegionLocation locateRegion(final TableName tableName,
       final byte [] row) throws IOException;
 
   /**
    * Allows flushing the region cache.
    */
+  @Override
   void clearRegionCache();
 
   /**
@@ -78,12 +82,14 @@ interface ClusterConnection extends HConnection {
    * @param tableName Name of the table whose regions we are to remove from
    * cache.
    */
+  @Override
   void clearRegionCache(final TableName tableName);
 
   /**
    * Deletes cached locations for the specific region.
    * @param location The location object for the region, to be purged from cache.
    */
+  @Override
   void deleteCachedRegionLocation(final HRegionLocation location);
 
   /**
@@ -95,6 +101,7 @@ interface ClusterConnection extends HConnection {
    * question
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   HRegionLocation relocateRegion(final TableName tableName,
       final byte [] row) throws IOException;
 
@@ -102,11 +109,13 @@ interface ClusterConnection extends HConnection {
    * Update the location cache. This is used internally by HBase, in most cases it should not be
    *  used by the client application.
    * @param tableName the table name
+   * @param regionName the region name
    * @param rowkey the row
    * @param exception the exception if any. Can be null.
    * @param source the previous location
    */
-  void updateCachedLocations(TableName tableName, byte[] rowkey,
+  @Override
+  void updateCachedLocations(TableName tableName, byte[] regionName, byte[] rowkey,
                                     Object exception, ServerName source);
 
 
@@ -117,6 +126,7 @@ interface ClusterConnection extends HConnection {
    * question
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   HRegionLocation locateRegion(final byte[] regionName)
   throws IOException;
 
@@ -126,6 +136,7 @@ interface ClusterConnection extends HConnection {
    * @return list of region locations for all regions of table
    * @throws IOException
    */
+  @Override
   List<HRegionLocation> locateRegions(final TableName tableName) throws IOException;
 
   /**
@@ -137,6 +148,7 @@ interface ClusterConnection extends HConnection {
    * @return list of region locations for all regions of table
    * @throws IOException
    */
+  @Override
   List<HRegionLocation> locateRegions(final TableName tableName,
       final boolean useCache,
       final boolean offlined) throws IOException;
@@ -145,6 +157,7 @@ interface ClusterConnection extends HConnection {
   /**
    * Returns a {@link MasterKeepAliveConnection} to the active master
    */
+  @Override
   MasterService.BlockingInterface getMaster() throws IOException;
 
 
@@ -154,6 +167,7 @@ interface ClusterConnection extends HConnection {
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   AdminService.BlockingInterface getAdmin(final ServerName serverName) throws IOException;
 
   /**
@@ -165,6 +179,7 @@ interface ClusterConnection extends HConnection {
    * @throws IOException if a remote or network exception occurs
    *
    */
+  @Override
   ClientService.BlockingInterface getClient(final ServerName serverName) throws IOException;
 
   /**
@@ -175,6 +190,7 @@ interface ClusterConnection extends HConnection {
    * @return Location of row.
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   HRegionLocation getRegionLocation(TableName tableName, byte [] row,
     boolean reload)
   throws IOException;
@@ -183,6 +199,7 @@ interface ClusterConnection extends HConnection {
    * Clear any caches that pertain to server name <code>sn</code>.
    * @param sn A server name
    */
+  @Override
   void clearCaches(final ServerName sn);
 
   /**
@@ -191,6 +208,7 @@ interface ClusterConnection extends HConnection {
    * @return The shared instance. Never returns null.
    * @throws MasterNotRunningException
    */
+  @Override
   @Deprecated
   MasterKeepAliveConnection getKeepAliveMasterService()
   throws MasterNotRunningException;
@@ -199,12 +217,14 @@ interface ClusterConnection extends HConnection {
    * @param serverName
    * @return true if the server is known as dead, false otherwise.
    * @deprecated internal method, do not use thru HConnection */
+  @Override
   @Deprecated
   boolean isDeadServer(ServerName serverName);
 
   /**
    * @return Nonce generator for this HConnection; may be null if disabled in configuration.
    */
+  @Override
   public NonceGenerator getNonceGenerator();
 
   /**

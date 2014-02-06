@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
@@ -117,8 +118,9 @@ public class TestClientNoCluster extends Configured implements Tool {
     }
 
     @Override
-    public HRegionLocation getMetaRegionLocation() throws IOException {
-      return new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, META_HOST);
+    public RegionLocations getMetaRegionLocation() throws IOException {
+      return new RegionLocations(
+        new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, META_HOST));
     }
 
     @Override
@@ -142,7 +144,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * Remove the @Ignore to try out timeout and retry asettings
    * @throws IOException
    */
-  @Ignore 
+  @Ignore
   @Test
   public void testTimeoutAndRetries() throws IOException {
     Configuration localConfig = HBaseConfiguration.create(this.conf);
@@ -759,7 +761,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     // an exception is thrown -- usually RegionTooBusyException when we have more than
     // hbase.test.multi.too.many requests outstanding at any time.
     getConf().setInt("hbase.client.start.log.errors.counter", 0);
- 
+
     // Ugly but this is only way to pass in configs.into ManyServersManyRegionsConnection class.
     getConf().setInt("hbase.test.regions", regions);
     getConf().setLong("hbase.test.namespace.span", namespaceSpan);

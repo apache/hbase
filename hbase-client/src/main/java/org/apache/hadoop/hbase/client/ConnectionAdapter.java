@@ -241,9 +241,9 @@ class ConnectionAdapter implements ClusterConnection {
   }
 
   @Override
-  public void updateCachedLocations(TableName tableName, byte[] rowkey,
+  public void updateCachedLocations(TableName tableName, byte[] regionName, byte[] rowkey,
       Object exception, ServerName source) {
-    wrappedConnection.updateCachedLocations(tableName, rowkey, exception, source);
+    wrappedConnection.updateCachedLocations(tableName, regionName, rowkey, exception, source);
   }
 
   @Override

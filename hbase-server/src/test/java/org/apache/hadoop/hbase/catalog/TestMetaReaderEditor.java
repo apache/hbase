@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-
+import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,11 +35,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -272,6 +275,101 @@ public class TestMetaReaderEditor {
       MetaReader.getRegion(ct, region.getRegionName());
     assertEquals(region.getEncodedName(),
       pair.getFirst().getEncodedName());
+  }
+
+  @Test
+  public void testParseReplicaIdFromServerColumn() {
+    String column1 = HConstants.SERVER_QUALIFIER_STR;
+    assertEquals(0, MetaReader.parseReplicaIdFromServerColumn(Bytes.toBytes(column1)));
+    String column2 = column1 + MetaReader.META_REPLICA_ID_DELIMITER;
+    assertEquals(-1, MetaReader.parseReplicaIdFromServerColumn(Bytes.toBytes(column2)));
+    String column3 = column2 + "00";
+    assertEquals(-1, MetaReader.parseReplicaIdFromServerColumn(Bytes.toBytes(column3)));
+    String column4 = column3 + "2A";
+    assertEquals(42, MetaReader.parseReplicaIdFromServerColumn(Bytes.toBytes(column4)));
+    String column5 = column4 + "2A";
+    assertEquals(-1, MetaReader.parseReplicaIdFromServerColumn(Bytes.toBytes(column5)));
+    String column6 = HConstants.STARTCODE_QUALIFIER_STR;
+    assertEquals(-1, MetaReader.parseReplicaIdFromServerColumn(Bytes.toBytes(column6)));
+  }
+
+  @Test
+  public void testMetaReaderGetColumnMethods() {
+    Assert.assertArrayEquals(HConstants.SERVER_QUALIFIER, MetaReader.getServerColumn(0));
+    Assert.assertArrayEquals(Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR
+      + MetaReader.META_REPLICA_ID_DELIMITER + "002A"), MetaReader.getServerColumn(42));
+
+    Assert.assertArrayEquals(HConstants.STARTCODE_QUALIFIER, MetaReader.getStartCodeColumn(0));
+    Assert.assertArrayEquals(Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR
+      + MetaReader.META_REPLICA_ID_DELIMITER + "002A"), MetaReader.getStartCodeColumn(42));
+
+    Assert.assertArrayEquals(HConstants.SEQNUM_QUALIFIER, MetaReader.getSeqNumColumn(0));
+    Assert.assertArrayEquals(Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR
+      + MetaReader.META_REPLICA_ID_DELIMITER + "002A"), MetaReader.getSeqNumColumn(42));
+  }
+
+  @Test
+  public void testMetaLocationsForRegionReplicas() throws IOException {
+    Random random = new Random();
+    ServerName serverName0 = ServerName.valueOf("foo", 60010, random.nextLong());
+    ServerName serverName1 = ServerName.valueOf("bar", 60010, random.nextLong());
+    ServerName serverName100 = ServerName.valueOf("baz", 60010, random.nextLong());
+
+    long regionId = System.currentTimeMillis();
+    HRegionInfo primary = new HRegionInfo(TableName.valueOf("table_foo"),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId, 0);
+    HRegionInfo replica1 = new HRegionInfo(TableName.valueOf("table_foo"),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId, 1);
+    HRegionInfo replica100 = new HRegionInfo(TableName.valueOf("table_foo"),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId, 100);
+
+    long seqNum0 = random.nextLong();
+    long seqNum1 = random.nextLong();
+    long seqNum100 = random.nextLong();
+
+
+    HTable meta = MetaReader.getMetaHTable(CT);
+    try {
+      MetaEditor.updateRegionLocation(CT, primary, serverName0, seqNum0);
+
+      // assert that the server, startcode and seqNum columns are there for the primary region
+      assertMetaLocation(meta, primary.getRegionName(), serverName0, seqNum0, 0, true);
+
+      // add replica = 1
+      MetaEditor.updateRegionLocation(CT, replica1, serverName1, seqNum1);
+      // check whether the primary is still there
+      assertMetaLocation(meta, primary.getRegionName(), serverName0, seqNum0, 0, true);
+      // now check for replica 1
+      assertMetaLocation(meta, primary.getRegionName(), serverName1, seqNum1, 1, true);
+
+      // add replica = 1
+      MetaEditor.updateRegionLocation(CT, replica100, serverName100, seqNum100);
+      // check whether the primary is still there
+      assertMetaLocation(meta, primary.getRegionName(), serverName0, seqNum0, 0, true);
+      // check whether the replica 1 is still there
+      assertMetaLocation(meta, primary.getRegionName(), serverName1, seqNum1, 1, true);
+      // now check for replica 1
+      assertMetaLocation(meta, primary.getRegionName(), serverName100, seqNum100, 100, true);
+    } finally {
+      meta.close();
+    }
+  }
+
+  public static void assertMetaLocation(HTable meta, byte[] row, ServerName serverName,
+      long seqNum, int replicaId, boolean checkSeqNum) throws IOException {
+    Get get = new Get(row);
+    Result result = meta.get(get);
+    assertTrue(Bytes.equals(
+      result.getValue(HConstants.CATALOG_FAMILY, MetaReader.getServerColumn(replicaId)),
+      Bytes.toBytes(serverName.getHostAndPort())));
+    assertTrue(Bytes.equals(
+      result.getValue(HConstants.CATALOG_FAMILY, MetaReader.getStartCodeColumn(replicaId)),
+      Bytes.toBytes(serverName.getStartcode())));
+    if (checkSeqNum) {
+      assertTrue(Bytes.equals(
+        result.getValue(HConstants.CATALOG_FAMILY, MetaReader.getSeqNumColumn(replicaId)),
+        Bytes.toBytes(seqNum)));
+    }
   }
 
 }

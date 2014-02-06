@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -47,15 +46,34 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.io.DataInputBuffer;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
- * HRegion information.
- * Contains HRegion id, start and end keys, a reference to this HRegions' table descriptor, etc.
+ * Information about a region. A region is a range of keys in the whole keyspace of a table, an
+ * identifier (a timestamp) for differentiating between subset ranges (after region split)
+ * and a replicaId for differentiating the instance for the same range and some status information
+ * about the region.
  *
- * On a big cluster, each client will have thousands of instances of this object, often
- *  100 000 of them if not million. It's important to keep the object size as small
- *  as possible.
+ * The region has a unique name which consists of the following fields:
+ * <li> tableName   : The name of the table </li>
+ * <li> startKey    : The startKey for the region. </li>
+ * <li> regionId    : A timestamp when the region is created. </li>
+ * <li> replicaId   : An id starting from 0 to differentiate replicas of the same region range
+ * but hosted in separated servers. The same region range can be hosted in multiple locations.</li>
+ * <li> encodedName : An MD5 encoded string for the region name.</li>
+ *
+ * <br> Other than the fields in the region name, region info contains:
+ * <li> endKey      : the endKey for the region (exclusive) </li>
+ * <li> split       : Whether the region is split </li>
+ * <li> offline     : Whether the region is offline </li>
+ *
+ * In 0.98 or before, a list of table's regions would fully cover the total keyspace, and at any
+ * point in time, a row key always belongs to a single region, which is hosted in a single server.
+ * In 0.99+, a region can have multiple instances (called replicas), and thus a range (or row) can
+ * correspond to multiple HRegionInfo's. These HRI's share the same fields however except the
+ * replicaId field. If the replicaId is not set, it defaults to 0, which is compatible with the
+ * previous behavior of a range corresponding to 1 region.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -118,6 +136,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   /** A non-capture group so that this can be embedded. */
   public static final String ENCODED_REGION_NAME_REGEX = "(?:[a-f0-9]+)";
 
+  // to keep appended int's sorted in string format. Only allows 2 bytes to be
+  // sorted for replicaId
+  public static final String REPLICA_ID_FORMAT = "%04X";
+
+  public static final byte REPLICA_ID_DELIMITER = (byte)'_';
+
+  private static final int MAX_REPLICA_ID = 0xFFFF;
+  private static final int DEFAULT_REPLICA_ID = 0;
   /**
    * Does region name contain its encoded name?
    * @param regionName region name
@@ -190,6 +216,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   public static final String NO_HASH = null;
   private String encodedName = null;
   private byte [] encodedNameAsBytes = null;
+  private int replicaId = DEFAULT_REPLICA_ID;
 
   // Current TableName
   private TableName tableName = null;
@@ -205,6 +232,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     result ^= Arrays.hashCode(this.endKey);
     result ^= Boolean.valueOf(this.offLine).hashCode();
     result ^= Arrays.hashCode(this.tableName.getName());
+    result ^= this.replicaId;
     this.hashCode = result;
   }
 
@@ -248,7 +276,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     this(tableName, startKey, endKey, false);
   }
 
-
   /**
    * Construct HRegionInfo with explicit parameters
    *
@@ -265,7 +292,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     this(tableName, startKey, endKey, split, System.currentTimeMillis());
   }
 
-
   /**
    * Construct HRegionInfo with explicit parameters
    *
@@ -280,7 +306,25 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   public HRegionInfo(final TableName tableName, final byte[] startKey,
                      final byte[] endKey, final boolean split, final long regionid)
   throws IllegalArgumentException {
+    this(tableName, startKey, endKey, split, regionid, DEFAULT_REPLICA_ID);
+  }
 
+  /**
+   * Construct HRegionInfo with explicit parameters
+   *
+   * @param tableName the table descriptor
+   * @param startKey first key in region
+   * @param endKey end of key range
+   * @param split true if this region has split and we have daughter regions
+   * regions that may or may not hold references to this region.
+   * @param regionid Region id to use.
+   * @param replicaId the replicaId to use
+   * @throws IllegalArgumentException
+   */
+  public HRegionInfo(final TableName tableName, final byte[] startKey,
+                     final byte[] endKey, final boolean split, final long regionid,
+                     final int replicaId)
+    throws IllegalArgumentException {
     super();
     if (tableName == null) {
       throw new IllegalArgumentException("TableName cannot be null");
@@ -288,8 +332,12 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     this.tableName = tableName;
     this.offLine = false;
     this.regionId = regionid;
+    this.replicaId = replicaId;
+    if (this.replicaId > MAX_REPLICA_ID) {
+      throw new IllegalArgumentException("ReplicaId cannot be greater than" + MAX_REPLICA_ID);
+    }
 
-    this.regionName = createRegionName(this.tableName, startKey, regionId, true);
+    this.regionName = createRegionName(this.tableName, startKey, regionId, replicaId, true);
 
     this.split = split;
     this.endKey = endKey == null? HConstants.EMPTY_END_ROW: endKey.clone();
@@ -315,8 +363,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     this.hashCode = other.hashCode();
     this.encodedName = other.getEncodedName();
     this.tableName = other.tableName;
+    this.replicaId = other.replicaId;
   }
 
+  public HRegionInfo(HRegionInfo other, int replicaId) {
+    this(other);
+    this.replicaId = replicaId;
+    this.setHashCode();
+  }
 
   /**
    * Make a region name of passed parameters.
@@ -350,6 +404,22 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * Make a region name of passed parameters.
    * @param tableName
    * @param startKey Can be null
+   * @param regionid Region id (Usually timestamp from when region was created).
+   * @param replicaId
+   * @param newFormat should we create the region name in the new format
+   *                  (such that it contains its encoded name?).
+   * @return Region name made of passed tableName, startKey, id and replicaId
+   */
+  public static byte [] createRegionName(final TableName tableName,
+      final byte [] startKey, final long regionid, int replicaId, boolean newFormat) {
+    return createRegionName(tableName, startKey, Bytes.toBytes(Long.toString(regionid)),
+        replicaId, newFormat);
+  }
+
+  /**
+   * Make a region name of passed parameters.
+   * @param tableName
+   * @param startKey Can be null
    * @param id Region id (Usually timestamp from when region was created).
    * @param newFormat should we create the region name in the new format
    *                  (such that it contains its encoded name?).
@@ -357,9 +427,35 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    */
   public static byte [] createRegionName(final TableName tableName,
       final byte [] startKey, final byte [] id, boolean newFormat) {
-    byte [] b = new byte [tableName.getName().length + 2 + id.length +
-       (startKey == null? 0: startKey.length) +
-       (newFormat ? (MD5_HEX_LENGTH + 2) : 0)];
+    return createRegionName(tableName, startKey, id, DEFAULT_REPLICA_ID, newFormat);
+  }
+  /**
+   * Make a region name of passed parameters.
+   * @param tableName
+   * @param startKey Can be null
+   * @param id Region id (Usually timestamp from when region was created).
+   * @param replicaId
+   * @param newFormat should we create the region name in the new format
+   * @return Region name made of passed tableName, startKey, id and replicaId
+   */
+  public static byte [] createRegionName(final TableName tableName,
+      final byte [] startKey, final byte [] id, final int replicaId, boolean newFormat) {
+    int len = tableName.getName().length + 2 + id.length +
+        (startKey == null? 0: startKey.length);
+    if (newFormat) {
+      len += MD5_HEX_LENGTH + 2;
+    }
+    byte[] replicaIdBytes = null;
+    // Special casing: replicaId is only appended if replicaId is greater than
+    // 0. This is because all regions in meta would have to be migrated to the new
+    // name otherwise
+    if (replicaId > 0) {
+      // use string representation for replica id
+      replicaIdBytes = Bytes.toBytes(String.format(REPLICA_ID_FORMAT, replicaId));
+      len += 1 + replicaIdBytes.length;
+    }
+
+    byte [] b = new byte [len];
 
     int offset = tableName.getName().length;
     System.arraycopy(tableName.getName(), 0, b, 0, offset);
@@ -372,11 +468,17 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     System.arraycopy(id, 0, b, offset, id.length);
     offset += id.length;
 
+    if (replicaIdBytes != null) {
+      b[offset++] = REPLICA_ID_DELIMITER;
+      System.arraycopy(replicaIdBytes, 0, b, offset, replicaIdBytes.length);
+      offset += replicaIdBytes.length;
+    }
+
     if (newFormat) {
       //
       // Encoded name should be built into the region name.
       //
-      // Use the region name thus far (namely, <tablename>,<startKey>,<id>)
+      // Use the region name thus far (namely, <tablename>,<startKey>,<id>_<replicaId>)
       // to compute a MD5 hash to be used as the encoded name, and append
       // it to the byte buffer.
       //
@@ -447,6 +549,11 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    */
   public static byte [][] parseRegionName(final byte [] regionName)
   throws IOException {
+    // Region name is of the format:
+    // tablename,startkey,regionIdTimestamp[_replicaId][.encodedName.]
+    // startkey can contain the delimiter (',') so we parse from the start and end
+
+    // parse from start
     int offset = -1;
     for (int i = 0; i < regionName.length; i++) {
       if (regionName[i] == HConstants.DELIMITER) {
@@ -458,8 +565,27 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     byte[] tableName = new byte[offset];
     System.arraycopy(regionName, 0, tableName, 0, offset);
     offset = -1;
-    for (int i = regionName.length - 1; i > 0; i--) {
-      if(regionName[i] == HConstants.DELIMITER) {
+
+    int endOffset = regionName.length;
+    // check whether regionName contains encodedName
+    if (regionName.length > MD5_HEX_LENGTH + 2
+        && regionName[regionName.length-1] == ENC_SEPARATOR
+        && regionName[regionName.length-MD5_HEX_LENGTH-2] == ENC_SEPARATOR) {
+      endOffset = endOffset - MD5_HEX_LENGTH - 2;
+    }
+
+    // parse from end
+    byte[] replicaId = null;
+    int idEndOffset = endOffset;
+    for (int i = endOffset - 1; i > 0; i--) {
+      if (regionName[i] == REPLICA_ID_DELIMITER) { //replicaId may or may not be present
+        replicaId = new byte[endOffset - i - 1];
+        System.arraycopy(regionName, i + 1, replicaId, 0,
+          endOffset - i - 1);
+        idEndOffset = i;
+        // do not break, continue to search for id
+      }
+      if (regionName[i] == HConstants.DELIMITER) {
         offset = i;
         break;
       }
@@ -471,13 +597,17 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       System.arraycopy(regionName, tableName.length + 1, startKey, 0,
           offset - tableName.length - 1);
     }
-    byte [] id = new byte[regionName.length - offset - 1];
+    byte [] id = new byte[idEndOffset - offset - 1];
     System.arraycopy(regionName, offset + 1, id, 0,
-        regionName.length - offset - 1);
-    byte [][] elements = new byte[3][];
+      idEndOffset - offset - 1);
+    byte [][] elements = new byte[replicaId == null ? 3 : 4][];
     elements[0] = tableName;
     elements[1] = startKey;
     elements[2] = id;
+    if (replicaId != null) {
+      elements[3] = replicaId;
+    }
+
     return elements;
   }
 
@@ -631,7 +761,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     this.offLine = offLine;
   }
 
-
   /**
    * @return True if this is a split parent region.
    */
@@ -641,6 +770,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       LOG.warn("Region is split but NOT offline: " + getRegionNameAsString());
     }
     return true;
+  }
+
+  /**
+   * Returns the region replica id
+   * @return returns region replica id
+   */
+  public int getReplicaId() {
+    return replicaId;
   }
 
   /**
@@ -654,7 +791,8 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" +
       Bytes.toStringBinary(this.endKey) + "'" +
       (isOffline()? ", OFFLINE => true": "") +
-      (isSplit()? ", SPLIT => true": "") + "}";
+      (isSplit()? ", SPLIT => true": "") +
+      ((replicaId > 0)? ", REPLICA_ID => " + replicaId : "") + "}";
   }
 
   /**
@@ -766,6 +904,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   // Comparable
   //
 
+  @Override
   public int compareTo(HRegionInfo o) {
     if (o == null) {
       return 1;
@@ -805,6 +944,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     } else if (this.regionId < o.regionId) {
       return -1;
     }
+
+    int replicaDiff = this.getReplicaId() - o.getReplicaId();
+    if (replicaDiff != 0) return replicaDiff;
 
     if (this.offLine == o.offLine)
       return 0;
@@ -849,6 +991,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     }
     builder.setOffline(info.isOffline());
     builder.setSplit(info.isSplit());
+    builder.setReplicaId(info.getReplicaId());
     return builder.build();
   }
 
@@ -866,6 +1009,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       return FIRST_META_REGIONINFO;
     }
     long regionId = proto.getRegionId();
+    int replicaId = proto.hasReplicaId() ? proto.getReplicaId() : DEFAULT_REPLICA_ID;
     byte[] startKey = null;
     byte[] endKey = null;
     if (proto.hasStartKey()) {
@@ -881,7 +1025,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     HRegionInfo hri = new HRegionInfo(
         tableName,
         startKey,
-        endKey, split, regionId);
+        endKey, split, regionId, replicaId);
     if (proto.hasOffline()) {
       hri.setOffline(proto.getOffline());
     }
@@ -980,7 +1124,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return A pair of the {@link HRegionInfo} and the {@link ServerName}
    * (or null for server address if no address set in hbase:meta).
    * @throws IOException
+   * @deprecated use MetaReader methods for interacting with meta layouts
    */
+  @Deprecated
   public static Pair<HRegionInfo, ServerName> getHRegionInfoAndServerName(final Result r) {
     HRegionInfo info =
       getHRegionInfo(r, HConstants.REGIONINFO_QUALIFIER);
@@ -994,7 +1140,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * table Result.
    * @param data a Result object from the catalog table scan
    * @return HRegionInfo or null
+   * @deprecated use MetaReader methods for interacting with meta layouts
    */
+  @Deprecated
   public static HRegionInfo getHRegionInfo(Result data) {
     return getHRegionInfo(data, HConstants.REGIONINFO_QUALIFIER);
   }
@@ -1005,21 +1153,25 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param data a Result object from the catalog table scan
    * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
    * parent
+   * @deprecated use MetaReader methods for interacting with meta layouts
    */
+  @Deprecated
   public static PairOfSameType<HRegionInfo> getDaughterRegions(Result data) throws IOException {
     HRegionInfo splitA = getHRegionInfo(data, HConstants.SPLITA_QUALIFIER);
     HRegionInfo splitB = getHRegionInfo(data, HConstants.SPLITB_QUALIFIER);
 
     return new PairOfSameType<HRegionInfo>(splitA, splitB);
   }
-  
+
   /**
    * Returns the merge regions by reading the corresponding columns of the catalog table
    * Result.
    * @param data a Result object from the catalog table scan
    * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
    * parent
+   * @deprecated use MetaReader methods for interacting with meta layouts
    */
+  @Deprecated
   public static PairOfSameType<HRegionInfo> getMergeRegions(Result data) throws IOException {
     HRegionInfo mergeA = getHRegionInfo(data, HConstants.MERGEA_QUALIFIER);
     HRegionInfo mergeB = getHRegionInfo(data, HConstants.MERGEB_QUALIFIER);
@@ -1035,7 +1187,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * {@link HConstants#SPLITA_QUALIFIER}, {@link HConstants#SPLITB_QUALIFIER} or
    * {@link HConstants#REGIONINFO_QUALIFIER}.
    * @return An HRegionInfo instance or null.
+   * @deprecated use MetaReader methods for interacting with meta layouts
    */
+  @Deprecated
   public static HRegionInfo getHRegionInfo(final Result r, byte [] qualifier) {
     Cell cell = r.getColumnLatestCell(
         HConstants.CATALOG_FAMILY, qualifier);
@@ -1044,11 +1198,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * Returns a {@link ServerName} from catalog table {@link Result}.
-   * @param r Result to pull from
-   * @return A ServerName instance or null if necessary fields not found or empty.
+   * @deprecated use MetaReader methods for interacting with meta layouts
    */
-  // TODO: ServerName should be a better place for this method?
+  @Deprecated
   public static ServerName getServerName(final Result r) {
     Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
     if (cell == null || cell.getValueLength() == 0) return null;
@@ -1071,7 +1223,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * E.g. the seqNum when the result of {@link #getServerName(Result)} was written.
    * @param r Result to pull the seqNum from
    * @return SeqNum, or HConstants.NO_SEQNUM if there's no value written.
+   * @deprecated use MetaReader methods for interacting with meta layouts
    */
+  @Deprecated
   public static long getSeqNumDuringOpen(final Result r) {
     Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER);
     if (cell == null || cell.getValueLength() == 0) return HConstants.NO_SEQNUM;
@@ -1191,5 +1345,4 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     }
     return false;
   }
-
 }

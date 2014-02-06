@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -33,10 +34,14 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.protobuf.ByteString;
 
 @Category(SmallTests.class)
 public class TestHRegionInfo {
@@ -101,7 +106,7 @@ public class TestHRegionInfo {
                  + id + "." + md5HashInHex + ".",
                  nameStr);
   }
-  
+
   @Test
   public void testContainsRange() {
     HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf("testtable"));
@@ -121,7 +126,7 @@ public class TestHRegionInfo {
     assertFalse(hri.containsRange(Bytes.toBytes("g"), Bytes.toBytes("g")));
     // Single row range entirely outside
     assertFalse(hri.containsRange(Bytes.toBytes("z"), Bytes.toBytes("z")));
-    
+
     // Degenerate range
     try {
       hri.containsRange(Bytes.toBytes("z"), Bytes.toBytes("a"));
@@ -149,13 +154,106 @@ public class TestHRegionInfo {
   public void testComparator() {
     TableName tablename = TableName.valueOf("comparatorTablename");
     byte[] empty = new byte[0];
-    HRegionInfo older = new HRegionInfo(tablename, empty, empty, false, 0L); 
-    HRegionInfo newer = new HRegionInfo(tablename, empty, empty, false, 1L); 
+    HRegionInfo older = new HRegionInfo(tablename, empty, empty, false, 0L);
+    HRegionInfo newer = new HRegionInfo(tablename, empty, empty, false, 1L);
     assertTrue(older.compareTo(newer) < 0);
     assertTrue(newer.compareTo(older) > 0);
     assertTrue(older.compareTo(older) == 0);
     assertTrue(newer.compareTo(newer) == 0);
   }
-  
+
+  @Test
+  public void testRegionNameForRegionReplicas() throws Exception {
+    String tableName = "tablename";
+    final TableName tn = TableName.valueOf(tableName);
+    String startKey = "startkey";
+    final byte[] sk = Bytes.toBytes(startKey);
+    String id = "id";
+
+    // assert with only the region name without encoding
+
+    // primary, replicaId = 0
+    byte [] name = HRegionInfo.createRegionName(tn, sk, Bytes.toBytes(id), 0, false);
+    String nameStr = Bytes.toString(name);
+    assertEquals(tableName + "," + startKey + "," + id, nameStr);
+
+    // replicaId = 1
+    name = HRegionInfo.createRegionName(tn, sk, Bytes.toBytes(id), 1, false);
+    nameStr = Bytes.toString(name);
+    assertEquals(tableName + "," + startKey + "," + id + "_" +
+      String.format(HRegionInfo.REPLICA_ID_FORMAT, 1), nameStr);
+
+    // replicaId = max
+    name = HRegionInfo.createRegionName(tn, sk, Bytes.toBytes(id), 0xFFFF, false);
+    nameStr = Bytes.toString(name);
+    assertEquals(tableName + "," + startKey + "," + id + "_" +
+        String.format(HRegionInfo.REPLICA_ID_FORMAT, 0xFFFF), nameStr);
+  }
+
+  @Test
+  public void testParseName() throws IOException {
+    TableName tableName = TableName.valueOf("testParseName");
+    byte[] startKey = Bytes.toBytes("startKey");
+    long regionId = System.currentTimeMillis();
+    int replicaId = 42;
+
+    // test without replicaId
+    byte[] regionName = HRegionInfo.createRegionName(tableName, startKey, regionId, false);
+
+    byte[][] fields = HRegionInfo.parseRegionName(regionName);
+    assertArrayEquals(Bytes.toString(fields[0]),tableName.getName(), fields[0]);
+    assertArrayEquals(Bytes.toString(fields[1]),startKey, fields[1]);
+    assertArrayEquals(Bytes.toString(fields[2]), Bytes.toBytes(Long.toString(regionId)),fields[2]);
+    assertEquals(3, fields.length);
+
+    // test with replicaId
+    regionName = HRegionInfo.createRegionName(tableName, startKey, regionId,
+      replicaId, false);
+
+    fields = HRegionInfo.parseRegionName(regionName);
+    assertArrayEquals(Bytes.toString(fields[0]),tableName.getName(), fields[0]);
+    assertArrayEquals(Bytes.toString(fields[1]),startKey, fields[1]);
+    assertArrayEquals(Bytes.toString(fields[2]), Bytes.toBytes(Long.toString(regionId)),fields[2]);
+    assertArrayEquals(Bytes.toString(fields[3]), Bytes.toBytes(
+      String.format(HRegionInfo.REPLICA_ID_FORMAT, replicaId)), fields[3]);
+  }
+
+  @Test
+  public void testConvert() {
+    TableName tableName = TableName.valueOf("ns1:table1");
+    byte[] startKey = Bytes.toBytes("startKey");
+    byte[] endKey = Bytes.toBytes("endKey");
+    boolean split = false;
+    long regionId = System.currentTimeMillis();
+    int replicaId = 42;
+
+
+    HRegionInfo hri = new HRegionInfo(tableName, startKey, endKey, split,
+      regionId, replicaId);
+
+    // convert two times, compare
+    HRegionInfo convertedHri = HRegionInfo.convert(HRegionInfo.convert(hri));
+
+    assertEquals(hri, convertedHri);
+
+    // test convert RegionInfo without replicaId
+    RegionInfo info = RegionInfo.newBuilder()
+      .setTableName(HBaseProtos.TableName.newBuilder()
+        .setQualifier(ByteString.copyFrom(tableName.getQualifier()))
+        .setNamespace(ByteString.copyFrom(tableName.getNamespace()))
+        .build())
+      .setStartKey(ByteString.copyFrom(startKey))
+      .setEndKey(ByteString.copyFrom(endKey))
+      .setSplit(split)
+      .setRegionId(regionId)
+      .build();
+
+    convertedHri = HRegionInfo.convert(info);
+    HRegionInfo expectedHri = new HRegionInfo(tableName, startKey, endKey, split,
+      regionId, 0); // expecting default replicaId
+
+    assertEquals(expectedHri, convertedHri);
+  }
+
 }
 

@@ -22,10 +22,11 @@ import java.io.InterruptedIOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
@@ -49,7 +50,7 @@ class ZooKeeperRegistry implements Registry {
   }
 
   @Override
-  public HRegionLocation getMetaRegionLocation() throws IOException {
+  public RegionLocations getMetaRegionLocation() throws IOException {
     ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher();
 
     try {
@@ -62,7 +63,8 @@ class ZooKeeperRegistry implements Registry {
           "; serverName=" + ((servername == null) ? "null" : servername));
       }
       if (servername == null) return null;
-      return new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, servername, 0);
+      HRegionLocation loc = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, servername, 0);
+      return new RegionLocations(new HRegionLocation[] {loc});
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return null;

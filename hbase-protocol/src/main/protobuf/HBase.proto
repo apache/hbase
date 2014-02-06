@@ -64,6 +64,7 @@ message RegionInfo {
   optional bytes end_key = 4;
   optional bool offline = 5;
   optional bool split = 6;
+  optional int32 replica_id = 7 [default = 0];
 }
 
 /**

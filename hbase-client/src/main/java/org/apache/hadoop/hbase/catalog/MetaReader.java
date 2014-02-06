@@ -17,37 +17,83 @@
  */
 package org.apache.hadoop.hbase.catalog;
 
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.NavigableMap;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Reads region and assignment information from <code>hbase:meta</code>.
  */
 @InterfaceAudience.Private
 public class MetaReader {
+
+  /*
+   * HBASE-10070 adds a replicaId to HRI, meaning more than one HRI can be defined for the
+   * same table range (table, startKey, endKey). For every range, there will be at least one
+   * HRI defined which is called default replica.
+   *
+   * Meta layout (as of 0.98 + HBASE-10070) is like:
+   * For each table range, there is a single row, formatted like:
+   * <tableName>,<startKey>,<regionId>,<encodedRegionName>. This row corresponds to the regionName
+   * of the default region replica.
+   * Columns are:
+   * info:regioninfo         => contains serialized HRI for the default region replica
+   * info:server             => contains hostname:port (in string form) for the server hosting
+   *                            the default regionInfo replica
+   * info:server_<replicaId> => contains hostname:port (in string form) for the server hosting the
+   *                            regionInfo replica with replicaId
+   * info:serverstartcode    => contains server start code (in binary long form) for the server
+   *                            hosting the default regionInfo replica
+   * info:serverstartcode_<replicaId> => contains server start code (in binary long form) for the
+   *                                     server hosting the regionInfo replica with replicaId
+   * info:seqnumDuringOpen    => contains seqNum (in binary long form) for the region at the time
+   *                             the server opened the region with default replicaId
+   * info:seqnumDuringOpen_<replicaId> => contains seqNum (in binary long form) for the region at
+   *                             the time the server opened the region with replicaId
+   * info:splitA              => contains a serialized HRI for the first daughter region if the
+   *                             region is split
+   * info:splitB              => contains a serialized HRI for the second daughter region if the
+   *                             region is split
+   * info:mergeA              => contains a serialized HRI for the first parent region if the
+   *                             region is the result of a merge
+   * info:mergeB              => contains a serialized HRI for the second parent region if the
+   *                             region is the result of a merge
+   *
+   * The actual layout of meta should be encapsulated inside MetaReader and MetaEditor methods,
+   * and should not leak out of those (through Result objects, etc)
+   */
+
   // TODO: Strip CatalogTracker from this class.  Its all over and in the end
   // its only used to get its Configuration so we can get associated
   // Connection.
@@ -63,59 +109,12 @@ public class MetaReader {
       META_REGION_PREFIX, 0, len);
   }
 
-  /**
-   * Performs a full scan of <code>hbase:meta</code>, skipping regions from any
-   * tables in the specified set of disabled tables.
-   * @param catalogTracker
-   * @param disabledTables set of disabled tables that will not be returned
-   * @return Returns a map of every region to it's currently assigned server,
-   * according to META.  If the region does not have an assignment it will have
-   * a null value in the map.
-   * @throws IOException
-   */
-  public static Map<HRegionInfo, ServerName> fullScan(
-      CatalogTracker catalogTracker, final Set<TableName> disabledTables)
-  throws IOException {
-    return fullScan(catalogTracker, disabledTables, false);
-  }
+  /** The delimiter for meta columns for replicaIds > 0 */
+  protected static final char META_REPLICA_ID_DELIMITER = '_';
 
-  /**
-   * Performs a full scan of <code>hbase:meta</code>, skipping regions from any
-   * tables in the specified set of disabled tables.
-   * @param catalogTracker
-   * @param disabledTables set of disabled tables that will not be returned
-   * @param excludeOfflinedSplitParents If true, do not include offlined split
-   * parents in the return.
-   * @return Returns a map of every region to it's currently assigned server,
-   * according to META.  If the region does not have an assignment it will have
-   * a null value in the map.
-   * @throws IOException
-   */
-  public static Map<HRegionInfo, ServerName> fullScan(
-      CatalogTracker catalogTracker, final Set<TableName> disabledTables,
-      final boolean excludeOfflinedSplitParents)
-  throws IOException {
-    final Map<HRegionInfo, ServerName> regions =
-      new TreeMap<HRegionInfo, ServerName>();
-    Visitor v = new Visitor() {
-      @Override
-      public boolean visit(Result r) throws IOException {
-        if (r ==  null || r.isEmpty()) return true;
-        Pair<HRegionInfo, ServerName> region = HRegionInfo.getHRegionInfoAndServerName(r);
-        HRegionInfo hri = region.getFirst();
-        if (hri  == null) return true;
-        if (hri.getTable() == null) return true;
-        if (disabledTables.contains(
-            hri.getTable())) return true;
-        // Are we to include split parents in the list?
-        if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
-        regions.put(hri, region.getSecond());
-        return true;
-      }
-    };
-    fullScan(catalogTracker, v);
-    return regions;
-  }
+  /** A regex for parsing server columns from meta. See above javadoc for meta layout */
+  private static final Pattern SERVER_COLUMN_PATTERN
+    = Pattern.compile("^server(_[0-9a-fA-F]{4})?$");
 
   /**
    * Performs a full scan of <code>hbase:meta</code>.
@@ -207,33 +206,81 @@ public class MetaReader {
   }
 
   /**
-   * Reads the location of the specified region
-   * @param catalogTracker
-   * @param regionName region whose location we are after
-   * @return location of region as a {@link ServerName} or null if not found
-   * @throws IOException
-   */
-  static ServerName readRegionLocation(CatalogTracker catalogTracker,
-      byte [] regionName)
-  throws IOException {
-    Pair<HRegionInfo, ServerName> pair = getRegion(catalogTracker, regionName);
-    return (pair == null || pair.getSecond() == null)? null: pair.getSecond();
-  }
-
-  /**
    * Gets the region info and assignment for the specified region.
    * @param catalogTracker
    * @param regionName Region to lookup.
    * @return Location and HRegionInfo for <code>regionName</code>
    * @throws IOException
+   * @deprecated use {@link #getRegionLocation(CatalogTracker, byte[])} instead
    */
+  @Deprecated
   public static Pair<HRegionInfo, ServerName> getRegion(
       CatalogTracker catalogTracker, byte [] regionName)
   throws IOException {
-    Get get = new Get(regionName);
+    HRegionLocation location = getRegionLocation(catalogTracker, regionName);
+    return location == null
+        ? null
+        : new Pair<HRegionInfo, ServerName>(location.getRegionInfo(), location.getServerName());
+  }
+
+  /**
+   * Returns the HRegionLocation from meta for the given region
+   * @param catalogTracker
+   * @param regionName
+   * @return HRegionLocation for the given region
+   * @throws IOException
+   */
+  public static HRegionLocation getRegionLocation(CatalogTracker catalogTracker,
+      byte[] regionName) throws IOException {
+    byte[] row = regionName;
+    HRegionInfo parsedInfo = null;
+    try {
+      parsedInfo = parseRegionInfoFromRegionName(regionName);
+      row = getMetaKeyForRegion(parsedInfo);
+    } catch (Exception parseEx) {
+      LOG.warn("Received parse exception:" + parseEx);
+    }
+    Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);
     Result r = get(getCatalogHTable(catalogTracker), get);
-    return (r == null || r.isEmpty())? null: HRegionInfo.getHRegionInfoAndServerName(r);
+    RegionLocations locations = getRegionLocations(r);
+    return locations == null
+        ? null
+        : locations.getRegionLocation(parsedInfo == null ? 0 : parsedInfo.getReplicaId());
+  }
+
+  /**
+   * Returns the HRegionLocation from meta for the given region
+   * @param catalogTracker
+   * @param regionInfo
+   * @return HRegionLocation for the given region
+   * @throws IOException
+   */
+  public static HRegionLocation getRegionLocation(CatalogTracker catalogTracker,
+      HRegionInfo regionInfo) throws IOException {
+    byte[] row = getMetaKeyForRegion(regionInfo);
+    Get get = new Get(row);
+    get.addFamily(HConstants.CATALOG_FAMILY);
+    Result r = get(getCatalogHTable(catalogTracker), get);
+    return getRegionLocation(r, regionInfo, regionInfo.getReplicaId());
+  }
+
+  /** Returns the row key to use for this regionInfo */
+  protected static byte[] getMetaKeyForRegion(HRegionInfo regionInfo) {
+    return RegionReplicaUtil.getRegionInfoForDefaultReplica(regionInfo).getRegionName();
+  }
+
+  /** Returns an HRI parsed from this regionName. Not all the fields of the HRI
+   * is stored in the name, so the returned object should only be used for the fields
+   * in the regionName.
+   */
+  protected static HRegionInfo parseRegionInfoFromRegionName(byte[] regionName)
+      throws IOException {
+    byte[][] fields = HRegionInfo.parseRegionName(regionName);
+    long regionId =  Long.parseLong(Bytes.toString(fields[2]));
+    int replicaId = fields.length > 3 ? Integer.parseInt(Bytes.toString(fields[3]), 16) : 0;
+    return new HRegionInfo(
+      TableName.valueOf(fields[0]), fields[1], fields[1], false, regionId, replicaId);
   }
 
   /**
@@ -258,10 +305,8 @@ public class MetaReader {
   public static Pair<HRegionInfo, HRegionInfo> getRegionsFromMergeQualifier(
       CatalogTracker catalogTracker, byte[] regionName) throws IOException {
     Result result = getRegionResult(catalogTracker, regionName);
-    HRegionInfo mergeA = HRegionInfo.getHRegionInfo(result,
-        HConstants.MERGEA_QUALIFIER);
-    HRegionInfo mergeB = HRegionInfo.getHRegionInfo(result,
-        HConstants.MERGEB_QUALIFIER);
+    HRegionInfo mergeA = getHRegionInfo(result, HConstants.MERGEA_QUALIFIER);
+    HRegionInfo mergeB = getHRegionInfo(result, HConstants.MERGEB_QUALIFIER);
     if (mergeA == null && mergeB == null) {
       return null;
     }
@@ -289,8 +334,12 @@ public class MetaReader {
 
       @Override
       public boolean visit(Result r) throws IOException {
-        this.current =
-          HRegionInfo.getHRegionInfo(r, HConstants.REGIONINFO_QUALIFIER);
+        RegionLocations locations = getRegionLocations(r);
+        if (locations == null || locations.getRegionLocation().getRegionInfo() == null) {
+          LOG.warn("No serialized HRegionInfo in " + r);
+          return true;
+        }
+        this.current = locations.getRegionLocation().getRegionInfo();
         if (this.current == null) {
           LOG.warn("No serialized HRegionInfo in " + r);
           return true;
@@ -438,28 +487,33 @@ public class MetaReader {
     // Make a version of CollectingVisitor that collects HRegionInfo and ServerAddress
     CollectingVisitor<Pair<HRegionInfo, ServerName>> visitor =
         new CollectingVisitor<Pair<HRegionInfo, ServerName>>() {
-      private Pair<HRegionInfo, ServerName> current = null;
+      private RegionLocations current = null;
 
       @Override
       public boolean visit(Result r) throws IOException {
-        HRegionInfo hri =
-          HRegionInfo.getHRegionInfo(r, HConstants.REGIONINFO_QUALIFIER);
-        if (hri == null) {
+        current = getRegionLocations(r);
+        if (current == null || current.getRegionLocation().getRegionInfo() == null) {
           LOG.warn("No serialized HRegionInfo in " + r);
           return true;
         }
+        HRegionInfo hri = current.getRegionLocation().getRegionInfo();
         if (!isInsideTable(hri, tableName)) return false;
         if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
-        ServerName sn = HRegionInfo.getServerName(r);
-        // Populate this.current so available when we call #add
-        this.current = new Pair<HRegionInfo, ServerName>(hri, sn);
         // Else call super and add this Result to the collection.
         return super.visit(r);
       }
 
       @Override
       void add(Result r) {
-        this.results.add(this.current);
+        if (current == null) {
+          return;
+        }
+        for (HRegionLocation loc : current.getRegionLocations()) {
+          if (loc != null) {
+            this.results.add(new Pair<HRegionInfo, ServerName>(
+                loc.getRegionInfo(), loc.getServerName()));
+          }
+        }
       }
     };
     fullScan(catalogTracker, visitor, getTableStartRowForMeta(tableName));
@@ -483,22 +537,18 @@ public class MetaReader {
       @Override
       void add(Result r) {
         if (r == null || r.isEmpty()) return;
-        if (HRegionInfo.getHRegionInfo(r) == null) return;
-        ServerName sn = HRegionInfo.getServerName(r);
-        if (sn != null && sn.equals(serverName)) {
-          this.results.add(r);
+        RegionLocations locations = getRegionLocations(r);
+        if (locations == null) return;
+        for (HRegionLocation loc : locations.getRegionLocations()) {
+          if (loc != null) {
+            if (loc.getServerName() != null && loc.getServerName().equals(serverName)) {
+              hris.put(loc.getRegionInfo(), r);
+            }
+          }
         }
       }
     };
     fullScan(catalogTracker, v);
-    List<Result> results = v.getResults();
-    if (results != null && !results.isEmpty()) {
-      // Convert results to Map keyed by HRI
-      for (Result r: results) {
-        HRegionInfo hri = HRegionInfo.getHRegionInfo(r);
-        if (hri != null) hris.put(hri, r);
-      }
-    }
     return hris;
   }
 
@@ -509,8 +559,13 @@ public class MetaReader {
       public boolean visit(Result r) throws IOException {
         if (r ==  null || r.isEmpty()) return true;
         LOG.info("fullScanMetaAndPrint.Current Meta Row: " + r);
-        HRegionInfo hrim = HRegionInfo.getHRegionInfo(r);
-        LOG.info("fullScanMetaAndPrint.HRI Print= " + hrim);
+        RegionLocations locations = getRegionLocations(r);
+        if (locations == null) return true;
+        for (HRegionLocation loc : locations.getRegionLocations()) {
+          if (loc != null) {
+            LOG.info("fullScanMetaAndPrint.HRI Print= " + loc.getRegionInfo());
+          }
+        }
         return true;
       }
     };
@@ -552,6 +607,215 @@ public class MetaReader {
       metaTable.close();
     }
     return;
+  }
+
+  /**
+   * Returns the column family used for meta columns.
+   * @return HConstants.CATALOG_FAMILY.
+   */
+  protected static byte[] getFamily() {
+    return HConstants.CATALOG_FAMILY;
+  }
+
+  /**
+   * Returns the column qualifier for serialized region info
+   * @return HConstants.REGIONINFO_QUALIFIER
+   */
+  protected static byte[] getRegionInfoColumn() {
+    return HConstants.REGIONINFO_QUALIFIER;
+  }
+
+  /**
+   * Returns the column qualifier for server column for replicaId
+   * @param replicaId the replicaId of the region
+   * @return a byte[] for server column qualifier
+   */
+  protected static byte[] getServerColumn(int replicaId) {
+    return replicaId == 0
+        ? HConstants.SERVER_QUALIFIER
+        : Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+          + String.format(HRegionInfo.REPLICA_ID_FORMAT, replicaId));
+  }
+
+  /**
+   * Returns the column qualifier for server start code column for replicaId
+   * @param replicaId the replicaId of the region
+   * @return a byte[] for server start code column qualifier
+   */
+  protected static byte[] getStartCodeColumn(int replicaId) {
+    return replicaId == 0
+        ? HConstants.STARTCODE_QUALIFIER
+        : Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+          + String.format(HRegionInfo.REPLICA_ID_FORMAT, replicaId));
+  }
+
+  /**
+   * Returns the column qualifier for seqNum column for replicaId
+   * @param replicaId the replicaId of the region
+   * @return a byte[] for seqNum column qualifier
+   */
+  protected static byte[] getSeqNumColumn(int replicaId) {
+    return replicaId == 0
+        ? HConstants.SEQNUM_QUALIFIER
+        : Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+          + String.format(HRegionInfo.REPLICA_ID_FORMAT, replicaId));
+  }
+
+  /**
+   * Parses the replicaId from the server column qualifier. See top of the class javadoc
+   * for the actual meta layout
+   * @param serverColumn the column qualifier
+   * @return an int for the replicaId
+   */
+  @VisibleForTesting
+  static int parseReplicaIdFromServerColumn(byte[] serverColumn) {
+    String serverStr = Bytes.toString(serverColumn);
+
+    Matcher matcher = SERVER_COLUMN_PATTERN.matcher(serverStr);
+    if (matcher.matches() && matcher.groupCount() > 0) {
+        String group = matcher.group(1);
+        if (group != null && group.length() > 0) {
+          return Integer.parseInt(group.substring(1), 16);
+        } else {
+          return 0;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Returns a {@link ServerName} from catalog table {@link Result}.
+   * @param r Result to pull from
+   * @return A ServerName instance or null if necessary fields not found or empty.
+   */
+  private static ServerName getServerName(final Result r, final int replicaId) {
+    byte[] serverColumn = getServerColumn(replicaId);
+    Cell cell = r.getColumnLatestCell(getFamily(), serverColumn);
+    if (cell == null || cell.getValueLength() == 0) return null;
+    String hostAndPort = Bytes.toString(
+        cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+    byte[] startcodeColumn = getStartCodeColumn(replicaId);
+    cell = r.getColumnLatestCell(getFamily(), startcodeColumn);
+    if (cell == null || cell.getValueLength() == 0) return null;
+    return ServerName.valueOf(hostAndPort,
+      Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+  }
+
+  /**
+   * The latest seqnum that the server writing to meta observed when opening the region.
+   * E.g. the seqNum when the result of {@link #getServerName(Result)} was written.
+   * @param r Result to pull the seqNum from
+   * @return SeqNum, or HConstants.NO_SEQNUM if there's no value written.
+   */
+  private static long getSeqNumDuringOpen(final Result r, final int replicaId) {
+    Cell cell = r.getColumnLatestCell(getFamily(), getSeqNumColumn(replicaId));
+    if (cell == null || cell.getValueLength() == 0) return HConstants.NO_SEQNUM;
+    return Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+  }
+
+  /**
+   * Returns an HRegionLocationList extracted from the result.
+   * @return an HRegionLocationList containing all locations for the region range
+   */
+  public static RegionLocations getRegionLocations(final Result r) {
+    if (r == null) return null;
+    HRegionInfo regionInfo = getHRegionInfo(r, getRegionInfoColumn());
+    if (regionInfo == null) return null;
+
+    List<HRegionLocation> locations = new ArrayList<HRegionLocation>(1);
+    NavigableMap<byte[],NavigableMap<byte[],byte[]>> familyMap = r.getNoVersionMap();
+
+    locations.add(getRegionLocation(r, regionInfo, 0));
+
+    NavigableMap<byte[], byte[]> infoMap = familyMap.get(getFamily());
+    if (infoMap == null) return new RegionLocations(locations);
+
+    // iterate until all serverName columns are seen
+    int replicaId = 0;
+    byte[] serverColumn = getServerColumn(replicaId);
+    SortedMap<byte[], byte[]> serverMap = infoMap.tailMap(serverColumn, false);
+    if (serverMap.isEmpty()) return new RegionLocations(locations);
+
+    for (Entry<byte[], byte[]> entry : serverMap.entrySet()) {
+      replicaId = parseReplicaIdFromServerColumn(entry.getKey());
+      if (replicaId < 0) {
+        break;
+      }
+
+      locations.add(getRegionLocation(r, regionInfo, replicaId));
+    }
+
+    return new RegionLocations(locations);
+  }
+
+  /**
+   * Returns the HRegionLocation parsed from the given meta row Result
+   * for the given regionInfo and replicaId. The regionInfo can be the default region info
+   * for the replica.
+   * @param r the meta row result
+   * @param regionInfo RegionInfo for default replica
+   * @param replicaId the replicaId for the HRegionLocation
+   * @return HRegionLocation parsed from the given meta row Result for the given replicaId
+   */
+  private static HRegionLocation getRegionLocation(final Result r, final HRegionInfo regionInfo,
+      final int replicaId) {
+    ServerName serverName = getServerName(r, replicaId);
+    long seqNum = getSeqNumDuringOpen(r, replicaId);
+    HRegionInfo replicaInfo = RegionReplicaUtil.getRegionInfoForReplica(regionInfo, replicaId);
+    return new HRegionLocation(replicaInfo, serverName, seqNum);
+  }
+
+  /**
+   * Returns HRegionInfo object from the column
+   * HConstants.CATALOG_FAMILY:HConstants.REGIONINFO_QUALIFIER of the catalog
+   * table Result.
+   * @param data a Result object from the catalog table scan
+   * @return HRegionInfo or null
+   */
+  public static HRegionInfo getHRegionInfo(Result data) {
+    return getHRegionInfo(data, HConstants.REGIONINFO_QUALIFIER);
+  }
+
+  /**
+   * Returns the HRegionInfo object from the column {@link HConstants#CATALOG_FAMILY} and
+   * <code>qualifier</code> of the catalog table result.
+   * @param r a Result object from the catalog table scan
+   * @param qualifier Column family qualifier
+   * @return An HRegionInfo instance or null.
+   */
+  private static HRegionInfo getHRegionInfo(final Result r, byte [] qualifier) {
+    Cell cell = r.getColumnLatestCell(getFamily(), qualifier);
+    if (cell == null) return null;
+    return HRegionInfo.parseFromOrNull(cell.getValueArray(),
+      cell.getValueOffset(), cell.getValueLength());
+  }
+
+  /**
+   * Returns the daughter regions by reading the corresponding columns of the catalog table
+   * Result.
+   * @param data a Result object from the catalog table scan
+   * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
+   * parent
+   */
+  public static PairOfSameType<HRegionInfo> getDaughterRegions(Result data) throws IOException {
+    HRegionInfo splitA = getHRegionInfo(data, HConstants.SPLITA_QUALIFIER);
+    HRegionInfo splitB = getHRegionInfo(data, HConstants.SPLITB_QUALIFIER);
+
+    return new PairOfSameType<HRegionInfo>(splitA, splitB);
+  }
+
+  /**
+   * Returns the merge regions by reading the corresponding columns of the catalog table
+   * Result.
+   * @param data a Result object from the catalog table scan
+   * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
+   * parent
+   */
+  public static PairOfSameType<HRegionInfo> getMergeRegions(Result data) throws IOException {
+    HRegionInfo mergeA = getHRegionInfo(data, HConstants.MERGEA_QUALIFIER);
+    HRegionInfo mergeB = getHRegionInfo(data, HConstants.MERGEB_QUALIFIER);
+
+    return new PairOfSameType<HRegionInfo>(mergeA, mergeB);
   }
 
   /**

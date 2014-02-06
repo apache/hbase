@@ -27,11 +27,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
  * keeps a cache of locations and then knows how to re-calibrate after they move.  You need one
  * of these to talk to your HBase cluster. {@link HConnectionManager} manages instances of this
  * class.  See it for how to get one of these.
- * 
+ *
  * <p>This is NOT a connection to a particular server but to ALL servers in the cluster.  Individual
  * connections are managed at a lower level.
  *
@@ -264,7 +264,8 @@ public interface HConnection extends Abortable, Closeable {
    * @return HRegionLocation that describes where to find the region in
    * question
    * @throws IOException if a remote or network exception occurs
-   * @deprecated internal method, do not use thru HConnection */
+   * @deprecated internal method, do not use thru HConnection
+   */
   @Deprecated
   public HRegionLocation locateRegion(final TableName tableName,
       final byte [] row) throws IOException;
@@ -323,12 +324,14 @@ public interface HConnection extends Abortable, Closeable {
    * Update the location cache. This is used internally by HBase, in most cases it should not be
    *  used by the client application.
    * @param tableName the table name
+   * @param regionName the regionName
    * @param rowkey the row
    * @param exception the exception if any. Can be null.
    * @param source the previous location
-   * @deprecated internal method, do not use thru HConnection */
+   * @deprecated internal method, do not use thru HConnection
+   */
   @Deprecated
-  void updateCachedLocations(TableName tableName, byte[] rowkey,
+  void updateCachedLocations(TableName tableName, byte[] regionName, byte[] rowkey,
                                     Object exception, ServerName source);
 
   @Deprecated
@@ -366,7 +369,8 @@ public interface HConnection extends Abortable, Closeable {
    *          regions from returned list.
    * @return list of region locations for all regions of table
    * @throws IOException
-   * @deprecated internal method, do not use thru HConnection */
+   * @deprecated internal method, do not use thru HConnection
+   */
   @Deprecated
   public List<HRegionLocation> locateRegions(final TableName tableName,
       final boolean useCache,
@@ -412,6 +416,7 @@ public interface HConnection extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    * @deprecated You can pass master flag but nothing special is done.
    */
+  @Deprecated
   AdminService.BlockingInterface getAdmin(final ServerName serverName, boolean getMaster)
       throws IOException;
 
@@ -506,6 +511,7 @@ public interface HConnection extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    * @deprecated This method will be changed from public to package protected.
    */
+  @Deprecated
   int getCurrentNrHRS() throws IOException;
 
   /**

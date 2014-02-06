@@ -30,11 +30,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 
@@ -50,6 +53,7 @@ import org.apache.hadoop.hbase.util.ExceptionUtil;
  * see HBASE-5986, and {@link DefaultMetaScannerVisitor} for details. </p>
  */
 @InterfaceAudience.Private
+//TODO: merge this to MetaReader, get rid of it.
 public class MetaScanner {
   private static final Log LOG = LogFactory.getLog(MetaScanner.class);
   /**
@@ -216,14 +220,14 @@ public class MetaScanner {
    * table Result.
    * @param data a Result object from the catalog table scan
    * @return HRegionInfo or null
+   * @deprecated Use {@link MetaReader#getRegionLocations(Result)}
    */
+  @Deprecated
   public static HRegionInfo getHRegionInfo(Result data) {
     return HRegionInfo.getHRegionInfo(data);
   }
 
   /**
-   * Used in tests.
-   *
    * Lists all of the regions currently in META.
    * @param conf
    * @param offlined True if we are to include offlined regions, false and we'll
@@ -234,22 +238,23 @@ public class MetaScanner {
   public static List<HRegionInfo> listAllRegions(Configuration conf, final boolean offlined)
   throws IOException {
     final List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
-    MetaScannerVisitor visitor = new DefaultMetaScannerVisitor() {
+    MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
         @Override
-        public boolean processRowInternal(Result result) throws IOException {
+        public boolean processRow(Result result) throws IOException {
           if (result == null || result.isEmpty()) {
             return true;
           }
 
-          HRegionInfo regionInfo = getHRegionInfo(result);
-          if (regionInfo == null) {
-            LOG.warn("Null REGIONINFO_QUALIFIER: " + result);
-            return true;
+          RegionLocations locations = MetaReader.getRegionLocations(result);
+          if (locations == null) return true;
+          for (HRegionLocation loc : locations.getRegionLocations()) {
+            if (loc != null) {
+              HRegionInfo regionInfo = loc.getRegionInfo();
+              // If region offline AND we are not to include offlined regions, return.
+              if (regionInfo.isOffline() && !offlined) continue;
+              regions.add(regionInfo);
+            }
           }
-
-          // If region offline AND we are not to include offlined regions, return.
-          if (regionInfo.isOffline() && !offlined) return true;
-          regions.add(regionInfo);
           return true;
         }
     };
@@ -272,10 +277,34 @@ public class MetaScanner {
       new TreeMap<HRegionInfo, ServerName>();
     MetaScannerVisitor visitor = new TableMetaScannerVisitor(tableName) {
       @Override
-      public boolean processRowInternal(Result rowResult) throws IOException {
-        HRegionInfo info = getHRegionInfo(rowResult);
-        ServerName serverName = HRegionInfo.getServerName(rowResult);
-        regions.put(new UnmodifyableHRegionInfo(info), serverName);
+      public boolean processRowInternal(Result result) throws IOException {
+        RegionLocations locations = MetaReader.getRegionLocations(result);
+        if (locations == null) return true;
+        for (HRegionLocation loc : locations.getRegionLocations()) {
+          if (loc != null) {
+            HRegionInfo regionInfo = loc.getRegionInfo();
+            regions.put(new UnmodifyableHRegionInfo(regionInfo), loc.getServerName());
+          }
+        }
+        return true;
+      }
+    };
+    metaScan(conf, connection, visitor, tableName);
+    return regions;
+  }
+
+  /**
+   * Lists table regions and locations grouped by region range from META.
+   */
+  public static List<RegionLocations> listTableRegionLocations(Configuration conf,
+      ClusterConnection connection, final TableName tableName) throws IOException {
+    final List<RegionLocations> regions = new ArrayList<RegionLocations>();
+    MetaScannerVisitor visitor = new TableMetaScannerVisitor(tableName) {
+      @Override
+      public boolean processRowInternal(Result result) throws IOException {
+        RegionLocations locations = MetaReader.getRegionLocations(result);
+        if (locations == null) return true;
+        regions.add(locations);
         return true;
       }
     };

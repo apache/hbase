@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HRegionLocation;
 
 /**
  * Cluster registry.
@@ -36,7 +36,7 @@ interface Registry {
    * @return Meta region location
    * @throws IOException
    */
-  HRegionLocation getMetaRegionLocation() throws IOException;
+  RegionLocations getMetaRegionLocation() throws IOException;
 
   /**
    * @return Cluster id.

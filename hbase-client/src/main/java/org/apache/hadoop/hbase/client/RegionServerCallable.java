@@ -73,6 +73,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
    * @param reload Set this to true if connection should re-find the region
    * @throws IOException e
    */
+  @Override
   public void prepare(final boolean reload) throws IOException {
     this.location = connection.getRegionLocation(tableName, row, reload);
     if (this.location == null) {
@@ -124,7 +125,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
       // hbase:meta again to find the new location
       if (this.location != null) getConnection().clearCaches(location.getServerName());
     } else if (t instanceof RegionMovedException) {
-      getConnection().updateCachedLocations(tableName, row, t, location.getServerName());
+      getConnection().updateCachedLocations(tableName, row, t, location);
     } else if (t instanceof NotServingRegionException && !retrying) {
       // Purge cache entries for this specific region from hbase:meta cache
       // since we don't call connect(true) when number of retries is 1.

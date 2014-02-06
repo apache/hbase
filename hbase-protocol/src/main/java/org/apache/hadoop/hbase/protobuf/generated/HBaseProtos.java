@@ -3687,6 +3687,16 @@ public final class HBaseProtos {
      * <code>optional bool split = 6;</code>
      */
     boolean getSplit();
+
+    // optional int32 replica_id = 7 [default = 0];
+    /**
+     * <code>optional int32 replica_id = 7 [default = 0];</code>
+     */
+    boolean hasReplicaId();
+    /**
+     * <code>optional int32 replica_id = 7 [default = 0];</code>
+     */
+    int getReplicaId();
   }
   /**
    * Protobuf type {@code RegionInfo}
@@ -3780,6 +3790,11 @@ public final class HBaseProtos {
             case 48: {
               bitField0_ |= 0x00000020;
               split_ = input.readBool();
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000040;
+              replicaId_ = input.readInt32();
               break;
             }
           }
@@ -3924,6 +3939,22 @@ public final class HBaseProtos {
       return split_;
     }
 
+    // optional int32 replica_id = 7 [default = 0];
+    public static final int REPLICA_ID_FIELD_NUMBER = 7;
+    private int replicaId_;
+    /**
+     * <code>optional int32 replica_id = 7 [default = 0];</code>
+     */
+    public boolean hasReplicaId() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>optional int32 replica_id = 7 [default = 0];</code>
+     */
+    public int getReplicaId() {
+      return replicaId_;
+    }
+
     private void initFields() {
       regionId_ = 0L;
       tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
@@ -3931,6 +3962,7 @@ public final class HBaseProtos {
       endKey_ = com.google.protobuf.ByteString.EMPTY;
       offline_ = false;
       split_ = false;
+      replicaId_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3974,6 +4006,9 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeBool(6, split_);
       }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeInt32(7, replicaId_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -4006,6 +4041,10 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(6, split_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(7, replicaId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4060,6 +4099,11 @@ public final class HBaseProtos {
         result = result && (getSplit()
             == other.getSplit());
       }
+      result = result && (hasReplicaId() == other.hasReplicaId());
+      if (hasReplicaId()) {
+        result = result && (getReplicaId()
+            == other.getReplicaId());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4096,6 +4140,10 @@ public final class HBaseProtos {
       if (hasSplit()) {
         hash = (37 * hash) + SPLIT_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getSplit());
+      }
+      if (hasReplicaId()) {
+        hash = (37 * hash) + REPLICA_ID_FIELD_NUMBER;
+        hash = (53 * hash) + getReplicaId();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -4228,6 +4276,8 @@ public final class HBaseProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         split_ = false;
         bitField0_ = (bitField0_ & ~0x00000020);
+        replicaId_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -4284,6 +4334,10 @@ public final class HBaseProtos {
           to_bitField0_ |= 0x00000020;
         }
         result.split_ = split_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.replicaId_ = replicaId_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4317,6 +4371,9 @@ public final class HBaseProtos {
         }
         if (other.hasSplit()) {
           setSplit(other.getSplit());
+        }
+        if (other.hasReplicaId()) {
+          setReplicaId(other.getReplicaId());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -4641,6 +4698,39 @@ public final class HBaseProtos {
       public Builder clearSplit() {
         bitField0_ = (bitField0_ & ~0x00000020);
         split_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional int32 replica_id = 7 [default = 0];
+      private int replicaId_ ;
+      /**
+       * <code>optional int32 replica_id = 7 [default = 0];</code>
+       */
+      public boolean hasReplicaId() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional int32 replica_id = 7 [default = 0];</code>
+       */
+      public int getReplicaId() {
+        return replicaId_;
+      }
+      /**
+       * <code>optional int32 replica_id = 7 [default = 0];</code>
+       */
+      public Builder setReplicaId(int value) {
+        bitField0_ |= 0x00000040;
+        replicaId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 replica_id = 7 [default = 0];</code>
+       */
+      public Builder clearReplicaId() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        replicaId_ = 0;
         onChanged();
         return this;
       }
@@ -16234,43 +16324,43 @@ public final class HBaseProtos {
       "ingPair\"o\n\022ColumnFamilySchema\022\014\n\004name\030\001 " +
       "\002(\014\022#\n\nattributes\030\002 \003(\0132\017.BytesBytesPair" +
       "\022&\n\rconfiguration\030\003 \003(\0132\017.NameStringPair" +
-      "\"\203\001\n\nRegionInfo\022\021\n\tregion_id\030\001 \002(\004\022\036\n\nta",
+      "\"\232\001\n\nRegionInfo\022\021\n\tregion_id\030\001 \002(\004\022\036\n\nta",
       "ble_name\030\002 \002(\0132\n.TableName\022\021\n\tstart_key\030" +
       "\003 \001(\014\022\017\n\007end_key\030\004 \001(\014\022\017\n\007offline\030\005 \001(\010\022" +
-      "\r\n\005split\030\006 \001(\010\"1\n\014FavoredNodes\022!\n\014favore" +
-      "d_node\030\001 \003(\0132\013.ServerName\"\225\001\n\017RegionSpec" +
-      "ifier\0222\n\004type\030\001 \002(\0162$.RegionSpecifier.Re" +
-      "gionSpecifierType\022\r\n\005value\030\002 \002(\014\"?\n\023Regi" +
-      "onSpecifierType\022\017\n\013REGION_NAME\020\001\022\027\n\023ENCO" +
-      "DED_REGION_NAME\020\002\"%\n\tTimeRange\022\014\n\004from\030\001" +
-      " \001(\004\022\n\n\002to\030\002 \001(\004\"A\n\nServerName\022\021\n\thost_n" +
-      "ame\030\001 \002(\t\022\014\n\004port\030\002 \001(\r\022\022\n\nstart_code\030\003 ",
-      "\001(\004\"\033\n\013Coprocessor\022\014\n\004name\030\001 \002(\t\"-\n\016Name" +
-      "StringPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\"" +
-      ",\n\rNameBytesPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030" +
-      "\002 \001(\014\"/\n\016BytesBytesPair\022\r\n\005first\030\001 \002(\014\022\016" +
-      "\n\006second\030\002 \002(\014\",\n\rNameInt64Pair\022\014\n\004name\030" +
-      "\001 \001(\t\022\r\n\005value\030\002 \001(\003\"\275\001\n\023SnapshotDescrip" +
-      "tion\022\014\n\004name\030\001 \002(\t\022\r\n\005table\030\002 \001(\t\022\030\n\rcre" +
-      "ation_time\030\003 \001(\003:\0010\022.\n\004type\030\004 \001(\0162\031.Snap" +
-      "shotDescription.Type:\005FLUSH\022\017\n\007version\030\005" +
-      " \001(\005\".\n\004Type\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH\020\001\022\r\n",
-      "\tSKIPFLUSH\020\002\"}\n\024ProcedureDescription\022\021\n\t" +
-      "signature\030\001 \002(\t\022\020\n\010instance\030\002 \001(\t\022\030\n\rcre" +
-      "ation_time\030\003 \001(\003:\0010\022&\n\rconfiguration\030\004 \003" +
-      "(\0132\017.NameStringPair\"\n\n\010EmptyMsg\"\033\n\007LongM" +
-      "sg\022\020\n\010long_msg\030\001 \002(\003\"\037\n\tDoubleMsg\022\022\n\ndou" +
-      "ble_msg\030\001 \002(\001\"\'\n\rBigDecimalMsg\022\026\n\016bigdec" +
-      "imal_msg\030\001 \002(\014\"5\n\004UUID\022\026\n\016least_sig_bits" +
-      "\030\001 \002(\004\022\025\n\rmost_sig_bits\030\002 \002(\004\"K\n\023Namespa" +
-      "ceDescriptor\022\014\n\004name\030\001 \002(\014\022&\n\rconfigurat" +
-      "ion\030\002 \003(\0132\017.NameStringPair\"$\n\020RegionServ",
-      "erInfo\022\020\n\010infoPort\030\001 \001(\005*r\n\013CompareType\022" +
-      "\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022" +
-      "\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007" +
-      "GREATER\020\005\022\t\n\005NO_OP\020\006B>\n*org.apache.hadoo" +
-      "p.hbase.protobuf.generatedB\013HBaseProtosH" +
-      "\001\240\001\001"
+      "\r\n\005split\030\006 \001(\010\022\025\n\nreplica_id\030\007 \001(\005:\0010\"1\n" +
+      "\014FavoredNodes\022!\n\014favored_node\030\001 \003(\0132\013.Se" +
+      "rverName\"\225\001\n\017RegionSpecifier\0222\n\004type\030\001 \002" +
+      "(\0162$.RegionSpecifier.RegionSpecifierType" +
+      "\022\r\n\005value\030\002 \002(\014\"?\n\023RegionSpecifierType\022\017" +
+      "\n\013REGION_NAME\020\001\022\027\n\023ENCODED_REGION_NAME\020\002" +
+      "\"%\n\tTimeRange\022\014\n\004from\030\001 \001(\004\022\n\n\002to\030\002 \001(\004\"" +
+      "A\n\nServerName\022\021\n\thost_name\030\001 \002(\t\022\014\n\004port",
+      "\030\002 \001(\r\022\022\n\nstart_code\030\003 \001(\004\"\033\n\013Coprocesso" +
+      "r\022\014\n\004name\030\001 \002(\t\"-\n\016NameStringPair\022\014\n\004nam" +
+      "e\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\",\n\rNameBytesPair\022" +
+      "\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(\014\"/\n\016BytesByt" +
+      "esPair\022\r\n\005first\030\001 \002(\014\022\016\n\006second\030\002 \002(\014\",\n" +
+      "\rNameInt64Pair\022\014\n\004name\030\001 \001(\t\022\r\n\005value\030\002 " +
+      "\001(\003\"\275\001\n\023SnapshotDescription\022\014\n\004name\030\001 \002(" +
+      "\t\022\r\n\005table\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(\003:" +
+      "\0010\022.\n\004type\030\004 \001(\0162\031.SnapshotDescription.T" +
+      "ype:\005FLUSH\022\017\n\007version\030\005 \001(\005\".\n\004Type\022\014\n\010D",
+      "ISABLED\020\000\022\t\n\005FLUSH\020\001\022\r\n\tSKIPFLUSH\020\002\"}\n\024P" +
+      "rocedureDescription\022\021\n\tsignature\030\001 \002(\t\022\020" +
+      "\n\010instance\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(\003:" +
+      "\0010\022&\n\rconfiguration\030\004 \003(\0132\017.NameStringPa" +
+      "ir\"\n\n\010EmptyMsg\"\033\n\007LongMsg\022\020\n\010long_msg\030\001 " +
+      "\002(\003\"\037\n\tDoubleMsg\022\022\n\ndouble_msg\030\001 \002(\001\"\'\n\r" +
+      "BigDecimalMsg\022\026\n\016bigdecimal_msg\030\001 \002(\014\"5\n" +
+      "\004UUID\022\026\n\016least_sig_bits\030\001 \002(\004\022\025\n\rmost_si" +
+      "g_bits\030\002 \002(\004\"K\n\023NamespaceDescriptor\022\014\n\004n" +
+      "ame\030\001 \002(\014\022&\n\rconfiguration\030\002 \003(\0132\017.NameS",
+      "tringPair\"$\n\020RegionServerInfo\022\020\n\010infoPor" +
+      "t\030\001 \001(\005*r\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLESS" +
+      "_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n" +
+      "\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_O" +
+      "P\020\006B>\n*org.apache.hadoop.hbase.protobuf." +
+      "generatedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -16300,7 +16390,7 @@ public final class HBaseProtos {
           internal_static_RegionInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionInfo_descriptor,
-              new java.lang.String[] { "RegionId", "TableName", "StartKey", "EndKey", "Offline", "Split", });
+              new java.lang.String[] { "RegionId", "TableName", "StartKey", "EndKey", "Offline", "Split", "ReplicaId", });
           internal_static_FavoredNodes_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_FavoredNodes_fieldAccessorTable = new

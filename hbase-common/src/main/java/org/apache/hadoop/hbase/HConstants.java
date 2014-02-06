@@ -397,13 +397,19 @@ public final class HConstants {
   public static final byte [] REGIONINFO_QUALIFIER = Bytes.toBytes(REGIONINFO_QUALIFIER_STR);
 
   /** The server column qualifier */
-  public static final byte [] SERVER_QUALIFIER = Bytes.toBytes("server");
+  public static final String SERVER_QUALIFIER_STR = "server";
+  /** The server column qualifier */
+  public static final byte [] SERVER_QUALIFIER = Bytes.toBytes(SERVER_QUALIFIER_STR);
 
   /** The startcode column qualifier */
-  public static final byte [] STARTCODE_QUALIFIER = Bytes.toBytes("serverstartcode");
+  public static final String STARTCODE_QUALIFIER_STR = "serverstartcode";
+  /** The startcode column qualifier */
+  public static final byte [] STARTCODE_QUALIFIER = Bytes.toBytes(STARTCODE_QUALIFIER_STR);
 
   /** The open seqnum column qualifier */
-  public static final byte [] SEQNUM_QUALIFIER = Bytes.toBytes("seqnumDuringOpen");
+  public static final String SEQNUM_QUALIFIER_STR = "seqnumDuringOpen";
+  /** The open seqnum column qualifier */
+  public static final byte [] SEQNUM_QUALIFIER = Bytes.toBytes(SEQNUM_QUALIFIER_STR);
 
   /** The state column qualifier */
   public static final byte [] STATE_QUALIFIER = Bytes.toBytes("state");

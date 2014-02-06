@@ -243,6 +243,7 @@ public class HConnectionManager {
    * @param conf configuration whose identity is used to find {@link HConnection} instance.
    * @deprecated
    */
+  @Deprecated
   public static void deleteConnection(Configuration conf) {
     ConnectionManager.deleteConnection(conf);
   }
@@ -254,6 +255,7 @@ public class HConnectionManager {
    * @param connection
    * @deprecated
    */
+  @Deprecated
   public static void deleteStaleConnection(HConnection connection) {
     ConnectionManager.deleteStaleConnection(connection);
   }
@@ -264,6 +266,7 @@ public class HConnectionManager {
    *  staleConnection to true.
    * @deprecated
    */
+  @Deprecated
   public static void deleteAllConnections(boolean staleConnection) {
     ConnectionManager.deleteAllConnections(staleConnection);
   }
