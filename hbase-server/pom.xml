@@ -438,10 +438,6 @@
       <groupId>javax.xml.bind</groupId>
       <artifactId>jaxb-api</artifactId>
     </dependency>
-    <dependency>
-      <groupId>stax</groupId>
-      <artifactId>stax-api</artifactId>
-    </dependency>
     <!-- tracing Dependencies -->
     <dependency>
       <groupId>org.cloudera.htrace</groupId>
