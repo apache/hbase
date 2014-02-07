@@ -241,6 +241,66 @@
     </para>
    </section>
 
+    <section><title>REST Gateway Impersonation Configuration</title>
+    <para>
+        By default, the REST gateway doesn't support impersonation. It accesses
+        the HBase on behalf of clients as the user configured as in the previous
+        section. To the HBase server, all requests are from the REST gateway user.
+        The actual users are unknown. You can turn on the impersonation support.
+        With impersonation, the REST gateway user is a proxy user. The HBase server
+        knows the acutal/real user of each request. So it can apply proper
+        authorizations.
+    </para>
+    <para>
+        To turn on REST gateway impersonation, we need to configure HBase servers
+        (masters and region servers) to allow proxy users; configure REST gateway
+        to enable impersonation.
+    </para>
+    <para>
+        To allow proxy users, add the following to the <code>hbase-site.xml</code>
+        file for every HBase server:
+    <programlisting><![CDATA[
+   <property>
+      <name>hadoop.security.authorization</name>
+      <value>true</value>
+   </property>
+   <property>
+      <name>hadoop.proxyuser.$USER.groups</name>
+      <value>$GROUPS</value>
+   </property>
+   <property>
+      <name>hadoop.proxyuser.$USER.hosts</name>
+      <value>$GROUPS</value>
+   </property>
+    ]]></programlisting>
+    </para>
+    <para>
+        Substitute the REST gateway proxy user for $USER, and the allowed
+        group list for $GROUPS.
+    </para>
+    <para>
+        To enable REST gateway impersonation, add the following to the
+        <code>hbase-site.xml</code> file for every REST gateway.
+    <programlisting><![CDATA[
+   <property>
+      <name>hbase.rest.authentication.type</name>
+      <value>kerberos</value>
+   </property>
+   <property>
+      <name>hbase.rest.authentication.kerberos.principal</name>
+      <value>HTTP/_HOST@HADOOP.LOCALDOMAIN</value>
+   </property>
+   <property>
+      <name>hbase.rest.authentication.kerberos.keytab</name>
+      <value>$KEYTAB</value>
+   </property>
+    ]]></programlisting>
+    </para>
+    <para>
+        Substitute the keytab for HTTP for $KEYTAB.
+    </para>
+   </section>
+
 </section>  <!-- Secure Client Access to HBase -->
 
 <section xml:id="hbase.secure.simpleconfiguration">
