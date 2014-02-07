@@ -278,7 +278,7 @@
   <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
   <%
   if (addr != null) {
-  	String url = addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/";
+    String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/";
   %>
   <td>
      <a href="<%= url %>"><%= addr.getHostname().toString() + ":" + addr.getPort() %></a>
@@ -301,7 +301,7 @@
 <%
   for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {   
      ServerName addr = rdEntry.getKey();                                       
-     String url = addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/";
+     String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/";
 %>
 <tr>
   <td><a href="<%= url %>"><%= addr.getHostname().toString() + ":" + addr.getPort() %></a></td>
