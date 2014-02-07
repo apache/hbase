@@ -165,14 +165,21 @@ public class InputSampler<K,V> extends Configured implements Tool  {
    */
   public static TaskAttemptContext getTaskAttemptContext(final Job job)
   throws IOException {
-    Constructor<TaskAttemptContext> c;
+    Constructor<?> c;
     try {
-      c = TaskAttemptContext.class.getConstructor(Configuration.class, TaskAttemptID.class);
+      if (TaskAttemptContext.class.isInterface()) {
+        // Hadoop 2.x
+        Class<?> clazz = Class.forName("org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl");
+        c = clazz.getConstructor(Configuration.class, TaskAttemptID.class);
+      } else {
+        // Hadoop 1.x
+        c = TaskAttemptContext.class.getConstructor(Configuration.class, TaskAttemptID.class);
+      }
     } catch (Exception e) {
       throw new IOException("Failed getting constructor", e);
     }
     try {
-      return c.newInstance(job.getConfiguration(), new TaskAttemptID());
+      return (TaskAttemptContext)c.newInstance(job.getConfiguration(), new TaskAttemptID());
     } catch (Exception e) {
       throw new IOException("Failed creating instance", e);
     }
