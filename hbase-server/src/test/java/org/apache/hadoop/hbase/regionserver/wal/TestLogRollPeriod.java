@@ -164,7 +164,17 @@ public class TestLogRollPeriod {
     });
 
     // Sleep until we should get at least min-LogRoll events
+    long wtime = System.currentTimeMillis();
     Thread.sleep((minRolls + 1) * LOG_ROLL_PERIOD);
+    // Do some extra sleep in case the machine is slow,
+    // and the log-roll is not triggered exactly on LOG_ROLL_PERIOD.
+    final int NUM_RETRIES = 1 + 8 * (minRolls - paths.size());
+    for (int retry = 0; paths.size() < minRolls && retry < NUM_RETRIES; ++retry) {
+      Thread.sleep(LOG_ROLL_PERIOD / 4);
+    }
+    wtime = System.currentTimeMillis() - wtime;
+    LOG.info(String.format("got %d rolls after %dms (%dms each) - expected at least %d rolls",
+                           paths.size(), wtime, wtime / paths.size(), minRolls));
     assertFalse(paths.size() < minRolls);
   }
 }
