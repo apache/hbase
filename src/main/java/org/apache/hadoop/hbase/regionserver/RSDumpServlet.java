@@ -50,6 +50,13 @@ public class RSDumpServlet extends StateDumpServlet {
     assert hrsconf != null : "No RS conf in context";
 
     response.setContentType("text/plain");
+ 
+    if (!hrs.isOnline()) {
+      response.getWriter().write("The RegionServer is initializing!");
+      response.getWriter().close();
+      return;
+    }
+
     OutputStream os = response.getOutputStream();
     PrintWriter out = new PrintWriter(os);
     

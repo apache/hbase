@@ -167,6 +167,9 @@ public final class HConstants {
   /** Parameter name for port region server listens on. */
   public static final String REGIONSERVER_PORT = "hbase.regionserver.port";
 
+  /** Parameter name for port region server's info server listens on. */
+  public static final String REGIONSERVER_INFO_PORT = "hbase.regionserver.info.port";
+  
   /** Default port region server listens on. */
   public static final int DEFAULT_REGIONSERVER_PORT = 60020;
 

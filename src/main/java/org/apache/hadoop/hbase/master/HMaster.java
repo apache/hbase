@@ -100,6 +100,7 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
@@ -1602,6 +1603,15 @@ Server {
     return masterActiveTime;
   }
 
+  public int getRegionServerInfoPort(final ServerName sn) {
+    RegionServerInfo info = this.regionServerTracker.getRegionServerInfo(sn);
+    if (info == null || info.getInfoPort() == 0) {
+      return conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
+        HConstants.DEFAULT_REGIONSERVER_INFOPORT);
+    }
+    return info.getInfoPort();
+  }
+  
   /**
    * @return array of coprocessor SimpleNames.
    */

@@ -37,3 +37,10 @@ message SnapshotDescription {
   optional Type type = 4 [default = FLUSH];
   optional int32 version = 5;
 }
+
+/**
+ * Description of the region server info
+ */
+message RegionServerInfo {
+  optional int32 infoPort = 1;
+}
