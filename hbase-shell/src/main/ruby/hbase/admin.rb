@@ -219,6 +219,10 @@ module Hbase
           has_columns = true
           next
         end
+        if arg.has_key?(REGION_REPLICATION)
+          region_replication = JInteger.valueOf(arg.delete(REGION_REPLICATION))
+          htd.setRegionReplication(region_replication)
+        end 
         
         # Get rid of the "METHOD", which is deprecated for create.
         # We'll do whatever it used to do below if it's table_att.
