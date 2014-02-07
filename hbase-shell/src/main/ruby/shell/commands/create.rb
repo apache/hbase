@@ -49,7 +49,7 @@ Examples:
   hbase> # Optionally pre-split the table into NUMREGIONS, using
   hbase> # SPLITALGO ("HexStringSplit", "UniformSplit" or classname)
   hbase> create 't1', 'f1', {NUMREGIONS => 15, SPLITALGO => 'HexStringSplit'}
-  hbase> create 't1', 'f1', {NUMREGIONS => 15, SPLITALGO => 'HexStringSplit', CONFIGURATION => {'hbase.hregion.scan.loadColumnFamiliesOnDemand' => 'true'}}
+  hbase> create 't1', 'f1', {NUMREGIONS => 15, SPLITALGO => 'HexStringSplit', REGION_REPLICATION => 2, CONFIGURATION => {'hbase.hregion.scan.loadColumnFamiliesOnDemand' => 'true'}}
 
 You can also keep around a reference to the created table:
 

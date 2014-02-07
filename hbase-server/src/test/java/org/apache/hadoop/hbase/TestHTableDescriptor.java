@@ -49,12 +49,14 @@ public class TestHTableDescriptor {
     htd.setMaxFileSize(v);
     htd.setDurability(Durability.ASYNC_WAL);
     htd.setReadOnly(true);
+    htd.setRegionReplication(2);
     byte [] bytes = htd.toByteArray();
     HTableDescriptor deserializedHtd = HTableDescriptor.parseFrom(bytes);
     assertEquals(htd, deserializedHtd);
     assertEquals(v, deserializedHtd.getMaxFileSize());
     assertTrue(deserializedHtd.isReadOnly());
     assertEquals(Durability.ASYNC_WAL, deserializedHtd.getDurability());
+    assertEquals(deserializedHtd.getRegionReplication(), 2);
   }
 
   /**

@@ -182,6 +182,13 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   private static final ImmutableBytesWritable DURABILITY_KEY =
       new ImmutableBytesWritable(Bytes.toBytes("DURABILITY"));
 
+  /**
+   * <em>INTERNAL</em> number of region replicas for the table.
+   */
+  public static final String REGION_REPLICATION = "REGION_REPLICATION";
+  private static final ImmutableBytesWritable REGION_REPLICATION_KEY =
+      new ImmutableBytesWritable(Bytes.toBytes(REGION_REPLICATION));
+
   /** Default durability for HTD is USE_DEFAULT, which defaults to HBase-global default value */
   private static final Durability DEFAULT_DURABLITY = Durability.USE_DEFAULT;
 
@@ -214,6 +221,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*128L;
 
+  public static final int DEFAULT_REGION_REPLICATION = 1;
+
   private final static Map<String, String> DEFAULT_VALUES
     = new HashMap<String, String>();
   private final static Set<ImmutableBytesWritable> RESERVED_KEYWORDS
@@ -227,6 +236,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     DEFAULT_VALUES.put(DEFERRED_LOG_FLUSH,
         String.valueOf(DEFAULT_DEFERRED_LOG_FLUSH));
     DEFAULT_VALUES.put(DURABILITY, DEFAULT_DURABLITY.name()); //use the enum name
+    DEFAULT_VALUES.put(REGION_REPLICATION, String.valueOf(DEFAULT_REGION_REPLICATION));
     for (String s : DEFAULT_VALUES.keySet()) {
       RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
     }
@@ -1065,6 +1075,26 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public Collection<HColumnDescriptor> getFamilies() {
     return Collections.unmodifiableCollection(this.families.values());
+  }
+
+  /**
+   * Returns the configured replicas per region
+   */
+  public int getRegionReplication() {
+    byte[] val = getValue(REGION_REPLICATION_KEY);
+    if (val == null || val.length == 0) {
+      return DEFAULT_REGION_REPLICATION;
+    }
+    return Integer.parseInt(Bytes.toString(val));
+  }
+
+  /**
+   * Sets the number of replicas per region.
+   * @param regionReplication the replication factor per region
+   */
+  public void setRegionReplication(int regionReplication) {
+    setValue(REGION_REPLICATION_KEY,
+        new ImmutableBytesWritable(Bytes.toBytes(Integer.toString(regionReplication))));
   }
 
   /**
