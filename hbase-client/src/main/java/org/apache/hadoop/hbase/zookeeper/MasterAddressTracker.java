@@ -29,6 +29,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 
 /**
  * Manages the location of the current active Master for the RegionServer.
@@ -103,7 +104,12 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    */
   public static ServerName getMasterAddress(final ZooKeeperWatcher zkw)
   throws KeeperException, IOException {
-    byte [] data = ZKUtil.getData(zkw, zkw.getMasterAddressZNode());
+    byte [] data;
+    try {
+      data = ZKUtil.getData(zkw, zkw.getMasterAddressZNode());
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException();
+    }
     if (data == null){
       throw new IOException("Can't get master address from ZooKeeper; znode data == null");
     }

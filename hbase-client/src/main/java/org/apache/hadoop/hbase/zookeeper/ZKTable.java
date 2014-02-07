@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.zookeeper.KeeperException;
 
+import java.io.InterruptedIOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -63,7 +64,7 @@ public class ZKTable {
   // TODO: Make it so always a table znode. Put table schema here as well as table state.
   // Have watcher on table znode so all are notified of state or schema change.
 
-  public ZKTable(final ZooKeeperWatcher zkw) throws KeeperException {
+  public ZKTable(final ZooKeeperWatcher zkw) throws KeeperException, InterruptedException {
     super();
     this.watcher = zkw;
     populateTableStates();
@@ -74,7 +75,7 @@ public class ZKTable {
    * @throws KeeperException
    */
   private void populateTableStates()
-  throws KeeperException {
+      throws KeeperException, InterruptedException {
     synchronized (this.cache) {
       List<String> children = ZKUtil.listChildrenNoWatch(this.watcher, this.watcher.tableZNode);
       if (children == null) return;
@@ -316,7 +317,7 @@ public class ZKTable {
    * @throws KeeperException
    */
   public static Set<TableName> getDisabledTables(ZooKeeperWatcher zkw)
-      throws KeeperException {
+      throws KeeperException, InterruptedIOException {
     return getAllTables(zkw, ZooKeeperProtos.Table.State.DISABLED);
   }
 
@@ -326,7 +327,7 @@ public class ZKTable {
    * @throws KeeperException
    */
   public static Set<TableName> getDisablingTables(ZooKeeperWatcher zkw)
-      throws KeeperException {
+      throws KeeperException, InterruptedIOException {
     return getAllTables(zkw, ZooKeeperProtos.Table.State.DISABLING);
   }
 
@@ -336,7 +337,7 @@ public class ZKTable {
    * @throws KeeperException
    */
   public static Set<TableName> getEnablingTables(ZooKeeperWatcher zkw)
-      throws KeeperException {
+      throws KeeperException, InterruptedIOException {
     return getAllTables(zkw, ZooKeeperProtos.Table.State.ENABLING);
   }
 
@@ -346,7 +347,7 @@ public class ZKTable {
    * @throws KeeperException
    */
   public static Set<TableName> getDisabledOrDisablingTables(ZooKeeperWatcher zkw)
-      throws KeeperException {
+      throws KeeperException, InterruptedIOException {
     return getAllTables(zkw, ZooKeeperProtos.Table.State.DISABLED,
       ZooKeeperProtos.Table.State.DISABLING);
   }
@@ -380,14 +381,19 @@ public class ZKTable {
    * @throws KeeperException
    */
   static Set<TableName> getAllTables(final ZooKeeperWatcher zkw,
-      final ZooKeeperProtos.Table.State... states) throws KeeperException {
+      final ZooKeeperProtos.Table.State... states) throws KeeperException, InterruptedIOException {
     Set<TableName> allTables = new HashSet<TableName>();
     List<String> children =
       ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
     if(children == null) return allTables;
     for (String child: children) {
       TableName tableName = TableName.valueOf(child);
-      ZooKeeperProtos.Table.State state = ZKTableReadOnly.getTableState(zkw, tableName);
+      ZooKeeperProtos.Table.State state = null;
+      try {
+        state = ZKTableReadOnly.getTableState(zkw, tableName);
+      } catch (InterruptedException e) {
+        throw new InterruptedIOException();
+      }
       for (ZooKeeperProtos.Table.State expectedState: states) {
         if (state == expectedState) {
           allTables.add(tableName);

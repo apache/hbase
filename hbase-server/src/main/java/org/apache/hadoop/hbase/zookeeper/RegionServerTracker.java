@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
@@ -98,6 +99,8 @@ public class RegionServerTracker extends ZooKeeperListener {
             LOG.warn("Get Rs info port from ephemeral node", e);
           } catch (IOException e) {
             LOG.warn("Illegal data from ephemeral node", e);
+          } catch (InterruptedException e) {
+            throw new InterruptedIOException();
           }
           this.regionServers.put(sn, rsInfoBuilder.build());
         }

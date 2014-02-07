@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.I
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.SUCCESS;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -569,7 +570,7 @@ public class SplitLogManager extends ZooKeeperListener {
    * @throws KeeperException
    */
   void removeStaleRecoveringRegionsFromZK(final Set<ServerName> failedServers)
-      throws KeeperException {
+      throws KeeperException, InterruptedIOException {
 
     if (!this.distributedLogReplay) {
       // remove any regions in recovery from ZK which could happen when we turn the feature on
@@ -591,7 +592,12 @@ public class SplitLogManager extends ZooKeeperListener {
       List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
       if (tasks != null) {
         for (String t : tasks) {
-          byte[] data = ZKUtil.getData(this.watcher, ZKUtil.joinZNode(watcher.splitLogZNode, t));
+          byte[] data;
+          try {
+            data = ZKUtil.getData(this.watcher, ZKUtil.joinZNode(watcher.splitLogZNode, t));
+          } catch (InterruptedException e) {
+            throw new InterruptedIOException();
+          }
           if (data != null) {
             SplitLogTask slt = null;
             try {
@@ -1115,7 +1121,7 @@ public class SplitLogManager extends ZooKeeperListener {
    * @param userRegions user regiones assigned on the region server
    */
   void markRegionsRecoveringInZK(final ServerName serverName, Set<HRegionInfo> userRegions)
-      throws KeeperException {
+      throws KeeperException, InterruptedIOException {
     if (userRegions == null || !this.distributedLogReplay) {
       return;
     }
@@ -1172,9 +1178,11 @@ public class SplitLogManager extends ZooKeeperListener {
             // wait a little bit for retry
             try {
               Thread.sleep(20);
-            } catch (Exception ignoreE) {
-              // ignore
+            } catch (InterruptedException e1) {
+              throw new InterruptedIOException();
             }
+          } catch (InterruptedException e) {
+            throw new InterruptedIOException();
           }
         } while ((--retries) > 0 && (!this.stopper.isStopped()));
       }
@@ -1240,7 +1248,12 @@ public class SplitLogManager extends ZooKeeperListener {
     String nodePath = ZKUtil.joinZNode(zkw.recoveringRegionsZNode, encodedRegionName);
     nodePath = ZKUtil.joinZNode(nodePath, serverName);
     try {
-      byte[] data = ZKUtil.getData(zkw, nodePath);
+      byte[] data;
+      try {
+        data = ZKUtil.getData(zkw, nodePath);
+      } catch (InterruptedException e) {
+        throw new InterruptedIOException();
+      }
       if (data != null) {
         result = ZKUtil.parseRegionStoreSequenceIds(data);
       }

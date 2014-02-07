@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -282,7 +283,11 @@ public class AssignmentManager extends ZooKeeperListener {
       this.timeoutMonitor = null;
       this.timerUpdater = null;
     }
-    this.zkTable = new ZKTable(this.watcher);
+    try {
+      this.zkTable = new ZKTable(this.watcher);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException();
+    }
     // This is the max attempts, not retries, so it should be at least 1.
     this.maximumAttempts = Math.max(1,
       this.server.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10));

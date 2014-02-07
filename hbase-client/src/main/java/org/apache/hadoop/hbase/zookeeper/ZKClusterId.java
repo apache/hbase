@@ -63,7 +63,13 @@ public class ZKClusterId {
   public static String readClusterIdZNode(ZooKeeperWatcher watcher)
   throws KeeperException {
     if (ZKUtil.checkExists(watcher, watcher.clusterIdZNode) != -1) {
-      byte [] data = ZKUtil.getData(watcher, watcher.clusterIdZNode);
+      byte [] data;
+      try {
+        data = ZKUtil.getData(watcher, watcher.clusterIdZNode);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return null;
+      }
       if (data != null) {
         try {
           return ClusterId.parseFrom(data).toString();

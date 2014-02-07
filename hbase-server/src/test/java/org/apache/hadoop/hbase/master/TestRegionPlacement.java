@@ -476,7 +476,7 @@ public class TestRegionPlacement {
    * Verify the number of region movement is expected
    */
   private void verifyRegionMovementNum(int expected)
-  throws InterruptedException, HBaseIOException {
+      throws InterruptedException, IOException {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
     int lastRegionOpenedCount = m.assignmentManager.getNumRegionsOpened();

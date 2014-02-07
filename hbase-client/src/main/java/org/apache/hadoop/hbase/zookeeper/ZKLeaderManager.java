@@ -170,6 +170,10 @@ public class ZKLeaderManager extends ZooKeeperListener {
       watcher.abort("Unhandled zookeeper exception removing leader node", ke);
       candidate.stop("Unhandled zookeeper exception removing leader node: "
           + ke.getMessage());
+    } catch (InterruptedException e) {
+      watcher.abort("Unhandled zookeeper exception removing leader node", e);
+      candidate.stop("Unhandled zookeeper exception removing leader node: "
+          + e.getMessage());
     }
   }
 

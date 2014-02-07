@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.CreateAndFailSilent;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.DeleteNodeFailSilent;
@@ -678,22 +679,18 @@ public class ZKUtil {
    *  error.
    */
   public static byte [] getData(ZooKeeperWatcher zkw, String znode)
-  throws KeeperException {
+      throws KeeperException, InterruptedException {
     try {
       byte [] data = zkw.getRecoverableZooKeeper().getData(znode, null, null);
       logRetrievedMsg(zkw, znode, data, false);
       return data;
     } catch (KeeperException.NoNodeException e) {
       LOG.debug(zkw.prefix("Unable to get data of znode " + znode + " " +
-        "because node does not exist (not an error)"));
+          "because node does not exist (not an error)"));
       return null;
     } catch (KeeperException e) {
       LOG.warn(zkw.prefix("Unable to get data of znode " + znode), e);
       zkw.keeperException(e);
-      return null;
-    } catch (InterruptedException e) {
-      LOG.warn(zkw.prefix("Unable to get data of znode " + znode), e);
-      zkw.interruptedException(e);
       return null;
     }
   }
@@ -1661,13 +1658,22 @@ public class ZKUtil {
     do {
       String znodeToProcess = stack.remove(stack.size() - 1);
       sb.append("\n").append(znodeToProcess).append(": ");
-      byte[] data = ZKUtil.getData(zkw, znodeToProcess);
+      byte[] data;
+      try {
+        data = ZKUtil.getData(zkw, znodeToProcess);
+      } catch (InterruptedException e) {
+        zkw.interruptedException(e);
+        return;
+      }
       if (data != null && data.length > 0) { // log position
         long position = 0;
         try {
           position = ZKUtil.parseHLogPositionFrom(ZKUtil.getData(zkw, znodeToProcess));
           sb.append(position);
-        } catch (Exception e) {
+        } catch (DeserializationException ignored) {
+        } catch (InterruptedException e) {
+          zkw.interruptedException(e);
+          return;
         }
       }
       for (String zNodeChild : ZKUtil.listChildrenNoWatch(zkw, znodeToProcess)) {
@@ -1682,7 +1688,13 @@ public class ZKUtil {
     sb.append("\n").append(peersZnode).append(": ");
     for (String peerIdZnode : ZKUtil.listChildrenNoWatch(zkw, peersZnode)) {
       String znodeToProcess = ZKUtil.joinZNode(peersZnode, peerIdZnode);
-      byte[] data = ZKUtil.getData(zkw, znodeToProcess);
+      byte[] data;
+      try {
+        data = ZKUtil.getData(zkw, znodeToProcess);
+      } catch (InterruptedException e) {
+        zkw.interruptedException(e);
+        return;
+      }
       // parse the data of the above peer znode.
       try {
       String clusterKey = ZooKeeperProtos.ReplicationPeer.newBuilder().
@@ -1705,9 +1717,15 @@ public class ZKUtil {
       if (!child.equals(peerState)) continue;
       String peerStateZnode = ZKUtil.joinZNode(znodeToProcess, child);
       sb.append("\n").append(peerStateZnode).append(": ");
-      byte[] peerStateData = ZKUtil.getData(zkw, peerStateZnode);
-      sb.append(ZooKeeperProtos.ReplicationState.newBuilder()
-          .mergeFrom(peerStateData, pblen, peerStateData.length - pblen).getState().name());
+      byte[] peerStateData;
+      try {
+        peerStateData = ZKUtil.getData(zkw, peerStateZnode);
+        sb.append(ZooKeeperProtos.ReplicationState.newBuilder()
+            .mergeFrom(peerStateData, pblen, peerStateData.length - pblen).getState().name());
+      } catch (InterruptedException e) {
+        zkw.interruptedException(e);
+        return;
+      }
     }
   }
 

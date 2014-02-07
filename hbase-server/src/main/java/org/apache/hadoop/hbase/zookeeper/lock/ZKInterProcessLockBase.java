@@ -362,6 +362,10 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
     } catch (KeeperException ex) {
       LOG.warn("Error processing lock metadata in " + lockZNode);
       return false;
+    } catch (InterruptedException e) {
+      LOG.warn("InterruptedException processing lock metadata in " + lockZNode);
+      Thread.currentThread().interrupt();
+      return false;
     }
     return true;
   }

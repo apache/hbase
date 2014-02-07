@@ -221,6 +221,10 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     } catch (KeeperException e) {
       member.controllerConnectionFailure("Failed to get data for new procedure:" + opName,
         new IOException(e));
+    } catch (InterruptedException e) {
+      member.controllerConnectionFailure("Failed to get data for new procedure:" + opName,
+          new IOException(e));
+      Thread.currentThread().interrupt();
     }
   }
 
@@ -330,6 +334,9 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     } catch (KeeperException e) {
       member.controllerConnectionFailure("Failed to get data for abort znode:" + abortZNode
           + zkController.getAbortZnode(), new IOException(e));
+    } catch (InterruptedException e) {
+      LOG.warn("abort already in progress", e);
+      Thread.currentThread().interrupt();
     }
   }
 

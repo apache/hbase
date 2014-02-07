@@ -50,7 +50,7 @@ public class TestZKTable {
 
   @Test
   public void testTableStates()
-  throws ZooKeeperConnectionException, IOException, KeeperException {
+      throws ZooKeeperConnectionException, IOException, KeeperException, InterruptedException {
     final TableName name =
         TableName.valueOf("testDisabled");
     Abortable abortable = new Abortable() {

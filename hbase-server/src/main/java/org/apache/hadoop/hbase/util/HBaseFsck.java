@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
@@ -1384,6 +1385,8 @@ public class HBaseFsck extends Configured {
           }
         } catch (KeeperException ke) {
           throw new IOException(ke);
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException();
         } finally {
           zkw.close();
         }
