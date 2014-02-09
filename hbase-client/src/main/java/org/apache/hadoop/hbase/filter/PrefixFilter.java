@@ -25,6 +25,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,6 +65,12 @@ public class PrefixFilter extends FilterBase {
     }
     filterRow = (cmp != 0);
     return filterRow;
+  }
+
+  @Override
+  public ReturnCode filterKeyValue(Cell v) {
+    if (filterRowKey(v.getRowArray(), v.getRowOffset(), v.getRowLength())) return ReturnCode.SKIP;
+    return ReturnCode.INCLUDE;
   }
 
   public boolean filterRow() {
