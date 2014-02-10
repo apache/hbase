@@ -24,6 +24,7 @@ module Shell
         return <<-EOF
 Describe the named table. For example:
   hbase> describe 't1'
+  hbase> describe 'ns1:t1'
 EOF
       end
 

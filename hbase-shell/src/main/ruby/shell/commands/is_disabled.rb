@@ -22,7 +22,9 @@ module Shell
     class IsDisabled < Command
       def help
         return <<-EOF
-Is named table disabled?: e.g. "hbase> is_disabled 't1'"
+Is named table disabled? For example:
+  hbase> is_disabled 't1'
+  hbase> is_disabled 'ns1:t1'
 EOF
       end
 

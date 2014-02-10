@@ -26,6 +26,7 @@ Return a counter cell value at specified table/row/column coordinates.
 A cell cell should be managed with atomic increment function oh HBase
 and the data should be binary encoded. Example:
 
+  hbase> get_counter 'ns1:t1', 'r1', 'c1'
   hbase> get_counter 't1', 'r1', 'c1'
 
 The same commands also can be run on a table reference. Suppose you had a reference

@@ -25,6 +25,7 @@ module Shell
 Get row or cell contents; pass table name, row, and optionally
 a dictionary of column(s), timestamp, timerange and versions. Examples:
 
+  hbase> get 'ns1:t1', 'r1'
   hbase> get 't1', 'r1'
   hbase> get 't1', 'r1', {TIMERANGE => [ts1, ts2]}
   hbase> get 't1', 'r1', {COLUMN => 'c1'}

@@ -30,6 +30,7 @@ caching is enabled on count scans by default. Default cache size is 10 rows.
 If your rows are small in size, you may want to increase this
 parameter. Examples:
 
+ hbase> count 'ns1:t1'
  hbase> count 't1'
  hbase> count 't1', INTERVAL => 100000
  hbase> count 't1', CACHE => 1000

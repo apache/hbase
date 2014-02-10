@@ -27,6 +27,7 @@ module Shell
           family within a region.
           Examples:
           Compact all regions in a table:
+          hbase> compact 'ns1:t1'
           hbase> compact 't1'
           Compact an entire region:
           hbase> compact 'r1'

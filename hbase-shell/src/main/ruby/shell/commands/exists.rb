@@ -22,7 +22,9 @@ module Shell
     class Exists < Command
       def help
         return <<-EOF
-Does the named table exist? e.g. "hbase> exists 't1'"
+Does the named table exist?
+  hbase> exists 't1'
+  hbase> exists 'ns1:t1'
 EOF
       end
 

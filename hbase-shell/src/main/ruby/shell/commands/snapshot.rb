@@ -24,6 +24,7 @@ module Shell
 Take a snapshot of specified table. Examples:
 
   hbase> snapshot 'sourceTable', 'snapshotName'
+  hbase> snapshot 'namespace:sourceTable', 'snapshotName'
 EOF
       end
 

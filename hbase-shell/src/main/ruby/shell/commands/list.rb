@@ -27,6 +27,8 @@ be used to filter the output. Examples:
 
   hbase> list
   hbase> list 'abc.*'
+  hbase> list 'ns:abc.*'
+  hbase> list 'ns:.*'
 EOF
       end
 

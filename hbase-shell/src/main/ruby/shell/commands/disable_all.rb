@@ -25,6 +25,8 @@ module Shell
 Disable all of tables matching the given regex:
 
 hbase> disable_all 't.*'
+hbase> disable_all 'ns:t.*'
+hbase> disable_all 'ns:.*'
 EOF
       end
 

@@ -27,6 +27,7 @@ And writing on the newly created table will not influence the snapshot data.
 
 Examples:
   hbase> clone_snapshot 'snapshotName', 'tableName'
+  hbase> clone_snapshot 'snapshotName', 'namespace:tableName'
 EOF
       end
 

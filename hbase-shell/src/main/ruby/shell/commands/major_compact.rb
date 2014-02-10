@@ -29,6 +29,7 @@ module Shell
           Examples:
           Compact all regions in a table:
           hbase> major_compact 't1'
+          hbase> major_compact 'ns1:t1'
           Compact an entire region:
           hbase> major_compact 'r1'
           Compact a single column family within a region:
