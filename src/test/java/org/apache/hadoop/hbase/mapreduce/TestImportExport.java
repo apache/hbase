@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -64,13 +63,13 @@ public class TestImportExport {
   private static final byte[] QUAL = Bytes.toBytes("q");
   private static final String OUTPUT_DIR = "outputdir";
 
-  private static MiniHBaseCluster cluster;
   private static long now = System.currentTimeMillis();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    cluster = UTIL.startMiniCluster();
+    UTIL.startMiniCluster();
     UTIL.startMiniMapReduceCluster();
+    UTIL.getConfiguration().set("mapred.job.tracker", "local");
   }
 
   @AfterClass
@@ -110,8 +109,7 @@ public class TestImportExport {
         OUTPUT_DIR,
         "1000"
     };
-
-    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
@@ -129,7 +127,7 @@ public class TestImportExport {
         OUTPUT_DIR
     };
 
-    opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
     conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
@@ -158,7 +156,7 @@ public class TestImportExport {
     String EXPORT_TABLE = ".META.";
     String[] args = new String[] { EXPORT_TABLE, OUTPUT_DIR, "1", "0", "0" };
     GenericOptionsParser opts = new GenericOptionsParser(new Configuration(
-        cluster.getConfiguration()), args);
+        UTIL.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
@@ -187,7 +185,7 @@ public class TestImportExport {
     p.add(FAMILYA, QUAL, now+4, QUAL);
     t.put(p);
 
-    Delete d = new Delete(ROW1, now+3, null);
+    Delete d = new Delete(ROW1, now+3);
     t.delete(d);
     d = new Delete(ROW1);
     d.deleteColumns(FAMILYA, QUAL, now+2);
@@ -200,7 +198,7 @@ public class TestImportExport {
         "1000"
     };
 
-    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
@@ -224,7 +222,7 @@ public class TestImportExport {
         OUTPUT_DIR
     };
 
-    opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
     conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
@@ -268,7 +266,7 @@ public class TestImportExport {
     String[] args = new String[] { EXPORT_TABLE, OUTPUT_DIR, "1000" };
 
     GenericOptionsParser opts = new GenericOptionsParser(new Configuration(
-        cluster.getConfiguration()), args);
+        UTIL.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
@@ -287,7 +285,7 @@ public class TestImportExport {
         "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1), IMPORT_TABLE, OUTPUT_DIR,
         "1000" };
 
-    opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
     conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
@@ -310,7 +308,7 @@ public class TestImportExport {
         "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1) + "", EXPORT_TABLE,
         OUTPUT_DIR, "1000" };
 
-    opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
     conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
