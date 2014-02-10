@@ -23,9 +23,10 @@ module Shell
       def help
         return <<-EOF
 Put a cell 'value' at specified table/row/column and optionally
-timestamp coordinates.  To put a cell value into table 't1' at
-row 'r1' under column 'c1' marked with the time 'ts1', do:
+timestamp coordinates.  To put a cell value into table 'ns1:t1' or 't1'
+at row 'r1' under column 'c1' marked with the time 'ts1', do:
 
+  hbase> put 'ns1:t1', 'r1', 'c1', 'value'
   hbase> put 't1', 'r1', 'c1', 'value'
   hbase> put 't1', 'r1', 'c1', 'value', ts1
   hbase> put 't1', 'r1', 'c1', 'value', {ATTRIBUTES=>{'mykey'=>'myvalue'}}

@@ -38,10 +38,10 @@ You can operate on several column families:
 
   hbase> alter 't1', 'f1', {NAME => 'f2', IN_MEMORY => true}, {NAME => 'f3', VERSIONS => 5}
 
-To delete the 'f1' column family in table 't1', use one of:
+To delete the 'f1' column family in table 'ns1:t1', use one of:
 
-  hbase> alter 't1', NAME => 'f1', METHOD => 'delete'
-  hbase> alter 't1', 'delete' => 'f1'
+  hbase> alter 'ns1:t1', NAME => 'f1', METHOD => 'delete'
+  hbase> alter 'ns1:t1', 'delete' => 'f1'
 
 You can also change table-scope attributes like MAX_FILESIZE, READONLY, 
 MEMSTORE_FLUSHSIZE, DEFERRED_LOG_FLUSH, etc. These can be put at the end;

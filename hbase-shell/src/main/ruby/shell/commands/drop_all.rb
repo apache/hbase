@@ -25,6 +25,8 @@ module Shell
 Drop all of the tables matching the given regex:
 
 hbase> drop_all 't.*'
+hbase> drop_all 'ns:t.*'
+hbase> drop_all 'ns:.*'
 EOF
       end
 

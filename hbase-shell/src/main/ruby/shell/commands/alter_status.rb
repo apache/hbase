@@ -27,6 +27,7 @@ table that have received the updated schema
 Pass table name.
 
 hbase> alter_status 't1'
+hbase> alter_status 'ns1:t1'
 EOF
       end
       def command(table)

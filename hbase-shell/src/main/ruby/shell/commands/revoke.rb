@@ -27,6 +27,7 @@ For example:
 
     hbase> revoke 'bobsmith'
     hbase> revoke 'bobsmith', 't1', 'f1', 'col1'
+    hbase> revoke 'bobsmith', 'ns1:t1', 'f1', 'col1'
 EOF
       end
 
