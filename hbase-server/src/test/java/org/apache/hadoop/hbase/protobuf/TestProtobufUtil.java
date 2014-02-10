@@ -105,19 +105,22 @@ public class TestProtobufUtil {
    */
   @Test
   public void testAppend() throws IOException {
+    long timeStamp = 111111;
     MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
     mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
     mutateBuilder.setMutateType(MutationType.APPEND);
-    mutateBuilder.setTimestamp(111111);
+    mutateBuilder.setTimestamp(timeStamp);
     ColumnValue.Builder valueBuilder = ColumnValue.newBuilder();
     valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
     QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c1"));
     qualifierBuilder.setValue(ByteString.copyFromUtf8("v1"));
+    qualifierBuilder.setTimestamp(timeStamp);
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
     qualifierBuilder.setValue(ByteString.copyFromUtf8("v2"));
     valueBuilder.addQualifierValue(qualifierBuilder.build());
+    qualifierBuilder.setTimestamp(timeStamp);
     mutateBuilder.addColumnValue(valueBuilder.build());
 
     MutationProto proto = mutateBuilder.build();
@@ -131,15 +134,8 @@ public class TestProtobufUtil {
     Append append = ProtobufUtil.toAppend(proto, null);
 
     // append always use the latest timestamp,
-    // add the timestamp to the original mutate
-    long timestamp = append.getTimeStamp();
-    mutateBuilder.setTimestamp(timestamp);
-    for (ColumnValue.Builder column: mutateBuilder.getColumnValueBuilderList()) {
-      for (QualifierValue.Builder qualifier:
-          column.getQualifierValueBuilderList()) {
-        qualifier.setTimestamp(timestamp);
-      }
-    }
+    // reset the timestamp to the original mutate
+    mutateBuilder.setTimestamp(append.getTimeStamp());
     assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.APPEND, append));
   }
 

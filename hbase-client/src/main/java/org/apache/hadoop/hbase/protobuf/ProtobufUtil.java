@@ -683,7 +683,7 @@ public final class ProtobufUtil {
           if (qv.hasTags()) {
             tags = qv.getTags().toByteArray();
           }
-          append.add(CellUtil.createCell(row, family, qualifier, append.getTimeStamp(),
+          append.add(CellUtil.createCell(row, family, qualifier, qv.getTimestamp(),
               KeyValue.Type.Put, value, tags));
         }
       }
@@ -761,7 +761,7 @@ public final class ProtobufUtil {
           if (qv.hasTags()) {
             tags = qv.getTags().toByteArray();
           }
-          increment.add(CellUtil.createCell(row, family, qualifier, increment.getTimeStamp(),
+          increment.add(CellUtil.createCell(row, family, qualifier, qv.getTimestamp(),
               KeyValue.Type.Put, value, tags));
         }
       }
