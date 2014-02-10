@@ -69,7 +69,7 @@ public class PrefixFilter extends FilterBase {
 
   @Override
   public ReturnCode filterKeyValue(Cell v) {
-    if (filterRowKey(v.getRowArray(), v.getRowOffset(), v.getRowLength())) return ReturnCode.SKIP;
+    if (filterRow) return ReturnCode.SKIP;
     return ReturnCode.INCLUDE;
   }
 
