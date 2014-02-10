@@ -26,6 +26,7 @@ Split entire table or pass a region to split individual region.  With the
 second parameter, you can specify an explicit split key for the region.  
 Examples:
     split 'tableName'
+    split 'namespace:tableName'
     split 'regionName' # format: 'tableName,startKey,id'
     split 'tableName', 'splitKey'
     split 'regionName', 'splitKey'

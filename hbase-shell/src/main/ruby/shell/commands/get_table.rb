@@ -27,6 +27,7 @@ on how to use the table.
 Eg.
 
   hbase> t1 = get_table 't1'
+  hbase> t1 = get_table 'ns1:t1'
 
 returns the table named 't1' as a table object. You can then do
 

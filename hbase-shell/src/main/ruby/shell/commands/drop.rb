@@ -22,7 +22,9 @@ module Shell
     class Drop < Command
       def help
         return <<-EOF
-Drop the named table. Table must first be disabled: e.g. "hbase> drop 't1'"
+Drop the named table. Table must first be disabled:
+  hbase> drop 't1'
+  hbase> drop 'ns1:t1'
 EOF
       end
 

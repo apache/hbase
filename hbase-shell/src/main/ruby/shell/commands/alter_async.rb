@@ -32,13 +32,13 @@ to instead keep a maximum of 5 cell VERSIONS, do:
 
   hbase> alter_async 't1', NAME => 'f1', VERSIONS => 5
 
-To delete the 'f1' column family in table 't1', do:
+To delete the 'f1' column family in table 'ns1:t1', do:
 
-  hbase> alter_async 't1', NAME => 'f1', METHOD => 'delete'
+  hbase> alter_async 'ns1:t1', NAME => 'f1', METHOD => 'delete'
 
 or a shorter version:
 
-  hbase> alter_async 't1', 'delete' => 'f1'
+  hbase> alter_async 'ns1:t1', 'delete' => 'f1'
 
 You can also change table-scope attributes like MAX_FILESIZE
 MEMSTORE_FLUSHSIZE, READONLY, and DEFERRED_LOG_FLUSH.

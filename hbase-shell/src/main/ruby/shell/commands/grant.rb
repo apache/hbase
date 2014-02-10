@@ -31,6 +31,7 @@ For example:
 
     hbase> grant 'bobsmith', 'RWXCA'
     hbase> grant 'bobsmith', 'RW', 't1', 'f1', 'col1'
+    hbase> grant 'bobsmith', 'RW', 'ns1:t1', 'f1', 'col1'
 EOF
       end
 

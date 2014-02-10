@@ -25,6 +25,7 @@ module Shell
 Delete all cells in a given row; pass a table name, row, and optionally
 a column and timestamp. Examples:
 
+  hbase> deleteall 'ns1:t1', 'r1'
   hbase> deleteall 't1', 'r1'
   hbase> deleteall 't1', 'r1', 'c1'
   hbase> deleteall 't1', 'r1', 'c1', ts1

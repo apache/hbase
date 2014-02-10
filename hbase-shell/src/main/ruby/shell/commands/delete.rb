@@ -28,6 +28,7 @@ coordinates exactly.  When scanning, a delete cell suppresses older
 versions. To delete a cell from  't1' at row 'r1' under column 'c1'
 marked with the time 'ts1', do:
 
+  hbase> delete 'ns1:t1', 'r1', 'c1', ts1
   hbase> delete 't1', 'r1', 'c1', ts1
 
 The same command can also be run on a table reference. Suppose you had a reference

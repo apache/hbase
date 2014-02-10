@@ -30,6 +30,8 @@ directly close a region, you pass the regions' encoded name only. A region
 name looks like this:
  
  TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.
+or
+ Namespace:TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.
 
 The trailing period is part of the regionserver name. A region's encoded name
 is the hash at the end of a region name; e.g. 527db22f95c8a9e0116f0cc13c680396 

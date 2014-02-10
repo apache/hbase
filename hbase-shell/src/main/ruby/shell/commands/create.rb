@@ -29,7 +29,10 @@ Column specification can be a simple string (name), or a dictionary
 including NAME attribute. 
 Examples:
 
-  hbase> create 't1', {NAME => 'f1', VERSIONS => 5}
+Create a table with namespace=ns1 and table qualifier=t1
+  hbase> create 'ns1:t1', {NAME => 'f1', VERSIONS => 5}
+
+Create a table with namespace=default and table qualifier=t1
   hbase> create 't1', {NAME => 'f1'}, {NAME => 'f2'}, {NAME => 'f3'}
   hbase> # The above in shorthand would be the following:
   hbase> create 't1', 'f1', 'f2', 'f3'
@@ -39,6 +42,7 @@ Examples:
 Table configuration options can be put at the end.
 Examples:
 
+  hbase> create 'ns1:t1', 'f1', SPLITS => ['10', '20', '30', '40']
   hbase> create 't1', 'f1', SPLITS => ['10', '20', '30', '40']
   hbase> create 't1', 'f1', SPLITS_FILE => 'splits.txt', OWNER => 'johndoe'
   hbase> create 't1', {NAME => 'f1', VERSIONS => 5}, METADATA => { 'mykey' => 'myvalue' }

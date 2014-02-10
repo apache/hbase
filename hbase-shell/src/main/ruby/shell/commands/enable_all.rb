@@ -25,6 +25,8 @@ module Shell
 Enable all of the tables matching the given regex:
 
 hbase> enable_all 't.*'
+hbase> enable_all 'ns:t.*'
+hbase> enable_all 'ns:.*'
 EOF
       end
 
