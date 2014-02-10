@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
+import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -320,9 +320,9 @@ public class TestHCM {
     // Save off current HConnections
     Map<HConnectionKey, HConnectionImplementation> oldHBaseInstances =
         new HashMap<HConnectionKey, HConnectionImplementation>();
-    oldHBaseInstances.putAll(HConnectionManager.CONNECTION_INSTANCES);
+    oldHBaseInstances.putAll(ConnectionManager.CONNECTION_INSTANCES);
 
-    HConnectionManager.CONNECTION_INSTANCES.clear();
+    ConnectionManager.CONNECTION_INSTANCES.clear();
 
     try {
       HConnection connection = HConnectionManager.getConnection(TEST_UTIL.getConfiguration());
@@ -332,8 +332,8 @@ public class TestHCM {
         HConnectionManager.getConnection(TEST_UTIL.getConfiguration()));
     } finally {
       // Put original HConnections back
-      HConnectionManager.CONNECTION_INSTANCES.clear();
-      HConnectionManager.CONNECTION_INSTANCES.putAll(oldHBaseInstances);
+      ConnectionManager.CONNECTION_INSTANCES.clear();
+      ConnectionManager.CONNECTION_INSTANCES.putAll(oldHBaseInstances);
     }
   }
 
@@ -354,8 +354,8 @@ public class TestHCM {
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
-    HConnectionManager.HConnectionImplementation conn =
-      (HConnectionManager.HConnectionImplementation)table.getConnection();
+    ConnectionManager.HConnectionImplementation conn =
+      (ConnectionManager.HConnectionImplementation)table.getConnection();
 
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
 
@@ -457,7 +457,7 @@ public class TestHCM {
       Assert.assertArrayEquals(e.getRow(0).getRow(), ROW);
 
       // Check that we unserialized the exception as expected
-      Throwable cause = HConnectionManager.findException(e.getCause(0));
+      Throwable cause = ConnectionManager.findException(e.getCause(0));
       Assert.assertNotNull(cause);
       Assert.assertTrue(cause instanceof RegionMovedException);
     }
@@ -554,8 +554,8 @@ public class TestHCM {
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
-    HConnectionManager.HConnectionImplementation conn =
-      (HConnectionManager.HConnectionImplementation)table.getConnection();
+    ConnectionManager.HConnectionImplementation conn =
+      (ConnectionManager.HConnectionImplementation)table.getConnection();
 
     HRegionLocation location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
     assertNotNull(location);
@@ -622,7 +622,7 @@ public class TestHCM {
 
   /**
    * Makes sure that there is no leaking of
-   * {@link HConnectionManager.HConnectionImplementation} in the {@link HConnectionManager}
+   * {@link ConnectionManager.HConnectionImplementation} in the {@link HConnectionManager}
    * class.
    */
   @Test
@@ -762,8 +762,8 @@ public class TestHCM {
   public void testMulti() throws Exception {
     HTable table = TEST_UTIL.createTable(TABLE_NAME3, FAM_NAM);
     TEST_UTIL.createMultiRegions(table, FAM_NAM);
-    HConnectionManager.HConnectionImplementation conn =
-      (HConnectionManager.HConnectionImplementation)
+    ConnectionManager.HConnectionImplementation conn =
+      (ConnectionManager.HConnectionImplementation)
         HConnectionManager.getConnection(TEST_UTIL.getConfiguration());
 
     // We're now going to move the region and check that it works for the client
@@ -882,8 +882,8 @@ public class TestHCM {
     try {
       long timeBase = timeMachine.currentTimeMillis();
       long largeAmountOfTime = ANY_PAUSE * 1000;
-      HConnectionManager.ServerErrorTracker tracker =
-          new HConnectionManager.ServerErrorTracker(largeAmountOfTime, 100);
+      ConnectionManager.ServerErrorTracker tracker =
+          new ConnectionManager.ServerErrorTracker(largeAmountOfTime, 100);
 
       // The default backoff is 0.
       assertEquals(0, tracker.calculateBackoffTime(location, ANY_PAUSE));
@@ -983,9 +983,9 @@ public class TestHCM {
     for (int i = 0; i < 30; i++) {
       HConnection c1 = null;
       try {
-        c1 = HConnectionManager.getConnection(config);
+        c1 = ConnectionManager.getConnectionInternal(config);
         LOG.info("HTable connection " + i + " " + c1);
-        HTable table = new HTable(TABLE_NAME4, c1, pool);
+        HTable table = new HTable(config, TABLE_NAME4, pool);
         table.close();
         LOG.info("HTable connection " + i + " closed " + c1);
       } catch (Exception e) {

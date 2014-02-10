@@ -118,18 +118,18 @@ public class TestAsyncProcess {
       }
     }
 
-    public MyAsyncProcess(HConnection hc, Configuration conf) {
+    public MyAsyncProcess(ClusterConnection hc, Configuration conf) {
       this(hc, conf, new AtomicInteger());
     }
 
-    public MyAsyncProcess(HConnection hc, Configuration conf, AtomicInteger nbThreads) {
+    public MyAsyncProcess(ClusterConnection hc, Configuration conf, AtomicInteger nbThreads) {
       super(hc, conf, new ThreadPoolExecutor(1, 20, 60, TimeUnit.SECONDS,
           new SynchronousQueue<Runnable>(), new CountingThreadFactory(nbThreads)),
             new RpcRetryingCallerFactory(conf), false);
     }
 
     public MyAsyncProcess(
-          HConnection hc, Configuration conf, boolean useGlobalErrors) {
+        ClusterConnection hc, Configuration conf, boolean useGlobalErrors) {
       super(hc, conf, new ThreadPoolExecutor(1, 20, 60, TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(), new CountingThreadFactory(new AtomicInteger())),
           new RpcRetryingCallerFactory(conf), useGlobalErrors);
@@ -184,7 +184,7 @@ public class TestAsyncProcess {
   /**
    * Returns our async process.
    */
-  static class MyConnectionImpl extends HConnectionManager.HConnectionImplementation {
+  static class MyConnectionImpl extends ConnectionManager.HConnectionImplementation {
     final AtomicInteger nbThreads = new AtomicInteger(0);
     final static Configuration c = new Configuration();
 
@@ -237,7 +237,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testSubmit() throws Exception {
-    HConnection hc = createHConnection();
+    ClusterConnection hc = createHConnection();
     AsyncProcess ap = new MyAsyncProcess(hc, conf);
 
     List<Put> puts = new ArrayList<Put>();
@@ -249,7 +249,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testSubmitWithCB() throws Exception {
-    HConnection hc = createHConnection();
+    ClusterConnection hc = createHConnection();
     final AtomicInteger updateCalled = new AtomicInteger(0);
     Batch.Callback<Object> cb = new Batch.Callback<Object>() {
       public void update(byte[] region, byte[] row, Object result) {
@@ -269,7 +269,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testSubmitBusyRegion() throws Exception {
-    HConnection hc = createHConnection();
+    ClusterConnection hc = createHConnection();
     AsyncProcess ap = new MyAsyncProcess(hc, conf);
 
     List<Put> puts = new ArrayList<Put>();
@@ -287,7 +287,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testSubmitBusyRegionServer() throws Exception {
-    HConnection hc = createHConnection();
+    ClusterConnection hc = createHConnection();
     AsyncProcess ap = new MyAsyncProcess(hc, conf);
 
     ap.taskCounterPerServer.put(sn2, new AtomicInteger(ap.maxConcurrentTasksPerServer));
@@ -462,8 +462,8 @@ public class TestAsyncProcess {
     Assert.assertTrue(start + 100L + sleepTime > end);
   }
 
-  private static HConnection createHConnection() throws IOException {
-    HConnection hc = Mockito.mock(HConnection.class);
+  private static ClusterConnection createHConnection() throws IOException {
+    ClusterConnection hc = Mockito.mock(ClusterConnection.class);
 
     Mockito.when(hc.getRegionLocation(Mockito.eq(DUMMY_TABLE),
         Mockito.eq(DUMMY_BYTES_1), Mockito.anyBoolean())).thenReturn(loc1);
@@ -638,7 +638,7 @@ public class TestAsyncProcess {
   public void testErrorsServers() throws IOException {
     HTable ht = new HTable();
     Configuration configuration = new Configuration(conf);
-    configuration.setBoolean(HConnectionManager.RETRIES_BY_SERVER_KEY, true);
+    configuration.setBoolean(ConnectionManager.RETRIES_BY_SERVER_KEY, true);
     configuration.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     // set default writeBufferSize
     ht.setWriteBufferSize(configuration.getLong("hbase.client.write.buffer", 2097152));

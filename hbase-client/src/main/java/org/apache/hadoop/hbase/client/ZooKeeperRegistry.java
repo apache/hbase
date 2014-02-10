@@ -38,14 +38,14 @@ import org.apache.zookeeper.KeeperException;
 class ZooKeeperRegistry implements Registry {
   static final Log LOG = LogFactory.getLog(ZooKeeperRegistry.class);
   // Needs an instance of hci to function.  Set after construct this instance.
-  HConnectionManager.HConnectionImplementation hci;
+  ConnectionManager.HConnectionImplementation hci;
 
   @Override
   public void init(HConnection connection) {
-    if (!(connection instanceof HConnectionManager.HConnectionImplementation)) {
+    if (!(connection instanceof ConnectionManager.HConnectionImplementation)) {
       throw new RuntimeException("This registry depends on HConnectionImplementation");
     }
-    this.hci = (HConnectionManager.HConnectionImplementation)connection;
+    this.hci = (ConnectionManager.HConnectionImplementation)connection;
   }
 
   @Override

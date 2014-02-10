@@ -245,8 +245,8 @@ public class TestFromClientSide {
      z0.close();
 
      // Then a ZooKeeperKeepAliveConnection
-     HConnectionManager.HConnectionImplementation connection1 =
-       (HConnectionManager.HConnectionImplementation)
+     ConnectionManager.HConnectionImplementation connection1 =
+       (ConnectionManager.HConnectionImplementation)
          HConnectionManager.getConnection(newConfig);
 
      ZooKeeperKeepAliveConnection z1 = connection1.getKeepAliveZooKeeperWatcher();
@@ -267,8 +267,8 @@ public class TestFromClientSide {
 
      Configuration newConfig2 = new Configuration(TEST_UTIL.getConfiguration());
      newConfig2.set(HConstants.HBASE_CLIENT_INSTANCE_ID, "6789");
-     HConnectionManager.HConnectionImplementation connection2 =
-       (HConnectionManager.HConnectionImplementation)
+     ConnectionManager.HConnectionImplementation connection2 =
+       (ConnectionManager.HConnectionImplementation)
          HConnectionManager.getConnection(newConfig2);
 
      assertTrue("connections should be different ", connection1 != connection2);
@@ -279,7 +279,7 @@ public class TestFromClientSide {
          " on different connections", z1 != z3);
 
      // Bypass the private access
-     Method m = HConnectionManager.HConnectionImplementation.class.
+     Method m = ConnectionManager.HConnectionImplementation.class.
        getDeclaredMethod("closeZooKeeperWatcher");
      m.setAccessible(true);
      m.invoke(connection2);
@@ -342,7 +342,7 @@ public class TestFromClientSide {
     TEST_UTIL.countRows(table);
     table.getConnection().clearRegionCache();
     assertEquals("Clearing cache should have 0 cached ", 0,
-        HConnectionManager.getCachedRegionCount(conf, TABLENAME));
+        ConnectionManager.getCachedRegionCount(conf, TABLENAME));
 
     // A Get is suppose to do a region lookup request
     Get g = new Get(Bytes.toBytes("aaa"));
@@ -350,7 +350,7 @@ public class TestFromClientSide {
 
     // only one region should be cached if the cache prefetch is disabled.
     assertEquals("Number of cached region is incorrect ", 1,
-        HConnectionManager.getCachedRegionCount(conf, TABLENAME));
+        ConnectionManager.getCachedRegionCount(conf, TABLENAME));
 
     // now we enable cached prefetch.
     HTable.setRegionCachePrefetch(conf, TABLENAME, true);
@@ -368,7 +368,7 @@ public class TestFromClientSide {
     table.getConnection().clearRegionCache();
 
     assertEquals("Number of cached region is incorrect ", 0,
-        HConnectionManager.getCachedRegionCount(conf, TABLENAME));
+        ConnectionManager.getCachedRegionCount(conf, TABLENAME));
 
     // if there is a cache miss, some additional regions should be prefetched.
     Get g2 = new Get(Bytes.toBytes("bbb"));
@@ -380,14 +380,14 @@ public class TestFromClientSide {
     // the total number of cached regions == region('aaa") + prefeched regions.
     LOG.info("Testing how many regions cached");
     assertEquals("Number of cached region is incorrect ", prefetchRegionNumber,
-        HConnectionManager.getCachedRegionCount(conf, TABLENAME));
+        ConnectionManager.getCachedRegionCount(conf, TABLENAME));
 
     table.getConnection().clearRegionCache();
 
     Get g3 = new Get(Bytes.toBytes("abc"));
     table.get(g3);
     assertEquals("Number of cached region is incorrect ", prefetchRegionNumber,
-        HConnectionManager.getCachedRegionCount(conf, TABLENAME));
+        ConnectionManager.getCachedRegionCount(conf, TABLENAME));
 
     LOG.info("Finishing testRegionCachePreWarm");
   }

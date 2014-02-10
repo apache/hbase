@@ -84,9 +84,9 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
@@ -581,7 +581,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     this.rand = new Random(initialIsa.hashCode());
     String name = "regionserver/" + initialIsa.toString();
     // Set how many times to retry talking to another server over HConnection.
-    HConnectionManager.setServerSideHConnectionRetries(this.conf, name, LOG);
+    ConnectionUtils.setServerSideHConnectionRetriesConfig(this.conf, name, LOG);
     this.priority = new AnnotationReadingPriorityFunction(this);
     RpcSchedulerFactory rpcSchedulerFactory;
     try {

@@ -57,7 +57,7 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.*;
 
 /**
- * Tests class {@link org.apache.hadoop.hbase.coprocessor.CoprocessorHost.Environment.HTableWrapper}
+ * Tests class {@link org.apache.hadoop.hbase.client.HTableWrapper}
  * by invoking its methods and briefly asserting the result is reasonable.
  */
 @Category(MediumTests.class)

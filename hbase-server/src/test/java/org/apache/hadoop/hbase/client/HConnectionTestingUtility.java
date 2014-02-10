@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
+import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
 import org.mockito.Mockito;
 
 /**
@@ -50,16 +50,16 @@ public class HConnectionTestingUtility {
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    */
-  public static HConnection getMockedConnection(final Configuration conf)
+  public static ClusterConnection getMockedConnection(final Configuration conf)
   throws ZooKeeperConnectionException {
     HConnectionKey connectionKey = new HConnectionKey(conf);
-    synchronized (HConnectionManager.CONNECTION_INSTANCES) {
+    synchronized (ConnectionManager.CONNECTION_INSTANCES) {
       HConnectionImplementation connection =
-        HConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
+          ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
       if (connection == null) {
         connection = Mockito.mock(HConnectionImplementation.class);
         Mockito.when(connection.getConfiguration()).thenReturn(conf);
-        HConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
+        ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
       }
       return connection;
     }
@@ -93,12 +93,12 @@ public class HConnectionTestingUtility {
    * when done with this mocked Connection.
    * @throws IOException
    */
-  public static HConnection getMockedConnectionAndDecorate(final Configuration conf,
+  public static ClusterConnection getMockedConnectionAndDecorate(final Configuration conf,
       final AdminProtos.AdminService.BlockingInterface admin,
       final ClientProtos.ClientService.BlockingInterface client,
       final ServerName sn, final HRegionInfo hri)
   throws IOException {
-    HConnection c = HConnectionTestingUtility.getMockedConnection(conf);
+    ClusterConnection c = HConnectionTestingUtility.getMockedConnection(conf);
     Mockito.doNothing().when(c).close();
     // Make it so we return a particular location when asked.
     final HRegionLocation loc = new HRegionLocation(hri, sn);
@@ -139,12 +139,12 @@ public class HConnectionTestingUtility {
   public static HConnection getSpiedConnection(final Configuration conf)
   throws IOException {
     HConnectionKey connectionKey = new HConnectionKey(conf);
-    synchronized (HConnectionManager.CONNECTION_INSTANCES) {
+    synchronized (ConnectionManager.CONNECTION_INSTANCES) {
       HConnectionImplementation connection =
-        HConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
+          ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
       if (connection == null) {
         connection = Mockito.spy(new HConnectionImplementation(conf, true));
-        HConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
+        ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
       }
       return connection;
     }
@@ -154,8 +154,8 @@ public class HConnectionTestingUtility {
    * @return Count of extant connection instances
    */
   public static int getConnectionCount() {
-    synchronized (HConnectionManager.CONNECTION_INSTANCES) {
-      return HConnectionManager.CONNECTION_INSTANCES.size();
+    synchronized (ConnectionManager.CONNECTION_INSTANCES) {
+      return ConnectionManager.CONNECTION_INSTANCES.size();
     }
   }
 }

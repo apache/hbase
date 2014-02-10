@@ -27,11 +27,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
  * keeps a cache of locations and then knows how to re-calibrate after they move.  You need one
  * of these to talk to your HBase cluster. {@link HConnectionManager} manages instances of this
  * class.  See it for how to get one of these.
- *
+ * 
  * <p>This is NOT a connection to a particular server but to ALL servers in the cluster.  Individual
  * connections are managed at a lower level.
  *
@@ -154,7 +154,9 @@ public interface HConnection extends Abortable, Closeable {
    */
   public HTableInterface getTable(TableName tableName, ExecutorService pool)  throws IOException;
 
-  /** @return - true if the master server is running */
+  /** @return - true if the master server is running
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   boolean isMasterRunning()
   throws MasterNotRunningException, ZooKeeperConnectionException;
 
@@ -202,7 +204,8 @@ public interface HConnection extends Abortable, Closeable {
    *          splitKeys used while creating table
    * @throws IOException
    *           if a remote or network exception occurs
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   boolean isTableAvailable(TableName tableName, byte[][] splitKeys) throws
       IOException;
 
@@ -251,8 +254,7 @@ public interface HConnection extends Abortable, Closeable {
    * @return HRegionLocation that describes where to find the region in
    * question
    * @throws IOException if a remote or network exception occurs
-   * @deprecated This is no longer a public API
-   */
+   * @deprecated internal method, do not use thru HConnection */
   @Deprecated
   public HRegionLocation locateRegion(final TableName tableName,
       final byte [] row) throws IOException;
@@ -263,7 +265,8 @@ public interface HConnection extends Abortable, Closeable {
 
   /**
    * Allows flushing the region cache.
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   void clearRegionCache();
 
   /**
@@ -271,7 +274,8 @@ public interface HConnection extends Abortable, Closeable {
    * <code>tableName</code>
    * @param tableName Name of the table whose regions we are to remove from
    * cache.
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   void clearRegionCache(final TableName tableName);
 
   @Deprecated
@@ -280,7 +284,8 @@ public interface HConnection extends Abortable, Closeable {
   /**
    * Deletes cached locations for the specific region.
    * @param location The location object for the region, to be purged from cache.
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   void deleteCachedRegionLocation(final HRegionLocation location);
 
   /**
@@ -291,7 +296,8 @@ public interface HConnection extends Abortable, Closeable {
    * @return HRegionLocation that describes where to find the region in
    * question
    * @throws IOException if a remote or network exception occurs
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   HRegionLocation relocateRegion(final TableName tableName,
       final byte [] row) throws IOException;
 
@@ -307,12 +313,12 @@ public interface HConnection extends Abortable, Closeable {
    * Update the location cache. This is used internally by HBase, in most cases it should not be
    *  used by the client application.
    * @param tableName the table name
-   * @param regionName the regionName
    * @param rowkey the row
    * @param exception the exception if any. Can be null.
    * @param source the previous location
-   */
-  void updateCachedLocations(TableName tableName, byte[] regionName, byte[] rowkey,
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
+  void updateCachedLocations(TableName tableName, byte[] rowkey,
                                     Object exception, ServerName source);
 
   @Deprecated
@@ -325,7 +331,8 @@ public interface HConnection extends Abortable, Closeable {
    * @return HRegionLocation that describes where to find the region in
    * question
    * @throws IOException if a remote or network exception occurs
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   HRegionLocation locateRegion(final byte[] regionName)
   throws IOException;
 
@@ -334,7 +341,8 @@ public interface HConnection extends Abortable, Closeable {
    * @param tableName table to get regions of
    * @return list of region locations for all regions of table
    * @throws IOException
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   List<HRegionLocation> locateRegions(final TableName tableName) throws IOException;
 
   @Deprecated
@@ -348,8 +356,7 @@ public interface HConnection extends Abortable, Closeable {
    *          regions from returned list.
    * @return list of region locations for all regions of table
    * @throws IOException
-   * @deprecated This is no longer a public API
-   */
+   * @deprecated internal method, do not use thru HConnection */
   @Deprecated
   public List<HRegionLocation> locateRegions(final TableName tableName,
       final boolean useCache,
@@ -362,7 +369,8 @@ public interface HConnection extends Abortable, Closeable {
 
   /**
    * Returns a {@link MasterKeepAliveConnection} to the active master
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   MasterService.BlockingInterface getMaster() throws IOException;
 
 
@@ -371,7 +379,8 @@ public interface HConnection extends Abortable, Closeable {
    * @param serverName
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   AdminService.BlockingInterface getAdmin(final ServerName serverName) throws IOException;
 
   /**
@@ -381,8 +390,8 @@ public interface HConnection extends Abortable, Closeable {
    * @param serverName
    * @return ClientProtocol proxy for RegionServer
    * @throws IOException if a remote or network exception occurs
-   *
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   ClientService.BlockingInterface getClient(final ServerName serverName) throws IOException;
 
   /**
@@ -393,7 +402,6 @@ public interface HConnection extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    * @deprecated You can pass master flag but nothing special is done.
    */
-  @Deprecated
   AdminService.BlockingInterface getAdmin(final ServerName serverName, boolean getMaster)
       throws IOException;
 
@@ -404,7 +412,8 @@ public interface HConnection extends Abortable, Closeable {
    * @param reload If true do not use cache, otherwise bypass.
    * @return Location of row.
    * @throws IOException if a remote or network exception occurs
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   HRegionLocation getRegionLocation(TableName tableName, byte [] row,
     boolean reload)
   throws IOException;
@@ -466,6 +475,7 @@ public interface HConnection extends Abortable, Closeable {
   public void setRegionCachePrefetch(final TableName tableName,
       final boolean enable);
 
+  @Deprecated
   public void setRegionCachePrefetch(final byte[] tableName,
       final boolean enable);
 
@@ -477,6 +487,7 @@ public interface HConnection extends Abortable, Closeable {
    */
   boolean getRegionCachePrefetch(final TableName tableName);
 
+  @Deprecated
   boolean getRegionCachePrefetch(final byte[] tableName);
 
   /**
@@ -507,7 +518,8 @@ public interface HConnection extends Abortable, Closeable {
   /**
    * Clear any caches that pertain to server name <code>sn</code>.
    * @param sn A server name
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   void clearCaches(final ServerName sn);
 
   /**
@@ -525,16 +537,13 @@ public interface HConnection extends Abortable, Closeable {
   /**
    * @param serverName
    * @return true if the server is known as dead, false otherwise.
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   boolean isDeadServer(ServerName serverName);
 
   /**
    * @return Nonce generator for this HConnection; may be null if disabled in configuration.
-   */
+   * @deprecated internal method, do not use thru HConnection */
+  @Deprecated
   public NonceGenerator getNonceGenerator();
-
-  /**
-   * @return Default AsyncProcess associated with this connection.
-   */
-  AsyncProcess getAsyncProcess();
 }
