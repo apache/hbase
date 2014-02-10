@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RegionSizeCalculator;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -121,6 +123,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
           " the task's full log for more details.");
     }
     TableSplit tSplit = (TableSplit) split;
+    LOG.info("Input split length: " + tSplit.getLength() + " bytes.");
     TableRecordReader trr = this.tableRecordReader;
     // if no table record reader was provided use default
     if (trr == null) {
@@ -146,13 +149,15 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException {
-	if (table == null) {
-	    throw new IOException("No table was provided.");
-	}
+    if (table == null) {
+      throw new IOException("No table was provided.");
+    }
     // Get the name server address and the default value is null.
     this.nameServer =
       context.getConfiguration().get("hbase.nameserver.address", null);
-    
+
+    RegionSizeCalculator sizeCalculator = new RegionSizeCalculator(table);
+
     Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
     if (keys == null || keys.getFirst() == null ||
         keys.getFirst().length == 0) {
@@ -161,9 +166,10 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         throw new IOException("Expecting at least one region.");
       }
       List<InputSplit> splits = new ArrayList<InputSplit>(1);
-      InputSplit split = new TableSplit(table.getName(),
+      long regionSize = sizeCalculator.getRegionSize(regLoc.getRegionInfo().getRegionName());
+      TableSplit split = new TableSplit(table.getName(),
           HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, regLoc
-              .getHostnamePort().split(Addressing.HOSTNAME_PORT_SEPARATOR)[0]);
+              .getHostnamePort().split(Addressing.HOSTNAME_PORT_SEPARATOR)[0], regionSize);
       splits.add(split);
       return splits;
     }
@@ -201,8 +207,11 @@ extends InputFormat<ImmutableBytesWritable, Result> {
           Bytes.compareTo(keys.getSecond()[i], stopRow) <= 0) &&
           keys.getSecond()[i].length > 0 ?
             keys.getSecond()[i] : stopRow;
-        InputSplit split = new TableSplit(table.getName(),
-          splitStart, splitStop, regionLocation);
+
+        byte[] regionName = location.getRegionInfo().getRegionName();
+        long regionSize = sizeCalculator.getRegionSize(regionName);
+        TableSplit split = new TableSplit(table.getName(),
+          splitStart, splitStop, regionLocation, regionSize);
         splits.add(split);
         if (LOG.isDebugEnabled()) {
           LOG.debug("getSplits: split -> " + i + " -> " + split);
