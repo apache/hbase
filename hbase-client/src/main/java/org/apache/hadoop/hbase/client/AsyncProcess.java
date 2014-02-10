@@ -122,7 +122,7 @@ class AsyncProcess {
   // TODO: many of the fields should be made private
   protected final long id;
 
-  protected final HConnection hConnection;
+  protected final ClusterConnection hConnection;
   protected final RpcRetryingCallerFactory rpcCallerFactory;
   protected final BatchErrors globalErrors;
   protected final ExecutorService pool;
@@ -190,7 +190,7 @@ class AsyncProcess {
     }
   }
 
-  public AsyncProcess(HConnection hc, Configuration conf, ExecutorService pool,
+  public AsyncProcess(ClusterConnection hc, Configuration conf, ExecutorService pool,
       RpcRetryingCallerFactory rpcCaller, boolean useGlobalErrors) {
     if (hc == null) {
       throw new IllegalArgumentException("HConnection cannot be null.");
@@ -508,7 +508,7 @@ class AsyncProcess {
   protected class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     private final Batch.Callback<CResult> callback;
     private final BatchErrors errors;
-    private final HConnectionManager.ServerErrorTracker errorsByServer;
+    private final ConnectionManager.ServerErrorTracker errorsByServer;
     private final ExecutorService pool;
 
 
@@ -1070,7 +1070,8 @@ class AsyncProcess {
    * We may benefit from connection-wide tracking of server errors.
    * @return ServerErrorTracker to use, null if there is no ServerErrorTracker on this connection
    */
-  protected HConnectionManager.ServerErrorTracker createServerErrorTracker() {
-    return new HConnectionManager.ServerErrorTracker(this.serverTrackerTimeout, this.numTries);
+  protected ConnectionManager.ServerErrorTracker createServerErrorTracker() {
+    return new ConnectionManager.ServerErrorTracker(
+        this.serverTrackerTimeout, this.numTries);
   }
 }

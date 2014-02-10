@@ -39,14 +39,14 @@ import java.io.IOException;
 class ZooKeeperKeepAliveConnection extends ZooKeeperWatcher{
   ZooKeeperKeepAliveConnection(
     Configuration conf, String descriptor,
-    HConnectionManager.HConnectionImplementation conn) throws IOException {
+    ConnectionManager.HConnectionImplementation conn) throws IOException {
     super(conf, descriptor, conn);
   }
 
   @Override
   public void close() {
     if (this.abortable != null) {
-      ((HConnectionManager.HConnectionImplementation)abortable).releaseZooKeeperWatcher(this);
+      ((ConnectionManager.HConnectionImplementation)abortable).releaseZooKeeperWatcher(this);
     }
   }
 

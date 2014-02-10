@@ -71,7 +71,7 @@ import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.NonceGenerator;
@@ -322,7 +322,7 @@ public class TestDistributedLogSplitting {
     HTable ht = installTable(zkw, TABLE_NAME, FAMILY_NAME, NUM_REGIONS_TO_CREATE);
     NonceGeneratorWithDups ng = new NonceGeneratorWithDups();
     NonceGenerator oldNg =
-        HConnectionManager.injectNonceGeneratorForTesting(ht.getConnection(), ng);
+        ConnectionUtils.injectNonceGeneratorForTesting(ht.getConnection(), ng);
 
     try {
       List<Increment> reqs = new ArrayList<Increment>();
@@ -356,7 +356,7 @@ public class TestDistributedLogSplitting {
         }
       }
     } finally {
-      HConnectionManager.injectNonceGeneratorForTesting(ht.getConnection(), oldNg);
+      ConnectionUtils.injectNonceGeneratorForTesting(ht.getConnection(), oldNg);
       ht.close();
       zkw.close();
     }

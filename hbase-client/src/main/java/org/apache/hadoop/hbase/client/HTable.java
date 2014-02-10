@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
@@ -117,7 +118,7 @@ import com.google.protobuf.ServiceException;
 @InterfaceStability.Stable
 public class HTable implements HTableInterface {
   private static final Log LOG = LogFactory.getLog(HTable.class);
-  protected HConnection connection;
+  protected ClusterConnection connection;
   private final TableName tableName;
   private volatile Configuration configuration;
   protected List<Row> writeAsyncBuffer = new LinkedList<Row>();
@@ -189,7 +190,7 @@ public class HTable implements HTableInterface {
       this.connection = null;
       return;
     }
-    this.connection = HConnectionManager.getConnection(conf);
+    this.connection = ConnectionManager.getConnectionInternal(conf);
     this.configuration = conf;
 
     this.pool = getDefaultExecutor(conf);
@@ -203,12 +204,14 @@ public class HTable implements HTableInterface {
    * @param tableName Name of the table.
    * @param connection HConnection to be used.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Do not use.
    */
+  @Deprecated
   public HTable(TableName tableName, HConnection connection) throws IOException {
     this.tableName = tableName;
     this.cleanupPoolOnClose = true;
     this.cleanupConnectionOnClose = false;
-    this.connection = connection;
+    this.connection = (ClusterConnection)connection;
     this.configuration = connection.getConfiguration();
 
     this.pool = getDefaultExecutor(this.configuration);
@@ -263,7 +266,7 @@ public class HTable implements HTableInterface {
    */
   public HTable(Configuration conf, final TableName tableName, final ExecutorService pool)
       throws IOException {
-    this.connection = HConnectionManager.getConnection(conf);
+    this.connection = ConnectionManager.getConnectionInternal(conf);
     this.configuration = conf;
     this.pool = pool;
     this.tableName = tableName;
@@ -282,25 +285,35 @@ public class HTable implements HTableInterface {
    * @param tableName Name of the table.
    * @param connection HConnection to be used.
    * @param pool ExecutorService to be used.
-   * @throws IOException if a remote or network exception occurs
+   * @throws IOException if a remote or network exception occurs.
+   * @deprecated Do not use, internal ctor.
    */
+  @Deprecated
   public HTable(final byte[] tableName, final HConnection connection,
       final ExecutorService pool) throws IOException {
     this(TableName.valueOf(tableName), connection, pool);
+  }
+
+  /** @deprecated Do not use, internal ctor. */
+  @Deprecated
+  public HTable(TableName tableName, final HConnection connection,
+      final ExecutorService pool) throws IOException {
+    this(tableName, (ClusterConnection)connection, pool);
   }
 
   /**
    * Creates an object to access a HBase table.
    * Shares zookeeper connection and other resources with other HTable instances
    * created with the same <code>connection</code> instance.
-   * Use this constructor when the ExecutorService and HConnection instance are
-   * externally managed.
+   * Visible only for HTableWrapper which is in different package.
+   * Should not be used by exernal code.
    * @param tableName Name of the table.
    * @param connection HConnection to be used.
    * @param pool ExecutorService to be used.
    * @throws IOException if a remote or network exception occurs
    */
-  public HTable(TableName tableName, final HConnection connection,
+  @InterfaceAudience.Private
+  public HTable(TableName tableName, final ClusterConnection connection,
       final ExecutorService pool) throws IOException {
     if (connection == null || connection.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
@@ -506,6 +519,7 @@ public class HTable implements HTableInterface {
    */
   // TODO(tsuna): Remove this.  Unit tests shouldn't require public helpers.
   @Deprecated
+  @VisibleForTesting
   public HConnection getConnection() {
     return this.connection;
   }

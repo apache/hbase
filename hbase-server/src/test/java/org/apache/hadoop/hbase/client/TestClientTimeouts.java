@@ -102,7 +102,8 @@ public class TestClientTimeouts {
           assertFalse(connection == lastConnection);
           lastConnection = connection;
           // Override the connection's rpc client for timeout testing
-          ((HConnectionManager.HConnectionImplementation)connection).setRpcClient(rpcClient);
+          ((ConnectionManager.HConnectionImplementation)connection).setRpcClient(
+              rpcClient);
           // run some admin commands
           HBaseAdmin.checkHBaseAvailable(conf);
           admin.setBalancerRunning(false, false);

@@ -62,8 +62,8 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class CoprocessorHConnection implements HConnection {
-  private static final NonceGenerator ng = new HConnectionManager.NoNonceGenerator();
+public class CoprocessorHConnection implements ClusterConnection {
+  private static final NonceGenerator ng = new ConnectionManager.NoNonceGenerator();
 
   /**
    * Create an unmanaged {@link HConnection} based on the environment in which we are running the
@@ -73,9 +73,10 @@ public class CoprocessorHConnection implements HConnection {
    * @return an unmanaged {@link HConnection}.
    * @throws IOException if we cannot create the basic connection
    */
-  public static HConnection getConnectionForEnvironment(CoprocessorEnvironment env)
+  public static ClusterConnection getConnectionForEnvironment(CoprocessorEnvironment env)
       throws IOException {
-    HConnection connection = HConnectionManager.createConnection(env.getConfiguration());
+    ClusterConnection connection =
+        ConnectionManager.createConnectionInternal(env.getConfiguration());
     // this bit is a little hacky - just trying to get it going for the moment
     if (env instanceof RegionCoprocessorEnvironment) {
       RegionCoprocessorEnvironment e = (RegionCoprocessorEnvironment) env;
@@ -87,11 +88,11 @@ public class CoprocessorHConnection implements HConnection {
     return connection;
   }
 
-  private HConnection delegate;
+  private ClusterConnection delegate;
   private ServerName serverName;
   private HRegionServer server;
 
-  public CoprocessorHConnection(HConnection delegate, HRegionServer server) {
+  public CoprocessorHConnection(ClusterConnection delegate, HRegionServer server) {
     this.server = server;
     this.serverName = server.getServerName();
     this.delegate = delegate;

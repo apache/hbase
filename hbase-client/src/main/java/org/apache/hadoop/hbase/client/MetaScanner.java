@@ -76,9 +76,8 @@ public class MetaScanner {
    * null if not interested in a particular table.
    * @throws IOException e
    */
-  public static void metaScan(Configuration configuration, HConnection connection,
-      MetaScannerVisitor visitor, TableName userTableName)
-  throws IOException {
+  public static void metaScan(Configuration configuration, ClusterConnection connection,
+      MetaScannerVisitor visitor, TableName userTableName) throws IOException {
     metaScan(configuration, connection, visitor, userTableName, null, Integer.MAX_VALUE,
         TableName.META_TABLE_NAME);
   }
@@ -123,10 +122,10 @@ public class MetaScanner {
    * @param metaTableName Meta table to scan, root or meta.
    * @throws IOException e
    */
-  public static void metaScan(Configuration configuration, HConnection connection,
+  static void metaScan(Configuration configuration, ClusterConnection connection,
       final MetaScannerVisitor visitor, final TableName tableName,
       final byte[] row, final int rowLimit, final TableName metaTableName)
-  throws IOException {
+    throws IOException {
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
     HTable metaTable;
     if (connection == null) {
@@ -266,7 +265,7 @@ public class MetaScanner {
    * @throws IOException
    */
   public static NavigableMap<HRegionInfo, ServerName> allTableRegions(Configuration conf,
-      HConnection connection, final TableName tableName,
+      ClusterConnection connection, final TableName tableName,
       final boolean offlined) throws IOException {
     final NavigableMap<HRegionInfo, ServerName> regions =
       new TreeMap<HRegionInfo, ServerName>();

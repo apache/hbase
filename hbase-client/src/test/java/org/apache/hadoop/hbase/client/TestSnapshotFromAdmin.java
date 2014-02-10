@@ -71,8 +71,8 @@ public class TestSnapshotFromAdmin {
         + "- further testing won't prove anything.", time < ignoreExpectedTime);
 
     // setup the mocks
-    HConnectionManager.HConnectionImplementation mockConnection = Mockito
-        .mock(HConnectionManager.HConnectionImplementation.class);
+    ConnectionManager.HConnectionImplementation mockConnection = Mockito
+        .mock(ConnectionManager.HConnectionImplementation.class);
     Configuration conf = HBaseConfiguration.create();
     // setup the conf to match the expected properties
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, numRetries);
@@ -118,8 +118,8 @@ public class TestSnapshotFromAdmin {
    */
   @Test
   public void testValidateSnapshotName() throws Exception {
-    HConnectionManager.HConnectionImplementation mockConnection = Mockito
-        .mock(HConnectionManager.HConnectionImplementation.class);
+    ConnectionManager.HConnectionImplementation mockConnection = Mockito
+        .mock(ConnectionManager.HConnectionImplementation.class);
     Configuration conf = HBaseConfiguration.create();
     Mockito.when(mockConnection.getConfiguration()).thenReturn(conf);
     HBaseAdmin admin = new HBaseAdmin(mockConnection);

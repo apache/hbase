@@ -71,7 +71,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
@@ -442,7 +442,7 @@ MasterServices, Server {
     }
     String name = "master/" + initialIsa.toString();
     // Set how many times to retry talking to another server over HConnection.
-    HConnectionManager.setServerSideHConnectionRetries(this.conf, name, LOG);
+    ConnectionUtils.setServerSideHConnectionRetriesConfig(this.conf, name, LOG);
     int numHandlers = conf.getInt(HConstants.MASTER_HANDLER_COUNT,
       conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, HConstants.DEFAULT_MASTER_HANLDER_COUNT));
     this.rpcServer = new RpcServer(this, name, getServices(),

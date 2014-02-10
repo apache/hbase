@@ -163,7 +163,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   // We use the implementation class rather then the interface because we
   //  need the package protected functions to get the connection to master
-  private HConnection connection;
+  private ClusterConnection connection;
 
   private volatile Configuration conf;
   private final long pause;
@@ -188,20 +188,26 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     // Will not leak connections, as the new implementation of the constructor
     // does not throw exceptions anymore.
-    this(HConnectionManager.getConnection(new Configuration(c)));
+    this(ConnectionManager.getConnectionInternal(new Configuration(c)));
     this.cleanupConnectionOnClose = true;
   }
 
- /**
-  * Constructor for externally managed HConnections.
-  * The connection to master will be created when required by admin functions.
-  *
-  * @param connection The HConnection instance to use
-  * @throws MasterNotRunningException, ZooKeeperConnectionException are not
-  *  thrown anymore but kept into the interface for backward api compatibility
-  */
+  /**
+   * Constructor for externally managed HConnections.
+   * The connection to master will be created when required by admin functions.
+   *
+   * @param connection The HConnection instance to use
+   * @throws MasterNotRunningException, ZooKeeperConnectionException are not
+   *  thrown anymore but kept into the interface for backward api compatibility
+   * @deprecated Do not use this internal ctor.
+   */
+  @Deprecated
   public HBaseAdmin(HConnection connection)
       throws MasterNotRunningException, ZooKeeperConnectionException {
+    this((ClusterConnection)connection);
+  }
+
+  HBaseAdmin(ClusterConnection connection) {
     this.conf = connection.getConfiguration();
     this.connection = connection;
 
@@ -2324,8 +2330,8 @@ public class HBaseAdmin implements Abortable, Closeable {
     copyOfConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     copyOfConf.setInt("zookeeper.recovery.retry", 0);
 
-    HConnectionManager.HConnectionImplementation connection
-      = (HConnectionManager.HConnectionImplementation)
+    ConnectionManager.HConnectionImplementation connection
+      = (ConnectionManager.HConnectionImplementation)
       HConnectionManager.getConnection(copyOfConf);
 
     try {

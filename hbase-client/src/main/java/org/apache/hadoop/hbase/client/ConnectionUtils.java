@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 
 /**
@@ -60,5 +62,34 @@ public class ConnectionUtils {
       return 1;
     }
     return newPause;
+  }
+  
+  /**
+   * @param conn The connection for which to replace the generator.
+   * @param cnm Replaces the nonce generator used, for testing.
+   * @return old nonce generator.
+   */
+  public static NonceGenerator injectNonceGeneratorForTesting(
+      HConnection conn, NonceGenerator cnm) {
+    return ConnectionManager.injectNonceGeneratorForTesting(conn, cnm);
+  }
+
+  /**
+   * Changes the configuration to set the number of retries needed when using HConnection
+   * internally, e.g. for  updating catalog tables, etc.
+   * Call this method before we create any Connections.
+   * @param c The Configuration instance to set the retries into.
+   * @param log Used to log what we set in here.
+   */
+  public static void setServerSideHConnectionRetriesConfig(
+      final Configuration c, final String sn, final Log log) {
+    int hcRetries = c.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+      HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    // Go big.  Multiply by 10.  If we can't get to meta after this many retries
+    // then something seriously wrong.
+    int serversideMultiplier = c.getInt("hbase.client.serverside.retries.multiplier", 10);
+    int retries = hcRetries * serversideMultiplier;
+    c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
+    log.debug(sn + " HConnection server-to-server retries=" + retries);
   }
 }
