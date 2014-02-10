@@ -115,6 +115,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
     }
 
     manager.join();
+    zkw.close();
 
     return (0);
   }

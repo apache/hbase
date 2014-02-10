@@ -207,6 +207,7 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
   }
 
   private void putAndReplicateRows() throws Exception {
+    LOG.debug("putAndReplicateRows");
     // add rows to Master cluster,
     Put p;
 
@@ -260,6 +261,7 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
   }
 
   private void mimicSyncUpAfterDelete() throws Exception {
+    LOG.debug("mimicSyncUpAfterDelete");
     utility2.shutdownMiniHBaseCluster();
 
     List<Delete> list = new ArrayList<Delete>();
@@ -329,6 +331,7 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
   }
 
   private void mimicSyncUpAfterPut() throws Exception {
+    LOG.debug("mimicSyncUpAfterPut");
     utility1.restartHBaseCluster(1);
     utility2.shutdownMiniHBaseCluster();
 
