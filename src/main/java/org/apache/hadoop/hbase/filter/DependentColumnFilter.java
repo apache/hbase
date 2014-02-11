@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
@@ -108,7 +109,7 @@ public class DependentColumnFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(KeyValue v, List<KeyValueScanner> scanners) {
     // Check if the column and qualifier match
     if (!v.matchingColumn(this.columnFamily, this.columnQualifier)) {
       // include non-matches for the time being, they'll be discarded afterwards

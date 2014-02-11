@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -70,8 +71,9 @@ public class SkipFilter extends FilterBase {
     filterRow = filterRow || value;
   }
 
-  public ReturnCode filterKeyValue(KeyValue v) {
-    ReturnCode c = filter.filterKeyValue(v);
+  @Override
+  public ReturnCode filterKeyValue(KeyValue v, List<KeyValueScanner> scanners) {
+    ReturnCode c = filter.filterKeyValue(v, scanners);
     changeFR(c != ReturnCode.INCLUDE);
     return c;
   }

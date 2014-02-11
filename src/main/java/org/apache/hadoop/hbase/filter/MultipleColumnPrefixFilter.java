@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.DataOutput;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import java.io.DataInput;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import java.util.TreeSet;
 import java.util.ArrayList;
 
@@ -64,7 +66,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue kv) {
+  public ReturnCode filterKeyValue(KeyValue kv, List<KeyValueScanner> scanners) {
     if (sortedPrefixes.size() == 0 || kv.getBuffer() == null) {
       return ReturnCode.INCLUDE;
     } else {

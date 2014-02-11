@@ -276,7 +276,7 @@ public class ScanQueryMatcher {
      * would lead to incorrect results in certain cases.
      */
     if (filter != null) {
-      ReturnCode filterResponse = filter.filterKeyValue(kv);
+      ReturnCode filterResponse = filter.filterKeyValue(kv, allScanners);
       if (filterResponse == ReturnCode.SKIP) {
         return MatchCode.SKIP;
       } else if (filterResponse == ReturnCode.NEXT_COL) {

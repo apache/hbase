@@ -147,27 +147,27 @@ public class TestCompoundRowPrefixFilter {
 
     assertTrue(!filter.filterRowKey(keys[0], 0, keys[0].length));
     assertTrue(!filter.filterAllRemaining());
-    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[0])) ==
-        ReturnCode.SEEK_NEXT_USING_HINT);
+    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[0]))
+        == ReturnCode.SEEK_NEXT_USING_HINT);
     assertTrue(Bytes.compareTo(
         filter.getNextKeyHint(KeyValue.createFirstOnRow(keys[0])).getRow(),
         PREFIXES[0]) == 0);
-    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[1])) ==
-        ReturnCode.INCLUDE);
-    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[2])) ==
-        ReturnCode.INCLUDE);
+    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[1]))
+        == ReturnCode.INCLUDE);
+    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[2]))
+        == ReturnCode.INCLUDE);
     assertTrue(!filter.filterAllRemaining());
-    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[3])) ==
-        ReturnCode.SEEK_NEXT_USING_HINT);
+    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[3]), null)
+        == ReturnCode.SEEK_NEXT_USING_HINT);
     assertTrue(Bytes.compareTo(filter.getNextKeyHint(
         KeyValue.createFirstOnRow(keys[3])).getRow(), PREFIXES[2]) == 0);
-    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[5]))
+    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[5]), null)
         == ReturnCode.INCLUDE);
-    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[6]))
+    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[6]), null)
         == ReturnCode.INCLUDE);
     assertTrue(Bytes.compareTo(filter.getNextKeyHint(
         KeyValue.createFirstOnRow(keys[6])).getRow(), PREFIXES[1]) == 0);
-    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[7]))
+    assertTrue(filter.filterKeyValue(KeyValue.createFirstOnRow(keys[7]), null)
         == ReturnCode.SKIP);
     assertTrue(filter.filterAllRemaining());
   }

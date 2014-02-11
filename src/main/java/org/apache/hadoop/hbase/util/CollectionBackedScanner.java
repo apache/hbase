@@ -135,4 +135,9 @@ public class CollectionBackedScanner extends NonLazyKeyValueScanner {
   public boolean currKeyValueObtainedFromCache() {
     return false;
   }
+
+  @Override
+  public boolean passesRowKeyPrefixBloomFilter(KeyValue kv) {
+    return true;
+  }
 }

@@ -21,11 +21,13 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
 
@@ -61,7 +63,7 @@ public class ColumnCountGetFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(KeyValue v, List<KeyValueScanner> scanners) {
     this.count++;
     return filterAllRemaining() ? ReturnCode.SKIP: ReturnCode.INCLUDE;
   }

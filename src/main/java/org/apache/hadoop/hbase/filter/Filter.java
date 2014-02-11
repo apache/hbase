@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.io.Writable;
 
 import java.util.List;
@@ -79,15 +80,27 @@ public interface Filter extends Writable {
    * column value. Return code is described below.  This allows filters to
    * filter only certain number of columns, then terminate without matching ever
    * column.
+   * The list of KeyValueScanners gives additional context about the kv to make
+   * more intelligent decisions while filtering it.
    *
    * If your filter returns <code>ReturnCode.NEXT_ROW</code>, it should return
    * <code>ReturnCode.NEXT_ROW</code> until {@link #reset()} is called
    * just in case the caller calls for the next row.
    *
    * @param v the KeyValue in question
+   * @param scanners : the list of KeyValueScanners that are involved in the
+   * heap. Can be null.
    * @return code as described below
    * @see Filter.ReturnCode
    */
+  public ReturnCode filterKeyValue(KeyValue v, List<KeyValueScanner> scanners);
+
+  /**
+   * Use {@link #filterKeyValue(KeyValue, List)} instead.
+   * @param v
+   * @return
+   */
+  @Deprecated
   public ReturnCode filterKeyValue(KeyValue v);
 
   /**

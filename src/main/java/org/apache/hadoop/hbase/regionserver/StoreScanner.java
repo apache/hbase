@@ -742,4 +742,9 @@ public class StoreScanner extends NonLazyKeyValueScanner
       throws IOException {
     return next(result, limit, metric, null);
   }
+
+  @Override
+  public boolean passesRowKeyPrefixBloomFilter(KeyValue kv) {
+    return true;
+  }
 }

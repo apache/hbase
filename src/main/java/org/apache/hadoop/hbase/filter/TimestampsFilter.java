@@ -9,6 +9,7 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 
 import com.google.common.base.Preconditions;
 
@@ -66,8 +67,8 @@ public class TimestampsFilter extends FilterBase {
     return minTimeStamp;
   }
 
-  @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(KeyValue v,
+      List<KeyValueScanner> scanners) {
     if (this.timestamps.contains(v.getTimestamp())) {
       return ReturnCode.INCLUDE;
     } else if (v.getTimestamp() < minTimeStamp) {

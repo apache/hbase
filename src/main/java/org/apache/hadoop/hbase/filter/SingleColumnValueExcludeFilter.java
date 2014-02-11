@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A {@link Filter} that checks a single column value, but does not emit the
@@ -76,8 +78,9 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
     super(family, qualifier, compareOp, comparator);
   }
 
-  public ReturnCode filterKeyValue(KeyValue keyValue) {
-    ReturnCode superRetCode = super.filterKeyValue(keyValue);
+  @Override
+  public ReturnCode filterKeyValue(KeyValue keyValue, List<KeyValueScanner> scanners) {
+    ReturnCode superRetCode = super.filterKeyValue(keyValue, null);
     if (superRetCode == ReturnCode.INCLUDE) {
       // If the current column is actually the tested column,
       // we will skip it instead.

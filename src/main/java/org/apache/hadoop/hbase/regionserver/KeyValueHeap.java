@@ -443,4 +443,9 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
     }
     return this.current.currKeyValueObtainedFromCache();
   }
+
+  @Override
+  public boolean passesRowKeyPrefixBloomFilter(KeyValue kv) {
+    return true;
+  }
 }

@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -65,7 +66,7 @@ public class RowFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(KeyValue v, List<KeyValueScanner> scanners) {
     if(this.filterOutRow) {
       return ReturnCode.NEXT_ROW;
     }

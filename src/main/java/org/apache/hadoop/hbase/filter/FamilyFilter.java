@@ -21,8 +21,10 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This filter is used to filter based on the column family. It takes an
@@ -56,7 +58,7 @@ public class FamilyFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(KeyValue v, List<KeyValueScanner> scanners) {
     int familyLength = v.getFamilyLength();
     if (familyLength > 0) {
       if (doCompare(this.compareOp, this.comparator, v.getBuffer(),

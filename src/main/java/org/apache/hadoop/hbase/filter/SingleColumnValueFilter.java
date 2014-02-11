@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.filter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
@@ -147,7 +148,8 @@ public class SingleColumnValueFilter extends FilterBase {
     return columnQualifier;
   }
 
-  public ReturnCode filterKeyValue(KeyValue keyValue) {
+  @Override
+  public ReturnCode filterKeyValue(KeyValue keyValue, List<KeyValueScanner> scanners) {
     // System.out.println("REMOVE KEY=" + keyValue.toString() + ", value=" + Bytes.toString(keyValue.getValue()));
     if (this.matchedColumn) {
       // We already found and matched the single column, all keys now pass

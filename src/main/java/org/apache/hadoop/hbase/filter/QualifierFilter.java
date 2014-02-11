@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This filter is used to filter based on the column qualifier. It takes an
@@ -57,7 +59,7 @@ public class QualifierFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(KeyValue v, List<KeyValueScanner> scanners) {
     int qualifierLength = v.getQualifierLength();
     if (qualifierLength > 0) {
       if (doCompare(this.compareOp, this.comparator, v.getBuffer(),

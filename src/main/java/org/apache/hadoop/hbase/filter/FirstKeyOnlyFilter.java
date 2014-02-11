@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 
 import java.io.DataOutput;
 import java.io.IOException;
@@ -50,7 +51,8 @@ public class FirstKeyOnlyFilter extends FilterBase {
     foundKV = false;
   }
 
-  public ReturnCode filterKeyValue(KeyValue v) {
+  @Override
+  public ReturnCode filterKeyValue(KeyValue v, List<KeyValueScanner> scanners) {
     if(foundKV) return ReturnCode.NEXT_ROW;
     foundKV = true;
     return ReturnCode.INCLUDE;

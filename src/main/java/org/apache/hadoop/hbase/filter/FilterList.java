@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.io.Writable;
 
 import java.io.DataInput;
@@ -161,13 +162,13 @@ public class FilterList implements Filter {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(KeyValue v, List<KeyValueScanner> scanners) {
     for (Filter filter : filters) {
       if (operator == Operator.MUST_PASS_ALL) {
         if (filter.filterAllRemaining()) {
           return ReturnCode.NEXT_ROW;
         }
-        ReturnCode code = filter.filterKeyValue(v);
+        ReturnCode code = filter.filterKeyValue(v, scanners);
         switch (code) {
         case INCLUDE:
           continue;
@@ -182,17 +183,25 @@ public class FilterList implements Filter {
           continue;
         }
 
-        switch (filter.filterKeyValue(v)) {
+        switch (filter.filterKeyValue(v, scanners)) {
         case INCLUDE:
           return ReturnCode.INCLUDE;
         case NEXT_ROW:
         case SKIP:
           // continue;
+        default:
+          break;
         }
       }
     }
     return operator == Operator.MUST_PASS_ONE?
       ReturnCode.SKIP: ReturnCode.INCLUDE;
+  }
+
+  @Override
+  @Deprecated
+  public ReturnCode filterKeyValue(KeyValue kv) {
+    return filterKeyValue(kv, null);
   }
 
   @Override
@@ -206,7 +215,7 @@ public class FilterList implements Filter {
   public boolean hasFilterRow() {
     for (Filter filter : filters) {
       if(filter.hasFilterRow()) {
-    	return true;
+        return true;
       }
     }
     return false;

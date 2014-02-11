@@ -21,12 +21,14 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.DataInput;
 import java.util.ArrayList;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
 
@@ -98,7 +100,7 @@ public class ColumnRangeFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue kv) {
+  public ReturnCode filterKeyValue(KeyValue kv, List<KeyValueScanner> scanners) {
     byte[] buffer = kv.getBuffer();
     int qualifierOffset = kv.getQualifierOffset();
     int qualifierLength = kv.getQualifierLength();

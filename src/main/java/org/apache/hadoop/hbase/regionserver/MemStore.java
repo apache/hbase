@@ -834,6 +834,13 @@ public class MemStore implements HeapSize {
     public boolean currKeyValueObtainedFromCache() {
       return true;
     }
+
+    @Override
+    public boolean passesRowKeyPrefixBloomFilter(KeyValue kv) {
+      // Need to fix this behavior and actually return a result
+      // from a bloom filter backed by the memstore.
+      return true;
+    }
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(

@@ -126,4 +126,13 @@ public interface KeyValueScanner {
    */
   boolean passesDeleteColumnCheck(KeyValue kv);
 
+  /**
+   * MemstoreScanner and StoreFileScanner should implement this method to check
+   * if the current kv passes the row key prefix bloom filter present in this
+   * file.
+   * @param kv : the given kv
+   * @return
+   */
+  boolean passesRowKeyPrefixBloomFilter(KeyValue kv);
+
 }

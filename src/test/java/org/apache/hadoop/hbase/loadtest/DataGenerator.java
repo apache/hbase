@@ -166,7 +166,7 @@ public class DataGenerator {
         new TreeSet<KeyValue>(new KeyValue.KVComparator());
     for (KeyValue kv : kvSet) {
       if (filter == null
-          || filter.filterKeyValue(kv).equals(Filter.ReturnCode.INCLUDE)) {
+          || filter.filterKeyValue(kv, null).equals(Filter.ReturnCode.INCLUDE)) {
         byte[] column = kv.getQualifier();
         if (Bytes.equals(prevColumn, column)) {
           currentVersions++;

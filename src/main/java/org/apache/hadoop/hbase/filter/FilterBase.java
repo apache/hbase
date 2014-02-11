@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -75,8 +76,14 @@ public abstract class FilterBase implements Filter {
    * @inheritDoc
    */
   @Override
-  public ReturnCode filterKeyValue(KeyValue ignored) {
+  public ReturnCode filterKeyValue(KeyValue ignored, List<KeyValueScanner> scanners) {
     return ReturnCode.INCLUDE;
+  }
+
+  @Override
+  @Deprecated
+  public ReturnCode filterKeyValue(KeyValue kv) {
+    return filterKeyValue(kv, null);
   }
 
   /**

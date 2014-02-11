@@ -21,8 +21,10 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This filter is used to filter based on column value. It takes an
@@ -56,7 +58,7 @@ public class ValueFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(KeyValue v, List<KeyValueScanner> scanners) {
     if (doCompare(this.compareOp, this.comparator, v.getBuffer(),
         v.getValueOffset(), v.getValueLength())) {
       return ReturnCode.SKIP;

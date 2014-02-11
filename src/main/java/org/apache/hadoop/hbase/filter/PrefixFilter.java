@@ -20,13 +20,11 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.DataInput;
-import java.util.List;
 import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;

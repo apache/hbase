@@ -23,9 +23,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
 
@@ -49,7 +51,7 @@ public class KeyOnlyFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue kv) {
+  public ReturnCode filterKeyValue(KeyValue kv, List<KeyValueScanner> scanners) {
     kv.convertToKeyOnly(this.lenAsVal);
     return ReturnCode.INCLUDE;
   }

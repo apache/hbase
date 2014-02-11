@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+
 import com.google.common.base.Preconditions;
 
 /**
@@ -56,7 +58,7 @@ public class ColumnPaginationFilter extends FilterBase
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v)
+  public ReturnCode filterKeyValue(KeyValue v, List<KeyValueScanner> scanners)
   {
     if(count >= offset + limit)
     {

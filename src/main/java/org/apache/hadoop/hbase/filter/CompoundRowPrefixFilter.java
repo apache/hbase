@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
@@ -77,7 +78,8 @@ public class CompoundRowPrefixFilter extends FilterBase {
 
   /**
    * Updates the state of the filter to the next rowPrefix.
-   * @return false if current prefix is updated. true if updated.
+   * @return false if we need to inspect the next prefix.
+   * true if the next prefix that we need to use is updated and valid.
    */
   private boolean checkAndUpdateNextPrefix() {
     if ((this.curPrefixIndex + 1) >= this.rowPrefixes.size()) {
@@ -88,8 +90,17 @@ public class CompoundRowPrefixFilter extends FilterBase {
     return true;
   }
 
+  private boolean passesRowPrefixBloomFilter(KeyValue kv,
+      List<KeyValueScanner> scanners) {
+    if (scanners == null) return true;
+    for (KeyValueScanner scanner : scanners) {
+      if (scanner.passesRowKeyPrefixBloomFilter(kv)) return true;
+    }
+    return false;
+  }
+
   @Override
-  public ReturnCode filterKeyValue(KeyValue currentKv) {
+  public ReturnCode filterKeyValue(KeyValue currentKv, List<KeyValueScanner> scanners) {
     while (true) {
       if (Bytes.startsWith(currentKv.getRow(), this.curRowPrefix)) {
         return ReturnCode.INCLUDE;
@@ -98,6 +109,13 @@ public class CompoundRowPrefixFilter extends FilterBase {
         // in the list
         if (!this.checkAndUpdateNextPrefix()) break;
       } else {
+        // We need to check the bloom filter if we need to seek to the
+        // current prefix.
+        if (!passesRowPrefixBloomFilter(
+            KeyValue.createFirstOnRow(this.curRowPrefix), scanners)) {
+          if (!this.checkAndUpdateNextPrefix()) break;
+          continue;
+        }
         break;
       }
     }
