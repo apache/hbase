@@ -294,6 +294,28 @@ public class TestFilterList {
     assertEquals(flist.filterKeyValue(new KeyValue(r2,r2,r2)), ReturnCode.SKIP);
   }
 
+  /**
+   * When we do a "MUST_PASS_ONE" (a logical 'OR') of the two filters
+   * we expect to get the same result as the inclusive stop result.
+   * @throws Exception
+   */
+  public void testFilterListWithInclusiveStopFilteMustPassOne() throws Exception {
+    byte[] r1 = Bytes.toBytes("Row1");
+    byte[] r11 = Bytes.toBytes("Row11");
+    byte[] r2 = Bytes.toBytes("Row2");
+  
+    FilterList flist = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+    flist.addFilter(new AlwaysNextColFilter());
+    flist.addFilter(new InclusiveStopFilter(r1));
+    flist.filterRowKey(r1, 0, r1.length);
+    assertEquals(flist.filterKeyValue(new KeyValue(r1,r1,r1)), ReturnCode.INCLUDE);
+    assertEquals(flist.filterKeyValue(new KeyValue(r11,r11,r11)), ReturnCode.INCLUDE);
+
+    flist.reset();
+    flist.filterRowKey(r2, 0, r2.length);
+    assertEquals(flist.filterKeyValue(new KeyValue(r2,r2,r2)), ReturnCode.SKIP);
+  }
+
   public static class AlwaysNextColFilter extends FilterBase {
     public AlwaysNextColFilter() {
       super();

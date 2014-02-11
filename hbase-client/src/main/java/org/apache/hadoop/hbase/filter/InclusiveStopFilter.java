@@ -24,7 +24,9 @@ import java.util.ArrayList;
 import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -49,6 +51,12 @@ public class InclusiveStopFilter extends FilterBase {
 
   public byte[] getStopRowKey() {
     return this.stopRowKey;
+  }
+
+  @Override
+  public ReturnCode filterKeyValue(Cell v) {
+    if (done) return ReturnCode.NEXT_ROW;
+    return ReturnCode.INCLUDE;
   }
 
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
