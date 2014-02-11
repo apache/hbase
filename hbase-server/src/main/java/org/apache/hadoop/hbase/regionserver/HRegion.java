@@ -5010,30 +5010,22 @@ public class HRegion implements HeapSize { // , Writable{
                     newKV.getTagsOffset(), oldKv.getTagsLength());
                 System.arraycopy(kv.getTagsArray(), kv.getTagsOffset(), newKV.getTagsArray(),
                     newKV.getTagsOffset() + oldKv.getTagsLength(), kv.getTagsLength());
+                // copy in row, family, and qualifier
+                System.arraycopy(kv.getRowArray(), kv.getRowOffset(),
+                    newKV.getRowArray(), newKV.getRowOffset(), kv.getRowLength());
+                System.arraycopy(kv.getFamilyArray(), kv.getFamilyOffset(),
+                    newKV.getFamilyArray(), newKV.getFamilyOffset(),
+                    kv.getFamilyLength());
+                System.arraycopy(kv.getQualifierArray(), kv.getQualifierOffset(),
+                    newKV.getQualifierArray(), newKV.getQualifierOffset(),
+                    kv.getQualifierLength());
                 idx++;
               } else {
-                // allocate an empty kv once
-                newKV = new KeyValue(row.length, kv.getFamilyLength(),
-                    kv.getQualifierLength(), now, KeyValue.Type.Put,
-                    kv.getValueLength(), kv.getTagsLength());
-                // copy in the value
-                System.arraycopy(kv.getValueArray(), kv.getValueOffset(),
-                    newKV.getValueArray(), newKV.getValueOffset(),
-                    kv.getValueLength());
-                // copy in tags
-                System.arraycopy(kv.getTagsArray(), kv.getTagsOffset(), newKV.getTagsArray(),
-                    newKV.getTagsOffset(), kv.getTagsLength());
-              }
-              // copy in row, family, and qualifier
-              System.arraycopy(kv.getRowArray(), kv.getRowOffset(),
-                  newKV.getRowArray(), newKV.getRowOffset(), kv.getRowLength());
-              System.arraycopy(kv.getFamilyArray(), kv.getFamilyOffset(),
-                  newKV.getFamilyArray(), newKV.getFamilyOffset(),
-                  kv.getFamilyLength());
-              System.arraycopy(kv.getQualifierArray(), kv.getQualifierOffset(),
-                  newKV.getQualifierArray(), newKV.getQualifierOffset(),
-                  kv.getQualifierLength());
-
+                newKV = kv;
+                // Append's KeyValue.Type==Put and ts==HConstants.LATEST_TIMESTAMP,
+                // so only need to update the timestamp to 'now'
+                newKV.updateLatestStamp(Bytes.toBytes(now));
+             }
               newKV.setMvccVersion(w.getWriteNumber());
               // Give coprocessors a chance to update the new cell
               if (coprocessorHost != null) {
