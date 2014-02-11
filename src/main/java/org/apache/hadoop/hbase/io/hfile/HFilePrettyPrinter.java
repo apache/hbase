@@ -19,19 +19,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.DataInput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
+import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -45,13 +33,15 @@ import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.util.BloomFilter;
-import org.apache.hadoop.hbase.util.BloomFilterFactory;
-import org.apache.hadoop.hbase.util.ByteBloomFilter;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.util.*;
 import org.codehaus.jackson.map.ObjectMapper;
+
+import java.io.DataInput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Implements pretty-printing functionality for {@link HFile}s.
@@ -401,6 +391,8 @@ public class HFilePrettyPrinter {
       return reader.getDeleteBloomFilterMetadata();
     } else if (bloomFilter.equals(HConstants.DELETE_COLUMN_BLOOM_FILTER)) {
       return reader.getDeleteColumnBloomFilterMetadata();
+    } else if (bloomFilter.equals(HConstants.ROWKEY_PREFIX_BLOOM_FILTER)) {
+      return reader.getRowKeyPrefixBloomFilterMetadata();
     }
     return null;
   }

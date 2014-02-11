@@ -19,13 +19,13 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.CompactionManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.nativeio.NativeIO;
+
+import java.nio.ByteBuffer;
 
 /**
  * HConstants holds a bunch of HBase-related constants
@@ -741,6 +741,8 @@ public final class HConstants {
   public static final String DELETE_FAMILY_BLOOM_FILTER = "delete_family_bloom_filter";
 
   public static final String DELETE_COLUMN_BLOOM_FILTER = "delete_column_bloom_filter";
+
+  public static final String ROWKEY_PREFIX_BLOOM_FILTER = "rowkey_prefix_bloom_filter";
 
   /**
    * This will enable/disable the usage of delete col bloom filter. Note that

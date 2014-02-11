@@ -124,6 +124,10 @@ public class StoreFile extends SchemaConfigured {
   static final byte[] BLOOM_FILTER_TYPE_KEY =
       Bytes.toBytes("BLOOM_FILTER_TYPE");
 
+  /** RowKey prefix length in FileInfo */
+  static final byte[] ROWKEY_PREFIX_LENGTH =
+    Bytes.toBytes("ROWKEY_PREFIX_LENGTH");
+
   /** Delete Family Count in FileInfo */
   public static final byte[] DELETE_FAMILY_COUNT =
       Bytes.toBytes("DELETE_FAMILY_COUNT");
@@ -654,6 +658,7 @@ public class StoreFile extends SchemaConfigured {
     private HFileDataBlockEncoder dataBlockEncoder;
     private KeyValue.KVComparator comparator = KeyValue.COMPARATOR;
     private BloomType bloomType = BloomType.NONE;
+    private int rowKeyPrefixLength = -1;
     private long maxKeyCount = 0;
     private Path dir;
     private Path filePath;
@@ -727,6 +732,11 @@ public class StoreFile extends SchemaConfigured {
     public WriterBuilder withBloomType(BloomType bloomType) {
       Preconditions.checkNotNull(bloomType);
       this.bloomType = bloomType;
+      return this;
+    }
+
+    public WriterBuilder withRowKeyPrefixLengthForBloom(int prefixLength) {
+      this.rowKeyPrefixLength = prefixLength;
       return this;
     }
 
@@ -876,6 +886,8 @@ public class StoreFile extends SchemaConfigured {
     private final BloomFilterWriter generalBloomFilterWriter;
     private final BloomFilterWriter deleteFamilyBloomFilterWriter;
     private final BloomFilterWriter deleteColumnBloomFilterWriter;
+    private final BloomFilterWriter rowKeyPrefixBloomFilterWriter;
+    private int rowKeyPrefixLength = 0;
     private final BloomType bloomType;
     private byte[] lastBloomKey;
     private int lastBloomKeyOffset, lastBloomKeyLen;
@@ -883,6 +895,7 @@ public class StoreFile extends SchemaConfigured {
     private KeyValue lastKv = null;
     private KeyValue lastDeleteFamilyKV = null;
     private KeyValue lastDeleteColumnKV = null;
+    private KeyValue lastPrefixKV = null;
     private long deleteFamilyCnt = 0;
     private long deleteColumnCnt = 0;
 
@@ -929,30 +942,62 @@ public class StoreFile extends SchemaConfigured {
         this.bloomType = BloomType.NONE;
       }
 
-      // initialize delete family Bloom filter when there is NO RowCol Bloom
-      // filter
-      if (this.bloomType != BloomType.ROWCOL) {
+      // Initialize delete family Bloom filter when there is NO RowCol Bloom
+      // filter and it has been enabled in the configuration
+      if (this.bloomType != BloomType.ROWCOL &&
+        BloomFilterFactory.isDeleteFamilyBloomEnabled(wb.conf)) {
         this.deleteFamilyBloomFilterWriter = BloomFilterFactory
-            .createDeleteBloomAtWrite(wb.conf, wb.cacheConf,
-                (int) Math.min(wb.maxKeyCount, Integer.MAX_VALUE), writer,
-                wb.bloomErrorRate, HConstants.DELETE_FAMILY_BLOOM_FILTER);
+            .createBloomFilterWriter(wb.conf, wb.cacheConf, writer, wb.bloomErrorRate);
       } else {
-        deleteFamilyBloomFilterWriter = null;
+        this.deleteFamilyBloomFilterWriter = null;
       }
+
       if (deleteFamilyBloomFilterWriter != null) {
         LOG.info("Delete Family Bloom filter type for " + wb.filePath + ": "
-            + deleteFamilyBloomFilterWriter.getClass().getSimpleName());
+          + deleteFamilyBloomFilterWriter.getClass().getSimpleName());
+      } else {
+        LOG.info("Delete Family Bloom filters are disabled by configuration or ROWCOL BF has " +
+          "been already enabled for " + writer.getPath() + (wb.conf == null ? " " +
+          "(configurations null)" : ""));
       }
-      // initialize DeleteColumn bloom filter
-      this.deleteColumnBloomFilterWriter = BloomFilterFactory
-          .createDeleteBloomAtWrite(wb.conf, wb.cacheConf,
-              (int) Math.min(wb.maxKeyCount, Integer.MAX_VALUE), writer,
-              wb.bloomErrorRate, HConstants.DELETE_COLUMN_BLOOM_FILTER);
+
+      // Initialize the delete column bloom filter if the conf is enabled
+      if (BloomFilterFactory.isDeleteColumnBloomEnabled(wb.conf)) {
+        // initialize DeleteColumn bloom filter
+        this.deleteColumnBloomFilterWriter = BloomFilterFactory
+            .createBloomFilterWriter(wb.conf, wb.cacheConf, writer, wb.bloomErrorRate);
+      } else {
+        this.deleteColumnBloomFilterWriter = null;
+      }
 
       if (deleteColumnBloomFilterWriter != null) {
         LOG.info("Delete Column Family filter type for " + wb.filePath + ": "
-            + deleteColumnBloomFilterWriter.getClass().getSimpleName());
+          + deleteColumnBloomFilterWriter.getClass().getSimpleName());
+      } else {
+        LOG.info("Delete Column Bloom filters are disabled by configuration for "
+          + writer.getPath() + (wb.conf == null ? " (configuration is null)" : ""));
       }
+
+      // Initialize the RowKey Prefix Bloom filters
+      if (wb.rowKeyPrefixLength > 0 && BloomFilterFactory.isRowKeyPrefixBloomEnabled(wb.conf)) {
+        // Create the bloom filter
+        this.rowKeyPrefixBloomFilterWriter = BloomFilterFactory.createBloomFilterWriter(
+          wb.conf, wb.cacheConf, writer, wb.bloomErrorRate);
+
+        // Cache the prefix length
+        rowKeyPrefixLength = wb.rowKeyPrefixLength;
+      } else {
+        this.rowKeyPrefixBloomFilterWriter = null;
+      }
+
+      if (rowKeyPrefixBloomFilterWriter != null) {
+        LOG.info("BloomFilter for the RowKeyPrefix " + rowKeyPrefixLength + " created " + wb
+          .filePath + ": " + rowKeyPrefixBloomFilterWriter.getClass().getSimpleName());
+      } else {
+        LOG.info("RowKeyPrefix Bloom filters are disabled for "
+          + writer.getPath() + (wb.conf == null ? " (configuration is null)" : ""));
+      }
+
     }
 
     /**
@@ -1137,6 +1182,24 @@ public class StoreFile extends SchemaConfigured {
       }
     }
 
+    private void appendRowKeyPrefixBloomFilter(final KeyValue kv)
+      throws IOException {
+      if (this.rowKeyPrefixBloomFilterWriter == null || kv.getRowLength() < rowKeyPrefixLength) {
+        return;
+      }
+
+      if (lastPrefixKV != null &&
+          (rowKeyPrefixBloomFilterWriter.getComparator().compare(
+            kv.getBuffer(), kv.getRowOffset(), rowKeyPrefixLength,
+            lastPrefixKV.getBuffer(), lastPrefixKV.getRowOffset(), rowKeyPrefixLength) == 0)) {
+        // return directly if the current prefix matches with the previous prefix
+        return;
+      }
+
+      this.rowKeyPrefixBloomFilterWriter.add(kv.getBuffer(), kv.getRowOffset(), rowKeyPrefixLength);
+      this.lastPrefixKV = kv;
+    }
+
     public void append(final KeyValue kv) throws IOException {
       append(kv, null);
     }
@@ -1145,7 +1208,7 @@ public class StoreFile extends SchemaConfigured {
       appendGeneralBloomfilter(kv);
       appendDeleteFamilyBloomFilter(kv);
       appendDeleteColumnBloomFilter(kv);
-
+      appendRowKeyPrefixBloomFilter(kv);
       writer.append(kv, cv);
       includeInTimeRangeTracker(kv);
     }
@@ -1181,6 +1244,10 @@ public class StoreFile extends SchemaConfigured {
       return deleteColumnBloomFilterWriter;
     }
 
+    BloomFilterWriter getRowKeyPrefixBloomFilterWriter() {
+      return rowKeyPrefixBloomFilterWriter;
+    }
+
     private boolean closeBloomFilter(BloomFilterWriter bfw) throws IOException {
       boolean haveBloom = (bfw != null && bfw.getKeyCount() > 0);
       if (haveBloom) {
@@ -1206,6 +1273,17 @@ public class StoreFile extends SchemaConfigured {
       return hasGeneralBloom;
     }
 
+    private boolean closeRowKeyPrefixBloomFilter() throws IOException {
+      boolean hasPrefixBloom = closeBloomFilter(rowKeyPrefixBloomFilterWriter);
+
+      // add the rowkey prefix bloom filter writer and append file info
+      if (hasPrefixBloom) {
+        writer.addRowKeyPrefixBloomFilter(rowKeyPrefixBloomFilterWriter);
+      }
+      writer.appendFileInfo(ROWKEY_PREFIX_LENGTH,  Bytes.toBytes(this.rowKeyPrefixLength));
+      return hasPrefixBloom;
+    }
+
     private boolean closeDeleteFamilyBloomFilter() throws IOException {
       boolean hasDeleteFamilyBloom = closeBloomFilter(deleteFamilyBloomFilterWriter);
 
@@ -1213,11 +1291,10 @@ public class StoreFile extends SchemaConfigured {
       if (hasDeleteFamilyBloom) {
         writer.addDeleteFamilyBloomFilter(deleteFamilyBloomFilterWriter);
       }
-
       // append file info about the number of delete family kvs
       // even if there is no delete family Bloom.
       writer.appendFileInfo(DELETE_FAMILY_COUNT,
-          Bytes.toBytes(this.deleteFamilyCnt));
+        Bytes.toBytes(this.deleteFamilyCnt));
 
       return hasDeleteFamilyBloom;
     }
@@ -1244,14 +1321,15 @@ public class StoreFile extends SchemaConfigured {
       boolean hasGeneralBloom = this.closeGeneralBloomFilter();
       boolean hasDeleteFamilyBloom = this.closeDeleteFamilyBloomFilter();
       boolean hasDeleteColumnBloom = this.closeDeleteColumnBloomFilter();
-
+      boolean hasRowKeyPrefixBloom = this.closeRowKeyPrefixBloomFilter();
       writer.close();
 
       // Log final Bloom filter statistics. This needs to be done after close()
       // because compound Bloom filters might be finalized as part of closing.
       StoreFile.LOG.info((hasGeneralBloom ? "" : "NO ") + "General Bloom and "
           + (hasDeleteFamilyBloom ? "" : "NO ") + "DeleteFamily and "
-          + (hasDeleteColumnBloom ? "" : "NO ") + "DeleteColumn"
+          + (hasDeleteColumnBloom ? "" : "NO ") + "DeleteColumn and "
+          + (hasRowKeyPrefixBloom ? "" : "NO ") + "RowKeyPrefix"
           + " was added to HFile (" + getPath() + ") ");
 
     }
@@ -1275,6 +1353,7 @@ public class StoreFile extends SchemaConfigured {
     protected BloomFilter generalBloomFilter = null;
     protected BloomFilter deleteFamilyBloomFilter = null;
     protected BloomFilter deleteColumnBloomFilter = null;
+    protected BloomFilter rowKeyPrefixBloomFilter = null;
     protected BloomType bloomFilterType;
     private final HFile.Reader reader;
     protected TimeRangeTracker timeRangeTracker = null;
@@ -1282,6 +1361,7 @@ public class StoreFile extends SchemaConfigured {
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
     private long deleteColumnCnt = -1;
+    private int rowKeyPrefixLength = -1;
 
     public Reader(FileSystem fs, Path path, CacheConfig cacheConf,
         DataBlockEncoding preferredEncodingInCache) throws IOException {
@@ -1482,6 +1562,49 @@ public class StoreFile extends SchemaConfigured {
     }
 
     /**
+     * This function checks whether the RowKeyPrefix Bloom filter covers the given RowKey prefix.
+     * @param buffer
+     * @param rowPrefixOffset
+     * @param rowPrefixLength
+     * @return false if the RowKeyPrefix Bloom filter doesn't cover the given RowKey prefix.
+     * Otherwise, return true;
+     */
+    public boolean passesRowKeyPrefixBloomFilter(byte[] buffer, int rowPrefixOffset,
+                                                 int rowPrefixLength) {
+
+      // Sanity check the parameters
+      if (buffer == null || rowPrefixOffset + rowPrefixLength > buffer.length
+        || rowPrefixLength <=0) {
+        return false;
+      }
+
+      // Cache Bloom filter as a local variable in case it is set to null by
+      // another thread on an IO error.
+      BloomFilter bloomFilter = this.rowKeyPrefixBloomFilter;
+
+      // Empty file or the prefix does not match at all
+      if (reader.getTrailer().getEntryCount() == 0) {
+        return false; // No need to seek
+      }
+
+      if (bloomFilter == null || this.rowKeyPrefixLength > rowPrefixLength) {
+        return true; // Have to seek into the file
+      }
+
+      try {
+        if (!bloomFilter.supportsAutoLoading()) {
+          return true;
+        }
+        return bloomFilter.contains(buffer, rowPrefixOffset, this.rowKeyPrefixLength, null);
+      } catch (IllegalArgumentException e) {
+        LOG.error("Bad RowKey Prefix  bloom filter data -- proceeding without", e);
+        setRowKeyPrefixBloomFilterFaulty();
+      }
+
+      return true;
+    }
+
+    /**
      * A method for checking Bloom filters. Called directly from
      * {@link StoreFileScanner} in case of a multi-column query.
      *
@@ -1592,6 +1715,11 @@ public class StoreFile extends SchemaConfigured {
       return true;
     }
 
+    /**
+     * Load the file info from the HFile format
+     * @return the file info mapping
+     * @throws IOException
+     */
     public Map<byte[], byte[]> loadFileInfo() throws IOException {
       Map<byte [], byte []> fi = reader.loadFileInfo();
 
@@ -1610,6 +1738,11 @@ public class StoreFile extends SchemaConfigured {
         deleteColumnCnt = Bytes.toLong(cnt);
       }
 
+      cnt = fi.get(ROWKEY_PREFIX_LENGTH);
+      if (cnt != null) {
+        rowKeyPrefixLength = Bytes.toInt(cnt);
+      }
+
       return fi;
     }
 
@@ -1617,6 +1750,7 @@ public class StoreFile extends SchemaConfigured {
       this.loadBloomfilter(BlockType.GENERAL_BLOOM_META);
       this.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META);
       this.loadBloomfilter(BlockType.DELETE_COLUMN_BLOOM_META);
+      this.loadBloomfilter(BlockType.ROWKEY_PREFIX_BLOOM_META);
     }
 
     private void loadBloomfilter(BlockType blockType) {
@@ -1662,6 +1796,19 @@ public class StoreFile extends SchemaConfigured {
                 + deleteColumnBloomFilter.getClass().getSimpleName()
                 + ") metadata for " + reader.getName());
           }
+        } else if (blockType == BlockType.ROWKEY_PREFIX_BLOOM_META) {
+          if (this.rowKeyPrefixBloomFilter != null) {
+            return; // Bloom has been loaded
+          }
+
+          DataInput bloomMeta = reader.getRowKeyPrefixBloomFilterMetadata();
+          if (bloomMeta != null) {
+            rowKeyPrefixBloomFilter = BloomFilterFactory.createFromMeta(
+              bloomMeta, reader);
+            LOG.info("Loaded RowKey Prefix Bloom ("
+              + rowKeyPrefixBloomFilter.getClass().getSimpleName()
+              + ") metadata for " + reader.getName());
+          }
         } else {
           throw new RuntimeException("Block Type: " + blockType.toString()
               + "is not supported for Bloom filter");
@@ -1684,6 +1831,8 @@ public class StoreFile extends SchemaConfigured {
         setDeleteFamilyBloomFilterFaulty();
       } else if (blockType == BlockType.DELETE_COLUMN_BLOOM_META) {
         setDeleteColumnBloomFilterFaulty();
+      } else if (blockType == BlockType.ROWKEY_PREFIX_BLOOM_META) {
+        setRowKeyPrefixBloomFilterFaulty();
       }
     }
 
@@ -1711,6 +1860,10 @@ public class StoreFile extends SchemaConfigured {
       this.deleteColumnBloomFilter = null;
     }
 
+    public void setRowKeyPrefixBloomFilterFaulty() {
+      this.rowKeyPrefixBloomFilter = null;
+    }
+
     public byte[] getLastKey() {
       return reader.getLastKey();
     }
@@ -1733,6 +1886,14 @@ public class StoreFile extends SchemaConfigured {
 
     public long getDeleteColumnCnt() {
       return deleteColumnCnt;
+    }
+
+    public long getRowKeyPrefixLength() {
+      return rowKeyPrefixLength;
+    }
+
+    public BloomFilter getRowKeyPrefixBloomFilter() {
+      return rowKeyPrefixBloomFilter;
     }
 
     public byte[] getFirstKey() {
@@ -1782,9 +1943,10 @@ public class StoreFile extends SchemaConfigured {
     }
 
     void disableBloomFilterForTesting() {
-      generalBloomFilter = null;
+      this.generalBloomFilter = null;
       this.deleteFamilyBloomFilter = null;
       this.deleteColumnBloomFilter = null;
+      this.rowKeyPrefixBloomFilter = null;
     }
 
     public long getMaxTimestamp() {

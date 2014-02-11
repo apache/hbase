@@ -19,15 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
@@ -37,6 +30,11 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * An HColumnDescriptor contains information about a column family such as the
@@ -48,6 +46,7 @@ import org.apache.hadoop.io.WritableComparable;
  * deleted when the column is deleted.
  */
 public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> {
+  static final Log LOG = LogFactory.getLog(HColumnDescriptor.class);
   // For future backward compatibility
 
   // Version 3 was when column names become byte arrays and when we picked up
@@ -96,6 +95,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String BLOOMFILTER_ERRORRATE = "BLOOMFILTER_ERRORRATE";
   public static final String FOREVER = "FOREVER";
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
+  public static final String ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER = "ROWKEY_PREFIX_LENGTH";
 
   /**
    * Default compression type.
@@ -147,6 +147,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String DEFAULT_BLOOMFILTER = StoreFile.BloomType.NONE.toString();
 
   /**
+   * Default setting for the RowKey Prefix Length for the Bloomfilter.
+   */
+  public static final int DEFAULT_ROWKEY_PREFIX_LENGTH_FOR_BLOOM = -1;
+
+  /**
    * Default value for bloom filter error rate.
    */
   public static final float DEFAULT_BLOOMFILTER_ERROR_RATE = 0.01f;
@@ -189,6 +194,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
           String.valueOf(DEFAULT_ENCODE_ON_DISK));
       DEFAULT_VALUES.put(DATA_BLOCK_ENCODING,
           String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
+      DEFAULT_VALUES.put(ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER,
+          String.valueOf(DEFAULT_ROWKEY_PREFIX_LENGTH_FOR_BLOOM));
       for (String s : DEFAULT_VALUES.keySet()) {
         RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
       }
@@ -691,6 +698,28 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       n = DEFAULT_BLOOMFILTER;
     }
     return StoreFile.BloomType.valueOf(n.toUpperCase());
+  }
+
+  /**
+   * @return the number of bytes as row key prefix for the bloom filter
+   */
+  public int getRowPrefixLengthForBloom() {
+    String n = getValue(ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER);
+    int prefixLength = DEFAULT_ROWKEY_PREFIX_LENGTH_FOR_BLOOM;
+    if (n != null) {
+      try {
+        prefixLength = Integer.valueOf(n);
+      } catch (Throwable e) {
+        LOG.error("Cannot parse " + n + " as the RowKey Prefix Length", e);
+      }
+    }
+    return prefixLength;
+  }
+
+  public void setRowKeyPrefixLengthForBloom(int prefixLength) {
+    if (prefixLength > 0) {
+      setValue(ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER, String.valueOf(prefixLength));
+    }
   }
 
   /**

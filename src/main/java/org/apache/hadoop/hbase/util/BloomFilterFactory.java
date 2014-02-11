@@ -20,18 +20,17 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.io.DataInput;
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+
+import java.io.DataInput;
+import java.io.IOException;
 
 /**
  * Handles Bloom filter initialization based on configuration and serialized
@@ -77,6 +76,10 @@ public final class BloomFilterFactory {
   /** Master switch to enable Delete Column Family filters */
   public static final String IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED =
       "io.storefile.delete.column.bloom.enabled";
+
+  /** Master switch to enable RowKey Prefix Bloom filters */
+  public static final String IO_STOREFILE_ROWKEYPREFIX_BLOOM_ENABLED =
+    "io.storefile.rowkey.prefix.bloom.enabled";
 
   /**
    * Target Bloom block size. Bloom filter blocks of approximately this size
@@ -132,7 +135,7 @@ public final class BloomFilterFactory {
    * @return true if Delete Family Bloom filters are enabled in the given configuration
    */
   public static boolean isDeleteFamilyBloomEnabled(Configuration conf) {
-    return conf.getBoolean(IO_STOREFILE_DELETEFAMILY_BLOOM_ENABLED, true);
+    return conf != null ? conf.getBoolean(IO_STOREFILE_DELETEFAMILY_BLOOM_ENABLED, true) : false;
   }
 
   /**
@@ -140,7 +143,15 @@ public final class BloomFilterFactory {
    * configuration
    */
   public static boolean isDeleteColumnBloomEnabled(Configuration conf) {
-    return conf.getBoolean(IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED, false);
+    return conf != null ? conf.getBoolean(IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED, false) : false;
+  }
+
+  /**
+   * @return true if rowkey prefix bloom filters are enabled in the given
+   * configuration
+   */
+  public static boolean isRowKeyPrefixBloomEnabled(Configuration conf) {
+    return conf != null ? conf.getBoolean(IO_STOREFILE_ROWKEYPREFIX_BLOOM_ENABLED, true) : false;
   }
 
   /**
@@ -252,30 +263,17 @@ public final class BloomFilterFactory {
   }
 
   /**
-   * Creates a new Delete Family/Column Bloom filter at the time of
+   * Creates a new Bloom filter at the time of
    * {@link org.apache.hadoop.hbase.regionserver.StoreFile} writing.
    * @param conf
-   * @param maxKeys an estimate of the number of keys we expect to insert.
-   *        Irrelevant if compound Bloom filters are enabled.
    * @param writer the HFile writer
    * @param bloomErrorRate
    * @return the new Bloom filter, or null in case Bloom filters are disabled
    *         or when failed to create one.
    */
-  public static BloomFilterWriter createDeleteBloomAtWrite(
-      Configuration conf, CacheConfig cacheConf, int maxKeys,
-      HFile.Writer writer, float bloomErrorRate, String deleteBloomType) {
-    if (deleteBloomType.equals(HConstants.DELETE_FAMILY_BLOOM_FILTER) && !isDeleteFamilyBloomEnabled(conf)) {
-      LOG.info("Delete Family Bloom filters are disabled by configuration for "
-          + writer.getPath()
-          + (conf == null ? " (configuration is null)" : ""));
-      return null;
-    } else if (deleteBloomType.equals(HConstants.DELETE_COLUMN_BLOOM_FILTER) && !isDeleteColumnBloomEnabled(conf)) {
-      LOG.info("Delete Column Bloom filters are disabled by configuration for "
-          + writer.getPath()
-          + (conf == null ? " (configuration is null)" : ""));
-      return null;
-    }
+  public static BloomFilterWriter createBloomFilterWriter(
+    Configuration conf, CacheConfig cacheConf,
+    HFile.Writer writer, float bloomErrorRate) {
 
     if (HFile.getFormatVersion(conf) > HFile.MIN_FORMAT_VERSION) {
       int maxFold = getMaxFold(conf);
@@ -291,4 +289,5 @@ public final class BloomFilterFactory {
       return null;
     }
   }
+
 };

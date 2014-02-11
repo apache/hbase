@@ -947,6 +947,7 @@ public class Store extends SchemaConfigured implements HeapSize,
             .withDataBlockEncoder(dataBlockEncoder)
             .withComparator(comparator)
             .withBloomType(family.getBloomFilterType())
+            .withRowKeyPrefixLengthForBloom(family.getRowPrefixLengthForBloom())
             .withMaxKeyCount(maxKeyCount)
             .withFavoredNodes(region.getFavoredNodes())
             .withCompression(compression)

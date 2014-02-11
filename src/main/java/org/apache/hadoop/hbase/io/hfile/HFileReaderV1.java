@@ -19,13 +19,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
-
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,7 +36,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
 
-import com.google.common.base.Preconditions;
+import java.io.ByteArrayInputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 
 /**
  * {@link HFile} reader for version 1. Does not support data block encoding,
@@ -747,6 +746,11 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
   @Override
   public DataInput getDeleteColumnBloomFilterMetadata() {
+    return null;
+  }
+
+  @Override
+  public DataInput getRowKeyPrefixBloomFilterMetadata() {
     return null;
   }
 

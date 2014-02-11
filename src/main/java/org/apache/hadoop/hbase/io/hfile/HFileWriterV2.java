@@ -20,12 +20,6 @@
 
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +32,12 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
+
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Writes HFile format version 2.
@@ -487,6 +487,11 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     this.addBloomFilter(bfw, BlockType.DELETE_COLUMN_BLOOM_META);
   }
 
+  @Override
+  public void addRowKeyPrefixBloomFilter(BloomFilterWriter bfw) {
+    this.addBloomFilter(bfw, BlockType.ROWKEY_PREFIX_BLOOM_META);
+  }
+
   private void addBloomFilter(final BloomFilterWriter bfw,
       final BlockType blockType) {
     if (bfw.getKeyCount() <= 0)
@@ -494,7 +499,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     if (blockType != BlockType.GENERAL_BLOOM_META &&
         blockType != BlockType.DELETE_FAMILY_BLOOM_META &&
-        blockType != BlockType.DELETE_COLUMN_BLOOM_META) {
+        blockType != BlockType.DELETE_COLUMN_BLOOM_META &&
+        blockType != BlockType.ROWKEY_PREFIX_BLOOM_META) {
       throw new RuntimeException("Block Type: " + blockType.toString() +
           "is not supported");
     }

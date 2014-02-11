@@ -19,16 +19,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.DataInput;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -44,11 +34,19 @@ import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.io.WritableUtils;
+
+import java.io.DataInput;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * {@link HFile} reader for version 2.
@@ -1573,19 +1571,26 @@ public class HFileReaderV2 extends AbstractHFileReader {
     return this.getBloomFilterMetadata(BlockType.DELETE_COLUMN_BLOOM_META);
   }
 
+  @Override
+  public DataInput getRowKeyPrefixBloomFilterMetadata() throws IOException {
+    return this.getBloomFilterMetadata(BlockType.ROWKEY_PREFIX_BLOOM_META);
+  }
+
   private DataInput getBloomFilterMetadata(BlockType blockType)
   throws IOException {
     if (blockType != BlockType.GENERAL_BLOOM_META &&
         blockType != BlockType.DELETE_FAMILY_BLOOM_META &&
-        blockType != BlockType.DELETE_COLUMN_BLOOM_META) {
+        blockType != BlockType.DELETE_COLUMN_BLOOM_META &&
+        blockType != BlockType.ROWKEY_PREFIX_BLOOM_META) {
       throw new RuntimeException("Block Type: " + blockType.toString() +
           " is not supported") ;
     }
 
-    for (HFileBlock b : loadOnOpenBlocks)
+    for (HFileBlock b : loadOnOpenBlocks) {
       if (b.getBlockType() == blockType) {
         return b.getByteStream();
       }
+    }
     return null;
   }
 

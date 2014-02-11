@@ -19,33 +19,13 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.Closeable;
-import java.io.DataInput;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.io.WriteOptions;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.metrics.PercentileMetric;
@@ -56,8 +36,18 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Histogram;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WriteOptions;
 
-import com.google.common.base.Preconditions;
+import java.io.Closeable;
+import java.io.DataInput;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * File format for hbase.
@@ -282,6 +272,12 @@ public class HFile {
      * @throws IOException
      */
     void addDeleteColumnBloomFilter(BloomFilterWriter bfw) throws IOException;
+
+    /**
+     * Store the Rowkey Prefix Bloom filter in the file, which is only supported in
+     * HFile V2.
+     */
+    void addRowKeyPrefixBloomFilter(BloomFilterWriter bfw) throws IOException;
 
     /**
      * Set whether compaction is in progress or not
@@ -525,6 +521,14 @@ public class HFile {
      * @throws IOException
      */
     DataInput getDeleteColumnBloomFilterMetadata() throws IOException;
+
+    /**
+     * Retrieves RowKey Prefix Bloom filter metadata as appropriate for each
+     * {@link HFile} version.
+     * Knows nothing about how metadata is structured.
+     * @throws IOException
+     */
+    DataInput getRowKeyPrefixBloomFilterMetadata() throws IOException;
 
     Path getPath();
 

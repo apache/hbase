@@ -19,16 +19,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeSet;
-
+import com.google.common.base.Joiner;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -41,25 +34,20 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.CacheTestHelper;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
-import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.*;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.Assert;
 import org.mockito.Mockito;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.util.*;
 
 /**
  * Test HStoreFile
@@ -418,6 +406,159 @@ public class TestStoreFile extends HBaseTestCase {
             .withMaxKeyCount(2000)
             .build();
     bloomWriteRead(writer, fs);
+  }
+
+  public void testRowKeyPrefixBloomFilter() throws Exception {
+    FileSystem fs = FileSystem.getLocal(conf);
+    final float ERROR_RATE = (float) 0.01;
+    conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, ERROR_RATE);
+    conf.setBoolean(BloomFilterFactory.IO_STOREFILE_ROWKEYPREFIX_BLOOM_ENABLED, true);
+
+    // Create a StoreFile
+    final int ROWKEY_PREFIX_LENGTH = Bytes.SIZEOF_INT;
+    Path f = new Path(ROOT_DIR, getName() + "-prefix-" + ROWKEY_PREFIX_LENGTH);
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf,
+      fs, StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+      .withFilePath(f)
+      .withRowKeyPrefixLengthForBloom(ROWKEY_PREFIX_LENGTH)
+      .build();
+
+    // Generate the prefixes
+    final int PREFIX_NUM = 10000;
+    byte[][] prefixArray = new byte[PREFIX_NUM][];
+    for (int i = 0; i < PREFIX_NUM; i++) {
+      prefixArray[i] = Bytes.toBytes(i);
+      Assert.assertEquals(ROWKEY_PREFIX_LENGTH, prefixArray[i].length);
+      if (i != 0) {
+        Assert.assertTrue(Bytes.BYTES_RAWCOMPARATOR.compare(prefixArray[i],
+          prefixArray[i-1]) > 0);
+      }
+    }
+
+    final byte[] shorterRowKey = new byte[Bytes.SIZEOF_INT -1];
+    System.arraycopy(prefixArray[0], 0, shorterRowKey, 0, Bytes.SIZEOF_INT -1);
+
+    // Add key values with the prefixes into store file
+    final int KV_PER_PREFIX = 10;
+    final int KV_NUM = KV_PER_PREFIX * PREFIX_NUM;
+    final byte[] FAMILY = Bytes.toBytes("family");
+    final byte[] COL =Bytes.toBytes("col");
+
+    // Generate the suffix
+    TreeSet<byte[]> suffix = new TreeSet<byte[]>(Bytes.BYTES_RAWCOMPARATOR);
+    MessageDigest m = MessageDigest.getInstance("MD5");
+    for (int i = 0; i < KV_NUM; i++) {
+      m.reset();
+      m.update(Bytes.toBytes("Test" + i));
+      suffix.add(m.digest()); // Make sure the suffix is sorted as byte order
+    }
+
+    // Add a row key whose length is shorter than the prefix; This row key shall not exist in the
+    // RowKeyPrefix Bloom filter
+    writer.append(new KeyValue(shorterRowKey, FAMILY, COL, Bytes.toBytes("value")));
+
+    // Add all the prepared the KVs by combining the prefix and suffix.
+    Iterator<byte[]> iterator = suffix.iterator();
+    for (int i = 0; i < KV_NUM; i++) {
+      // Generate row key
+      byte[] row = Bytes.add(prefixArray[i / KV_PER_PREFIX], iterator.next());
+      KeyValue kv = new KeyValue(row, FAMILY, COL, Bytes.toBytes("value" + i));
+      writer.append(kv);
+    }
+
+    // Verify the bloom filter writer
+    Assert.assertNotNull(writer.getRowKeyPrefixBloomFilterWriter());
+    writer.close();
+
+    // Open the file and load the bloom filters
+    StoreFile.Reader reader = new StoreFile.Reader(fs, f, cacheConf, DataBlockEncoding.NONE);
+    reader.loadFileInfo();
+    reader.loadBloomfilter();
+
+    // Verify the prefix length
+    Assert.assertEquals(ROWKEY_PREFIX_LENGTH, reader.getRowKeyPrefixLength());
+
+    // Verify the RowKey Prefix Bloom filter has been loaded
+    Assert.assertNotNull(reader.getRowKeyPrefixBloomFilter());
+
+    // Verify the number keys in the RowKey Prefix Bloom filter
+    Assert.assertEquals(PREFIX_NUM, reader.getRowKeyPrefixBloomFilter().getKeyCount());
+
+    // Verify all the prefixes have been covered in the Bloom
+    for (byte[] prefix : prefixArray) {
+      // The bloom filter contains the bloom key
+      assertTrue(reader.getRowKeyPrefixBloomFilter().contains(prefix, 0, prefix.length,
+        null));
+      assertTrue(reader.passesRowKeyPrefixBloomFilter(prefix, 0, prefix.length));
+    }
+
+    // Verify all the longer prefix has been covered in the Bloom as well
+    int falsePositive = 0;
+    for (byte[] prefix : prefixArray) {
+      byte[] longerPrefix = Bytes.add(prefix, Bytes.toBytes(10));
+
+      assertTrue(reader.getRowKeyPrefixBloomFilter().contains(
+        longerPrefix, 0, prefix.length, null));
+      assertTrue(reader.passesRowKeyPrefixBloomFilter(longerPrefix, 0, longerPrefix.length));
+
+      if (reader.getRowKeyPrefixBloomFilter().contains(
+        longerPrefix, 0,  longerPrefix.length, null)) {
+        falsePositive ++;
+      }
+    }
+
+    // Verify the error rate
+    assertTrue(PREFIX_NUM * ERROR_RATE >= falsePositive);
+
+    // Create a new store file with a new row key prefix
+    final int ROWKEY_PREFIX_LENGTH2 = ROWKEY_PREFIX_LENGTH + 1;
+    f = new Path(ROOT_DIR, getName() + "-prefix-" + ROWKEY_PREFIX_LENGTH2);
+    writer = new StoreFile.WriterBuilder(conf, cacheConf,
+      fs, StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+      .withFilePath(f)
+      .withRowKeyPrefixLengthForBloom(ROWKEY_PREFIX_LENGTH2)
+      .build();
+
+    // Write the same data into this new store file
+    iterator = suffix.iterator();
+    for (int i = 0; i < KV_NUM; i++) {
+      // Generate row key
+      byte[] row = Bytes.add(prefixArray[i / KV_PER_PREFIX], iterator.next());
+      KeyValue kv = new KeyValue(row, FAMILY, COL, Bytes.toBytes("value" + i));
+      writer.append(kv);
+    }
+
+    // Verify the bloom filter writer
+    Assert.assertNotNull(writer.getRowKeyPrefixBloomFilterWriter());
+    writer.close();
+
+    // Open the file and load the bloom filter
+    reader = new StoreFile.Reader(fs, f, cacheConf, DataBlockEncoding.NONE);
+    reader.loadFileInfo();
+    reader.loadBloomfilter();
+
+    // Verify the prefix length
+    Assert.assertEquals(ROWKEY_PREFIX_LENGTH2, reader.getRowKeyPrefixLength());
+
+    // Verify the RowKey Prefix Bloom filter has been loaded
+    Assert.assertNotNull(reader.getRowKeyPrefixBloomFilter());
+
+    // Verify the number keys in the RowKey Prefix Bloom filter is larger than the PREFIX_NUM
+    Assert.assertTrue(reader.getRowKeyPrefixBloomFilter().getKeyCount() > PREFIX_NUM);
+
+    falsePositive = 0;
+    for (byte[] prefix : prefixArray) {
+      // Verify all the existing prefixes won't be covered in this new Bloom filter,
+      // whose prefix length is larger than all the existing prefixes.
+      if (reader.getRowKeyPrefixBloomFilter().contains(prefix, 0, prefix.length, null)) {
+        falsePositive++;
+      }
+      // But the passesRowKeyPrefixBloomFilter will return true due to the prefix mismatch
+      Assert.assertTrue(reader.passesRowKeyPrefixBloomFilter(prefix, 0, prefix.length));
+    }
+
+    // Verify the error rate
+    assertTrue(PREFIX_NUM * ERROR_RATE >= falsePositive);
   }
 
   public void testDeleteFamilyBloomFilter() throws Exception {

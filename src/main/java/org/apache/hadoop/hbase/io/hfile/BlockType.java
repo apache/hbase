@@ -19,13 +19,13 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import org.apache.hadoop.hbase.util.Bytes;
+
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Various types of {@link HFile} blocks. Ordinal values of these enum constants
@@ -77,6 +77,9 @@ public enum BlockType {
 
   /** Delete Column Bloom filter metadata, version 2 */
   DELETE_COLUMN_BLOOM_META("DCBLMET2", BlockCategory.BLOOM),
+
+  /** RowKey Prefix Bloom filter metadata, version 2 */
+  ROWKEY_PREFIX_BLOOM_META("RPBLMET2", BlockCategory.BLOOM),
 
   // Trailer
 

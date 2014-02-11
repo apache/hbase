@@ -416,6 +416,12 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     throw new IOException("Delete Bloom filter is not supported in HFile V1");
   }
 
+  @Override
+  public void addRowKeyPrefixBloomFilter(BloomFilterWriter bfw)
+    throws IOException {
+    throw new IOException("RowKeyPrefix Bloom filter is not supported in HFile V1");
+  }
+
   /**
    * Write out the index in the version 1 format. This conforms to the legacy
    * version 1 format, but can still be read by
