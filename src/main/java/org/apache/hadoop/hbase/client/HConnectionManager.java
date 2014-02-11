@@ -1445,7 +1445,7 @@ public class HConnectionManager {
           // Sleep and retry finding root region.
           try {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Root region location changed. Sleeping.");
+              LOG.debug("Root region location changed. Sleeping.", t);
             }
             Thread.sleep(getPauseTime(tries));
             if (LOG.isDebugEnabled()) {

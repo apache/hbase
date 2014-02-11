@@ -57,8 +57,8 @@ public class CompoundRowPrefixFilter extends FilterBase {
     Preconditions.checkArgument(rowPrefixes.size() > 0,
         "Requires atleast one row prefix to initialize.");
     // sorting the rowPrefixes to keep them in increasing order.
-    this.resetFilterProgress();
     Collections.sort(this.rowPrefixes, Bytes.BYTES_COMPARATOR);
+    this.resetFilterProgress();
   }
 
   /**
@@ -151,6 +151,7 @@ public class CompoundRowPrefixFilter extends FilterBase {
       rowPrefixes.add(Bytes.readByteArray(in));
     }
     Preconditions.checkArgument(rowPrefixes.size() > 0);
+    Collections.sort(this.rowPrefixes, Bytes.BYTES_COMPARATOR);
     this.resetFilterProgress();
   }
 
