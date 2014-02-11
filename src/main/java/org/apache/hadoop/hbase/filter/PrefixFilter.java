@@ -25,6 +25,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
@@ -64,6 +65,11 @@ public class PrefixFilter extends FilterBase {
     }
     filterRow = (cmp != 0);
     return filterRow;
+  }
+
+  @Override
+  public ReturnCode filterKeyValue(KeyValue ignored) {
+    return filterRow ? ReturnCode.NEXT_ROW : ReturnCode.INCLUDE;
   }
 
   public boolean filterRow() {
