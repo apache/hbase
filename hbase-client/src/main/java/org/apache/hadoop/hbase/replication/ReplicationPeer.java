@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.replication;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -33,6 +35,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -54,13 +57,14 @@ public class ReplicationPeer implements Abortable, Closeable {
   private final String id;
   private List<ServerName> regionServers = new ArrayList<ServerName>(0);
   private final AtomicBoolean peerEnabled = new AtomicBoolean();
+  private volatile Map<String, List<String>> tableCFs = new HashMap<String, List<String>>();
   // Cannot be final since a new object needs to be recreated when session fails
   private ZooKeeperWatcher zkw;
   private final Configuration conf;
   private long lastRegionserverUpdate;
 
   private PeerStateTracker peerStateTracker;
-
+  private TableCFsTracker tableCFsTracker;
 
   /**
    * Constructor that takes all the objects required to communicate with the
@@ -104,6 +108,76 @@ public class ReplicationPeer implements Abortable, Closeable {
   }
 
   /**
+   * start a table-cfs tracker to listen the (table, cf-list) map change
+   *
+   * @param zookeeper zk watcher for the local cluster
+   * @param tableCFsNode path to zk node which stores table-cfs
+   * @throws KeeperException
+   */
+  public void startTableCFsTracker(ZooKeeperWatcher zookeeper, String tableCFsNode)
+    throws KeeperException {
+    this.tableCFsTracker = new TableCFsTracker(tableCFsNode, zookeeper,
+        this);
+    this.tableCFsTracker.start();
+    this.readTableCFsZnode();
+  }
+
+  static Map<String, List<String>> parseTableCFsFromConfig(String tableCFsConfig) {
+    if (tableCFsConfig == null || tableCFsConfig.trim().length() == 0) {
+      return null;
+    }
+
+    Map<String, List<String>> tableCFsMap = null;
+
+    // parse out (table, cf-list) pairs from tableCFsConfig
+    // format: "table1:cf1,cf2;table2:cfA,cfB"
+    String[] tables = tableCFsConfig.split(";");
+    for (String tab : tables) {
+      // 1 ignore empty table config
+      tab = tab.trim();
+      if (tab.length() == 0) {
+        continue;
+      }
+      // 2 split to "table" and "cf1,cf2"
+      //   for each table: "table:cf1,cf2" or "table"
+      String[] pair = tab.split(":");
+      String tabName = pair[0].trim();
+      if (pair.length > 2 || tabName.length() == 0) {
+        LOG.error("ignore invalid tableCFs setting: " + tab);
+        continue;
+      }
+
+      // 3 parse "cf1,cf2" part to List<cf>
+      List<String> cfs = null;
+      if (pair.length == 2) {
+        String[] cfsList = pair[1].split(",");
+        for (String cf : cfsList) {
+          String cfName = cf.trim();
+          if (cfName.length() > 0) {
+            if (cfs == null) {
+              cfs = new ArrayList<String>();
+            }
+            cfs.add(cfName);
+          }
+        }
+      }
+
+      // 4 put <table, List<cf>> to map
+      if (tableCFsMap == null) {
+        tableCFsMap = new HashMap<String, List<String>>();
+      }
+      tableCFsMap.put(tabName, cfs);
+    }
+
+    return tableCFsMap;
+  }
+
+  private void readTableCFsZnode() {
+    String currentTableCFs = Bytes.toString(tableCFsTracker.getData(false));
+    this.tableCFs = parseTableCFsFromConfig(currentTableCFs);
+  }
+
+  /**
    * Get the cluster key of that peer
    * @return string consisting of zk ensemble addresses, client port
    * and root znode
@@ -118,6 +192,14 @@ public class ReplicationPeer implements Abortable, Closeable {
    */
   public AtomicBoolean getPeerEnabled() {
     return peerEnabled;
+  }
+
+  /**
+   * Get replicable (table, cf-list) map of this peer
+   * @return the replicable (table, cf-list) map
+   */
+  public Map<String, List<String>> getTableCFs() {
+    return this.tableCFs;
   }
 
   /**
@@ -272,6 +354,25 @@ public class ReplicationPeer implements Abortable, Closeable {
         } catch (DeserializationException e) {
           LOG.warn("Failed deserializing the content of " + path, e);
         }
+      }
+    }
+  }
+
+  /**
+   * Tracker for (table, cf-list) map of this peer
+   */
+  public class TableCFsTracker extends ZooKeeperNodeTracker {
+
+    public TableCFsTracker(String tableCFsZNode, ZooKeeperWatcher watcher,
+        Abortable abortable) {
+      super(watcher, tableCFsZNode, abortable);
+    }
+
+    @Override
+    public synchronized void nodeDataChanged(String path) {
+      if (path.equals(node)) {
+        super.nodeDataChanged(path);
+        readTableCFsZnode();
       }
     }
   }

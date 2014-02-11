@@ -20,28 +20,17 @@
 
 module Shell
   module Commands
-    class ListPeers< Command
+    class ShowPeerTableCFs< Command
       def help
-        return <<-EOF
-List all replication peer clusters.
+          return <<-EOF
+  Show replicable table-cf config for the specified peer.
 
-  hbase> list_peers
-EOF
+    hbase> show_peer_tableCFs
+  EOF
       end
 
-      def command()
-        now = Time.now
-        peers = replication_admin.list_peers
-
-        formatter.header(["PEER_ID", "CLUSTER_KEY", "STATE", "TABLE_CFS"])
-
-        peers.entrySet().each do |e|
-          state = replication_admin.get_peer_state(e.key)
-          tableCFs = replication_admin.show_peer_tableCFs(e.key)
-          formatter.row([ e.key, e.value, state, tableCFs ])
-        end
-
-        formatter.footer(now)
+      def command(id)
+        puts replication_admin.show_peer_tableCFs(id)
       end
     end
   end

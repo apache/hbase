@@ -26,6 +26,7 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -612,17 +614,37 @@ public class ReplicationSource extends Thread
    * @param entry The entry to check for replication
    */
   protected void removeNonReplicableEdits(HLog.Entry entry) {
-    NavigableMap<byte[], Integer> scopes = entry.getKey().getScopes();
+    String tabName = entry.getKey().getTablename().getNameAsString();
     ArrayList<KeyValue> kvs = entry.getEdit().getKeyValues();
+    Map<String, List<String>> tableCFs = null;
+    try {
+      tableCFs = this.replicationPeers.getTableCFs(peerId);
+    } catch (IllegalArgumentException e) {
+      LOG.error("should not happen: can't get tableCFs for peer " + peerId +
+          ", degenerate as if it's not configured by keeping tableCFs==null");
+    }
     int size = kvs.size();
-    for (int i = size-1; i >= 0; i--) {
-      KeyValue kv = kvs.get(i);
-      // The scope will be null or empty if
-      // there's nothing to replicate in that WALEdit
-      if (scopes == null || !scopes.containsKey(kv.getFamily())) {
-        kvs.remove(i);
+
+    // clear kvs(prevent replicating) if logKey's table isn't in this peer's
+    // replicable table list (empty tableCFs means all table are replicable)
+    if (tableCFs != null && !tableCFs.containsKey(tabName)) {
+      kvs.clear();
+    } else {
+      NavigableMap<byte[], Integer> scopes = entry.getKey().getScopes();
+      List<String> cfs = (tableCFs == null) ? null : tableCFs.get(tabName);
+      for (int i = size - 1; i >= 0; i--) {
+        KeyValue kv = kvs.get(i);
+        // The scope will be null or empty if
+        // there's nothing to replicate in that WALEdit
+        // ignore(remove) kv if its cf isn't in the replicable cf list
+        // (empty cfs means all cfs of this table are replicable)
+        if (scopes == null || !scopes.containsKey(kv.getFamily()) ||
+            (cfs != null && !cfs.contains(Bytes.toString(kv.getFamily())))) {
+          kvs.remove(i);
+        }
       }
     }
+
     if (kvs.size() < size/2) {
       kvs.trimToSize();
     }
