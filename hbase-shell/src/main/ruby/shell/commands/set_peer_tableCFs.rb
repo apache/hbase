@@ -20,28 +20,27 @@
 
 module Shell
   module Commands
-    class ListPeers< Command
+    class SetPeerTableCFs< Command
       def help
         return <<-EOF
-List all replication peer clusters.
+  Set the replicable table-cf config for the specified peer
+  Examples:
 
-  hbase> list_peers
-EOF
+    # set all tables to be replicable for a peer
+    hbase> set_peer_tableCFs '1', ""
+    hbase> set_peer_tableCFs '1'
+    # set table / table-cf to be replicable for a peer, for a table without
+    # an explicit column-family list, all replicable column-families (with
+    # replication_scope == 1) will be replicated
+    hbase> set_peer_tableCFs '2', "table1; table2:cf1,cf2; table3:cfA,cfB"
+
+  EOF
       end
 
-      def command()
-        now = Time.now
-        peers = replication_admin.list_peers
-
-        formatter.header(["PEER_ID", "CLUSTER_KEY", "STATE", "TABLE_CFS"])
-
-        peers.entrySet().each do |e|
-          state = replication_admin.get_peer_state(e.key)
-          tableCFs = replication_admin.show_peer_tableCFs(e.key)
-          formatter.row([ e.key, e.value, state, tableCFs ])
+      def command(id, peer_table_cfs = nil)
+        format_simple_command do
+          replication_admin.set_peer_tableCFs(id, peer_table_cfs)
         end
-
-        formatter.footer(now)
       end
     end
   end

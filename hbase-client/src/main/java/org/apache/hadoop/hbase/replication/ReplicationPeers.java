@@ -44,7 +44,6 @@ public interface ReplicationPeers {
    * Initialize the ReplicationPeers interface.
    */
   void init() throws ReplicationException;
-
   /**
    * Add a new remote slave cluster for replication.
    * @param peerId a short that identifies the cluster
@@ -52,6 +51,15 @@ public interface ReplicationPeers {
    *          hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
    */
   void addPeer(String peerId, String clusterKey) throws ReplicationException;
+
+  /**
+   * Add a new remote slave cluster for replication.
+   * @param peerId a short that identifies the cluster
+   * @param clusterKey the concatenation of the slave cluster's:
+   *          hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+   * @param tableCFs the table and column-family list which will be replicated for this peer
+   */
+  void addPeer(String peerId, String clusterKey, String tableCFs) throws ReplicationException;
 
   /**
    * Removes a remote slave cluster and stops the replication to it.
@@ -70,6 +78,26 @@ public interface ReplicationPeers {
    * @param peerId a short that identifies the cluster
    */
   void disablePeer(String peerId) throws ReplicationException;
+
+  /**
+   * Get the table and column-family list string of the peer from ZK.
+   * @param peerId a short that identifies the cluster
+   */
+  public String getPeerTableCFsConfig(String peerId) throws ReplicationException;
+
+  /**
+   * Set the table and column-family list string of the peer to ZK.
+   * @param peerId a short that identifies the cluster
+   * @param tableCFs the table and column-family list which will be replicated for this peer
+   */
+  public void setPeerTableCFsConfig(String peerId, String tableCFs) throws ReplicationException;
+
+  /**
+   * Get the table and column-family-list map of the peer.
+   * @param peerId a short that identifies the cluster
+   * @return the table and column-family list which will be replicated for this peer
+   */
+  public Map<String, List<String>> getTableCFs(String peerId);
 
   /**
    * Get the replication status for the specified connected remote slave cluster.

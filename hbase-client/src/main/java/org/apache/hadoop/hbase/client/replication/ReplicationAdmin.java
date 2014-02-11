@@ -139,6 +139,11 @@ public class ReplicationAdmin implements Closeable {
     this.replicationPeers.addPeer(id, clusterKey);
   }
 
+  public void addPeer(String id, String clusterKey, String tableCFs)
+    throws ReplicationException {
+    this.replicationPeers.addPeer(id, clusterKey, tableCFs);
+  }
+
   /**
    * Removes a peer cluster and stops the replication to it.
    * @param id a short that identifies the cluster
@@ -177,6 +182,22 @@ public class ReplicationAdmin implements Closeable {
    */
   public Map<String, String> listPeers() {
     return this.replicationPeers.getAllPeerClusterKeys();
+  }
+
+  /**
+   * Get the replicable table-cf config of the specified peer.
+   * @param id a short that identifies the cluster
+   */
+  public String getPeerTableCFs(String id) throws ReplicationException {
+    return this.replicationPeers.getPeerTableCFsConfig(id);
+  }
+
+  /**
+   * Set the replicable table-cf config of the specified peer
+   * @param id a short that identifies the cluster
+   */
+  public void setPeerTableCFs(String id, String tableCFs) throws ReplicationException {
+    this.replicationPeers.setPeerTableCFsConfig(id, tableCFs);
   }
 
   /**

@@ -32,8 +32,8 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Add a new peer cluster to replicate to
-    def add_peer(id, cluster_key)
-      @replication_admin.addPeer(id, cluster_key)
+    def add_peer(id, cluster_key, peer_tableCFs = nil)
+      @replication_admin.addPeer(id, cluster_key, peer_tableCFs)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -71,6 +71,18 @@ module Hbase
     # Stop the replication stream to the specified peer
     def disable_peer(id)
       @replication_admin.disablePeer(id)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Show the current tableCFs config for the specified peer
+    def show_peer_tableCFs(id)
+      @replication_admin.getPeerTableCFs(id)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Set new tableCFs config for the specified peer
+    def set_peer_tableCFs(id, tableCFs)
+      @replication_admin.setPeerTableCFs(id, tableCFs)
     end
   end
 end
