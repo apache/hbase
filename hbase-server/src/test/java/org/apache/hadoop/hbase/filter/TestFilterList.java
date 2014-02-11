@@ -39,7 +39,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -257,6 +259,52 @@ public class TestFilterList {
           Bytes.toBytes(i));
         assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
       assertFalse(filterMPONE.filterRow());
+    }
+  }
+
+  /**
+   * When we do a "MUST_PASS_ONE" (a logical 'OR') of the above two filters
+   * we expect to get the same result as the 'prefix' only result.
+   * @throws Exception
+   */
+  public void testFilterListTwoFiltersMustPassOne() throws Exception {
+    byte[] r1 = Bytes.toBytes("Row1");
+    byte[] r11 = Bytes.toBytes("Row11");
+    byte[] r2 = Bytes.toBytes("Row2");
+  
+    FilterList flist = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+    flist.addFilter(new PrefixFilter(r1));
+    flist.filterRowKey(r1, 0, r1.length);
+    assertEquals(flist.filterKeyValue(new KeyValue(r1,r1,r1)), ReturnCode.INCLUDE);
+    assertEquals(flist.filterKeyValue(new KeyValue(r11,r11,r11)), ReturnCode.INCLUDE);
+
+    flist.reset();
+    flist.filterRowKey(r2, 0, r2.length);
+    assertEquals(flist.filterKeyValue(new KeyValue(r2,r2,r2)), ReturnCode.SKIP);
+  
+    flist = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+    flist.addFilter(new AlwaysNextColFilter());
+    flist.addFilter(new PrefixFilter(r1));
+    flist.filterRowKey(r1, 0, r1.length);
+    assertEquals(flist.filterKeyValue(new KeyValue(r1,r1,r1)), ReturnCode.INCLUDE);
+    assertEquals(flist.filterKeyValue(new KeyValue(r11,r11,r11)), ReturnCode.INCLUDE);
+
+    flist.reset();
+    flist.filterRowKey(r2, 0, r2.length);
+    assertEquals(flist.filterKeyValue(new KeyValue(r2,r2,r2)), ReturnCode.SKIP);
+  }
+
+  public static class AlwaysNextColFilter extends FilterBase {
+    public AlwaysNextColFilter() {
+      super();
+    }
+    @Override
+    public ReturnCode filterKeyValue(Cell v) {
+      return ReturnCode.NEXT_COL;
+    }
+    public static AlwaysNextColFilter parseFrom(final byte [] pbBytes)
+        throws DeserializationException {
+      return new AlwaysNextColFilter();
     }
   }
 
