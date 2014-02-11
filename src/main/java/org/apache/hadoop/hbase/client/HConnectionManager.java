@@ -2647,28 +2647,40 @@ public class HConnectionManager {
           Thread.currentThread().interrupt();
           throw new InterruptedIOException(e.getMessage());
         } catch (ExecutionException ex) {
+          Throwable t = ex.getCause();
+
           // retry, unless it is not to be retried.
-          if (ex.getCause() instanceof DoNotRetryIOException) {
-            throw (DoNotRetryIOException)ex.getCause();
-          } else if (ex.getCause() instanceof RegionOverloadedException) {
-            RegionOverloadedException roe = (RegionOverloadedException)ex.getCause();
+          if (t instanceof DoNotRetryIOException) {
+            throw (DoNotRetryIOException)t;
+          } else if (t instanceof RegionOverloadedException) {
+            RegionOverloadedException roe = (RegionOverloadedException)t;
             if (roe.getBackoffTimeMillis() > maxWaitTimeRequested) {
               maxWaitTimeRequested = roe.getBackoffTimeMillis();
               toThrow = roe;
             }
           }
 
-          if (singleServer &&
-              ex.getCause() instanceof PreemptiveFastFailException) {
-            throw (PreemptiveFastFailException)ex.getCause();
+          if (singleServer && (t instanceof PreemptiveFastFailException)) {
+            throw (PreemptiveFastFailException)t;
           }
 
-          if (ex.getCause() instanceof ClientSideDoNotRetryException) {
-            throw (ClientSideDoNotRetryException)ex.getCause();
+          if (t instanceof ClientSideDoNotRetryException) {
+            throw (ClientSideDoNotRetryException)t;
           }
 
-          if (ex.getCause() instanceof OutOfMemoryError) {
-            throw (OutOfMemoryError)ex.getCause();
+          // Throw Error directly.
+          if (t instanceof Error) {
+            LOG.error(t);
+            throw (Error)t;
+          }
+
+          // Don't retry on non-IOException
+          if (t instanceof RuntimeException) {
+            LOG.error(t);
+            throw (RuntimeException)t;
+          } else if (! (t instanceof IOException)) {
+            LOG.error(t);
+            throw new RuntimeException(t);
           }
 
           // Add entry for the all the regions involved in this operation.
@@ -2681,10 +2693,9 @@ public class HConnectionManager {
               regionFailure = failedRegionsInfo.get(regionName);
             }
             regionFailure.setServerName(serverName);
-            regionFailure.addException(ex.getCause());
+            regionFailure.addException(t);
           }
-          LOG.warn("Current exception is not known as fatal, ignoring for retry.",
-              ex.getCause());
+          LOG.warn("Current exception is not known as fatal, ignoring for retry.", t);
         } catch (CancellationException ce) {
           LOG.debug("Execution cancelled, ignoring for retry.");
         } catch (Throwable unknownThrowable) {
@@ -2884,8 +2895,8 @@ public class HConnectionManager {
       if (t instanceof DoNotRetryIOException) {
         throw (DoNotRetryIOException)t;
       }
-      if (t instanceof OutOfMemoryError) {
-        throw (OutOfMemoryError)t;
+      if (t instanceof Error) {
+        throw (Error)t;
       }
       return t;
     }
