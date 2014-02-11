@@ -122,7 +122,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
       // Place the secondary and tertiary region server
       Map<HRegionInfo, Pair<HServerAddress, HServerAddress>>
         secondaryAndTertiaryRSMap =
-        this.placeSecondaryAndTertiaryRS(primaryRSMap, domain);
+        this.placeSecondaryAndTertiaryWithRestrictions(primaryRSMap, domain);
 
       // Get the assignment plan by initialization with the primaryRSMap and the
       // secondaryAndTertiaryRSMap
@@ -283,6 +283,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
    * @return
    * @throws IOException
    */
+  @SuppressWarnings("unused")
   private Map<HRegionInfo, Pair<HServerAddress,HServerAddress>> placeSecondaryAndTertiaryRS(
       Map<HRegionInfo, HServerAddress> primaryRSMap, AssignmentDomain domain)
       throws IOException {

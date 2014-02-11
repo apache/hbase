@@ -60,6 +60,7 @@ public class TestAdmin {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private HBaseAdmin admin;
   private static final int NUM_REGION_SERVER = 3;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
@@ -653,9 +654,6 @@ public class TestAdmin {
     HTableDescriptor htd = this.admin.getTableDescriptor(tableName);
 
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    HTable table = new HTable(master.getConfiguration(),
-        tableName);
-    Map<HRegionInfo, HServerAddress> hriToHsa = table.getRegionsInfo();
 
     // Try adding a column
     this.admin.enableTable(tableName);

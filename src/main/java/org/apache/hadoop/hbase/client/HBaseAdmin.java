@@ -265,18 +265,27 @@ public class HBaseAdmin {
   public void createTable(final HTableDescriptor desc, byte [][] splitKeys)
   throws IOException {
     HTableDescriptor.isLegalTableName(desc.getName());
-    if(splitKeys != null && splitKeys.length > 1) {
-      Arrays.sort(splitKeys, Bytes.BYTES_COMPARATOR);
-      // Verify there are no duplicate split keys
-      byte [] lastKey = null;
-      for(byte [] splitKey : splitKeys) {
-        if(lastKey != null && Bytes.equals(splitKey, lastKey)) {
-          throw new IllegalArgumentException("All split keys must be unique, found duplicate");
-        }
-        lastKey = splitKey;
-      }
-    }
+    checkSplitKeys(splitKeys);
     createTableAsync(desc, splitKeys);
+    checkTableOnline(desc, splitKeys);
+  }
+
+  /**
+   * Same like {@link #createTable(HTableDescriptor, byte[][])} but creates
+   * table on specific regionservers
+   *
+   * @throws IOException
+   */
+  public void createTable(final HTableDescriptor desc, byte[][] splitKeys,
+      List<HServerAddress> servers) throws IOException {
+    HTableDescriptor.isLegalTableName(desc.getName());
+    checkSplitKeys(splitKeys);
+    createTableAsyncAndPlaceOnServers(desc, splitKeys, servers);
+    checkTableOnline(desc, splitKeys);
+  }
+
+  private void checkTableOnline(final HTableDescriptor desc, byte[][] splitKeys)
+      throws IOException, RegionOfflineException, InterruptedIOException {
     int numRegs = splitKeys == null ? 1 : splitKeys.length + 1;
     int prevRegCount = 0;
     for (int tries = 0; tries < numRetries; ++tries) {
@@ -327,6 +336,21 @@ public class HBaseAdmin {
     }
   }
 
+  public void checkSplitKeys(byte[][] splitKeys) {
+    if (splitKeys != null && splitKeys.length > 1) {
+      Arrays.sort(splitKeys, Bytes.BYTES_COMPARATOR);
+      // Verify there are no duplicate split keys
+      byte[] lastKey = null;
+      for (byte[] splitKey : splitKeys) {
+        if (lastKey != null && Bytes.equals(splitKey, lastKey)) {
+          throw new IllegalArgumentException(
+              "All split keys must be unique, found duplicate");
+        }
+        lastKey = splitKey;
+      }
+    }
+  }
+
   /**
    * Creates a new table but does not block and wait for it to come online.
    * Asynchronous operation.
@@ -354,6 +378,31 @@ public class HBaseAdmin {
       LOG.warn("Creating " + desc.getNameAsString() + " took too long", ste);
     }
   }
+
+  /**
+   * SAme as {@link #createTableAsync(HTableDescriptor, byte[][])} but using a
+   * specific set of servers to assign the regions
+   *
+   * @param desc
+   * @param splitKeys
+   * @param servers
+   * @throws IOException
+   */
+  public void createTableAsyncAndPlaceOnServers(HTableDescriptor desc,
+      byte[][] splitKeys, List<HServerAddress> servers) throws IOException {
+    if (this.master == null) {
+      throw new MasterNotRunningException("master has been shut down");
+    }
+    HTableDescriptor.isLegalTableName(desc.getName());
+    try {
+      this.master.createTableAndAssignOnServers(desc, splitKeys, servers);
+    } catch (RemoteException e) {
+      throw RemoteExceptionHandler.decodeRemoteException(e);
+    } catch (SocketTimeoutException ste) {
+      LOG.warn("Creating " + desc.getNameAsString() + " took too long", ste);
+    }
+  }
+
 
   /**
    * Deletes a table.

@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Writable;
@@ -56,6 +57,17 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    */
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)
   throws IOException;
+
+  /**
+   * Same like {@link #createTable(HTableDescriptor, byte[][])} above, but we
+   * specify the set of machines where we want the regions to be assigned
+   *
+   * @param desc
+   * @param splitKeys
+   * @throws IOException
+   */
+  public void createTableAndAssignOnServers(HTableDescriptor desc,
+      byte[][] splitKeys, List<HServerAddress> servers) throws IOException;
 
   /**
    * Deletes a table

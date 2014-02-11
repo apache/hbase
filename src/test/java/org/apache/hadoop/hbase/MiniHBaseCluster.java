@@ -30,7 +30,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -487,6 +486,14 @@ public class MiniHBaseCluster {
       count++;
     }
     return index;
+  }
+
+  public List<HServerAddress> getRegionServers() throws IOException {
+    List<HServerAddress> servers = new ArrayList<HServerAddress>();
+    for (JVMClusterUtil.RegionServerThread rst: getRegionServerThreads()) {
+      servers.add(rst.getRegionServer().getHServerInfo().getServerAddress());
+    }
+    return servers;
   }
 
   /**

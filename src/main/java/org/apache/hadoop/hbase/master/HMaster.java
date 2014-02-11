@@ -1413,26 +1413,41 @@ public class HMaster extends HasThread implements HMasterInterface,
     }
   }
 
-  @Override
-  public void createTable(HTableDescriptor desc, byte [][] splitKeys)
-  throws IOException {
+  /**
+   * Creates regionInfo for the new regions that are going to be part of the new
+   * table
+   *
+   * @param desc - descriptor of the new table
+   * @param splitKeys - split keys marking the start and end key for every region
+   * @return array of new HRegionInfo
+   * @throws IOException
+   */
+  public HRegionInfo[] createRegionsForNewTable(HTableDescriptor desc,
+      byte[][] splitKeys) throws IOException {
     if (!isMasterRunning()) {
       throw new MasterNotRunningException();
     }
-    HRegionInfo [] newRegions = null;
-    if(splitKeys == null || splitKeys.length == 0) {
-      newRegions = new HRegionInfo [] { new HRegionInfo(desc, null, null) };
+    HRegionInfo[] newRegions = null;
+    if (splitKeys == null || splitKeys.length == 0) {
+      newRegions = new HRegionInfo[] { new HRegionInfo(desc, null, null) };
     } else {
       int numRegions = splitKeys.length + 1;
       newRegions = new HRegionInfo[numRegions];
-      byte [] startKey = null;
-      byte [] endKey = null;
-      for(int i=0;i<numRegions;i++) {
+      byte[] startKey = null;
+      byte[] endKey = null;
+      for (int i = 0; i < numRegions; i++) {
         endKey = (i == splitKeys.length) ? null : splitKeys[i];
         newRegions[i] = new HRegionInfo(desc, startKey, endKey);
         startKey = endKey;
       }
     }
+    return newRegions;
+  }
+
+  @Override
+  public void createTable(HTableDescriptor desc, byte [][] splitKeys)
+  throws IOException {
+    HRegionInfo[] newRegions = createRegionsForNewTable(desc, splitKeys);
     try {
       // We can not create a table unless meta regions have already been
       // assigned and scanned.
@@ -1449,6 +1464,31 @@ public class HMaster extends HasThread implements HMasterInterface,
     } catch (IOException e) {
       LOG.error("Cannot create table " + desc.getNameAsString() + 
         " because of " + e.toString());
+      throw RemoteExceptionHandler.checkIOException(e);
+    }
+  }
+
+  @Override
+  public void createTableAndAssignOnServers(HTableDescriptor desc,
+      byte[][] splitKeys, List<HServerAddress> servers) throws IOException {
+    HRegionInfo[] newRegions = createRegionsForNewTable(desc, splitKeys);
+    try {
+      // We can not create a table unless meta regions have already been
+      // assigned and scanned.
+      if (!this.regionManager.areAllMetaRegionsOnline()) {
+        throw new NotAllMetaRegionsOnlineException();
+      }
+      if (!this.serverManager.hasEnoughRegionServers()) {
+        throw new IOException("not enough servers to create table yet");
+      }
+      createTable(newRegions, servers);
+      LOG.info("Succeeded in creating table " + desc.getNameAsString()
+          + "on the specified servers");
+    } catch (TableExistsException e) {
+      throw e;
+    } catch (IOException e) {
+      LOG.error("Cannot create table " + desc.getNameAsString()
+          + " because of " + e.toString() + " on the specified servers");
       throw RemoteExceptionHandler.checkIOException(e);
     }
   }
@@ -1477,8 +1517,39 @@ public class HMaster extends HasThread implements HMasterInterface,
     return false;
   }
 
-  private synchronized void createTable(final HRegionInfo [] newRegions)
-  throws IOException {
+  private synchronized void createTable(final HRegionInfo[] newRegions)
+      throws IOException {
+    String tableName = newRegions[0].getTableDesc().getNameAsString();
+    AssignmentPlan assignmentPlan = null;
+    if (this.shouldAssignRegionsWithFavoredNodes) {
+      // Get the assignment domain for this table
+      AssignmentDomain domain = this.getAssignmentDomain(tableName);
+      // Get the assignment plan for the new regions
+      assignmentPlan = regionPlacement.getNewAssignmentPlan(newRegions, domain);
+    }
+    createTable(newRegions, assignmentPlan);
+  }
+
+  /**
+   * Create table such that we place the new regions on the specified machines
+   * @param newRegions - new regions from the new table
+   * @param servers - set of machines where we like the regions to be placed
+   * @throws IOException
+   */
+  private synchronized void createTable(final HRegionInfo[] newRegions,
+      List<HServerAddress> servers) throws IOException {
+    String tableName = newRegions[0].getTableDesc().getNameAsString();
+    AssignmentPlan assignmentPlan = null;
+    if (this.shouldAssignRegionsWithFavoredNodes) {
+      // Get the assignment domain for this table
+      AssignmentDomain domain = this.getAssignmentDomain(tableName, servers);
+      // Get the assignment plan for the new regions
+      assignmentPlan = regionPlacement.getNewAssignmentPlan(newRegions, domain);
+    }
+    createTable(newRegions, assignmentPlan);
+  }
+
+  private synchronized void createTable(final HRegionInfo[] newRegions, AssignmentPlan assignmentPlan) throws IOException {
     String tableName = newRegions[0].getTableDesc().getNameAsString();
     // 1. Check to see if table already exists. Get meta region where
     // table would sit should it exist. Open scanner on it. If a region
@@ -1499,15 +1570,6 @@ public class HMaster extends HasThread implements HMasterInterface,
       if (tableExists(srvr, metaRegionName, tableName)) {
         throw new TableExistsException(tableName);
       }
-      AssignmentPlan assignmentPlan = null;
-      if (this.shouldAssignRegionsWithFavoredNodes) {
-        // Get the assignment domain for this table
-        AssignmentDomain domain = this.getAssignmentDomain(tableName);
-        // Get the assignment plan for the new regions
-        assignmentPlan =
-          regionPlacement.getNewAssignmentPlan(newRegions, domain);
-      }
-
       if (assignmentPlan == null) {
         LOG.info("Generated the assignment plan for new table " + tableName);
       } else {
@@ -1545,15 +1607,26 @@ public class HMaster extends HasThread implements HMasterInterface,
     // Get all the online region servers
     List<HServerAddress> onlineRSList =
       this.serverManager.getOnlineRegionServerList();
-    
+    return getAssignmentDomain(tableName, onlineRSList);
+  }
+
+  /**
+   * Get the assignment domain for the table. Currently the domain would be
+   * generated by shuffling the passed region servers.
+   *
+   * It would be easy to extend for the multi-tenancy in the future.
+   *
+   * @param tableName
+   * @param servers - list of servers that we want to be included in the plan
+   * @return the assignment domain for the table.
+   */
+  private AssignmentDomain getAssignmentDomain(String tableName, List<HServerAddress> servers) {
     // Shuffle the server list based on the tableName
     Random random = new Random(tableName.hashCode());
-    Collections.shuffle(onlineRSList, random);
-    
+    Collections.shuffle(servers, random);
     // Add the shuffled server list into the assignment domain
     AssignmentDomain domain = new AssignmentDomain(this.conf);
-    domain.addServers(onlineRSList);
-    
+    domain.addServers(servers);
     return domain;
   }
   
