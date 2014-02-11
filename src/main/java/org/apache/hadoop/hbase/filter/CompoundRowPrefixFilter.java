@@ -128,21 +128,17 @@ public class CompoundRowPrefixFilter extends FilterBase {
   @Override
   public void readFields(DataInput in) throws IOException {
     int numRowPrefixes = in.readInt();
-    this.curRowPrefix = Bytes.readByteArray(in);
-    this.curPrefixIndex = in.readInt();
-    this.done = in.readBoolean();
     this.rowPrefixes = new ArrayList<byte[]>(numRowPrefixes);
     for (int i = 0; i < numRowPrefixes; i++) {
       rowPrefixes.add(Bytes.readByteArray(in));
     }
+    Preconditions.checkArgument(rowPrefixes.size() > 0);
+    this.resetFilterProgress();
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(this.rowPrefixes.size());
-    Bytes.writeByteArray(out, this.curRowPrefix);
-    out.writeInt(this.curPrefixIndex);
-    out.writeBoolean(this.done);
     for (byte[] row : this.rowPrefixes) {
       Bytes.writeByteArray(out, row);
     }
