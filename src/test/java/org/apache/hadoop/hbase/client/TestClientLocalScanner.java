@@ -87,7 +87,7 @@ public class TestClientLocalScanner {
     TEST_UTIL.loadTable(t, FAMILY2);
     t.flushCommits();
     TEST_UTIL.flush(name);
-    assertRowCount(t, rowCount);
+    TEST_UTIL.assertRowCount(t, rowCount);
     Scan scan = getScan(100, 100, true, FAMILY);
     assertTrue(compareScanners(tmpTable.getScanner(scan),
         t.getLocalScanner(scan)));
@@ -179,10 +179,10 @@ public class TestClientLocalScanner {
     t.flushCommits();
     TEST_UTIL.flush(name);
 
-    assertRowCount(t, rowCount);
+    TEST_UTIL.assertRowCount(t, rowCount);
     // Split the table.  Should split on a reasonable key; 'lqj'
     Map<HRegionInfo, HServerAddress> regions  = splitTable(t);
-    assertRowCount(t, rowCount);
+    TEST_UTIL.assertRowCount(t, rowCount);
     // Get end key of first region.
     byte [] endKey = regions.keySet().iterator().next().getEndKey();
     // Count rows with a filter that stops us before passed 'endKey'.
@@ -257,7 +257,7 @@ public class TestClientLocalScanner {
     int rowCount = TEST_UTIL.loadTable(t, FAMILY);
     t.flushCommits();
     TEST_UTIL.flush(tableName);
-    assertRowCount(t, rowCount);
+    TEST_UTIL.assertRowCount(t, rowCount);
 
     Scan scan = getScan(100, 100, true, FAMILY);
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
@@ -374,30 +374,6 @@ public class TestClientLocalScanner {
         }
       }
     }
-  }
-
-  private void assertRowCount(final HTable t, final int expected)
-    throws IOException {
-    assertEquals(expected, countRows(t, new Scan()));
-  }
-
-  /**
-   * @param t
-   * @param s
-   * @return Count of rows in table.
-   * @throws IOException
-   */
-  private int countRows(final HTable t, final Scan s)
-  throws IOException {
-    // Assert all rows in table.
-    ResultScanner scanner = t.getScanner(s);
-    int count = 0;
-    for (Result result: scanner) {
-      count++;
-      assertTrue(result.size() > 0);
-      // LOG.info("Count=" + count + ", row=" + Bytes.toString(result.getRow()));
-    }
-    return count;
   }
 
   /**

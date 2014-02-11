@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -1719,5 +1720,37 @@ REGION_LOOP:
 
   public BlockCache getBlockCache() {
     return cacheConf.getBlockCache();
+  }
+
+  /**
+   * Assert the number of rows are expected for a given HTable
+   * @param t The HTable instance to check
+   * @param expected The expected number of rows
+   * @throws IOException
+   */
+  public static void assertRowCount(final HTable t, final int expected)
+    throws IOException {
+    assertEquals(expected, countRows(t, new Scan()));
+  }
+
+  /**
+   * Count the number of rows for an HTable instance based on the given the specific
+   * scan request.
+   *
+   * @param t The HTable instance to count the rows
+   * @param s The scan request fpr counting
+   * @return Count of rows in table for a given scan request
+   * @throws IOException
+   */
+  public static int countRows(final HTable t, final Scan s)
+    throws IOException {
+    // Assert all rows in table.
+    ResultScanner scanner = t.getScanner(s);
+    int count = 0;
+    for (Result result: scanner) {
+      count++;
+      assertTrue(result.size() > 0);
+    }
+    return count;
   }
 }

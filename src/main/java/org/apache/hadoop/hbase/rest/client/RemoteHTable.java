@@ -399,6 +399,7 @@ public class RemoteHTable implements HTableInterface {
   class Scanner implements ResultScanner {
 
     String uri;
+    boolean isClosed = false;
 
     public Scanner(Scan scan) throws IOException {
       ScannerModel model;
@@ -522,6 +523,12 @@ public class RemoteHTable implements HTableInterface {
       } catch (IOException e) {
         LOG.warn(StringUtils.stringifyException(e));
       }
+      isClosed = true;
+    }
+
+    @Override
+    public boolean isClosed() {
+      return isClosed;
     }
 
   }

@@ -47,4 +47,9 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
    * Closes the scanner and releases any resources it has allocated
    */
   public void close();
+
+  /**
+   * @return true if the scanner is closed. Otherwise return false.
+   */
+  public boolean isClosed();
 }

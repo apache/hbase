@@ -584,6 +584,17 @@ public final class HConstants {
   public static final String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY = "hbase.client.scanner.max.result.size";
 
   /**
+   * Parameter name for the number of threads for the ParallelScanner
+   */
+  public static final String HBASE_CLIENT_PARALLEL_SCANNER_THREAD =
+    "hbase.client.parallel.scanner.thread";
+
+  /**
+   * The default number of threads for the ParallelScanner
+   */
+  public static final int HBASE_CLIENT_PARALLEL_SCANNER_THREAD_DEFAULT = 100;
+
+  /**
    * Maximum number of bytes returned when calling a scanner's next method.
    * Note that when a single row is larger than this limit the row is still
    * returned completely.

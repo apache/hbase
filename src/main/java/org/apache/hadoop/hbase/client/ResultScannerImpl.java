@@ -20,17 +20,17 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedList;
 
 /**
  * This abstract class was designed in order to share code across ClientScanner
@@ -179,6 +179,11 @@ public abstract class ResultScannerImpl implements ResultScanner {
   public void close() {
     closeCurrentScanner();
     closed = true;
+  }
+
+  @Override
+  public boolean isClosed() {
+    return closed;
   }
 
   protected abstract void closeCurrentScanner();
