@@ -53,6 +53,12 @@ public class InclusiveStopFilter extends FilterBase {
     return this.stopRowKey;
   }
 
+  @Override
+  public ReturnCode filterKeyValue(KeyValue v) {
+    if (done) return ReturnCode.NEXT_ROW;
+    return ReturnCode.INCLUDE;
+  }
+
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
     if (buffer == null) {
       //noinspection RedundantIfStatement

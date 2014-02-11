@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -203,6 +205,43 @@ public class TestFilterList extends TestCase {
         assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
       assertFalse(filterMPONE.filterRow());
     }
+  }
+
+  public static class AlwaysNextColFilter extends FilterBase {
+    public AlwaysNextColFilter() {
+      super();
+    }
+    @Override
+    public ReturnCode filterKeyValue(KeyValue v) {
+      return ReturnCode.NEXT_COL;
+    }
+    @Override
+    public void readFields(DataInput arg0) throws IOException {}
+
+    @Override
+    public void write(DataOutput arg0) throws IOException {}
+  }
+
+  /**
+   * When we do a "MUST_PASS_ONE" (a logical 'OR') of the two filters
+   * we expect to get the same result as the inclusive stop result.
+   * @throws Exception
+   */
+  public void testFilterListWithInclusiveStopFilteMustPassOne() throws Exception {
+    byte[] r1 = Bytes.toBytes("Row1");
+    byte[] r11 = Bytes.toBytes("Row11");
+    byte[] r2 = Bytes.toBytes("Row2");
+  
+    FilterList flist = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+    flist.addFilter(new AlwaysNextColFilter());
+    flist.addFilter(new InclusiveStopFilter(r1));
+    flist.filterRowKey(r1, 0, r1.length);
+    assertEquals(flist.filterKeyValue(new KeyValue(r1,r1,r1)), ReturnCode.INCLUDE);
+    assertEquals(flist.filterKeyValue(new KeyValue(r11,r11,r11)), ReturnCode.INCLUDE);
+
+    flist.reset();
+    flist.filterRowKey(r2, 0, r2.length);
+    assertEquals(flist.filterKeyValue(new KeyValue(r2,r2,r2)), ReturnCode.SKIP);
   }
 
   /**
