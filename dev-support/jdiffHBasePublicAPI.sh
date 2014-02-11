@@ -67,6 +67,11 @@ set -e
 #   >  ./jdiffHBasePublicAPI.sh /home/aleks/stable_hbase/hbase stable_95 /home/aleks/exp_hbase/hbase experiment_95
 #
 #
+################################################## NOTE ON USAGE ###################################################
+#
+#   1. When using this tool, please specify the initial version first and the current version second. The semantics
+#      do not make sense otherwise. For example: jdiff 94 95 is good. jdiff 95 94 is bad
+#
 ############################################# READING A JDIFF REPORT ###############################################
 #
 #   The purpose of the JDiff report is show things that have changed between two versions of the public API. A user
@@ -131,8 +136,8 @@ fi
 #If the JDIFF_WORKING_DIRECTORY is set, then we will output the report there. Otherwise, to the default location
 if [[ "$JDIFF_WORKING_DIRECTORY" = "" ]]; then
 
-  echo "JDIFF_WORKING_DIRECTORY not set. That's not an issue. We will default it to ./jidff"
   JDIFF_WORKING_DIRECTORY=/tmp/jdiff
+  echo "JDIFF_WORKING_DIRECTORY not set. That's not an issue. We will default it to $JDIFF_WORKING_DIRECTORY."
 else
   echo "JDIFF_WORKING_DIRECTORY set to $JDIFF_WORKING_DIRECTORY";
 fi
@@ -204,6 +209,13 @@ if  [[ "$C_FORMAT" = "new" ]]; then
   fi
 
 else
+
+  if [[ "P_FORMAT" != "old" ]]; then
+    echo "When using this tool, please specify the initial version first and the current version second. They should be in ascending chronological order.
+          The semantics do not make sense otherwise. For example: jdiff 94 95 is good. jdiff 95 94 is bad."
+    echo "Exiting the script."
+    exit 5;
+  fi
   templateFile=$DEV_SUPPORT_HOME/hbase_jdiff_template.xml
   echo "Both formats are using the 94 and earlier style directory format. We'll be using template $templateFile"
 fi
