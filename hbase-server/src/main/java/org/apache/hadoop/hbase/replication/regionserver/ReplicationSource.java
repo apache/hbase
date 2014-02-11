@@ -131,6 +131,8 @@ public class ReplicationSource extends Thread
   private ReplicationSinkManager replicationSinkMgr;
   //WARN threshold for the number of queued logs, defaults to 2
   private int logQueueWarnThreshold;
+  // throttler
+  private ReplicationThrottler throttler;
 
   /**
    * Instantiation method used by region servers
@@ -164,6 +166,8 @@ public class ReplicationSource extends Thread
     // replication and make replication specific settings such as compression or codec to use
     // passing Cells.
     this.conn = HConnectionManager.getConnection(this.conf);
+    long bandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
+    this.throttler = new ReplicationThrottler((double)bandwidth/10.0);
     this.replicationQueues = replicationQueues;
     this.replicationPeers = replicationPeers;
     this.manager = manager;
@@ -598,6 +602,7 @@ public class ReplicationSource extends Thread
       Thread.sleep(this.sleepForRetries * sleepMultiplier);
     } catch (InterruptedException e) {
       LOG.debug("Interrupted while sleeping between retries");
+      Thread.currentThread().interrupt();
     }
     return sleepMultiplier < maxRetriesMultiplier;
   }
@@ -661,6 +666,22 @@ public class ReplicationSource extends Thread
       }
       SinkPeer sinkPeer = null;
       try {
+        if (this.throttler.isEnabled()) {
+          long sleepTicks = this.throttler.getNextSleepInterval(currentSize);
+          if (sleepTicks > 0) {
+            try {
+              if (LOG.isTraceEnabled()) {
+                LOG.trace("To sleep " + sleepTicks + "ms for throttling control");
+              }
+              Thread.sleep(sleepTicks);
+            } catch (InterruptedException e) {
+              LOG.debug("Interrupted while sleeping for throttling control");
+              Thread.currentThread().interrupt();
+            }
+            // reset throttler's cycle start tick when sleep for throttling occurs
+            this.throttler.resetStartTick();
+          }
+        }
         sinkPeer = replicationSinkMgr.getReplicationSink();
         BlockingInterface rrs = sinkPeer.getRegionServer();
         if (LOG.isTraceEnabled()) {
@@ -674,6 +695,9 @@ public class ReplicationSource extends Thread
               this.peerClusterZnode, this.repLogReader.getPosition(),
               this.replicationQueueInfo.isQueueRecovered(), currentWALisBeingWrittenTo);
           this.lastLoggedPosition = this.repLogReader.getPosition();
+        }
+        if (this.throttler.isEnabled()) {
+          this.throttler.addPushSize(currentSize);
         }
         this.totalReplicatedEdits += entries.size();
         this.totalReplicatedOperations += currentNbOperations;
