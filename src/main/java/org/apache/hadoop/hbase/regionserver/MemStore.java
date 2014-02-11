@@ -84,6 +84,7 @@ public class MemStore implements HeapSize {
 
   // Used to track own heapSize
   final AtomicLong size;
+  private long snapshotSize;
 
   private AtomicLong numDeletesInKvSet;
   private AtomicLong numDeletesInSnapshot;
@@ -122,6 +123,7 @@ public class MemStore implements HeapSize {
     timeRangeTracker = new TimeRangeTracker();
     snapshotTimeRangeTracker = new TimeRangeTracker();
     this.size = new AtomicLong(DEEP_OVERHEAD);
+    this.snapshotSize = 0;
     this.numDeletesInKvSet = new AtomicLong(0);
     this.numDeletesInSnapshot = new AtomicLong(0);
 
@@ -201,6 +203,7 @@ public class MemStore implements HeapSize {
           }
 
           // Reset heap to not include any keys
+          this.snapshotSize = keySize();
           this.size.set(DEEP_OVERHEAD);
           this.numDeletesInSnapshot = numDeletesInKvSet;
           this.numDeletesInKvSet.set(0);
@@ -248,6 +251,7 @@ public class MemStore implements HeapSize {
         tmpAllocator = this.snapshotAllocator;
         this.snapshotAllocator = null;
       }
+      this.snapshotSize = 0;
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -881,6 +885,20 @@ public class MemStore implements HeapSize {
    */
   public long keySize() {
     return heapSize() - DEEP_OVERHEAD;
+  }
+
+  public long getSnapshotSize() {
+    return snapshotSize;
+  }
+
+  /**
+   * Flush will first clear out the data in snapshot if any. If snapshot is
+   * empty, current keyvalue set will be flushed.
+   *
+   * @return size of data that is going to be flushed
+   */
+  public long getFlushableSize() {
+    return snapshotSize > 0 ? snapshotSize : keySize();
   }
 
   /**

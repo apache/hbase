@@ -1980,6 +1980,14 @@ public class Store extends SchemaConfigured implements HeapSize,
     return this.memstore.keySize();
   }
 
+  public long getSnapshotSize() {
+    return this.memstore.getSnapshotSize();
+  }
+
+  public long getFlushableMemstoreSize() {
+    return this.memstore.getFlushableSize();
+  }
+
   /**
    * A helper function to get the smallest LSN in the mestore.
    * @return

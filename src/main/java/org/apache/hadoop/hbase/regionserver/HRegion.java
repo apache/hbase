@@ -1506,7 +1506,7 @@ public class HRegion implements HeapSize {
       for (Store store : storesToFlush) {
         LOG.debug("Flushing Column Family: " + store.getColumnFamilyName() +
                   " which was occupying " +
-                  StringUtils.humanReadableInt(store.getMemStoreSize()) +
+                  StringUtils.humanReadableInt(store.getFlushableMemstoreSize()) +
                   " of memstore.");
       }
     }
@@ -1561,7 +1561,7 @@ public class HRegion implements HeapSize {
         sequenceId = myseqid;
       }
       for (Store s : storesToFlush) {
-        totalMemstoreSizeOfFlushableStores += s.getMemStoreSize();
+        totalMemstoreSizeOfFlushableStores += s.getFlushableMemstoreSize();
         storeFlushers.add(s.getStoreFlusher(sequenceId));
       }
 
@@ -2621,8 +2621,8 @@ public class HRegion implements HeapSize {
    * @return true if the size of the store is above the flush threshold for column families
    */
   private boolean shouldFlushStore(Store store) {
-    return (store.getMemStoreSize() > this.columnfamilyMemstoreFlushSize) ?
-            true : false;
+    return store.getSnapshotSize() > 0 ||
+        store.getMemStoreSize() > this.columnfamilyMemstoreFlushSize;
   }
 
   /**
