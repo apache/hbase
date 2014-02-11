@@ -19,6 +19,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,17 +32,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
 /**
  * Cluster connection.
@@ -226,7 +221,7 @@ public interface HConnection extends Closeable {
   /**
    * Process a batch of Gets. Does the retries.
    *
-   * @param list
+   * @param actions
    *          A batch of Gets to process.
    * @param tableName
    *          The name of the table
@@ -425,18 +420,12 @@ public interface HConnection extends Closeable {
   public String getServerConfProperty(String prop) throws IOException;
 
   /**
-   * Initialize all the HRegionLocations by scanning the META table and cache these locations
-   * properly.
-   * @param conf
-   * @param tableName
-   */
-  public void prefetchHRegionLocations(final Configuration conf, final byte[] tableName);
-
-
-  /**
-   * Get all the cached HRegionLocations
-   * @param tableName
+   * Get all the cached HRegionLocations for the given table. If the given table has not been
+   * initialized for all HRegionLocations, force to refresh the locations from META.
+   * @param tableName The given tableName
+   * @param forceRefresh Whether to force to refresh the HRegionLocations from META.
    * @return cachedHRegionLocations
    */
-  public Collection<HRegionLocation> getCachedHRegionLocations(final byte [] tableName);
+  public Collection<HRegionLocation> getCachedHRegionLocations(final byte [] tableName,
+                                                               boolean forceRefresh);
 }

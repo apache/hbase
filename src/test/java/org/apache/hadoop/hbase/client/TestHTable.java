@@ -50,7 +50,9 @@ public class TestHTable {
       3, Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
 
     NavigableMap<HRegionInfo, HServerAddress> allRegionsInfoMap =  table.getRegionsInfo();
-    Collection<HRegionLocation> regionLocations = table.getCachedHRegionLocations(true);
+    Collection<HRegionLocation> regionLocations = table.getCachedHRegionLocations(false);
+    Collection<HRegionLocation> regionLocations2 = table.getCachedHRegionLocations(true);
+    assertEquals(regionLocations.size(), regionLocations2.size());
 
     // Make sure allRegions and regionLocations containing the same information
     verifyOnlineRegionsAndRegionLocations(allRegionsInfoMap, regionLocations, NUM_REGIONS);

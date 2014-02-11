@@ -468,11 +468,7 @@ public class HTable implements HTableInterface {
    */
   @Override
   public Collection<HRegionLocation> getCachedHRegionLocations(boolean forceRefresh) {
-    if (forceRefresh) {
-      connection.prefetchHRegionLocations(configuration, tableName);
-    }
-
-    return connection.getCachedHRegionLocations(tableName);
+    return connection.getCachedHRegionLocations(tableName, forceRefresh);
   }
 
 
