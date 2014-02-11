@@ -133,7 +133,8 @@ struct TScan {
   5:optional i32 caching,
   6:optional Text filterString,
   7:optional bool cachingBlocksEnabled,
-  8:optional i32 batchLimit
+  8:optional i32 batchLimit,
+  9:optional i64 minTimestamp
 }
 
 //

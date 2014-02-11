@@ -40,13 +40,14 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
-import org.apache.hadoop.hbase.thrift.generated.Constants;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
+import org.apache.hadoop.hbase.thrift.generated.HbaseConstants;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
+import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.metrics.ContextFactory;
@@ -369,6 +370,7 @@ public class TestThriftServer {
    *
    * @throws Exception
    */
+  @SuppressWarnings("deprecation")
   @Test
   public void doTestTableTimestampsAndColumns() throws Exception {
     // Setup
@@ -512,6 +514,18 @@ public class TestThriftServer {
       TRowResult rowResult4a = handler.scannerGet(scanner4).get(0);
       assertEquals(rowResult4a.columns.size(), 1);
       assertBufferEquals(rowResult4a.columns.get(columnBname).value, valueBname);
+      closeScanner(scanner4, handler);
+
+      // Test MinTimestamp
+      TScan tScan = new TScan();
+      tScan.setStartRow(rowAname);
+      tScan.setColumns(getColumnList(true, true));
+      tScan.setMinTimestamp(time1 - 1);
+      tScan.setTimestamp(time1);
+      int scanner5 = handler.scannerOpenWithScan(tableAname, tScan);
+      TRowResult result5 = handler.scannerGet(scanner5).get(0);
+      assertBufferEquals(result5.columns.get(columnBname).value, valueBname);
+      closeScanner(scanner5, handler);
     } finally {
       // Teardown
       handler.disableTable(tableAname);
@@ -544,6 +558,8 @@ public class TestThriftServer {
     LOG.info("Region found:" + regions.get(0));
     handler.disableTable(tableAname);
     handler.deleteTable(tableAname);
+    ((ThriftServerRunner.HBaseHandler) handler).getTable(tableAname)
+        .clearRegionCache();
     regionCount = handler.getTableRegions(tableAname).size();
     assertEquals("non-existing table should have 0 region, " +
             "but found " + regionCount, regionCount, 0);
@@ -685,6 +701,6 @@ public class TestThriftServer {
 
   @Test
   public void testMaxTimestamp() {
-    assertEquals(HConstants.LATEST_TIMESTAMP, Constants.LATEST_TIMESTAMP);
+    assertEquals(HConstants.LATEST_TIMESTAMP, HbaseConstants.LATEST_TIMESTAMP);
   }
 }

@@ -1110,6 +1110,7 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
+    @Override
     public void scannerClose(int id) throws IOError, IllegalArgument {
       LOG.debug("scannerClose: id=" + id);
       ResultScanner scanner = getScanner(id);
@@ -1120,6 +1121,7 @@ public class ThriftServerRunner implements Runnable {
       removeScanner(id);
     }
 
+    @Override
     public List<TRowResult> scannerGetList(int id,int nbRows) throws IllegalArgument, IOError {
         LOG.debug("scannerGetList: id=" + id);
         ResultScanner scanner = getScanner(id);
@@ -1141,6 +1143,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.rowResultFromHBase(results);
     }
 
+    @Override
     public List<TRowResult> scannerGet(int id) throws IllegalArgument, IOError {
         return scannerGetList(id,1);
     }
@@ -1226,8 +1229,12 @@ public class ThriftServerRunner implements Runnable {
         if (tScan.isSetStopRow()) {
           scan.setStopRow(tScan.getStopRow());
         }
-        if (tScan.isSetTimestamp()) {
-          scan.setTimeRange(Long.MIN_VALUE, tScan.getTimestamp());
+        if (tScan.isSetTimestamp() || tScan.isSetMinTimestamp()) {
+          long minTS = tScan.isSetMinTimestamp() ? tScan.getMinTimestamp()
+              : Long.MIN_VALUE;
+          long maxTS = tScan.isSetTimestamp() ? tScan.getTimestamp()
+              : Long.MAX_VALUE;
+          scan.setTimeRange(minTS, maxTS);
         }
         if (tScan.isSetCaching()) {
           scan.setCaching(tScan.getCaching());
