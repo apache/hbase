@@ -39,7 +39,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -305,6 +307,21 @@ public class TestFilterList {
     flist.filterRowKey(r2, 0, r2.length);
     assertEquals(flist.filterKeyValue(new KeyValue(r2,r2,r2)), ReturnCode.SKIP);
   }
+
+  public static class AlwaysNextColFilter extends FilterBase {
+    public AlwaysNextColFilter() {
+      super();
+    }
+    @Override
+    public ReturnCode filterKeyValue(Cell v) {
+      return ReturnCode.NEXT_COL;
+    }
+    public static AlwaysNextColFilter parseFrom(final byte [] pbBytes)
+                throws DeserializationException {
+      return new AlwaysNextColFilter();
+    }
+  }
+
 
   /**
    * Test filterKeyValue logic.
