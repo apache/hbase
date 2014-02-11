@@ -50,6 +50,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A base for {@link TableInputFormat}s. Receives a {@link HTable}, an
@@ -123,7 +124,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
           " the task's full log for more details.");
     }
     TableSplit tSplit = (TableSplit) split;
-    LOG.info("Input split length: " + tSplit.getLength() + " bytes.");
+    LOG.info("Input split length: " + StringUtils.humanReadableInt(tSplit.getLength()) + " bytes.");
     TableRecordReader trr = this.tableRecordReader;
     // if no table record reader was provided use default
     if (trr == null) {
