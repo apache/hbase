@@ -84,7 +84,7 @@ public class MemStore implements HeapSize {
 
   // Used to track own heapSize
   final AtomicLong size;
-  private long snapshotSize;
+  volatile private long snapshotSize;
 
   private AtomicLong numDeletesInKvSet;
   private AtomicLong numDeletesInSnapshot;

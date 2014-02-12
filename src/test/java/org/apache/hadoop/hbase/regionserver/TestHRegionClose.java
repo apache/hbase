@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.data.Stat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -95,5 +97,30 @@ public class TestHRegionClose {
   @Test
   public void mainTest() throws Exception {
     tryCloseRegion();
+  }
+
+  @Test
+  public void testMemstoreCleanup() throws Exception {
+    HRegion region = server.getOnlineRegionsAsArray()[0];
+
+    Store store = region.getStore(FAMILIES[0]);
+
+    byte[] row = region.getStartKey();
+    byte[] value = Bytes.toBytes("testMemstoreCleanup");
+    Put put = new Put(row);
+    put.add(FAMILIES[0], null, Bytes.toBytes("testMemstoreCleanup"));
+
+    // First put something in current memstore, which will be in snapshot after flusher.prepare()
+    region.put(put);
+
+    StoreFlusher flusher = store.getStoreFlusher(12345);
+    flusher.prepare();
+
+    // Second put something in current memstore
+    put.add(FAMILIES[0], Bytes.toBytes("abc"), value);
+    region.put(put);
+
+    region.close();
+    assertEquals(0, region.getMemstoreSize().get());
   }
 }

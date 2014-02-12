@@ -2172,7 +2172,7 @@ public class HRegionServer implements HRegionInterface,
                     "interrupted.", ex);
               }
             } else {
-              LOG.error("unable to process message" +
+              LOG.error("FAILED TO PROCESS MESSAGE FROM MASTER" +
                   (e != null ? (": " + e.msg.toString()) : ""), ex);
               checkFileSystem();
             }

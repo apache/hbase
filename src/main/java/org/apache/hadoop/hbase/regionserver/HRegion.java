@@ -845,12 +845,10 @@ public class HRegion implements HeapSize {
     status.setStatus("Waiting for split lock");
     synchronized (splitLock) {
       status.setStatus("Disabling compacts and flushes for region");
-      boolean wasFlushing = false;
       synchronized (writestate) {
         // Disable compacting and flushing by background threads for this
         // region.
         writestate.writesEnabled = false;
-        wasFlushing = writestate.flushing;
         LOG.debug("Closing " + this + ": disabling compactions & flushes");
         while (writestate.compacting > 0 || writestate.flushing) {
           LOG.debug("waiting for " + writestate.compacting + " compactions" +
@@ -863,13 +861,23 @@ public class HRegion implements HeapSize {
           }
         }
       }
-      // If we were not just flushing, is it worth doing a preflush...one
-      // that will clear out of the bulk of the memstore before we put up
-      // the close flag?
-      if (!abort && !wasFlushing && worthPreFlushing()) {
+
+      // First flush clears content in either snapshots or current memstores
+      if (!abort) {
         status.setStatus("Pre-flushing region before close");
         LOG.info("Running close preflush of " + this.getRegionNameAsString());
-        internalFlushcache(status);
+
+        try {
+          internalFlushcache(status);
+        } catch (IOException ioe) {
+          // Failed to flush the region but probably it is still able to serve request,
+          // so re-enable writes to it.
+          status.setStatus("Failed to flush the region, putting it online again");
+          synchronized (writestate) {
+            writestate.writesEnabled = true;
+          }
+          throw ioe;
+        }
       }
       newScannerLock.writeLock().lock();
       this.closing.set(true);
@@ -885,9 +893,18 @@ public class HRegion implements HeapSize {
           waitOnRowLocks();
           LOG.debug("No more row locks outstanding on region " + this);
 
-          // Don't flush the cache if we are aborting
+          // Second flush to ensure no unflushed data in memory.
           if (!abort) {
-            internalFlushcache(status);
+            try {
+              internalFlushcache(status);
+            } catch (IOException ioe) {
+              status.setStatus("Failed to flush the region, putting it online again");
+              synchronized (writestate) {
+                writestate.writesEnabled = true;
+              }
+              this.closing.set(false);
+              throw ioe;
+            }
           }
           List<StoreFile> result = new ArrayList<StoreFile>();
 
@@ -902,6 +919,7 @@ public class HRegion implements HeapSize {
 
             // close each store in parallel
             for (final Store store : stores.values()) {
+              assert store.getFlushableMemstoreSize() == 0;
               completionService
                   .submit(new Callable<ImmutableList<StoreFile>>() {
                     public ImmutableList<StoreFile> call() throws IOException {
@@ -928,6 +946,9 @@ public class HRegion implements HeapSize {
             }
           }
           this.closed.set(true);
+          if (memstoreSize.get() != 0) {
+            LOG.error("Memstore size should be 0 after clean region close, but is " + memstoreSize.get());
+          }
           status.markComplete("Closed");
           LOG.info("Closed " + this);
           return result;
@@ -940,14 +961,6 @@ public class HRegion implements HeapSize {
         status.cleanup();
       }
     }
-  }
-
-   /**
-    * @return True if its worth doing a flush before we put up the close flag.
-    */
-  private boolean worthPreFlushing() {
-    return this.memstoreSize.get() >
-      this.conf.getLong("hbase.hregion.preclose.flush.size", 1024 * 1024 * 5);
   }
 
   //////////////////////////////////////////////////////////////////////////////
