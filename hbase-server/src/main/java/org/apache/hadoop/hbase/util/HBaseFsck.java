@@ -269,6 +269,10 @@ public class HBaseFsck extends Configured {
   public HBaseFsck(Configuration conf) throws MasterNotRunningException,
       ZooKeeperConnectionException, IOException, ClassNotFoundException {
     super(conf);
+    // make a copy, just to be sure we're not overriding someone else's config
+    setConf(HBaseConfiguration.create(getConf()));
+    // disable blockcache for tool invocation, see HBASE-10500
+    getConf().setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
     errors = getErrorReporter(conf);
 
     int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
