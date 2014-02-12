@@ -48,6 +48,9 @@ public class TestSecureLoadIncrementalHFiles extends  TestLoadIncrementalHFiles{
       HadoopSecurityEnabledUserProviderForTesting.class);
     // setup configuration
     SecureTestUtil.enableSecurity(util.getConfiguration());
+    util.getConfiguration().setInt(
+        LoadIncrementalHFiles.MAX_FILES_PER_REGION_PER_FAMILY,
+        MAX_FILES_PER_REGION_PER_FAMILY);
 
     util.startMiniCluster();
 
