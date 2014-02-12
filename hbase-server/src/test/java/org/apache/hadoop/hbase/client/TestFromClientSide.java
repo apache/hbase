@@ -4422,7 +4422,7 @@ public class TestFromClientSide {
     byte[] v1 = Bytes.toBytes("42");
     byte[] v2 = Bytes.toBytes("23");
     byte [][] QUALIFIERS = new byte [][] {
-        Bytes.toBytes("b"), Bytes.toBytes("a")
+        Bytes.toBytes("b"), Bytes.toBytes("a"), Bytes.toBytes("c")
     };
     Append a = new Append(ROW);
     a.add(FAMILY, QUALIFIERS[0], v1);
@@ -4433,9 +4433,14 @@ public class TestFromClientSide {
     a = new Append(ROW);
     a.add(FAMILY, QUALIFIERS[0], v2);
     a.add(FAMILY, QUALIFIERS[1], v1);
+    a.add(FAMILY, QUALIFIERS[2], v2);
     Result r = t.append(a);
     assertEquals(0, Bytes.compareTo(Bytes.add(v1,v2), r.getValue(FAMILY, QUALIFIERS[0])));
     assertEquals(0, Bytes.compareTo(Bytes.add(v2,v1), r.getValue(FAMILY, QUALIFIERS[1])));
+    // QUALIFIERS[2] previously not exist, verify both value and timestamp are correct
+    assertEquals(0, Bytes.compareTo(v2, r.getValue(FAMILY, QUALIFIERS[2])));
+    assertEquals(r.getColumnLatest(FAMILY, QUALIFIERS[0]).getTimestamp(),
+        r.getColumnLatest(FAMILY, QUALIFIERS[2]).getTimestamp());
   }
 
   @Test

@@ -5023,30 +5023,22 @@ public class HRegion implements HeapSize { // , Writable{
                     newKV.getTagsOffset(), oldKv.getTagsLength());
                 System.arraycopy(kv.getBuffer(), kv.getTagsOffset(), newKV.getBuffer(),
                     newKV.getTagsOffset() + oldKv.getTagsLength(), kv.getTagsLength());
+                // copy in row, family, and qualifier
+                System.arraycopy(kv.getBuffer(), kv.getRowOffset(),
+                    newKV.getBuffer(), newKV.getRowOffset(), kv.getRowLength());
+                System.arraycopy(kv.getBuffer(), kv.getFamilyOffset(),
+                    newKV.getBuffer(), newKV.getFamilyOffset(),
+                    kv.getFamilyLength());
+                System.arraycopy(kv.getBuffer(), kv.getQualifierOffset(),
+                    newKV.getBuffer(), newKV.getQualifierOffset(),
+                    kv.getQualifierLength());
                 idx++;
               } else {
-                // allocate an empty kv once
-                newKV = new KeyValue(row.length, kv.getFamilyLength(),
-                    kv.getQualifierLength(), now, KeyValue.Type.Put,
-                    kv.getValueLength(), kv.getTagsLength());
-                // copy in the value
-                System.arraycopy(kv.getBuffer(), kv.getValueOffset(),
-                    newKV.getBuffer(), newKV.getValueOffset(),
-                    kv.getValueLength());
-                // copy in tags
-                System.arraycopy(kv.getBuffer(), kv.getTagsOffset(), newKV.getBuffer(),
-                    newKV.getTagsOffset(), kv.getTagsLength());
+                newKV = kv;
+                // Append's KeyValue.Type==Put and ts==HConstants.LATEST_TIMESTAMP,
+                // so only need to update the timestamp to 'now'
+                newKV.updateLatestStamp(Bytes.toBytes(now));
               }
-              // copy in row, family, and qualifier
-              System.arraycopy(kv.getBuffer(), kv.getRowOffset(),
-                  newKV.getBuffer(), newKV.getRowOffset(), kv.getRowLength());
-              System.arraycopy(kv.getBuffer(), kv.getFamilyOffset(),
-                  newKV.getBuffer(), newKV.getFamilyOffset(),
-                  kv.getFamilyLength());
-              System.arraycopy(kv.getBuffer(), kv.getQualifierOffset(),
-                  newKV.getBuffer(), newKV.getQualifierOffset(),
-                  kv.getQualifierLength());
-
               newKV.setMvccVersion(w.getWriteNumber());
               // Give coprocessors a chance to update the new cell
               if (coprocessorHost != null) {
