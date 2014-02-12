@@ -32,6 +32,8 @@ public abstract class Hash {
   public static final int JENKINS_HASH = 0;
   /** Constant to denote {@link MurmurHash}. */
   public static final int MURMUR_HASH  = 1;
+  /** Constant to denote {@link MurmurHash3}. */
+  public static final int MURMUR_HASH3 = 2;
 
   /**
    * This utility method converts String representation of hash function name
@@ -45,6 +47,8 @@ public abstract class Hash {
       return JENKINS_HASH;
     } else if ("murmur".equalsIgnoreCase(name)) {
       return MURMUR_HASH;
+    } else if ("murmur3".equalsIgnoreCase(name)) {
+      return MURMUR_HASH3;
     } else {
       return INVALID_HASH;
     }
@@ -68,12 +72,14 @@ public abstract class Hash {
    */
   public static Hash getInstance(int type) {
     switch(type) {
-    case JENKINS_HASH:
-      return JenkinsHash.getInstance();
-    case MURMUR_HASH:
-      return MurmurHash.getInstance();
-    default:
-      return null;
+      case JENKINS_HASH:
+        return JenkinsHash.getInstance();
+      case MURMUR_HASH:
+        return MurmurHash.getInstance();
+      case MURMUR_HASH3:
+        return MurmurHash3.getInstance();
+      default:
+        return null;
     }
   }
 
