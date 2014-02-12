@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -38,12 +39,15 @@ import org.junit.Test;
 
 @SuppressWarnings("deprecation")
 public class TestLowerToUpperCompactionHook {
-
-  private static byte[] TABLE = Bytes.toBytes("TestCompactionHook");
-  private static byte[] FAMILY = Bytes.toBytes("family");
+  private static String TABLE_STRING = "TestCompactionHook";
+  private static byte[] TABLE = Bytes.toBytes(TABLE_STRING);
+  private static String FAMILY_STRING = "family";
+  private static byte[] FAMILY = Bytes.toBytes(FAMILY_STRING);
   private static byte[] START_KEY = Bytes.toBytes("aaa");
   private static byte[] END_KEY = Bytes.toBytes("zzz");
   private static int BLOCK_SIZE = 70;
+  private static final SchemaMetrics ALL_METRICS =
+      SchemaMetrics.ALL_SCHEMA_METRICS;
 
   private static HBaseTestingUtility TEST_UTIL = null;
   private static HTableDescriptor TESTTABLEDESC = null;
@@ -69,6 +73,19 @@ public class TestLowerToUpperCompactionHook {
     HRegion r = HBaseTestCase.createNewHRegion(TESTTABLEDESC, START_KEY,
         END_KEY, TEST_UTIL.getConfiguration());
     Put[] puts = new Put[25];
+
+    String kvsTransformedFullName = SchemaMetrics.generateSchemaMetricsPrefix(
+        TABLE_STRING, FAMILY_STRING)
+        + ALL_METRICS
+            .getStoreMetricName(StoreMetricType.STORE_COMPHOOK_KVS_TRANSFORMED);
+    long startValueTransformedKVs = HRegion
+        .getNumericMetric(kvsTransformedFullName);
+
+    String bytesSavedFullName = SchemaMetrics.generateSchemaMetricsPrefix(
+        TABLE_STRING, FAMILY_STRING)
+        + ALL_METRICS
+            .getStoreMetricName(StoreMetricType.STORE_COMPHOOK_BYTES_SAVED);
+    long startValueBytesSaved = HRegion.getNumericMetric(bytesSavedFullName);
     // put some lowercase strings
     for (int i = 0; i < 25; i++) {
       byte[] row = Bytes.toBytes("row" + i);
@@ -82,7 +99,13 @@ public class TestLowerToUpperCompactionHook {
     // without calling this, the compaction will not happen
     r.flushcache();
     r.compactStores(true);
-    //
+
+    long transformedKVsAfterCompaction = HRegion.getNumericPersistentMetric(kvsTransformedFullName);
+    Assert.assertEquals(25, transformedKVsAfterCompaction - startValueTransformedKVs);
+    long bytesSavedAfterCompaction = HRegion.getNumericPersistentMetric(bytesSavedFullName);
+    // kv with value abc should be skipped
+    Assert.assertTrue((bytesSavedAfterCompaction - startValueBytesSaved) > 0);
+
     Scan scan = new Scan();
     InternalScanner s = r.getScanner(scan);
     List<KeyValue> results = new ArrayList<KeyValue>();
@@ -93,8 +116,8 @@ public class TestLowerToUpperCompactionHook {
     // this should return true, we are flushing the HRegion, so we expect the
     // compaction to be done
     Assert.assertTrue(checkIfLowerCase(results));
-    // check if we got all 25 results back
-    Assert.assertEquals(25, results.size());
+    // check if we got 24 results back since one of them should be skipped
+    Assert.assertEquals(24, results.size());
   }
 
   public boolean checkIfLowerCase(List<KeyValue> result) {

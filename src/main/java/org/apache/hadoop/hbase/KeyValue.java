@@ -27,15 +27,17 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.google.common.primitives.Longs;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
+
+import com.google.common.primitives.Longs;
 
 /**
  * An HBase Key/Value.
@@ -542,8 +544,10 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
         value, voffset, vlength);
   }
 
-  // Needed doing 'contains' on List.  Only compares the key portion, not the
-  // value.
+  /**
+   * Needed doing 'contains' on List. Only compares the key portion, not the
+   * value.
+   */
   public boolean equals(Object other) {
     if (!(other instanceof KeyValue)) {
       return false;
@@ -2248,11 +2252,18 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
   }
 
   /**
-   * Overwrites the value in the KV, keeps the other properties the same
+   * Returns new keyValue which has all properties same as the passed ones
+   * except the value
+   *
+   * @param newValue
+   *          - new value
+   * @return new KeyValue
    */
   public KeyValue modifyValueAndClone(byte[] newValue) {
-    KeyValue newKV = new KeyValue(this.getRow(), this.getFamily(),
-        this.getQualifier(), this.getTimestamp(), newValue);
+    KeyValue newKV = new KeyValue(bytes, getRowOffset(), getRowLength(), bytes,
+        getFamilyOffset(), getFamilyLength(), bytes, getQualifierOffset(),
+        getQualifierLength(), this.getTimestamp(), Type.codeToType(this
+            .getType()), newValue, 0, newValue.length);
     newKV.setMemstoreTS(this.getMemstoreTS());
     return newKV;
   }

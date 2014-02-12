@@ -23,7 +23,6 @@ package org.apache.hadoop.hbase.regionserver.metrics;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -188,7 +187,9 @@ public class SchemaMetrics {
     MEMSTORE_SIZE_MB("memstoreSizeMB"),
     STATIC_INDEX_SIZE_KB("staticIndexSizeKB"),
     FLUSH_SIZE("flushSize", PERSISTENT_METRIC_FLAG),
-    COMPACTION_WRITE_SIZE("compactionWriteSize", PERSISTENT_METRIC_FLAG);
+    COMPACTION_WRITE_SIZE("compactionWriteSize", PERSISTENT_METRIC_FLAG),
+    STORE_COMPHOOK_KVS_TRANSFORMED("storeCompHookKVsTransformed", PERSISTENT_METRIC_FLAG),
+    STORE_COMPHOOK_BYTES_SAVED("storeCompHookBytesSaved", PERSISTENT_METRIC_FLAG);
 
     private final String metricStr;
     private final int flags;

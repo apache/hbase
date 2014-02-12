@@ -1,4 +1,3 @@
-
 /*
  * Copyright The Apache Software Foundation.
  *
@@ -18,6 +17,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * <p>
@@ -39,6 +39,14 @@ public class RestrictedKeyValue {
 
   public RestrictedKeyValue(KeyValue keyValue) {
     this.keyValue = keyValue;
+  }
+
+  /**
+   * Create RestrictedKeyValue deep copy
+   * @param rkv
+   */
+  public RestrictedKeyValue(RestrictedKeyValue rkv) {
+    this.keyValue = rkv.getKeyValue().clone();
   }
 
   /**
@@ -73,4 +81,61 @@ public class RestrictedKeyValue {
   public long getTimestamp() {
     return keyValue.getTimestamp();
   }
+
+  /**
+   * Compare how many bytes the value of this keyvalue is taking comparing to
+   * the other. Negative value is good, positive is bad!
+   *
+   * @param other
+   * @return
+   */
+  public int differenceInBytes(KeyValue other) {
+    if (keyValue == null && other == null) {
+      return 0;
+    } else if (keyValue == null) {
+      return -other.getLength();
+    } else if (other == null) {
+      return keyValue.getLength();
+    } else {
+      return this.keyValue.getValueLength() - other.getValueLength();
+    }
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((keyValue == null) ? 0 : keyValue.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    RestrictedKeyValue other = (RestrictedKeyValue) obj;
+    if (keyValue == null) {
+      if (other.keyValue != null)
+        return false;
+    } else if (!keyValue.equals(other.keyValue)) {
+      //this just compares the key part (ignoring the value)
+      return false;
+    } else if (Bytes.BYTES_RAWCOMPARATOR.compare(keyValue.getBuffer(),
+        keyValue.getValueOffset(), keyValue.getValueLength(),
+        other.keyValue.getBuffer(), other.keyValue.getValueOffset(),
+        other.keyValue.getValueLength()) != 0) {
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public String toString() {
+    return "RestrictedKeyValue [keyValue=" + keyValue + "/value=" + Bytes.toString(keyValue.getValue()) + "]";
+  }
+
 }

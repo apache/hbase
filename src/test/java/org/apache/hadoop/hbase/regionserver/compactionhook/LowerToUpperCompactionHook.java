@@ -31,14 +31,16 @@ public class LowerToUpperCompactionHook implements CompactionHook {
 
   @Override
   public RestrictedKeyValue transform (RestrictedKeyValue kv) {
-    byte[] newValue;
+    RestrictedKeyValue kvModified = new RestrictedKeyValue(kv);
     String currentValue = Bytes.toString(kv.getValue());
-    /**
-     * transform it to uppercase.
-     */
-    String newValueString = currentValue.toUpperCase();
-    newValue = Bytes.toBytes(newValueString);
-    kv.modifyValue(newValue);
-    return kv;
+    if (currentValue.equals("abc")) {
+      return null;
+    }
+    // create a copy of the kv and transform it to uppercase.
+    String newValueString = currentValue;
+    newValueString = newValueString.toUpperCase();
+    byte[] newValue = Bytes.toBytes(newValueString);
+    kvModified.modifyValue(newValue);
+    return kvModified;
   }
 }

@@ -205,7 +205,6 @@ public class Store extends SchemaConfigured implements HeapSize,
    * failed.  Can be null.
    * @throws IOException
    */
-  @SuppressWarnings("unchecked")
   protected Store(Path basedir, HColumnDescriptor family, FileSystem fs,
       Configuration confParam, HRegion region, HRegionInfo regionInfo)
           throws IOException{
@@ -1328,6 +1327,10 @@ public class Store extends SchemaConfigured implements HeapSize,
       throws IOException {
     // calculate maximum key count (for blooms), and minFlushTime after compaction
     long maxKeyCount = 0;
+    // how much bytes the compaction hook saved
+    long bytesSaved = 0;
+    // how many KVs were converted with compaction hook
+    long kvsConverted = 0;
     long minFlushTime = Long.MAX_VALUE;
     for (StoreFile file : filesToCompact) {
       if (file.hasMinFlushTime() && file.getMinFlushTime() < minFlushTime) {
@@ -1411,6 +1414,15 @@ public class Store extends SchemaConfigured implements HeapSize,
                 RestrictedKeyValue modifiedKv = compactHook.transform(restrictedKv);
                 if (modifiedKv != null) {
                   writer.append(modifiedKv.getKeyValue(), kvContext);
+                  bytesSaved += modifiedKv.differenceInBytes(kv);
+                } else {
+                  if (kv != null) {
+                    bytesSaved += kv.getLength();
+                  }
+                }
+                if (!restrictedKv.equals(modifiedKv)) {
+                  kvsConverted++;
+
                 }
               } else {
                 writer.append(kv, kvContext);
@@ -1422,7 +1434,16 @@ public class Store extends SchemaConfigured implements HeapSize,
                   getSchemaMetrics().updatePersistentStoreMetric(
                     SchemaMetrics.StoreMetricType.COMPACTION_WRITE_SIZE,
                     bytesWritten);
+                  getSchemaMetrics().updatePersistentStoreMetric(
+                      SchemaMetrics.StoreMetricType.STORE_COMPHOOK_BYTES_SAVED,
+                      bytesSaved);
+                  getSchemaMetrics()
+                      .updatePersistentStoreMetric(
+                          SchemaMetrics.StoreMetricType.STORE_COMPHOOK_KVS_TRANSFORMED,
+                          kvsConverted);
                   bytesWritten = 0;
+                  bytesSaved = 0;
+                  kvsConverted = 0;
                   if (!this.region.areWritesEnabled()) {
                     writer.close();
                     fs.delete(writer.getPath(), false);
@@ -1438,7 +1459,13 @@ public class Store extends SchemaConfigured implements HeapSize,
           kvs.clear();
         } while (hasMore);
         getSchemaMetrics().updatePersistentStoreMetric(
-          SchemaMetrics.StoreMetricType.COMPACTION_WRITE_SIZE, bytesWritten);
+            SchemaMetrics.StoreMetricType.COMPACTION_WRITE_SIZE, bytesWritten);
+        getSchemaMetrics().updatePersistentStoreMetric(
+            SchemaMetrics.StoreMetricType.STORE_COMPHOOK_BYTES_SAVED,
+            bytesSaved);
+        getSchemaMetrics().updatePersistentStoreMetric(
+            SchemaMetrics.StoreMetricType.STORE_COMPHOOK_KVS_TRANSFORMED,
+            kvsConverted);
       } finally {
         if (scanner != null) {
           scanner.close();
@@ -1702,6 +1729,7 @@ public class Store extends SchemaConfigured implements HeapSize,
       firstOnRow = new KeyValue(lastKV.getRow(), HConstants.LATEST_TIMESTAMP);
     }
     // Get a scanner that caches blocks and that uses pread.
+    @SuppressWarnings("deprecation")
     HFileScanner scanner = r.getScanner(true, false, false);
     // Seek scanner.  If can't seek it, return.
     if (!seekToScanner(scanner, firstOnRow, firstKV)) return;
