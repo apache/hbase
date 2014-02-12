@@ -97,6 +97,7 @@ import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
@@ -3863,49 +3864,53 @@ public class HBaseFsck extends Configured implements Tool {
     // do the real work of hbck
     connect();
 
-    // if corrupt file mode is on, first fix them since they may be opened later
-    if (checkCorruptHFiles || sidelineCorruptHFiles) {
-      LOG.info("Checking all hfiles for corruption");
-      HFileCorruptionChecker hfcc = createHFileCorruptionChecker(sidelineCorruptHFiles);
-      setHFileCorruptionChecker(hfcc); // so we can get result
-      Collection<String> tables = getIncludedTables();
-      Collection<Path> tableDirs = new ArrayList<Path>();
-      Path rootdir = FSUtils.getRootDir(getConf());
-      if (tables.size() > 0) {
-        for (String t : tables) {
-          tableDirs.add(FSUtils.getTablePath(rootdir, t));
+    try {
+      // if corrupt file mode is on, first fix them since they may be opened later
+      if (checkCorruptHFiles || sidelineCorruptHFiles) {
+        LOG.info("Checking all hfiles for corruption");
+        HFileCorruptionChecker hfcc = createHFileCorruptionChecker(sidelineCorruptHFiles);
+        setHFileCorruptionChecker(hfcc); // so we can get result
+        Collection<String> tables = getIncludedTables();
+        Collection<Path> tableDirs = new ArrayList<Path>();
+        Path rootdir = FSUtils.getRootDir(getConf());
+        if (tables.size() > 0) {
+          for (String t : tables) {
+            tableDirs.add(FSUtils.getTablePath(rootdir, t));
+          }
+        } else {
+          tableDirs = FSUtils.getTableDirs(FSUtils.getCurrentFileSystem(getConf()), rootdir);
         }
-      } else {
-        tableDirs = FSUtils.getTableDirs(FSUtils.getCurrentFileSystem(getConf()), rootdir);
+        hfcc.checkTables(tableDirs);
+        hfcc.report(errors);
       }
-      hfcc.checkTables(tableDirs);
-      hfcc.report(errors);
-    }
 
-    // check and fix table integrity, region consistency.
-    int code = onlineHbck();
-    setRetCode(code);
-    // If we have changed the HBase state it is better to run hbck again
-    // to see if we haven't broken something else in the process.
-    // We run it only once more because otherwise we can easily fall into
-    // an infinite loop.
-    if (shouldRerun()) {
-      try {
-        LOG.info("Sleeping " + sleepBeforeRerun + "ms before re-checking after fix...");
-        Thread.sleep(sleepBeforeRerun);
-      } catch (InterruptedException ie) {
-        return this;
-      }
-      // Just report
-      setFixAssignments(false);
-      setFixMeta(false);
-      setFixHdfsHoles(false);
-      setFixHdfsOverlaps(false);
-      setFixVersionFile(false);
-      setFixTableOrphans(false);
-      errors.resetErrors();
-      code = onlineHbck();
+      // check and fix table integrity, region consistency.
+      int code = onlineHbck();
       setRetCode(code);
+      // If we have changed the HBase state it is better to run hbck again
+      // to see if we haven't broken something else in the process.
+      // We run it only once more because otherwise we can easily fall into
+      // an infinite loop.
+      if (shouldRerun()) {
+        try {
+          LOG.info("Sleeping " + sleepBeforeRerun + "ms before re-checking after fix...");
+          Thread.sleep(sleepBeforeRerun);
+        } catch (InterruptedException ie) {
+          return this;
+        }
+        // Just report
+        setFixAssignments(false);
+        setFixMeta(false);
+        setFixHdfsHoles(false);
+        setFixHdfsOverlaps(false);
+        setFixVersionFile(false);
+        setFixTableOrphans(false);
+        errors.resetErrors();
+        code = onlineHbck();
+        setRetCode(code);
+      }
+    } finally {
+      IOUtils.cleanup(null, connection, meta, admin);
     }
     return this;
   }
