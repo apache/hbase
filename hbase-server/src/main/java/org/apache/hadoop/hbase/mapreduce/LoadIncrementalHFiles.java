@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -42,6 +43,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -68,7 +70,6 @@ import org.apache.hadoop.hbase.client.coprocessor.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -102,7 +103,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private HBaseAdmin hbAdmin;
 
   public static final String NAME = "completebulkload";
+  public static final String MAX_FILES_PER_REGION_PER_FAMILY
+    = "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
   private static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
+
+  private int maxFilesPerRegionPerFamily;
   private boolean assignSeqIds;
 
   private boolean hasForwardedToken;
@@ -119,6 +124,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     this.hbAdmin = new HBaseAdmin(conf);
     this.userProvider = UserProvider.instantiate(conf);
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
+    maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
   }
 
   private void usage() {
@@ -291,6 +297,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         Multimap<ByteBuffer, LoadQueueItem> regionGroups = groupOrSplitPhase(table,
             pool, queue, startEndKeys);
 
+        if (!checkHFilesCountPerRegionPerFamily(regionGroups)) {
+          // Error is logged inside checkHFilesCountPerRegionPerFamily.
+          throw new IOException("Trying to load more than " + maxFilesPerRegionPerFamily
+            + " hfiles to one family of one region");
+        }
+
         bulkLoadPhase(table, conn, pool, queue, regionGroups);
 
         // NOTE: The next iteration's split / group could happen in parallel to
@@ -376,6 +388,31 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         throw (InterruptedIOException)new InterruptedIOException().initCause(e1);
       }
     }
+  }
+
+  private boolean checkHFilesCountPerRegionPerFamily(
+      final Multimap<ByteBuffer, LoadQueueItem> regionGroups) {
+    for (Entry<ByteBuffer,
+        ? extends Collection<LoadQueueItem>> e: regionGroups.asMap().entrySet()) {
+      final Collection<LoadQueueItem> lqis =  e.getValue();
+      HashMap<byte[], MutableInt> filesMap = new HashMap<byte[], MutableInt>();
+      for (LoadQueueItem lqi: lqis) {
+        MutableInt count = filesMap.get(lqi.family);
+        if (count == null) {
+          count = new MutableInt();
+          filesMap.put(lqi.family, count);
+        }
+        count.increment();
+        if (count.intValue() > maxFilesPerRegionPerFamily) {
+          LOG.error("Trying to load more than " + maxFilesPerRegionPerFamily
+            + " hfiles to family " + Bytes.toStringBinary(lqi.family)
+            + " of region with start key "
+            + Bytes.toStringBinary(e.getKey()));
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   /**
