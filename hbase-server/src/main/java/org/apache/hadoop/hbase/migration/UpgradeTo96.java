@@ -84,7 +84,6 @@ public class UpgradeTo96 extends Configured implements Tool {
     CommandLineParser parser = new GnuParser();
     CommandLine cmd = parser.parse(options, args);
     if (cmd.hasOption("h")) {
-      printUsage();
       return false;
     }
     if (cmd.hasOption("execute")) upgrade = true;
