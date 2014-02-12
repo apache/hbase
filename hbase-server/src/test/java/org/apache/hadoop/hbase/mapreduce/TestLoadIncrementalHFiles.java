@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.TreeMap;
@@ -60,7 +61,8 @@ import org.junit.experimental.categories.Category;
 public class TestLoadIncrementalHFiles {
   private static final byte[] QUALIFIER = Bytes.toBytes("myqual");
   private static final byte[] FAMILY = Bytes.toBytes("myfam");
-  private static final String EXPECTED_MSG_FOR_NON_EXISTING_FAMILY = "Unmatched family names found";
+  static final String EXPECTED_MSG_FOR_NON_EXISTING_FAMILY = "Unmatched family names found";
+  static final int MAX_FILES_PER_REGION_PER_FAMILY = 4;
 
   private static final byte[][] SPLIT_KEYS = new byte[][] {
     Bytes.toBytes("ddd"),
@@ -75,6 +77,9 @@ public class TestLoadIncrementalHFiles {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    util.getConfiguration().setInt(
+      LoadIncrementalHFiles.MAX_FILES_PER_REGION_PER_FAMILY,
+      MAX_FILES_PER_REGION_PER_FAMILY);
     util.startMiniCluster();
   }
 
@@ -355,6 +360,29 @@ public class TestLoadIncrementalHFiles {
     }
   }
 
+  @Test
+  public void testLoadTooMayHFiles() throws Exception {
+    Path dir = util.getDataTestDirOnTestFS("testLoadTooMayHFiles");
+    FileSystem fs = util.getTestFileSystem();
+    dir = dir.makeQualified(fs);
+    Path familyDir = new Path(dir, Bytes.toString(FAMILY));
 
+    byte[] from = Bytes.toBytes("begin");
+    byte[] to = Bytes.toBytes("end");
+    for (int i = 0; i <= MAX_FILES_PER_REGION_PER_FAMILY; i++) {
+      createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_"
+          + i), FAMILY, QUALIFIER, from, to, 1000);
+    }
+
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
+    String [] args= {dir.toString(), "mytable_testLoadTooMayHFiles"};
+    try {
+      loader.run(args);
+      fail("Bulk loading too many files should fail");
+    } catch (IOException ie) {
+      assertTrue(ie.getMessage().contains("Trying to load more than "
+        + MAX_FILES_PER_REGION_PER_FAMILY + " hfiles"));
+    }
+  }
 }
 
