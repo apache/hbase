@@ -93,12 +93,14 @@ public class Import {
       Context context)
     throws IOException {
       try {
-        for (Cell kv : value.rawCells()) {
-          kv = filterKv(kv);
-          // skip if we filtered it out
-          if (kv == null) continue;
-          // TODO get rid of ensureKeyValue
-          context.write(row, KeyValueUtil.ensureKeyValue(convertKv(kv, cfRenameMap)));
+        if (filter == null || !filter.filterRowKey(row.get(), row.getOffset(), row.getLength())) {
+          for (Cell kv : value.rawCells()) {
+            kv = filterKv(kv);
+            // skip if we filtered it out
+            if (kv == null) continue;
+            // TODO get rid of ensureKeyValue
+            context.write(row, KeyValueUtil.ensureKeyValue(convertKv(kv, cfRenameMap)));
+          }
         }
       } catch (InterruptedException e) {
         e.printStackTrace();
@@ -143,32 +145,34 @@ public class Import {
     throws IOException, InterruptedException {
       Put put = null;
       Delete delete = null;
-      for (Cell kv : result.rawCells()) {
-        kv = filterKv(kv);
-        // skip if we filter it out
-        if (kv == null) continue;
-
-        kv = convertKv(kv, cfRenameMap);
-        // Deletes and Puts are gathered and written when finished
-        if (CellUtil.isDelete(kv)) {
-          if (delete == null) {
-            delete = new Delete(key.get());
+      if (filter == null || !filter.filterRowKey(key.get(), key.getOffset(), key.getLength())) {
+        for (Cell kv : result.rawCells()) {
+          kv = filterKv(kv);
+          // skip if we filter it out
+          if (kv == null) continue;
+  
+          kv = convertKv(kv, cfRenameMap);
+          // Deletes and Puts are gathered and written when finished
+          if (CellUtil.isDelete(kv)) {
+            if (delete == null) {
+              delete = new Delete(key.get());
+            }
+            delete.addDeleteMarker(kv);
+          } else {
+            if (put == null) { 
+              put = new Put(key.get());
+            }
+            put.add(kv);
           }
-          delete.addDeleteMarker(kv);
-        } else {
-          if (put == null) { 
-            put = new Put(key.get());
-          }
-          put.add(kv);
         }
-      }
-      if (put != null) {
-        put.setClusterIds(clusterIds);
-        context.write(key, put);
-      }
-      if (delete != null) {
-        delete.setClusterIds(clusterIds);
-        context.write(key, delete);
+        if (put != null) {
+          put.setClusterIds(clusterIds);
+          context.write(key, put);
+        }
+        if (delete != null) {
+          delete.setClusterIds(clusterIds);
+          context.write(key, delete);
+        }
       }
     }
 
@@ -431,6 +435,8 @@ public class Import {
     System.err.println("  -D" + FILTER_ARGS_CONF_KEY + "=<comma separated list of args for filter");
     System.err.println(" NOTE: The filter will be applied BEFORE doing key renames via the "
         + CF_RENAME_PROP + " property. Futher, filters will only use the"
+        + " Filter#filterRowKey(byte[] buffer, int offset, int length) method to identify "
+        + " whether the current row needs to be ignored completely for processing and "
         + "Filter#filterKeyValue(KeyValue) method to determine if the KeyValue should be added;"
         + " Filter.ReturnCode#INCLUDE and #INCLUDE_AND_NEXT_COL will be considered as including "
         + "the KeyValue.");
