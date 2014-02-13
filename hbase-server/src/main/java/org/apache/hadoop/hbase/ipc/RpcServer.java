@@ -1852,6 +1852,12 @@ public class RpcServer implements RpcServerInterface {
         try {
           status.pause("Waiting for a call");
           Call call = myCallQueue.take(); // pop the queue; maybe blocked here
+          if (!call.connection.channel.isOpen()) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(Thread.currentThread().getName() + ": skipped " + call);
+            }
+            continue;
+          }
           status.setStatus("Setting up call");
           status.setConnection(call.connection.getHostAddress(), call.connection.getRemotePort());
           if (LOG.isDebugEnabled()) {
