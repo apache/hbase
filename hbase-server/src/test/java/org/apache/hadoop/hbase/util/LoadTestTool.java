@@ -485,6 +485,8 @@ public class LoadTestTool extends AbstractHBaseTool {
       } catch (Throwable e) {
         LOG.fatal("Error in granting permission for the user " + userOwner.getShortName(), e);
         return EXIT_FAILURE;
+      } finally {
+        table.close();
       }
     }
 
