@@ -29,6 +29,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
@@ -63,6 +65,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceStability.Stable
 public class Get extends Query
   implements Row, Comparable<Row> {
+  private static final Log LOG = LogFactory.getLog(Get.class);
 
   private byte [] row = null;
   private int maxVersions = 1;
@@ -156,11 +159,14 @@ public class Get extends Query
    * @param timestamp version timestamp
    * @return this for invocation chaining
    */
-  public Get setTimeStamp(long timestamp) {
+  public Get setTimeStamp(long timestamp)
+  throws IOException {
     try {
       tr = new TimeRange(timestamp, timestamp+1);
     } catch(IOException e) {
-      // Will never happen
+      // This should never happen, unless integer overflow or something extremely wrong...
+      LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
+      throw e;
     }
     return this;
   }

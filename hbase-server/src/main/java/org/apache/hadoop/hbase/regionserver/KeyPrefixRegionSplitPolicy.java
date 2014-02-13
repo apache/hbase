@@ -62,7 +62,11 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
       try {
         prefixLength = Integer.parseInt(prefixLengthString);
       } catch (NumberFormatException nfe) {
-        // ignore
+        /* Differentiate NumberFormatException from an invalid value range reported below. */
+        LOG.error("Number format exception when parsing " + PREFIX_LENGTH_KEY + " for table "
+            + region.getTableDesc().getTableName() + ":"
+            + prefixLengthString + ". " + nfe);
+        return;
       }
       if (prefixLength <= 0) {
         LOG.error("Invalid value for " + PREFIX_LENGTH_KEY + " for table "

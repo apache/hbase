@@ -132,8 +132,10 @@ class SplitRequest implements Runnable {
       try {
         this.tableLock.release();
       } catch (IOException ex) {
-        LOG.warn("Could not release the table lock", ex);
-        //TODO: if we get here, and not abort RS, this lock will never be released
+        LOG.error("Could not release the table lock (something is really wrong). " 
+           + "Aborting this server to avoid holding the lock forever.");
+        this.server.abort("Abort; we got an error when releasing the table lock "
+                         + "on " + parent.getRegionNameAsString());
       }
     }
   }

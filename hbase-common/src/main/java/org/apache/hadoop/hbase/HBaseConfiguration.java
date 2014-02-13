@@ -145,7 +145,12 @@ public class HBaseConfiguration extends Configuration {
       if (Class.forName("org.apache.hadoop.conf.ConfServlet") != null) {
         isShowConf = true;
       }
-    } catch (Exception e) {
+    } catch (LinkageError e) {
+       // should we handle it more aggressively in addition to log the error?
+       LOG.warn("Error thrown: ", e);
+    } catch (ClassNotFoundException ce) {
+      LOG.debug("ClassNotFound: ConfServlet");
+      // ignore
     }
     return isShowConf;
   }

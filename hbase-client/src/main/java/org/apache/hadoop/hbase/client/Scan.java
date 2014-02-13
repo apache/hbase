@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
@@ -82,6 +84,8 @@ import java.util.TreeSet;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Scan extends Query {
+  private static final Log LOG = LogFactory.getLog(Scan.class);
+
   private static final String RAW_ATTR = "_raw_";
   private static final String ISOLATION_LEVEL = "_isolationlevel_";
 
@@ -297,11 +301,14 @@ public class Scan extends Query {
    * @see #setMaxVersions(int)
    * @return this
    */
-  public Scan setTimeStamp(long timestamp) {
+  public Scan setTimeStamp(long timestamp)
+  throws IOException {
     try {
       tr = new TimeRange(timestamp, timestamp+1);
     } catch(IOException e) {
-      // Will never happen
+      // This should never happen, unless integer overflow or something extremely wrong...
+      LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
+      throw e;
     }
     return this;
   }
