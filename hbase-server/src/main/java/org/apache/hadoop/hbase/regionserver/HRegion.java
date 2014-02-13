@@ -1576,6 +1576,9 @@ public class HRegion implements HeapSize { // , Writable{
     // Clear flush flag.
     // If nothing to flush, return and avoid logging start/stop flush.
     if (this.memstoreSize.get() <= 0) {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Empty memstore size for the current region "+this);
+      }
       return false;
     }
     if (LOG.isDebugEnabled()) {
