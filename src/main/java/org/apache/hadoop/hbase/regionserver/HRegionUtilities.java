@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -36,7 +37,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
+import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.common.base.Preconditions;
 
 public class HRegionUtilities {
   private static void checkFamily(final byte [] family, HRegionInfo regionInfo)
@@ -107,5 +112,25 @@ public class HRegionUtilities {
     } finally {
       storeOpenerThreadPool.shutdownNow();
     }
+  }
+
+  /**
+   * Adjusting the startRow of startBucket to region's startRow
+   * and endRow of endBucket to region's endRow.
+   * Modifies the current list
+   * @param buckets
+   * @return
+   */
+  public static List<Bucket> adjustHistogramBoundariesToRegionBoundaries(
+      List<Bucket> buckets, byte[] startKey, byte[] endKey) {
+    int size = buckets.size();
+    Preconditions.checkArgument(size > 1);
+    Bucket startBucket = buckets.get(0);
+    Bucket endBucket = buckets.get(size - 1);
+    buckets.set(0, new HFileHistogram.Bucket.Builder(startBucket)
+      .setStartRow(startKey).create());
+    buckets.set(size - 1, new HFileHistogram.Bucket.Builder(endBucket)
+      .setEndRow(endKey).create());
+    return buckets;
   }
 }

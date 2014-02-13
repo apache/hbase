@@ -173,6 +173,20 @@ public interface HFileHistogram {
         this.hfileStats = new HashMap<HFileStat, Double>();
       }
 
+      /**
+       * Create a builder from an existing Bucket structure.
+       * @param b : Given Bucket.
+       */
+      public Builder(Bucket b) {
+        this.hfileStats = new HashMap<HFileStat, Double>();
+        for (Entry<HFileStat, Double> entry : b.hfileStats.entrySet()) {
+          this.hfileStats.put(entry.getKey(), entry.getValue());
+        }
+        setStartRow(b.startRow);
+        setEndRow(b.endRow);
+        setNumRows(b.numRows);
+      }
+
       public Builder setStartRow(byte[] startRow) {
         this.startRow = Bytes.copyOfByteArray(startRow);
         return this;

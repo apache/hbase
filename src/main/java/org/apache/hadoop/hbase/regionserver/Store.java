@@ -983,6 +983,9 @@ public class Store extends SchemaConfigured implements HeapSize,
       // notifyChangeReadersObservers. See HBASE-4485 for a possible
       // deadlock scenario that could have happened if continue to hold
       // the lock.
+      // Clearing the histogram since we have a new file in the system
+      // which we would want to include in the report.
+      this.hist = null;
       this.lock.writeLock().unlock();
     }
 
@@ -1145,6 +1148,7 @@ public class Store extends SchemaConfigured implements HeapSize,
         filesCompacting.removeAll(filesToCompact);
       }
       status.cleanup();
+      this.hist = null;
     }
   }
 
@@ -1493,18 +1497,26 @@ public class Store extends SchemaConfigured implements HeapSize,
    * Returns null if no data available.
    * @throws IOException
    */
-  public synchronized HFileHistogram getHistogram() throws IOException {
-    if (hist != null) return hist;
-    List<HFileHistogram> histograms = new ArrayList<HFileHistogram>();
-    if (storefiles.size() == 0) return hist;
-    for (StoreFile file : this.storefiles) {
-      HFileHistogram hist = file.getHistogram();
-      if (hist != null) histograms.add(hist);
+  public HFileHistogram getHistogram() throws IOException {
+    this.lock.readLock().lock();
+    try {
+      if (hist != null) return hist;
+      List<HFileHistogram> histograms = new ArrayList<HFileHistogram>();
+      if (storefiles.size() == 0) return hist;
+      for (StoreFile file : this.storefiles) {
+        HFileHistogram hist = file.getHistogram();
+        if (hist != null) histograms.add(hist);
+      }
+      if (histograms.size() == 0) return hist;
+      HFileHistogram h = histograms.get(0).compose(histograms);
+      this.hist = h;
+      return hist;
+    } catch (Exception e) {
+      LOG.warn("Failed constructing the histogra", e);
+    } finally {
+      lock.readLock().unlock();
     }
-    if (histograms.size() == 0) return hist;
-    HFileHistogram h = histograms.get(0).compose(histograms);
-    this.hist = h;
-    return hist;
+    return null;
   }
 
   /**

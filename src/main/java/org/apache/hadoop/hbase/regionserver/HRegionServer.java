@@ -3843,7 +3843,8 @@ public class HRegionServer implements HRegionInterface,
     HRegion region = getRegion(regionName);
     HFileHistogram hist = region.getHistogram();
     if (hist == null) return null;
-    return hist.getUniformBuckets();
+    return HRegionUtilities.adjustHistogramBoundariesToRegionBoundaries(
+        hist.getUniformBuckets(), region.getStartKey(), region.getEndKey());
   }
 
   /**
@@ -3857,6 +3858,7 @@ public class HRegionServer implements HRegionInterface,
     HRegion region = getRegion(regionName);
     HFileHistogram hist = region.getStore(family).getHistogram();
     if (hist == null) return null;
-    return hist.getUniformBuckets();
+    return HRegionUtilities.adjustHistogramBoundariesToRegionBoundaries(
+        hist.getUniformBuckets(), region.getStartKey(), region.getEndKey());
   }
 }

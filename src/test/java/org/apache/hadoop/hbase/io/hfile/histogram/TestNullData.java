@@ -42,9 +42,9 @@ public class TestNullData {
     util.loadTable(table, FAMILY);
     util.flush(TABLE);
     assertTrue(util.getHBaseCluster().getRegions(TABLE).size() == 1);
-    HRegion region = util.getHBaseCluster().getRegions(TABLE).get(0);
-    List<Bucket> hist = table.getHistogram(region.getStartKey());
-    assertTrue(hist == null);
+    List<List<Bucket>> hist =
+        table.getHistogramsForAllRegions();
+    assertTrue(hist.get(0) == null);
   }
 
 }

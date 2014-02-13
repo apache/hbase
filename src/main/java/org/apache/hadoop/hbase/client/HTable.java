@@ -24,19 +24,26 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.PreloadThreadPool;
+import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RegionserverUtils;
 import org.apache.hadoop.hbase.util.Writables;
+
+import com.google.common.base.Preconditions;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -1320,28 +1327,14 @@ public class HTable implements HTableInterface {
   /**
    * Returns the List of buckets which represent the histogram for the region
    * the row belongs to.
-   * Some notes regarding the buckets :
-   * The Bucket boundaries may not align with the boundaries of the Region.
-   * The Bucket Boundaries will look as follows :
-   * [0x00,0x00, ... 0x00] -> [some byte array] -> ... -> [some byte array]
-   * -> [0xff, 0xff, ... 0xff]
    *
    * @param row
    * @return will be either null or at least will contain
    * one element
    * @throws IOException
    */
-  public List<Bucket> getHistogram(final byte[] row) throws IOException {
-    return this.getConnectionAndResetOperationContext()
-        .getRegionServerWithRetries(
-        new ServerCallable<List<Bucket>>(connection,
-            tableName, row, this.options) {
-          public List<Bucket> call() throws IOException {
-            return server.getHistogram(
-                location.getRegionInfo().getRegionName());
-          }
-        }
-    );
+  protected List<Bucket> getHistogram(final byte[] row) throws IOException {
+    return getHistogramForColumnFamily(row, null);
   }
 
   /**
@@ -1352,17 +1345,71 @@ public class HTable implements HTableInterface {
    * @return
    * @throws IOException
    */
-  public List<Bucket> getHistogramForColumnFamily(final byte[] row,
+  protected List<Bucket> getHistogramForColumnFamily(final byte[] row,
       final byte[] cf) throws IOException {
-    return this.getConnectionAndResetOperationContext()
+    List<Bucket> ret = this.getConnectionAndResetOperationContext()
         .getRegionServerWithRetries(
             new ServerCallable<List<Bucket>>(connection,
                 tableName, row, this.options) {
               public List<Bucket> call() throws IOException {
-                return server.getHistogramForStore(
+                if (cf != null) {
+                  return server.getHistogramForStore(
                     location.getRegionInfo().getRegionName(), cf);
+                } else {
+                  return server.getHistogram(
+                      location.getRegionInfo().getRegionName());
+                }
               }
         }
     );
+    Preconditions.checkArgument(ret == null || ret.size() > 1);
+    return ret;
+  }
+
+  /**
+   * API to get the histograms for all the regions in the table.
+   * @return
+   * @throws IOException
+   */
+  public List<List<Bucket>> getHistogramsForAllRegions() throws IOException {
+    return getHistogramsForAllRegions(null);
+  }
+
+  /**
+   * API to get the histograms for all the regions in the table.
+   * @param family : the family whose histogram is being requested.
+   * Returns data for all the families if family is null.
+   * @return
+   * @throws IOException
+   */
+  public List<List<Bucket>> getHistogramsForAllRegions(final byte[] family)
+      throws IOException {
+    List<List<Bucket>> ret = new ArrayList<List<Bucket>>();
+    TreeMap<byte[], Future<List<Bucket>>> futures =
+        new TreeMap<byte[], Future<List<Bucket>>>(Bytes.BYTES_COMPARATOR);
+    for (final byte[] row : this.getStartKeys()) {
+      futures.put(row, HTable.multiActionThreadPool.submit(
+          new Callable<List<Bucket>>() {
+            public List<Bucket> call() throws Exception {
+              if (family == null) {
+                return getHistogram(row);
+              } else {
+                return getHistogramForColumnFamily(row, family);
+              }
+            }
+          }));
+    }
+    for (Future<List<Bucket>> f : futures.values()) {
+      try {
+        ret.add(f.get());
+      } catch (InterruptedException e) {
+        throw new IOException("Failed obtaining the histograms for the regions",
+            e);
+      } catch (ExecutionException e) {
+        throw new IOException("Failed obtaining the histograms for the regions",
+            e);
+      }
+    }
+    return ret;
   }
 }
