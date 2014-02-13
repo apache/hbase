@@ -67,6 +67,12 @@ public class CallRunner {
 
   public void run() {
     try {
+      if (!call.connection.channel.isOpen()) {
+        if (RpcServer.LOG.isDebugEnabled()) {
+          RpcServer.LOG.debug(Thread.currentThread().getName() + ": skipped " + call);
+        }
+        return;
+      }
       this.status.setStatus("Setting up call");
       this.status.setConnection(call.connection.getHostAddress(), call.connection.getRemotePort());
       if (RpcServer.LOG.isDebugEnabled()) {
