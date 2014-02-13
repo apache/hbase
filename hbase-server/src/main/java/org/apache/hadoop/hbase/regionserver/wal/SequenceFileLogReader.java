@@ -255,8 +255,15 @@ public class SequenceFileLogReader extends ReaderBase {
       Field fEnd = SequenceFile.Reader.class.getDeclaredField("end");
       fEnd.setAccessible(true);
       end = fEnd.getLong(this.reader);
-    } catch(Exception e) { /* reflection fail. keep going */ }
-
+    } catch(NoSuchFieldException nfe) {
+       /* reflection failure, keep going */
+    } catch(IllegalAccessException iae) {
+       /* reflection failure, keep going */
+    } catch(Exception e) {
+       /* All other cases. Should we handle it more aggressively? */
+       LOG.warn("Unexpected exception when accessing the end field", e);
+    }
+ 
     String msg = (this.path == null? "": this.path.toString()) +
       ", entryStart=" + entryStart + ", pos=" + pos +
       ((end == Long.MAX_VALUE) ? "" : ", end=" + end) +
@@ -268,8 +275,14 @@ public class SequenceFileLogReader extends ReaderBase {
         .getConstructor(String.class)
         .newInstance(msg)
         .initCause(ioe);
-    } catch(Exception e) { /* reflection fail. keep going */ }
-
+    } catch(NoSuchMethodException nfe) {
+       /* reflection failure, keep going */
+    } catch(IllegalAccessException iae) {
+       /* reflection failure, keep going */
+    } catch(Exception e) {
+       /* All other cases. Should we handle it more aggressively? */
+       LOG.warn("Unexpected exception when accessing the end field", e);
+    }
     return ioe;
   }
 }

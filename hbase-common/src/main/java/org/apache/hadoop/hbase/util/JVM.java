@@ -207,7 +207,8 @@ public class JVM {
       if (input != null){
         try {
           input.close();
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+          LOG.warn("Not able to close the InputStream", e);
         }
       }
     }
