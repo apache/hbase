@@ -329,6 +329,9 @@ public class MetaCache {
     TableName tableName = location.getRegionInfo().getTable();
     ConcurrentMap<byte[], RegionLocations> tableLocations = getTableLocations(tableName);
     RegionLocations rll = tableLocations.get(location.getRegionInfo().getStartKey());
+    if (rll == null) {
+      return;
+    }
     RegionLocations updatedLocations = rll.remove(location);
     if (updatedLocations.isEmpty()) {
       tableLocations.remove(location.getRegionInfo().getStartKey(), rll);
