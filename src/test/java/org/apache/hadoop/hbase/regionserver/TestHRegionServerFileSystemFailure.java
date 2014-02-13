@@ -1,5 +1,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertFalse;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -8,18 +10,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-
-import static org.junit.Assert.*;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.apache.hadoop.hbase.util.HasThread;
 
 public class TestHRegionServerFileSystemFailure {
   private static final Log LOG = LogFactory
@@ -32,7 +30,7 @@ public class TestHRegionServerFileSystemFailure {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    conf = new HBaseConfiguration().create();
+    conf = HBaseConfiguration.create();
     conf.setBoolean("ipc.client.ping", true);
     conf.setInt("ipc.ping.interval", 5000);
     TEST_UTIL = new HBaseTestingUtility(conf);
@@ -47,8 +45,8 @@ public class TestHRegionServerFileSystemFailure {
   private static class TableLoader extends HasThread {
     private final HTable table;
 
-    public TableLoader(HTable table) {
-      this.table = table;
+    public TableLoader(byte[] tableName) throws IOException {
+      this.table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     }
 
     @Override
@@ -71,10 +69,10 @@ public class TestHRegionServerFileSystemFailure {
   public void testHRegionServerFileSystemFailure() throws Exception {
     // Build some data.
     byte[] tableName = Bytes.toBytes("testCloseHRegion");
-    HTable table = TEST_UTIL.createTable(tableName, FAMILIES);
+    TEST_UTIL.createTable(tableName, FAMILIES);
 
     for (int i = 0; i < nLoaders; i++) {
-      new TableLoader(table).start();
+      new TableLoader(tableName).start();
     }
 
     // Wait for loaders to build up some data.
