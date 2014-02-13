@@ -473,20 +473,17 @@ public class LoadTestTool extends AbstractHBaseTool {
       conf.set("hadoop.security.authorization", "false");
       conf.set("hadoop.security.authentication", "simple");
       LOG.info("Granting permission for the user " + userOwner.getShortName());
-      HTable table = new HTable(conf, tableName);
       AccessControlProtos.Permission.Action[] actions = {
           AccessControlProtos.Permission.Action.ADMIN,
           AccessControlProtos.Permission.Action.CREATE, AccessControlProtos.Permission.Action.READ,
           AccessControlProtos.Permission.Action.WRITE };
 
       try {
-        AccessControlClient.grant(conf, table.getName(), userOwner.getShortName(), COLUMN_FAMILY,
+        AccessControlClient.grant(conf, tableName, userOwner.getShortName(), COLUMN_FAMILY,
             null, actions);
       } catch (Throwable e) {
         LOG.fatal("Error in granting permission for the user " + userOwner.getShortName(), e);
         return EXIT_FAILURE;
-      } finally {
-        table.close();
       }
     }
 
