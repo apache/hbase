@@ -1,4 +1,44 @@
 HBase Change Log
+Release 0.94.17 - 02/13/2014
+Bug
+
+    [HBASE-7963] - HBase VerifyReplication not working when security enabled
+    [HBASE-10249] - TestReplicationSyncUpTool fails because failover takes too long
+    [HBASE-10274] - MiniZookeeperCluster should close ZKDatabase when shutdown ZooKeeperServers
+    [HBASE-10319] - HLog should roll periodically to allow DN decommission to eventually complete.
+    [HBASE-10320] - Avoid ArrayList.iterator() ExplicitColumnTracker
+    [HBASE-10335] - AuthFailedException in zookeeper may block replication forever
+    [HBASE-10340] - [BACKPORT] HBASE-9892 Add info port to ServerName to support multi instances in a node
+    [HBASE-10363] - [0.94] TestInputSampler and TestInputSamplerTool fail under hadoop 2.0/23 profiles.
+    [HBASE-10371] - Compaction creates empty hfile, then selects this file for compaction and creates empty hfile and over again
+    [HBASE-10383] - Secure Bulk Load for 'completebulkload' fails for version 0.94.15
+    [HBASE-10400] - [hbck] Continue if region dir missing on region merge attempt
+    [HBASE-10401] - [hbck] perform overlap group merges in parallel
+    [HBASE-10448] - ZKUtil create and watch methods don't set watch in some cases
+    [HBASE-10470] - Import generates huge log file while importing large amounts of data
+    [HBASE-10481] - API Compatibility JDiff script does not properly handle arguments in reverse order
+    [HBASE-10482] - ReplicationSyncUp doesn't clean up its ZK, needed for tests
+    [HBASE-10485] - PrefixFilter#filterKeyValue() should perform filtering on row key
+    [HBASE-10489] - TestImportExport fails in 0.94 with Hadoop2
+    [HBASE-10493] - InclusiveStopFilter#filterKeyValue() should perform filtering on row key
+    [HBASE-10505] - Import.filterKv does not call Filter.filterRowKey
+    [HBASE-10506] - Fail-fast if client connection is lost before the real call be executed in RPC layer
+    [HBASE-10508] - Backport HBASE-10365 'HBaseFsck should clean up connection properly when repair is completed' to 0.94 and 0.96
+
+Improvement
+
+    [HBASE-10423] - Report back the message of split or rollback failure to the master
+    [HBASE-10457] - Print corrupted file information in SnapshotInfo tool without -file option
+
+Task
+
+    [HBASE-10473] - Add utility for adorning http Context
+
+Test
+
+    [HBASE-10480] - TestLogRollPeriod#testWithEdits may fail due to insufficient waiting
+
+
 Release 0.94.16 - 01/10/2014
 Sub-task
 
