@@ -71,6 +71,9 @@ public class TableRecordReaderImpl {
     boolean useClientLocalScan = conf.getBoolean(
         org.apache.hadoop.hbase.mapreduce.TableInputFormat.USE_CLIENT_LOCAL_SCANNER,
         org.apache.hadoop.hbase.mapreduce.TableInputFormat.DEFAULT_USE_CLIENT_LOCAL_SCANNER);
+    boolean useSnapshot = conf.getBoolean(
+        org.apache.hadoop.hbase.mapreduce.TableInputFormat.CLIENT_LOCAL_SCANNER_USE_SNAPSHOT,
+        org.apache.hadoop.hbase.mapreduce.TableInputFormat.DEFAULT_CLIENT_LOCAL_SCANNER_USE_SNAPSHOT);
     if ((endRow != null) && (endRow.length > 0)) {
       scan.setStopRow(endRow);
       if (trrRowFilter != null) {
@@ -78,7 +81,7 @@ public class TableRecordReaderImpl {
         scan.setFilter(trrRowFilter);
         scan.setCacheBlocks(false);
         if (useClientLocalScan) {
-          this.scanner = this.htable.getLocalScanner(scan);
+          this.scanner = this.htable.getLocalScanner(scan, !useSnapshot);
         } else {
           this.scanner = this.htable.getScanner(scan);
         }
@@ -88,7 +91,7 @@ public class TableRecordReaderImpl {
             Bytes.toStringBinary(endRow));
         scan.addColumns(trrInputColumns);
         if (useClientLocalScan) {
-          this.scanner = this.htable.getLocalScanner(scan);
+          this.scanner = this.htable.getLocalScanner(scan, !useSnapshot);
         } else {
           this.scanner = this.htable.getScanner(scan);
         }

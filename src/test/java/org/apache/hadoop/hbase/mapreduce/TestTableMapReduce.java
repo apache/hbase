@@ -130,10 +130,8 @@ public class TestTableMapReduce extends MultiRegionTable {
       LOG.info("Before map/reduce startup");
       job = new Job(conf, "process column contents");
       job.setNumReduceTasks(1);
-      Scan scan = new Scan();
-      scan.addFamily(INPUT_FAMILY);
       TableMapReduceUtil.initTableMapperJob(
-        Bytes.toString(table.getTableName()), scan,
+        Bytes.toString(table.getTableName()), INPUT_FAMILY,
         ProcessContentsMapper.class, ImmutableBytesWritable.class,
         Put.class, job);
       TableMapReduceUtil.initTableReducerJob(

@@ -62,8 +62,11 @@ public class TableRecordReaderImpl {
     boolean useClientLocalScan = conf.getBoolean(
         TableInputFormat.USE_CLIENT_LOCAL_SCANNER,
         TableInputFormat.DEFAULT_USE_CLIENT_LOCAL_SCANNER);
+    boolean usingSnapshot = conf.getBoolean(
+        TableInputFormat.CLIENT_LOCAL_SCANNER_USE_SNAPSHOT,
+        TableInputFormat.DEFAULT_CLIENT_LOCAL_SCANNER_USE_SNAPSHOT);
     if (useClientLocalScan) {
-      this.scanner = this.htable.getLocalScanner(newScan);
+      this.scanner = this.htable.getLocalScanner(newScan, !usingSnapshot);
     } else {
       this.scanner = this.htable.getScanner(newScan);
     }

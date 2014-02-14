@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.nio.charset.CharacterCodingException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,6 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
 import org.apache.hadoop.util.StringUtils;
@@ -103,6 +106,14 @@ implements Configurable {
   public static final String USE_CLIENT_LOCAL_SCANNER = "hbase.mapreduce.use.client.side.scan";
 
   public static final boolean DEFAULT_USE_CLIENT_LOCAL_SCANNER = false;
+
+  public static final String CLIENT_LOCAL_SCANNER_USE_SNAPSHOT =
+      "hbase.mapreduce.client.side.scan.use.snapshot";
+
+  public static final boolean DEFAULT_CLIENT_LOCAL_SCANNER_USE_SNAPSHOT = false;
+
+  public static final String FILTER_STRING =
+      "hbase.mapreduce.scan.filter.string";
 
   /** The configuration. */
   private Configuration conf = null;
@@ -217,6 +228,22 @@ implements Configurable {
         if (conf.get(SCAN_END_ROW) != null) {
           LOG.info("Setting end row to: " + endRow);
           scan.setStopRow(Bytes.toBytes(endRow));
+        }
+
+        String filterString = conf.get(TableInputFormat.FILTER_STRING);
+        if (filterString != null) {
+          ParseFilter fp = new ParseFilter();
+          Filter f = null;
+          try {
+            f = fp.parseFilterString(filterString);
+          } catch (CharacterCodingException e) {
+            LOG.error("Incorrect character encoding found", e);
+            throw e;
+          } catch (Exception e) {
+            LOG.error("Unknown exception", e);
+            throw e;
+          }
+          scan.setFilter(f);
         }
 
         LOG.info("Scan config:" +

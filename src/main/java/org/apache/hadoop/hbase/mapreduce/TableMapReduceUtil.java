@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Base64;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
@@ -85,6 +86,19 @@ public class TableMapReduceUtil {
     job.getConfiguration().set(TableInputFormat.INPUT_TABLE, table);
     job.getConfiguration().set(TableInputFormat.SCAN,
       convertScanToString(scan));
+  }
+
+  public static void initTableMapperJob(String table, byte[] cf,
+      Class<? extends TableMapper> mapper,
+      Class<? extends WritableComparable> outputKeyClass,
+      Class<? extends Writable> outputValueClass, Job job) throws IOException {
+    job.setInputFormatClass(TableInputFormat.class);
+    if (outputValueClass != null) job.setMapOutputValueClass(outputValueClass);
+    if (outputKeyClass != null) job.setMapOutputKeyClass(outputKeyClass);
+    job.setMapperClass(mapper);
+    job.getConfiguration().set(TableInputFormat.INPUT_TABLE, table);
+    job.getConfiguration().set(TableInputFormat.SCAN_COLUMN_FAMILY,
+        Bytes.toString(cf));
   }
 
   /**
