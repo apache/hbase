@@ -45,25 +45,36 @@ import javax.management.ObjectName;
 @InterfaceStability.Evolving
 public class DirectMemoryUtils {
   private static final Log LOG = LogFactory.getLog(DirectMemoryUtils.class);
-  private static final MBeanServer beanServer;
-  private static final ObjectName nioDirectPool;
+  private static final String MEMORY_USED = "MemoryUsed";
+  private static final MBeanServer BEAN_SERVER;
+  private static final ObjectName NIO_DIRECT_POOL;
+  private static final boolean HAS_MEMORY_USED_ATTRIBUTE;
 
   static {
     // initialize singletons. Only maintain a reference to the MBeanServer if
     // we're able to consume it -- hence convoluted logic.
     ObjectName n = null;
     MBeanServer s = null;
+    Object a = null;
     try {
       n = new ObjectName("java.nio:type=BufferPool,name=direct");
     } catch (MalformedObjectNameException e) {
       LOG.warn("Unable to initialize ObjectName for DirectByteBuffer allocations.");
     } finally {
-      nioDirectPool = n;
+      NIO_DIRECT_POOL = n;
     }
-    if (nioDirectPool != null) {
+    if (NIO_DIRECT_POOL != null) {
       s = ManagementFactory.getPlatformMBeanServer();
     }
-    beanServer = s;
+    BEAN_SERVER = s;
+    if (BEAN_SERVER != null) {
+      try {
+        a = BEAN_SERVER.getAttribute(NIO_DIRECT_POOL, MEMORY_USED);
+      } catch (JMException e) {
+        LOG.debug("Failed to retrieve nio.BufferPool direct MemoryUsed attribute.", e);
+      }
+    }
+    HAS_MEMORY_USED_ATTRIBUTE = a != null;
   }
 
   /**
@@ -103,12 +114,12 @@ public class DirectMemoryUtils {
    * @return the current amount of direct memory used.
    */
   public static long getDirectMemoryUsage() {
-    if (beanServer == null || nioDirectPool == null) return 0;
+    if (BEAN_SERVER == null || NIO_DIRECT_POOL == null || !HAS_MEMORY_USED_ATTRIBUTE) return 0;
     try {
-      Long value = (Long) beanServer.getAttribute(nioDirectPool, "MemoryUsed");
+      Long value = (Long) BEAN_SERVER.getAttribute(NIO_DIRECT_POOL, MEMORY_USED);
       return value == null ? 0 : value;
     } catch (JMException e) {
-      LOG.debug("Failed to retrieve nio.BufferPool direct MemoryUsed");
+      // should print further diagnostic information?
       return 0;
     }
   }
