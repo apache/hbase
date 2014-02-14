@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -1119,7 +1120,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   static class RandomReadTest extends Test {
     private final int everyN;
     private final boolean reportLatency;
-    private final float[] times;
+    private final double[] times;
     int idx = 0;
 
     RandomReadTest(Configuration conf, TestOptions options, Status status) {
@@ -1128,7 +1129,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       LOG.info("Sampling 1 every " + everyN + " out of " + perClientRunRows + " total rows.");
       this.reportLatency = options.isReportLatency();
       if (this.reportLatency) {
-        times = new float[(int) Math.ceil(this.perClientRunRows * this.sampleRate)];
+        times = new double[(int) Math.ceil(this.perClientRunRows * this.sampleRate)];
       } else {
         times = null;
       }
@@ -1157,7 +1158,20 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected void testTakedown() throws IOException {
       super.testTakedown();
       if (this.reportLatency) {
-        LOG.info("randomRead latency log (ms): " + Arrays.toString(times));
+        DescriptiveStatistics ds;
+        Arrays.sort(times);
+        ds = new DescriptiveStatistics(times);
+        LOG.info("randomRead latency log (ms), on " + times.length + " measures");
+        LOG.info("99.9999% = " + ds.getPercentile(99.9999d));
+        LOG.info(" 99.999% = " + ds.getPercentile(99.999d));
+        LOG.info("  99.99% = " + ds.getPercentile(99.99d));
+        LOG.info("   99.9% = " + ds.getPercentile(99.9d));
+        LOG.info("     99% = " + ds.getPercentile(99d));
+        LOG.info("     95% = " + ds.getPercentile(95d));
+        LOG.info("     90% = " + ds.getPercentile(90d));
+        LOG.info("     80% = " + ds.getPercentile(80d));
+        LOG.info("Standard Deviation = " + ds.getStandardDeviation());
+        LOG.info("Mean = " + ds.getMean());
       }
     }
   }
