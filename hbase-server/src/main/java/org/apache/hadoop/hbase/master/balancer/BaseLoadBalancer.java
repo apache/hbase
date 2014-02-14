@@ -586,6 +586,14 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   @Override
+  public void regionOnline(HRegionInfo regionInfo, ServerName sn) {
+  }
+
+  @Override
+  public void regionOffline(HRegionInfo regionInfo) {
+  }
+
+  @Override
   public boolean isStopped() {
     return stopped;
   }

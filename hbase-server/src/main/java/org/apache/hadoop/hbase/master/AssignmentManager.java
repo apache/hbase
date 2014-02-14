@@ -1274,6 +1274,7 @@ public class AssignmentManager extends ZooKeeperListener {
     clearRegionPlan(regionInfo);
     // Add the server to serversInUpdatingTimer
     addToServersInUpdatingTimer(sn);
+    balancer.regionOnline(regionInfo, sn);
   }
 
   /**
@@ -2662,6 +2663,7 @@ public class AssignmentManager extends ZooKeeperListener {
         if (!disabledOrEnablingTables.contains(tableName)) {
           regionStates.updateRegionState(regionInfo, State.OPEN, regionLocation);
           regionStates.regionOnline(regionInfo, regionLocation);
+          balancer.regionOnline(regionInfo, regionLocation);
         }
         // need to enable the table if not disabled or disabling or enabling
         // this will be used in rolling restarts
@@ -3509,6 +3511,7 @@ public class AssignmentManager extends ZooKeeperListener {
     removeClosedRegion(regionInfo);
     // remove the region plan as well just in case.
     clearRegionPlan(regionInfo);
+    balancer.regionOffline(regionInfo);
   }
 
   /**

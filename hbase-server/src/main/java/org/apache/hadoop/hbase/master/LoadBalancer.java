@@ -117,4 +117,17 @@ public interface LoadBalancer extends Configurable, Stoppable {
    * @throws HBaseIOException
    */
   void initialize() throws HBaseIOException;
+
+  /**
+   * Marks the region as online at balancer.
+   * @param regionInfo
+   * @param sn
+   */
+  void regionOnline(HRegionInfo regionInfo, ServerName sn);
+
+  /**
+   * Marks the region as offline at balancer.
+   * @param regionInfo
+   */
+  void regionOffline(HRegionInfo regionInfo);
 }
