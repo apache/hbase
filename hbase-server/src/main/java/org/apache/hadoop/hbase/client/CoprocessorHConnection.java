@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -310,6 +311,11 @@ public class CoprocessorHConnection implements ClusterConnection {
   @Override
   public List<HRegionLocation> locateRegions(TableName tableName) throws IOException {
     return delegate.locateRegions(tableName);
+  }
+
+  @Override
+  public RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache, boolean retry) throws IOException {
+    return delegate.locateRegion(tableName, row, useCache, retry);
   }
 
   @Override
