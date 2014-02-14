@@ -250,6 +250,10 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
     } catch (KeeperException e) {
       coordinator.rpcConnectionFailure("Failed to get data for abort node:" + abortNode
           + zkProc.getAbortZnode(), new IOException(e));
+    } catch (InterruptedException e) {
+      coordinator.rpcConnectionFailure("Failed to get data for abort node:" + abortNode
+          + zkProc.getAbortZnode(), new IOException(e));
+      Thread.currentThread().interrupt();
     }
     coordinator.abortProcedure(procName, ee);
   }

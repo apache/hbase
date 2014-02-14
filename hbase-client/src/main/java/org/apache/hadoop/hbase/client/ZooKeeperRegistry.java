@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -107,6 +108,8 @@ class ZooKeeperRegistry implements Registry {
       return ZKTableReadOnly.isDisabledTable(zkw, tableName);
     } catch (KeeperException e) {
       throw new IOException("Enable/Disable failed", e);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException();
     } finally {
        zkw.close();
     }

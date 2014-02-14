@@ -159,6 +159,8 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
       throw new ReplicationException(e);
     } catch (DeserializationException e) {
       throw new ReplicationException(e);
+    } catch (InterruptedException e) {
+      throw new ReplicationException(e);
     }
   }
 
@@ -211,6 +213,8 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
         peers.put(id, clusterKey);
       }
     } catch (KeeperException e) {
+      this.abortable.abort("Cannot get the list of peers ", e);
+    } catch (InterruptedException e) {
       this.abortable.abort("Cannot get the list of peers ", e);
     }
     return peers;
@@ -268,6 +272,11 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     } catch (KeeperException e) {
       throw new ReplicationException("Error getting configuration for peer with id="
           + peerId, e);
+    } catch (InterruptedException e) {
+      LOG.warn("Could not get configuration for peer because the thread " +
+          "was interrupted. peerId=" + peerId);
+      Thread.currentThread().interrupt();
+      return null;
     }
     if (data == null) {
       LOG.error("Could not get configuration for peer because it doesn't exist. peerId=" + peerId);

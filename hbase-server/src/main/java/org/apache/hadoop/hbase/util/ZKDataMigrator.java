@@ -131,7 +131,8 @@ public class ZKDataMigrator extends Configured implements Tool {
     return 0;
   }
 
-  private void checkAndMigrateTableStatesToPB(ZooKeeperWatcher zkw) throws KeeperException {
+  private void checkAndMigrateTableStatesToPB(ZooKeeperWatcher zkw) throws KeeperException,
+      InterruptedException {
     List<String> tables = ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
     if (tables == null) {
       LOG.info("No table present to migrate table state to PB. returning..");
@@ -154,7 +155,8 @@ public class ZKDataMigrator extends Configured implements Tool {
     }
   }
 
-  private void checkAndMigrateReplicationNodesToPB(ZooKeeperWatcher zkw) throws KeeperException {
+  private void checkAndMigrateReplicationNodesToPB(ZooKeeperWatcher zkw) throws KeeperException,
+      InterruptedException {
     String replicationZnodeName = getConf().get("zookeeper.znode.replication", "replication");
     String replicationPath = ZKUtil.joinZNode(zkw.baseZNode, replicationZnodeName);
     List<String> replicationZnodes = ZKUtil.listChildrenNoWatch(zkw, replicationPath);
@@ -185,7 +187,7 @@ public class ZKDataMigrator extends Configured implements Tool {
   }
 
   private void checkAndMigrateQueuesToPB(ZooKeeperWatcher zkw, String znode, String rs)
-      throws KeeperException, NoNodeException {
+      throws KeeperException, NoNodeException, InterruptedException {
     String rsPath = ZKUtil.joinZNode(znode, rs);
     List<String> peers = ZKUtil.listChildrenNoWatch(zkw, rsPath);
     if (peers == null || peers.isEmpty()) return;
@@ -207,7 +209,7 @@ public class ZKDataMigrator extends Configured implements Tool {
   }
 
   private void checkAndMigratePeerZnodesToPB(ZooKeeperWatcher zkw, String znode,
-      List<String> peers) throws KeeperException, NoNodeException {
+      List<String> peers) throws KeeperException, NoNodeException, InterruptedException {
     for (String peer : peers) {
       String peerZnode = ZKUtil.joinZNode(znode, peer);
       byte[] data = ZKUtil.getData(zkw, peerZnode);

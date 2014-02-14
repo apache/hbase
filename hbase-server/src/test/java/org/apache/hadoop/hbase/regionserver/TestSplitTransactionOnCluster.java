@@ -27,6 +27,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -1255,7 +1256,7 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  private void waitUntilRegionServerDead() throws InterruptedException {
+  private void waitUntilRegionServerDead() throws InterruptedException, InterruptedIOException {
     // Wait until the master processes the RS shutdown
     for (int i=0; cluster.getMaster().getClusterStatus().
         getServers().size() == NB_SERVERS && i<100; i++) {

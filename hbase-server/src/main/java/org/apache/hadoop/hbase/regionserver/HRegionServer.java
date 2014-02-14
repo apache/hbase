@@ -4513,7 +4513,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     String nodePath = ZKUtil.joinZNode(this.zooKeeper.recoveringRegionsZNode,
       region.getEncodedName());
     // recovering-region level
-    byte[] data = ZKUtil.getData(zkw, nodePath);
+    byte[] data;
+    try {
+      data = ZKUtil.getData(zkw, nodePath);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException();
+    }
     if (data != null) {
       lastRecordedFlushedSequenceId = SplitLogManager.parseLastFlushedSequenceIdFrom(data);
     }

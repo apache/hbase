@@ -81,6 +81,9 @@ public class MetaRegionTracker extends ZooKeeperNodeTracker {
       return ServerName.parseFrom(ZKUtil.getData(zkw, zkw.metaServerZNode));
     } catch (DeserializationException e) {
       throw ZKUtil.convert(e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return null;
     }
   }
 

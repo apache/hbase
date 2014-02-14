@@ -55,7 +55,7 @@ public class ZKTableReadOnly {
    */
   public static boolean isDisabledTable(final ZooKeeperWatcher zkw,
       final TableName tableName)
-  throws KeeperException {
+      throws KeeperException, InterruptedException {
     ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
     return isTableState(ZooKeeperProtos.Table.State.DISABLED, state);
   }
@@ -71,7 +71,7 @@ public class ZKTableReadOnly {
    */
   public static boolean isEnabledTable(final ZooKeeperWatcher zkw,
       final TableName tableName)
-  throws KeeperException {
+      throws KeeperException, InterruptedException {
     return getTableState(zkw, tableName) == ZooKeeperProtos.Table.State.ENABLED;
   }
 
@@ -87,7 +87,7 @@ public class ZKTableReadOnly {
    */
   public static boolean isDisablingOrDisabledTable(final ZooKeeperWatcher zkw,
       final TableName tableName)
-  throws KeeperException {
+      throws KeeperException, InterruptedException {
     ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
     return isTableState(ZooKeeperProtos.Table.State.DISABLING, state) ||
       isTableState(ZooKeeperProtos.Table.State.DISABLED, state);
@@ -99,7 +99,7 @@ public class ZKTableReadOnly {
    * @throws KeeperException
    */
   public static Set<TableName> getDisabledTables(ZooKeeperWatcher zkw)
-  throws KeeperException {
+      throws KeeperException, InterruptedException {
     Set<TableName> disabledTables = new HashSet<TableName>();
     List<String> children =
       ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
@@ -118,7 +118,7 @@ public class ZKTableReadOnly {
    * @throws KeeperException
    */
   public static Set<TableName> getDisabledOrDisablingTables(ZooKeeperWatcher zkw)
-  throws KeeperException {
+      throws KeeperException, InterruptedException {
     Set<TableName> disabledTables = new HashSet<TableName>();
     List<String> children =
       ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
@@ -146,7 +146,7 @@ public class ZKTableReadOnly {
    */
   static ZooKeeperProtos.Table.State getTableState(final ZooKeeperWatcher zkw,
       final TableName tableName)
-  throws KeeperException {
+      throws KeeperException, InterruptedException {
     String znode = ZKUtil.joinZNode(zkw.tableZNode, tableName.getNameAsString());
     byte [] data = ZKUtil.getData(zkw, znode);
     if (data == null || data.length <= 0) return null;

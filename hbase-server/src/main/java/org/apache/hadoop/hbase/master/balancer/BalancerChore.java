@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.master.HMaster;
 
+import java.io.IOException;
+
 /**
  * Chore that will call HMaster.balance{@link org.apache.hadoop.hbase.master.HMaster#balance()} when
  * needed.
@@ -46,7 +48,7 @@ public class BalancerChore extends Chore {
   protected void chore() {
     try {
       master.balance();
-    } catch (HBaseIOException e) {
+    } catch (IOException e) {
       LOG.error("Failed to balance.", e);
     }
   }

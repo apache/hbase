@@ -141,6 +141,9 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     } catch (KeeperException e) {
       throw new ReplicationException("Internal Error: could not get position in log for queueId="
           + queueId + ", filename=" + filename, e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return 0;
     }
     try {
       return ZKUtil.parseHLogPositionFrom(bytes);
@@ -338,6 +341,10 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       // Multi call failed; it looks like some other regionserver took away the logs.
       LOG.warn("Got exception in copyQueuesFromRSUsingMulti: ", e);
       queues.clear();
+    } catch (InterruptedException e) {
+      LOG.warn("Got exception in copyQueuesFromRSUsingMulti: ", e);
+      queues.clear();
+      Thread.currentThread().interrupt();
     }
     return queues;
   }
@@ -403,6 +410,9 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       }
     } catch (KeeperException e) {
       this.abortable.abort("Copy queues from rs", e);
+    } catch (InterruptedException e) {
+      LOG.warn(e);
+      Thread.currentThread().interrupt();
     }
     return queues;
   }

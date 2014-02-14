@@ -390,7 +390,7 @@ public class MasterFileSystem {
    * @throws KeeperException
    */
   void removeStaleRecoveringRegionsFromZK(final Set<ServerName> failedServers)
-      throws KeeperException {
+      throws KeeperException, InterruptedIOException {
     this.splitLogManager.removeStaleRecoveringRegionsFromZK(failedServers);
   }
 
