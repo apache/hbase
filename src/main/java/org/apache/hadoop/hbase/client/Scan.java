@@ -20,16 +20,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
-import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -40,6 +30,16 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
+import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
 
 /**
  * Used to perform Scan operations.
@@ -184,7 +184,7 @@ public class Scan extends Operation implements Writable {
    */
   public Scan(Get get) {
     this.startRow = get.getRow();
-    this.stopRow = get.getRow();
+    this.stopRow = Bytes.nextOf(get.getRow());
     this.filter = get.getFilter();
     this.maxVersions = get.getMaxVersions();
     this.storeLimit = get.getMaxResultsPerColumnFamily();
@@ -195,8 +195,7 @@ public class Scan extends Operation implements Writable {
   }
 
   public boolean isGetScan() {
-    return this.startRow != null && this.startRow.length > 0 &&
-      Bytes.equals(this.startRow, this.stopRow);
+    return Bytes.isNext(startRow, stopRow);
   }
 
   /**
@@ -225,7 +224,7 @@ public class Scan extends Operation implements Writable {
     if (set == null) {
       set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
     }
-    
+
     if (qualifier == null) {
       set.add(HConstants.EMPTY_BYTE_ARRAY);
     } else {
@@ -261,7 +260,7 @@ public class Scan extends Operation implements Writable {
   public boolean isPreloadBlocks() {
     return preloadBlocks;
   }
-  
+
   /**
    * Set whether this scanner should preload data blocks or not.
    * @param value
@@ -380,23 +379,23 @@ public class Scan extends Operation implements Writable {
   }
 
   /**
-   * This is technically not the max available memory setting, more of a hint. 
-   * We will add KV's till we exceed this setting if partialRow is true, 
+   * This is technically not the max available memory setting, more of a hint.
+   * We will add KV's till we exceed this setting if partialRow is true,
    * and add entire rows till we exceed this setting if partialRow is false.
    * !!!NOTE!!!: this call will overwrite the caching setting and set it as
    * int.max_value. If you really want row-based constraint as well, use
    * setCaching(int caching), which will reset maxResponseSize to match your
-   * configuration and disable partial row. 
+   * configuration and disable partial row.
    */
   public void setCaching(int responseSize, boolean partialRow) {
     this.maxResponseSize = responseSize;
     this.partialRow = partialRow;
-    this.caching = Integer.MAX_VALUE; 
+    this.caching = Integer.MAX_VALUE;
   }
 
   /**
-   * Set if pre-fetching is enabled on the region server. If enabled, the 
-   * region server will try to read the next scan result ahead of time. This 
+   * Set if pre-fetching is enabled on the region server. If enabled, the
+   * region server will try to read the next scan result ahead of time. This
    * improves scan performance if we are doing large scans.
    * @param enablePrefetching if pre-fetching is enabled or not
    */
@@ -407,7 +406,7 @@ public class Scan extends Operation implements Writable {
   public boolean getServerPrefetching() {
     return serverPrefetching;
   }
-  
+
   /**
    * @return maximum response size that client can handle for a single call to next()
    */
@@ -423,9 +422,9 @@ public class Scan extends Operation implements Writable {
   }
 
   /**
-   * Set currentPartialResponseSize to accumulated response size 
+   * Set currentPartialResponseSize to accumulated response size
    * for all the KeyValue pairs collected so far. This is only used at
-   * server side, and not used as a client API. 
+   * server side, and not used as a client API.
    * @param responseSize
    */
   public void setCurrentPartialResponseSize(int responseSize) {
@@ -433,8 +432,8 @@ public class Scan extends Operation implements Writable {
   }
 
   /*
-   * Get current PartialResponseSize. This is only used at server side, 
-   * and not used as a client API. 
+   * Get current PartialResponseSize. This is only used at server side,
+   * and not used as a client API.
    */
   public int getCurrentPartialResponseSize() {
     return this.currentPartialResponseSize;
@@ -690,6 +689,7 @@ public class Scan extends Operation implements Writable {
   }
 
   //Writable
+  @Override
   public void readFields(final DataInput in)
   throws IOException {
     int version = in.readByte();
@@ -742,6 +742,7 @@ public class Scan extends Operation implements Writable {
     }
   }
 
+  @Override
   public void write(final DataOutput out)
   throws IOException {
     // We try to talk a protocol version as low as possible so that we can be
@@ -823,6 +824,7 @@ public class Scan extends Operation implements Writable {
    * @throws IllegalArgumentException When the colon is missing.
    * @deprecated use {@link #addColumn(byte[], byte[])} instead
    */
+  @Deprecated
   public Scan addColumn(byte[] familyAndQualifier) {
     byte [][] fq = KeyValue.parseColumn(familyAndQualifier);
     if (fq.length > 1 && fq[1] != null && fq[1].length > 0) {
@@ -842,6 +844,7 @@ public class Scan extends Operation implements Writable {
    * @deprecated issue multiple {@link #addColumn(byte[], byte[])} instead
    * @return this
    */
+  @Deprecated
   public Scan addColumns(byte [][] columns) {
     for (byte[] column : columns) {
       addColumn(column);
@@ -859,6 +862,7 @@ public class Scan extends Operation implements Writable {
    * @return A reference to this instance.
    * @deprecated use {@link #addColumn(byte[], byte[])} instead
    */
+  @Deprecated
   public Scan addColumns(String columns) {
     String[] cols = columns.split(" ");
     for (String col : cols) {
@@ -875,6 +879,7 @@ public class Scan extends Operation implements Writable {
    * @return The columns in an old style string format.
    * @deprecated
    */
+  @Deprecated
   public String getInputColumns() {
     StringBuilder cols = new StringBuilder("");
     for (Map.Entry<byte[], NavigableSet<byte[]>> e :

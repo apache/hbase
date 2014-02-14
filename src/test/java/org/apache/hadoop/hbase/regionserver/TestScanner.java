@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -521,6 +520,7 @@ public class TestScanner extends HBaseTestCase {
       if (flushIndex == count) {
         LOG.info("Starting flush at flush index " + flushIndex);
         Thread t = new Thread() {
+          @Override
           public void run() {
             try {
               hri.flushcache();
@@ -542,5 +542,35 @@ public class TestScanner extends HBaseTestCase {
     s.close();
     LOG.info("Found " + count + " items");
     return count;
+  }
+
+  public void testGetScanner() throws Exception {
+    String ROW_STR = "aaa";
+    byte[] ROW = Bytes.toBytes(ROW_STR);
+    try {
+      this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
+      addContent(this.r, HConstants.CATALOG_FAMILY);
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      // Do simple test of getting one row only first.
+      Scan scan = new Scan(new Get(ROW).addFamily(HConstants.CATALOG_FAMILY));
+
+      assertTrue("isGetScan", scan.isGetScan());
+
+      InternalScanner s = r.getScanner(scan);
+      int count = 0;
+      while (s.next(results)) {
+        count++;
+      }
+      s.close();
+      assertEquals("Number of rows returned", 1, count + 1);
+      assertTrue("Results should not be empty", results.size() > 0);
+      for (KeyValue kv : results) {
+        assertEquals("Row", ROW_STR, Bytes.toString(kv.getRow()));
+      }
+    } finally {
+      this.r.close();
+      this.r.getLog().closeAndDelete();
+      shutdownDfs(this.cluster);
+    }
   }
 }

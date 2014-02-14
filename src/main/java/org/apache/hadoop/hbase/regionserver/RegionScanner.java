@@ -59,7 +59,6 @@ public class RegionScanner implements InternalScanner {
   private final byte [] stopRow;
   private Filter filter;
   private final int batch;
-  private int isScan;
   private boolean filterClosed = false;
   private long readPt;
   private Scan originalScan;
@@ -96,9 +95,6 @@ public class RegionScanner implements InternalScanner {
     } else {
       this.stopRow = scan.getStopRow();
     }
-    // If we are doing a get, we want to be [startRow,endRow] normally
-    // it is [startRow,endRow) and if startRow=endRow we get nothing.
-    this.isScan = scan.isGetScan() ? -1 : 0;
 
     // synchronize on scannerReadPoints so that nobody calculates
     // getSmallestReadPoint, before scannerReadPoints is updated.
@@ -207,6 +203,7 @@ public class RegionScanner implements InternalScanner {
       this.metric = metric;
     }
 
+    @Override
     public ScanResult call() {
       ScanResult scanResult = null;
       List<Result> outResults = new ArrayList<Result>();
@@ -336,7 +333,7 @@ public class RegionScanner implements InternalScanner {
     }
     return returnResult;
   }
-  
+
   @Override
   public boolean next(List<KeyValue> outResults)
       throws IOException {
@@ -458,10 +455,14 @@ public class RegionScanner implements InternalScanner {
   }
 
   private boolean isStopRow(byte [] currentRow) {
-    return currentRow == null ||
-        (stopRow != null &&
-        comparator.compareRows(stopRow, 0, stopRow.length,
-            currentRow, 0, currentRow.length) <= isScan);
+    if (currentRow == null) {
+      return true;
+    }
+    if (stopRow == null) {
+      return false;
+    }
+    return comparator.compareRows(stopRow, 0, stopRow.length, currentRow, 0,
+        currentRow.length) <= 0;
   }
 
   @Override

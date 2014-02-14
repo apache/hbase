@@ -104,9 +104,11 @@ public class Bytes {
     public ByteArrayComparator() {
       super();
     }
+    @Override
     public int compare(byte [] left, byte [] right) {
       return compareTo(left, right);
     }
+    @Override
     public int compare(byte [] b1, int s1, int l1, byte [] b2, int s2, int l2) {
       return compareTo(b1, s1, l1, b2, s2, l2);
     }
@@ -1495,5 +1497,36 @@ public class Bytes {
     byte[] tmp = new byte[arr.length];
     System.arraycopy(arr, 0, tmp, 0, arr.length);
     return tmp;
+  }
+
+  /**
+   * Returns a byte array next to a given one, i.e. it is the smallest byte
+   * array among all byte arrays that is strictly greater than the give array.
+   * Greater and smaller are defined by Bytes.compareTo.
+   *
+   * @param b
+   *          the give array
+   */
+  public static byte[] nextOf(byte[] b) {
+    byte[] res = new byte[b.length + 1];
+    System.arraycopy(b, 0, res, 0, b.length);
+    return res;
+  }
+
+  /**
+   * Return whether b equals nextOf(a)
+   */
+  public static boolean isNext(byte[] a, byte[] b) {
+    if (a == null || b == null) {
+      return false;
+    }
+
+    if (b.length != a.length + 1) {
+      return false;
+    }
+    if (b[a.length] != 0) {
+      return false;
+    }
+    return Bytes.compareTo(a, 0, a.length, b, 0, a.length) == 0;
   }
 }
