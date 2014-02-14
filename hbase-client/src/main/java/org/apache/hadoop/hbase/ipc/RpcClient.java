@@ -980,8 +980,6 @@ public class RpcClient {
           // Clean up open calls but don't treat this as a fatal condition,
           // since we expect certain responses to not make it by the specified
           // {@link ConnectionId#rpcTimeout}.
-        } if (ExceptionUtil.isInterrupt(e)){
-
         } else {
           // Treat this as a fatal condition and close this connection
           markClosed(e);
