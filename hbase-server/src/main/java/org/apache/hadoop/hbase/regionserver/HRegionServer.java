@@ -2531,7 +2531,7 @@ public class HRegionServer extends HasThread implements
     return getRegionByEncodedName(regionName, encodedRegionName);
   }
 
-  protected HRegion getRegionByEncodedName(String encodedRegionName)
+  public HRegion getRegionByEncodedName(String encodedRegionName)
       throws NotServingRegionException {
     return getRegionByEncodedName(null, encodedRegionName);
   }
