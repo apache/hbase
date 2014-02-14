@@ -1552,7 +1552,6 @@ public class TestAdmin {
 
     TEST_UTIL.getConfiguration().setInt(
         "hbase.regionserver.logroll.errors.tolerated", 2);
-    TEST_UTIL.getConfiguration().setInt("ipc.ping.interval", 10 * 1000);
     TEST_UTIL.getConfiguration().setInt("ipc.socket.timeout", 10 * 1000);
     TEST_UTIL.getConfiguration().setInt("hbase.rpc.timeout", 10 * 1000);
 
