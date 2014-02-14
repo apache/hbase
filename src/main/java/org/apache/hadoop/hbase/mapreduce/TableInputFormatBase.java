@@ -254,8 +254,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     // This will return numMappersPerJob - 1 split interval
     byte[][] dividingKeys = algmImpl.split(numMappersPerJob);
 
-    byte[] splitStartKey =  algmImpl.firstRow();
-    byte[] splitStopKey = algmImpl.lastRow();
+    byte[] splitStartKey = startRow;
+    byte[] splitStopKey = stopRow;
 
     TreeMap<byte[], byte[]> regions = table.getStartEndKeysMap();
 
@@ -273,7 +273,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     } else {
       for (int i = 0; i <= dividingKeys.length; i++) {
         if (i == dividingKeys.length) {
-          splitStopKey = algmImpl.lastRow();
+          splitStopKey = stopRow;
         } else {
           splitStopKey = dividingKeys[i];
         }
