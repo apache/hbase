@@ -779,13 +779,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           } else if (this.stopping) {
             boolean allUserRegionsOffline = areAllUserRegionsOffline();
             if (allUserRegionsOffline) {
-              // Set stopped if no requests since last time we went around the loop.
-              // The remaining meta regions will be closed on our way out.
-              if (oldRequestCount == this.requestCount.get()) {
+              // Set stopped if no more write requests tp meta tables
+              // since last time we went around the loop.  Any open
+              // meta regions will be closed on our way out.
+              if (oldRequestCount == getWriteRequestCount()) {
                 stop("Stopped; only catalog regions remaining online");
                 break;
               }
-              oldRequestCount = this.requestCount.get();
+              oldRequestCount = getWriteRequestCount();
             } else {
               // Make sure all regions have been closed -- some regions may
               // have not got it because we were splitting at the time of
@@ -925,6 +926,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
     }
     return allUserRegionsOffline;
+  }
+
+  /**
+   * @return Current write count for all online regions.
+   */
+  private long getWriteRequestCount() {
+    int writeCount = 0;
+    for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
+      writeCount += e.getValue().getWriteRequestsCount();
+    }
+    return writeCount;
   }
 
   void tryRegionServerReport()
