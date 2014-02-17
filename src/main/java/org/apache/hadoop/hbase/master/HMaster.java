@@ -488,8 +488,7 @@ Server {
     // to check if the cluster should be shutdown.
     this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
     this.clusterStatusTracker.start();
-    return this.activeMasterManager.blockUntilBecomingActiveMaster(startupStatus,
-        this.clusterStatusTracker);
+    return this.activeMasterManager.blockUntilBecomingActiveMaster(startupStatus);
   }
 
   /**

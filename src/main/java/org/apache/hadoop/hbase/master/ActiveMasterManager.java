@@ -49,6 +49,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(ActiveMasterManager.class);
 
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
+  final AtomicBoolean clusterShutDown = new AtomicBoolean(false);
 
   private final ServerName sn;
   private final Server master;
@@ -73,6 +74,16 @@ public class ActiveMasterManager extends ZooKeeperListener {
 
   @Override
   public void nodeDeleted(String path) {
+    // We need to keep track of the cluster's shutdown status while
+    // we wait on the current master. We consider that, if the cluster
+    // was already in a "shutdown" state when we started, that this master
+    // is part of a new cluster that was started shortly after the old cluster
+    // shut down, so that state is now irrelevant. This means that the shutdown
+    // state must be set while we wait on the active master in order
+    // to shutdown this master. See HBASE-8519.
+    if (path.equals(watcher.clusterStateZNode) && !master.isStopped()) {
+      clusterShutDown.set(true);
+    }
     if(path.equals(watcher.masterAddressZNode) && !master.isStopped()) {
       handleMasterNodeChange();
     }
@@ -125,8 +136,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
    * master was running or if some other problem (zookeeper, stop flag has been
    * set on this Master)
    */
-  boolean blockUntilBecomingActiveMaster(MonitoredTask startupStatus,
-    ClusterStatusTracker clusterStatusTracker) {
+  boolean blockUntilBecomingActiveMaster(MonitoredTask startupStatus) {
     while (true) {
       startupStatus.setStatus("Trying to register in ZK as active master");
       // Try to become the active master, watch if there is another master.
@@ -199,7 +209,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
             LOG.debug("Interrupted waiting for master to die", e);
           }
         }
-        if (!clusterStatusTracker.isClusterUp()) {
+        if (clusterShutDown.get()) {
           this.master.stop("Cluster went down before this master became active");
         }
         if (this.master.isStopped()) {
