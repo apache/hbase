@@ -349,10 +349,7 @@ public class HFilePerformanceEvaluation {
     void doRow(int i) throws Exception {
       HFileScanner scanner = this.reader.getScanner(false, true);
       byte[] gaussianRandomRowBytes = getGaussianRandomRowBytes();
-      if (scanner.seekTo(gaussianRandomRowBytes) < 0) {
-        LOG.info("Not able to seekTo " + new String(gaussianRandomRowBytes));
-        return;
-      }
+      scanner.seekTo(gaussianRandomRowBytes);
       for (int ii = 0; ii < 30; ii++) {
         if (!scanner.next()) {
           LOG.info("NOTHING FOLLOWS");
@@ -366,7 +363,8 @@ public class HFilePerformanceEvaluation {
     private byte [] getGaussianRandomRowBytes() {
       int r = (int) randomData.nextGaussian((double)totalRows / 2.0,
           (double)totalRows / 10.0);
-      return format(r);
+      // make sure r falls into [0,totalRows)
+      return format(Math.min(totalRows, Math.max(r,0)));
     }
   }
 
