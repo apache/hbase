@@ -355,7 +355,8 @@ public class HFilePerformanceEvaluation {
     private byte [] getGaussianRandomRowBytes() {
       int r = (int) randomData.nextGaussian((double)totalRows / 2.0,
           (double)totalRows / 10.0);
-      return format(r);
+      // make sure r falls into [0,totalRows)
+      return format(Math.min(totalRows, Math.max(r,0)));
     }
   }
 
