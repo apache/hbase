@@ -76,9 +76,9 @@ public class TestRegionSplitPolicy {
     // Set max size for this 'table'.
     long maxSplitSize = 1024L;
     htd.setMaxFileSize(maxSplitSize);
-    // Set flush size to 1/4.  IncreasingToUpperBoundRegionSplitPolicy
-    // grows by the square of the number of regions times flushsize each time.
-    long flushSize = maxSplitSize/4;
+    // Set flush size to 1/8.  IncreasingToUpperBoundRegionSplitPolicy
+    // grows by the cube of the number of regions times flushsize each time.
+    long flushSize = maxSplitSize/8;
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSize);
     htd.setMemStoreFlushSize(flushSize);
     // If RegionServerService with no regions in it -- 'online regions' == 0 --
@@ -101,18 +101,18 @@ public class TestRegionSplitPolicy {
     // Now test that we increase our split size as online regions for a table
     // grows. With one region, split size should be flushsize.
     regions.add(mockRegion);
-    Mockito.doReturn(flushSize/2).when(mockStore).getSize();
-    // Should not split since store is 1/2 flush size.
+    Mockito.doReturn(flushSize).when(mockStore).getSize();
+    // Should not split since store is flush size.
     assertFalse(policy.shouldSplit());
-    // Set size of store to be > flush size and we should split
-    Mockito.doReturn(flushSize + 1).when(mockStore).getSize();
+    // Set size of store to be > 2*flush size and we should split
+    Mockito.doReturn(flushSize*2 + 1).when(mockStore).getSize();
     assertTrue(policy.shouldSplit());
     // Add another region to the 'online regions' on this server and we should
     // now be no longer be splittable since split size has gone up.
     regions.add(mockRegion);
     assertFalse(policy.shouldSplit());
     // Quadruple (2 squared) the store size and make sure its just over; verify it'll split
-    Mockito.doReturn((flushSize * 2 * 2) + 1).when(mockStore).getSize();
+    Mockito.doReturn((flushSize * 2 * 2 * 2) + 1).when(mockStore).getSize();
     assertTrue(policy.shouldSplit());
 
     // Finally assert that even if loads of regions, we'll split at max size
