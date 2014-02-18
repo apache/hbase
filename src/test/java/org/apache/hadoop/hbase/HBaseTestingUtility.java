@@ -1453,6 +1453,7 @@ public class HBaseTestingUtility {
     c.set("mapred.job.tracker", mrClusterJobConf.get("mapred.job.tracker"));
     /* this for mrv2 support */
     conf.set("mapreduce.framework.name", "yarn");
+    conf.setBoolean("yarn.is.minicluster", true);
     String rmAdress = mrClusterJobConf.get("yarn.resourcemanager.address");
     if (rmAdress != null) {
       conf.set("yarn.resourcemanager.address", rmAdress);
