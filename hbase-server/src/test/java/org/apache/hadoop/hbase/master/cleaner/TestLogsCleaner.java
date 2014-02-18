@@ -70,13 +70,12 @@ public class TestLogsCleaner {
     ReplicationQueues repQueues =
         ReplicationFactory.getReplicationQueues(server.getZooKeeper(), conf, server);
     repQueues.init(server.getServerName().toString());
-    Path oldLogDir = new Path(TEST_UTIL.getDataTestDir(),
+    final Path oldLogDir = new Path(TEST_UTIL.getDataTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     String fakeMachineName =
       URLEncoder.encode(server.getServerName().toString(), "UTF8");
 
-    FileSystem fs = FileSystem.get(conf);
-    LogCleaner cleaner  = new LogCleaner(1000, server, conf, fs, oldLogDir);
+    final FileSystem fs = FileSystem.get(conf);
 
     // Create 2 invalid files, 1 "recent" file, 1 very new file and 30 old files
     long now = System.currentTimeMillis();
@@ -117,11 +116,17 @@ public class TestLogsCleaner {
 
     assertEquals(34, fs.listStatus(oldLogDir).length);
 
+    LogCleaner cleaner  = new LogCleaner(1000, server, conf, fs, oldLogDir);
     cleaner.chore();
 
     // We end up with the current log file, a newer one and the 3 old log
     // files which are scheduled for replication
-    assertEquals(5, fs.listStatus(oldLogDir).length);
+    TEST_UTIL.waitFor(1000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return 5 == fs.listStatus(oldLogDir).length;
+      }
+    });
 
     for (FileStatus file : fs.listStatus(oldLogDir)) {
       System.out.println("Kept log files: " + file.getPath().getName());
