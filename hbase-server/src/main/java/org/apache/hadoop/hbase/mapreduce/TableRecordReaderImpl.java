@@ -81,6 +81,12 @@ public class TableRecordReaderImpl {
     currentScan.setStartRow(firstRow);
     currentScan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE,
       Bytes.toBytes(Boolean.TRUE));
+    if (this.scanner != null) {
+      if (logScannerActivity) {
+        LOG.info("Closing the previously opened scanner object.");
+      }
+      this.scanner.close();
+    }
     this.scanner = this.htable.getScanner(currentScan);
     if (logScannerActivity) {
       LOG.info("Current scan=" + currentScan.toString());
