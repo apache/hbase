@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -152,5 +153,10 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
   public void prepare(boolean reload) throws IOException {
     // Use the location we were given in the constructor rather than go look it up.
     setStub(getConnection().getClient(this.location.getServerName()));
+  }
+
+  @VisibleForTesting
+  ServerName getServerName() {
+    return location.getServerName();
   }
 }

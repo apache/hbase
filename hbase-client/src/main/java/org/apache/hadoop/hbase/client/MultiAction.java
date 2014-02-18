@@ -84,17 +84,6 @@ public final class MultiAction<R> {
     return actions.keySet();
   }
 
-  /**
-   * @return All actions from all regions in this container
-   */
-  public List<Action<R>> allActions() {
-    List<Action<R>> res = new ArrayList<Action<R>>();
-    for (List<Action<R>> lst : actions.values()) {
-      res.addAll(lst);
-    }
-    return res;
-  }
-
   public boolean hasNonceGroup() {
     return nonceGroup != HConstants.NO_NONCE;
   }

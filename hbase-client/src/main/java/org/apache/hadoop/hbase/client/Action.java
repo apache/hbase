@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
  * A Get, Put, Increment, Append, or Delete associated with it's region.  Used internally by  
@@ -27,17 +28,33 @@ import org.apache.hadoop.hbase.HConstants;
  * the index from the original request. 
  */
 @InterfaceAudience.Private
+//TODO: R is never used
 public class Action<R> implements Comparable<R> {
   // TODO: This class should not be visible outside of the client package.
   private Row action;
   private int originalIndex;
   private long nonce = HConstants.NO_NONCE;
+  private int replicaId = RegionReplicaUtil.DEFAULT_REPLICA_ID;
 
   public Action(Row action, int originalIndex) {
     super();
     this.action = action;
-    this.originalIndex = originalIndex;    
+    this.originalIndex = originalIndex;
   }
+
+  /**
+   * Creates an action for a particular replica from original action.
+   * @param action Original action.
+   * @param replicaId Replica id for the new action.
+   */
+  public Action(Action<R> action, int replicaId) {
+    super();
+    this.action = action.action;
+    this.nonce = action.nonce;
+    this.originalIndex = action.originalIndex;
+    this.replicaId = replicaId;
+  }
+
 
   public void setNonce(long nonce) {
     this.nonce = nonce;
@@ -53,6 +70,10 @@ public class Action<R> implements Comparable<R> {
 
   public int getOriginalIndex() {
     return originalIndex;
+  }
+
+  public int getReplicaId() {
+    return replicaId;
   }
 
   @SuppressWarnings("rawtypes")

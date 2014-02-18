@@ -28,12 +28,10 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -49,7 +47,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class CoprocessorHConnection implements ClusterConnection {
+class CoprocessorHConnection implements ClusterConnection {
   private static final NonceGenerator ng = new ConnectionManager.NoNonceGenerator();
 
   /**
@@ -60,7 +58,7 @@ public class CoprocessorHConnection implements ClusterConnection {
    * @return an unmanaged {@link HConnection}.
    * @throws IOException if we cannot create the basic connection
    */
-  public static ClusterConnection getConnectionForEnvironment(CoprocessorEnvironment env)
+  static ClusterConnection getConnectionForEnvironment(CoprocessorEnvironment env)
       throws IOException {
     ClusterConnection connection =
         ConnectionManager.createConnectionInternal(env.getConfiguration());
@@ -426,5 +424,10 @@ public class CoprocessorHConnection implements ClusterConnection {
   @Override
   public AsyncProcess getAsyncProcess() {
     return delegate.getAsyncProcess();
+  }
+
+  @Override
+  public RegionLocations locateRegionAll(TableName tableName, byte[] row) throws IOException {
+    return delegate.locateRegionAll(tableName, row);
   }
 }

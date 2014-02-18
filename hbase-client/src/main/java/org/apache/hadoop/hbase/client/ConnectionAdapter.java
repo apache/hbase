@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -200,6 +201,11 @@ class ConnectionAdapter implements ClusterConnection {
   public HRegionLocation locateRegion(byte[] tableName, byte[] row)
       throws IOException {
     return wrappedConnection.locateRegion(tableName, row);
+  }
+
+  @Override
+  public RegionLocations locateRegionAll(TableName tableName, byte[] row) throws IOException {
+    return wrappedConnection.locateRegionAll(tableName, row);
   }
 
   @Override

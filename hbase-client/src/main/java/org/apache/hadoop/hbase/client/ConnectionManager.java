@@ -946,10 +946,15 @@ class ConnectionManager {
     }
 
     @Override
-    public HRegionLocation locateRegion(final TableName tableName,
-        final byte [] row)
-    throws IOException{
-      RegionLocations locations = locateRegion(tableName, row, true, true);
+    public RegionLocations locateRegionAll(
+        final TableName tableName, final byte[] row) throws IOException{
+      return locateRegion(tableName, row, true, true);
+    }
+
+    @Override
+    public HRegionLocation locateRegion(
+        final TableName tableName, final byte[] row) throws IOException{
+      RegionLocations locations = locateRegionAll(tableName, row);
       return locations == null ? null : locations.getRegionLocation();
     }
 
