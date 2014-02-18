@@ -2781,22 +2781,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     return scannerId;
   }
 
-  /**
-   * Generate a random positive long number
-   *
-   * @return a random positive long number
-   */
-  protected long nextLong() {
-    long n = rand.nextLong();
-    if (n == 0) {
-      return nextLong();
-    }
-    if (n < 0) {
-      n = -n;
-    }
-    return n;
-  }
-
   // Start Client methods
 
   /**
