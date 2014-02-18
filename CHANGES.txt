@@ -1,5 +1,5 @@
 HBase Change Log
-Release 0.94.17 - 02/13/2014
+Release 0.94.17 - 02/18/2014
 Bug
 
     [HBASE-7963] - HBase VerifyReplication not working when security enabled
@@ -21,12 +21,21 @@ Bug
     [HBASE-10485] - PrefixFilter#filterKeyValue() should perform filtering on row key
     [HBASE-10489] - TestImportExport fails in 0.94 with Hadoop2
     [HBASE-10493] - InclusiveStopFilter#filterKeyValue() should perform filtering on row key
+    [HBASE-10501] - Improve IncreasingToUpperBoundRegionSplitPolicy to avoid too many regions
     [HBASE-10505] - Import.filterKv does not call Filter.filterRowKey
     [HBASE-10506] - Fail-fast if client connection is lost before the real call be executed in RPC layer
     [HBASE-10508] - Backport HBASE-10365 'HBaseFsck should clean up connection properly when repair is completed' to 0.94 and 0.96
+    [HBASE-10539] - HRegion.addAndGetGlobalMemstoreSize returns previous size
+    [HBASE-10545] - RS Hangs waiting on region to close on shutdown; has to timeout before can go down
+    [HBASE-10546] - Two scanner objects are open for each hbase map task but only one scanner object is closed
+    [HBASE-10551] - Change local mode back to one RS thread by default
+    [HBASE-10552] - HFilePerformanceEvaluation.GaussianRandomReadBenchmark fails sometimes.
+    [HBASE-10555] - Backport HBASE-8519 to 0.94, Backup master will never come up if primary master dies during initialization
+    [HBASE-10562] - Fix TestMultiTableInputFormat for Hadoop 2 in 0.94
 
 Improvement
 
+    [HBASE-10212] - New rpc metric: number of active handler
     [HBASE-10423] - Report back the message of split or rollback failure to the master
     [HBASE-10457] - Print corrupted file information in SnapshotInfo tool without -file option
 
