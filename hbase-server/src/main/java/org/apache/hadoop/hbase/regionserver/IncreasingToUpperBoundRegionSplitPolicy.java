@@ -29,30 +29,34 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 
 /**
  * Split size is the number of regions that are on this server that all are
- * of the same table, squared, times the region flush size OR the maximum
+ * of the same table, cubed, times 2x the region flush size OR the maximum
  * region split size, whichever is smaller.  For example, if the flush size
- * is 128M, then on first flush we will split which will make two regions
- * that will split when their size is 2 * 2 * 128M = 512M.  If one of these
+ * is 128M, then after two flushes (256MB) we will split which will make two regions
+ * that will split when their size is 2^3 * 128M*2 = 2048M.  If one of these
  * regions splits, then there are three regions and now the split size is
- * 3 * 3 * 128M =  1152M, and so on until we reach the configured
+ * 3^3 * 128M*2 =  6912M, and so on until we reach the configured
  * maximum filesize and then from there on out, we'll use that.
  */
 public class IncreasingToUpperBoundRegionSplitPolicy
 extends ConstantSizeRegionSplitPolicy {
   static final Log LOG =
     LogFactory.getLog(IncreasingToUpperBoundRegionSplitPolicy.class);
-  private long flushSize;
+  private long initialSize;
 
   @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
     Configuration conf = getConf();
+    this.initialSize = conf.getLong("hbase.increasing.policy.initial.size", -1);
+    if (this.initialSize > 0) {
+      return;
+    }
     HTableDescriptor desc = region.getTableDesc();
     if (desc != null) {
-      this.flushSize = desc.getMemStoreFlushSize();
+      this.initialSize = 2*desc.getMemStoreFlushSize();
     }
-    if (this.flushSize <= 0) {
-      this.flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
+    if (this.initialSize <= 0) {
+      this.initialSize = 2*conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
         HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
     }
   }
@@ -90,10 +94,11 @@ extends ConstantSizeRegionSplitPolicy {
    * @return Region max size or <code>count of regions squared * flushsize, which ever is
    * smaller; guard against there being zero regions on this server.
    */
-  long getSizeToCheck(final int tableRegionsCount) {
-    return tableRegionsCount == 0? getDesiredMaxFileSize():
+  protected long getSizeToCheck(final int tableRegionsCount) {
+    // safety check for 100 to avoid numerical overflow in extreme cases
+    return tableRegionsCount == 0 || tableRegionsCount > 100 ? getDesiredMaxFileSize():
       Math.min(getDesiredMaxFileSize(),
-        this.flushSize * (tableRegionsCount * (long)tableRegionsCount));
+        this.initialSize * tableRegionsCount * tableRegionsCount * tableRegionsCount);
   }
 
   /**
