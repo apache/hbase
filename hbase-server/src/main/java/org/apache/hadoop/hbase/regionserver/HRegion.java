@@ -836,7 +836,7 @@ public class HRegion implements HeapSize { // , Writable{
     if (this.rsAccounting != null) {
       rsAccounting.addAndGetGlobalMemstoreSize(memStoreSize);
     }
-    return this.memstoreSize.getAndAdd(memStoreSize);
+    return this.memstoreSize.addAndGet(memStoreSize);
   }
 
   /** @return a HRegionInfo object for this region */
