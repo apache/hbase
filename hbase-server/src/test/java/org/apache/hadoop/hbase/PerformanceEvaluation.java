@@ -1158,9 +1158,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected void testTakedown() throws IOException {
       super.testTakedown();
       if (this.reportLatency) {
-        DescriptiveStatistics ds;
         Arrays.sort(times);
-        ds = new DescriptiveStatistics(times);
+        DescriptiveStatistics ds = new DescriptiveStatistics();
+        for (double t : times) {
+          ds.addValue(t);
+        }
         LOG.info("randomRead latency log (ms), on " + times.length + " measures");
         LOG.info("99.9999% = " + ds.getPercentile(99.9999d));
         LOG.info(" 99.999% = " + ds.getPercentile(99.999d));
