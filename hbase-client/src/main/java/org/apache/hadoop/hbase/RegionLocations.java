@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -259,6 +260,10 @@ public class RegionLocations {
 
   public HRegionLocation[] getRegionLocations() {
     return locations;
+  }
+
+  public HRegionLocation getDefaultRegionLocation() {
+    return locations[HRegionInfo.DEFAULT_REPLICA_ID];
   }
 
   /**

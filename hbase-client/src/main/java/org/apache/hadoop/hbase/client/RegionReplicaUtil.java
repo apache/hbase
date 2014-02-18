@@ -30,7 +30,7 @@ public class RegionReplicaUtil {
   /**
    * The default replicaId for the region
    */
-  private static final int DEFAULT_REPLICA_ID = 0;
+  static final int DEFAULT_REPLICA_ID = 0;
 
   /**
    * Returns the HRegionInfo for the given replicaId. HRegionInfo's correspond to
@@ -62,4 +62,7 @@ public class RegionReplicaUtil {
     return getRegionInfoForReplica(regionInfo, DEFAULT_REPLICA_ID);
   }
 
+  public static boolean isDefaultReplica(int replicaId) {
+    return DEFAULT_REPLICA_ID == replicaId;
+  }
 }
