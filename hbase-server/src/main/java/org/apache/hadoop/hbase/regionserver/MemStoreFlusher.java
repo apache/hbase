@@ -219,6 +219,11 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   private class FlushHandler extends HasThread {
+
+    private FlushHandler(String name) {
+      super(name);
+    }
+
     @Override
     public void run() {
       while (!server.isStopped()) {
@@ -362,7 +367,7 @@ class MemStoreFlusher implements FlushRequester {
     ThreadFactory flusherThreadFactory = Threads.newDaemonThreadFactory(
         server.getServerName().toShortString() + "-MemStoreFlusher", eh);
     for (int i = 0; i < flushHandlers.length; i++) {
-      flushHandlers[i] = new FlushHandler();
+      flushHandlers[i] = new FlushHandler("MemStoreFlusher." + i);
       flusherThreadFactory.newThread(flushHandlers[i]);
       flushHandlers[i].start();
     }
