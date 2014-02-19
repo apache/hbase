@@ -33,6 +33,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
@@ -41,7 +43,6 @@ import org.apache.hadoop.hbase.catalog.MetaReader.Visitor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Used internally for reading meta and constructing datastructures that are
@@ -100,20 +101,27 @@ public class SnapshotOfRegionAssignmentFromMeta {
       public boolean visit(Result result) throws IOException {
         try {
           if (result ==  null || result.isEmpty()) return true;
-          Pair<HRegionInfo, ServerName> regionAndServer =
-              HRegionInfo.getHRegionInfoAndServerName(result);
-          HRegionInfo hri = regionAndServer.getFirst();
-          if (hri  == null) return true;
+          RegionLocations rl = MetaReader.getRegionLocations(result);
+          if (rl == null) return true;
+          HRegionInfo hri = rl.getRegionLocation(0).getRegionInfo();
+          if (hri == null) return true;
           if (hri.getTable() == null) return true;
           if (disabledTables.contains(hri.getTable())) {
             return true;
           }
           // Are we to include split parents in the list?
           if (excludeOfflinedSplitParents && hri.isSplit()) return true;
-          // Add the current assignment to the snapshot
-          addAssignment(hri, regionAndServer.getSecond());
-          addRegion(hri);
-          
+          HRegionLocation[] hrls = rl.getRegionLocations();
+
+          // Add the current assignment to the snapshot for all replicas
+          for (int i = 0; i < hrls.length; i++) {
+            if (hrls[i] == null) continue;
+            hri = hrls[i].getRegionInfo();
+            if (hri == null) continue;
+            addAssignment(hri, hrls[i].getServerName());
+            addRegion(hri);
+          }
+
           // the code below is to handle favored nodes
           byte[] favoredNodes = result.getValue(HConstants.CATALOG_FAMILY,
               FavoredNodeAssignmentHelper.FAVOREDNODES_QUALIFIER);
@@ -157,6 +165,8 @@ public class SnapshotOfRegionAssignmentFromMeta {
   private void addAssignment(HRegionInfo regionInfo, ServerName server) {
     // Process the region to region server map
     regionToRegionServerMap.put(regionInfo, server);
+
+    if (server == null) return;
 
     // Process the region server to region map
     List<HRegionInfo> regionList = regionServerToRegionMap.get(server);

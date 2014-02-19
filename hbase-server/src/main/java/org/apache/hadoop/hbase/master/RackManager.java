@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -65,5 +66,21 @@ public class RackManager {
     }
 
     return UNKNOWN_RACK;
+  }
+
+  /**
+   * Same as {@link #getRack(ServerName)} except that a list is passed
+   * @param servers
+   * @return
+   */
+  public List<String> getRack(List<ServerName> servers) {
+    // just a note - switchMapping caches results (at least the implementation should unless the
+    // resolution is really a lightweight process)
+    List<String> serversAsString = new ArrayList<String>(servers.size());
+    for (ServerName server : servers) {
+      serversAsString.add(server.getHostname());
+    }
+    List<String> racks = switchMapping.resolve(serversAsString);
+    return racks;
   }
 }

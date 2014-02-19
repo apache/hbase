@@ -26,11 +26,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
@@ -51,6 +54,9 @@ import com.google.common.base.Preconditions;
 public class RegionStateStore {
   private static final Log LOG = LogFactory.getLog(RegionStateStore.class);
 
+  /** The delimiter for meta columns for replicaIds > 0 */
+  protected static final char META_REPLICA_ID_DELIMITER = '_';
+
   private volatile HRegion metaRegion;
   private volatile HTableInterface metaTable;
   private volatile boolean initialized;
@@ -67,11 +73,27 @@ public class RegionStateStore {
    * @return A ServerName instance or {@link HRegionInfo#getServerName(Result)}
    * if necessary fields not found or empty.
    */
-  static ServerName getRegionServer(final Result r) {
-    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, HConstants.SERVERNAME_QUALIFIER);
-    if (cell == null || cell.getValueLength() == 0) return HRegionInfo.getServerName(r);
+  static ServerName getRegionServer(final Result r, int replicaId) {
+    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getServerNameColumn(replicaId));
+    if (cell == null || cell.getValueLength() == 0) {
+      RegionLocations locations = MetaReader.getRegionLocations(r);
+      if (locations != null) {
+        HRegionLocation location = locations.getRegionLocation(replicaId);
+        if (location != null) {
+          return location.getServerName();
+        }
+      }
+      return null;
+    }
     return ServerName.parseServerName(Bytes.toString(cell.getValueArray(),
       cell.getValueOffset(), cell.getValueLength()));
+  }
+
+  private static byte[] getServerNameColumn(int replicaId) {
+    return replicaId == 0
+        ? HConstants.SERVERNAME_QUALIFIER
+        : Bytes.toBytes(HConstants.SERVERNAME_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+          + String.format(HRegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -79,11 +101,18 @@ public class RegionStateStore {
    * @param r Result to pull the region state from
    * @return the region state, or OPEN if there's no value written.
    */
-  static State getRegionState(final Result r) {
-    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER);
+  static State getRegionState(final Result r, int replicaId) {
+    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getStateColumn(replicaId));
     if (cell == null || cell.getValueLength() == 0) return State.OPEN;
     return State.valueOf(Bytes.toString(cell.getValueArray(),
       cell.getValueOffset(), cell.getValueLength()));
+  }
+
+  private static byte[] getStateColumn(int replicaId) {
+    return replicaId == 0
+        ? HConstants.STATE_QUALIFIER
+        : Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+          + String.format(HRegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -159,27 +188,23 @@ public class RegionStateStore {
     State state = newState.getState();
 
     try {
-      Put put = new Put(hri.getRegionName());
+      int replicaId = hri.getReplicaId();
+      Put put = new Put(MetaReader.getMetaKeyForRegion(hri));
       StringBuilder info = new StringBuilder("Updating row ");
       info.append(hri.getRegionNameAsString()).append(" with state=").append(state);
       if (serverName != null && !serverName.equals(oldServer)) {
-        put.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SERVERNAME_QUALIFIER,
+        put.addImmutable(HConstants.CATALOG_FAMILY, getServerNameColumn(replicaId),
           Bytes.toBytes(serverName.getServerName()));
         info.append("&sn=").append(serverName);
       }
       if (openSeqNum >= 0) {
         Preconditions.checkArgument(state == State.OPEN
           && serverName != null, "Open region should be on a server");
-        put.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-          Bytes.toBytes(serverName.getHostAndPort()));
-        put.addImmutable(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-          Bytes.toBytes(serverName.getStartcode()));
-        put.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER,
-          Bytes.toBytes(openSeqNum));
+        MetaEditor.addLocation(put, serverName, openSeqNum, replicaId);
         info.append("&openSeqNum=").append(openSeqNum);
         info.append("&server=").append(serverName);
       }
-      put.addImmutable(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
+      put.addImmutable(HConstants.CATALOG_FAMILY, getStateColumn(replicaId),
         Bytes.toBytes(state.name()));
       LOG.info(info);
 

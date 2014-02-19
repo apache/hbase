@@ -38,7 +38,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -51,6 +50,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionException;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -101,6 +101,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableReques
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
@@ -108,6 +110,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterSta
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
@@ -127,12 +131,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
@@ -196,6 +195,7 @@ public class HBaseAdmin implements Admin {
     this.cleanupConnectionOnClose = true;
   }
 
+  @Override
   public int getOperationTimeout() {
     return operationTimeout;
   }
@@ -269,6 +269,7 @@ public class HBaseAdmin implements Admin {
   }
 
   /** @return HConnection used by this object. */
+  @Override
   public HConnection getConnection() {
     return connection;
   }
@@ -278,6 +279,7 @@ public class HBaseAdmin implements Admin {
    * @throws ZooKeeperConnectionException
    * @throws MasterNotRunningException
    */
+  @Override
   public boolean isMasterRunning()
   throws MasterNotRunningException, ZooKeeperConnectionException {
     return connection.isMasterRunning();
@@ -288,6 +290,7 @@ public class HBaseAdmin implements Admin {
    * @return True if table exists already.
    * @throws IOException
    */
+  @Override
   public boolean tableExists(final TableName tableName)
   throws IOException {
     boolean b = false;
@@ -320,6 +323,7 @@ public class HBaseAdmin implements Admin {
    * @return - returns an array of HTableDescriptors
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public HTableDescriptor[] listTables() throws IOException {
     return this.connection.listTables();
   }
@@ -332,6 +336,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @see #listTables()
    */
+  @Override
   public HTableDescriptor[] listTables(Pattern pattern) throws IOException {
     List<HTableDescriptor> matched = new LinkedList<HTableDescriptor>();
     HTableDescriptor[] tables = listTables();
@@ -351,6 +356,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @see #listTables(java.util.regex.Pattern)
    */
+  @Override
   public HTableDescriptor[] listTables(String regex) throws IOException {
     return listTables(Pattern.compile(regex));
   }
@@ -398,6 +404,7 @@ public class HBaseAdmin implements Admin {
    * @return TableName[] table names
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public TableName[] listTableNames() throws IOException {
     return this.connection.listTableNames();
   }
@@ -409,6 +416,7 @@ public class HBaseAdmin implements Admin {
    * @throws TableNotFoundException
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public HTableDescriptor getTableDescriptor(final TableName tableName)
   throws TableNotFoundException, IOException {
     return this.connection.getHTableDescriptor(tableName);
@@ -440,6 +448,7 @@ public class HBaseAdmin implements Admin {
    * and attempt-at-creation).
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void createTable(HTableDescriptor desc)
   throws IOException {
     createTable(desc, null);
@@ -469,6 +478,7 @@ public class HBaseAdmin implements Admin {
    * and attempt-at-creation).
    * @throws IOException
    */
+  @Override
   public void createTable(HTableDescriptor desc, byte [] startKey,
       byte [] endKey, int numRegions)
   throws IOException {
@@ -505,6 +515,7 @@ public class HBaseAdmin implements Admin {
    * and attempt-at-creation).
    * @throws IOException
    */
+  @Override
   public void createTable(final HTableDescriptor desc, byte [][] splitKeys)
   throws IOException {
     try {
@@ -512,7 +523,7 @@ public class HBaseAdmin implements Admin {
     } catch (SocketTimeoutException ste) {
       LOG.warn("Creating " + desc.getTableName() + " took too long", ste);
     }
-    int numRegs = splitKeys == null ? 1 : splitKeys.length + 1;
+    int numRegs = (splitKeys == null ? 1 : splitKeys.length + 1) * desc.getRegionReplication();
     int prevRegCount = 0;
     boolean doneWithMetaScan = false;
     for (int tries = 0; tries < this.numRetries * this.retryLongerMultiplier;
@@ -523,19 +534,27 @@ public class HBaseAdmin implements Admin {
         MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
           @Override
           public boolean processRow(Result rowResult) throws IOException {
-            HRegionInfo info = HRegionInfo.getHRegionInfo(rowResult);
-            if (info == null) {
+            RegionLocations list = MetaReader.getRegionLocations(rowResult);
+            if (list == null) {
               LOG.warn("No serialized HRegionInfo in " + rowResult);
               return true;
             }
-            if (!info.getTable().equals(desc.getTableName())) {
+            HRegionLocation l = list.getRegionLocation();
+            if (l == null) {
+              return true;
+            }
+            if (!l.getRegionInfo().getTable().equals(desc.getTableName())) {
               return false;
             }
-            ServerName serverName = HRegionInfo.getServerName(rowResult);
-            // Make sure that regions are assigned to server
-            if (!(info.isOffline() || info.isSplit()) && serverName != null
-                && serverName.getHostAndPort() != null) {
-              actualRegCount.incrementAndGet();
+            if (l.getRegionInfo().isOffline() || l.getRegionInfo().isSplit()) return true;
+            HRegionLocation[] locations = list.getRegionLocations();
+            for (HRegionLocation location : locations) {
+              if (location == null) continue;
+              ServerName serverName = location.getServerName();
+              // Make sure that regions are assigned to server
+              if (serverName != null && serverName.getHostAndPort() != null) {
+                actualRegCount.incrementAndGet();
+              }
             }
             return true;
           }
@@ -593,6 +612,7 @@ public class HBaseAdmin implements Admin {
    * and attempt-at-creation).
    * @throws IOException
    */
+  @Override
   public void createTableAsync(
     final HTableDescriptor desc, final byte [][] splitKeys)
   throws IOException {
@@ -642,6 +662,7 @@ public class HBaseAdmin implements Admin {
    * @param tableName name of table to delete
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void deleteTable(final TableName tableName) throws IOException {
     boolean tableExists = true;
 
@@ -736,6 +757,7 @@ public class HBaseAdmin implements Admin {
    * @see #deleteTables(java.util.regex.Pattern)
    * @see #deleteTable(java.lang.String)
    */
+  @Override
   public HTableDescriptor[] deleteTables(String regex) throws IOException {
     return deleteTables(Pattern.compile(regex));
   }
@@ -751,6 +773,7 @@ public class HBaseAdmin implements Admin {
    * @return Table descriptors for tables that couldn't be deleted
    * @throws IOException
    */
+  @Override
   public HTableDescriptor[] deleteTables(Pattern pattern) throws IOException {
     List<HTableDescriptor> failed = new LinkedList<HTableDescriptor>();
     for (HTableDescriptor table : listTables(pattern)) {
@@ -772,6 +795,7 @@ public class HBaseAdmin implements Admin {
    * @param preserveSplits True if the splits should be preserved
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void truncateTable(final TableName tableName, final boolean preserveSplits)
       throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
@@ -798,6 +822,7 @@ public class HBaseAdmin implements Admin {
    * @see #disableTable(byte[])
    * @see #enableTableAsync(byte[])
    */
+  @Override
   public void enableTable(final TableName tableName)
   throws IOException {
     enableTableAsync(tableName);
@@ -869,6 +894,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException
    * @since 0.90.0
    */
+  @Override
   public void enableTableAsync(final TableName tableName)
   throws IOException {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
@@ -905,6 +931,7 @@ public class HBaseAdmin implements Admin {
    * @see #enableTables(java.util.regex.Pattern)
    * @see #enableTable(java.lang.String)
    */
+  @Override
   public HTableDescriptor[] enableTables(String regex) throws IOException {
     return enableTables(Pattern.compile(regex));
   }
@@ -919,6 +946,7 @@ public class HBaseAdmin implements Admin {
    * @param pattern The pattern to match table names against
    * @throws IOException
    */
+  @Override
   public HTableDescriptor[] enableTables(Pattern pattern) throws IOException {
     List<HTableDescriptor> failed = new LinkedList<HTableDescriptor>();
     for (HTableDescriptor table : listTables(pattern)) {
@@ -947,6 +975,7 @@ public class HBaseAdmin implements Admin {
    * @see #isTableEnabled(byte[])
    * @since 0.90.0
    */
+  @Override
   public void disableTableAsync(final TableName tableName) throws IOException {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     executeCallable(new MasterCallable<Void>(getConnection()) {
@@ -979,6 +1008,7 @@ public class HBaseAdmin implements Admin {
    * TableNotFoundException means the table doesn't exist.
    * TableNotEnabledException means the table isn't in enabled state.
    */
+  @Override
   public void disableTable(final TableName tableName)
   throws IOException {
     disableTableAsync(tableName);
@@ -1032,6 +1062,7 @@ public class HBaseAdmin implements Admin {
    * @see #disableTables(java.util.regex.Pattern)
    * @see #disableTable(java.lang.String)
    */
+  @Override
   public HTableDescriptor[] disableTables(String regex) throws IOException {
     return disableTables(Pattern.compile(regex));
   }
@@ -1047,6 +1078,7 @@ public class HBaseAdmin implements Admin {
    * @return Table descriptors for tables that couldn't be disabled
    * @throws IOException
    */
+  @Override
   public HTableDescriptor[] disableTables(Pattern pattern) throws IOException {
     List<HTableDescriptor> failed = new LinkedList<HTableDescriptor>();
     for (HTableDescriptor table : listTables(pattern)) {
@@ -1077,6 +1109,7 @@ public class HBaseAdmin implements Admin {
    * @return true if table is on-line
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public boolean isTableEnabled(TableName tableName) throws IOException {
     checkTableExistence(tableName);
     return connection.isTableEnabled(tableName);
@@ -1097,6 +1130,7 @@ public class HBaseAdmin implements Admin {
    * @return true if table is off-line
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public boolean isTableDisabled(TableName tableName) throws IOException {
     checkTableExistence(tableName);
     return connection.isTableDisabled(tableName);
@@ -1115,6 +1149,7 @@ public class HBaseAdmin implements Admin {
    * @return true if all regions of the table are available
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public boolean isTableAvailable(TableName tableName) throws IOException {
     return connection.isTableAvailable(tableName);
   }
@@ -1139,6 +1174,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException
    *           if a remote or network excpetion occurs
    */
+  @Override
   public boolean isTableAvailable(TableName tableName,
                                   byte[][] splitKeys) throws IOException {
     return connection.isTableAvailable(tableName, splitKeys);
@@ -1165,6 +1201,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException
    *           if a remote or network exception occurs
    */
+  @Override
   public Pair<Integer, Integer> getAlterStatus(final TableName tableName)
   throws IOException {
     return executeCallable(new MasterCallable<Pair<Integer, Integer>>(getConnection()) {
@@ -1192,6 +1229,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException
    *           if a remote or network exception occurs
    */
+  @Override
   public Pair<Integer, Integer> getAlterStatus(final byte[] tableName)
    throws IOException {
     return getAlterStatus(TableName.valueOf(tableName));
@@ -1232,6 +1270,7 @@ public class HBaseAdmin implements Admin {
    * @param column column descriptor of column to be added
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void addColumn(final TableName tableName, final HColumnDescriptor column)
   throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
@@ -1278,6 +1317,7 @@ public class HBaseAdmin implements Admin {
    * @param columnName name of column to be deleted
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void deleteColumn(final TableName tableName, final byte [] columnName)
   throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
@@ -1326,6 +1366,7 @@ public class HBaseAdmin implements Admin {
    * @param descriptor new column descriptor to use
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void modifyColumn(final TableName tableName, final HColumnDescriptor descriptor)
   throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
@@ -1346,6 +1387,7 @@ public class HBaseAdmin implements Admin {
    * the one currently in <code>hbase:meta</code>
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void closeRegion(final String regionname, final String serverName)
   throws IOException {
     closeRegion(Bytes.toBytes(regionname), serverName);
@@ -1361,6 +1403,7 @@ public class HBaseAdmin implements Admin {
    * <code> host187.example.com,60020,1289493121758</code>
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void closeRegion(final byte [] regionname, final String serverName)
   throws IOException {
     CatalogTracker ct = getCatalogTracker();
@@ -1408,6 +1451,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException
    *           if a remote or network exception occurs
    */
+  @Override
   public boolean closeRegionWithEncodedRegionName(final String encodedRegionName,
       final String serverName) throws IOException {
     if (null == serverName || ("").equals(serverName.trim())) {
@@ -1438,6 +1482,7 @@ public class HBaseAdmin implements Admin {
    * @param hri
    * @throws IOException
    */
+  @Override
   public void closeRegion(final ServerName sn, final HRegionInfo hri)
   throws IOException {
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
@@ -1448,6 +1493,7 @@ public class HBaseAdmin implements Admin {
   /**
    * Get all the online regions on a region server.
    */
+  @Override
   public List<HRegionInfo> getOnlineRegions(
       final ServerName sn) throws IOException {
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
@@ -1462,6 +1508,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
+  @Override
   public void flush(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
     flush(Bytes.toBytes(tableNameOrRegionName));
@@ -1475,6 +1522,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
+  @Override
   public void flush(final byte[] tableNameOrRegionName)
   throws IOException, InterruptedException {
     CatalogTracker ct = getCatalogTracker();
@@ -1522,6 +1570,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
+  @Override
   public void compact(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
     compact(Bytes.toBytes(tableNameOrRegionName));
@@ -1535,6 +1584,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
+  @Override
   public void compact(final byte[] tableNameOrRegionName)
   throws IOException, InterruptedException {
     compact(tableNameOrRegionName, null, false);
@@ -1549,6 +1599,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
+  @Override
   public void compact(String tableOrRegionName, String columnFamily)
     throws IOException,  InterruptedException {
     compact(Bytes.toBytes(tableOrRegionName), Bytes.toBytes(columnFamily));
@@ -1563,6 +1614,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
+  @Override
   public void compact(final byte[] tableNameOrRegionName, final byte[] columnFamily)
   throws IOException, InterruptedException {
     compact(tableNameOrRegionName, columnFamily, false);
@@ -1576,6 +1628,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
+  @Override
   public void majorCompact(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
     majorCompact(Bytes.toBytes(tableNameOrRegionName));
@@ -1589,6 +1642,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
+  @Override
   public void majorCompact(final byte[] tableNameOrRegionName)
   throws IOException, InterruptedException {
     compact(tableNameOrRegionName, null, true);
@@ -1603,6 +1657,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
+  @Override
   public void majorCompact(final String tableNameOrRegionName,
     final String columnFamily) throws IOException, InterruptedException {
     majorCompact(Bytes.toBytes(tableNameOrRegionName),
@@ -1618,6 +1673,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
+  @Override
   public void majorCompact(final byte[] tableNameOrRegionName,
     final byte[] columnFamily) throws IOException, InterruptedException {
     compact(tableNameOrRegionName, columnFamily, true);
@@ -1699,6 +1755,7 @@ public class HBaseAdmin implements Admin {
    * @throws ZooKeeperConnectionException
    * @throws MasterNotRunningException
    */
+  @Override
   public void move(final byte [] encodedRegionName, final byte [] destServerName)
   throws HBaseIOException, MasterNotRunningException, ZooKeeperConnectionException {
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
@@ -1726,6 +1783,7 @@ public class HBaseAdmin implements Admin {
    * @throws ZooKeeperConnectionException
    * @throws IOException
    */
+  @Override
   public void assign(final byte[] regionName) throws MasterNotRunningException,
       ZooKeeperConnectionException, IOException {
     final byte[] toBeAssigned = getRegionName(regionName);
@@ -1754,6 +1812,7 @@ public class HBaseAdmin implements Admin {
    * @throws ZooKeeperConnectionException
    * @throws IOException
    */
+  @Override
   public void unassign(final byte [] regionName, final boolean force)
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     final byte[] toBeUnassigned = getRegionName(regionName);
@@ -1780,6 +1839,7 @@ public class HBaseAdmin implements Admin {
    *          Region to offline.
    * @throws IOException
    */
+  @Override
   public void offline(final byte [] regionName)
   throws IOException {
     MasterKeepAliveConnection master = connection.getKeepAliveMasterService();
@@ -1798,6 +1858,7 @@ public class HBaseAdmin implements Admin {
    * @param synchronous If true, it waits until current balance() call, if outstanding, to return.
    * @return Previous balancer value
    */
+  @Override
   public boolean setBalancerRunning(final boolean on, final boolean synchronous)
   throws MasterNotRunningException, ZooKeeperConnectionException {
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
@@ -1828,6 +1889,7 @@ public class HBaseAdmin implements Admin {
    * logs.
    * @return True if balancer ran, false otherwise.
    */
+  @Override
   public boolean balancer()
   throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException {
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
@@ -1845,6 +1907,7 @@ public class HBaseAdmin implements Admin {
    * @throws ServiceException
    * @throws MasterNotRunningException
    */
+  @Override
   public boolean enableCatalogJanitor(boolean enable)
       throws ServiceException, MasterNotRunningException {
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
@@ -1862,6 +1925,7 @@ public class HBaseAdmin implements Admin {
    * @throws ServiceException
    * @throws MasterNotRunningException
    */
+  @Override
   public int runCatalogScan() throws ServiceException, MasterNotRunningException {
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
@@ -1877,6 +1941,7 @@ public class HBaseAdmin implements Admin {
    * @throws ServiceException
    * @throws org.apache.hadoop.hbase.MasterNotRunningException
    */
+  @Override
   public boolean isCatalogJanitorEnabled() throws ServiceException, MasterNotRunningException {
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
@@ -1895,6 +1960,7 @@ public class HBaseAdmin implements Admin {
    *          two adjacent regions
    * @throws IOException
    */
+  @Override
   public void mergeRegions(final byte[] encodedNameOfRegionA,
       final byte[] encodedNameOfRegionB, final boolean forcible)
       throws IOException {
@@ -1930,6 +1996,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
+  @Override
   public void split(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
     split(Bytes.toBytes(tableNameOrRegionName));
@@ -1943,11 +2010,13 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
+  @Override
   public void split(final byte[] tableNameOrRegionName)
   throws IOException, InterruptedException {
     split(tableNameOrRegionName, null);
   }
 
+  @Override
   public void split(final String tableNameOrRegionName,
     final String splitPoint) throws IOException, InterruptedException {
     split(Bytes.toBytes(tableNameOrRegionName), Bytes.toBytes(splitPoint));
@@ -1962,6 +2031,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException interrupt exception occurred
    */
+  @Override
   public void split(final byte[] tableNameOrRegionName,
       final byte [] splitPoint) throws IOException, InterruptedException {
     CatalogTracker ct = getCatalogTracker();
@@ -2016,6 +2086,7 @@ public class HBaseAdmin implements Admin {
    * @param htd modified description of the table
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void modifyTable(final TableName tableName, final HTableDescriptor htd)
   throws IOException {
     if (!tableName.equals(htd.getTableName())) {
@@ -2135,6 +2206,7 @@ public class HBaseAdmin implements Admin {
    * Shuts down the HBase cluster
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public synchronized void shutdown() throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
@@ -2151,6 +2223,7 @@ public class HBaseAdmin implements Admin {
    * @see #shutdown()
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public synchronized void stopMaster() throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
@@ -2167,6 +2240,7 @@ public class HBaseAdmin implements Admin {
    * <code>example.org:1234</code>
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public synchronized void stopRegionServer(final String hostnamePort)
   throws IOException {
     String hostname = Addressing.parseHostname(hostnamePort);
@@ -2187,6 +2261,7 @@ public class HBaseAdmin implements Admin {
    * @return cluster status
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public ClusterStatus getClusterStatus() throws IOException {
     return executeCallable(new MasterCallable<ClusterStatus>(getConnection()) {
       @Override
@@ -2206,6 +2281,7 @@ public class HBaseAdmin implements Admin {
   /**
    * @return Configuration used by the instance.
    */
+  @Override
   public Configuration getConfiguration() {
     return this.conf;
   }
@@ -2215,6 +2291,7 @@ public class HBaseAdmin implements Admin {
    * @param descriptor descriptor which describes the new namespace
    * @throws IOException
    */
+  @Override
   public void createNamespace(final NamespaceDescriptor descriptor) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
@@ -2233,6 +2310,7 @@ public class HBaseAdmin implements Admin {
    * @param descriptor descriptor which describes the new namespace
    * @throws IOException
    */
+  @Override
   public void modifyNamespace(final NamespaceDescriptor descriptor) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
@@ -2249,6 +2327,7 @@ public class HBaseAdmin implements Admin {
    * @param name namespace name
    * @throws IOException
    */
+  @Override
   public void deleteNamespace(final String name) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
@@ -2266,6 +2345,7 @@ public class HBaseAdmin implements Admin {
    * @return A descriptor
    * @throws IOException
    */
+  @Override
   public NamespaceDescriptor getNamespaceDescriptor(final String name) throws IOException {
     return
         executeCallable(new MasterCallable<NamespaceDescriptor>(getConnection()) {
@@ -2283,6 +2363,7 @@ public class HBaseAdmin implements Admin {
    * @return List of descriptors
    * @throws IOException
    */
+  @Override
   public NamespaceDescriptor[] listNamespaceDescriptors() throws IOException {
     return
         executeCallable(new MasterCallable<NamespaceDescriptor[]>(getConnection()) {
@@ -2306,6 +2387,7 @@ public class HBaseAdmin implements Admin {
    * @return A descriptor
    * @throws IOException
    */
+  @Override
   public HTableDescriptor[] listTableDescriptorsByNamespace(final String name) throws IOException {
     return
         executeCallable(new MasterCallable<HTableDescriptor[]>(getConnection()) {
@@ -2330,6 +2412,7 @@ public class HBaseAdmin implements Admin {
    * @return The list of table names in the namespace
    * @throws IOException
    */
+  @Override
   public TableName[] listTableNamesByNamespace(final String name) throws IOException {
     return
         executeCallable(new MasterCallable<TableName[]>(getConnection()) {
@@ -2406,6 +2489,7 @@ public class HBaseAdmin implements Admin {
    * @return Ordered list of {@link HRegionInfo}.
    * @throws IOException
    */
+  @Override
   public List<HRegionInfo> getTableRegions(final TableName tableName)
   throws IOException {
     CatalogTracker ct = getCatalogTracker();
@@ -2437,6 +2521,7 @@ public class HBaseAdmin implements Admin {
    * @return HTD[] the tableDescriptor
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public HTableDescriptor[] getTableDescriptorsByTableName(List<TableName> tableNames)
   throws IOException {
     return this.connection.getHTableDescriptorsByTableName(tableNames);
@@ -2448,6 +2533,7 @@ public class HBaseAdmin implements Admin {
    * @return HTD[] the tableDescriptor
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public HTableDescriptor[] getTableDescriptors(List<String> names)
   throws IOException {
     List<TableName> tableNames = new ArrayList<TableName>(names.size());
@@ -2470,7 +2556,8 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws FailedLogCloseException
    */
- public synchronized  byte[][] rollHLogWriter(String serverName)
+ @Override
+public synchronized  byte[][] rollHLogWriter(String serverName)
       throws IOException, FailedLogCloseException {
     ServerName sn = ServerName.valueOf(serverName);
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
@@ -2489,6 +2576,7 @@ public class HBaseAdmin implements Admin {
     }
   }
 
+  @Override
   public String[] getMasterCoprocessors() {
     try {
       return getClusterStatus().getMasterCoprocessors();
@@ -2507,6 +2595,7 @@ public class HBaseAdmin implements Admin {
    * @throws InterruptedException
    * @return the current compaction state
    */
+  @Override
   public CompactionState getCompactionState(final String tableNameOrRegionName)
       throws IOException, InterruptedException {
     return getCompactionState(Bytes.toBytes(tableNameOrRegionName));
@@ -2521,6 +2610,7 @@ public class HBaseAdmin implements Admin {
    * @throws InterruptedException
    * @return the current compaction state
    */
+  @Override
   public CompactionState getCompactionState(final byte[] tableNameOrRegionName)
       throws IOException, InterruptedException {
     CompactionState state = CompactionState.NONE;
@@ -2613,6 +2703,7 @@ public class HBaseAdmin implements Admin {
    * @throws SnapshotCreationException if snapshot creation failed
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
+  @Override
   public void snapshot(final String snapshotName,
                        final TableName tableName) throws IOException,
       SnapshotCreationException, IllegalArgumentException {
@@ -2662,6 +2753,7 @@ public class HBaseAdmin implements Admin {
     * @throws SnapshotCreationException if snapshot creation failed
     * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
     */
+  @Override
   public void snapshot(final byte[] snapshotName,
                        final TableName tableName) throws IOException,
       SnapshotCreationException, IllegalArgumentException {
@@ -2693,6 +2785,7 @@ public class HBaseAdmin implements Admin {
    * @throws SnapshotCreationException if snapshot creation failed
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
+  @Override
   public void snapshot(final String snapshotName,
                        final TableName tableName,
                       SnapshotDescription.Type type) throws IOException, SnapshotCreationException,
@@ -2739,6 +2832,7 @@ public class HBaseAdmin implements Admin {
    * @throws SnapshotCreationException if snapshot failed to be taken
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
+  @Override
   public void snapshot(SnapshotDescription snapshot) throws IOException, SnapshotCreationException,
       IllegalArgumentException {
     // actually take the snapshot
@@ -2789,6 +2883,7 @@ public class HBaseAdmin implements Admin {
    * @throws SnapshotCreationException if snapshot creation failed
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
+  @Override
   public SnapshotResponse takeSnapshotAsync(SnapshotDescription snapshot) throws IOException,
       SnapshotCreationException {
     ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
@@ -2823,6 +2918,7 @@ public class HBaseAdmin implements Admin {
    * @throws HBaseSnapshotException if the snapshot failed
    * @throws UnknownSnapshotException if the requested snapshot is unknown
    */
+  @Override
   public boolean isSnapshotFinished(final SnapshotDescription snapshot)
       throws IOException, HBaseSnapshotException, UnknownSnapshotException {
 
@@ -2848,6 +2944,7 @@ public class HBaseAdmin implements Admin {
    * @throws RestoreSnapshotException if snapshot failed to be restored
    * @throws IllegalArgumentException if the restore request is formatted incorrectly
    */
+  @Override
   public void restoreSnapshot(final byte[] snapshotName)
       throws IOException, RestoreSnapshotException {
     restoreSnapshot(Bytes.toString(snapshotName));
@@ -2866,6 +2963,7 @@ public class HBaseAdmin implements Admin {
    * @throws RestoreSnapshotException if snapshot failed to be restored
    * @throws IllegalArgumentException if the restore request is formatted incorrectly
    */
+  @Override
   public void restoreSnapshot(final String snapshotName)
       throws IOException, RestoreSnapshotException {
     boolean takeFailSafeSnapshot =
@@ -2889,6 +2987,7 @@ public class HBaseAdmin implements Admin {
    * @throws RestoreSnapshotException if snapshot failed to be restored
    * @throws IllegalArgumentException if the restore request is formatted incorrectly
    */
+  @Override
   public void restoreSnapshot(final byte[] snapshotName, final boolean takeFailSafeSnapshot)
       throws IOException, RestoreSnapshotException {
     restoreSnapshot(Bytes.toString(snapshotName), takeFailSafeSnapshot);
@@ -2910,6 +3009,7 @@ public class HBaseAdmin implements Admin {
    * @throws RestoreSnapshotException if snapshot failed to be restored
    * @throws IllegalArgumentException if the restore request is formatted incorrectly
    */
+  @Override
   public void restoreSnapshot(final String snapshotName, boolean takeFailSafeSnapshot)
       throws IOException, RestoreSnapshotException {
     TableName tableName = null;
@@ -3013,6 +3113,7 @@ public class HBaseAdmin implements Admin {
    * @throws RestoreSnapshotException if snapshot failed to be cloned
    * @throws IllegalArgumentException if the specified table has not a valid name
    */
+  @Override
   public void cloneSnapshot(final byte[] snapshotName, final TableName tableName)
       throws IOException, TableExistsException, RestoreSnapshotException, InterruptedException {
     cloneSnapshot(Bytes.toString(snapshotName), tableName);
@@ -3045,6 +3146,7 @@ public class HBaseAdmin implements Admin {
    * @throws RestoreSnapshotException if snapshot failed to be cloned
    * @throws IllegalArgumentException if the specified table has not a valid name
    */
+  @Override
   public void cloneSnapshot(final String snapshotName, final TableName tableName)
       throws IOException, TableExistsException, RestoreSnapshotException, InterruptedException {
     if (tableExists(tableName)) {
@@ -3065,6 +3167,7 @@ public class HBaseAdmin implements Admin {
    * @return data returned after procedure execution. null if no return data.
    * @throws IOException
    */
+  @Override
   public byte[] execProcedureWithRet(String signature, String instance,
       Map<String, String> props) throws IOException {
     ProcedureDescription.Builder builder = ProcedureDescription.newBuilder();
@@ -3098,6 +3201,7 @@ public class HBaseAdmin implements Admin {
    * @param props Property/Value pairs of properties passing to the procedure
    * @throws IOException
    */
+  @Override
   public void execProcedure(String signature, String instance,
       Map<String, String> props) throws IOException {
     ProcedureDescription.Builder builder = ProcedureDescription.newBuilder();
@@ -3164,6 +3268,7 @@ public class HBaseAdmin implements Admin {
    * @return true if the specified procedure is finished successfully, false if it is still running
    * @throws IOException if the specified procedure finished with error
    */
+  @Override
   public boolean isProcedureFinished(String signature, String instance, Map<String, String> props)
       throws IOException {
     final ProcedureDescription.Builder builder = ProcedureDescription.newBuilder();
@@ -3264,6 +3369,7 @@ public class HBaseAdmin implements Admin {
    * @return a list of snapshot descriptors for completed snapshots
    * @throws IOException if a network error occurs
    */
+  @Override
   public List<SnapshotDescription> listSnapshots() throws IOException {
     return executeCallable(new MasterCallable<List<SnapshotDescription>>(getConnection()) {
       @Override
@@ -3281,6 +3387,7 @@ public class HBaseAdmin implements Admin {
    * @return - returns a List of SnapshotDescription
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public List<SnapshotDescription> listSnapshots(String regex) throws IOException {
     return listSnapshots(Pattern.compile(regex));
   }
@@ -3292,6 +3399,7 @@ public class HBaseAdmin implements Admin {
    * @return - returns a List of SnapshotDescription
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public List<SnapshotDescription> listSnapshots(Pattern pattern) throws IOException {
     List<SnapshotDescription> matched = new LinkedList<SnapshotDescription>();
     List<SnapshotDescription> snapshots = listSnapshots();
@@ -3308,6 +3416,7 @@ public class HBaseAdmin implements Admin {
    * @param snapshotName name of the snapshot
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void deleteSnapshot(final byte[] snapshotName) throws IOException {
     deleteSnapshot(Bytes.toString(snapshotName));
   }
@@ -3317,6 +3426,7 @@ public class HBaseAdmin implements Admin {
    * @param snapshotName name of the snapshot
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void deleteSnapshot(final String snapshotName) throws IOException {
     // make sure the snapshot is possibly valid
     TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(snapshotName));
@@ -3337,6 +3447,7 @@ public class HBaseAdmin implements Admin {
    * @param regex The regular expression to match against
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void deleteSnapshots(final String regex) throws IOException {
     deleteSnapshots(Pattern.compile(regex));
   }
@@ -3346,6 +3457,7 @@ public class HBaseAdmin implements Admin {
    * @param pattern pattern for names of the snapshot to match
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
   public void deleteSnapshots(final Pattern pattern) throws IOException {
     List<SnapshotDescription> snapshots = listSnapshots(pattern);
     for (final SnapshotDescription snapshot : snapshots) {
@@ -3430,6 +3542,7 @@ public class HBaseAdmin implements Admin {
    *
    * @return A MasterCoprocessorRpcChannel instance
    */
+  @Override
   public CoprocessorRpcChannel coprocessorService() {
     return new MasterCoprocessorRpcChannel(connection);
   }

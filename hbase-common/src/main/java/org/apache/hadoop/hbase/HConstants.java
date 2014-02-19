@@ -412,14 +412,18 @@ public final class HConstants {
   public static final byte [] SEQNUM_QUALIFIER = Bytes.toBytes(SEQNUM_QUALIFIER_STR);
 
   /** The state column qualifier */
-  public static final byte [] STATE_QUALIFIER = Bytes.toBytes("state");
+  public static final String STATE_QUALIFIER_STR = "state";
+
+  public static final byte [] STATE_QUALIFIER = Bytes.toBytes(STATE_QUALIFIER_STR);
 
   /**
    * The serverName column qualifier. Its the server where the region is
    * transitioning on, while column server is the server where the region is
    * opened on. They are the same when the region is in state OPEN.
    */
-  public static final byte [] SERVERNAME_QUALIFIER = Bytes.toBytes("sn");
+  public static final String SERVERNAME_QUALIFIER_STR = "sn";
+
+  public static final byte [] SERVERNAME_QUALIFIER = Bytes.toBytes(SERVERNAME_QUALIFIER_STR);
 
   /** The lower-half split region column qualifier */
   public static final byte [] SPLITA_QUALIFIER = Bytes.toBytes("splitA");

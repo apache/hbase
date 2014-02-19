@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
@@ -59,6 +61,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
@@ -1382,7 +1385,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
 
-  
+
   /**
    * Marks the region as online.  Removes it from regions in transition and
    * updates the in-memory assignment information.
@@ -2659,20 +2662,51 @@ public class AssignmentManager extends ZooKeeperListener {
     boolean retainAssignment = server.getConfiguration().
       getBoolean("hbase.master.startup.retainassign", true);
 
+    Set<HRegionInfo> regionsFromMetaScan = allRegions.keySet();
     if (retainAssignment) {
       assign(allRegions);
     } else {
-      List<HRegionInfo> regions = new ArrayList<HRegionInfo>(allRegions.keySet());
+      List<HRegionInfo> regions = new ArrayList<HRegionInfo>(regionsFromMetaScan);
       assign(regions);
     }
 
-    for (HRegionInfo hri : allRegions.keySet()) {
+    for (HRegionInfo hri : regionsFromMetaScan) {
       TableName tableName = hri.getTable();
       if (!tableStateManager.isTableState(tableName,
           ZooKeeperProtos.Table.State.ENABLED)) {
         setEnabledTable(tableName);
       }
     }
+    // assign all the replicas that were not recorded in the meta
+    assign(replicaRegionsNotRecordedInMeta(regionsFromMetaScan, (MasterServices)server));
+  }
+
+  /**
+   * Get a list of replica regions that are:
+   * not recorded in meta yet. We might not have recorded the locations
+   * for the replicas since the replicas may not have been online yet, master restarted
+   * in the middle of assigning, ZK erased, etc.
+   * @param regionsRecordedInMeta the list of regions we know are recorded in meta
+   * either as a default, or, as the location of a replica
+   * @param master
+   * @return list of replica regions
+   * @throws IOException
+   */
+  public static List<HRegionInfo> replicaRegionsNotRecordedInMeta(
+      Set<HRegionInfo> regionsRecordedInMeta, MasterServices master)throws IOException {
+    List<HRegionInfo> regionsNotRecordedInMeta = new ArrayList<HRegionInfo>();
+    for (HRegionInfo hri : regionsRecordedInMeta) {
+      TableName table = hri.getTable();
+      HTableDescriptor htd = master.getTableDescriptors().get(table);
+      // look at the HTD for the replica count. That's the source of truth
+      int desiredRegionReplication = htd.getRegionReplication();
+      for (int i = 0; i < desiredRegionReplication; i++) {
+        HRegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(hri, i);
+        if (regionsRecordedInMeta.contains(replica)) continue;
+        regionsNotRecordedInMeta.add(replica);
+      }
+    }
+    return regionsNotRecordedInMeta;
   }
 
   /**
@@ -2725,37 +2759,42 @@ public class AssignmentManager extends ZooKeeperListener {
     Set<ServerName> offlineServers = new HashSet<ServerName>();
     // Iterate regions in META
     for (Result result : results) {
-      HRegionInfo regionInfo = HRegionInfo.getHRegionInfo(result);
-      if (regionInfo == null) continue;
-      State state = RegionStateStore.getRegionState(result);
-      ServerName lastHost = HRegionInfo.getServerName(result);
-      ServerName regionLocation = RegionStateStore.getRegionServer(result);
-      regionStates.createRegionState(regionInfo, state, regionLocation, lastHost);
-      if (!regionStates.isRegionInState(regionInfo, State.OPEN)) {
-        // Region is not open (either offline or in transition), skip
-        continue;
-      }
-      TableName tableName = regionInfo.getTable();
-      if (!onlineServers.contains(regionLocation)) {
-        // Region is located on a server that isn't online
-        offlineServers.add(regionLocation);
-        if (useZKForAssignment) {
+      HRegionLocation[] locations = MetaReader.getRegionLocations(result).getRegionLocations();
+      if (locations == null) continue;
+      for (HRegionLocation hrl : locations) {
+        HRegionInfo regionInfo = hrl.getRegionInfo();
+        if (regionInfo == null) continue;
+        int replicaId = regionInfo.getReplicaId();
+        State state = RegionStateStore.getRegionState(result, replicaId);
+        ServerName lastHost = hrl.getServerName();
+        ServerName regionLocation = RegionStateStore.getRegionServer(result, replicaId);
+        regionStates.createRegionState(regionInfo, state, regionLocation, lastHost);
+        if (!regionStates.isRegionInState(regionInfo, State.OPEN)) {
+          // Region is not open (either offline or in transition), skip
+          continue;
+        }
+        TableName tableName = regionInfo.getTable();
+        if (!onlineServers.contains(regionLocation)) {
+          // Region is located on a server that isn't online
+          offlineServers.add(regionLocation);
+          if (useZKForAssignment) {
+            regionStates.regionOffline(regionInfo);
+          }
+        } else if (!disabledOrEnablingTables.contains(tableName)) {
+          // Region is being served and on an active server
+          // add only if region not in disabled or enabling table
+          regionStates.regionOnline(regionInfo, regionLocation);
+          balancer.regionOnline(regionInfo, regionLocation);
+        } else if (useZKForAssignment) {
           regionStates.regionOffline(regionInfo);
         }
-      } else if (!disabledOrEnablingTables.contains(tableName)) {
-        // Region is being served and on an active server
-        // add only if region not in disabled or enabling table
-        regionStates.regionOnline(regionInfo, regionLocation);
-        balancer.regionOnline(regionInfo, regionLocation);
-      } else if (useZKForAssignment) {
-        regionStates.regionOffline(regionInfo);
-      }
-      // need to enable the table if not disabled or disabling or enabling
-      // this will be used in rolling restarts
-      if (!disabledOrDisablingOrEnabling.contains(tableName)
-        && !getTableStateManager().isTableState(tableName,
-          ZooKeeperProtos.Table.State.ENABLED)) {
-        setEnabledTable(tableName);
+        // need to enable the table if not disabled or disabling or enabling
+        // this will be used in rolling restarts
+        if (!disabledOrDisablingOrEnabling.contains(tableName)
+          && !getTableStateManager().isTableState(tableName,
+            ZooKeeperProtos.Table.State.ENABLED)) {
+          setEnabledTable(tableName);
+        }
       }
     }
     return offlineServers;
@@ -3875,5 +3914,9 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public LoadBalancer getBalancer() {
     return this.balancer;
+  }
+
+  public Map<ServerName, List<HRegionInfo>> getSnapShotOfAssignment(List<HRegionInfo> infos) {
+    return getRegionStates().getRegionAssignments(infos);
   }
 }

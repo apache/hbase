@@ -266,7 +266,7 @@ public class MetaReader {
   }
 
   /** Returns the row key to use for this regionInfo */
-  protected static byte[] getMetaKeyForRegion(HRegionInfo regionInfo) {
+  public static byte[] getMetaKeyForRegion(HRegionInfo regionInfo) {
     return RegionReplicaUtil.getRegionInfoForDefaultReplica(regionInfo).getRegionName();
   }
 
@@ -630,7 +630,8 @@ public class MetaReader {
    * @param replicaId the replicaId of the region
    * @return a byte[] for server column qualifier
    */
-  protected static byte[] getServerColumn(int replicaId) {
+  @VisibleForTesting
+  public static byte[] getServerColumn(int replicaId) {
     return replicaId == 0
         ? HConstants.SERVER_QUALIFIER
         : Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
@@ -642,7 +643,8 @@ public class MetaReader {
    * @param replicaId the replicaId of the region
    * @return a byte[] for server start code column qualifier
    */
-  protected static byte[] getStartCodeColumn(int replicaId) {
+  @VisibleForTesting
+  public static byte[] getStartCodeColumn(int replicaId) {
     return replicaId == 0
         ? HConstants.STARTCODE_QUALIFIER
         : Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
@@ -654,7 +656,8 @@ public class MetaReader {
    * @param replicaId the replicaId of the region
    * @return a byte[] for seqNum column qualifier
    */
-  protected static byte[] getSeqNumColumn(int replicaId) {
+  @VisibleForTesting
+  public static byte[] getSeqNumColumn(int replicaId) {
     return replicaId == 0
         ? HConstants.SEQNUM_QUALIFIER
         : Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR + META_REPLICA_ID_DELIMITER

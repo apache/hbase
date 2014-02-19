@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
@@ -270,7 +271,9 @@ public class MetaEditor extends MetaReader {
   throws IOException {
     List<Put> puts = new ArrayList<Put>();
     for (HRegionInfo regionInfo : regionInfos) {
-      puts.add(makePutFromRegionInfo(regionInfo));
+      if (RegionReplicaUtil.isDefaultReplica(regionInfo)) {
+        puts.add(makePutFromRegionInfo(regionInfo));
+      }
     }
     putsToMetaTable(catalogTracker, puts);
     LOG.info("Added " + puts.size());
@@ -544,7 +547,7 @@ public class MetaEditor extends MetaReader {
     return p;
   }
 
-  private static Put addLocation(final Put p, final ServerName sn, long openSeqNum, int replicaId){
+  public static Put addLocation(final Put p, final ServerName sn, long openSeqNum, int replicaId){
     p.addImmutable(HConstants.CATALOG_FAMILY, MetaReader.getServerColumn(replicaId),
       Bytes.toBytes(sn.getHostAndPort()));
     p.addImmutable(HConstants.CATALOG_FAMILY, MetaReader.getStartCodeColumn(replicaId),
