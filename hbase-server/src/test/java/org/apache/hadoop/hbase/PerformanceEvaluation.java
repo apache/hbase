@@ -137,6 +137,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private int presplitRegions = 0;
   private boolean useTags = false;
   private int noOfTags = 1;
+  private int multiGet = 0;
   private HConnection connection;
 
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
@@ -153,7 +154,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
         "writeToWAL=(\\w+),\\s+" +
         "useTags=(\\w+),\\s+" +
         "noOfTags=(\\d+),\\s+" +
-        "reportLatency=(\\w+)");
+        "reportLatency=(\\w+),\\s+" +
+        "multiGet=(\\d+)");
 
   /**
    * Enum for map metrics.  Keep it out here rather than inside in the Map
@@ -234,12 +236,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private boolean useTags = false;
     private int noOfTags = 0;
     private boolean reportLatency = false;
+    private int multiGet = 0;
 
     public PeInputSplit() {}
 
     public PeInputSplit(TableName tableName, int startRow, int rows, int totalRows,
         float sampleRate, int clients, boolean flushCommits, boolean writeToWAL,
-        boolean useTags, int noOfTags, boolean reportLatency) {
+        boolean useTags, int noOfTags, boolean reportLatency, int multiGet) {
       this.tableName = tableName;
       this.startRow = startRow;
       this.rows = rows;
@@ -251,6 +254,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.useTags = useTags;
       this.noOfTags = noOfTags;
       this.reportLatency = reportLatency;
+      this.multiGet = multiGet;
     }
 
     @Override
@@ -270,6 +274,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.useTags = in.readBoolean();
       this.noOfTags = in.readInt();
       this.reportLatency = in.readBoolean();
+      this.multiGet = in.readInt();
     }
 
     @Override
@@ -287,6 +292,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       out.writeBoolean(useTags);
       out.writeInt(noOfTags);
       out.writeBoolean(reportLatency);
+      out.writeInt(multiGet);
     }
 
     @Override
@@ -342,6 +348,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public boolean isReportLatency() {
       return reportLatency;
     }
+
+    public int getMultiGet() {
+      return multiGet;
+    }
   }
 
   /**
@@ -383,6 +393,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
             boolean useTags = Boolean.parseBoolean(m.group(9));
             int noOfTags = Integer.parseInt(m.group(10));
             boolean reportLatency = Boolean.parseBoolean(m.group(11));
+            int multiGet = Integer.parseInt(m.group(12));
 
             LOG.debug("tableName=" + tableName +
                       " split["+ splitList.size() + "] " +
@@ -395,11 +406,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
                       " writeToWAL=" + writeToWAL +
                       " useTags=" + useTags +
                       " noOfTags=" + noOfTags +
-                      " reportLatency=" + reportLatency);
+                      " reportLatency=" + reportLatency +
+                      " multiGet=" + multiGet);
 
             PeInputSplit newSplit =
               new PeInputSplit(tableName, startRow, rows, totalRows, sampleRate, clients,
-                flushCommits, writeToWAL, useTags, noOfTags, reportLatency);
+                flushCommits, writeToWAL, useTags, noOfTags, reportLatency, multiGet);
             splitList.add(newSplit);
           }
         }
@@ -522,7 +534,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       long elapsedTime = this.pe.runOneClient(this.cmd, value.getStartRow(),
           value.getRows(), value.getTotalRows(), value.getSampleRate(),
           value.isFlushCommits(), value.isWriteToWAL(), value.isUseTags(),
-          value.getNoOfTags(), value.isReportLatency(),
+          value.getNoOfTags(), value.isReportLatency(), value.getMultiGet(),
           HConnectionManager.createConnection(context.getConfiguration()), status);
       // Collect how much time the thing took. Report as map output and
       // to the ELAPSED_TIME counter.
@@ -633,6 +645,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     final int preSplitRegions = this.presplitRegions;
     final boolean useTags = this.useTags;
     final int numTags = this.noOfTags;
+    final int multiGet = this.multiGet;
     final HConnection connection = HConnectionManager.createConnection(getConf());
     for (int i = 0; i < this.N; i++) {
       final int index = i;
@@ -653,10 +666,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
           pe.connection = connection;
           pe.useTags = useTags;
           pe.noOfTags = numTags;
+          pe.multiGet = multiGet;
           try {
             long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
                perClientRows, R, sampleRate, flushCommits, writeToWal, useTags,
-               noOfTags, reportLatency, connection, new Status() {
+               noOfTags, reportLatency, multiGet, connection, new Status() {
                   public void setStatus(final String msg) throws IOException {
                     LOG.info("client-" + getName() + " " + msg);
                   }
@@ -771,7 +785,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
           ", writeToWAL=" + this.writeToWAL +
           ", useTags=" + this.useTags +
           ", noOfTags=" + this.noOfTags +
-          ", reportLatency=" + this.reportLatency;
+          ", reportLatency=" + this.reportLatency +
+          ", multiGet=" + this.multiGet;
           int hash = h.hash(Bytes.toBytes(s));
           m.put(hash, s);
         }
@@ -828,13 +843,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private boolean useTags = false;
     private int noOfTags = 0;
     private boolean reportLatency;
+    private int multiGet = 0;
     private HConnection connection;
 
     TestOptions() {}
 
     TestOptions(int startRow, int perClientRunRows, int totalRows, float sampleRate,
         int numClientThreads, TableName tableName, boolean flushCommits, boolean writeToWAL,
-        boolean useTags, int noOfTags, boolean reportLatency, HConnection connection) {
+        boolean useTags, int noOfTags, boolean reportLatency, int multiGet,
+        HConnection connection) {
       this.startRow = startRow;
       this.perClientRunRows = perClientRunRows;
       this.totalRows = totalRows;
@@ -846,6 +863,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.useTags = useTags;
       this.noOfTags = noOfTags;
       this.reportLatency = reportLatency;
+      this.multiGet = multiGet;
       this.connection = connection;
     }
 
@@ -883,6 +901,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public boolean isReportLatency() {
       return reportLatency;
+    }
+
+    public int getMultiGet() {
+      return multiGet;
     }
 
     public HConnection getConnection() {
@@ -1121,6 +1143,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private final int everyN;
     private final boolean reportLatency;
     private final double[] times;
+    private final int multiGet;
+    private ArrayList<Get> gets;
     int idx = 0;
 
     RandomReadTest(Configuration conf, TestOptions options, Status status) {
@@ -1128,10 +1152,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
       everyN = (int) (this.totalRows / (this.totalRows * this.sampleRate));
       LOG.info("Sampling 1 every " + everyN + " out of " + perClientRunRows + " total rows.");
       this.reportLatency = options.isReportLatency();
+      this.multiGet = options.getMultiGet();
+      if (this.multiGet > 0) {
+        LOG.info("MultiGet enabled. Sending GETs in batches of " + this.multiGet + ".");
+        this.gets = new ArrayList<Get>(this.multiGet);
+      }
       if (this.reportLatency) {
-        times = new double[(int) Math.ceil(this.perClientRunRows * this.sampleRate)];
+        this.times = new double[(int) Math.ceil(this.perClientRunRows * this.sampleRate / Math.max(1, this.multiGet))];
       } else {
-        times = null;
+        this.times = null;
       }
     }
 
@@ -1140,10 +1169,22 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (i % everyN == 0) {
         Get get = new Get(getRandomRow(this.rand, this.totalRows));
         get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-        long start = System.nanoTime();
-        this.table.get(get);
-        if (this.reportLatency) {
-          times[idx++] = (float) ((System.nanoTime() - start) / 1000000.0);
+        if (this.multiGet > 0) {
+          this.gets.add(get);
+          if (this.gets.size() == this.multiGet) {
+            long start = System.nanoTime();
+            this.table.get(this.gets);
+            if (this.reportLatency) {
+              times[idx++] = (System.nanoTime() - start) / 1e6;
+            }
+            this.gets.clear();
+          }
+        } else {
+          long start = System.nanoTime();
+          this.table.get(get);
+          if (this.reportLatency) {
+            times[idx++] = (System.nanoTime() - start) / 1e6;
+          }
         }
       }
     }
@@ -1156,6 +1197,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     protected void testTakedown() throws IOException {
+      if (this.gets != null && this.gets.size() > 0) {
+        this.table.get(gets);
+        this.gets.clear();
+      }
       super.testTakedown();
       if (this.reportLatency) {
         Arrays.sort(times);
@@ -1378,7 +1423,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   long runOneClient(final Class<? extends Test> cmd, final int startRow,
       final int perClientRunRows, final int totalRows, final float sampleRate,
       boolean flushCommits, boolean writeToWAL, boolean useTags, int noOfTags,
-      boolean reportLatency, HConnection connection, final Status status)
+      boolean reportLatency, int multiGet, HConnection connection, final Status status)
   throws IOException {
     status.setStatus("Start " + cmd + " at offset " + startRow + " for " +
       perClientRunRows + " rows");
@@ -1386,7 +1431,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     TestOptions options = new TestOptions(startRow, perClientRunRows,
       totalRows, sampleRate, N, tableName, flushCommits, writeToWAL, useTags, noOfTags,
-      reportLatency, connection);
+      reportLatency, multiGet, connection);
     final Test t;
     try {
       Constructor<? extends Test> constructor = cmd.getDeclaredConstructor(
@@ -1420,7 +1465,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       admin = new HBaseAdmin(getConf());
       checkTable(admin);
       runOneClient(cmd, 0, this.R, this.R, this.sampleRate, this.flushCommits,
-      this.writeToWAL, this.useTags, this.noOfTags, this.reportLatency, this.connection, status);
+      this.writeToWAL, this.useTags, this.noOfTags, this.reportLatency, this.multiGet,
+        this.connection, status);
     } catch (Exception e) {
       LOG.error("Failed", e);
     } finally {
@@ -1595,6 +1641,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         final String latency = "--latency";
         if (cmd.startsWith(latency)) {
           this.reportLatency = true;
+          continue;
+        }
+
+        final String multiGet = "--multiGet=";
+        if (cmd.startsWith(multiGet)) {
+          this.multiGet = Integer.parseInt(cmd.substring(multiGet.length()));
           continue;
         }
 
