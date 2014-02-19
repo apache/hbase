@@ -30,6 +30,7 @@
         org.apache.hadoop.hbase.protobuf.ProtobufUtil;
         org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
+        org.apache.hadoop.hbase.client.RegionReplicaUtil;
 </%import>
 <%if (onlineRegions != null && onlineRegions.size() > 0) %>
 
@@ -87,6 +88,7 @@
             <th>Region Name</th>
             <th>Start Key</th>
             <th>End Key</th>
+            <th>ReplicaID</th>
         </tr>
 
         <%for HRegionInfo r: onlineRegions %>
@@ -94,6 +96,7 @@
             <td><% r.getRegionNameAsString() %></td>
             <td><% Bytes.toStringBinary(r.getStartKey()) %></td>
             <td><% Bytes.toStringBinary(r.getEndKey()) %></td>
+            <td><% r.getReplicaId() %></td>
         </tr>
         </%for>
     </table>
