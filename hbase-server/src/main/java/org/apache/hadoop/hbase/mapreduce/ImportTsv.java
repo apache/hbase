@@ -349,6 +349,13 @@ public class ImportTsv extends Configured implements Tool {
       private static final long serialVersionUID = 1L;
     }
 
+    /**
+     * Return starting position and length of row key from the specified line bytes.
+     * @param lineBytes
+     * @param length
+     * @return Pair of row key offset and length.
+     * @throws BadTsvLineException
+     */
     public Pair<Integer, Integer> parseRowKey(byte[] lineBytes, int length)
         throws BadTsvLineException {
       int rkColumnIndex = 0;
@@ -371,7 +378,7 @@ public class ImportTsv extends Configured implements Tool {
                   + " are less than row key position.");
         }
       }
-      return new Pair<Integer, Integer>(startPos, endPos);
+      return new Pair<Integer, Integer>(startPos, endPos - startPos + 1);
     }
   }
 
