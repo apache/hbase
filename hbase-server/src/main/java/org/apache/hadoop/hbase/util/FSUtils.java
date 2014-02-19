@@ -645,8 +645,8 @@ public abstract class FSUtils {
             if (wait > 0) {
               Thread.sleep(wait);
             }
-          } catch (InterruptedException ex) {
-            // ignore
+          } catch (InterruptedException ie) {
+            throw (InterruptedIOException)new InterruptedIOException().initCause(ie);
           }
           retries--;
         } else {
@@ -676,8 +676,8 @@ public abstract class FSUtils {
               ", retrying in "+wait+"msec: "+StringUtils.stringifyException(ioe));
           try {
             Thread.sleep(wait);
-          } catch (InterruptedException ie) {
-            throw (InterruptedIOException)new InterruptedIOException().initCause(ie);
+          } catch (InterruptedException e) {
+            throw (InterruptedIOException)new InterruptedIOException().initCause(e);
           }
         } else {
           throw ioe;
@@ -783,9 +783,8 @@ public abstract class FSUtils {
               ", retrying in " + wait + "msec: " + StringUtils.stringifyException(ioe));
           try {
             Thread.sleep(wait);
-          } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            break;
+          } catch (InterruptedException e) {
+            throw (InterruptedIOException)new InterruptedIOException().initCause(e);
           }
         } else {
           throw ioe;
@@ -852,7 +851,7 @@ public abstract class FSUtils {
       try {
         Thread.sleep(wait);
       } catch (InterruptedException e) {
-        //continue
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
     }
   }

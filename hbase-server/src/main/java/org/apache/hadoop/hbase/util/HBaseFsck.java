@@ -4043,6 +4043,7 @@ public class HBaseFsck extends Configured {
           LOG.info("Sleeping " + sleepBeforeRerun + "ms before re-checking after fix...");
           Thread.sleep(sleepBeforeRerun);
         } catch (InterruptedException ie) {
+          LOG.warn("Interrupted while sleeping");
           return this;
         }
         // Just report

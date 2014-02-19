@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.InterruptedIOException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
@@ -184,7 +185,8 @@ public class JVMClusterUtil {
     while (findActiveMaster(masters) == null) {
       try {
         Thread.sleep(100);
-      } catch (InterruptedException ignored) {
+      } catch (InterruptedException e) {
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
       if (System.currentTimeMillis() > startTime + 30000) {
         throw new RuntimeException("Master not active after 30 seconds");
@@ -211,8 +213,11 @@ public class JVMClusterUtil {
       }
       // REMOVE
       if (System.currentTimeMillis() > startTime + 10000) {
-
-        Threads.sleep(1000);
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
       }
       if (System.currentTimeMillis() > startTime + maxwait) {
         String msg = "Master not initialized after " + maxwait + "ms seconds";
@@ -222,8 +227,8 @@ public class JVMClusterUtil {
       }
       try {
         Thread.sleep(100);
-      } catch (InterruptedException ignored) {
-        // Keep waiting
+      } catch (InterruptedException e) {
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
     }
   }
