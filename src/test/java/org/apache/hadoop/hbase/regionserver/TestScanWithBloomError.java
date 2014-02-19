@@ -1,5 +1,11 @@
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.TestMultiColumnScanner.FAMILY;
+import static org.apache.hadoop.hbase.regionserver.TestMultiColumnScanner.FAMILY_BYTES;
+import static org.apache.hadoop.hbase.regionserver.TestMultiColumnScanner.createValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,9 +27,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
@@ -31,9 +35,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
-import static org.apache.hadoop.hbase.regionserver.TestMultiColumnScanner.*;
-import static org.junit.Assert.*;
 
 /**
  * Test a multi-column scanner when there is a Bloom filter false-positive.
@@ -95,7 +96,7 @@ public class TestScanWithBloomError {
   private void scanColSet(int[] colSet, int[] expectedResultCols)
       throws IOException {
     LOG.info("Scanning column set: " + Arrays.toString(colSet));
-    Scan scan = new Scan(ROW_BYTES, ROW_BYTES);
+    Scan scan = new Scan(ROW_BYTES, Bytes.nextOf(ROW_BYTES));
     addColumnSetToScan(scan, colSet);
     RegionScanner scanner = (RegionScanner)
         region.getScanner(scan);
