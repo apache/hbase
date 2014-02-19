@@ -507,7 +507,7 @@
             <parallel>classes</parallel>
             <!-- surefire hack, if not we're
               using method parallelization class ! -->
-            <testFailureIgnore>false</testFailureIgnore>
+            <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
             <argLine>-enableassertions -Xmx1900m -XX:MaxPermSize=100m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true -Djava.awt.headless=true</argLine>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
@@ -521,8 +521,8 @@
               </goals>
               <configuration>
                 <skip>${surefire.skipSecondPart}</skip>
-                <testFailureIgnore>false</testFailureIgnore>
-                <forkMode>perThread</forkMode>
+                <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
+                <forkMode>${surefire.secondPartForkMode}</forkMode>
                 <perCoreThreadCount>false</perCoreThreadCount>
                 <threadCount>${surefire.secondPartThreadCount}</threadCount>
                 <parallel>classes</parallel>
@@ -943,10 +943,12 @@
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
     <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
     <surefire.firstPartParallel>classes</surefire.firstPartParallel>
+    <surefire.secondPartForkMode>perThread</surefire.secondPartForkMode>
     <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
     <surefire.secondPartThreadCount>2</surefire.secondPartThreadCount>
     <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
     <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
+    <surefire.testFailureIgnore>false</surefire.testFailureIgnore>
     <test.output.tofile>true</test.output.tofile>
     <surefire.timeout>900</surefire.timeout>
   </properties>
