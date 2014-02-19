@@ -1787,18 +1787,30 @@ MasterServices, Server {
   private HRegionInfo[] getHRegionInfos(HTableDescriptor hTableDescriptor,
     byte[][] splitKeys) {
     HRegionInfo[] hRegionInfos = null;
+    int numRegionReplicas = hTableDescriptor.getRegionReplication();
+    if (numRegionReplicas <= 0) {
+      LOG.warn("Invalid number of replicas per region in the table descriptor. Setting it to 1.");
+      numRegionReplicas = 1;
+    }
+    long regionId = System.currentTimeMillis();
     if (splitKeys == null || splitKeys.length == 0) {
-      hRegionInfos = new HRegionInfo[]{
-          new HRegionInfo(hTableDescriptor.getTableName(), null, null)};
+      hRegionInfos = new HRegionInfo[numRegionReplicas];
+      for (int i = 0; i < numRegionReplicas; i++) {
+        hRegionInfos[i] = new HRegionInfo(hTableDescriptor.getTableName(), null, null,
+                false, regionId, (short)i);
+      }
     } else {
       int numRegions = splitKeys.length + 1;
-      hRegionInfos = new HRegionInfo[numRegions];
+      hRegionInfos = new HRegionInfo[numRegions * numRegionReplicas];
       byte[] startKey = null;
       byte[] endKey = null;
       for (int i = 0; i < numRegions; i++) {
         endKey = (i == splitKeys.length) ? null : splitKeys[i];
-        hRegionInfos[i] =
-            new HRegionInfo(hTableDescriptor.getTableName(), startKey, endKey);
+        for (int j = 0; j < numRegionReplicas; j++) {
+          hRegionInfos[i*numRegionReplicas + j] =
+               new HRegionInfo(hTableDescriptor.getTableName(), startKey, endKey,
+                   false, regionId, (short)j);
+        }
         startKey = endKey;
       }
     }

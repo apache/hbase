@@ -27,7 +27,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -39,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 
 /**
@@ -111,7 +111,13 @@ public abstract class ModifyRegionUtils {
     CompletionService<HRegionInfo> completionService = new ExecutorCompletionService<HRegionInfo>(
         regionOpenAndInitThreadPool);
     List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
+    int defaultReplicas = 0;
     for (final HRegionInfo newRegion : newRegions) {
+      regionInfos.add(newRegion);
+      if (!RegionReplicaUtil.isDefaultReplica(newRegion)) {
+        continue;
+      }
+      defaultReplicas++;
       completionService.submit(new Callable<HRegionInfo>() {
         @Override
         public HRegionInfo call() throws IOException {
@@ -121,10 +127,8 @@ public abstract class ModifyRegionUtils {
     }
     try {
       // wait for all regions to finish creation
-      for (int i = 0; i < regionNumber; i++) {
-        Future<HRegionInfo> future = completionService.take();
-        HRegionInfo regionInfo = future.get();
-        regionInfos.add(regionInfo);
+      for (int i = 0; i < defaultReplicas; i++) {
+        completionService.take().get();
       }
     } catch (InterruptedException e) {
       LOG.error("Caught " + e + " during region creation");

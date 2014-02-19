@@ -39,6 +39,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -500,7 +501,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     } catch (SocketTimeoutException ste) {
       LOG.warn("Creating " + desc.getTableName() + " took too long", ste);
     }
-    int numRegs = splitKeys == null ? 1 : splitKeys.length + 1;
+    int numRegs = (splitKeys == null ? 1 : splitKeys.length + 1) * desc.getRegionReplication();
     int prevRegCount = 0;
     boolean doneWithMetaScan = false;
     for (int tries = 0; tries < this.numRetries * this.retryLongerMultiplier;
@@ -511,19 +512,27 @@ public class HBaseAdmin implements Abortable, Closeable {
         MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
           @Override
           public boolean processRow(Result rowResult) throws IOException {
-            HRegionInfo info = HRegionInfo.getHRegionInfo(rowResult);
-            if (info == null) {
+            RegionLocations list = MetaReader.getRegionLocations(rowResult);
+            if (list == null) {
               LOG.warn("No serialized HRegionInfo in " + rowResult);
               return true;
             }
-            if (!info.getTable().equals(desc.getTableName())) {
+            HRegionLocation l = list.getRegionLocation();
+            if (l == null) {
+              return true;
+            }
+            if (!l.getRegionInfo().getTable().equals(desc.getTableName())) {
               return false;
             }
-            ServerName serverName = HRegionInfo.getServerName(rowResult);
-            // Make sure that regions are assigned to server
-            if (!(info.isOffline() || info.isSplit()) && serverName != null
-                && serverName.getHostAndPort() != null) {
-              actualRegCount.incrementAndGet();
+            if (l.getRegionInfo().isOffline() || l.getRegionInfo().isSplit()) return true;
+            HRegionLocation[] locations = list.getRegionLocations();
+            for (HRegionLocation location : locations) {
+              if (location == null) continue;
+              ServerName serverName = location.getServerName();
+              // Make sure that regions are assigned to server
+              if (serverName != null && serverName.getHostAndPort() != null) {
+                actualRegCount.incrementAndGet();
+              }
             }
             return true;
           }

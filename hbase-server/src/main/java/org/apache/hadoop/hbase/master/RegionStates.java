@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -73,6 +74,11 @@ public class RegionStates {
    * Contains the set of regions currently assigned to a given server.
    */
   private final Map<ServerName, Set<HRegionInfo>> serverHoldings;
+
+  /**
+   * Maintains the mapping from the default region to the replica regions.
+   */
+  private final Map<HRegionInfo, Set<HRegionInfo>> defaultReplicaToOtherReplicas;
 
   /**
    * Region to server assignment map.
@@ -120,6 +126,7 @@ public class RegionStates {
     regionStates = new HashMap<String, RegionState>();
     regionsInTransition = new HashMap<String, RegionState>();
     serverHoldings = new HashMap<ServerName, Set<HRegionInfo>>();
+    defaultReplicaToOtherReplicas = new HashMap<HRegionInfo, Set<HRegionInfo>>();
     regionAssignments = new TreeMap<HRegionInfo, ServerName>();
     lastAssignments = new HashMap<String, ServerName>();
     processedServers = new HashMap<ServerName, Long>();
@@ -134,6 +141,43 @@ public class RegionStates {
   @SuppressWarnings("unchecked")
   public synchronized Map<HRegionInfo, ServerName> getRegionAssignments() {
     return (Map<HRegionInfo, ServerName>)regionAssignments.clone();
+  }
+
+  /**
+   * Return the replicas (including default) for the regions grouped by ServerName
+   * @param regions
+   * @return a pair containing the groupings as a map
+   */
+  synchronized Map<ServerName, List<HRegionInfo>> getRegionAssignments(List<HRegionInfo> regions) {
+    Map<ServerName, List<HRegionInfo>> map = new HashMap<ServerName, List<HRegionInfo>>();
+    for (HRegionInfo region : regions) {
+      HRegionInfo defaultReplica = RegionReplicaUtil.getRegionInfoForDefaultReplica(region);
+      ServerName server = regionAssignments.get(defaultReplica);
+      List<HRegionInfo> regionsOnServer;
+      if (server != null) {
+        regionsOnServer = map.get(server);
+        if (regionsOnServer == null) {
+          regionsOnServer = new ArrayList<HRegionInfo>(1);
+          map.put(server, regionsOnServer);
+        }
+        regionsOnServer.add(defaultReplica);
+      }
+      Set<HRegionInfo> allReplicas = defaultReplicaToOtherReplicas.get(defaultReplica);
+      if (allReplicas != null) {
+        for (HRegionInfo hri : allReplicas) {
+          server = regionAssignments.get(hri);
+          if (server != null) { 
+            regionsOnServer = map.get(server);
+            if (regionsOnServer == null) {
+              regionsOnServer = new ArrayList<HRegionInfo>(1);
+              map.put(server, regionsOnServer);
+            }
+            regionsOnServer.add(hri);
+          }
+        }
+      }
+    }
+    return map;
   }
 
   public synchronized ServerName getRegionServerOfRegion(HRegionInfo hri) {
@@ -375,20 +419,43 @@ public class RegionStates {
     ServerName oldServerName = regionAssignments.put(hri, serverName);
     if (!serverName.equals(oldServerName)) {
       LOG.info("Onlined " + hri.getShortNameToLog() + " on " + serverName);
-      Set<HRegionInfo> regions = serverHoldings.get(serverName);
-      if (regions == null) {
-        regions = new HashSet<HRegionInfo>();
-        serverHoldings.put(serverName, regions);
-      }
-      regions.add(hri);
+      addToServerHoldings(serverName, hri);
       if (oldServerName != null) {
         LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
-        Set<HRegionInfo> oldRegions = serverHoldings.get(oldServerName);
-        oldRegions.remove(hri);
-        if (oldRegions.isEmpty()) {
-          serverHoldings.remove(oldServerName);
-        }
+        removeFromServerHoldings(oldServerName, hri);
       }
+    }
+  }
+
+  private void addToServerHoldings(ServerName serverName, HRegionInfo hri) {
+    Set<HRegionInfo> regions = serverHoldings.get(serverName);
+    if (regions == null) {
+      regions = new HashSet<HRegionInfo>();
+      serverHoldings.put(serverName, regions);
+    }
+    regions.add(hri);
+
+    HRegionInfo defaultReplica = RegionReplicaUtil.getRegionInfoForDefaultReplica(hri);
+    Set<HRegionInfo> replicas =
+        defaultReplicaToOtherReplicas.get(defaultReplica);
+    if (replicas == null) {
+      replicas = new HashSet<HRegionInfo>();
+      defaultReplicaToOtherReplicas.put(defaultReplica, replicas);
+    }
+    replicas.add(hri);
+  }
+
+  private void removeFromServerHoldings(ServerName serverName, HRegionInfo hri) {
+    Set<HRegionInfo> oldRegions = serverHoldings.get(serverName);
+    oldRegions.remove(hri);
+    if (oldRegions.isEmpty()) {
+      serverHoldings.remove(serverName);
+    }
+    HRegionInfo defaultReplica = RegionReplicaUtil.getRegionInfoForDefaultReplica(hri);
+    Set<HRegionInfo> replicas = defaultReplicaToOtherReplicas.get(defaultReplica);
+    replicas.remove(hri);
+    if (replicas.isEmpty()) {
+      defaultReplicaToOtherReplicas.remove(defaultReplica);
     }
   }
 
@@ -459,11 +526,7 @@ public class RegionStates {
     ServerName oldServerName = regionAssignments.remove(hri);
     if (oldServerName != null) {
       LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
-      Set<HRegionInfo> oldRegions = serverHoldings.get(oldServerName);
-      oldRegions.remove(hri);
-      if (oldRegions.isEmpty()) {
-        serverHoldings.remove(oldServerName);
-      }
+      removeFromServerHoldings(oldServerName, hri);
     }
   }
 

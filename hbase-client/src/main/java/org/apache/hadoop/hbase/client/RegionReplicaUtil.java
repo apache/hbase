@@ -62,7 +62,13 @@ public class RegionReplicaUtil {
     return getRegionInfoForReplica(regionInfo, DEFAULT_REPLICA_ID);
   }
 
+  /** @return true if this replicaId corresponds to default replica for the region */
   public static boolean isDefaultReplica(int replicaId) {
     return DEFAULT_REPLICA_ID == replicaId;
+  }
+
+  /** @return true if this region is a default replica for the region */
+  public static boolean isDefaultReplica(HRegionInfo hri) {
+    return  hri.getReplicaId() == DEFAULT_REPLICA_ID;
   }
 }
