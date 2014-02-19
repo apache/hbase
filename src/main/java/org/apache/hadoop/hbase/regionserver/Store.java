@@ -262,7 +262,7 @@ public class Store extends SchemaConfigured implements HeapSize,
     LOG.info("time to purge deletes set to " + timeToPurgeDeletes +
         "ms in store " + this);
 
-    this.memstore = new MemStore(conf, this.comparator);
+    this.memstore = new MemStore(conf, this.comparator, this.family);
     this.storeNameStr = getColumnFamilyName();
 
     // Setting up cache configuration for this family

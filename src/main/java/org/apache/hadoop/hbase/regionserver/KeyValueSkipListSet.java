@@ -46,6 +46,13 @@ import java.util.concurrent.ConcurrentSkipListMap;
  */
 class KeyValueSkipListSet implements NavigableSet<KeyValue> {
   private final ConcurrentNavigableMap<KeyValue, KeyValue> delegatee;
+  private volatile MemstoreBloomFilterContainer bloomFilterContainer = null;
+
+  KeyValueSkipListSet(final KeyValue.KVComparator c,
+      final MemstoreBloomFilterContainer bloomFilterContainer) {
+    this(c);
+    this.bloomFilterContainer = bloomFilterContainer;
+  }
 
   KeyValueSkipListSet(final KeyValue.KVComparator c) {
     this.delegatee = new ConcurrentSkipListMap<KeyValue, KeyValue>(c);
@@ -155,6 +162,7 @@ class KeyValueSkipListSet implements NavigableSet<KeyValue> {
   }
 
   public boolean add(KeyValue e) {
+    this.bloomFilterContainer.add(e);
     return this.delegatee.put(e, e) == null;
   }
 
@@ -201,5 +209,9 @@ class KeyValueSkipListSet implements NavigableSet<KeyValue> {
 
   public <T> T[] toArray(T[] a) {
     throw new UnsupportedOperationException("Not implemented");
+  }
+
+  public boolean containsRowPrefixForKeyValue(KeyValue kv) {
+    return this.bloomFilterContainer.containsRowPrefixForKeyValue(kv);
   }
 }

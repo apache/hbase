@@ -29,9 +29,17 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.CompoundRowPrefixFilter;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.*;
@@ -406,6 +414,80 @@ public class TestStoreFile extends HBaseTestCase {
             .withMaxKeyCount(2000)
             .build();
     bloomWriteRead(writer, fs);
+  }
+
+  public void testMemstoreRowPrefixBloomFilter() throws Exception {
+    conf.setBoolean(BloomFilterFactory.IO_STOREFILE_ROWKEYPREFIX_BLOOM_ENABLED,
+        true);
+    conf.setBoolean(HConstants.IN_MEMORY_BLOOM_ENABLED, true);
+
+    byte[] FAMILY = Bytes.toBytes("testMemstoreRowPrefixBloomFiltercf");
+    byte[] TABLE = Bytes.toBytes("testMemstoreRowPrefixBloomFilter");
+    int ROW_PREFIX_LENGTH = 4;
+    //Create table
+    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY)
+        .setMaxVersions(Integer.MAX_VALUE);
+    hcd.setRowKeyPrefixLengthForBloom(ROW_PREFIX_LENGTH);
+
+    HTableDescriptor htd = new HTableDescriptor(TABLE);
+    htd.addFamily(hcd);
+    HRegionInfo info = new HRegionInfo(htd, null, null, false);
+    Path tableDir = new Path(ROOT_DIR, "testMemstoreRowPrefixBloomFilter");
+    Path rootDir = new Path(ROOT_DIR);
+    this.fs.mkdirs(tableDir);
+    HRegion region = HRegion.createHRegion(info, rootDir, conf);
+
+    byte[][] prefixes = new byte[][] {
+        Bytes.toBytes("abcd"),
+        Bytes.toBytes("mnop"),
+        Bytes.toBytes("xyzd")};
+    KeyValue[] kvs = new KeyValue[] {
+        KeyValue.createFirstOnRow(prefixes[0]),
+        KeyValue.createFirstOnRow(prefixes[1]),
+        KeyValue.createFirstOnRow(prefixes[2])};
+    Put p = new Put(prefixes[0]);
+    p.add(FAMILY, null, prefixes[0]);
+
+    region.put(p);
+    KeyValueScanner kvScannerBeforeFlush =
+        region.getStore(FAMILY).memstore.getScanners().get(0);
+    assertTrue(kvScannerBeforeFlush.passesRowKeyPrefixBloomFilter(kvs[0]));
+    assertFalse(kvScannerBeforeFlush.passesRowKeyPrefixBloomFilter(kvs[1]));
+
+    //Flush
+    region.flushcache();
+    KeyValueScanner kvScannerAfterFlush =
+        region.getStore(FAMILY).memstore.getScanners().get(0);
+    assertFalse(kvScannerAfterFlush.passesRowKeyPrefixBloomFilter(kvs[0]));
+    assertFalse(kvScannerAfterFlush.passesRowKeyPrefixBloomFilter(kvs[1]));
+
+    p = new Put(prefixes[1]);
+    p.add(FAMILY, null, prefixes[1]);
+    region.put(p);
+
+    p = new Put(prefixes[2]);
+    p.add(FAMILY, null, prefixes[2]);
+    region.put(p);
+
+    InternalScanner scanner = region.getScanner(new Scan().setFilter(
+        new CompoundRowPrefixFilter.Builder()
+          .addRowPrefix(prefixes[0])
+          .addRowPrefix(prefixes[1])
+          .create()
+    ));
+    List<KeyValue> results = Lists.newArrayList();
+
+    assertTrue(scanner.next(results));
+    Result r = new Result(results);
+    assertTrue(Bytes.equals(r.getRow(), prefixes[0]));
+
+    results.clear();
+
+    assertTrue(scanner.next(results));
+    r = new Result(results);
+    assertTrue(Bytes.equals(r.getRow(), prefixes[1]));
+
+    assertFalse(scanner.next(results));
   }
 
   public void testRowKeyPrefixBloomFilter() throws Exception {

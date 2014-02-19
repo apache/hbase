@@ -916,6 +916,10 @@ public final class HConstants {
   public static final String USE_HFILEHISTOGRAM = "hbase.client.hfilehistogram.enabled";
   public static final boolean DEFAULT_USE_HFILEHISTOGRAM = true;
 
+  public static final String IN_MEMORY_BLOOM_ENABLED =
+      "hbase.hregion.memstore.bloom.filter.enabled";
+  public static final boolean DEFAULT_IN_MEMORY_BLOOM_ENABLED = false;
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

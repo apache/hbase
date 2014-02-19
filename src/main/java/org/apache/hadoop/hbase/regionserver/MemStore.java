@@ -35,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
@@ -99,6 +100,7 @@ public class MemStore implements HeapSize {
   // Keep track of the total size of KVs not just the
   // bytes stored in the MSLAB
   private final AtomicLong successfullyAllocatedKvBytes;
+  private final HColumnDescriptor familyDesc;
 
   /**
    * Default constructor. Used for tests.
@@ -108,18 +110,30 @@ public class MemStore implements HeapSize {
   }
 
   /**
+   * Constructor which defaults the familyDescriptor to null and pass on
+   * the other arguments as is.
+   * @param conf
+   * @param c
+   * @param familyDesc
+   */
+  public MemStore(final Configuration conf, final KeyValue.KVComparator c) {
+    this(conf, c, null);
+  }
+
+  /**
    * Constructor.
    * @param c Comparator
    */
   public MemStore(final Configuration conf,
-      final KeyValue.KVComparator c) {
+      final KeyValue.KVComparator c, HColumnDescriptor familyDesc) {
     this.conf = conf;
     this.comparator = c;
     this.comparatorIgnoreTimestamp =
       this.comparator.getComparatorIgnoringTimestamps();
     this.comparatorIgnoreType = this.comparator.getComparatorIgnoringType();
-    this.kvset = new KeyValueSkipListSet(c);
-    this.snapshot = new KeyValueSkipListSet(c);
+    this.familyDesc = familyDesc;
+    this.kvset = this.createNewKVSet();
+    this.snapshot = this.createNewKVSet();
     timeRangeTracker = new TimeRangeTracker();
     snapshotTimeRangeTracker = new TimeRangeTracker();
     this.size = new AtomicLong(DEEP_OVERHEAD);
@@ -174,6 +188,16 @@ public class MemStore implements HeapSize {
              Math.min(smallestSeqNumberVal, seqNum)));
   }
 
+  private KeyValueSkipListSet createNewKVSet() {
+    int rowPrefixLength = -1;
+    if (familyDesc != null) {
+      rowPrefixLength = familyDesc.getRowPrefixLengthForBloom();
+    }
+    return new KeyValueSkipListSet(this.comparator,
+        new MemstoreBloomFilterContainer.Builder(conf)
+          .withRowPrefixFilter(rowPrefixLength).create());
+  }
+
   /**
    * Creates a snapshot of the current memstore.
    * Snapshot must be cleared by call to {@link #clearSnapshot(SortedSet<KeyValue>)}
@@ -190,7 +214,8 @@ public class MemStore implements HeapSize {
       } else {
         if (!this.kvset.isEmpty()) {
           this.snapshot = this.kvset;
-          this.kvset = new KeyValueSkipListSet(this.comparator);
+          this.kvset = createNewKVSet();
+
           // Reset the smallest sequence number
           this.smallestSeqNumber.set(Long.MAX_VALUE);
           this.snapshotTimeRangeTracker = this.timeRangeTracker;
@@ -244,7 +269,7 @@ public class MemStore implements HeapSize {
       // OK. Passed in snapshot is same as current snapshot.  If not-empty,
       // create a new snapshot and let the old one go.
       if (!ss.isEmpty()) {
-        this.snapshot = new KeyValueSkipListSet(this.comparator);
+        this.snapshot = createNewKVSet();
         this.snapshotTimeRangeTracker = new TimeRangeTracker();
       }
       if (this.snapshotAllocator != null) {
@@ -841,14 +866,13 @@ public class MemStore implements HeapSize {
 
     @Override
     public boolean passesRowKeyPrefixBloomFilter(KeyValue kv) {
-      // Need to fix this behavior and actually return a result
-      // from a bloom filter backed by the memstore.
-      return true;
+      return this.kvsetAtCreation.containsRowPrefixForKeyValue(kv)
+          || this.snapshotAtCreation.containsRowPrefixForKeyValue(kv);
     }
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (18 * ClassSize.REFERENCE));
+      ClassSize.OBJECT + (19 * ClassSize.REFERENCE));
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
