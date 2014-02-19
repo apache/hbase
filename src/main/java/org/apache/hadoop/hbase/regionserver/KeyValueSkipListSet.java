@@ -162,7 +162,7 @@ class KeyValueSkipListSet implements NavigableSet<KeyValue> {
   }
 
   public boolean add(KeyValue e) {
-    this.bloomFilterContainer.add(e);
+    if (this.bloomFilterContainer != null) this.bloomFilterContainer.add(e);
     return this.delegatee.put(e, e) == null;
   }
 
@@ -212,6 +212,9 @@ class KeyValueSkipListSet implements NavigableSet<KeyValue> {
   }
 
   public boolean containsRowPrefixForKeyValue(KeyValue kv) {
-    return this.bloomFilterContainer.containsRowPrefixForKeyValue(kv);
+    if (this.bloomFilterContainer != null)
+      return this.bloomFilterContainer.containsRowPrefixForKeyValue(kv);
+    else
+      return true;
   }
 }
