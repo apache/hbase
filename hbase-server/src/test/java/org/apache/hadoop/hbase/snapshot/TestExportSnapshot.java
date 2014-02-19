@@ -105,16 +105,14 @@ public class TestExportSnapshot {
     emptySnapshotName = Bytes.toBytes("emptySnaptb0-" + tid);
 
     // create Table
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(FAMILY));
-    admin.createTable(htd, null);
+    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, FAMILY);
 
     // Take an empty snapshot
     admin.snapshot(emptySnapshotName, tableName);
 
     // Add some rows
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    TEST_UTIL.loadTable(table, FAMILY);
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 1000, FAMILY);
 
     // take a snapshot
     admin.snapshot(snapshotName, tableName);
@@ -126,6 +124,7 @@ public class TestExportSnapshot {
     SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getHBaseAdmin());
     SnapshotTestingUtils.deleteArchiveDirectory(TEST_UTIL);
   }
+
 
   /**
    * Verfy the result of getBalanceSplits() method.
@@ -265,6 +264,44 @@ public class TestExportSnapshot {
 
     // Remove the exported dir
     fs.delete(copyDir, true);
+  }
+
+  /**
+   * Check that ExportSnapshot will return a failure if something fails.
+   */
+  @Test
+  public void testExportFailure() throws Exception {
+    assertEquals(1, runExportAndInjectFailures(snapshotName, false));
+  }
+
+  /**
+   * Check that ExportSnapshot will succede if something fails but the retry succede.
+   */
+  @Test
+  public void testExportRetry() throws Exception {
+    assertEquals(0, runExportAndInjectFailures(snapshotName, true));
+  }
+
+  /*
+   * Execute the ExportSnapshot job injecting failures
+   */
+  private int runExportAndInjectFailures(final byte[] snapshotName, boolean retry)
+      throws Exception {
+    Path copyDir = TEST_UTIL.getDataTestDir("export-" + System.currentTimeMillis());
+    URI hdfsUri = FileSystem.get(TEST_UTIL.getConfiguration()).getUri();
+    FileSystem fs = FileSystem.get(copyDir.toUri(), new Configuration());
+    copyDir = copyDir.makeQualified(fs);
+
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setBoolean(ExportSnapshot.CONF_TEST_FAILURE, true);
+    conf.setBoolean(ExportSnapshot.CONF_TEST_RETRY, retry);
+
+    // Export Snapshot
+    int res = ExportSnapshot.innerMain(conf, new String[] {
+      "-snapshot", Bytes.toString(snapshotName),
+      "-copy-to", copyDir.toString()
+    });
+    return res;
   }
 
   /*
