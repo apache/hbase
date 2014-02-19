@@ -196,7 +196,7 @@ public class TestImportTsvParser {
     Pair<Integer, Integer> rowKeyOffsets = parser
         .parseRowKey(line, line.length);
     assertEquals(0, rowKeyOffsets.getFirst().intValue());
-    assertEquals(5, rowKeyOffsets.getSecond().intValue());
+    assertEquals(6, rowKeyOffsets.getSecond().intValue());
     try {
       line = Bytes.toBytes("\t\tval_a\t1234");
       parser.parseRowKey(line, line.length);
@@ -209,7 +209,7 @@ public class TestImportTsvParser {
     line = Bytes.toBytes("val_a\trowkey\t1234");
     rowKeyOffsets = parser.parseRowKey(line, line.length);
     assertEquals(6, rowKeyOffsets.getFirst().intValue());
-    assertEquals(11, rowKeyOffsets.getSecond().intValue());
+    assertEquals(6, rowKeyOffsets.getSecond().intValue());
     try {
       line = Bytes.toBytes("val_a");
       rowKeyOffsets = parser.parseRowKey(line, line.length);
@@ -222,7 +222,7 @@ public class TestImportTsvParser {
     line = Bytes.toBytes("val_a\t1234\trowkey");
     rowKeyOffsets = parser.parseRowKey(line, line.length);
     assertEquals(11, rowKeyOffsets.getFirst().intValue());
-    assertEquals(16, rowKeyOffsets.getSecond().intValue());
+    assertEquals(6, rowKeyOffsets.getSecond().intValue());
   }
 
 }
