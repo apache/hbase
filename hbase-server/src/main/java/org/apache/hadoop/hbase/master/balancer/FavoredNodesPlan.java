@@ -20,13 +20,13 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.jboss.netty.util.internal.ConcurrentHashMap;
 
 /**
  * This class contains the mapping information between each region and
