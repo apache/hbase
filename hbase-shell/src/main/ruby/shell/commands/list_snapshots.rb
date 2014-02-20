@@ -37,8 +37,7 @@ EOF
         now = Time.now
         formatter.header([ "SNAPSHOT", "TABLE + CREATION TIME"])
 
-        regex = /#{regex}/ unless regex.is_a?(Regexp)
-        list = admin.list_snapshot.select {|s| regex.match(s.getName)}
+        list = admin.list_snapshot(regex)
         list.each do |snapshot|
           creation_time = Time.at(snapshot.getCreationTime() / 1000).to_s
           formatter.row([ snapshot.getName, snapshot.getTable + " (" + creation_time + ")" ])

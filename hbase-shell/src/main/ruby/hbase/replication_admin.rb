@@ -45,8 +45,10 @@ module Hbase
 
     #---------------------------------------------------------------------------------------------
     # Show replcated tables/column families, and their ReplicationType
-    def list_replicated_tables
-       @replication_admin.listReplicated()
+    def list_replicated_tables(regex = ".*")
+      pattern = java.util.regex.Pattern.compile(regex)
+      list = @replication_admin.listReplicated()
+      list.select {|s| pattern.match(s.get(org.apache.hadoop.hbase.client.replication.ReplicationAdmin::TNAME))}
     end
 
     #----------------------------------------------------------------------------------------------
