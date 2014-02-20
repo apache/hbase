@@ -19,16 +19,24 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -53,8 +61,12 @@ public class ModifyTableHandler extends TableEventHandler {
   @Override
   protected void prepareWithTableLock() throws IOException {
     super.prepareWithTableLock();
-    // Check table exists.
-    getTableDescriptor();
+    // Check operation is possible on the table in its current state
+    // Also checks whether the table exists
+    if (masterServices.getAssignmentManager().getZKTable().isEnabledTable(this.htd.getTableName())
+        && this.htd.getRegionReplication() != getTableDescriptor().getRegionReplication()) {
+      throw new IOException("REGION_REPLICATION change is not supported for enabled tables");
+    } 
   }
 
   @Override
@@ -68,8 +80,32 @@ public class ModifyTableHandler extends TableEventHandler {
     HTableDescriptor oldHtd = getTableDescriptor();
     this.masterServices.getTableDescriptors().add(this.htd);
     deleteFamilyFromFS(hris, oldHtd.getFamiliesKeys());
+    removeReplicaColumnsIfNeeded(this.htd.getRegionReplication(), oldHtd.getRegionReplication(),
+        htd.getTableName());
     if (cpHost != null) {
       cpHost.postModifyTableHandler(this.tableName, this.htd);
+    }
+  }
+
+  private void removeReplicaColumnsIfNeeded(int newReplicaCount, int oldReplicaCount,
+      TableName table) throws IOException {
+    if (newReplicaCount >= oldReplicaCount) return;
+    Set<byte[]> tableRows = new HashSet<byte[]>();
+    Scan scan = MetaReader.getScanForTableName(table);
+    scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+    HTable htable = null;
+    try {
+      htable = new HTable(masterServices.getConfiguration(), TableName.META_TABLE_NAME);
+      ResultScanner resScanner = htable.getScanner(scan);
+      for (Result result : resScanner) {
+        tableRows.add(result.getRow());
+      }
+      MetaEditor.removeRegionReplicasFromMeta(tableRows, newReplicaCount,
+          oldReplicaCount - newReplicaCount, masterServices.getCatalogTracker());
+    } finally {
+      if (htable != null) {
+        htable.close();
+      }
     }
   }
 

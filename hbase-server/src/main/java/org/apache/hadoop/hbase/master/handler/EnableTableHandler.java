@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.master.BulkAssigner;
 import org.apache.hadoop.hbase.master.GeneralBulkAssigner;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableLockManager;
@@ -62,6 +64,7 @@ public class EnableTableHandler extends EventHandler {
   private final CatalogTracker catalogTracker;
   private boolean skipTableStateCheck = false;
   private TableLock tableLock;
+  private MasterServices services;
 
   public EnableTableHandler(Server server, TableName tableName,
       CatalogTracker catalogTracker, AssignmentManager assignmentManager,
@@ -72,6 +75,14 @@ public class EnableTableHandler extends EventHandler {
     this.assignmentManager = assignmentManager;
     this.tableLockManager = tableLockManager;
     this.skipTableStateCheck = skipTableStateCheck;
+  }
+
+  public EnableTableHandler(MasterServices services, TableName tableName,
+      CatalogTracker catalogTracker, AssignmentManager assignmentManager,
+      TableLockManager tableLockManager, boolean skipTableStateCheck) {
+    this((Server)services, tableName, catalogTracker, assignmentManager, tableLockManager,
+        skipTableStateCheck);
+    this.services = services;
   }
 
   public EnableTableHandler prepare()
@@ -183,6 +194,16 @@ public class EnableTableHandler extends EventHandler {
     int countOfRegionsInTable = tableRegionsAndLocations.size();
     Map<HRegionInfo, ServerName> regionsToAssign =
         regionsToAssignWithServerName(tableRegionsAndLocations);
+    if (services != null) {
+      // need to potentially create some regions for the replicas
+      List<HRegionInfo> unrecordedReplicas = AssignmentManager.replicaRegionsNotRecordedInMeta(
+          new HashSet<HRegionInfo>(regionsToAssign.keySet()), services);
+      for (HRegionInfo h : unrecordedReplicas) {
+        regionsToAssign.put(h, 
+            this.assignmentManager.getBalancer().randomAssignment(h,
+                serverManager.getOnlineServersList()));
+      }
+    }
     int regionsCount = regionsToAssign.size();
     if (regionsCount == 0) {
       done = true;
