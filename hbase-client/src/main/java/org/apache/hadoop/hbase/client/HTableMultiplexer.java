@@ -472,12 +472,14 @@ public class HTableMultiplexer {
        * buffer queue.  
        **/
       long frequency = conf.getLong(TABLE_MULTIPLEXER_FLUSH_FREQ_MS, 100);
-      
+
       // initial delay
       try {
         Thread.sleep(frequency);
       } catch (InterruptedException e) {
-      } // Ignore
+        LOG.warn("Interrupted while sleeping");
+        Thread.currentThread().interrupt();
+      }
 
       long start, elapsed;
       int failedCount = 0;
@@ -488,7 +490,7 @@ public class HTableMultiplexer {
           // Clear the processingList, putToStatusMap and failedCount
           processingList.clear();
           failedCount = 0;
-          
+
           // drain all the queued puts into the tmp list
           queue.drainTo(processingList);
           currentProcessingPutCount.set(processingList.size());
@@ -567,7 +569,12 @@ public class HTableMultiplexer {
             elapsed = EnvironmentEdgeManager.currentTimeMillis() - start;
           }
           if (elapsed < frequency) {
-            Thread.sleep(frequency - elapsed);
+            try {
+              Thread.sleep(frequency - elapsed);
+            } catch (InterruptedException e) {
+              LOG.warn("Interrupted while sleeping");
+              Thread.currentThread().interrupt();
+            }
           }
         } catch (Exception e) {
           // Log all the exceptions and move on

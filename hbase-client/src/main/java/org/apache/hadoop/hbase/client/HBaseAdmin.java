@@ -696,7 +696,8 @@ public class HBaseAdmin implements Abortable, Closeable {
       try {
         Thread.sleep(getPauseTime(tries));
       } catch (InterruptedException e) {
-        // continue
+        throw new InterruptedIOException("Interrupted when waiting" +
+            " for table to be deleted");
       }
     }
 
@@ -2708,10 +2709,8 @@ public class HBaseAdmin implements Abortable, Closeable {
         LOG.debug("(#" + tries + ") Sleeping: " + sleep +
           "ms while waiting for snapshot completion.");
         Thread.sleep(sleep);
-
       } catch (InterruptedException e) {
-        LOG.debug("Interrupted while waiting for snapshot " + snapshot + " to complete");
-        Thread.currentThread().interrupt();
+        throw (InterruptedIOException)new InterruptedIOException("Interrupted").initCause(e);
       }
       LOG.debug("Getting current status of snapshot from master...");
       done = executeCallable(new MasterCallable<IsSnapshotDoneResponse>(getConnection()) {
@@ -2720,7 +2719,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           return master.isSnapshotDone(null, request);
         }
       });
-    };
+    }
     if (!done.getDone()) {
       throw new SnapshotCreationException("Snapshot '" + snapshot.getName()
           + "' wasn't completed in expectedTime:" + max + " ms", snapshot);
@@ -3048,10 +3047,8 @@ public class HBaseAdmin implements Abortable, Closeable {
         LOG.debug("(#" + tries + ") Sleeping: " + sleep +
           "ms while waiting for procedure completion.");
         Thread.sleep(sleep);
-
       } catch (InterruptedException e) {
-        LOG.debug("Interrupted while waiting for procedure " + signature + " to complete");
-        Thread.currentThread().interrupt();
+        throw (InterruptedIOException)new InterruptedIOException("Interrupted").initCause(e);
       }
       LOG.debug("Getting current status of procedure from master...");
       done = isProcedureFinished(signature, instance, props);
@@ -3132,8 +3129,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         LOG.debug(tries + ") Sleeping: " + sleep + " ms while we wait for snapshot restore to complete.");
         Thread.sleep(sleep);
       } catch (InterruptedException e) {
-        LOG.debug("Interrupted while waiting for snapshot " + snapshot + " restore to complete");
-        Thread.currentThread().interrupt();
+        throw (InterruptedIOException)new InterruptedIOException("Interrupted").initCause(e);
       }
       LOG.debug("Getting current status of snapshot restore from master...");
       done = executeCallable(new MasterCallable<IsRestoreSnapshotDoneResponse>(
