@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.InterruptedIOException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -322,7 +323,7 @@ public class MiniZooKeeperCluster {
   }
 
   // XXX: From o.a.zk.t.ClientBase
-  private static boolean waitForServerDown(int port, long timeout) {
+  private static boolean waitForServerDown(int port, long timeout) throws IOException {
     long start = System.currentTimeMillis();
     while (true) {
       try {
@@ -344,14 +345,14 @@ public class MiniZooKeeperCluster {
       try {
         Thread.sleep(250);
       } catch (InterruptedException e) {
-        // ignore
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
     }
     return false;
   }
 
   // XXX: From o.a.zk.t.ClientBase
-  private static boolean waitForServerUp(int port, long timeout) {
+  private static boolean waitForServerUp(int port, long timeout) throws IOException {
     long start = System.currentTimeMillis();
     while (true) {
       try {
@@ -385,7 +386,7 @@ public class MiniZooKeeperCluster {
       try {
         Thread.sleep(250);
       } catch (InterruptedException e) {
-        // ignore
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
     }
     return false;
