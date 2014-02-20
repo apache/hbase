@@ -1939,45 +1939,54 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     RegionServerStatusService.BlockingInterface master = null;
     boolean refresh = false; // for the first time, use cached data
     RegionServerStatusService.BlockingInterface intf = null;
-    while (keepLooping() && master == null) {
-      sn = this.masterAddressManager.getMasterAddress(refresh);
-      if (sn == null) {
-        if (!keepLooping()) {
-          // give up with no connection.
-          LOG.debug("No master found and cluster is stopped; bailing out");
-          return null;
+    boolean interrupted = false;
+    try {
+      while (keepLooping() && master == null) {
+        sn = this.masterAddressManager.getMasterAddress(refresh);
+        if (sn == null) {
+          if (!keepLooping()) {
+            // give up with no connection.
+            LOG.debug("No master found and cluster is stopped; bailing out");
+            return null;
+          }
+          LOG.debug("No master found; retry");
+          previousLogTime = System.currentTimeMillis();
+          refresh = true; // let's try pull it from ZK directly
+          sleeper.sleep();
+          continue;
         }
-        LOG.debug("No master found; retry");
-        previousLogTime = System.currentTimeMillis();
-        refresh = true; // let's try pull it from ZK directly
-        sleeper.sleep();
-        continue;
-      }
 
-      new InetSocketAddress(sn.getHostname(), sn.getPort());
-      try {
-        BlockingRpcChannel channel =
-            this.rpcClient.createBlockingRpcChannel(sn, userProvider.getCurrent(), this.rpcTimeout);
-        intf = RegionServerStatusService.newBlockingStub(channel);
-        break;
-      } catch (IOException e) {
-        e = e instanceof RemoteException ?
-            ((RemoteException)e).unwrapRemoteException() : e;
-        if (e instanceof ServerNotRunningYetException) {
-          if (System.currentTimeMillis() > (previousLogTime+1000)){
-            LOG.info("Master isn't available yet, retrying");
-            previousLogTime = System.currentTimeMillis();
-          }
-        } else {
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
-            LOG.warn("Unable to connect to master. Retrying. Error was:", e);
-            previousLogTime = System.currentTimeMillis();
-          }
-        }
+        new InetSocketAddress(sn.getHostname(), sn.getPort());
         try {
-          Thread.sleep(200);
-        } catch (InterruptedException ignored) {
+          BlockingRpcChannel channel =
+            this.rpcClient.createBlockingRpcChannel(sn, userProvider.getCurrent(), this.rpcTimeout);
+          intf = RegionServerStatusService.newBlockingStub(channel);
+          break;
+        } catch (IOException e) {
+          e = e instanceof RemoteException ?
+            ((RemoteException)e).unwrapRemoteException() : e;
+          if (e instanceof ServerNotRunningYetException) {
+            if (System.currentTimeMillis() > (previousLogTime+1000)){
+              LOG.info("Master isn't available yet, retrying");
+              previousLogTime = System.currentTimeMillis();
+            }
+          } else {
+            if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+              LOG.warn("Unable to connect to master. Retrying. Error was:", e);
+              previousLogTime = System.currentTimeMillis();
+            }
+          }
+          try {
+            Thread.sleep(200);
+          } catch (InterruptedException ex) {
+            interrupted = true;
+            LOG.warn("Interrupted while sleeping");
+          }
         }
+      }
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
       }
     }
     return new Pair<ServerName, RegionServerStatusService.BlockingInterface>(sn, intf);
