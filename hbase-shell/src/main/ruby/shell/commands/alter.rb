@@ -74,6 +74,10 @@ You can also remove a table-scope attribute:
 
   hbase> alter 't1', METHOD => 'table_att_unset', NAME => 'coprocessor$1'
 
+You can also set REGION_REPLICATION:
+
+  hbase> alter 't1', {REGION_REPLICATION => 2}
+
 There could be more than one alteration in one command:
 
   hbase> alter 't1', { NAME => 'f1', VERSIONS => 3 }, 

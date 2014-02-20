@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -170,6 +171,31 @@ public class MetaEditor extends MetaReader {
       t.delete(deletes);
     } finally {
       t.close();
+    }
+  }
+
+  /**
+   * Deletes some replica columns corresponding to replicas for the passed rows
+   * @param metaRows
+   * @param replicaIndexToDeleteFrom the replica ID we would start deleting from
+   * @param numReplicasToRemove
+   * @param ct
+   * @throws IOException
+   */
+  public static void removeRegionReplicasFromMeta(Set<byte[]> metaRows, int replicaIndexToDeleteFrom,
+      int numReplicasToRemove, CatalogTracker ct) throws IOException {
+    int absoluteIndex = replicaIndexToDeleteFrom + numReplicasToRemove;
+    for (byte[] row : metaRows) {
+      Delete deleteReplicaLocations = new Delete(row);
+      for (int i = replicaIndexToDeleteFrom; i < absoluteIndex; i++) {
+        deleteReplicaLocations.deleteColumns(HConstants.CATALOG_FAMILY,
+            MetaReader.getServerColumn(i));
+        deleteReplicaLocations.deleteColumns(HConstants.CATALOG_FAMILY,
+            MetaReader.getSeqNumColumn(i));
+        deleteReplicaLocations.deleteColumns(HConstants.CATALOG_FAMILY,
+            MetaReader.getStartCodeColumn(i));
+      }
+      deleteFromMetaTable(ct, deleteReplicaLocations);
     }
   }
 

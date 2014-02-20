@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -176,44 +178,43 @@ public class TestMasterOperationsForRegionReplicas {
 //        TEST_UTIL.getMiniHBaseCluster().startRegionServer();
 //      }
 
-      //TODO: HBASE-10361 patch should uncomment the test below
-//      //check on alter table
-//      admin.disableTable(table);
-//      assert(admin.isTableDisabled(table));
-//      //increase the replica
-//      desc.setRegionReplication(numReplica + 1);
-//      admin.modifyTable(table, desc);
-//      admin.enableTable(table);
-//      assert(admin.isTableEnabled(table));
-//      List<HRegionInfo> regions = TEST_UTIL.getMiniHBaseCluster().getMaster()
-//          .getAssignmentManager().getRegionStates().getRegionsOfTable(table);
-//      assert(regions.size() == numRegions * (numReplica + 1));
-//
-//      //decrease the replica(earlier, table was modified to have a replica count of numReplica + 1)
-//      admin.disableTable(table);
-//      desc.setRegionReplication(numReplica);
-//      admin.modifyTable(table, desc);
-//      admin.enableTable(table);
-//      assert(admin.isTableEnabled(table));
-//      regions = TEST_UTIL.getMiniHBaseCluster().getMaster()
-//          .getAssignmentManager().getRegionStates().getRegionsOfTable(table);
-//      assert(regions.size() == numRegions * numReplica);
-//      //also make sure the meta table has the replica locations removed
-//      hris = MetaReader.getTableRegions(ct, table);
-//      assert(hris.size() == numRegions * numReplica);
-//      //just check that the number of default replica regions in the meta table are the same
-//      //as the number of regions the table was created with, and the count of the
-//      //replicas is numReplica for each region
-//      Map<HRegionInfo, Integer> defaultReplicas = new HashMap<HRegionInfo, Integer>();
-//      for (HRegionInfo hri : hris) {
-//        Integer i;
-//        HRegionInfo regionReplica0 = hri.getRegionInfoForReplica(0);
-//        defaultReplicas.put(regionReplica0,
-//            (i = defaultReplicas.get(regionReplica0)) == null ? 1 : i + 1);
-//      }
-//      assert(defaultReplicas.size() == numRegions);
-//      Collection<Integer> counts = new HashSet<Integer>(defaultReplicas.values());
-//      assert(counts.size() == 1 && counts.contains(new Integer(numReplica)));
+      //check on alter table
+      admin.disableTable(table);
+      assert(admin.isTableDisabled(table));
+      //increase the replica
+      desc.setRegionReplication(numReplica + 1);
+      admin.modifyTable(table, desc);
+      admin.enableTable(table);
+      assert(admin.isTableEnabled(table));
+      List<HRegionInfo> regions = TEST_UTIL.getMiniHBaseCluster().getMaster()
+          .getAssignmentManager().getRegionStates().getRegionsOfTable(table);
+      assert(regions.size() == numRegions * (numReplica + 1));
+
+      //decrease the replica(earlier, table was modified to have a replica count of numReplica + 1)
+      admin.disableTable(table);
+      desc.setRegionReplication(numReplica);
+      admin.modifyTable(table, desc);
+      admin.enableTable(table);
+      assert(admin.isTableEnabled(table));
+      regions = TEST_UTIL.getMiniHBaseCluster().getMaster()
+          .getAssignmentManager().getRegionStates().getRegionsOfTable(table);
+      assert(regions.size() == numRegions * numReplica);
+      //also make sure the meta table has the replica locations removed
+      hris = MetaReader.getTableRegions(ct, table);
+      assert(hris.size() == numRegions * numReplica);
+      //just check that the number of default replica regions in the meta table are the same
+      //as the number of regions the table was created with, and the count of the
+      //replicas is numReplica for each region
+      Map<HRegionInfo, Integer> defaultReplicas = new HashMap<HRegionInfo, Integer>();
+      for (HRegionInfo hri : hris) {
+        Integer i;
+        HRegionInfo regionReplica0 = RegionReplicaUtil.getRegionInfoForDefaultReplica(hri);
+        defaultReplicas.put(regionReplica0,
+            (i = defaultReplicas.get(regionReplica0)) == null ? 1 : i + 1);
+      }
+      assert(defaultReplicas.size() == numRegions);
+      Collection<Integer> counts = new HashSet<Integer>(defaultReplicas.values());
+      assert(counts.size() == 1 && counts.contains(new Integer(numReplica)));
     } finally {
       admin.disableTable(table);
       admin.deleteTable(table);

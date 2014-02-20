@@ -446,9 +446,11 @@ public class RegionStates {
     }
     HRegionInfo defaultReplica = RegionReplicaUtil.getRegionInfoForDefaultReplica(hri);
     Set<HRegionInfo> replicas = defaultReplicaToOtherReplicas.get(defaultReplica);
-    replicas.remove(hri);
-    if (replicas.isEmpty()) {
-      defaultReplicaToOtherReplicas.remove(defaultReplica);
+    if (replicas != null) {
+      replicas.remove(hri);
+      if (replicas.isEmpty()) {
+        defaultReplicaToOtherReplicas.remove(defaultReplica);
+      }
     }
   }
 
