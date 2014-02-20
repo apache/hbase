@@ -584,10 +584,8 @@ public class RpcServer implements RpcServerInterface {
               key = null;
             }
           } catch (InterruptedException e) {
-            if (running) {                      // unexpected -- log it
-              LOG.info(getName() + ": unexpectedly interrupted: " +
-                StringUtils.stringifyException(e));
-            }
+            LOG.debug("Interrupted while sleeping");
+            return;
           } catch (IOException ex) {
             LOG.error(getName() + ": error in Reader", ex);
           }
@@ -702,13 +700,19 @@ public class RpcServer implements RpcServerInterface {
             LOG.warn(getName() + ": OutOfMemoryError in server select", e);
             closeCurrentConnection(key, e);
             cleanupConnections(true);
-            try { Thread.sleep(60000); } catch (Exception ignored) {}
+            try {
+              Thread.sleep(60000);
+            } catch (InterruptedException ex) {
+              LOG.debug("Interrupted while sleeping");
+              return;
+            }
           }
         } catch (Exception e) {
           closeCurrentConnection(key, e);
         }
         cleanupConnections(false);
       }
+
       LOG.info(getName() + ": stopping");
 
       synchronized (this) {
@@ -859,7 +863,6 @@ public class RpcServer implements RpcServerInterface {
 
     private void doRunLoop() {
       long lastPurgeTime = 0;   // last check for old calls.
-
       while (running) {
         try {
           waitPending();     // If a channel is being registered, wait.
@@ -870,7 +873,7 @@ public class RpcServer implements RpcServerInterface {
             iter.remove();
             try {
               if (key.isValid() && key.isWritable()) {
-                  doAsyncWrite(key);
+                doAsyncWrite(key);
               }
             } catch (IOException e) {
               LOG.info(getName() + ": asyncWrite", e);
@@ -921,11 +924,16 @@ public class RpcServer implements RpcServerInterface {
             // some thread(s) a chance to finish
             //
             LOG.warn(getName() + ": OutOfMemoryError in server select", e);
-            try { Thread.sleep(60000); } catch (Exception ignored) {}
+            try {
+              Thread.sleep(60000);
+            } catch (InterruptedException ex) {
+              LOG.debug("Interrupted while sleeping");
+              return;
+            }
           }
         } catch (Exception e) {
           LOG.warn(getName() + ": exception in Responder " +
-                   StringUtils.stringifyException(e));
+              StringUtils.stringifyException(e));
         }
       }
       LOG.info(getName() + ": stopped");
