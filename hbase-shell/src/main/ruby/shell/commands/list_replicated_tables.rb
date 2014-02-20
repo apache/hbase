@@ -34,9 +34,7 @@ EOF
         now = Time.now
 
         formatter.header([ "TABLE:COLUMNFAMILY", "ReplicationType" ], [ 32 ])
-        list = replication_admin.list_replicated_tables
-        regex = /#{regex}/ unless regex.is_a?(Regexp)
-        list = list.select {|s| regex.match(s.get(org.apache.hadoop.hbase.client.replication.ReplicationAdmin::TNAME))}
+        list = replication_admin.list_replicated_tables(regex)
         list.each do |e|
           if e.get(org.apache.hadoop.hbase.client.replication.ReplicationAdmin::REPLICATIONTYPE) == org.apache.hadoop.hbase.client.replication.ReplicationAdmin::REPLICATIONGLOBAL
              replicateType = "GLOBAL"

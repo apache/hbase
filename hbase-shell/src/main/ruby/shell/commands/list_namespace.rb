@@ -34,8 +34,7 @@ EOF
         now = Time.now
         formatter.header([ "NAMESPACE" ])
 
-        regex = /#{regex}/ unless regex.is_a?(Regexp)
-        list = admin.list_namespace.grep(regex)
+        list = admin.list_namespace(regex)
         list.each do |table|
           formatter.row([ table ])
         end
