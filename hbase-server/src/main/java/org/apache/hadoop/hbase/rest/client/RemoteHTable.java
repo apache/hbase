@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.rest.client;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -268,7 +269,9 @@ public class RemoteHTable implements HTableInterface {
       case 509:
         try {
           Thread.sleep(sleepTime);
-        } catch (InterruptedException e) { }
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
         break;
       default:
         throw new IOException("schema request returned " + code);
@@ -344,7 +347,9 @@ public class RemoteHTable implements HTableInterface {
         case 509:
           try {
             Thread.sleep(sleepTime);
-          } catch (InterruptedException e) { }
+          } catch (InterruptedException e) {
+            throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+          }
           break;
         default:
           throw new IOException("get request returned " + code);
@@ -389,7 +394,9 @@ public class RemoteHTable implements HTableInterface {
       case 509:
         try {
           Thread.sleep(sleepTime);
-        } catch (InterruptedException e) { }
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
         break;
       default:
         throw new IOException("put request failed with " + code);
@@ -443,7 +450,9 @@ public class RemoteHTable implements HTableInterface {
       case 509:
         try {
           Thread.sleep(sleepTime);
-        } catch (InterruptedException e) { }
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
         break;
       default:
         throw new IOException("multiput request failed with " + code);
@@ -464,7 +473,9 @@ public class RemoteHTable implements HTableInterface {
       case 509:
         try {
           Thread.sleep(sleepTime);
-        } catch (InterruptedException e) { }
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
         break;
       default:
         throw new IOException("delete request failed with " + code);
@@ -510,7 +521,9 @@ public class RemoteHTable implements HTableInterface {
         case 509:
           try {
             Thread.sleep(sleepTime);
-          } catch (InterruptedException e) { }
+          } catch (InterruptedException e) {
+            throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+          }
           break;
         default:
           throw new IOException("scan request failed with " + code);
@@ -539,7 +552,9 @@ public class RemoteHTable implements HTableInterface {
         case 509:
           try {
             Thread.sleep(sleepTime);
-          } catch (InterruptedException e) { }
+          } catch (InterruptedException e) {
+            throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+          }
           break;
         default:
           throw new IOException("scanner.next request failed with " + code);
@@ -660,6 +675,7 @@ public class RemoteHTable implements HTableInterface {
         try {
           Thread.sleep(sleepTime);
         } catch (final InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
         }
         break;
       default:
@@ -700,6 +716,7 @@ public class RemoteHTable implements HTableInterface {
         try {
           Thread.sleep(sleepTime);
         } catch (final InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
         }
         break;
       default:

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.rest.client;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -130,6 +131,7 @@ public class RemoteAdmin {
         try {
           Thread.sleep(sleepTime);
         } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
         }
         break;
       default:
@@ -171,6 +173,7 @@ public class RemoteAdmin {
         try {
           Thread.sleep(sleepTime);
         } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
         }
         break;
       default:
@@ -219,6 +222,7 @@ public class RemoteAdmin {
         try {
           Thread.sleep(sleepTime);
         } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
         }
         break;
       default:
@@ -256,7 +260,9 @@ public class RemoteAdmin {
       case 509:
         try {
           Thread.sleep(sleepTime);
-        } catch (InterruptedException e) { }
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
         break;
       default:
         throw new IOException("get request to " + path.toString() + " returned " + code);
@@ -293,7 +299,9 @@ public class RemoteAdmin {
       case 509:
         try {
           Thread.sleep(sleepTime);
-        } catch (InterruptedException e) { }
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
         break;
       default:
         throw new IOException("create request to " + path.toString() + " returned " + code);
@@ -336,7 +344,9 @@ public class RemoteAdmin {
       case 509:
         try {
           Thread.sleep(sleepTime);
-        } catch (InterruptedException e) { }
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
         break;
       default:
         throw new IOException("delete request to " + path.toString() + " returned " + code);
@@ -377,6 +387,7 @@ public class RemoteAdmin {
         try {
           Thread.sleep(sleepTime);
         } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
         }
         break;
       default:
