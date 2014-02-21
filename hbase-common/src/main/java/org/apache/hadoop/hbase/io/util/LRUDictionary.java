@@ -87,9 +87,6 @@ public class LRUDictionary implements Dictionary {
     public BidirectionalLRUMap(int initialSize) {
       initSize = initialSize;
       indexToNode = new Node[initialSize];
-      for (int i = 0; i < initialSize; i++) {
-        indexToNode[i] = new Node();
-      }
     }
 
     private short put(byte[] array, int offset, int length) {
@@ -100,6 +97,9 @@ public class LRUDictionary implements Dictionary {
 
       if (currSize < initSize) {
         // There is space to add without evicting.
+        if (indexToNode[currSize] == null) {
+          indexToNode[currSize] = new Node();
+        }
         indexToNode[currSize].setContents(stored, 0, stored.length);
         setHead(indexToNode[currSize]);
         short ret = (short) currSize++;
@@ -172,19 +172,15 @@ public class LRUDictionary implements Dictionary {
     }
 
     private void clear() {
+      for (int i = 0; i < currSize; i++) {
+        indexToNode[i].next = null;
+        indexToNode[i].prev = null;
+        indexToNode[i].container = null;
+      }
       currSize = 0;
       nodeToIndex.clear();
       tail = null;
       head = null;
-
-      for (Node n : indexToNode) {
-        n.container = null;
-      }
-
-      for (int i = 0; i < initSize; i++) {
-        indexToNode[i].next = null;
-        indexToNode[i].prev = null;
-      }
     }
 
     private static class Node {
