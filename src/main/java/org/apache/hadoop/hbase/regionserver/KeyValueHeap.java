@@ -102,7 +102,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
     } else {
       KeyValueScanner topScanner = this.heap.peek();
       if (topScanner == null ||
-          this.comparator.compare(kvNext, topScanner.peek()) >= 0) {
+          this.comparator.compare(this.current, topScanner) > 0) {
         this.heap.add(this.current);
         this.current = pollRealKV();
       }
@@ -381,7 +381,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
           // Compare the current scanner to the next scanner. We try to avoid
           // putting the current one back into the heap if possible.
           KeyValue nextKV = nextEarliestScanner.peek();
-          if (nextKV == null || comparator.compare(curKV, nextKV) <= 0) {
+          if (nextKV == null || comparator.compare(kvScanner, nextEarliestScanner) <= 0) {
             // We already have the scanner with the earliest KV, so return it.
             return kvScanner;
           }

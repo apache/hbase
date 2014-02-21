@@ -24,18 +24,20 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.NavigableMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -43,8 +45,11 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.TestStore;
 import org.apache.hadoop.hbase.regionserver.TestStoreFile;
+import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.WritableUtils;
 import org.junit.Test;
+import org.mortbay.log.Log;
 
 /**
  * Test cases for the "load" half of the HFileOutputFormat bulk load
@@ -152,6 +157,103 @@ public class TestLoadIncrementalHFiles {
     } finally {
       util.shutdownMiniCluster();
     }
+  }
+
+  @Test
+  public void testLoadWithSeqNumNoFlush() throws Exception {
+    testLoadWithSeqNum(false);
+  }
+
+  @Test
+  public void testLoadWithSeqNumWithFlush() throws Exception {
+    testLoadWithSeqNum(true);
+  }
+
+  private void testLoadWithSeqNum(boolean flush) throws Exception {
+    String testName = "bulkLoadSensibility";
+    Path dir1 = util.getTestDir(testName + "1");
+    Path dir2 = util.getTestDir(testName + "2");
+    FileSystem fs = util.getTestFileSystem();
+    dir1 = dir1.makeQualified(fs);
+    dir2 = dir2.makeQualified(fs);
+    Path familyDir1 = new Path(dir1, Bytes.toString(FAMILY));
+    Path familyDir2 = new Path(dir2, Bytes.toString(FAMILY));
+    byte[] row = Bytes.toBytes("key");
+    long timestamp = 1000;
+
+    int hfileIdx = 0;
+    Configuration config = util.getConfiguration();
+    Log.info("Creating first bulkloaded file");
+    createHFileForKV(config, fs, new Path(familyDir1, "hfile_"
+        + hfileIdx++), row, FAMILY, QUALIFIER, timestamp, Bytes.toBytes("bulkValue"));
+
+    util.startMiniCluster();
+    try {
+      HBaseAdmin admin = new HBaseAdmin(config);
+      HTableDescriptor htd = new HTableDescriptor(TABLE);
+      htd.addFamily(new HColumnDescriptor(FAMILY));
+      // Do not worry about splitting the keys
+      admin.createTable(htd);
+
+      HTable table = new HTable(config, TABLE);
+      Log.info("Waiting for HTable to be available");
+      util.waitTableAvailable(TABLE, 30000);
+
+      // Do a dummy put to increase the hlog sequence number
+      Log.info("Doing a htable.put()");
+      Put put = new Put(row);
+      put.add(FAMILY, QUALIFIER, timestamp, Bytes.toBytes("singlePutValue"));
+      table.put(put);
+
+      if (flush) {
+        // flush the table
+        Log.info("Flushing the table ");
+        table.flushRegionForRow(row, 0);
+      }
+
+      config.setBoolean(LoadIncrementalHFiles.ASSIGN_SEQ_IDS, false);
+      Log.info("Loading the first bulkload file");
+      LoadIncrementalHFiles loader1 = new LoadIncrementalHFiles(
+          config);
+      loader1.doBulkLoad(dir1, table);
+
+      Log.info("Getting after the first bulkloaded file");
+      Get get = new Get(row);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setTimeStamp(timestamp);
+
+      Result result = table.get(get);
+      NavigableMap<Long, byte[]> navigableMap =
+          result.getMap().get(FAMILY).get(QUALIFIER);
+      assertEquals("singlePutValue", Bytes.toString(navigableMap.get(timestamp)));
+
+      Log.info("Creating second bulkload file");
+      createHFileForKV(config, fs, new Path(familyDir2, "hfile_"
+          + hfileIdx++), row, FAMILY, QUALIFIER, timestamp, Bytes.toBytes("bulkValue2"));
+
+      config.setBoolean(LoadIncrementalHFiles.ASSIGN_SEQ_IDS, true);
+      LoadIncrementalHFiles loader2 = new LoadIncrementalHFiles(
+          config);
+
+      Log.info("Loading the second bulkload file");
+      loader2.doBulkLoad(dir2, table);
+
+      Log.info("Verifying get after 2nd bulk load");
+      result = table.get(get);
+      navigableMap =
+          result.getMap().get(FAMILY).get(QUALIFIER);
+      if (flush) {
+        // no value in memstore
+        // the latest bulk load file should win
+        assertEquals("bulkValue2", Bytes.toString(navigableMap.get(timestamp)));
+      } else {
+        // The value in memstore wins
+        assertEquals("singlePutValue", Bytes.toString(navigableMap.get(timestamp)));
+      }
+    } finally {
+      util.shutdownMiniCluster();
+    }
+
   }
 
   private void verifyAssignedSequenceNumber(String testName,
@@ -262,16 +364,47 @@ public class TestLoadIncrementalHFiles {
         .withCompression(COMPRESSION)
         .withComparator(KeyValue.KEY_COMPARATOR)
         .create();
+    TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
     long now = System.currentTimeMillis();
     try {
       // subtract 2 since iterateOnSplits doesn't include boundary keys
       for (byte[] key : Bytes.iterateOnSplits(startKey, endKey, numRows-2)) {
         KeyValue kv = new KeyValue(key, family, qualifier, now, key);
         writer.append(kv);
+        timeRangeTracker.includeTimestamp(kv);
       }
     } finally {
       writer.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY,
           Bytes.toBytes(System.currentTimeMillis()));
+      writer.appendFileInfo(StoreFile.TIMERANGE_KEY,
+          WritableUtils.toByteArray(timeRangeTracker));
+      writer.close();
+    }
+  }
+
+  static void createHFileForKV(
+      Configuration conf,
+      FileSystem fs, Path path,
+      byte[] key,
+      byte[] family, byte[] qualifier,
+      long timestamp, byte[] value) throws IOException
+  {
+    HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf))
+        .withPath(fs, path)
+        .withBlockSize(BLOCKSIZE)
+        .withCompression(COMPRESSION)
+        .withComparator(KeyValue.KEY_COMPARATOR)
+        .create();
+    TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
+    try {
+      KeyValue kv = new KeyValue(key, family, qualifier, timestamp, value);
+      writer.append(kv);
+      timeRangeTracker.includeTimestamp(kv);
+    } finally {
+      writer.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY,
+          Bytes.toBytes(System.currentTimeMillis()));
+      writer.appendFileInfo(StoreFile.TIMERANGE_KEY,
+          WritableUtils.toByteArray(timeRangeTracker));
       writer.close();
     }
   }
