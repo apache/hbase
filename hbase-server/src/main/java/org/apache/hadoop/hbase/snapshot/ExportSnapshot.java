@@ -189,7 +189,7 @@ public final class ExportSnapshot extends Configured implements Tool {
           // FLAKY-TEST-WARN: lower is better, we can get some runs without the
           // retry, but at least we reduce the number of test failures due to
           // this test exception from the same map task.
-          if (random.nextFloat() < 0.05) {
+          if (random.nextFloat() < 0.03) {
             throw new IOException("TEST RETRY FAILURE: Unable to copy input=" + inputPath
                                   + " time=" + System.currentTimeMillis());
           }
@@ -587,6 +587,7 @@ public final class ExportSnapshot extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     boolean verifyChecksum = true;
     String snapshotName = null;
+    boolean overwrite = false;
     String filesGroup = null;
     String filesUser = null;
     Path outputRoot = null;
@@ -611,6 +612,8 @@ public final class ExportSnapshot extends Configured implements Tool {
           filesGroup = args[++i];
         } else if (cmd.equals("-chmod")) {
           filesMode = Integer.parseInt(args[++i], 8);
+        } else if (cmd.equals("-overwrite")) {
+          overwrite = true;
         } else if (cmd.equals("-h") || cmd.equals("--help")) {
           printUsageAndExit();
         } else {
@@ -644,13 +647,20 @@ public final class ExportSnapshot extends Configured implements Tool {
 
     // Check if the snapshot already exists
     if (outputFs.exists(outputSnapshotDir)) {
-      System.err.println("The snapshot '" + snapshotName +
-        "' already exists in the destination: " + outputSnapshotDir);
-      return 1;
+      if (overwrite) {
+        if (!outputFs.delete(outputSnapshotDir, true)) {
+          System.err.println("Unable to remove existing snapshot directory: " + outputSnapshotDir);
+          return 1;
+        }
+      } else {
+        System.err.println("The snapshot '" + snapshotName +
+          "' already exists in the destination: " + outputSnapshotDir);
+        return 1;
+      }
     }
 
     // Check if the snapshot already in-progress
-    if (outputFs.exists(snapshotTmpDir)) {
+    if (!overwrite && outputFs.exists(snapshotTmpDir)) {
       System.err.println("A snapshot with the same name '" + snapshotName + "' may be in-progress");
       System.err.println("Please check " + snapshotTmpDir + ". If the snapshot has completed, ");
       System.err.println("consider removing " + snapshotTmpDir + " before retrying export");
@@ -664,7 +674,7 @@ public final class ExportSnapshot extends Configured implements Tool {
     // The snapshot references must be copied before the hfiles otherwise the cleaner
     // will remove them because they are unreferenced.
     try {
-      FileUtil.copy(inputFs, snapshotDir, outputFs, snapshotTmpDir, false, false, conf);
+      FileUtil.copy(inputFs, snapshotDir, outputFs, snapshotTmpDir, false, overwrite, conf);
     } catch (IOException e) {
       System.err.println("Failed to copy the snapshot directory: from=" + snapshotDir +
         " to=" + snapshotTmpDir);
@@ -710,14 +720,15 @@ public final class ExportSnapshot extends Configured implements Tool {
     System.err.println("  -snapshot NAME          Snapshot to restore.");
     System.err.println("  -copy-to NAME           Remote destination hdfs://");
     System.err.println("  -no-checksum-verify     Do not verify checksum.");
+    System.err.println("  -overwrite              Rewrite the snapshot manifest if already exists");
     System.err.println("  -chuser USERNAME        Change the owner of the files to the specified one.");
     System.err.println("  -chgroup GROUP          Change the group of the files to the specified one.");
     System.err.println("  -chmod MODE             Change the permission of the files to the specified one.");
     System.err.println("  -mappers                Number of mappers to use during the copy (mapreduce.job.maps).");
     System.err.println();
     System.err.println("Examples:");
-    System.err.println("  hbase " + getClass() + " \\");
-    System.err.println("    -snapshot MySnapshot -copy-to hdfs:///srv2:8082/hbase \\");
+    System.err.println("  hbase " + getClass().getName() + " \\");
+    System.err.println("    -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase \\");
     System.err.println("    -chuser MyUser -chgroup MyGroup -chmod 700 -mappers 16");
     System.exit(1);
   }
