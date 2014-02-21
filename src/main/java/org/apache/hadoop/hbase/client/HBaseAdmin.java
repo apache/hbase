@@ -336,6 +336,10 @@ public class HBaseAdmin {
     }
   }
 
+  /**
+   * Sorts and checks the splitKeys.
+   * @param splitKeys
+   */
   public void checkSplitKeys(byte[][] splitKeys) {
     if (splitKeys != null && splitKeys.length > 1) {
       Arrays.sort(splitKeys, Bytes.BYTES_COMPARATOR);

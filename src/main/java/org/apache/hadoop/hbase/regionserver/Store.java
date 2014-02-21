@@ -488,7 +488,8 @@ public class Store extends SchemaConfigured implements HeapSize,
       completionService.submit(new Callable<StoreFile>() {
         public StoreFile call() throws IOException {
           StoreFile storeFile = new StoreFile(fs, p, conf, cacheConf,
-              family.getBloomFilterType(), dataBlockEncoder);
+              family.getBloomFilterType(), dataBlockEncoder,
+              family.getHFileHistogramBucketCount());
           passSchemaMetricsTo(storeFile);
           storeFile.createReader();
           return storeFile;
@@ -607,7 +608,8 @@ public class Store extends SchemaConfigured implements HeapSize,
     StoreFile.rename(fs, srcPath, dstPath);
 
     StoreFile sf = new StoreFile(fs, dstPath, this.conf, this.cacheConf,
-        this.family.getBloomFilterType(), this.dataBlockEncoder);
+        this.family.getBloomFilterType(), this.dataBlockEncoder,
+        family.getHFileHistogramBucketCount());
     passSchemaMetricsTo(sf);
 
     sf.createReader();
@@ -848,7 +850,8 @@ public class Store extends SchemaConfigured implements HeapSize,
     info.dstPath = dstPath;
 
     StoreFile sf = new StoreFile(this.fs, dstPath, this.conf, this.cacheConf,
-        this.family.getBloomFilterType(), this.dataBlockEncoder);
+        this.family.getBloomFilterType(), this.dataBlockEncoder,
+        family.getHFileHistogramBucketCount());
     passSchemaMetricsTo(sf);
 
     StoreFile.Reader r = sf.createReader();
@@ -1367,8 +1370,7 @@ public class Store extends SchemaConfigured implements HeapSize,
     long smallestReadPoint = region.getSmallestReadPoint();
     MultiVersionConsistencyControl.setThreadReadPoint(smallestReadPoint);
     HFileHistogram hist = new UniformSplitHFileHistogram(
-        this.conf.getInt(HFileHistogram.HFILEHISTOGRAM_BINCOUNT,
-            HFileHistogram.DEFAULT_HFILEHISTOGRAM_BINCOUNT));
+        this.family.getHFileHistogramBucketCount());
     try {
       InternalScanner scanner = null;
       try {
@@ -1532,7 +1534,7 @@ public class Store extends SchemaConfigured implements HeapSize,
     try {
       storeFile = new StoreFile(this.fs, path, this.conf,
           this.cacheConf, this.family.getBloomFilterType(),
-          NoOpDataBlockEncoder.INSTANCE);
+          NoOpDataBlockEncoder.INSTANCE, family.getHFileHistogramBucketCount());
       passSchemaMetricsTo(storeFile);
       storeFile.createReader();
     } catch (IOException e) {
@@ -1584,7 +1586,8 @@ public class Store extends SchemaConfigured implements HeapSize,
             destPath);
       }
       result = new StoreFile(this.fs, destPath, this.conf, this.cacheConf,
-          this.family.getBloomFilterType(), this.dataBlockEncoder);
+          this.family.getBloomFilterType(), this.dataBlockEncoder,
+          family.getHFileHistogramBucketCount());
       passSchemaMetricsTo(result);
       result.createReader();
     }

@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -96,6 +97,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String FOREVER = "FOREVER";
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
   public static final String ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER = "ROWKEY_PREFIX_LENGTH";
+  public static final String HFILEHISTOGRAM_BUCKET_COUNT =
+      "HFILEHISTOGRAM_BUCKET_COUNT";
 
   /**
    * Default compression type.
@@ -196,6 +199,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
           String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
       DEFAULT_VALUES.put(ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER,
           String.valueOf(DEFAULT_ROWKEY_PREFIX_LENGTH_FOR_BLOOM));
+      DEFAULT_VALUES.put(HFILEHISTOGRAM_BUCKET_COUNT,
+          String.valueOf(HFileHistogram.DEFAULT_HFILEHISTOGRAM_BINCOUNT));
       for (String s : DEFAULT_VALUES.keySet()) {
         RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
       }
@@ -700,25 +705,48 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     return StoreFile.BloomType.valueOf(n.toUpperCase());
   }
 
+  public int getIntValueFromString(String key, int defaultValue,
+      String parseErrorMessage) {
+    String n = getValue(key);
+    int returnValue = defaultValue;
+    if (n != null) {
+      try {
+        returnValue = Integer.parseInt(n);
+      } catch (Throwable e) {
+        LOG.error("Invalid Input " + n + ". " + parseErrorMessage, e);
+      }
+    }
+    return returnValue;
+  }
+
+  public int getHFileHistogramBucketCount() {
+    return getIntValueFromString(
+        HFILEHISTOGRAM_BUCKET_COUNT,
+        HFileHistogram.DEFAULT_HFILEHISTOGRAM_BINCOUNT,
+        "Cannot parse the histogram bin count");
+  }
+
   /**
    * @return the number of bytes as row key prefix for the bloom filter
    */
   public int getRowPrefixLengthForBloom() {
-    String n = getValue(ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER);
-    int prefixLength = DEFAULT_ROWKEY_PREFIX_LENGTH_FOR_BLOOM;
-    if (n != null) {
-      try {
-        prefixLength = Integer.valueOf(n);
-      } catch (Throwable e) {
-        LOG.error("Cannot parse " + n + " as the RowKey Prefix Length", e);
-      }
-    }
-    return prefixLength;
+    return getIntValueFromString(
+        ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER,
+        DEFAULT_ROWKEY_PREFIX_LENGTH_FOR_BLOOM,
+        "Cannot parse row key prefix length");
   }
 
   public void setRowKeyPrefixLengthForBloom(int prefixLength) {
     if (prefixLength > 0) {
       setValue(ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER, String.valueOf(prefixLength));
+    }
+  }
+
+  public void setHFileHistogramBucketCount(int histogramBucketCount) {
+    if (histogramBucketCount > 0) {
+      setValue(
+          HFILEHISTOGRAM_BUCKET_COUNT,
+          String.valueOf(histogramBucketCount));
     }
   }
 

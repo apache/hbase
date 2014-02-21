@@ -224,6 +224,9 @@ public class StoreFile extends SchemaConfigured {
 
   private HFileHistogram histogram = null;
 
+  private int histogramBinCount =
+      HFileHistogram.DEFAULT_HFILEHISTOGRAM_BINCOUNT;
+
   /**
    * Constructor, loads a reader and it's indices, etc. May allocate a
    * substantial amount of ram depending on the underlying files (10-20MB?).
@@ -246,7 +249,8 @@ public class StoreFile extends SchemaConfigured {
             final Configuration conf,
             final CacheConfig cacheConf,
             final BloomType cfBloomType,
-            final HFileDataBlockEncoder dataBlockEncoder)
+            final HFileDataBlockEncoder dataBlockEncoder,
+            final int histogramBinCount)
       throws IOException {
     this.conf = conf;
     this.fs = fs;
@@ -275,6 +279,27 @@ public class StoreFile extends SchemaConfigured {
     } else {
       this.modificationTimeStamp = 0;
     }
+    this.histogramBinCount = histogramBinCount;
+  }
+
+  /**
+   * Constructor which defaults the hfileHistogram Bin count to the default.
+   * @param fs
+   * @param p
+   * @param conf
+   * @param cacheConf
+   * @param cfBloomType
+   * @param dataBlockEncoder
+   * @throws IOException
+   */
+  StoreFile(final FileSystem fs,
+            final Path p,
+            final Configuration conf,
+            final CacheConfig cacheConf,
+            final BloomType cfBloomType,
+            final HFileDataBlockEncoder dataBlockEncoder) throws IOException {
+    this(fs, p, conf, cacheConf, cfBloomType, dataBlockEncoder,
+        HFileHistogram.DEFAULT_HFILEHISTOGRAM_BINCOUNT);
   }
 
   /**
@@ -1573,19 +1598,21 @@ public class StoreFile extends SchemaConfigured {
                                                  int rowPrefixLength) {
 
       // Sanity check the parameters
-      if (buffer == null || rowPrefixOffset + rowPrefixLength > buffer.length
-        || rowPrefixLength <=0) {
+      if (buffer == null  // Empty row
+          || reader.getTrailer().getEntryCount() == 0 // Empty file or the prefix does not match at all
+          ) {
         return false;
+      }
+
+      if (rowPrefixLength <=0 // No RowPrefixBloom filter case
+          || rowPrefixOffset + rowPrefixLength > buffer.length // Unknown prefix length, we'll return true
+          ) {
+        return true;
       }
 
       // Cache Bloom filter as a local variable in case it is set to null by
       // another thread on an IO error.
       BloomFilter bloomFilter = this.rowKeyPrefixBloomFilter;
-
-      // Empty file or the prefix does not match at all
-      if (reader.getTrailer().getEntryCount() == 0) {
-        return false; // No need to seek
-      }
 
       if (bloomFilter == null || this.rowKeyPrefixLength > rowPrefixLength) {
         return true; // Have to seek into the file
@@ -2011,9 +2038,7 @@ public class StoreFile extends SchemaConfigured {
     if (histogram != null) return histogram;
     ByteBuffer buf = this.reader.reader.getMetaBlock(
         HFile.HFILEHISTOGRAM_METABLOCK, false);
-    histogram = new UniformSplitHFileHistogram(
-        this.conf.getInt(HFileHistogram.HFILEHISTOGRAM_BINCOUNT,
-            HFileHistogram.DEFAULT_HFILEHISTOGRAM_BINCOUNT));
+    histogram = new UniformSplitHFileHistogram(this.histogramBinCount);
     histogram = histogram.deserialize(buf);
     return histogram;
   }
