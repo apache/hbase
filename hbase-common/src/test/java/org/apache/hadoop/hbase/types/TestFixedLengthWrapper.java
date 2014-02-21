@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-
-import java.util.Arrays;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -54,10 +52,10 @@ public class TestFixedLengthWrapper {
           buff.setPosition(0);
           DataType<byte[]> type = new FixedLengthWrapper<byte[]>(new RawBytes(ord), limit);
           assertEquals(limit, type.encode(buff, val));
-          byte[] expected = Arrays.copyOf(val, limit);
           buff.setPosition(0);
           byte[] actual = type.decode(buff);
-          assertArrayEquals(expected, actual);
+          assertTrue("Decoding output differs from expected", 
+            Bytes.equals(val, 0, val.length, actual, 0, val.length));
           buff.setPosition(0);
           assertEquals(limit, type.skip(buff));
         }
