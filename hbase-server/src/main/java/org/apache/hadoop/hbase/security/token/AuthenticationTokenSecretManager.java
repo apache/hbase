@@ -130,7 +130,7 @@ public class AuthenticationTokenSecretManager
     identifier.setIssueDate(now);
     identifier.setExpirationDate(now + tokenMaxLifetime);
     identifier.setSequenceNumber(tokenSeq.getAndIncrement());
-    return createPassword(WritableUtils.toByteArray(identifier),
+    return createPassword(identifier.getBytes(),
         secretKey.getKey());
   }
 
@@ -147,7 +147,7 @@ public class AuthenticationTokenSecretManager
           identifier.getKeyId()+")");
     }
     // regenerate the password
-    return createPassword(WritableUtils.toByteArray(identifier),
+    return createPassword(identifier.getBytes(),
         masterKey.getKey());
   }
 
