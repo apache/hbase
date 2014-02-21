@@ -175,15 +175,15 @@
         A memory setting for the RegionServer process.
         </para>
     </section>
-    <section xml:id="perf.rs.memstore.upperlimit">
-        <title><varname>hbase.regionserver.global.memstore.upperLimit</varname></title>
-        <para>See <xref linkend="hbase.regionserver.global.memstore.upperLimit"/>.
+    <section xml:id="perf.rs.memstore.size">
+        <title><varname>hbase.regionserver.global.memstore.size</varname></title>
+        <para>See <xref linkend="hbase.regionserver.global.memstore.size"/>.
         This memory setting is often adjusted for the RegionServer process depending on needs.
         </para>
     </section>
-    <section xml:id="perf.rs.memstore.lowerlimit">
-        <title><varname>hbase.regionserver.global.memstore.lowerLimit</varname></title>
-        <para>See <xref linkend="hbase.regionserver.global.memstore.lowerLimit"/>.
+    <section xml:id="perf.rs.memstore.size.lower.limit">
+        <title><varname>hbase.regionserver.global.memstore.size.lower.limit</varname></title>
+        <para>See <xref linkend="hbase.regionserver.global.memstore.size.lower.limit"/>.
         This memory setting is often adjusted for the RegionServer process depending on needs.
         </para>
     </section>

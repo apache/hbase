@@ -132,10 +132,7 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   /**
-   * Calculate global memstore size for configured percentage of <code>max</code>.
-   * @param max
-   * @param c
-   * @return Limit.
+   * Retrieve global memstore configured size as percentage of total heap.
    */
   static float getGlobalMemStorePercent(final Configuration c) {
     float limit = c.getFloat(MEMSTORE_SIZE_KEY,

@@ -74,8 +74,13 @@ public class HBaseConfiguration extends Configuration {
   }
 
   private static void checkForClusterFreeMemoryLimit(Configuration conf) {
-      float globalMemstoreLimit = conf.getFloat("hbase.regionserver.global.memstore.upperLimit", 0.4f);
-      int gml = (int)(globalMemstoreLimit * CONVERT_TO_PERCENTAGE);
+      if (conf.get("hbase.regionserver.global.memstore.upperLimit") != null) {
+        LOG.warn("hbase.regionserver.global.memstore.upperLimit is deprecated by "
+          + "hbase.regionserver.global.memstore.size");
+      }
+      float globalMemstoreSize = conf.getFloat("hbase.regionserver.global.memstore.size",
+        conf.getFloat("hbase.regionserver.global.memstore.upperLimit", 0.4f));
+      int gml = (int)(globalMemstoreSize * CONVERT_TO_PERCENTAGE);
       float blockCacheUpperLimit =
         conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
           HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
@@ -87,10 +92,10 @@ public class HBaseConfiguration extends Configuration {
             "Current heap configuration for MemStore and BlockCache exceeds " +
             "the threshold required for successful cluster operation. " +
             "The combined value cannot exceed 0.8. Please check " +
-            "the settings for hbase.regionserver.global.memstore.upperLimit and " +
+            "the settings for hbase.regionserver.global.memstore.size and " +
             "hfile.block.cache.size in your configuration. " +
-            "hbase.regionserver.global.memstore.upperLimit is " +
-            globalMemstoreLimit +
+            "hbase.regionserver.global.memstore.size is " +
+            globalMemstoreSize +
             " hfile.block.cache.size is " + blockCacheUpperLimit);
       }
   }
