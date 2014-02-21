@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.FileNotFoundException;
+import java.io.InterruptedIOException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -911,7 +912,11 @@ public class HRegionFileSystem {
       } catch (IOException ioe) {
         lastIOE = ioe;
         if (fs.exists(dir)) return true; // directory is present
-        sleepBeforeRetry("Create Directory", i+1);
+        try {
+          sleepBeforeRetry("Create Directory", i+1);
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
       }
     } while (++i <= hdfsClientRetriesNumber);
     throw new IOException("Exception in createDir", lastIOE);
@@ -934,9 +939,14 @@ public class HRegionFileSystem {
         lastIOE = ioe;
         if (!fs.exists(srcpath) && fs.exists(dstPath)) return true; // successful move
         // dir is not there, retry after some time.
-        sleepBeforeRetry("Rename Directory", i+1);
+        try {
+          sleepBeforeRetry("Rename Directory", i+1);
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
       }
     } while (++i <= hdfsClientRetriesNumber);
+
     throw new IOException("Exception in rename", lastIOE);
   }
 
@@ -956,16 +966,21 @@ public class HRegionFileSystem {
         lastIOE = ioe;
         if (!fs.exists(dir)) return true;
         // dir is there, retry deleting after some time.
-        sleepBeforeRetry("Delete Directory", i+1);
+        try {
+          sleepBeforeRetry("Delete Directory", i+1);
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
       }
     } while (++i <= hdfsClientRetriesNumber);
+
     throw new IOException("Exception in DeleteDir", lastIOE);
   }
 
   /**
    * sleeping logic; handles the interrupt exception.
    */
-  private void sleepBeforeRetry(String msg, int sleepMultiplier) {
+  private void sleepBeforeRetry(String msg, int sleepMultiplier) throws InterruptedException {
     sleepBeforeRetry(msg, sleepMultiplier, baseSleepBeforeRetries, hdfsClientRetriesNumber);
   }
 
@@ -993,9 +1008,14 @@ public class HRegionFileSystem {
       } catch (IOException ioe) {
         lastIOE = ioe;
         if (fs.exists(dir)) return true; // directory is present
-        sleepBeforeRetry("Create Directory", i+1, baseSleepBeforeRetries, hdfsClientRetriesNumber);
+        try {
+          sleepBeforeRetry("Create Directory", i+1, baseSleepBeforeRetries, hdfsClientRetriesNumber);
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
       }
     } while (++i <= hdfsClientRetriesNumber);
+
     throw new IOException("Exception in createDir", lastIOE);
   }
 
@@ -1004,12 +1024,12 @@ public class HRegionFileSystem {
    * for this to avoid re-looking for the integer values.
    */
   private static void sleepBeforeRetry(String msg, int sleepMultiplier, int baseSleepBeforeRetries,
-      int hdfsClientRetriesNumber) {
+      int hdfsClientRetriesNumber) throws InterruptedException {
     if (sleepMultiplier > hdfsClientRetriesNumber) {
       LOG.debug(msg + ", retries exhausted");
       return;
     }
     LOG.debug(msg + ", sleeping " + baseSleepBeforeRetries + " times " + sleepMultiplier);
-    Threads.sleep((long)baseSleepBeforeRetries * sleepMultiplier);
+    Thread.sleep((long)baseSleepBeforeRetries * sleepMultiplier);
   }
 }

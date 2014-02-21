@@ -1188,7 +1188,8 @@ public class TestAssignmentManager {
     }
 
     @Override
-    boolean assign(ServerName destination, List<HRegionInfo> regions) {
+    boolean assign(ServerName destination, List<HRegionInfo> regions)
+        throws InterruptedException {
       if (enabling) {
         for (HRegionInfo region : regions) {
           assignmentCount++;

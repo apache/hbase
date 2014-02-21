@@ -1127,43 +1127,55 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     int lastCount = -1;
     long previousLogTime = 0;
     Set<String> closedRegions = new HashSet<String>();
-    while (!isOnlineRegionsEmpty()) {
-      int count = getNumberOfOnlineRegions();
-      // Only print a message if the count of regions has changed.
-      if (count != lastCount) {
-        // Log every second at most
-        if (System.currentTimeMillis() > (previousLogTime + 1000)) {
-          previousLogTime = System.currentTimeMillis();
-          lastCount = count;
-          LOG.info("Waiting on " + count + " regions to close");
-          // Only print out regions still closing if a small number else will
-          // swamp the log.
-          if (count < 10 && LOG.isDebugEnabled()) {
-            LOG.debug(this.onlineRegions);
+    boolean interrupted = false;
+    try {
+      while (!isOnlineRegionsEmpty()) {
+        int count = getNumberOfOnlineRegions();
+        // Only print a message if the count of regions has changed.
+        if (count != lastCount) {
+          // Log every second at most
+          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+            previousLogTime = System.currentTimeMillis();
+            lastCount = count;
+            LOG.info("Waiting on " + count + " regions to close");
+            // Only print out regions still closing if a small number else will
+            // swamp the log.
+            if (count < 10 && LOG.isDebugEnabled()) {
+              LOG.debug(this.onlineRegions);
+            }
           }
         }
-      }
-      // Ensure all user regions have been sent a close. Use this to
-      // protect against the case where an open comes in after we start the
-      // iterator of onlineRegions to close all user regions.
-      for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
-        HRegionInfo hri = e.getValue().getRegionInfo();
-        if (!this.regionsInTransitionInRS.containsKey(hri.getEncodedNameAsBytes())
-            && !closedRegions.contains(hri.getEncodedName())) {
-          closedRegions.add(hri.getEncodedName());
-          // Don't update zk with this close transition; pass false.
-          closeRegionIgnoreErrors(hri, abort);
+        // Ensure all user regions have been sent a close. Use this to
+        // protect against the case where an open comes in after we start the
+        // iterator of onlineRegions to close all user regions.
+        for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
+          HRegionInfo hri = e.getValue().getRegionInfo();
+          if (!this.regionsInTransitionInRS.containsKey(hri.getEncodedNameAsBytes())
+              && !closedRegions.contains(hri.getEncodedName())) {
+            closedRegions.add(hri.getEncodedName());
+            // Don't update zk with this close transition; pass false.
+            closeRegionIgnoreErrors(hri, abort);
+              }
+        }
+        // No regions in RIT, we could stop waiting now.
+        if (this.regionsInTransitionInRS.isEmpty()) {
+          if (!isOnlineRegionsEmpty()) {
+            LOG.info("We were exiting though online regions are not empty," +
+                " because some regions failed closing");
+          }
+          break;
+        }
+        try {
+          Thread.sleep(200);
+        } catch (InterruptedException e) {
+          interrupted = true;
+          LOG.warn("Interrupted while sleeping");
         }
       }
-      // No regions in RIT, we could stop waiting now.
-      if (this.regionsInTransitionInRS.isEmpty()) {
-        if (!isOnlineRegionsEmpty()) {
-          LOG.info("We were exiting though online regions are not empty," +
-              " because some regions failed closing");
-        }
-        break;
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
       }
-      Threads.sleep(200);
     }
   }
 

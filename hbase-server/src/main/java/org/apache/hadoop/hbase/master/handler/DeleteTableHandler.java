@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
+import java.io.InterruptedIOException;
 import java.io.IOException;
 import java.util.List;
 
@@ -39,7 +40,6 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 
 @InterfaceAudience.Private
@@ -78,7 +78,12 @@ public class DeleteTableHandler extends TableEventHandler {
           am.regionOffline(region);
         }
         if (!states.isRegionInTransition(region)) break;
-        Threads.sleep(waitingTimeForEvents);
+        try {
+          Thread.sleep(waitingTimeForEvents);
+        } catch (InterruptedException e) {
+          LOG.warn("Interrupted while sleeping");
+          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        }
         LOG.debug("Waiting on region to clear regions in transition; "
           + am.getRegionStates().getRegionTransitionState(region));
       }

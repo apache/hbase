@@ -1449,7 +1449,8 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param regions Regions to assign.
    * @return true if successful
    */
-  boolean assign(final ServerName destination, final List<HRegionInfo> regions) {
+  boolean assign(final ServerName destination, final List<HRegionInfo> regions)
+    throws InterruptedException {
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
     try {
       int regionCount = regions.size();
@@ -1512,7 +1513,7 @@ public class AssignmentManager extends ZooKeeperListener {
             oldCounter = count;
           }
           if (count >= total) break;
-          Threads.sleep(5);
+          Thread.sleep(5);
         }
 
         if (server.isStopped()) {
@@ -1615,8 +1616,6 @@ public class AssignmentManager extends ZooKeeperListener {
           LOG.info("Unable to communicate with " + destination
             + " in order to assign regions, ", e);
           return false;
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
         }
       } finally {
         for (Lock lock : locks.values()) {

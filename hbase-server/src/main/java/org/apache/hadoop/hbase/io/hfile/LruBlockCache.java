@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -869,8 +868,17 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       victimHandler.shutdown();
     this.scheduleThreadPool.shutdown();
     for (int i = 0; i < 10; i++) {
-      if (!this.scheduleThreadPool.isShutdown()) Threads.sleep(10);
+      if (!this.scheduleThreadPool.isShutdown()) {
+        try {
+          Thread.sleep(10);
+        } catch (InterruptedException e) {
+          LOG.warn("Interrupted while sleeping");
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
     }
+
     if (!this.scheduleThreadPool.isShutdown()) {
       List<Runnable> runnables = this.scheduleThreadPool.shutdownNow();
       LOG.debug("Still running " + runnables);

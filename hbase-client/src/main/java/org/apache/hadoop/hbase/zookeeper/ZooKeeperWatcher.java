@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -372,9 +371,16 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         long finished = System.currentTimeMillis() +
           this.conf.getLong("hbase.zookeeper.watcher.sync.connected.wait", 2000);
         while (System.currentTimeMillis() < finished) {
-          Threads.sleep(1);
+          try {
+            Thread.sleep(1);
+          } catch (InterruptedException e) {
+            LOG.warn("Interrupted while sleeping");
+            throw new RuntimeException("Interrupted while waiting for" +
+                " recoverableZooKeeper is set");
+          }
           if (this.recoverableZooKeeper != null) break;
         }
+
         if (this.recoverableZooKeeper == null) {
           LOG.error("ZK is null on connection event -- see stack trace " +
             "for the stack trace when constructor was called on this zkw",
