@@ -450,26 +450,51 @@ public class HTable implements HTableInterface {
   }
 
   /**
-   * Gets all the regions and their address for this table.
+   * Gets all the regions (assigned and unassigned) and their address for this table.
+   * If the region is not assigned, then the associated  address will be an empty
+   * HServerAddress.
    * <p>
    * This is mainly useful for the MapReduce integration.
    * @return A map of HRegionInfo with it's server address
    * @throws IOException if a remote or network exception occurs
    */
   public NavigableMap<HRegionInfo, HServerAddress> getRegionsInfo()
-      throws IOException {
+    throws IOException {
     final NavigableMap<HRegionInfo, HServerAddress> regionMap =
       new TreeMap<HRegionInfo, HServerAddress>();
 
-    for (HRegionLocation location : getCachedHRegionLocations(true)) {
-      regionMap.put(location.getRegionInfo(), location.getServerAddress());
-    }
+    MetaScannerVisitor visitor = new MetaScannerVisitor() {
+      public boolean processRow(Result rowResult) throws IOException {
+        HRegionInfo info = Writables.getHRegionInfo(
+          rowResult.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.REGIONINFO_QUALIFIER));
 
+        if (!(Bytes.equals(info.getTableDesc().getName(), getTableName()))) {
+          return false;
+        }
+
+        HServerAddress server = new HServerAddress();
+        byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.SERVER_QUALIFIER);
+        if (value != null && value.length > 0) {
+          String address = Bytes.toString(value);
+          server = new HServerAddress(address);
+        }
+
+        if (!(info.isOffline() || info.isSplit())) {
+          regionMap.put(new UnmodifyableHRegionInfo(info), server);
+        }
+        return true;
+      }
+
+    };
+    MetaScanner.metaScan(configuration, visitor, tableName);
     return regionMap;
   }
 
   /**
-   * Get all the cached HRegionLocations.
+   * Get all the cached HRegionLocations. If the region is not assigned,
+   * then it won't be included.
    * @param forceRefresh
    * @return
    */
