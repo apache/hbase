@@ -110,8 +110,6 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
 
   @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
-    metricsRegistry.snapshot(metricsCollector.addRecord(metricsRegistry.info()), all);
-
     MetricsRecordBuilder mrb = metricsCollector.addRecord(metricsName)
         .setContext(metricsContext);
 
