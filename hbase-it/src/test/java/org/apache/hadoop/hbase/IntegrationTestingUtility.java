@@ -98,7 +98,12 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
     if (isDistributedCluster()) {
       getHBaseClusterInterface().restoreInitialStatus();
     } else {
-      getMiniHBaseCluster().shutdown();
+      try {
+        shutdownMiniCluster();
+      } catch (Exception e) {
+        // re-wrap into IOException
+        throw new IOException(e);
+      }
     }
   }
 
