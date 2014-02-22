@@ -4576,6 +4576,19 @@ public class TestFromClientSide {
     assertEquals("Did not access all the regions in the table", numOfRegions,
         scanMetrics.countOfRegions.getCurrentIntervalValue());
 
+    // set caching to 100
+    scan = new Scan();
+    scan.setCaching(100);
+    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
+    scanner = ht.getScanner(scan);
+    for (Result result : scanner.next(numRecords - 1)) {
+    }
+    scanner.close();
+    
+    scanMetrics = getScanMetrics(scan);
+    assertEquals("Did not access all the regions in the table", numOfRegions,
+        scanMetrics.countOfRegions.getCurrentIntervalValue());
+    
     // now, test that the metrics are still collected even if you don't call close, but do
     // run past the end of all the records
     Scan scanWithoutClose = new Scan();
