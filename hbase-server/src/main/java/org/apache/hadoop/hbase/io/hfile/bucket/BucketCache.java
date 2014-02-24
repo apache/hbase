@@ -367,7 +367,10 @@ public class BucketCache implements BlockCache, HeapSize {
         if (bucketEntry.equals(backingMap.get(key))) {
           int len = bucketEntry.getLength();
           ByteBuffer bb = ByteBuffer.allocate(len);
-          ioEngine.read(bb, bucketEntry.offset());
+          int lenRead = ioEngine.read(bb, bucketEntry.offset());
+          if (lenRead != len) {
+            throw new RuntimeException("Only " + lenRead + " bytes read, " + len + " expected");
+          }
           Cacheable cachedBlock = bucketEntry.deserializerReference(
               deserialiserMap).deserialize(bb, true);
           long timeTaken = System.nanoTime() - start;

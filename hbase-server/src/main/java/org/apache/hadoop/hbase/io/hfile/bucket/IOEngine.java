@@ -39,9 +39,10 @@ public interface IOEngine {
    * Transfers data from IOEngine to the given byte buffer
    * @param dstBuffer the given byte buffer into which bytes are to be written
    * @param offset The offset in the IO engine where the first byte to be read
+   * @return number of bytes read
    * @throws IOException
    */
-  void read(ByteBuffer dstBuffer, long offset) throws IOException;
+  int read(ByteBuffer dstBuffer, long offset) throws IOException;
 
   /**
    * Transfers data from the given byte buffer to IOEngine

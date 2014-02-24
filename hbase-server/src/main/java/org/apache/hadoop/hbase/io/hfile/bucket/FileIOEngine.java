@@ -69,11 +69,12 @@ public class FileIOEngine implements IOEngine {
    * Transfers data from file to the given byte buffer
    * @param dstBuffer the given byte buffer into which bytes are to be written
    * @param offset The offset in the file where the first byte to be read
+   * @return number of bytes read
    * @throws IOException
    */
   @Override
-  public void read(ByteBuffer dstBuffer, long offset) throws IOException {
-    fileChannel.read(dstBuffer, offset);
+  public int read(ByteBuffer dstBuffer, long offset) throws IOException {
+    return fileChannel.read(dstBuffer, offset);
   }
 
   /**
