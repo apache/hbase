@@ -1337,10 +1337,13 @@ MasterServices, Server {
       RpcController controller, RegionServerReportRequest request) throws ServiceException {
     try {
       ClusterStatusProtos.ServerLoad sl = request.getLoad();
-      this.serverManager.regionServerReport(ProtobufUtil.toServerName(request.getServer()), new ServerLoad(sl));
+      ServerName serverName = ProtobufUtil.toServerName(request.getServer());
+      ServerLoad oldLoad = serverManager.getLoad(serverName);
+      this.serverManager.regionServerReport(serverName, new ServerLoad(sl));
       if (sl != null && this.metricsMaster != null) {
         // Up our metrics.
-        this.metricsMaster.incrementRequests(sl.getTotalNumberOfRequests());
+        this.metricsMaster.incrementRequests(sl.getTotalNumberOfRequests()
+          - (oldLoad != null ? oldLoad.getTotalNumberOfRequests() : 0));
       }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
