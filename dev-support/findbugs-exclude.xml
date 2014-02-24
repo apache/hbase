@@ -115,6 +115,14 @@
   </Match>
 
   <Match>
+    <Class name="org.apache.hadoop.hbase.ipc.RpcClient$Connection"/>
+    <Or>
+      <Bug pattern="IS2_INCONSISTENT_SYNC"/>
+      <Bug pattern="NN_NAKED_NOTIFY"/>
+    </Or>
+  </Match>
+
+  <Match>
     <Class name="org.apache.hadoop.hbase.regionserver.HRegion"/>
     <Or>
       <Method name="startRegionOperation"/>
