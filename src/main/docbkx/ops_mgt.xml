@@ -914,7 +914,7 @@ false
         The tool executes a Map-Reduce job, similar to distcp, to copy files between the two clusters,
         and since it works at file-system level the hbase cluster does not have to be online.
         <para>To copy a snapshot called MySnapshot to an HBase cluster srv2 (hdfs:///srv2:8082/hbase) using 16 mappers:
-<programlisting>$ bin/hbase class org.apache.hadoop.hbase.snapshot.tool.ExportSnapshot -snapshot MySnapshot -copy-to hdfs:///srv2:8082/hbase -mappers 16</programlisting>
+<programlisting>$ bin/hbase class org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16</programlisting>
         </para>
       </para>
     </section>
