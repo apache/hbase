@@ -80,9 +80,10 @@ public final class ByteBufferArray {
    * @param start start position in the ByteBufferArray
    * @param len The maximum number of bytes to be written to the given array
    * @param dstArray The array into which bytes are to be written
+   * @return number of bytes read
    */
-  public void getMultiple(long start, int len, byte[] dstArray) {
-    getMultiple(start, len, dstArray, 0);
+  public int getMultiple(long start, int len, byte[] dstArray) {
+    return getMultiple(start, len, dstArray, 0);
   }
 
   /**
@@ -92,13 +93,15 @@ public final class ByteBufferArray {
    * @param dstArray The array into which bytes are to be written
    * @param dstOffset The offset within the given array of the first byte to be
    *          written
+   * @return number of bytes read
    */
-  public void getMultiple(long start, int len, byte[] dstArray, int dstOffset) {
+  public int getMultiple(long start, int len, byte[] dstArray, int dstOffset) {
     multiple(start, len, dstArray, dstOffset, new Visitor() {
       public void visit(ByteBuffer bb, byte[] array, int arrayIdx, int len) {
         bb.get(array, arrayIdx, len);
       }
     });
+    return len;
   }
 
   /**

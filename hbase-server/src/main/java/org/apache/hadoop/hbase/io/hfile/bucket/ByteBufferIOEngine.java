@@ -59,12 +59,13 @@ public class ByteBufferIOEngine implements IOEngine {
    * @param dstBuffer the given byte buffer into which bytes are to be written
    * @param offset The offset in the ByteBufferArray of the first byte to be
    *          read
+   * @return number of bytes read
    * @throws IOException
    */
   @Override
-  public void read(ByteBuffer dstBuffer, long offset) throws IOException {
+  public int read(ByteBuffer dstBuffer, long offset) throws IOException {
     assert dstBuffer.hasArray();
-    bufferArray.getMultiple(offset, dstBuffer.remaining(), dstBuffer.array(),
+    return bufferArray.getMultiple(offset, dstBuffer.remaining(), dstBuffer.array(),
         dstBuffer.arrayOffset());
   }
 
