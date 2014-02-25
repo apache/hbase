@@ -118,6 +118,9 @@ public class ZKDataMigrator extends Configured implements Tool {
         } else if (child.equals(SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION)) {
           // not needed as it is transient.
           ZKUtil.deleteNodeRecursively(zkw, childPath);
+        } else if (child.equals(conf.get("zookeeper.znode.acl.parent", "acl"))) {
+          // it will be re-created when hbase:acl is re-opened
+          ZKUtil.deleteNodeRecursively(zkw, childPath);
         }
       }
     } catch (Exception e) {
