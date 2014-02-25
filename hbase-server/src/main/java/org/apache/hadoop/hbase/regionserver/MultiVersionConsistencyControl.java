@@ -35,13 +35,13 @@ import org.apache.hadoop.hbase.util.ClassSize;
 @InterfaceAudience.Private
 public class MultiVersionConsistencyControl {
   private static final long NO_WRITE_NUMBER = 0;
-  private volatile long memstoreRead = 0; 
+  private volatile long memstoreRead = 0;
   private final Object readWaiters = new Object();
 
   // This is the pending queue of writes.
   private final LinkedList<WriteEntry> writeQueue =
       new LinkedList<WriteEntry>();
-  
+
   /**
    * Default constructor. Initializes the memstoreRead/Write points to 0.
    */
@@ -60,14 +60,14 @@ public class MultiVersionConsistencyControl {
   }
 
   /**
-   * 
+   *
    * @param initVal The value we used initially and expected it'll be reset later
    * @return WriteEntry instance.
    */
   WriteEntry beginMemstoreInsert() {
     return beginMemstoreInsertWithSeqNum(NO_WRITE_NUMBER);
   }
-  
+
   /**
    * Get a mvcc write number before an actual one(its log sequence Id) being assigned
    * @param sequenceId
@@ -83,9 +83,9 @@ public class MultiVersionConsistencyControl {
     // changes touch same row key
     // If for any reason, the bumped value isn't reset due to failure situations, we'll reset
     // curSeqNum to NO_WRITE_NUMBER in order NOT to advance memstore read point at all
-    return sequenceId.incrementAndGet() + 1000000000;  
+    return sequenceId.incrementAndGet() + 1000000000;
   }
-  
+
   /**
    * This function starts a MVCC transaction with current region's log change sequence number. Since
    * we set change sequence number when flushing current change to WAL(late binding), the flush
@@ -126,7 +126,7 @@ public class MultiVersionConsistencyControl {
     }
     waitForPreviousTransactionsComplete(e);
   }
-  
+
   /**
    * Complete a {@link WriteEntry} that was created by {@link #beginMemstoreInsert()}. At the
    * end of this call, the global read point is at least as large as the write point of the passed
@@ -184,13 +184,25 @@ public class MultiVersionConsistencyControl {
   }
 
   /**
+   * Advances the current read point to be given seqNum if it is smaller than
+   * that.
+   */
+  void advanceMemstoreReadPointIfNeeded(long seqNum) {
+    synchronized (writeQueue) {
+      if (this.memstoreRead < seqNum) {
+        memstoreRead = seqNum;
+      }
+    }
+  }
+
+  /**
    * Wait for all previous MVCC transactions complete
    */
   public void waitForPreviousTransactionsComplete() {
     WriteEntry w = beginMemstoreInsert();
     waitForPreviousTransactionsComplete(w);
   }
-  
+
   public void waitForPreviousTransactionsComplete(WriteEntry waitedEntry) {
     boolean interrupted = false;
     WriteEntry w = waitedEntry;

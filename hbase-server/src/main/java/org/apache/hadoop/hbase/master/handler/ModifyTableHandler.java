@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Private
@@ -63,10 +64,11 @@ public class ModifyTableHandler extends TableEventHandler {
     super.prepareWithTableLock();
     // Check operation is possible on the table in its current state
     // Also checks whether the table exists
-    if (masterServices.getAssignmentManager().getZKTable().isEnabledTable(this.htd.getTableName())
+    if (masterServices.getAssignmentManager().getTableStateManager()
+        .isTableState(this.htd.getTableName(), ZooKeeperProtos.Table.State.ENABLED)
         && this.htd.getRegionReplication() != getTableDescriptor().getRegionReplication()) {
       throw new IOException("REGION_REPLICATION change is not supported for enabled tables");
-    } 
+    }
   }
 
   @Override

@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * Describe a StoreFile (hfile, reference, link)
  */
 @InterfaceAudience.Private
-public class StoreFileInfo {
+public class StoreFileInfo implements Comparable<StoreFileInfo> {
   public static final Log LOG = LogFactory.getLog(StoreFileInfo.class);
 
   /**
@@ -402,5 +402,28 @@ public class StoreFileInfo {
       length = status.getLen()/2;
     }
     return FSUtils.computeHDFSBlocksDistribution(fs, status, start, length);
+  }
+
+  @Override
+  public boolean equals(Object that) {
+    if (that == null) {
+      return false;
+    }
+
+    if (that instanceof StoreFileInfo) {
+      return this.compareTo((StoreFileInfo)that) == 0;
+    }
+
+    return false;
+  };
+
+  @Override
+  public int compareTo(StoreFileInfo o) {
+    return this.fileStatus.compareTo(o.fileStatus);
+  }
+
+  @Override
+  public int hashCode() {
+    return this.fileStatus.hashCode();
   }
 }

@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.io.FileNotFoundException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.security.Key;
@@ -27,6 +26,8 @@ import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
@@ -93,6 +94,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  * A Store holds a column family in a Region.  Its a memstore and a set of zero
@@ -487,10 +489,13 @@ public class HStore implements Store {
    */
   private List<StoreFile> loadStoreFiles() throws IOException {
     Collection<StoreFileInfo> files = fs.getStoreFiles(getColumnFamilyName());
+    return openStoreFiles(files);
+  }
+
+  private List<StoreFile> openStoreFiles(Collection<StoreFileInfo> files) throws IOException {
     if (files == null || files.size() == 0) {
       return new ArrayList<StoreFile>();
     }
-
     // initialize the thread pool for opening store files in parallel..
     ThreadPoolExecutor storeFileOpenerThreadPool =
       this.region.getStoreFileOpenAndCloseThreadPool("StoreFileOpenerThread-" +
@@ -548,6 +553,60 @@ public class HStore implements Store {
     }
 
     return results;
+  }
+
+  /**
+   * Checks the underlying store files, and opens the files that  have not
+   * been opened, and removes the store file readers for store files no longer
+   * available. Mainly used by secondary region replicas to keep up to date with
+   * the primary region files.
+   * @throws IOException
+   */
+  @Override
+  public void refreshStoreFiles() throws IOException {
+    StoreFileManager sfm = storeEngine.getStoreFileManager();
+    Collection<StoreFile> currentFiles = sfm.getStorefiles();
+    if (currentFiles == null) currentFiles = new ArrayList<StoreFile>(0);
+
+    Collection<StoreFileInfo> newFiles = fs.getStoreFiles(getColumnFamilyName());
+    if (newFiles == null) newFiles = new ArrayList<StoreFileInfo>(0);
+
+    HashMap<StoreFileInfo, StoreFile> currentFilesSet = new HashMap<StoreFileInfo, StoreFile>(currentFiles.size());
+    for (StoreFile sf : currentFiles) {
+      currentFilesSet.put(sf.getFileInfo(), sf);
+    }
+    HashSet<StoreFileInfo> newFilesSet = new HashSet<StoreFileInfo>(newFiles);
+
+    Set<StoreFileInfo> toBeAddedFiles = Sets.difference(newFilesSet, currentFilesSet.keySet());
+    Set<StoreFileInfo> toBeRemovedFiles = Sets.difference(currentFilesSet.keySet(), newFilesSet);
+
+    if (toBeAddedFiles.isEmpty() && toBeRemovedFiles.isEmpty()) {
+      return;
+    }
+
+    LOG.info("Refreshing store files for region " + this.getRegionInfo().getRegionNameAsString()
+      + " files to add: " + toBeAddedFiles + " files to remove: " + toBeRemovedFiles);
+
+    Set<StoreFile> toBeRemovedStoreFiles = new HashSet<StoreFile>(toBeRemovedFiles.size());
+    for (StoreFileInfo sfi : toBeRemovedFiles) {
+      toBeRemovedStoreFiles.add(currentFilesSet.get(sfi));
+    }
+
+    // try to open the files
+    List<StoreFile> openedFiles = openStoreFiles(toBeAddedFiles);
+
+    // propogate the file changes to the underlying store file manager
+    replaceStoreFiles(toBeRemovedStoreFiles, openedFiles); //won't throw an exception
+
+    // Advance the memstore read point to be at least the new store files seqIds so that
+    // readers might pick it up. This assumes that the store is not getting any writes (otherwise
+    // in-flight transactions might be made visible)
+    if (!toBeAddedFiles.isEmpty()) {
+      region.getMVCC().advanceMemstoreReadPointIfNeeded(this.getMaxSequenceId());
+    }
+
+    // notify scanners, close file readers, and recompute store size
+    completeCompaction(toBeRemovedStoreFiles, false);
   }
 
   private StoreFile createStoreFileAndReader(final Path p) throws IOException {
@@ -1099,7 +1158,7 @@ public class HStore implements Store {
       writeCompactionWalRecord(filesToCompact, sfs);
       replaceStoreFiles(filesToCompact, sfs);
       // At this point the store will use new files for all new scanners.
-      completeCompaction(filesToCompact); // Archive old files & update store size.
+      completeCompaction(filesToCompact, true); // Archive old files & update store size.
     } finally {
       finishCompactionRequest(cr);
     }
@@ -1153,7 +1212,8 @@ public class HStore implements Store {
         this.region.getRegionInfo(), compactionDescriptor, this.region.getSequenceId());
   }
 
-  private void replaceStoreFiles(final Collection<StoreFile> compactedFiles,
+  @VisibleForTesting
+  void replaceStoreFiles(final Collection<StoreFile> compactedFiles,
       final Collection<StoreFile> result) throws IOException {
     this.lock.writeLock().lock();
     try {
@@ -1300,7 +1360,7 @@ public class HStore implements Store {
           this.getCoprocessorHost().postCompact(this, sf, null);
         }
         replaceStoreFiles(filesToCompact, Lists.newArrayList(sf));
-        completeCompaction(filesToCompact);
+        completeCompaction(filesToCompact, true);
       }
     } finally {
       synchronized (filesCompacting) {
@@ -1500,7 +1560,7 @@ public class HStore implements Store {
     }
   }
 
-  /*
+  /**
    * <p>It works by processing a compaction that's been written to disk.
    *
    * <p>It is usually invoked at the end of a compaction, but might also be
@@ -1517,6 +1577,28 @@ public class HStore implements Store {
    */
   @VisibleForTesting
   protected void completeCompaction(final Collection<StoreFile> compactedFiles)
+    throws IOException {
+    completeCompaction(compactedFiles, true);
+  }
+
+
+  /**
+   * <p>It works by processing a compaction that's been written to disk.
+   *
+   * <p>It is usually invoked at the end of a compaction, but might also be
+   * invoked at HStore startup, if the prior execution died midway through.
+   *
+   * <p>Moving the compacted TreeMap into place means:
+   * <pre>
+   * 1) Unload all replaced StoreFile, close and collect list to delete.
+   * 2) Compute new store size
+   * </pre>
+   *
+   * @param compactedFiles list of files that were compacted
+   * @param newFile StoreFile that is the result of the compaction
+   */
+  @VisibleForTesting
+  protected void completeCompaction(final Collection<StoreFile> compactedFiles, boolean removeFiles)
       throws IOException {
     try {
       // Do not delete old store files until we have sent out notification of
@@ -1531,7 +1613,9 @@ public class HStore implements Store {
       for (StoreFile compactedFile : compactedFiles) {
         compactedFile.closeReader(true);
       }
-      this.fs.removeStoreFiles(this.getColumnFamilyName(), compactedFiles);
+      if (removeFiles) {
+        this.fs.removeStoreFiles(this.getColumnFamilyName(), compactedFiles);
+      }
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.error("Failed removing compacted files in " + this +

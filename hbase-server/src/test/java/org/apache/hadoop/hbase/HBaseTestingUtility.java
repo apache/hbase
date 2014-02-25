@@ -1815,6 +1815,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
   }
 
+  public void deleteNumericRows(final HTable t, final byte[] f, int startRow, int endRow) throws IOException {
+    for (int i = startRow; i < endRow; i++) {
+      byte[] data = Bytes.toBytes(String.valueOf(i));
+      Delete delete = new Delete(data);
+      delete.deleteFamily(f);
+      t.delete(delete);
+    }
+  }
+
   /**
    * Return the number of rows in the given table.
    */

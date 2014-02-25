@@ -20,6 +20,10 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.lang.ref.SoftReference;
@@ -84,6 +88,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
+import com.google.common.collect.Lists;
+
 /**
  * Test class for the Store
  */
@@ -137,7 +143,7 @@ public class TestStore {
   }
 
   private void init(String methodName) throws IOException {
-    init(methodName, HBaseConfiguration.create());
+    init(methodName, TEST_UTIL.getConfiguration());
   }
 
   private void init(String methodName, Configuration conf)
@@ -194,6 +200,7 @@ public class TestStore {
     // Inject our faulty LocalFileSystem
     conf.setClass("fs.file.impl", FaultyFileSystem.class, FileSystem.class);
     user.runAs(new PrivilegedExceptionAction<Object>() {
+      @Override
       public Object run() throws Exception {
         // Make sure it worked (above is sensitive to caching details in hadoop core)
         FileSystem fs = FileSystem.get(conf);
@@ -330,7 +337,7 @@ public class TestStore {
     FileSystem fs = FileSystem.get(conf);
     // Initialize region
     init(name.getMethodName(), conf);
-    
+
     int storeFileNum = 4;
     for (int i = 1; i <= storeFileNum; i++) {
       LOG.info("Adding some data for the store file #"+i);
@@ -350,12 +357,12 @@ public class TestStore {
     lowestTimeStampFromFS = getLowestTimeStampFromFS(fs, store.getStorefiles());
     Assert.assertEquals(lowestTimeStampFromManager, lowestTimeStampFromFS);
   }
-  
-  private static long getLowestTimeStampFromFS(FileSystem fs, 
+
+  private static long getLowestTimeStampFromFS(FileSystem fs,
       final Collection<StoreFile> candidates) throws IOException {
     long minTs = Long.MAX_VALUE;
     if (candidates.isEmpty()) {
-      return minTs; 
+      return minTs;
     }
     Path[] p = new Path[candidates.size()];
     int i = 0;
@@ -363,7 +370,7 @@ public class TestStore {
       p[i] = sf.getPath();
       ++i;
     }
-    
+
     FileStatus[] stats = fs.listStatus(p);
     if (stats == null || stats.length == 0) {
       return minTs;
@@ -724,6 +731,7 @@ public class TestStore {
     conf.setClass("fs.file.impl", FaultyFileSystem.class,
         FileSystem.class);
     user.runAs(new PrivilegedExceptionAction<Object>() {
+      @Override
       public Object run() throws Exception {
         // Make sure it worked (above is sensitive to caching details in hadoop core)
         FileSystem fs = FileSystem.get(conf);
@@ -790,6 +798,7 @@ public class TestStore {
           overwrite, bufferSize, replication, blockSize, progress), faultPos, fault);
     }
 
+    @Override
     public FSDataOutputStream createNonRecursive(Path f, boolean overwrite,
         int bufferSize, short replication, long blockSize, Progressable progress)
     throws IOException {
@@ -967,5 +976,103 @@ public class TestStore {
     init(this.name.getMethodName(), conf);
     Assert.assertEquals(DummyStoreEngine.lastCreatedCompactor,
       this.store.storeEngine.getCompactor());
+  }
+
+  private void addStoreFile() throws IOException {
+    StoreFile f = this.store.getStorefiles().iterator().next();
+    Path storedir = f.getPath().getParent();
+    long seqid = this.store.getMaxSequenceId();
+    Configuration c = TEST_UTIL.getConfiguration();
+    FileSystem fs = FileSystem.get(c);
+    HFileContext fileContext = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).build();
+    StoreFile.Writer w = new StoreFile.WriterBuilder(c, new CacheConfig(c),
+        fs)
+            .withOutputDir(storedir)
+            .withFileContext(fileContext)
+            .build();
+    w.appendMetadata(seqid + 1, false);
+    w.close();
+    LOG.info("Added store file:" + w.getPath());
+  }
+
+  private void archiveStoreFile(int index) throws IOException {
+    Collection<StoreFile> files = this.store.getStorefiles();
+    StoreFile sf = null;
+    Iterator<StoreFile> it = files.iterator();
+    for (int i = 0; i <= index; i++) {
+      sf = it.next();
+    }
+    store.getRegionFileSystem().removeStoreFiles(store.getColumnFamilyName(), Lists.newArrayList(sf));
+  }
+
+  public void testRefreshStoreFiles() throws Exception {
+    init(name.getMethodName());
+
+    assertEquals(0, this.store.getStorefilesCount());
+
+    // add some data, flush
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+    flush(1);
+    assertEquals(1, this.store.getStorefilesCount());
+
+    // add one more file
+    addStoreFile();
+
+    assertEquals(1, this.store.getStorefilesCount());
+    store.refreshStoreFiles();
+    assertEquals(2, this.store.getStorefilesCount());
+
+    // add three more files
+    addStoreFile();
+    addStoreFile();
+    addStoreFile();
+
+    assertEquals(2, this.store.getStorefilesCount());
+    store.refreshStoreFiles();
+    assertEquals(5, this.store.getStorefilesCount());
+
+    archiveStoreFile(0);
+
+    assertEquals(5, this.store.getStorefilesCount());
+    store.refreshStoreFiles();
+    assertEquals(4, this.store.getStorefilesCount());
+
+    archiveStoreFile(0);
+    archiveStoreFile(1);
+    archiveStoreFile(2);
+
+    assertEquals(4, this.store.getStorefilesCount());
+    store.refreshStoreFiles();
+    assertEquals(1, this.store.getStorefilesCount());
+
+    archiveStoreFile(0);
+    store.refreshStoreFiles();
+    assertEquals(0, this.store.getStorefilesCount());
+  }
+
+  @SuppressWarnings("unchecked")
+  public void testRefreshStoreFilesNotChanged() throws IOException {
+    init(name.getMethodName());
+
+    assertEquals(0, this.store.getStorefilesCount());
+
+    // add some data, flush
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+    flush(1);
+    // add one more file
+    addStoreFile();
+
+    HStore spiedStore = spy(store);
+
+    // call first time after files changed
+    spiedStore.refreshStoreFiles();
+    assertEquals(2, this.store.getStorefilesCount());
+    verify(spiedStore, times(1)).replaceStoreFiles(any(Collection.class), any(Collection.class));
+
+    // call second time
+    spiedStore.refreshStoreFiles();
+
+    //ensure that replaceStoreFiles is not called if files are not refreshed
+    verify(spiedStore, times(0)).replaceStoreFiles(null, null);
   }
 }

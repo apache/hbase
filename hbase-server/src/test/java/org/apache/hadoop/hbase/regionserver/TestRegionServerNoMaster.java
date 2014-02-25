@@ -44,6 +44,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -85,6 +87,11 @@ public class TestRegionServerNoMaster {
     hri = table.getRegionLocation(row, false).getRegionInfo();
     regionName = hri.getRegionName();
 
+    stopMasterAndAssignMeta(HTU);
+  }
+
+  public static void stopMasterAndAssignMeta(HBaseTestingUtility HTU)
+      throws NodeExistsException, KeeperException, IOException, InterruptedException {
     // No master
     HTU.getHBaseCluster().getMaster().stopMaster();
 

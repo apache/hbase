@@ -136,6 +136,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
@@ -220,7 +221,7 @@ public class HRegion implements HeapSize { // , Writable{
    * Its default value is -1L. This default is used as a marker to indicate
    * that the region hasn't opened yet. Once it is opened, it is set to the derived
    * {@link #openSeqNum}, the largest sequence id of all hfiles opened under this Region.
-   * 
+   *
    * <p>Control of this sequence is handed off to the WAL/HLog implementation.  It is responsible
    * for tagging edits with the correct sequence id since it is responsible for getting the
    * edits into the WAL files. It controls updating the sequence id value.  DO NOT UPDATE IT
@@ -375,6 +376,9 @@ public class HRegion implements HeapSize { // , Writable{
     volatile boolean writesEnabled = true;
     // Set if region is read-only
     volatile boolean readOnly = false;
+    // whether the reads are enabled. This is different than readOnly, because readOnly is
+    // static in the lifetime of the region, while readsEnabled is dynamic
+    volatile boolean readsEnabled = true;
 
     /**
      * Set flags that make this region read-only.
@@ -392,6 +396,10 @@ public class HRegion implements HeapSize { // , Writable{
 
     boolean isFlushRequested() {
       return this.flushRequested;
+    }
+
+    void setReadsEnabled(boolean readsEnabled) {
+      this.readsEnabled = readsEnabled;
     }
 
     static final long HEAP_SIZE = ClassSize.align(
@@ -727,7 +735,7 @@ public class HRegion implements HeapSize { // , Writable{
     fs.cleanupAnySplitDetritus();
     fs.cleanupMergesDir();
 
-    this.writestate.setReadOnly(this.htableDescriptor.isReadOnly());
+    this.writestate.setReadOnly(ServerRegionReplicaUtil.isReadOnly(this));
     this.writestate.flushRequested = false;
     this.writestate.compacting = 0;
 
@@ -2156,6 +2164,7 @@ public class HRegion implements HeapSize { // , Writable{
       this.nonce = nonce;
     }
 
+    @Override
     public Mutation getMutation(int index) {
       return this.operations[index];
     }
@@ -2485,7 +2494,7 @@ public class HRegion implements HeapSize { // , Writable{
       // Acquire the latest mvcc number
       // ----------------------------------
       w = mvcc.beginMemstoreInsertWithSeqNum(mvccNum);
-      
+
       // calling the pre CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
         MiniBatchOperationInProgress<Mutation> miniBatchOp =
@@ -2547,7 +2556,7 @@ public class HRegion implements HeapSize { // , Writable{
             }
             // txid should always increase, so having the one from the last call is ok.
             walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
-              this.htableDescriptor.getTableName(), now, m.getClusterIds(), 
+              this.htableDescriptor.getTableName(), now, m.getClusterIds(),
               currentNonceGroup, currentNonce);
             txid = this.log.appendNoSync(this.htableDescriptor,  this.getRegionInfo(),  walKey,
               walEdit, getSequenceId(), true, null);
@@ -2574,7 +2583,7 @@ public class HRegion implements HeapSize { // , Writable{
       Mutation mutation = batchOp.getMutation(firstIndex);
       if (walEdit.size() > 0) {
         walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
-            this.htableDescriptor.getTableName(), HLog.NO_SEQUENCE_ID, now, 
+            this.htableDescriptor.getTableName(), HLog.NO_SEQUENCE_ID, now,
             mutation.getClusterIds(), currentNonceGroup, currentNonce);
         txid = this.log.appendNoSync(this.htableDescriptor, this.getRegionInfo(), walKey, walEdit,
           getSequenceId(), true, memstoreCells);
@@ -2599,7 +2608,7 @@ public class HRegion implements HeapSize { // , Writable{
       if (txid != 0) {
         syncOrDefer(txid, durability);
       }
-      
+
       doRollBackMemstore = false;
       // calling the post CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
@@ -2741,7 +2750,7 @@ public class HRegion implements HeapSize { // , Writable{
         if (this.getCoprocessorHost() != null) {
           Boolean processed = null;
           if (w instanceof Put) {
-            processed = this.getCoprocessorHost().preCheckAndPutAfterRowLock(row, family, 
+            processed = this.getCoprocessorHost().preCheckAndPutAfterRowLock(row, family,
                 qualifier, compareOp, comparator, (Put) w);
           } else if (w instanceof Delete) {
             processed = this.getCoprocessorHost().preCheckAndDeleteAfterRowLock(row, family,
@@ -2886,6 +2895,16 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
+  protected void checkReadsEnabled() throws IOException {
+    if (!this.writestate.readsEnabled) {
+      throw new IOException ("The region's reads are disabled. Cannot serve the request");
+    }
+  }
+
+  public void setReadsEnabled(boolean readsEnabled) {
+    this.writestate.setReadsEnabled(readsEnabled);
+  }
+
   /**
    * Add updates first to the hlog and then add values to memstore.
    * Warning: Assumption is caller has lock on passed in row.
@@ -2944,7 +2963,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private void rollbackMemstore(List<KeyValue> memstoreCells) {
     int kvsRolledback = 0;
-    
+
     for (KeyValue kv : memstoreCells) {
       byte[] family = kv.getFamily();
       Store store = getStore(family);
@@ -4912,7 +4931,7 @@ public class HRegion implements HeapSize { // , Writable{
           // 7. Append no sync
           if (!walEdit.isEmpty()) {
             walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
-              this.htableDescriptor.getTableName(), HLog.NO_SEQUENCE_ID, now, 
+              this.htableDescriptor.getTableName(), HLog.NO_SEQUENCE_ID, now,
               processor.getClusterIds(), nonceGroup, nonce);
             txid = this.log.appendNoSync(this.htableDescriptor, this.getRegionInfo(),
               walKey, walEdit, getSequenceId(), true, memstoreCells);
@@ -5183,7 +5202,7 @@ public class HRegion implements HeapSize { // , Writable{
             }
             allKVs.addAll(entry.getValue());
           }
-          
+
           // Actually write to WAL now
           if (writeToWAL) {
             // Using default cluster id, as this can only happen in the originating
@@ -5200,7 +5219,7 @@ public class HRegion implements HeapSize { // , Writable{
             // Append a faked WALEdit in order for SKIP_WAL updates to get mvcc assigned
             walKey = this.appendNoSyncNoAppend(this.log, memstoreCells);
           }
-          
+
           size = this.addAndGetGlobalMemstoreSize(size);
           flush = isFlushSize(size);
         } finally {
@@ -5406,7 +5425,7 @@ public class HRegion implements HeapSize { // , Writable{
             size = this.addAndGetGlobalMemstoreSize(size);
             flush = isFlushSize(size);
           }
-          
+
           // Actually write to WAL now
           if (walEdits != null && !walEdits.isEmpty()) {
             if (writeToWAL) {
@@ -5772,10 +5791,11 @@ public class HRegion implements HeapSize { // , Writable{
    */
   protected void startRegionOperation(Operation op) throws IOException {
     switch (op) {
-    case INCREMENT:
-    case APPEND:
-    case GET:
+    case GET:  // read operations
     case SCAN:
+      checkReadsEnabled();
+    case INCREMENT: // write operations
+    case APPEND:
     case SPLIT_REGION:
     case MERGE_REGION:
     case PUT:
@@ -6064,7 +6084,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * Do not change this sequence id. See {@link #sequenceId} comment.
-   * @return sequenceId 
+   * @return sequenceId
    */
   @VisibleForTesting
   public AtomicLong getSequenceId() {
@@ -6175,7 +6195,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
   }
-  
+
   /**
    * Append a faked WALEdit in order to get a long sequence number and log syncer will just ignore
    * the WALEdit append later.

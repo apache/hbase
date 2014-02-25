@@ -363,6 +363,9 @@ public class HRegionServer extends HasThread implements
    */
   private MovedRegionsCleaner movedRegionsCleaner;
 
+  // chore for refreshing store files for secondary regions
+  private StorefileRefresherChore storefileRefresher;
+
   private RegionServerCoprocessorHost rsHost;
 
   private RegionServerProcedureManagerHost rspmHost;
@@ -693,6 +696,12 @@ public class HRegionServer extends HasThread implements
       rpcServices.isa.getAddress(), 0));
     this.pauseMonitor = new JvmPauseMonitor(conf);
     pauseMonitor.start();
+
+    int storefileRefreshPeriod = conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD
+      , StorefileRefresherChore.DEFAULT_REGIONSERVER_STOREFILE_REFRESH_PERIOD);
+    if (storefileRefreshPeriod > 0) {
+      this.storefileRefresher = new StorefileRefresherChore(storefileRefreshPeriod, this, this);
+    }
   }
 
   /**
@@ -831,6 +840,9 @@ public class HRegionServer extends HasThread implements
     }
     if (this.nonceManagerChore != null) {
       this.nonceManagerChore.interrupt();
+    }
+    if (this.storefileRefresher != null) {
+      this.storefileRefresher.interrupt();
     }
 
     // Stop the snapshot and other procedure handlers, forcefully killing all running tasks
@@ -1506,6 +1518,10 @@ public class HRegionServer extends HasThread implements
       Threads.setDaemonThreadRunning(this.nonceManagerChore.getThread(), getName() + ".nonceCleaner",
             uncaughtExceptionHandler);
     }
+    if (this.storefileRefresher != null) {
+      Threads.setDaemonThreadRunning(this.storefileRefresher.getThread(), getName() + ".storefileRefresher",
+            uncaughtExceptionHandler);
+    }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -1852,6 +1868,9 @@ public class HRegionServer extends HasThread implements
       if (this.replicationSinkHandler != null) {
         this.replicationSinkHandler.stopReplicationService();
       }
+    }
+    if (this.storefileRefresher != null) {
+      Threads.shutdown(this.storefileRefresher.getThread());
     }
   }
 

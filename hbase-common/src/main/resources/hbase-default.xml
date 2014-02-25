@@ -1221,6 +1221,19 @@ possible configurations would overwhelm and obscure the important.
     <description>Fully qualified name of class implementing coordinated state manager.</description>
   </property>
   <property>
+    <name>hbase.regionserver.storefile.refresh.period</name>
+    <value>0</value>
+    <description>
+      The period (in milliseconds) for refreshing the store files for the secondary regions. 0
+      means this feature is disabled. Secondary regions sees new files (from flushes and
+      compactions) from primary once the secondary region refreshes the list of files in the
+      region (there is no notification mechanism). But too frequent refreshes might cause
+      extra Namenode pressure. If the files cannot be refreshed for longer than HFile TTL
+      (hbase.master.hfilecleaner.ttl) the requests are rejected. Configuring HFile TTL to a larger
+      value is also recommended with this setting.
+    </description>
+  </property>
+  <property>
     <name>hbase.http.filter.initializers</name>
     <value>org.apache.hadoop.hbase.http.lib.StaticUserWebFilter</value>
     <description>
