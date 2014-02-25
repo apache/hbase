@@ -20,7 +20,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtility.assertKVListsEqual;
-import static org.apache.hadoop.hbase.regionserver.TestMultiColumnScanner.*;
+import static org.apache.hadoop.hbase.regionserver.TestMultiColumnScanner.FAMILY;
+import static org.apache.hadoop.hbase.regionserver.TestMultiColumnScanner.FAMILY_BYTES;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -44,9 +45,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -198,13 +197,7 @@ public class TestSeekOptimizations {
     }
     scan.setMaxVersions(maxVersions);
     scan.setStartRow(rowBytes(startRow));
-
-    // Adjust for the fact that for multi-row queries the end row is exclusive.
-    {
-      final byte[] scannerStopRow =
-          rowBytes(endRow + (startRow != endRow ? 1 : 0));
-      scan.setStopRow(scannerStopRow);
-    }
+    scan.setStopRow(rowBytes(endRow < 0 ? endRow : (endRow + 1)));
 
     final long initialSeekCount = StoreFileScanner.getSeekCount();
     final InternalScanner scanner = region.getScanner(scan);
