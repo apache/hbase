@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
@@ -713,16 +714,26 @@ public class HTable implements HTableInterface {
    */
    @Override
    public Result getRowOrBefore(final byte[] row, final byte[] family)
-   throws IOException {
+       throws IOException {
      RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
          tableName, row) {
-       public Result call() throws IOException {
-         return ProtobufUtil.getRowOrBefore(getStub(),
-           getLocation().getRegionInfo().getRegionName(), row, family);
+       public Result call(int callTimeout) throws IOException {
+         PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+         controller.setPriority(tableName);
+         controller.setCallTimeout(callTimeout);
+         ClientProtos.GetRequest request = RequestConverter.buildGetRowOrBeforeRequest(
+             getLocation().getRegionInfo().getRegionName(), row, family);
+         try {
+           ClientProtos.GetResponse response = getStub().get(controller, request);
+           if (!response.hasResult()) return null;
+           return ProtobufUtil.toResult(response.getResult());
+         } catch (ServiceException se) {
+           throw ProtobufUtil.getRemoteException(se);
+         }
        }
      };
-    return rpcCallerFactory.<Result> newCaller().callWithRetries(callable, this.operationTimeout);
-  }
+     return rpcCallerFactory.<Result>newCaller().callWithRetries(callable, this.operationTimeout);
+   }
 
    /**
     * {@inheritDoc}
@@ -771,11 +782,22 @@ public class HTable implements HTableInterface {
   public Result get(final Get get) throws IOException {
     RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
         getName(), get.getRow()) {
-      public Result call() throws IOException {
-        return ProtobufUtil.get(getStub(), getLocation().getRegionInfo().getRegionName(), get);
+      public Result call(int callTimeout) throws IOException {
+        ClientProtos.GetRequest request =
+            RequestConverter.buildGetRequest(getLocation().getRegionInfo().getRegionName(), get);
+        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+        controller.setPriority(tableName);
+        controller.setCallTimeout(callTimeout);
+        try {
+          ClientProtos.GetResponse response = getStub().get(controller, request);
+          if (response == null) return null;
+          return ProtobufUtil.toResult(response.getResult());
+        } catch (ServiceException se) {
+          throw ProtobufUtil.getRemoteException(se);
+        }
       }
     };
-    return rpcCallerFactory.<Result> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Result>newCaller().callWithRetries(callable, this.operationTimeout);
   }
 
   /**
@@ -863,11 +885,15 @@ public class HTable implements HTableInterface {
   throws IOException {
     RegionServerCallable<Boolean> callable = new RegionServerCallable<Boolean>(connection,
         tableName, delete.getRow()) {
-      public Boolean call() throws IOException {
+      public Boolean call(int callTimeout) throws IOException {
+        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+        controller.setPriority(tableName);
+        controller.setCallTimeout(callTimeout);
+
         try {
           MutateRequest request = RequestConverter.buildMutateRequest(
             getLocation().getRegionInfo().getRegionName(), delete);
-          MutateResponse response = getStub().mutate(null, request);
+          MutateResponse response = getStub().mutate(controller, request);
           return Boolean.valueOf(response.getProcessed());
         } catch (ServiceException se) {
           throw ProtobufUtil.getRemoteException(se);
@@ -999,16 +1025,17 @@ public class HTable implements HTableInterface {
   public void mutateRow(final RowMutations rm) throws IOException {
     RegionServerCallable<Void> callable =
         new RegionServerCallable<Void>(connection, getName(), rm.getRow()) {
-      public Void call() throws IOException {
+      public Void call(int callTimeout) throws IOException {
+        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+        controller.setPriority(tableName);
+        controller.setCallTimeout(callTimeout);
         try {
           RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
             getLocation().getRegionInfo().getRegionName(), rm);
           regionMutationBuilder.setAtomic(true);
           MultiRequest request =
             MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
-          PayloadCarryingRpcController pcrc = new PayloadCarryingRpcController();
-          pcrc.setPriority(tableName);
-          getStub().multi(null, request);
+          getStub().multi(controller, request);
         } catch (ServiceException se) {
           throw ProtobufUtil.getRemoteException(se);
         }
@@ -1032,15 +1059,16 @@ public class HTable implements HTableInterface {
     final long nonceGroup = ng.getNonceGroup(), nonce = ng.newNonce();
     RegionServerCallable<Result> callable =
       new RegionServerCallable<Result>(this.connection, getName(), append.getRow()) {
-        public Result call() throws IOException {
+        public Result call(int callTimeout) throws IOException {
+          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          controller.setPriority(getTableName());
+          controller.setCallTimeout(callTimeout);
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
               getLocation().getRegionInfo().getRegionName(), append, nonceGroup, nonce);
-            PayloadCarryingRpcController rpcController = new PayloadCarryingRpcController();
-            rpcController.setPriority(getTableName());
-            MutateResponse response = getStub().mutate(rpcController, request);
+            MutateResponse response = getStub().mutate(controller, request);
             if (!response.hasResult()) return null;
-            return ProtobufUtil.toResult(response.getResult(), rpcController.cellScanner());
+            return ProtobufUtil.toResult(response.getResult(), controller.cellScanner());
           } catch (ServiceException se) {
             throw ProtobufUtil.getRemoteException(se);
           }
@@ -1062,14 +1090,15 @@ public class HTable implements HTableInterface {
     final long nonceGroup = ng.getNonceGroup(), nonce = ng.newNonce();
     RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
         getName(), increment.getRow()) {
-      public Result call() throws IOException {
+      public Result call(int callTimeout) throws IOException {
+        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+        controller.setPriority(getTableName());
+        controller.setCallTimeout(callTimeout);
         try {
           MutateRequest request = RequestConverter.buildMutateRequest(
             getLocation().getRegionInfo().getRegionName(), increment, nonceGroup, nonce);
-          PayloadCarryingRpcController rpcController = new PayloadCarryingRpcController();
-          rpcController.setPriority(getTableName());
-          MutateResponse response = getStub().mutate(rpcController, request);
-          return ProtobufUtil.toResult(response.getResult(), rpcController.cellScanner());
+          MutateResponse response = getStub().mutate(controller, request);
+          return ProtobufUtil.toResult(response.getResult(), controller.cellScanner());
         } catch (ServiceException se) {
           throw ProtobufUtil.getRemoteException(se);
         }
@@ -1124,16 +1153,17 @@ public class HTable implements HTableInterface {
     final long nonceGroup = ng.getNonceGroup(), nonce = ng.newNonce();
     RegionServerCallable<Long> callable =
       new RegionServerCallable<Long>(connection, getName(), row) {
-        public Long call() throws IOException {
+        public Long call(int callTimeout) throws IOException {
+          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          controller.setPriority(getTableName());
+          controller.setCallTimeout(callTimeout);
           try {
             MutateRequest request = RequestConverter.buildIncrementRequest(
               getLocation().getRegionInfo().getRegionName(), row, family,
               qualifier, amount, durability, nonceGroup, nonce);
-            PayloadCarryingRpcController rpcController = new PayloadCarryingRpcController();
-            rpcController.setPriority(getTableName());
-            MutateResponse response = getStub().mutate(rpcController, request);
+            MutateResponse response = getStub().mutate(controller, request);
             Result result =
-              ProtobufUtil.toResult(response.getResult(), rpcController.cellScanner());
+              ProtobufUtil.toResult(response.getResult(), controller.cellScanner());
             return Long.valueOf(Bytes.toLong(result.getValue(family, qualifier)));
           } catch (ServiceException se) {
             throw ProtobufUtil.getRemoteException(se);
@@ -1153,12 +1183,15 @@ public class HTable implements HTableInterface {
   throws IOException {
     RegionServerCallable<Boolean> callable =
       new RegionServerCallable<Boolean>(connection, getName(), row) {
-        public Boolean call() throws IOException {
+        public Boolean call(int callTimeout) throws IOException {
+          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          controller.setPriority(tableName);
+          controller.setCallTimeout(callTimeout);
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
               getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
                 new BinaryComparator(value), CompareType.EQUAL, put);
-            MutateResponse response = getStub().mutate(null, request);
+            MutateResponse response = getStub().mutate(controller, request);
             return Boolean.valueOf(response.getProcessed());
           } catch (ServiceException se) {
             throw ProtobufUtil.getRemoteException(se);
@@ -1178,13 +1211,16 @@ public class HTable implements HTableInterface {
   throws IOException {
     RegionServerCallable<Boolean> callable =
       new RegionServerCallable<Boolean>(connection, getName(), row) {
-        public Boolean call() throws IOException {
+        public Boolean call(int callTimeout) throws IOException {
+          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          controller.setPriority(tableName);
+          controller.setCallTimeout(callTimeout);
           try {
             CompareType compareType = CompareType.valueOf(compareOp.name());
             MutateRequest request = RequestConverter.buildMutateRequest(
               getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
                 new BinaryComparator(value), compareType, put);
-            MutateResponse response = getStub().mutate(null, request);
+            MutateResponse response = getStub().mutate(controller, request);
             return Boolean.valueOf(response.getProcessed());
           } catch (ServiceException se) {
             throw ProtobufUtil.getRemoteException(se);
@@ -1204,12 +1240,15 @@ public class HTable implements HTableInterface {
   throws IOException {
     RegionServerCallable<Boolean> callable =
       new RegionServerCallable<Boolean>(connection, getName(), row) {
-        public Boolean call() throws IOException {
+        public Boolean call(int callTimeout) throws IOException {
+          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          controller.setPriority(tableName);
+          controller.setCallTimeout(callTimeout);
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
               getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
                 new BinaryComparator(value), CompareType.EQUAL, delete);
-            MutateResponse response = getStub().mutate(null, request);
+            MutateResponse response = getStub().mutate(controller, request);
             return Boolean.valueOf(response.getProcessed());
           } catch (ServiceException se) {
             throw ProtobufUtil.getRemoteException(se);
@@ -1229,13 +1268,16 @@ public class HTable implements HTableInterface {
   throws IOException {
     RegionServerCallable<Boolean> callable =
       new RegionServerCallable<Boolean>(connection, getName(), row) {
-        public Boolean call() throws IOException {
+        public Boolean call(int callTimeout) throws IOException {
+          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          controller.setPriority(tableName);
+          controller.setCallTimeout(callTimeout);
           try {
             CompareType compareType = CompareType.valueOf(compareOp.name());
             MutateRequest request = RequestConverter.buildMutateRequest(
               getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
                 new BinaryComparator(value), compareType, delete);
-            MutateResponse response = getStub().mutate(null, request);
+            MutateResponse response = getStub().mutate(controller, request);
             return Boolean.valueOf(response.getProcessed());
           } catch (ServiceException se) {
             throw ProtobufUtil.getRemoteException(se);

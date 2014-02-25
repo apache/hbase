@@ -87,7 +87,6 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -109,6 +108,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Does RPC against a cluster.  Manages connections per regionserver in the cluster.
  * <p>See HBaseServer
  */
+@SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 @InterfaceAudience.Private
 public class RpcClient {
   // The LOG key is intentionally not from this package to avoid ipc logging at DEBUG (all under
@@ -131,15 +131,31 @@ public class RpcClient {
   private final IPCUtil ipcUtil;
 
   protected final SocketFactory socketFactory;           // how to create sockets
+  private final int connectTO;
+  private final int readTO;
+  private final int writeTO;
   protected String clusterId;
   protected final SocketAddress localAddr;
 
   private final boolean fallbackAllowed;
   private UserProvider userProvider;
 
-  final private static String SOCKET_TIMEOUT = "ipc.socket.timeout";
-  final static int DEFAULT_SOCKET_TIMEOUT = 20000; // 20 seconds
-  final static int PING_CALL_ID = -1; // Used by the server, for compatibility with old clients.
+  final private static String SOCKET_TIMEOUT_CONNECT = "ipc.socket.timeout.connect";
+  final static int DEFAULT_SOCKET_TIMEOUT_CONNECT = 10000; // 10 seconds
+
+  /**
+   * How long we wait when we wait for an answer. It's not the operation time, it's the time
+   *  we wait when we start to receive an answer, when the remote write starts to send the data.
+   */
+  final private static String SOCKET_TIMEOUT_READ = "ipc.socket.timeout.read";
+  final static int DEFAULT_SOCKET_TIMEOUT_READ = 20000; // 20 seconds
+
+  final private static String SOCKET_TIMEOUT_WRITE = "ipc.socket.timeout.write";
+  final static int DEFAULT_SOCKET_TIMEOUT_WRITE = 60000; // 60 seconds
+
+  // Used by the server, for compatibility with old clients.
+  // The client in 0.99+ does not ping the server.
+  final static int PING_CALL_ID = -1;
 
   public final static String FAILED_SERVER_EXPIRY_KEY = "hbase.ipc.client.failed.servers.expiry";
   public final static int FAILED_SERVER_EXPIRY_DEFAULT = 2000;
@@ -151,18 +167,6 @@ public class RpcClient {
   public static final boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
 
   public static final String ALLOWS_INTERRUPTS = "hbase.ipc.client.allowsInterrupt";
-
-  // thread-specific RPC timeout, which may override that of what was passed in.
-  // This is used to change dynamically the timeout (for read only) when retrying: if
-  //  the time allowed for the operation is less than the usual socket timeout, then
-  //  we lower the timeout. This is subject to race conditions, and should be used with
-  //  extreme caution.
-  private static ThreadLocal<Integer> rpcTimeout = new ThreadLocal<Integer>() {
-    @Override
-    protected Integer initialValue() {
-      return HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
-    }
-  };
 
   /**
    * A class to manage a list of servers that failed recently.
@@ -231,13 +235,6 @@ public class RpcClient {
     }
   }
 
-  /**
-   * @return the socket timeout
-   */
-  static int getSocketTimeout(Configuration conf) {
-    return conf.getInt(SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT);
-  }
-
   /** A call waiting for a value. */
   protected class Call {
     final int id;                                 // call id
@@ -254,15 +251,47 @@ public class RpcClient {
     volatile boolean done;                                 // true when call is done
     long startTime;
     final MethodDescriptor md;
+    final int timeout; // timeout in millisecond for this call; 0 means infinite.
 
     protected Call(final MethodDescriptor md, Message param, final CellScanner cells,
-        final Message responseDefaultType) {
+        final Message responseDefaultType, int timeout) {
       this.param = param;
       this.md = md;
       this.cells = cells;
       this.startTime = EnvironmentEdgeManager.currentTimeMillis();
       this.responseDefaultType = responseDefaultType;
       this.id = callIdCnt.getAndIncrement();
+      this.timeout = timeout;
+    }
+
+
+    /**
+     * Check if the call did timeout. Set an exception (includes a notify) if it's the case.
+     * @return true if the call is on timeout, false otherwise.
+     */
+    public boolean checkTimeout() {
+      if (timeout == 0){
+        return false;
+      }
+
+      long waitTime = EnvironmentEdgeManager.currentTimeMillis() - getStartTime();
+      if (waitTime >= timeout) {
+        IOException ie = new CallTimeoutException("Call id=" + id +
+            ", waitTime=" + waitTime + ", operationTimeout=" + timeout + " expired.");
+        setException(ie); // includes a notify
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+    public int remainingTime() {
+      if (timeout == 0) {
+        return Integer.MAX_VALUE;
+      }
+
+      int remaining = timeout - (int) (EnvironmentEdgeManager.currentTimeMillis() - getStartTime());
+      return remaining > 0 ? remaining : 0;
     }
 
     @Override
@@ -345,6 +374,7 @@ public class RpcClient {
   /** Thread that reads responses and notifies callers.  Each connection owns a
    * socket connected to a remote address.  Calls are multiplexed through this
    * socket: responses may be delivered out of order. */
+  @SuppressWarnings("SynchronizeOnNonFinalField")
   protected class Connection extends Thread {
     private ConnectionHeader header;              // connection header
     protected ConnectionId remoteId;
@@ -414,8 +444,7 @@ public class RpcClient {
         setName(name + " - writer");
       }
 
-      public void cancel(CallFuture cts){
-        cts.call.done = true;
+      public void remove(CallFuture cts){
         callsToWrite.remove(cts);
         calls.remove(cts.call.id);
       }
@@ -442,15 +471,8 @@ public class RpcClient {
             continue;
           }
 
-          if (remoteId.rpcTimeout > 0) {
-            long waitTime = EnvironmentEdgeManager.currentTimeMillis() - cts.call.getStartTime();
-            if (waitTime >= remoteId.rpcTimeout) {
-              IOException ie = new CallTimeoutException("Call id=" + cts.call.id +
-                  ", waitTime=" + waitTime + ", rpcTimetout=" + remoteId.rpcTimeout +
-                  ", expired before being sent to the server.");
-              cts.call.setException(ie); // includes a notify
-              continue;
-            }
+          if (cts.call.checkTimeout()) {
+            continue;
           }
 
           try {
@@ -595,10 +617,8 @@ public class RpcClient {
           if (localAddr != null) {
             this.socket.bind(localAddr);
           }
-          // connection time out is 20s
-          NetUtils.connect(this.socket, remoteId.getAddress(),
-              getSocketTimeout(conf));
-          this.socket.setSoTimeout(remoteId.rpcTimeout);
+          NetUtils.connect(this.socket, remoteId.getAddress(), connectTO);
+          this.socket.setSoTimeout(readTO);
           return;
         } catch (SocketTimeoutException toe) {
           /* The max number of retries is 45,
@@ -883,10 +903,8 @@ public class RpcClient {
         while (true) {
           setupConnection();
           InputStream inStream = NetUtils.getInputStream(socket);
-          // This creates a socket with a write timeout. This timeout cannot be changed,
-          //  RpcClient allows to change the timeout dynamically, but we can only
-          //  change the read timeout today.
-          OutputStream outStream = NetUtils.getOutputStream(socket, remoteId.rpcTimeout);
+          // This creates a socket with a write timeout. This timeout cannot be changed.
+          OutputStream outStream = NetUtils.getOutputStream(socket, writeTO);
           // Write out the preamble -- MAGIC, version, and auth to use.
           writeConnectionHeaderPreamble(outStream);
           if (useSasl) {
@@ -1005,7 +1023,7 @@ public class RpcClient {
         LOG.debug(getName() + ": closing ipc connection to " + server);
       }
 
-      cleanupCalls();
+      cleanupCalls(true);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(getName() + ": ipc connection to " + server + " closed");
@@ -1025,8 +1043,6 @@ public class RpcClient {
      * Initiates a call by sending the parameter to the remote server.
      * Note: this is not called from the Connection thread, but by other
      * threads.
-     * @param call
-     * @param priority
      * @see #readResponse()
      */
     private void writeRequest(Call call, final int priority, Span span) throws IOException {
@@ -1143,7 +1159,7 @@ public class RpcClient {
           if (expectedCall) call.setResponse(value, cellBlockScanner);
         }
       } catch (IOException e) {
-        if (e instanceof SocketTimeoutException && remoteId.rpcTimeout > 0) {
+        if (e instanceof SocketTimeoutException) {
           // Clean up open calls but don't treat this as a fatal condition,
           // since we expect certain responses to not make it by the specified
           // {@link ConnectionId#rpcTimeout}.
@@ -1152,7 +1168,7 @@ public class RpcClient {
           markClosed(e);
         }
       } finally {
-        cleanupCalls(remoteId.rpcTimeout);
+        cleanupCalls(false);
       }
     }
 
@@ -1166,7 +1182,7 @@ public class RpcClient {
     }
 
     /**
-     * @param e
+     * @param e exception to be wrapped
      * @return RemoteException made from passed <code>e</code>
      */
     private RemoteException createRemoteException(final ExceptionResponse e) {
@@ -1195,44 +1211,30 @@ public class RpcClient {
       }
     }
 
-    /* Cleanup all calls and mark them as done */
-    protected void cleanupCalls() {
-      cleanupCalls(-1);
-    }
 
     /**
      * Cleanup the calls older than a given timeout, in milli seconds.
-     * @param rpcTimeout -1 for all calls, > 0 otherwise. 0 means no timeout and does nothing.
+     * @param allCalls for all calls,
      */
-    protected synchronized void cleanupCalls(long rpcTimeout) {
-      if (rpcTimeout == 0) return;
-
+    protected synchronized void cleanupCalls(boolean allCalls) {
       Iterator<Entry<Integer, Call>> itor = calls.entrySet().iterator();
       while (itor.hasNext()) {
         Call c = itor.next().getValue();
-        long waitTime = EnvironmentEdgeManager.currentTimeMillis() - c.getStartTime();
-        if (rpcTimeout < 0) {
+        if (c.done) {
+          // To catch the calls without timeout that were cancelled.
+          itor.remove();
+        } else if (allCalls) {
+          long waitTime = EnvironmentEdgeManager.currentTimeMillis() - c.getStartTime();
           IOException ie = new IOException("Call id=" + c.id + ", waitTime=" + waitTime);
           c.setException(ie);
           itor.remove();
-        } else if (waitTime >= rpcTimeout) {
-          IOException ie = new CallTimeoutException("Call id=" + c.id +
-              ", waitTime=" + waitTime + ", rpcTimeout=" + rpcTimeout);
-          c.setException(ie);
+        } else if (c.checkTimeout()) {
           itor.remove();
         } else {
-          // This relies on the insertion order to be the call id order. This is not
-          //  true under 'difficult' conditions (gc, ...).
-          rpcTimeout -= waitTime;
+          // We expect the call to be ordered by timeout. It may not be the case, but stopping
+          //  at the first valid call allows to be sure that we still have something to do without
+          //  spending too much time by reading the full list.
           break;
-        }
-      }
-
-      if (!shouldCloseConnection.get() && socket != null && rpcTimeout > 0) {
-        try {
-          socket.setSoTimeout((int)rpcTimeout);
-        } catch (SocketException e) {
-          LOG.warn("Couldn't change timeout, which may result in longer than expected calls");
         }
       }
     }
@@ -1253,7 +1255,7 @@ public class RpcClient {
   /**
    * Construct an IPC cluster client whose values are of the {@link Message} class.
    * @param conf configuration
-   * @param clusterId
+   * @param clusterId the cluster id
    * @param factory socket factory
    */
   RpcClient(Configuration conf, String clusterId, SocketFactory factory) {
@@ -1263,7 +1265,7 @@ public class RpcClient {
   /**
    * Construct an IPC cluster client whose values are of the {@link Message} class.
    * @param conf configuration
-   * @param clusterId
+   * @param clusterId the cluster id
    * @param factory socket factory
    * @param localAddr client socket bind address
    */
@@ -1286,22 +1288,30 @@ public class RpcClient {
         IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
     this.localAddr = localAddr;
     this.userProvider = UserProvider.instantiate(conf);
+    this.connectTO = conf.getInt(SOCKET_TIMEOUT_CONNECT, DEFAULT_SOCKET_TIMEOUT_CONNECT);
+    this.readTO = conf.getInt(SOCKET_TIMEOUT_READ, DEFAULT_SOCKET_TIMEOUT_READ);
+    this.writeTO = conf.getInt(SOCKET_TIMEOUT_WRITE, DEFAULT_SOCKET_TIMEOUT_WRITE);
+
+
     // login the server principal (if using secure Hadoop)
     if (LOG.isDebugEnabled()) {
       LOG.debug("Codec=" + this.codec + ", compressor=" + this.compressor +
-        ", tcpKeepAlive=" + this.tcpKeepAlive +
-        ", tcpNoDelay=" + this.tcpNoDelay +
-        ", minIdleTimeBeforeClose=" + this.minIdleTimeBeforeClose +
-        ", maxRetries=" + this.maxRetries +
-        ", fallbackAllowed=" + this.fallbackAllowed +
-        ", bind address=" + (this.localAddr != null ? this.localAddr : "null"));
+          ", tcpKeepAlive=" + this.tcpKeepAlive +
+          ", tcpNoDelay=" + this.tcpNoDelay +
+          ", connectTO=" + this.connectTO +
+          ", readTO=" + this.readTO +
+          ", writeTO=" + this.writeTO +
+          ", minIdleTimeBeforeClose=" + this.minIdleTimeBeforeClose +
+          ", maxRetries=" + this.maxRetries +
+          ", fallbackAllowed=" + this.fallbackAllowed +
+          ", bind address=" + (this.localAddr != null ? this.localAddr : "null"));
     }
   }
 
   /**
    * Construct an IPC client for the cluster <code>clusterId</code> with the default SocketFactory
    * @param conf configuration
-   * @param clusterId
+   * @param clusterId the cluster id
    */
   public RpcClient(Configuration conf, String clusterId) {
     this(conf, clusterId, NetUtils.getDefaultSocketFactory(conf), null);
@@ -1310,7 +1320,7 @@ public class RpcClient {
   /**
    * Construct an IPC client for the cluster <code>clusterId</code> with the default SocketFactory
    * @param conf configuration
-   * @param clusterId
+   * @param clusterId the cluster id
    * @param localAddr client socket bind address.
    */
   public RpcClient(Configuration conf, String clusterId, SocketAddress localAddr) {
@@ -1343,7 +1353,7 @@ public class RpcClient {
 
   /**
    * Encapsulate the ugly casting and RuntimeException conversion in private method.
-   * @param conf
+   * @param conf configuration
    * @return The compressor to use on this client.
    */
   private static CompressionCodec getCompressor(final Configuration conf) {
@@ -1380,19 +1390,11 @@ public class RpcClient {
    * Return the pool size specified in the configuration, which is applicable only if
    * the pool type is {@link PoolType#RoundRobin}.
    *
-   * @param config
+   * @param config configuration
    * @return the maximum pool size
    */
   protected static int getPoolSize(Configuration config) {
     return config.getInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, 1);
-  }
-
-  /** Return the socket factory of this client
-   *
-   * @return this client's socket factory
-   */
-  SocketFactory getSocketFactory() {
-    return socketFactory;
   }
 
   /** Stop all threads related to this client.  No further calls may be made
@@ -1432,25 +1434,19 @@ public class RpcClient {
    * with the <code>ticket</code> credentials, returning the value.
    * Throws exceptions if there are network problems or if the remote code
    * threw an exception.
-   * @param md
-   * @param param
-   * @param cells
-   * @param addr
-   * @param returnType
    * @param ticket Be careful which ticket you pass. A new user will mean a new Connection.
    *          {@link UserProvider#getCurrent()} makes a new instance of User each time so will be a
    *          new Connection each time.
-   * @param rpcTimeout
    * @return A pair with the Message response and the Cell data (if any).
    * @throws InterruptedException
    * @throws IOException
    */
   Pair<Message, CellScanner> call(MethodDescriptor md, Message param, CellScanner cells,
-      Message returnType, User ticket, InetSocketAddress addr, int rpcTimeout, int priority)
+      Message returnType, User ticket, InetSocketAddress addr, int callTimeout, int priority)
       throws IOException, InterruptedException {
-    Call call = new Call(md, param, cells, returnType);
+    Call call = new Call(md, param, cells, returnType, callTimeout);
     Connection connection =
-      getConnection(ticket, call, addr, rpcTimeout, this.codec, this.compressor);
+      getConnection(ticket, call, addr, this.codec, this.compressor);
 
     CallFuture cts = null;
     if (connection.callSender != null){
@@ -1460,16 +1456,17 @@ public class RpcClient {
     }
 
     while (!call.done) {
+      if (call.checkTimeout()) {
+        if (cts != null) connection.callSender.remove(cts);
+        break;
+      }
       try {
         synchronized (call) {
-          call.wait(1000);  // wait for the result. We will be notified by the reader.
+          call.wait(Math.min(call.remainingTime(), 1000) + 1);
         }
       } catch (InterruptedException e) {
-        if (cts != null) {
-          connection.callSender.cancel(cts);
-        } else {
-          call.done = true;
-        }
+        call.setException(new InterruptedIOException());
+        if (cts != null) connection.callSender.remove(cts);
         throw e;
       }
     }
@@ -1485,7 +1482,6 @@ public class RpcClient {
 
     return new Pair<Message, CellScanner>(call.response, call.cells);
   }
-
 
 
   /**
@@ -1523,7 +1519,7 @@ public class RpcClient {
    *  process died) or no route to host: i.e. their next retries should be faster and with a
    *  safe exception.
    */
-  public void cancelConnections(String hostname, int port, IOException ioe) {
+  public void cancelConnections(String hostname, int port) {
     synchronized (connections) {
       for (Connection connection : connections.values()) {
         if (connection.isAlive() &&
@@ -1540,15 +1536,15 @@ public class RpcClient {
 
   /**
    *  Get a connection from the pool, or create a new one and add it to the
-   * pool.  Connections to a given host/port are reused.
+   * pool. Connections to a given host/port are reused.
    */
   protected Connection getConnection(User ticket, Call call, InetSocketAddress addr,
-      int rpcTimeout, final Codec codec, final CompressionCodec compressor)
+                                     final Codec codec, final CompressionCodec compressor)
   throws IOException {
     if (!running.get()) throw new StoppedRpcClientException();
     Connection connection;
     ConnectionId remoteId =
-      new ConnectionId(ticket, call.md.getService().getName(), addr, rpcTimeout);
+      new ConnectionId(ticket, call.md.getService().getName(), addr);
     synchronized (connections) {
       connection = connections.get(remoteId);
       if (connection == null) {
@@ -1576,17 +1572,12 @@ public class RpcClient {
   protected static class ConnectionId {
     final InetSocketAddress address;
     final User ticket;
-    final int rpcTimeout;
     private static final int PRIME = 16777619;
     final String serviceName;
 
-    ConnectionId(User ticket,
-        String serviceName,
-        InetSocketAddress address,
-        int rpcTimeout) {
+    ConnectionId(User ticket, String serviceName, InetSocketAddress address) {
       this.address = address;
       this.ticket = ticket;
-      this.rpcTimeout = rpcTimeout;
       this.serviceName = serviceName;
     }
 
@@ -1604,8 +1595,7 @@ public class RpcClient {
 
     @Override
     public String toString() {
-      return this.address.toString() + "/" + this.serviceName + "/" + this.ticket + "/" +
-        this.rpcTimeout;
+      return this.address.toString() + "/" + this.serviceName + "/" + this.ticket;
     }
 
     @Override
@@ -1614,7 +1604,7 @@ public class RpcClient {
        ConnectionId id = (ConnectionId) obj;
        return address.equals(id.address) &&
               ((ticket != null && ticket.equals(id.ticket)) ||
-               (ticket == id.ticket)) && rpcTimeout == id.rpcTimeout &&
+               (ticket == id.ticket)) &&
                this.serviceName == id.serviceName;
      }
      return false;
@@ -1624,26 +1614,9 @@ public class RpcClient {
     public int hashCode() {
       int hashcode = (address.hashCode() +
         PRIME * (PRIME * this.serviceName.hashCode() ^
-        (ticket == null ? 0 : ticket.hashCode()) )) ^
-        rpcTimeout;
+        (ticket == null ? 0 : ticket.hashCode()) ));
       return hashcode;
     }
-  }
-
-  public static void setRpcTimeout(int t) {
-    rpcTimeout.set(t);
-  }
-
-  /**
-   * Returns the lower of the thread-local RPC time from {@link #setRpcTimeout(int)} and the given
-   * default timeout.
-   */
-  public static int getRpcTimeout(int defaultTimeout) {
-    return Math.min(defaultTimeout, rpcTimeout.get());
-  }
-
-  public static void resetRpcTimeout() {
-    rpcTimeout.remove();
   }
 
   /**
@@ -1654,24 +1627,24 @@ public class RpcClient {
    *          new Connection each time.
    * @return A pair with the Message response and the Cell data (if any).
    */
-  Message callBlockingMethod(MethodDescriptor md, RpcController controller,
-      Message param, Message returnType, final User ticket, final InetSocketAddress isa,
-      final int rpcTimeout)
+  Message callBlockingMethod(MethodDescriptor md, PayloadCarryingRpcController pcrc,
+      Message param, Message returnType, final User ticket, final InetSocketAddress isa)
   throws ServiceException {
     long startTime = 0;
     if (LOG.isTraceEnabled()) {
       startTime = EnvironmentEdgeManager.currentTimeMillis();
     }
-    PayloadCarryingRpcController pcrc = (PayloadCarryingRpcController)controller;
+    int callTimeout = 0;
     CellScanner cells = null;
     if (pcrc != null) {
+      callTimeout = pcrc.getCallTimeout();
       cells = pcrc.cellScanner();
       // Clear it here so we don't by mistake try and these cells processing results.
       pcrc.setCellScanner(null);
     }
     Pair<Message, CellScanner> val;
     try {
-      val = call(md, param, cells, returnType, ticket, isa, rpcTimeout,
+      val = call(md, param, cells, returnType, ticket, isa, callTimeout,
         pcrc != null? pcrc.getPriority(): HConstants.NORMAL_QOS);
       if (pcrc != null) {
         // Shove the results into controller so can be carried across the proxy/pb service void.
@@ -1696,8 +1669,8 @@ public class RpcClient {
    * @return A blocking rpc channel that goes via this rpc client instance.
    */
   public BlockingRpcChannel createBlockingRpcChannel(final ServerName sn,
-      final User ticket, final int rpcTimeout) {
-    return new BlockingRpcChannelImplementation(this, sn, ticket, rpcTimeout);
+      final User ticket, int defaultOperationTimeout) {
+    return new BlockingRpcChannelImplementation(this, sn, ticket, defaultOperationTimeout);
   }
 
   /**
@@ -1707,25 +1680,36 @@ public class RpcClient {
   public static class BlockingRpcChannelImplementation implements BlockingRpcChannel {
     private final InetSocketAddress isa;
     private final RpcClient rpcClient;
-    private final int rpcTimeout;
     private final User ticket;
+    private final int defaultOperationTimeout;
 
+    /**
+     * @param defaultOperationTimeout - the default timeout when no timeout is given
+     *                                   by the caller.
+     */
     protected BlockingRpcChannelImplementation(final RpcClient rpcClient, final ServerName sn,
-        final User ticket, final int rpcTimeout) {
+        final User ticket, int defaultOperationTimeout) {
       this.isa = new InetSocketAddress(sn.getHostname(), sn.getPort());
       this.rpcClient = rpcClient;
-      // Set the rpc timeout to be the minimum of configured timeout and whatever the current
-      // thread local setting is.
-      this.rpcTimeout = getRpcTimeout(rpcTimeout);
       this.ticket = ticket;
+      this.defaultOperationTimeout = defaultOperationTimeout;
     }
 
     @Override
     public Message callBlockingMethod(MethodDescriptor md, RpcController controller,
-        Message param, Message returnType)
-    throws ServiceException {
-      return this.rpcClient.callBlockingMethod(md, controller, param, returnType, this.ticket,
-        this.isa, this.rpcTimeout);
+                                      Message param, Message returnType) throws ServiceException {
+      PayloadCarryingRpcController pcrc;
+      if (controller != null) {
+        pcrc = (PayloadCarryingRpcController) controller;
+        if (!pcrc.hasCallTimeout()){
+          pcrc.setCallTimeout(defaultOperationTimeout);
+        }
+      } else {
+        pcrc =  new PayloadCarryingRpcController();
+        pcrc.setCallTimeout(defaultOperationTimeout);
+      }
+
+      return this.rpcClient.callBlockingMethod(md, pcrc, param, returnType, this.ticket, this.isa);
     }
   }
 }

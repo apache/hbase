@@ -32,7 +32,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
@@ -53,6 +52,10 @@ public class RpcRetryingCaller<T> {
    * Timeout for the call including retries
    */
   private int callTimeout;
+  /**
+   * The remaining time, for the call to come. Takes into account the tries already done.
+   */
+  private int remainingTime;
   /**
    * When we started making calls.
    */
@@ -77,20 +80,20 @@ public class RpcRetryingCaller<T> {
   }
 
   private void beforeCall() {
-    int remaining = (int)(callTimeout -
-      (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime));
-    if (remaining < MIN_RPC_TIMEOUT) {
-      // If there is no time left, we're trying anyway. It's too late.
-      // 0 means no timeout, and it's not the intent here. So we secure both cases by
-      // resetting to the minimum.
-      remaining = MIN_RPC_TIMEOUT;
+    if (callTimeout > 0) {
+      remainingTime = (int) (callTimeout -
+          (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime));
+      if (remainingTime < MIN_RPC_TIMEOUT) {
+        // If there is no time left, we're trying anyway. It's too late.
+        // 0 means no timeout, and it's not the intent here. So we secure both cases by
+        // resetting to the minimum.
+        remainingTime = MIN_RPC_TIMEOUT;
+      }
+    } else {
+      remainingTime = 0;
     }
-    RpcClient.setRpcTimeout(remaining);
   }
 
-  private void afterCall() {
-    RpcClient.resetRpcTimeout();
-  }
 
   public synchronized T callWithRetries(RetryingCallable<T> callable) throws IOException,
       RuntimeException {
@@ -114,12 +117,13 @@ public class RpcRetryingCaller<T> {
       new ArrayList<RetriesExhaustedException.ThrowableWithExtraContext>();
     this.globalStartTime = EnvironmentEdgeManager.currentTimeMillis();
     for (int tries = 0;; tries++) {
-      long expectedSleep = 0;
+      long expectedSleep;
       try {
-        beforeCall();
         callable.prepare(tries != 0); // if called with false, check table status on ZK
-        return callable.call();
+        beforeCall();
+        return callable.call(remainingTime);
       } catch (Throwable t) {
+        ExceptionUtil.rethrowIfInterrupt(t);
         if (LOG.isTraceEnabled()) {
           LOG.trace("Call exception, tries=" + tries + ", retries=" + retries + ", retryTime=" +
               (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime) + "ms", t);
@@ -131,7 +135,6 @@ public class RpcRetryingCaller<T> {
             new RetriesExhaustedException.ThrowableWithExtraContext(t,
                 EnvironmentEdgeManager.currentTimeMillis(), toString());
         exceptions.add(qt);
-        ExceptionUtil.rethrowIfInterrupt(t);
         if (tries >= retries - 1) {
           throw new RetriesExhaustedException(tries, exceptions);
         }
@@ -147,8 +150,6 @@ public class RpcRetryingCaller<T> {
               ": " + callable.getExceptionMessageAdditionalDetail();
           throw (SocketTimeoutException)(new SocketTimeoutException(msg).initCause(t));
         }
-      } finally {
-        afterCall();
       }
       try {
         Thread.sleep(expectedSleep);
@@ -159,7 +160,6 @@ public class RpcRetryingCaller<T> {
   }
 
   /**
-   * @param expectedSleep
    * @return Calculate how long a single call took
    */
   private long singleCallDuration(final long expectedSleep) {
@@ -170,7 +170,7 @@ public class RpcRetryingCaller<T> {
   /**
    * Call the server once only.
    * {@link RetryingCallable} has a strange shape so we can do retrys.  Use this invocation if you
-   * want to do a single call only (A call to {@link RetryingCallable#call()} will not likely
+   * want to do a single call only (A call to {@link RetryingCallable#call(int)} will not likely
    * succeed).
    * @return an object of type T
    * @throws IOException if a remote or network exception occurs
@@ -181,9 +181,8 @@ public class RpcRetryingCaller<T> {
     // The code of this method should be shared with withRetries.
     this.globalStartTime = EnvironmentEdgeManager.currentTimeMillis();
     try {
-      beforeCall();
       callable.prepare(false);
-      return callable.call();
+      return callable.call(callTimeout);
     } catch (Throwable t) {
       Throwable t2 = translateException(t);
       ExceptionUtil.rethrowIfInterrupt(t2);
@@ -193,8 +192,6 @@ public class RpcRetryingCaller<T> {
       } else {
         throw new RuntimeException(t2);
       }
-    } finally {
-      afterCall();
     }
   }
 

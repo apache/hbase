@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Implementations call a RegionServer and implement {@link #call()}.
+ * Implementations call a RegionServer and implement {@link #call(int)}.
  * Passed to a {@link RpcRetryingCaller} so we retry on fail.
  * TODO: this class is actually tied to one region, because most of the paths make use of
  *       the regioninfo part of location when building requests. The only reason it works for

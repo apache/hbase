@@ -437,7 +437,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
 
-  private final int rpcTimeout;
+  private final int operationTimeout;
 
   private final RegionServerAccounting regionServerAccounting;
 
@@ -555,7 +555,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     this.numRegionsToReport = conf.getInt(
       "hbase.regionserver.numregionstoreport", 10);
 
-    this.rpcTimeout = conf.getInt(
+    this.operationTimeout = conf.getInt(
       HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY,
       HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT);
 
@@ -1972,7 +1972,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         new InetSocketAddress(sn.getHostname(), sn.getPort());
         try {
           BlockingRpcChannel channel =
-            this.rpcClient.createBlockingRpcChannel(sn, userProvider.getCurrent(), this.rpcTimeout);
+            this.rpcClient.createBlockingRpcChannel(sn, userProvider.getCurrent(), operationTimeout);
           intf = RegionServerStatusService.newBlockingStub(channel);
           break;
         } catch (IOException e) {

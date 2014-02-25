@@ -82,7 +82,7 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
             .setRequest(request.toByteString()).build();
     RegionServerCallable<CoprocessorServiceResponse> callable =
         new RegionServerCallable<CoprocessorServiceResponse>(connection, table, row) {
-          public CoprocessorServiceResponse call() throws Exception {
+          public CoprocessorServiceResponse call(int callTimeout) throws Exception {
             byte[] regionName = getLocation().getRegionInfo().getRegionName();
             return ProtobufUtil.execService(getStub(), call, regionName);
           }

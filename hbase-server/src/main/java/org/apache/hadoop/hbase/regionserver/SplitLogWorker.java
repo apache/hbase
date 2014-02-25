@@ -423,7 +423,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
    * RS and the hard limit upper bound(maxConcurrentTasks) set by configuration. <br>
    * At any given time, a RS allows spawn MIN(Expected Tasks/RS, Hard Upper Bound)
    * @param numTasks current total number of available tasks
-   * @return
    */
   private int calculateAvailableSplitters(int numTasks) {
     // at lease one RS(itself) available

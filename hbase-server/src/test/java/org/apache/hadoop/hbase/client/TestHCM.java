@@ -40,20 +40,26 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
+import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -99,6 +105,25 @@ public class TestHCM {
   private static final byte[] ROW = Bytes.toBytes("bbb");
   private static final byte[] ROW_X = Bytes.toBytes("xxx");
   private static Random _randy = new Random();
+
+/**
+* This copro sleeps 20 second. The first call it fails. The second time, it works.
+*/
+  public static class SleepAndFailFirstTime extends BaseRegionObserver {
+    static final AtomicLong ct = new AtomicLong(0);
+
+    public SleepAndFailFirstTime() {
+    }
+
+    @Override
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
+              final Get get, final List<Cell> results) throws IOException {
+      Threads.sleep(20000);
+      if (ct.incrementAndGet() == 1){
+        throw new IOException("first call I fail");
+      }
+    }
+  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -165,7 +190,7 @@ public class TestHCM {
     t.close();
 
     con1.close();
-    // if the pool was created on demand it should be closed upon connectin close
+    // if the pool was created on demand it should be closed upon connection close
     assertTrue(pool.isShutdown());
 
     con2.close();
@@ -244,6 +269,41 @@ public class TestHCM {
     testConnectionClose(false);
   }
 
+  /**
+   * Test that an operation can fail if we read the global operation timeout, even if the
+   * individual timeout is fine. We do that with:
+   * - client side: an operation timeout of 30 seconds
+   * - server side: we sleep 20 second at each attempt. The first work fails, the second one
+   * succeeds. But the client won't wait that much, because 20 + 20 > 30, so the client
+   * timeouted when the server answers.
+   */
+  @Test
+  public void testOperationTimeout() throws Exception {
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testOperationTimeout");
+    hdt.addCoprocessor(SleepAndFailFirstTime.class.getName());
+    HTable table = TEST_UTIL.createTable(hdt, new byte[][]{FAM_NAM}, TEST_UTIL.getConfiguration());
+
+    // Check that it works if the timeout is big enough
+    table.setOperationTimeout(120 * 1000);
+    table.get(new Get(FAM_NAM));
+
+    // Resetting and retrying. Will fail this time, not enough time for the second try
+    SleepAndFailFirstTime.ct.set(0);
+    try {
+      table.setOperationTimeout(30 * 1000);
+      table.get(new Get(FAM_NAM));
+      Assert.fail("We expect an exception here");
+    } catch (SocketTimeoutException e) {
+      // The client has a CallTimeout class, but it's not shared.We're not very clean today,
+      //  in the general case you can expect the call to stop, but the exception may vary.
+      // In this test however, we're sure that it will be a socket timeout.
+      LOG.info("We received an exception, as expected ", e);
+    } catch (IOException e) {
+      Assert.fail("Wrong exception:" + e.getMessage());
+    }
+  }
+
+
   private void testConnectionClose(boolean allowsInterrupt) throws Exception {
     String tableName = "HCM-testConnectionClose" + allowsInterrupt;
     TEST_UTIL.createTable(tableName.getBytes(), FAM_NAM).close();
@@ -302,12 +362,12 @@ public class TestHCM {
 
     LOG.info("Going to cancel connections. connection=" + conn.toString() + ", sn=" + sn);
     for (int i = 0; i < 5000; i++) {
-      rpcClient.cancelConnections(sn.getHostname(), sn.getPort(), null);
+      rpcClient.cancelConnections(sn.getHostname(), sn.getPort());
       Thread.sleep(5);
     }
 
     step.compareAndSet(1, 2);
-    // The test may fail here if the thread doing the gets is stuck. The wait to find
+    // The test may fail here if the thread doing the gets is stuck. The way to find
     //  out what's happening is to look for the thread named 'testConnectionCloseThread'
     TEST_UTIL.waitFor(20000, new Waiter.Predicate<Exception>() {
       @Override

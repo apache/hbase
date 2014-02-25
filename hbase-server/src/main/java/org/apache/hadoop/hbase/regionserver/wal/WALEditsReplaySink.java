@@ -191,7 +191,7 @@ public class WALEditsReplaySink {
     }
 
     @Override
-    public ReplicateWALEntryResponse call() throws IOException {
+    public ReplicateWALEntryResponse call(int callTimeout) throws IOException {
       try {
         replayToServer(this.regionInfo, this.entries);
       } catch (ServiceException se) {
@@ -210,8 +210,8 @@ public class WALEditsReplaySink {
 
       Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
           ReplicationProtbufUtil.buildReplicateWALEntryRequest(entriesArray);
+      PayloadCarryingRpcController controller = new PayloadCarryingRpcController(p.getSecond());
       try {
-        PayloadCarryingRpcController controller = new PayloadCarryingRpcController(p.getSecond());
         remoteSvr.replay(controller, p.getFirst());
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);

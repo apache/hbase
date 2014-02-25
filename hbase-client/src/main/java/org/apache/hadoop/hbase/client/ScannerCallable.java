@@ -143,11 +143,10 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     }
   }
 
-  /**
-   * @see java.util.concurrent.Callable#call()
-   */
+
+  @Override
   @SuppressWarnings("deprecation")
-  public Result [] call() throws IOException {
+  public Result [] call(int callTimeout) throws IOException {
     if (closed) {
       if (scannerId != -1) {
         close();
@@ -163,8 +162,9 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
           request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
           ScanResponse response = null;
           PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          controller.setPriority(getTableName());
+          controller.setCallTimeout(callTimeout);
           try {
-            controller.setPriority(getTableName());
             response = getStub().scan(controller, request);
             // Client and RS maintain a nextCallSeq number during the scan. Every next() call
             // from client to server will increment this number in both sides. Client passes this

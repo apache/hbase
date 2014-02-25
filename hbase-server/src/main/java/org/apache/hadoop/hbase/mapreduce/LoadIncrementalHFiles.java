@@ -596,7 +596,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     final RegionServerCallable<Boolean> svrCallable =
         new RegionServerCallable<Boolean>(conn, tableName, first) {
       @Override
-      public Boolean call() throws Exception {
+      public Boolean call(int callTimeout) throws Exception {
         SecureBulkLoadClient secureClient = null;
         boolean success = false;
 

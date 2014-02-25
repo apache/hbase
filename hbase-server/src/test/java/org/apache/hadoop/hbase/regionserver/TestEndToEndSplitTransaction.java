@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -155,7 +156,9 @@ public class TestEndToEndSplitTransaction {
       byte[] regionName = con.relocateRegion(tableName, row).getRegionInfo()
           .getRegionName();
       // get and scan should now succeed without exception
-      ProtobufUtil.get(server, regionName, new Get(row));
+      ClientProtos.GetRequest request =
+          RequestConverter.buildGetRequest(regionName, new Get(row));
+      server.get(null, request);
       ScanRequest scanRequest = RequestConverter.buildScanRequest(
         regionName, new Scan(row), 1, true);
       try {
@@ -164,6 +167,8 @@ public class TestEndToEndSplitTransaction {
         throw ProtobufUtil.getRemoteException(se);
       }
     } catch (IOException x) {
+      return false;
+    } catch (ServiceException e) {
       return false;
     }
     return true;

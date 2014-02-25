@@ -165,16 +165,15 @@ public class ClientSmallScanner extends ClientScanner {
     this.scan.setStartRow(localStartKey);
     RegionServerCallable<Result[]> callable = new RegionServerCallable<Result[]>(
         getConnection(), getTable(), scan.getStartRow()) {
-      public Result[] call() throws IOException {
+      public Result[] call(int callTimeout) throws IOException {
         ScanRequest request = RequestConverter.buildScanRequest(getLocation()
             .getRegionInfo().getRegionName(), scan, cacheNum, true);
-        ScanResponse response = null;
         PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+        controller.setPriority(getTableName());
+        controller.setCallTimeout(callTimeout);
         try {
-          controller.setPriority(getTableName());
-          response = getStub().scan(controller, request);
-          return ResponseConverter.getResults(controller.cellScanner(),
-              response);
+          ScanResponse response = getStub().scan(controller, request);
+          return ResponseConverter.getResults(controller.cellScanner(), response);
         } catch (ServiceException se) {
           throw ProtobufUtil.getRemoteException(se);
         }

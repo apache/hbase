@@ -608,9 +608,7 @@ class ConnectionManager {
                 @Override
                 public void newDead(ServerName sn) {
                   clearCaches(sn);
-                  rpcClient.cancelConnections(sn.getHostname(), sn.getPort(),
-                      new SocketException(sn.getServerName() +
-                          " is dead: closing its connection."));
+                  rpcClient.cancelConnections(sn.getHostname(), sn.getPort());
                 }
               }, conf, listenerClass);
         }
@@ -1516,8 +1514,7 @@ class ConnectionManager {
           synchronized (connectionLock.get(key)) {
             stub = stubs.get(key);
             if (stub == null) {
-              BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn,
-                user, rpcTimeout);
+              BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
               stub = makeStub(channel);
               isMasterRunning();
               stubs.put(key, stub);
@@ -1635,8 +1632,8 @@ class ConnectionManager {
       synchronized (this.connectionLock.get(key)) {
         stub = (AdminService.BlockingInterface)this.stubs.get(key);
         if (stub == null) {
-          BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(serverName,
-            user, this.rpcTimeout);
+          BlockingRpcChannel channel =
+              this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
           stub = AdminService.newBlockingStub(channel);
           this.stubs.put(key, stub);
         }
@@ -1656,8 +1653,8 @@ class ConnectionManager {
       synchronized (this.connectionLock.get(key)) {
         stub = (ClientService.BlockingInterface)this.stubs.get(key);
         if (stub == null) {
-          BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(sn,
-            user, this.rpcTimeout);
+          BlockingRpcChannel channel =
+              this.rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
           stub = ClientService.newBlockingStub(channel);
           // In old days, after getting stub/proxy, we'd make a call.  We are not doing that here.
           // Just fail on first actual call rather than in here on setup.

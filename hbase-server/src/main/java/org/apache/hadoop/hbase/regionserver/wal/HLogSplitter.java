@@ -1861,7 +1861,6 @@ public class HLogSplitter {
   * Tag original sequence number for each edit to be replayed
   * @param entry
   * @param cell
-  * @return
   */
   private static Cell tagReplayLogSequenceNumber(WALEntry entry, Cell cell) {
     // Tag puts with original sequence number if there is no LOG_REPLAY_TAG yet

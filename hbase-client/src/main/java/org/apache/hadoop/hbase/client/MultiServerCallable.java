@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -72,14 +71,14 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
   @Override
   public HRegionInfo getHRegionInfo() {
     throw new RuntimeException("Cannot get region info for multi-region request");
-  };
+  }
 
   MultiAction<R> getMulti() {
     return this.multiAction;
   }
 
   @Override
-  public MultiResponse call() throws IOException {
+  public MultiResponse call(int callTimeout) throws IOException {
     int countOfActions = this.multiAction.size();
     if (countOfActions <= 0) throw new DoNotRetryIOException("No Actions");
     MultiRequest.Builder multiRequestBuilder = MultiRequest.newBuilder();
@@ -118,6 +117,7 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
     // optionally ferries cell response data back out again.
     PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cells);
     controller.setPriority(getTableName());
+    controller.setCallTimeout(callTimeout);
     ClientProtos.MultiResponse responseProto;
     ClientProtos.MultiRequest requestProto = multiRequestBuilder.build();
     try {

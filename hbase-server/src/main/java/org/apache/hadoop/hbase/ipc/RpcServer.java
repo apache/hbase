@@ -2042,8 +2042,7 @@ public class RpcServer implements RpcServerInterface {
             status.getClient(), startTime, processingTime, qTime,
             responseSize);
       }
-      return new Pair<Message, CellScanner>(result,
-        controller != null? controller.cellScanner(): null);
+      return new Pair<Message, CellScanner>(result, controller.cellScanner());
     } catch (Throwable e) {
       // The above callBlockingMethod will always return a SE.  Strip the SE wrapper before
       // putting it on the wire.  Its needed to adhere to the pb Service Interface but we don't
@@ -2239,7 +2238,7 @@ public class RpcServer implements RpcServerInterface {
 
   /**
    * Helper for {@link #channelRead(java.nio.channels.ReadableByteChannel, java.nio.ByteBuffer)}
-   * and {@link #channelWrite(java.nio.channels.WritableByteChannel, java.nio.ByteBuffer)}. Only
+   * and {@link #channelWrite(GatheringByteChannel, BufferChain)}. Only
    * one of readCh or writeCh should be non-null.
    *
    * @param readCh read channel
@@ -2248,7 +2247,7 @@ public class RpcServer implements RpcServerInterface {
    * @return bytes written
    * @throws java.io.IOException e
    * @see #channelRead(java.nio.channels.ReadableByteChannel, java.nio.ByteBuffer)
-   * @see #channelWrite(java.nio.channels.WritableByteChannel, java.nio.ByteBuffer)
+   * @see #channelWrite(GatheringByteChannel, BufferChain)
    */
   private static int channelIO(ReadableByteChannel readCh,
                                WritableByteChannel writeCh,

@@ -60,8 +60,8 @@ public class ReplicationProtbufUtil {
       final HLog.Entry[] entries) throws IOException {
     Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
       buildReplicateWALEntryRequest(entries);
+    PayloadCarryingRpcController controller = new PayloadCarryingRpcController(p.getSecond());
     try {
-      PayloadCarryingRpcController controller = new PayloadCarryingRpcController(p.getSecond());
       admin.replicateWALEntry(controller, p.getFirst());
     } catch (ServiceException se) {
       throw ProtobufUtil.getRemoteException(se);

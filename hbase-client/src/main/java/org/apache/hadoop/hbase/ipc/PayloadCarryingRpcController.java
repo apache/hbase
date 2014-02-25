@@ -26,9 +26,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-
 /**
  * Optionally carries Cells across the proxy/service interface down into ipc. On its
  * way out it optionally carries a set of result Cell data.  We stick the Cells here when we want
@@ -36,7 +33,8 @@ import com.google.protobuf.RpcController;
  * service chasm.  Used by client and server ipc'ing.
  */
 @InterfaceAudience.Private
-public class PayloadCarryingRpcController implements RpcController, CellScannable {
+public class PayloadCarryingRpcController
+    extends TimeLimitedRpcController implements CellScannable {
   /**
    * Priority to set on this request.  Set it here in controller so available composing the
    * request.  This is the ordained way of setting priorities going forward.  We will be
@@ -45,8 +43,6 @@ public class PayloadCarryingRpcController implements RpcController, CellScannabl
   // Currently only multi call makes use of this.  Eventually this should be only way to set
   // priority.
   private int priority = 0;
-
-  // TODO: Fill out the rest of this class methods rather than return UnsupportedOperationException
 
   /**
    * They are optionally set on construction, cleared after we make the call, and then optionally
@@ -77,41 +73,6 @@ public class PayloadCarryingRpcController implements RpcController, CellScannabl
 
   public void setCellScanner(final CellScanner cellScanner) {
     this.cellScanner = cellScanner;
-  }
-
-  @Override
-  public String errorText() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean failed() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean isCanceled() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void notifyOnCancel(RpcCallback<Object> arg0) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void reset() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void setFailed(String arg0) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void startCancel() {
-    throw new UnsupportedOperationException();
   }
 
   /**

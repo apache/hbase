@@ -28,8 +28,8 @@ public class DelegatingRetryingCallable<T, D extends RetryingCallable<T>> implem
   }
 
   @Override
-  public T call() throws Exception {
-    return delegate.call();
+  public T call(int callTimeout) throws Exception {
+    return delegate.call(callTimeout);
   }
 
   @Override

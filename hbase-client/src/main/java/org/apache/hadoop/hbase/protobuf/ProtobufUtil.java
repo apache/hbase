@@ -1429,28 +1429,6 @@ public final class ProtobufUtil {
 // Start helpers for Client
 
   /**
-   * A helper to invoke a Get using client protocol.
-   *
-   * @param client
-   * @param regionName
-   * @param get
-   * @return the result of the Get
-   * @throws IOException
-   */
-  public static Result get(final ClientService.BlockingInterface client,
-      final byte[] regionName, final Get get) throws IOException {
-    GetRequest request =
-      RequestConverter.buildGetRequest(regionName, get);
-    try {
-      GetResponse response = client.get(null, request);
-      if (response == null) return null;
-      return toResult(response.getResult());
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-  }
-
-  /**
    * A helper to get a row of the closet one before using client protocol.
    *
    * @param client

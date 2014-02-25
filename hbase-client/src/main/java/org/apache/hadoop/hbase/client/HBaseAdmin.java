@@ -607,7 +607,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         CreateTableRequest request = RequestConverter.buildCreateTableRequest(desc, splitKeys);
         master.createTable(null, request);
         return null;
@@ -636,7 +636,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         DeleteTableRequest req = RequestConverter.buildDeleteTableRequest(tableName);
         master.deleteTable(null,req);
         return null;
@@ -841,7 +841,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         LOG.info("Started enable of " + tableName);
         EnableTableRequest req = RequestConverter.buildEnableTableRequest(tableName);
         master.enableTable(null,req);
@@ -918,7 +918,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         LOG.info("Started disable of " + tableName);
         DisableTableRequest req = RequestConverter.buildDisableTableRequest(tableName);
         master.disableTable(null,req);
@@ -1136,7 +1136,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException {
     return executeCallable(new MasterCallable<Pair<Integer, Integer>>(getConnection()) {
       @Override
-      public Pair<Integer, Integer> call() throws ServiceException {
+      public Pair<Integer, Integer> call(int callTimeout) throws ServiceException {
         GetSchemaAlterStatusRequest req = RequestConverter
             .buildGetSchemaAlterStatusRequest(tableName);
         GetSchemaAlterStatusResponse ret = master.getSchemaAlterStatus(null, req);
@@ -1203,7 +1203,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         AddColumnRequest req = RequestConverter.buildAddColumnRequest(tableName, column);
         master.addColumn(null,req);
         return null;
@@ -1249,7 +1249,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         DeleteColumnRequest req = RequestConverter.buildDeleteColumnRequest(tableName, columnName);
         master.deleteColumn(null,req);
         return null;
@@ -1297,7 +1297,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         ModifyColumnRequest req = RequestConverter.buildModifyColumnRequest(tableName, descriptor);
         master.modifyColumn(null,req);
         return null;
@@ -1707,7 +1707,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     final byte[] toBeAssigned = getRegionName(regionName);
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         AssignRegionRequest request =
           RequestConverter.buildAssignRegionRequest(toBeAssigned);
         master.assignRegion(null,request);
@@ -1735,7 +1735,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     final byte[] toBeUnassigned = getRegionName(regionName);
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         UnassignRegionRequest request =
           RequestConverter.buildUnassignRegionRequest(toBeUnassigned, force);
         master.unassignRegion(null,request);
@@ -1992,7 +1992,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         ModifyTableRequest request = RequestConverter.buildModifyTableRequest(tableName, htd);
         master.modifyTable(null, request);
         return null;
@@ -2105,7 +2105,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public synchronized void shutdown() throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         master.shutdown(null,ShutdownRequest.newBuilder().build());
         return null;
       }
@@ -2121,7 +2121,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public synchronized void stopMaster() throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         master.stopMaster(null,StopMasterRequest.newBuilder().build());
         return null;
       }
@@ -2157,7 +2157,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public ClusterStatus getClusterStatus() throws IOException {
     return executeCallable(new MasterCallable<ClusterStatus>(getConnection()) {
       @Override
-      public ClusterStatus call() throws ServiceException {
+      public ClusterStatus call(int callTimeout) throws ServiceException {
         GetClusterStatusRequest req = RequestConverter.buildGetClusterStatusRequest();
         return ClusterStatus.convert(master.getClusterStatus(null,req).getClusterStatus());
       }
@@ -2185,7 +2185,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void createNamespace(final NamespaceDescriptor descriptor) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws Exception {
+      public Void call(int callTimeout) throws Exception {
         master.createNamespace(null,
           CreateNamespaceRequest.newBuilder()
                 .setNamespaceDescriptor(ProtobufUtil
@@ -2203,7 +2203,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void modifyNamespace(final NamespaceDescriptor descriptor) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws Exception {
+      public Void call(int callTimeout) throws Exception {
         master.modifyNamespace(null, ModifyNamespaceRequest.newBuilder().
           setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(descriptor)).build());
         return null;
@@ -2219,7 +2219,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void deleteNamespace(final String name) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws Exception {
+      public Void call(int callTimeout) throws Exception {
         master.deleteNamespace(null, DeleteNamespaceRequest.newBuilder().
           setNamespaceName(name).build());
         return null;
@@ -2237,7 +2237,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     return
         executeCallable(new MasterCallable<NamespaceDescriptor>(getConnection()) {
           @Override
-          public NamespaceDescriptor call() throws Exception {
+          public NamespaceDescriptor call(int callTimeout) throws Exception {
             return ProtobufUtil.toNamespaceDescriptor(
               master.getNamespaceDescriptor(null, GetNamespaceDescriptorRequest.newBuilder().
                 setNamespaceName(name).build()).getNamespaceDescriptor());
@@ -2254,7 +2254,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     return
         executeCallable(new MasterCallable<NamespaceDescriptor[]>(getConnection()) {
           @Override
-          public NamespaceDescriptor[] call() throws Exception {
+          public NamespaceDescriptor[] call(int callTimeout) throws Exception {
             List<HBaseProtos.NamespaceDescriptor> list =
               master.listNamespaceDescriptors(null, ListNamespaceDescriptorsRequest.newBuilder().
                 build()).getNamespaceDescriptorList();
@@ -2277,7 +2277,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     return
         executeCallable(new MasterCallable<HTableDescriptor[]>(getConnection()) {
           @Override
-          public HTableDescriptor[] call() throws Exception {
+          public HTableDescriptor[] call(int callTimeout) throws Exception {
             List<TableSchema> list =
               master.listTableDescriptorsByNamespace(null, ListTableDescriptorsByNamespaceRequest.
                 newBuilder().setNamespaceName(name).build()).getTableSchemaList();
@@ -2301,7 +2301,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     return
         executeCallable(new MasterCallable<TableName[]>(getConnection()) {
           @Override
-          public TableName[] call() throws Exception {
+          public TableName[] call(int callTimeout) throws Exception {
             List<HBaseProtos.TableName> tableNames =
               master.listTableNamesByNamespace(null, ListTableNamesByNamespaceRequest.
                 newBuilder().setNamespaceName(name).build())
@@ -2715,7 +2715,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       LOG.debug("Getting current status of snapshot from master...");
       done = executeCallable(new MasterCallable<IsSnapshotDoneResponse>(getConnection()) {
         @Override
-        public IsSnapshotDoneResponse call() throws ServiceException {
+        public IsSnapshotDoneResponse call(int callTimeout) throws ServiceException {
           return master.isSnapshotDone(null, request);
         }
       });
@@ -2744,7 +2744,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     // run the snapshot on the master
     return executeCallable(new MasterCallable<SnapshotResponse>(getConnection()) {
       @Override
-      public SnapshotResponse call() throws ServiceException {
+      public SnapshotResponse call(int callTimeout) throws ServiceException {
         return master.snapshot(null, request);
       }
     });
@@ -2775,7 +2775,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
     return executeCallable(new MasterCallable<IsSnapshotDoneResponse>(getConnection()) {
       @Override
-      public IsSnapshotDoneResponse call() throws ServiceException {
+      public IsSnapshotDoneResponse call(int callTimeout) throws ServiceException {
         return master.isSnapshotDone(null,
           IsSnapshotDoneRequest.newBuilder().setSnapshot(snapshot).build());
       }
@@ -3026,7 +3026,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     ExecProcedureResponse response = executeCallable(new MasterCallable<ExecProcedureResponse>(
         getConnection()) {
       @Override
-      public ExecProcedureResponse call() throws ServiceException {
+      public ExecProcedureResponse call(int callTimeout) throws ServiceException {
         return master.execProcedure(null, request);
       }
     });
@@ -3089,7 +3089,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     return executeCallable(
         new MasterCallable<IsProcedureDoneResponse>(getConnection()) {
           @Override
-          public IsProcedureDoneResponse call() throws ServiceException {
+          public IsProcedureDoneResponse call(int callTimeout) throws ServiceException {
             return master.isProcedureDone(null, IsProcedureDoneRequest
                 .newBuilder().setProcedure(desc).build());
           }
@@ -3135,7 +3135,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       done = executeCallable(new MasterCallable<IsRestoreSnapshotDoneResponse>(
           getConnection()) {
         @Override
-        public IsRestoreSnapshotDoneResponse call() throws ServiceException {
+        public IsRestoreSnapshotDoneResponse call(int callTimeout) throws ServiceException {
           return master.isRestoreSnapshotDone(null, request);
         }
       });
@@ -3165,7 +3165,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     // run the snapshot restore on the master
     return executeCallable(new MasterCallable<RestoreSnapshotResponse>(getConnection()) {
       @Override
-      public RestoreSnapshotResponse call() throws ServiceException {
+      public RestoreSnapshotResponse call(int callTimeout) throws ServiceException {
         return master.restoreSnapshot(null, request);
       }
     });
@@ -3179,7 +3179,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public List<SnapshotDescription> listSnapshots() throws IOException {
     return executeCallable(new MasterCallable<List<SnapshotDescription>>(getConnection()) {
       @Override
-      public List<SnapshotDescription> call() throws ServiceException {
+      public List<SnapshotDescription> call(int callTimeout) throws ServiceException {
         return master.getCompletedSnapshots(null, GetCompletedSnapshotsRequest.newBuilder().build())
             .getSnapshotsList();
       }
@@ -3235,7 +3235,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     // do the delete
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
-      public Void call() throws ServiceException {
+      public Void call(int callTimeout) throws ServiceException {
         master.deleteSnapshot(null,
           DeleteSnapshotRequest.newBuilder().
             setSnapshot(SnapshotDescription.newBuilder().setName(snapshotName).build()).build());
@@ -3264,7 +3264,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       // do the delete
       executeCallable(new MasterCallable<Void>(getConnection()) {
         @Override
-        public Void call() throws ServiceException {
+        public Void call(int callTimeout) throws ServiceException {
           this.master.deleteSnapshot(null,
             DeleteSnapshotRequest.newBuilder().setSnapshot(snapshot).build());
           return null;
