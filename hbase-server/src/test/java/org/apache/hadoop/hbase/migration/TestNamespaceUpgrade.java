@@ -35,20 +35,29 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
@@ -281,6 +290,61 @@ public class TestNamespaceUpgrade {
     Path hbaseRootDir = TEST_UTIL.getDefaultRootDirPath();
     for (String dir: newdirs) {
       assertTrue(dir, fs.exists(new Path(hbaseRootDir, dir)));
+    }
+  }
+
+  @Test (timeout = 300000)
+  public void testACLTableMigration() throws IOException {
+    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS("testACLTable");
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    byte[] FAMILY = Bytes.toBytes("l");
+    byte[] QUALIFIER = Bytes.toBytes("testUser");
+    byte[] VALUE = Bytes.toBytes("RWCA");
+
+    // Create a Region
+    HTableDescriptor aclTable = new HTableDescriptor(TableName.valueOf("testACLTable"));
+    aclTable.addFamily(new HColumnDescriptor(FAMILY));
+    FSTableDescriptors fstd = new FSTableDescriptors(fs, rootDir);
+    fstd.createTableDescriptor(aclTable);
+    HRegionInfo hriAcl = new HRegionInfo(aclTable.getTableName(), null, null);
+    HRegion region = HRegion.createHRegion(hriAcl, rootDir, conf, aclTable);
+    try {
+      // Create rows
+      Put p = new Put(Bytes.toBytes("-ROOT-"));
+      p.addImmutable(FAMILY, QUALIFIER, VALUE);
+      region.put(p);
+      p = new Put(Bytes.toBytes(".META."));
+      p.addImmutable(FAMILY, QUALIFIER, VALUE);
+      region.put(p);
+      p = new Put(Bytes.toBytes("_acl_"));
+      p.addImmutable(FAMILY, QUALIFIER, VALUE);
+      region.put(p);
+
+      NamespaceUpgrade upgrade = new NamespaceUpgrade();
+      upgrade.updateAcls(region);
+
+      // verify rows -ROOT- is removed
+      Get g = new Get(Bytes.toBytes("-ROOT-"));
+      Result r = region.get(g);
+      assertTrue(r == null || r.size() == 0);
+
+      // verify rows _acl_ is renamed to hbase:acl
+      g = new Get(AccessControlLists.ACL_TABLE_NAME.toBytes());
+      r = region.get(g);
+      assertTrue(r != null && r.size() == 1);
+      assertTrue(Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIER)) == 0);
+
+      // verify rows .META. is renamed to hbase:meta
+      g = new Get(TableName.META_TABLE_NAME.toBytes());
+      r = region.get(g);
+      assertTrue(r != null && r.size() == 1);
+      assertTrue(Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIER)) == 0);
+    } finally {
+      region.close();
+      // Delete the region
+      HRegionFileSystem.deleteRegionFromFileSystem(conf, fs,
+        FSUtils.getTableDir(rootDir, hriAcl.getTable()), hriAcl);
     }
   }
 }
