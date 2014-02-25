@@ -136,7 +136,7 @@ import com.google.common.collect.Lists;
 
 /**
  * Basic stand-alone testing of HRegion.
- * 
+ *
  * A lot of the meta information for an HRegion now lives inside other HRegions
  * or in the HBaseMaster, so only basic testing is possible.
  */
@@ -151,7 +151,7 @@ public class TestHRegion {
   private static final String COLUMN_FAMILY = "MyCF";
 
   HRegion region = null;
-  private static HBaseTestingUtility TEST_UTIL; // do not run unit tests in parallel 
+  private static HBaseTestingUtility TEST_UTIL; // do not run unit tests in parallel
   public static Configuration conf ;
   private String DIR;
   private static FileSystem fs;
@@ -191,7 +191,7 @@ public class TestHRegion {
   String getName() {
     return name.getMethodName();
   }
-  
+
   // ////////////////////////////////////////////////////////////////////////////
   // New tests that doesn't spin up a mini cluster but rather just test the
   // individual code pieces in the HRegion. Putting files locally in
@@ -1971,7 +1971,7 @@ public class TestHRegion {
 
   /**
    * This method tests https://issues.apache.org/jira/browse/HBASE-2516.
-   * 
+   *
    * @throws IOException
    */
   @Test
@@ -2540,7 +2540,7 @@ public class TestHRegion {
 
   /**
    * Added for HBASE-5416
-   * 
+   *
    * Here we test scan optimization when only subset of CFs are used in filter
    * conditions.
    */
@@ -2609,7 +2609,7 @@ public class TestHRegion {
 
   /**
    * HBASE-5416
-   * 
+   *
    * Test case when scan limits amount of KVs returned on each next() call.
    */
   @Test
@@ -2703,7 +2703,7 @@ public class TestHRegion {
   // ////////////////////////////////////////////////////////////////////////////
   /**
    * Splits twice and verifies getting from each of the split regions.
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -2835,7 +2835,7 @@ public class TestHRegion {
    * Flushes the cache in a thread while scanning. The tests verify that the
    * scan is coherent - e.g. the returned results are always of the same or
    * later update as the previous results.
-   * 
+   *
    * @throws IOException
    *           scan / compact
    * @throws InterruptedException
@@ -2957,7 +2957,7 @@ public class TestHRegion {
   /**
    * Writes very wide records and scans for the latest every time.. Flushes and
    * compacts the region every now and then to keep things realistic.
-   * 
+   *
    * @throws IOException
    *           by flush / scan / compaction
    * @throws InterruptedException
@@ -3115,7 +3115,7 @@ public class TestHRegion {
   /**
    * Writes very wide records and gets the latest row every time.. Flushes and
    * compacts the region aggressivly to catch issues.
-   * 
+   *
    * @throws IOException
    *           by flush / scan / compaction
    * @throws InterruptedException
@@ -3500,7 +3500,7 @@ public class TestHRegion {
   /**
    * Testcase to check state of region initialization task set to ABORTED or not
    * if any exceptions during initialization
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -3923,7 +3923,116 @@ public class TestHRegion {
     region.close();
   }
 
+  @Test
+  public void testRegionReplicaSecondary() throws IOException {
+    // create a primary region, load some data and flush
+    // create a secondary region, and do a get against that
+    Path rootDir = new Path(DIR + "testRegionReplicaSecondary");
+
+    byte[][] families = new byte[][] {
+        Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
+    };
+    byte[] cq = Bytes.toBytes("cq");
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionReplicaSecondary"));
+    for (byte[] family : families) {
+      htd.addFamily(new HColumnDescriptor(family));
+    }
+
+    long time = System.currentTimeMillis();
+    HRegionInfo primaryHri = new HRegionInfo(htd.getTableName(),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+      false, time, 0);
+    HRegionInfo secondaryHri = new HRegionInfo(htd.getTableName(),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+      false, time, 1);
+
+    HRegion primaryRegion = null, secondaryRegion = null;
+
+    try {
+      primaryRegion = HRegion.createHRegion(primaryHri,
+        rootDir, TEST_UTIL.getConfiguration(), htd);
+
+      // load some data
+      putData(primaryRegion, 0, 1000, cq, families);
+
+      // flush region
+      primaryRegion.flushcache();
+
+      // open secondary region
+      secondaryRegion = HRegion.openHRegion(rootDir, secondaryHri, htd, null, conf);
+
+      verifyData(secondaryRegion, 0, 1000, cq, families);
+    } finally {
+      if (primaryRegion != null) {
+        HRegion.closeHRegion(primaryRegion);
+      }
+      if (secondaryRegion != null) {
+        HRegion.closeHRegion(secondaryRegion);
+      }
+    }
+  }
+
+  @Test
+  public void testRegionReplicaSecondaryIsReadOnly() throws IOException {
+    // create a primary region, load some data and flush
+    // create a secondary region, and do a put against that
+    Path rootDir = new Path(DIR + "testRegionReplicaSecondary");
+
+    byte[][] families = new byte[][] {
+        Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
+    };
+    byte[] cq = Bytes.toBytes("cq");
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionReplicaSecondary"));
+    for (byte[] family : families) {
+      htd.addFamily(new HColumnDescriptor(family));
+    }
+
+    long time = System.currentTimeMillis();
+    HRegionInfo primaryHri = new HRegionInfo(htd.getTableName(),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+      false, time, 0);
+    HRegionInfo secondaryHri = new HRegionInfo(htd.getTableName(),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+      false, time, 1);
+
+    HRegion primaryRegion = null, secondaryRegion = null;
+
+    try {
+      primaryRegion = HRegion.createHRegion(primaryHri,
+        rootDir, TEST_UTIL.getConfiguration(), htd);
+
+      // load some data
+      putData(primaryRegion, 0, 1000, cq, families);
+
+      // flush region
+      primaryRegion.flushcache();
+
+      // open secondary region
+      secondaryRegion = HRegion.openHRegion(rootDir, secondaryHri, htd, null, conf);
+
+      try {
+        putData(secondaryRegion, 0, 1000, cq, families);
+        fail("Should have thrown exception");
+      } catch (IOException ex) {
+        // expected
+      }
+    } finally {
+      if (primaryRegion != null) {
+        HRegion.closeHRegion(primaryRegion);
+      }
+      if (secondaryRegion != null) {
+        HRegion.closeHRegion(secondaryRegion);
+      }
+    }
+
+  }
+
   private void putData(int startRow, int numRows, byte[] qf, byte[]... families) throws IOException {
+    putData(this.region, startRow, numRows, qf, families);
+  }
+
+  private void putData(HRegion region,
+      int startRow, int numRows, byte[] qf, byte[]... families) throws IOException {
     for (int i = startRow; i < startRow + numRows; i++) {
       Put put = new Put(Bytes.toBytes("" + i));
       put.setDurability(Durability.SKIP_WAL);
@@ -3966,13 +4075,13 @@ public class TestHRegion {
 
   /*
    * Assert first value in the passed region is <code>firstValue</code>.
-   * 
+   *
    * @param r
-   * 
+   *
    * @param fs
-   * 
+   *
    * @param firstValue
-   * 
+   *
    * @throws IOException
    */
   private void assertScan(final HRegion r, final byte[] fs, final byte[] firstValue)

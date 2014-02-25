@@ -27,10 +27,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -349,4 +349,13 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @return Whether this store has too many store files.
    */
   boolean hasTooManyStoreFiles();
+
+  /**
+   * Checks the underlying store files, and opens the files that  have not
+   * been opened, and removes the store file readers for store files no longer
+   * available. Mainly used by secondary region replicas to keep up to date with
+   * the primary region files.
+   * @throws IOException
+   */
+   void refreshStoreFiles() throws IOException;
 }

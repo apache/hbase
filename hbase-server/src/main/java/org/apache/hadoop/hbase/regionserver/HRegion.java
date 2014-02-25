@@ -137,6 +137,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
@@ -195,7 +196,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
       "hbase.hregion.scan.loadColumnFamiliesOnDemand";
-      
+
   /**
    * This is the global default value for durability. All tables/mutations not
    * defining a durability or using USE_DEFAULT will default to this value.
@@ -366,6 +367,9 @@ public class HRegion implements HeapSize { // , Writable{
     volatile boolean writesEnabled = true;
     // Set if region is read-only
     volatile boolean readOnly = false;
+    // whether the reads are enabled. This is different than readOnly, because readOnly is
+    // static in the lifetime of the region, while readsEnabled is dynamic
+    volatile boolean readsEnabled = true;
 
     /**
      * Set flags that make this region read-only.
@@ -385,6 +389,10 @@ public class HRegion implements HeapSize { // , Writable{
       return this.flushRequested;
     }
 
+    void setReadsEnabled(boolean readsEnabled) {
+      this.readsEnabled = readsEnabled;
+    }
+
     static final long HEAP_SIZE = ClassSize.align(
         ClassSize.OBJECT + 5 * Bytes.SIZEOF_BOOLEAN);
   }
@@ -399,7 +407,7 @@ public class HRegion implements HeapSize { // , Writable{
   private RegionServerAccounting rsAccounting;
   private List<Pair<Long, Long>> recentFlushes = new ArrayList<Pair<Long,Long>>();
   private long flushCheckInterval;
-  // flushPerChanges is to prevent too many changes in memstore    
+  // flushPerChanges is to prevent too many changes in memstore
   private long flushPerChanges;
   private long blockingMemStoreSize;
   final long threadWakeFrequency;
@@ -499,7 +507,7 @@ public class HRegion implements HeapSize { // , Writable{
       throw new IllegalArgumentException(MEMSTORE_FLUSH_PER_CHANGES + " can not exceed "
           + MAX_FLUSH_PER_CHANGES);
     }
-    
+
     this.rowLockWaitDuration = conf.getInt("hbase.rowlock.wait.duration",
                     DEFAULT_ROWLOCK_WAIT_DURATION);
 
@@ -644,7 +652,7 @@ public class HRegion implements HeapSize { // , Writable{
     fs.cleanupAnySplitDetritus();
     fs.cleanupMergesDir();
 
-    this.writestate.setReadOnly(this.htableDescriptor.isReadOnly());
+    this.writestate.setReadOnly(ServerRegionReplicaUtil.isReadOnly(this));
     this.writestate.flushRequested = false;
     this.writestate.compacting = 0;
 
@@ -737,7 +745,7 @@ public class HRegion implements HeapSize { // , Writable{
           for (Store store : this.stores.values()) {
             try {
               store.close();
-            } catch (IOException e) { 
+            } catch (IOException e) {
               LOG.warn(e.getMessage());
             }
           }
@@ -2018,6 +2026,7 @@ public class HRegion implements HeapSize { // , Writable{
       this.nonce = nonce;
     }
 
+    @Override
     public Mutation getMutation(int index) {
       return this.operations[index];
     }
@@ -2774,6 +2783,16 @@ public class HRegion implements HeapSize { // , Writable{
     if (this.writestate.isReadOnly()) {
       throw new IOException("region is read only");
     }
+  }
+
+  protected void checkReadsEnabled() throws IOException {
+    if (!this.writestate.readsEnabled) {
+      throw new IOException ("The region's reads are disabled. Cannot serve the request");
+    }
+  }
+
+  public void setReadsEnabled(boolean readsEnabled) {
+    this.writestate.setReadsEnabled(readsEnabled);
   }
 
   /**
@@ -3885,7 +3904,7 @@ public class HRegion implements HeapSize { // , Writable{
           if (filter != null && filter.hasFilterRow()) {
             filter.filterRowCells(results);
           }
-          
+
           if (isEmptyRow || filterRow()) {
             results.clear();
             boolean moreRows = nextRow(currentRow, offset, length);
@@ -3953,7 +3972,7 @@ public class HRegion implements HeapSize { // , Writable{
       return filter != null && (!filter.hasFilterRow())
           && filter.filterRow();
     }
-    
+
     private boolean filterRowKey(byte[] row, int offset, short length) throws IOException {
       return filter != null
           && filter.filterRowKey(row, offset, length);
@@ -5625,7 +5644,7 @@ public class HRegion implements HeapSize { // , Writable{
    * modifies data. It has to be called just before a try.
    * #closeRegionOperation needs to be called in the try's finally block
    * Acquires a read lock and checks if the region is closing or closed.
-   * @throws IOException 
+   * @throws IOException
    */
   public void startRegionOperation() throws IOException {
     startRegionOperation(Operation.ANY);
@@ -5633,14 +5652,15 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * @param op The operation is about to be taken on the region
-   * @throws IOException 
+   * @throws IOException
    */
   protected void startRegionOperation(Operation op) throws IOException {
     switch (op) {
-    case INCREMENT:
-    case APPEND:
-    case GET:
+    case GET:  // read operations
     case SCAN:
+      checkReadsEnabled();
+    case INCREMENT: // write operations
+    case APPEND:
     case SPLIT_REGION:
     case MERGE_REGION:
     case PUT:
@@ -5683,7 +5703,7 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Closes the lock. This needs to be called in the finally block corresponding
    * to the try block of #startRegionOperation
-   * @throws IOException 
+   * @throws IOException
    */
   public void closeRegionOperation() throws IOException {
     closeRegionOperation(Operation.ANY);

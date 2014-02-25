@@ -50,7 +50,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.ObjectName;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -235,6 +234,7 @@ import org.cliffc.high_scale_lib.Counter;
 
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -481,6 +481,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * The lease timeout period for client scanners (milliseconds).
    */
   private final int scannerLeaseTimeoutPeriod;
+
+  // chore for refreshing store files for secondary regions
+  private StorefileRefresherChore storefileRefresher;
 
   /**
    * The reference to the priority extraction function
@@ -821,6 +824,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         this.isa.getAddress(), 0));
     this.pauseMonitor = new JvmPauseMonitor(conf);
     pauseMonitor.start();
+
+    int storefileRefreshPeriod = conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD
+      , StorefileRefresherChore.DEFAULT_REGIONSERVER_STOREFILE_REFRESH_PERIOD);
+    if (storefileRefreshPeriod > 0) {
+      this.storefileRefresher = new StorefileRefresherChore(storefileRefreshPeriod, this, this);
+    }
   }
 
   /**
@@ -945,6 +954,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
     if (this.nonceManagerChore != null) {
       this.nonceManagerChore.interrupt();
+    }
+    if (this.storefileRefresher != null) {
+      this.storefileRefresher.interrupt();
     }
 
     // Stop the snapshot and other procedure handlers, forcefully killing all running tasks
@@ -1608,6 +1620,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       Threads.setDaemonThreadRunning(this.nonceManagerChore.getThread(), n + ".nonceCleaner",
             uncaughtExceptionHandler);
     }
+    if (this.storefileRefresher != null) {
+      Threads.setDaemonThreadRunning(this.storefileRefresher.getThread(), n + ".storefileRefresher",
+            uncaughtExceptionHandler);
+    }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -1893,6 +1909,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       if (this.replicationSinkHandler != null) {
         this.replicationSinkHandler.stopReplicationService();
       }
+    }
+    if (this.storefileRefresher != null) {
+      Threads.shutdown(this.storefileRefresher.getThread());
     }
   }
 
