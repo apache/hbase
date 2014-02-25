@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
@@ -3751,6 +3752,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       }
       builder.setLastFlushTime(region.getLastFlushTime());
       return builder.build();
+    } catch (DroppedSnapshotException ex) {
+      // Cache flush can fail in a few places. If it fails in a critical
+      // section, we get a DroppedSnapshotException and a replay of hlog
+      // is required. Currently the only way to do this is a restart of
+      // the server.
+      abort("Replay of HLog required. Forcing server shutdown", ex);
+      throw new ServiceException(ex);
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
