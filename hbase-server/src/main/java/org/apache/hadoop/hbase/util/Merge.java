@@ -228,11 +228,9 @@ public class Merge extends Configured implements Tool {
   }
 
   /*
-   * Adds a region's meta information from the passed <code>meta</code>
-   * region.
+   * Parse given arguments including generic arguments and assign table name and regions names.
    *
-   * @param metainfo hbase:meta HRegionInfo to be updated
-   * @param region HRegion to add to <code>meta</code>
+   * @param args the arguments to parse
    *
    * @throws IOException
    */
