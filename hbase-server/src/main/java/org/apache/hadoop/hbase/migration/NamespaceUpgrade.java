@@ -453,21 +453,43 @@ public class NamespaceUpgrade implements Tool {
    * @param region
    * @throws IOException
    */
-  private void updateAcls(HRegion region) throws IOException {
+  void updateAcls(HRegion region) throws IOException {
     byte[] rowKey = Bytes.toBytes(NamespaceUpgrade.OLD_ACL);
     // get the old _acl_ entry, if present.
     Get g = new Get(rowKey);
     Result r = region.get(g);
-    if (r == null || r.size() == 0) return;
-    // create a put for new _acl_ entry with rowkey as hbase:acl
-    Put p = new Put(AccessControlLists.ACL_GLOBAL_NAME);
-    for (Cell c : r.rawCells()) {
-      p.addImmutable(CellUtil.cloneFamily(c), CellUtil.cloneQualifier(c), CellUtil.cloneValue(c));
+    if (r != null && r.size() > 0) {
+      // create a put for new _acl_ entry with rowkey as hbase:acl
+      Put p = new Put(AccessControlLists.ACL_GLOBAL_NAME);
+      for (Cell c : r.rawCells()) {
+        p.addImmutable(CellUtil.cloneFamily(c), CellUtil.cloneQualifier(c), CellUtil.cloneValue(c));
+      }
+      region.put(p);
+      // delete the old entry
+      Delete del = new Delete(rowKey);
+      region.delete(del);
     }
-    region.put(p);
-    // delete the old entry
+
+    // delete the old entry for '-ROOT-'
+    rowKey = Bytes.toBytes(TableName.OLD_ROOT_STR);
     Delete del = new Delete(rowKey);
     region.delete(del);
+
+    // rename .META. to hbase:meta
+    rowKey = Bytes.toBytes(TableName.OLD_META_STR);
+    g = new Get(rowKey);
+    r = region.get(g);
+    if (r != null && r.size() > 0) {
+      // create a put for new .META. entry with rowkey as hbase:meta
+      Put p = new Put(TableName.META_TABLE_NAME.getName());
+      for (Cell c : r.rawCells()) {
+        p.addImmutable(CellUtil.cloneFamily(c), CellUtil.cloneQualifier(c), CellUtil.cloneValue(c));
+      }
+      region.put(p);
+      // delete the old entry
+      del = new Delete(rowKey);
+      region.delete(del);
+    }
   }
 
   //Culled from FSTableDescriptors
