@@ -558,8 +558,10 @@ public class TestThriftServer {
     LOG.info("Region found:" + regions.get(0));
     handler.disableTable(tableAname);
     handler.deleteTable(tableAname);
-    ((ThriftServerRunner.HBaseHandler) handler).getTable(tableAname)
+    if (handler instanceof ThriftServerRunner.HBaseHandler) {
+      ((ThriftServerRunner.HBaseHandler) handler).getTable(tableAname)
         .clearRegionCache();
+    }
     regionCount = handler.getTableRegions(tableAname).size();
     assertEquals("non-existing table should have 0 region, " +
             "but found " + regionCount, regionCount, 0);
