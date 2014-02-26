@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,17 +35,25 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegionAction;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 @Category(MediumTests.class)
 public class TestBaseLoadBalancer extends BalancerTestBase {
 
-  private static LoadBalancer loadBalancer;
-  private static final Log LOG = LogFactory.getLog(TestStochasticLoadBalancer.class);
+  private static BaseLoadBalancer loadBalancer;
+  private static RackManager rackManager;
+  private static final int NUM_SERVERS = 15;
+  private static ServerName[] servers = new ServerName[NUM_SERVERS];
+  private static final Log LOG = LogFactory.getLog(TestBaseLoadBalancer.class);
 
   int[][] regionsAndServersMocks = new int[][] {
       // { num regions, num servers }
@@ -58,6 +67,20 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     Configuration conf = HBaseConfiguration.create();
     loadBalancer = new MockBalancer();
     loadBalancer.setConf(conf);
+    // Set up the rack topologies (5 machines per rack)
+    rackManager = Mockito.mock(RackManager.class);
+    for (int i = 0; i < NUM_SERVERS; i++) {
+      servers[i] = ServerName.valueOf("foo"+i+":1234",-1);
+      if (i < 5) {
+        Mockito.when(rackManager.getRack(servers[i])).thenReturn("rack1");
+      }
+      if (i >= 5 && i < 10) {
+        Mockito.when(rackManager.getRack(servers[i])).thenReturn("rack2");
+      }
+      if (i >= 10) {
+        Mockito.when(rackManager.getRack(servers[i])).thenReturn("rack3");
+      }
+    }
   }
 
   public static class MockBalancer extends BaseLoadBalancer {
@@ -174,6 +197,138 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertRetainedAssignment(existing, listOfServerNames, assignment);
   }
 
+  @Test
+  public void testRegionAvailability() throws Exception {
+    // Create a cluster with a few servers, assign them to specific racks
+    // then assign some regions. The tests should check whether moving a
+    // replica from one node to a specific other node or rack lowers the
+    // availability of the region or not
+
+    List<HRegionInfo> list0 = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> list1 = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> list2 = new ArrayList<HRegionInfo>();
+    // create a region (region1)
+    HRegionInfo hri1 = new HRegionInfo(
+        TableName.valueOf("table"), "key1".getBytes(), "key2".getBytes(),
+        false, 100);
+    // create a replica of the region (replica_of_region1)
+    HRegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
+    // create a second region (region2)
+    HRegionInfo hri3 = new HRegionInfo(
+        TableName.valueOf("table"), "key2".getBytes(), "key3".getBytes(),
+        false, 101);
+    list0.add(hri1); //only region1
+    list1.add(hri2); //only replica_of_region1
+    list2.add(hri3); //only region2
+    Map<ServerName, List<HRegionInfo>> clusterState =
+        new LinkedHashMap<ServerName, List<HRegionInfo>>();
+    clusterState.put(servers[0], list0); //servers[0] hosts region1
+    clusterState.put(servers[1], list1); //servers[1] hosts replica_of_region1
+    clusterState.put(servers[2], list2); //servers[2] hosts region2
+    // create a cluster with the above clusterState. The way in which the
+    // cluster is created (constructor code) would make sure the indices of
+    // the servers are in the order in which it is inserted in the clusterState
+    // map (linkedhashmap is important). A similar thing applies to the region lists
+    Cluster cluster = new Cluster(clusterState, null, null, rackManager);
+    // check whether a move of region1 from servers[0] to servers[1] would lower
+    // the availability of region1
+    assertTrue(cluster.wouldLowerAvailability(hri1, servers[1]));
+    // check whether a move of region1 from servers[0] to servers[2] would lower
+    // the availability of region1
+    assertTrue(!cluster.wouldLowerAvailability(hri1, servers[2]));
+    // check whether a move of replica_of_region1 from servers[0] to servers[2] would lower
+    // the availability of replica_of_region1
+    assertTrue(!cluster.wouldLowerAvailability(hri2, servers[2]));
+    // check whether a move of region2 from servers[0] to servers[1] would lower
+    // the availability of region2
+    assertTrue(!cluster.wouldLowerAvailability(hri3, servers[1]));
+
+    // now lets have servers[1] host replica_of_region2
+    list1.add(RegionReplicaUtil.getRegionInfoForReplica(hri3, 1));
+    // create a new clusterState with the above change
+    cluster = new Cluster(clusterState, null, null, rackManager);
+    // now check whether a move of a replica from servers[0] to servers[1] would lower
+    // the availability of region2
+    assertTrue(cluster.wouldLowerAvailability(hri3, servers[1]));
+
+    // start over again
+    clusterState.clear();
+    clusterState.put(servers[0], list0); //servers[0], rack1 hosts region1
+    clusterState.put(servers[5], list1); //servers[5], rack2 hosts replica_of_region1 and replica_of_region2
+    clusterState.put(servers[6], list2); //servers[6], rack2 hosts region2
+    clusterState.put(servers[10], new ArrayList<HRegionInfo>()); //servers[10], rack3 hosts no region
+    // create a cluster with the above clusterState
+    cluster = new Cluster(clusterState, null, null, rackManager);
+    // check whether a move of region1 from servers[0],rack1 to servers[6],rack2 would
+    // lower the availability
+
+    assertTrue(cluster.wouldLowerAvailability(hri1, servers[0]));
+
+    // now create a cluster without the rack manager
+    cluster = new Cluster(clusterState, null, null, null);
+    // now repeat check whether a move of region1 from servers[0] to servers[6] would
+    // lower the availability
+    assertTrue(!cluster.wouldLowerAvailability(hri1, servers[6]));
+  }
+
+  @Test
+  public void testRegionAvailabilityWithRegionMoves() throws Exception {
+    List<HRegionInfo> list0 = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> list1 = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> list2 = new ArrayList<HRegionInfo>();
+    // create a region (region1)
+    HRegionInfo hri1 = new HRegionInfo(
+        TableName.valueOf("table"), "key1".getBytes(), "key2".getBytes(),
+        false, 100);
+    // create a replica of the region (replica_of_region1)
+    HRegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
+    // create a second region (region2)
+    HRegionInfo hri3 = new HRegionInfo(
+        TableName.valueOf("table"), "key2".getBytes(), "key3".getBytes(),
+        false, 101);
+    list0.add(hri1); //only region1
+    list1.add(hri2); //only replica_of_region1
+    list2.add(hri3); //only region2
+    Map<ServerName, List<HRegionInfo>> clusterState =
+        new LinkedHashMap<ServerName, List<HRegionInfo>>();
+    clusterState.put(servers[0], list0); //servers[0] hosts region1
+    clusterState.put(servers[1], list1); //servers[1] hosts replica_of_region1
+    clusterState.put(servers[2], list2); //servers[2] hosts region2
+    // create a cluster with the above clusterState. The way in which the
+    // cluster is created (constructor code) would make sure the indices of
+    // the servers are in the order in which it is inserted in the clusterState
+    // map (linkedhashmap is important).
+    Cluster cluster = new Cluster(clusterState, null, null, rackManager);
+    // check whether moving region1 from servers[1] to servers[2] would lower availability
+    assertTrue(!cluster.wouldLowerAvailability(hri1, servers[2]));
+
+    // now move region1 from servers[0] to servers[2]
+    cluster.doAction(new MoveRegionAction(0, 0, 2));
+    // now repeat check whether moving region1 from servers[1] to servers[2]
+    // would lower availability
+    assertTrue(cluster.wouldLowerAvailability(hri1, servers[2]));
+
+    // start over again
+    clusterState.clear();
+    List<HRegionInfo> list3 = new ArrayList<HRegionInfo>();
+    HRegionInfo hri4 = RegionReplicaUtil.getRegionInfoForReplica(hri3, 1);
+    list3.add(hri4);
+    clusterState.put(servers[0], list0); //servers[0], rack1 hosts region1
+    clusterState.put(servers[5], list1); //servers[5], rack2 hosts replica_of_region1
+    clusterState.put(servers[6], list2); //servers[6], rack2 hosts region2
+    clusterState.put(servers[12], list3); //servers[12], rack3 hosts replica_of_region2
+    // create a cluster with the above clusterState
+    cluster = new Cluster(clusterState, null, null, rackManager);
+    // check whether a move of replica_of_region2 from servers[12],rack3 to servers[0],rack1 would
+    // lower the availability
+    assertTrue(!cluster.wouldLowerAvailability(hri4, servers[0]));
+    // now move region2 from servers[6],rack2 to servers[0],rack1
+    cluster.doAction(new MoveRegionAction(2, 2, 0));
+    // now repeat check if replica_of_region2 from servers[12],rack3 to servers[0],rack1 would
+    // lower the availability
+    assertTrue(cluster.wouldLowerAvailability(hri3, servers[0]));
+  }
+
   private List<ServerName> getListOfServerNames(final List<ServerAndLoad> sals) {
     List<ServerName> list = new ArrayList<ServerName>();
     for (ServerAndLoad e : sals) {
@@ -227,5 +382,4 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
       }
     }
   }
-
 }

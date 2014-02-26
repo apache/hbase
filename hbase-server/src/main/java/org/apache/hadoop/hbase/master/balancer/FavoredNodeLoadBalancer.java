@@ -63,6 +63,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
 
   @Override
   public void setConf(Configuration conf) {
+    super.setConf(conf);
     globalFavoredNodesAssignmentPlan = new FavoredNodesPlan();
     this.rackManager = new RackManager(conf);
     this.conf = conf;
@@ -81,7 +82,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
       LOG.warn("Not running balancer since exception was thrown " + ie);
       return plans;
     }
-    globalFavoredNodesAssignmentPlan = snaphotOfRegionAssignment.getExistingAssignmentPlan(); 
+    globalFavoredNodesAssignmentPlan = snaphotOfRegionAssignment.getExistingAssignmentPlan();
     Map<ServerName, ServerName> serverNameToServerNameWithoutCode =
         new HashMap<ServerName, ServerName>();
     Map<ServerName, ServerName> serverNameWithoutCodeToServerName =
@@ -134,7 +135,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
             destination = serverNameWithoutCodeToServerName.get(favoredNodes.get(2));
           }
         }
-        
+
         if (destination != null) {
           RegionPlan plan = new RegionPlan(region, currentServer, destination);
           plans.add(plan);
@@ -160,7 +161,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
       //    one of the favored node is still alive. In this case, try to adhere
       //    to the current favored nodes assignment as much as possible - i.e.,
       //    if the current primary is gone, then make the secondary or tertiary
-      //    as the new host for the region (based on their current load). 
+      //    as the new host for the region (based on their current load).
       //    Note that we don't change the favored
       //    node assignments here (even though one or more favored node is currently
       //    down). It is up to the balanceCluster to do this hard work. The HDFS
@@ -223,7 +224,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
     }
   }
 
-  private Pair<Map<ServerName, List<HRegionInfo>>, List<HRegionInfo>> 
+  private Pair<Map<ServerName, List<HRegionInfo>>, List<HRegionInfo>>
   segregateRegionsAndAssignRegionsWithFavoredNodes(List<HRegionInfo> regions,
       List<ServerName> availableServers) {
     Map<ServerName, List<HRegionInfo>> assignmentMapForFavoredNodes =
