@@ -49,6 +49,8 @@ public interface MetricsMasterSource extends BaseSource {
   String MASTER_ACTIVE_TIME_NAME = "masterActiveTime";
   String MASTER_START_TIME_NAME = "masterStartTime";
   String AVERAGE_LOAD_NAME = "averageLoad";
+  String LIVE_REGION_SERVERS_NAME = "liveRegionServers";
+  String DEAD_REGION_SERVERS_NAME = "deadRegionServers";
   String NUM_REGION_SERVERS_NAME = "numRegionServers";
   String NUM_DEAD_REGION_SERVERS_NAME = "numDeadRegionServers";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
@@ -61,7 +63,9 @@ public interface MetricsMasterSource extends BaseSource {
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   String MASTER_START_TIME_DESC = "Master Start Time";
   String AVERAGE_LOAD_DESC = "AverageLoad";
+  String LIVE_REGION_SERVERS_DESC = "Names of live RegionServers";
   String NUMBER_OF_REGION_SERVERS_DESC = "Number of RegionServers";
+  String DEAD_REGION_SERVERS_DESC = "Names of dead RegionServers";
   String NUMBER_OF_DEAD_REGION_SERVERS_DESC = "Number of dead RegionServers";
   String ZOOKEEPER_QUORUM_DESC = "Zookeeper Quorum";
   String SERVER_NAME_DESC = "Server Name";
