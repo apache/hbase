@@ -168,8 +168,11 @@ public class ServerShutdownHandler extends EventHandler {
       while (!this.server.isStopped()) {
         try {
           this.server.getCatalogTracker().waitForMeta();
-          hris = MetaReader.getServerUserRegions(this.server.getCatalogTracker(),
-            this.serverName);
+          // Skip getting user regions if the server is stopped.
+          if (!this.server.isStopped()) {
+            hris = MetaReader.getServerUserRegions(this.server.getCatalogTracker(),
+                this.serverName);
+          }
           break;
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();

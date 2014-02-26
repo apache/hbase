@@ -163,11 +163,11 @@ public class MetaReader {
   private static HTable getHTable(final CatalogTracker catalogTracker,
       final TableName tableName)
   throws IOException {
-    // Passing the CatalogTracker's connection configuration ensures this
+    // Passing the CatalogTracker's connection ensures this
     // HTable instance uses the CatalogTracker's connection.
     org.apache.hadoop.hbase.client.HConnection c = catalogTracker.getConnection();
     if (c == null) throw new NullPointerException("No connection");
-    return new HTable(catalogTracker.getConnection().getConfiguration(), tableName);
+    return new HTable(tableName, c);
   }
 
   /**
