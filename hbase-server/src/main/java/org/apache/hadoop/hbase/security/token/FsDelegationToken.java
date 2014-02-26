@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.security;
+package org.apache.hadoop.hbase.security.token;
 
 import java.io.IOException;
 
