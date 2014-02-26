@@ -19,9 +19,18 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -34,16 +43,21 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompoundRowPrefixFilter;
-import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.*;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.CacheTestHelper;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
+import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -52,10 +66,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Assert;
 import org.mockito.Mockito;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.util.*;
+import com.google.common.base.Joiner;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  * Test HStoreFile
@@ -382,7 +395,7 @@ public class TestStoreFile extends HBaseTestCase {
       TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
       columns.add("family:col".getBytes());
 
-      Scan scan = new Scan(row.getBytes(),row.getBytes());
+      Scan scan = new Scan(row.getBytes(), Bytes.nextOf(row.getBytes()));
       scan.addColumn("family".getBytes(), "family:col".getBytes());
       boolean exists = scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE);
       if (i % 2 == 0) {
@@ -762,7 +775,7 @@ public class TestStoreFile extends HBaseTestCase {
           TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
           columns.add(("col" + col).getBytes());
 
-          Scan scan = new Scan(row.getBytes(),row.getBytes());
+          Scan scan = new Scan(row.getBytes(), Bytes.nextOf(row.getBytes()));
           scan.addColumn("family".getBytes(), ("col"+col).getBytes());
           boolean exists =
               scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE);
@@ -1146,7 +1159,7 @@ public class TestStoreFile extends HBaseTestCase {
 
     assertEquals(dataBlockEncoderAlgo.getNameInBytes(), value);
   }
-  
+
   public static List<StoreFile> getStoreFiles(Store s) {
     return s.getStorefiles();
   }

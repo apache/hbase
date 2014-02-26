@@ -38,7 +38,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -281,7 +280,7 @@ public class TestCompoundBloomFilter {
 
   private boolean isInBloom(StoreFileScanner scanner, byte[] row,
       byte[] qualifier) {
-    Scan scan = new Scan(row, row);
+    Scan scan = new Scan(row, Bytes.nextOf(row));
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     columns.add(qualifier);
     return scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE);
