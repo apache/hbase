@@ -34,7 +34,7 @@
 #
 # Modelled after $HADOOP_HOME/bin/slaves.sh.
 
-usage="Usage: $0 [--config <hbase-confdir>] [--rs-only] [--master-only] [--graceful]"
+usage="Usage: $0 [--config <hbase-confdir>] [--rs-only] [--master-only] [--graceful] [--maxthreads xx]"
 
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
@@ -57,23 +57,32 @@ function usage() {
 RR_RS=1
 RR_MASTER=1
 RR_GRACEFUL=0
+RR_MAXTHREADS=1
 
-for x in "$@" ; do
-  case "$x" in
+while [ $# -gt 0 ]; do
+  case "$1" in
     --rs-only|-r)
       RR_RS=1
       RR_MASTER=0
       RR_GRACEFUL=0
+      shift
       ;;
     --master-only)
       RR_RS=0
       RR_MASTER=1
       RR_GRACEFUL=0
+      shift
       ;;
     --graceful)
       RR_RS=0
       RR_MASTER=0
       RR_GRACEFUL=1
+      shift
+      ;;
+    --maxthreads)
+      shift
+      RR_MAXTHREADS=$1
+      shift
       ;;
     *)
       echo Bad argument: $x
@@ -85,7 +94,7 @@ done
 
 # quick function to get a value from the HBase config file
 # HBASE-6504 - only take the first line of the output in case verbose gc is on
-distMode=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed | head -n 1`
+distMode=`HBASE_CONF_DIR=${HBASE_CONF_DIR} $bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed | head -n 1`
 if [ "$distMode" == 'false' ]; then
   if [ $RR_RS -ne 1 ] || [ $RR_MASTER -ne 1 ]; then
     echo Cant do selective rolling restart if not running distributed
@@ -158,7 +167,7 @@ else
         rs_parts=(${rs//,/ })
         hostname=${rs_parts[0]}
         echo "Gracefully restarting: $hostname"
-        "$bin"/graceful_stop.sh --config "${HBASE_CONF_DIR}" --restart --reload --debug "$hostname"
+        "$bin"/graceful_stop.sh --config "${HBASE_CONF_DIR}" --restart --reload --debug --maxthreads "${RR_MAXTHREADS}" "$hostname"
         sleep 1
     done
   fi
