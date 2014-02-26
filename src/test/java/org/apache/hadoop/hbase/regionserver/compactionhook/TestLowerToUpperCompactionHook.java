@@ -85,6 +85,13 @@ public class TestLowerToUpperCompactionHook {
         TABLE_STRING, FAMILY_STRING)
         + ALL_METRICS
             .getStoreMetricName(StoreMetricType.STORE_COMPHOOK_BYTES_SAVED);
+
+    String kvsErrorsFullName = SchemaMetrics.generateSchemaMetricsPrefix(
+        TABLE_STRING, FAMILY_STRING)
+        + ALL_METRICS
+            .getStoreMetricName(StoreMetricType.STORE_COMPHOOK_KVS_ERRORS);
+    long startValueKvsErrors = HRegion.getNumericMetric(kvsErrorsFullName);
+
     long startValueBytesSaved = HRegion.getNumericMetric(bytesSavedFullName);
     // put some lowercase strings
     for (int i = 0; i < 25; i++) {
@@ -101,10 +108,13 @@ public class TestLowerToUpperCompactionHook {
     r.compactStores(true);
 
     long transformedKVsAfterCompaction = HRegion.getNumericPersistentMetric(kvsTransformedFullName);
-    Assert.assertEquals(25, transformedKVsAfterCompaction - startValueTransformedKVs);
+    // for one of them we are throwing exception - so it will not be transformed
+    Assert.assertEquals(24, transformedKVsAfterCompaction - startValueTransformedKVs);
     long bytesSavedAfterCompaction = HRegion.getNumericPersistentMetric(bytesSavedFullName);
     // kv with value abc should be skipped
     Assert.assertTrue((bytesSavedAfterCompaction - startValueBytesSaved) > 0);
+    long kvsErrors = HRegion.getNumericPersistentMetric(kvsErrorsFullName);
+    Assert.assertEquals(1, kvsErrors - startValueKvsErrors);
 
     Scan scan = new Scan();
     InternalScanner s = r.getScanner(scan);
@@ -124,7 +134,9 @@ public class TestLowerToUpperCompactionHook {
     for (KeyValue kv : result) {
       String currValue = new String(kv.getValue());
       String uppercase = currValue.toUpperCase();
-      if (!currValue.equals(uppercase)) {
+      // we ignore "aba" because in that case we thew IllegalArgumentException
+      // and value stayed unchanged
+      if (!currValue.equals(uppercase) && !currValue.equals("aba")) {
         return false;
       }
     }

@@ -189,7 +189,9 @@ public class SchemaMetrics {
     FLUSH_SIZE("flushSize", PERSISTENT_METRIC_FLAG),
     COMPACTION_WRITE_SIZE("compactionWriteSize", PERSISTENT_METRIC_FLAG),
     STORE_COMPHOOK_KVS_TRANSFORMED("storeCompHookKVsTransformed", PERSISTENT_METRIC_FLAG),
-    STORE_COMPHOOK_BYTES_SAVED("storeCompHookBytesSaved", PERSISTENT_METRIC_FLAG);
+    STORE_COMPHOOK_BYTES_SAVED("storeCompHookBytesSaved", PERSISTENT_METRIC_FLAG),
+    //if exception occurred during compaction hook execution, count the number of errors
+    STORE_COMPHOOK_KVS_ERRORS("storeCompKVsErrors", PERSISTENT_METRIC_FLAG);
 
     private final String metricStr;
     private final int flags;

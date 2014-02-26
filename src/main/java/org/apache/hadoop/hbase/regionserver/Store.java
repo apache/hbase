@@ -1338,6 +1338,8 @@ public class Store extends SchemaConfigured implements HeapSize,
     long bytesSaved = 0;
     // how many KVs were converted with compaction hook
     long kvsConverted = 0;
+    // how many times exception occurred during compaction hook execution
+    long kvsErrors = 0;
     long minFlushTime = Long.MAX_VALUE;
     for (StoreFile file : filesToCompact) {
       if (file.hasMinFlushTime() && file.getMinFlushTime() < minFlushTime) {
@@ -1416,19 +1418,27 @@ public class Store extends SchemaConfigured implements HeapSize,
                 kv.setMemstoreTS(0);
               }
               if (compactHook != null && kv.isPut()) {
-                RestrictedKeyValue restrictedKv = new RestrictedKeyValue(kv);
-                RestrictedKeyValue modifiedKv = compactHook.transform(restrictedKv);
-                if (modifiedKv != null) {
-                  writer.append(modifiedKv.getKeyValue(), kvContext);
-                  bytesSaved += modifiedKv.differenceInBytes(kv);
-                } else {
-                  if (kv != null) {
-                    bytesSaved += kv.getLength();
+                try {
+                  RestrictedKeyValue restrictedKv = new RestrictedKeyValue(kv);
+                  RestrictedKeyValue modifiedKv = compactHook
+                      .transform(restrictedKv);
+                  if (modifiedKv != null) {
+                    writer.append(modifiedKv.getKeyValue(), kvContext);
+                    bytesSaved += modifiedKv.differenceInBytes(kv);
+                  } else {
+                    if (kv != null) {
+                      bytesSaved += kv.getLength();
+                    }
                   }
-                }
-                if (!restrictedKv.equals(modifiedKv)) {
-                  kvsConverted++;
-
+                  if (!restrictedKv.equals(modifiedKv)) {
+                    kvsConverted++;
+                  }
+                } catch (Exception e) {
+                  // if exception happened just write unmodified keyvalue
+                  writer.append(kv, kvContext);
+                  LOG.error("Exception happened while executing compaction hook, leaving KV unchanged: "
+                      + e.getCause());
+                  kvsErrors++;
                 }
               } else {
                 writer.append(kv, kvContext);
@@ -1447,9 +1457,13 @@ public class Store extends SchemaConfigured implements HeapSize,
                       .updatePersistentStoreMetric(
                           SchemaMetrics.StoreMetricType.STORE_COMPHOOK_KVS_TRANSFORMED,
                           kvsConverted);
+                  getSchemaMetrics().updatePersistentStoreMetric(
+                      SchemaMetrics.StoreMetricType.STORE_COMPHOOK_KVS_ERRORS,
+                      kvsErrors);
                   bytesWritten = 0;
                   bytesSaved = 0;
                   kvsConverted = 0;
+                  kvsErrors = 0;
                   if (!this.region.areWritesEnabled()) {
                     writer.close();
                     fs.delete(writer.getPath(), false);
@@ -1472,6 +1486,9 @@ public class Store extends SchemaConfigured implements HeapSize,
         getSchemaMetrics().updatePersistentStoreMetric(
             SchemaMetrics.StoreMetricType.STORE_COMPHOOK_KVS_TRANSFORMED,
             kvsConverted);
+        getSchemaMetrics().updatePersistentStoreMetric(
+            SchemaMetrics.StoreMetricType.STORE_COMPHOOK_KVS_ERRORS,
+            kvsErrors);
       } finally {
         if (scanner != null) {
           scanner.close();
