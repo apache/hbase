@@ -35,11 +35,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
@@ -49,6 +52,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
@@ -96,6 +100,7 @@ public class TestVisibilityLabels {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
+    conf.setBoolean("hbase.online.schema.update.enable", true);
     conf.setInt("hfile.format.version", 3);
     conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
     conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
@@ -715,6 +720,47 @@ public class TestVisibilityLabels {
       if (table != null) {
         table.close();
       }
+    }
+  }
+
+  @Test
+  public void testUserShouldNotDoDDLOpOnLabelsTable() throws Exception {
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    try {
+      admin.disableTable(LABELS_TABLE_NAME);
+      fail("Lables table should not get disabled by user.");
+    } catch (Exception e) {
+    }
+    try {
+      admin.deleteTable(LABELS_TABLE_NAME);
+      fail("Lables table should not get disabled by user.");
+    } catch (Exception e) {
+    }
+    try {
+      HColumnDescriptor hcd = new HColumnDescriptor("testFamily");
+      admin.addColumn(LABELS_TABLE_NAME, hcd);
+      fail("Lables table should not get altered by user.");
+    } catch (Exception e) {
+    }
+    try {
+      admin.deleteColumn(LABELS_TABLE_NAME, VisibilityConstants.LABELS_TABLE_FAMILY);
+      fail("Lables table should not get altered by user.");
+    } catch (Exception e) {
+    }
+    try {
+      HColumnDescriptor hcd = new HColumnDescriptor(VisibilityConstants.LABELS_TABLE_FAMILY);
+      hcd.setBloomFilterType(BloomType.ROWCOL);
+      admin.modifyColumn(LABELS_TABLE_NAME, hcd);
+      fail("Lables table should not get altered by user.");
+    } catch (Exception e) {
+    }
+    try {
+      HTableDescriptor htd = new HTableDescriptor(LABELS_TABLE_NAME);
+      htd.addFamily(new HColumnDescriptor("f1"));
+      htd.addFamily(new HColumnDescriptor("f2"));
+      admin.modifyTable(LABELS_TABLE_NAME, htd);
+      fail("Lables table should not get altered by user.");
+    } catch (Exception e) {
     }
   }
 
