@@ -453,6 +453,12 @@ class AsyncProcess<CResult> {
     NonceGenerator ng = this.hConnection.getNonceGenerator();
     for (Row r : rows) {
       posInList++;
+      if (r instanceof Put) {
+        Put put = (Put) r;
+        if (put.isEmpty()) {
+          throw new IllegalArgumentException("No columns to insert for #" + (posInList+1)+ " item");
+        }
+      }
       Action<Row> action = new Action<Row>(r, posInList);
       setNonce(ng, r, action);
       actions.add(action);

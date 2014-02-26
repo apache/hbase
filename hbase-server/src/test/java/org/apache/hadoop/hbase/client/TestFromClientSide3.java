@@ -268,6 +268,30 @@ public class TestFromClientSide3 {
   }
 
   @Test
+  public void testHTableBatchWithEmptyPut() throws Exception {
+    HTable table = TEST_UTIL.createTable(
+      Bytes.toBytes("testHTableBatchWithEmptyPut"), new byte[][] { FAMILY });
+    try {
+      List actions = (List) new ArrayList();
+      Object[] results = new Object[2];
+      // create an empty Put
+      Put put1 = new Put(ROW);
+      actions.add(put1);
+      
+      Put put2 = new Put(ANOTHERROW);
+      put2.add(FAMILY, QUALIFIER, VALUE);
+      actions.add(put2);
+      
+      table.batch(actions, results);
+      fail("Empty Put should have failed the batch call");
+    } catch (IllegalArgumentException iae) {
+      
+    } finally {
+      table.close();
+    }
+  }
+  
+  @Test
   public void testHTableExistsMethodSingleRegionSingleGet() throws Exception {
 
     // Test with a single region table.
