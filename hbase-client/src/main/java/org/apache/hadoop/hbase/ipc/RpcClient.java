@@ -140,17 +140,17 @@ public class RpcClient {
   private final boolean fallbackAllowed;
   private UserProvider userProvider;
 
-  final private static String SOCKET_TIMEOUT_CONNECT = "ipc.socket.timeout.connect";
+  final private static String SOCKET_TIMEOUT_CONNECT = "hbase.ipc.client.socket.timeout.connect";
   final static int DEFAULT_SOCKET_TIMEOUT_CONNECT = 10000; // 10 seconds
 
   /**
    * How long we wait when we wait for an answer. It's not the operation time, it's the time
    *  we wait when we start to receive an answer, when the remote write starts to send the data.
    */
-  final private static String SOCKET_TIMEOUT_READ = "ipc.socket.timeout.read";
+  final private static String SOCKET_TIMEOUT_READ = "hbase.ipc.client.socket.timeout.read";
   final static int DEFAULT_SOCKET_TIMEOUT_READ = 20000; // 20 seconds
 
-  final private static String SOCKET_TIMEOUT_WRITE = "ipc.socket.timeout.write";
+  final private static String SOCKET_TIMEOUT_WRITE = "hbase.ipc.client.socket.timeout.write";
   final static int DEFAULT_SOCKET_TIMEOUT_WRITE = 60000; // 60 seconds
 
   // Used by the server, for compatibility with old clients.
