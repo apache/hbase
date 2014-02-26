@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MetricsMasterWrapper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
  * Impl for exposing HMaster Information through JMX
  */
+@InterfaceAudience.Private
 public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   private final HMaster master;
@@ -68,7 +69,16 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
   }
 
   @Override
-  public int getRegionServers() {
+  public String getRegionServers() {
+    ServerManager serverManager = this.master.getServerManager();
+    if (serverManager == null) {
+      return "";
+    }
+    return StringUtils.join(serverManager.getOnlineServers().keySet(), ";");
+  }
+  
+  @Override
+  public int getNumRegionServers() {
     ServerManager serverManager = this.master.getServerManager();
     if (serverManager == null) {
       return 0;
@@ -77,7 +87,17 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
   }
 
   @Override
-  public int getDeadRegionServers() {
+  public String getDeadRegionServers() {
+    ServerManager serverManager = this.master.getServerManager();
+    if (serverManager == null) {
+      return "";
+    }
+    return StringUtils.join(serverManager.getDeadServers().copyServerNames(), ";");
+  }
+
+  
+  @Override
+  public int getNumDeadRegionServers() {
     ServerManager serverManager = this.master.getServerManager();
     if (serverManager == null) {
       return 0;

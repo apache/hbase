@@ -56,8 +56,8 @@ public class TestMasterMetricsWrapper {
     assertEquals(master.getMasterActiveTime(), info.getActiveTime());
     assertEquals(master.getMasterStartTime(), info.getStartTime());
     assertEquals(master.getCoprocessors().length, info.getCoprocessors().length);
-    assertEquals(master.getServerManager().getOnlineServersList().size(), info.getRegionServers());
-    assertTrue(info.getRegionServers() == 4);
+    assertEquals(master.getServerManager().getOnlineServersList().size(), info.getNumRegionServers());
+    assertTrue(info.getNumRegionServers() == 4);
 
     String zkServers = info.getZookeeperQuorum();
     assertEquals(zkServers.split(",").length, TEST_UTIL.getZkCluster().getZooKeeperServerNum());
@@ -72,7 +72,7 @@ public class TestMasterMetricsWrapper {
         index) {
       Threads.sleep(10);
     }
-    assertTrue(info.getRegionServers() == 3);
-    assertTrue(info.getDeadRegionServers() == 1);
+    assertTrue(info.getNumRegionServers() == 3);
+    assertTrue(info.getNumDeadRegionServers() == 1);
   }
 }

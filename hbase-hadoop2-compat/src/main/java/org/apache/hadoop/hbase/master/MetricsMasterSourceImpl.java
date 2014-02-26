@@ -80,11 +80,15 @@ public class MetricsMasterSourceImpl
               MASTER_START_TIME_DESC), masterWrapper.getStartTime())
           .addGauge(Interns.info(AVERAGE_LOAD_NAME, AVERAGE_LOAD_DESC),
               masterWrapper.getAverageLoad())
+          .tag(Interns.info(LIVE_REGION_SERVERS_NAME, LIVE_REGION_SERVERS_DESC),
+                masterWrapper.getRegionServers())
           .addGauge(Interns.info(NUM_REGION_SERVERS_NAME,
-              NUMBER_OF_REGION_SERVERS_DESC), masterWrapper.getRegionServers())
+              NUMBER_OF_REGION_SERVERS_DESC), masterWrapper.getNumRegionServers())
+          .tag(Interns.info(DEAD_REGION_SERVERS_NAME, DEAD_REGION_SERVERS_DESC),
+                masterWrapper.getDeadRegionServers())
           .addGauge(Interns.info(NUM_DEAD_REGION_SERVERS_NAME,
               NUMBER_OF_DEAD_REGION_SERVERS_DESC),
-              masterWrapper.getDeadRegionServers())
+              masterWrapper.getNumDeadRegionServers())
           .tag(Interns.info(ZOOKEEPER_QUORUM_NAME, ZOOKEEPER_QUORUM_DESC),
               masterWrapper.getZookeeperQuorum())
           .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC), masterWrapper.getServerName())
