@@ -1862,6 +1862,11 @@ rs.close();
 
       <section xml:id="arch.region.splits">
         <title>Region Splits</title>
+        <para>Regions split when they reach a configured threshold.
+        Below we treat the topic in short.  For a longer exposition,
+        see <link xlink:href="http://hortonworks.com/blog/apache-hbase-region-splitting-and-merging/">Apache HBase Region Splitting and Merging</link>
+        by our Enis Soztutar.
+        </para>
 
         <para>Splits run unaided on the RegionServer; i.e. the Master does not
         participate. The RegionServer splits a region, offlines the split
