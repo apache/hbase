@@ -1517,16 +1517,24 @@ public class Bytes {
    * Return whether b equals nextOf(a)
    */
   public static boolean isNext(byte[] a, byte[] b) {
+    return isNext(a, 0, a.length, b, 0, b.length);
+  }
+
+  /**
+   * Return whether b[...] equals nextOf(a[...])
+   */
+  public static boolean isNext(byte[] a, int aOffs, int aLen, byte[] b,
+      int bOffs, int bLen) {
     if (a == null || b == null) {
       return false;
     }
 
-    if (b.length != a.length + 1) {
+    if (bLen != aLen + 1) {
       return false;
     }
-    if (b[a.length] != 0) {
+    if (b[bOffs + aLen] != 0) {
       return false;
     }
-    return Bytes.compareTo(a, 0, a.length, b, 0, a.length) == 0;
+    return Bytes.compareTo(a, aOffs, aLen, b, bOffs, aLen) == 0;
   }
 }

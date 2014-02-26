@@ -20,6 +20,10 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.NavigableSet;
+
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
@@ -28,10 +32,6 @@ import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.NavigableSet;
 
 /**
  * A query matcher that is specifically designed for the scan case.
@@ -321,15 +321,23 @@ public class ScanQueryMatcher {
   }
 
   public boolean moreRowsMayExistAfter(KeyValue kv) {
-    if (!Bytes.equals(stopRow , HConstants.EMPTY_END_ROW) &&
-        rowComparator.compareRows(kv.getBuffer(),kv.getRowOffset(),
+    if (Bytes.equals(stopRow , HConstants.EMPTY_END_ROW)) {
+      // No stopRow specified
+      return true;
+    }
+    if (rowComparator.compareRows(kv.getBuffer(),kv.getRowOffset(),
             kv.getRowLength(), stopRow, 0, stopRow.length) >= 0) {
       // KV >= STOPROW
       // then NO there is nothing left.
       return false;
-    } else {
-      return true;
     }
+    if (Bytes.isNext(kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
+        stopRow, 0, stopRow.length)) {
+      // stopRow == Bytes.nextOf(kv), nothing left, too
+      return false;
+    }
+
+    return true;
   }
 
   /**
