@@ -544,13 +544,21 @@ public class SchemaMetrics {
       boolean preload) {
     addToReadTime(blockCategory, isCompaction, timeMs);
     if (l1Cached || l2Cached) {
-      if (l1Cached) updateOnCacheHit(blockCategory, isCompaction);
-      if (l2Cached) updateOnL2CacheHit(blockCategory, isCompaction);
-      if (preload) updateOnPreloadCacheHit(blockCategory, isCompaction, timeMs);
+      if (l1Cached) {
+        updateOnCacheHit(blockCategory, isCompaction);
+      }
+      if (l2Cached) {
+        updateOnL2CacheHit(blockCategory, isCompaction);
+      }
+      if (preload) {
+        updateOnPreloadCacheHit(blockCategory, isCompaction, timeMs);
+      }
     } else {
       updateOnCacheMiss(blockCategory, isCompaction);
       updateOnL2CacheMiss(blockCategory, isCompaction);
-      if (preload) updateOnPreloadCacheMiss(blockCategory, isCompaction, timeMs);
+      if (preload) {
+        updateOnPreloadCacheMiss(blockCategory, isCompaction, timeMs);
+      }
     }
 
     if (this != ALL_SCHEMA_METRICS) {

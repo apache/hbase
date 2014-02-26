@@ -152,8 +152,9 @@ public class TestFromClientSide4 {
           BlockMetricType.PRELOAD_CACHE_MISS, BlockCategory.DATA, false));
     // All the three values should be positive
     assertTrue(misses > 0 && hits > 0 && preloaderMiss > 0);
-    // Check that the cache misses ratio is at most 1/100
-    assertTrue(misses * 100 <= hits + misses);
+    // The blocks read by the preloader should always be less than or equal to
+    // the total number of misses.
+    assertTrue(preloaderMiss <= misses);
   }
 
   @Test
@@ -272,8 +273,9 @@ public class TestFromClientSide4 {
     assertTrue(misses > 0 && hits > 0 && preloaderMiss > 0);
     // Check that at least nine tenth of the blocks read by the preloader is used by the scanner
     assertTrue(9 * preloaderMiss <= 10 * hits);
-    // Check that the cache misses ratio is at most 1/10
-    assertTrue(misses * 10 <= hits + misses);
+    // The blocks read by the preloader should always be less than or equal to
+    // the total number of misses.
+    assertTrue(preloaderMiss <= misses);
   }
 
   @Test
