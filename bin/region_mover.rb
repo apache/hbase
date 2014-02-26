@@ -23,6 +23,7 @@
 # Does not work for case of multiple regionservers all running on the
 # one node.
 require 'optparse'
+require File.join(File.dirname(__FILE__), 'thread-pool')
 include Java
 import org.apache.hadoop.hbase.HConstants
 import org.apache.hadoop.hbase.HBaseConfiguration
@@ -161,6 +162,7 @@ def move(admin, r, newServer, original)
   # Now move it. Do it in a loop so can retry if fail.  Have seen issue where
   # we tried move region but failed and retry put it back on old location;
   # retry in this case.
+
   retries = admin.getConfiguration.getInt("hbase.move.retries.max", 5)
   count = 0
   same = true
@@ -346,20 +348,26 @@ def unloadRegions(options, hostname)
     break if rs.length == 0
     count = 0
     $LOG.info("Moving " + rs.length.to_s + " region(s) from " + servername +
-      " during this cycle");
-    for r in rs
-      # Get a random server to move the region to.
-      server = servers[rand(servers.length)]
-      $LOG.info("Moving region " + r.getRegionNameAsString() + " (" + 
-        count.to_s + " of " + rs.length.to_s + ") from server=" + 
-        servername + " to server=" + server);
-      count = count + 1
-      # Assert we can scan region in its current location
-      isSuccessfulScan(admin, r)
-      # Now move it.
-      move(admin, r, server, servername)
-      movedRegions.add(r)
+      " on " + servers.length.to_s + " servers using " + options[:maxthreads].to_s + " threads.")
+    counter = 0
+    pool = ThreadPool.new(options[:maxthreads])
+    server_index = 0
+    while counter < rs.length do
+      pool.launch(rs,counter,server_index) do |_rs,_counter,_server_index|
+        $LOG.info("Moving region " + _rs[_counter].getEncodedName() + " (" + _counter.to_s +
+        " of " + _rs.length.to_s + ") to server=" + servers[_server_index] + " for " + servername)
+        # Assert we can scan region in its current location
+        isSuccessfulScan(admin, _rs[_counter])
+        # Now move it.
+        move(admin, _rs[_counter], servers[_server_index], servername)
+        movedRegions.add(_rs[_counter])
+      end 
+      counter += 1
+      server_index = (server_index + 1) % servers.length
     end
+    $LOG.info("Waiting for the pool to complete")
+    pool.stop
+    $LOG.info("Pool completed")
   end
   if movedRegions.size() > 0 
     # Write out file of regions moved
@@ -395,7 +403,10 @@ def loadRegions(options, hostname)
   count = 0
   # sleep 20s to make sure the rs finished initialization.
   sleep 20
-  for r in regions
+  counter = 0
+  pool = ThreadPool.new(options[:maxthreads])
+  while counter < regions.length do
+    r = regions[counter]
     exists = false
     begin
       isSuccessfulScan(admin, r)
@@ -403,19 +414,22 @@ def loadRegions(options, hostname)
     rescue org.apache.hadoop.hbase.NotServingRegionException => e
       $LOG.info("Failed scan of " + e.message)
     end
-    count = count + 1
     next unless exists
     currentServer = getServerNameForRegion(admin, r)
     if currentServer and currentServer == servername
       $LOG.info("Region " + r.getRegionNameAsString() + " (" + count.to_s +
-        " of " + regions.length.to_s + ") already on target server=" + servername) 
+        " of " + regions.length.to_s + ") already on target server=" + servername)
       next
     end
-    $LOG.info("Moving region " + r.getRegionNameAsString() + " (" + 
-      count.to_s + " of " + regions.length.to_s + ") from server=" + 
-      currentServer + " to server=" + servername);
-    move(admin, r, servername, currentServer)
+    pool.launch(r,currentServer,count) do |_r,_currentServer,_count|
+      $LOG.info("Moving region " + _r.getRegionNameAsString() + " (" + _count.to_s +
+        " of " + regions.length.to_s + ") from " + _currentServer + " to server=" + 
+        servername);      
+      move(admin, _r, servername, _currentServer)
+    end
+    counter = counter + 1
   end
+  pool.stop
 end
 
 # Returns an array of hosts to exclude as region move targets
@@ -456,6 +470,7 @@ optparse = OptionParser.new do |opts|
   opts.banner = "Usage: #{NAME}.rb [options] load|unload <hostname>"
   opts.separator 'Load or unload regions by moving one at a time'
   options[:file] = nil
+  options[:maxthreads] = 1
   opts.on('-f', '--filename=FILE', 'File to save regions list into unloading, or read from loading; default /tmp/<hostname>') do |file|
     options[:file] = file
   end
@@ -469,6 +484,9 @@ optparse = OptionParser.new do |opts|
   end
   opts.on('-x', '--excludefile=FILE', 'File with hosts-per-line to exclude as unload targets; default excludes only target host; useful for rack decommisioning.') do |file|
     options[:excludesFile] = file
+  end
+  opts.on('-m', '--maxthreads=XX', 'Define the maximum number of threads to use to unload and reload the regions') do |number|
+    options[:maxthreads] = number.to_i
   end
 end
 optparse.parse!

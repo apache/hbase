@@ -24,13 +24,14 @@
 # Turn off the balancer before running this script.
 function usage {
   echo "Usage: graceful_stop.sh [--config <conf-dir>] [-d] [-e] [--restart [--reload]] [--thrift] [--rest] <hostname>"
-  echo " thrift      If we should stop/start thrift before/after the hbase stop/start"
-  echo " rest        If we should stop/start rest before/after the hbase stop/start"
-  echo " restart     If we should restart after graceful stop"
-  echo " reload      Move offloaded regions back on to the restarted server"
-  echo " d|debug     Print helpful debug information"
-  echo " hostname    Hostname of server we are to stop"
-  echo " e|failfast  Set -e so exit immediately if any command exits with non-zero status"
+  echo " thrift         If we should stop/start thrift before/after the hbase stop/start"
+  echo " rest           If we should stop/start rest before/after the hbase stop/start"
+  echo " restart        If we should restart after graceful stop"
+  echo " reload         Move offloaded regions back on to the restarted server"
+  echo " d|debug        Print helpful debug information"
+  echo " maxthreads xx  Limit the number of threads used by the region mover. Default value is 1."
+  echo " hostname       Hostname of server we are to stop"
+  echo " e|failfast     Set -e so exit immediately if any command exits with non-zero status"
   exit 1
 }
 
@@ -48,6 +49,7 @@ reload=
 debug=
 thrift=
 rest=
+maxthreads=1
 failfast=
 while [ $# -gt 0 ]
 do
@@ -58,6 +60,7 @@ do
     --reload)   reload=true; shift;;
     --failfast | -e)  failfast=true; shift;;
     --debug | -d)  debug="--debug"; shift;;
+    --maxthreads) shift; maxthreads=$1; shift;;
     --) shift; break;;
     -*) usage ;;
     *)  break;;	# terminate while loop
@@ -88,7 +91,7 @@ HBASE_BALANCER_STATE=`echo 'balance_switch false' | "$bin"/hbase --config ${HBAS
 log "Previous balancer state was $HBASE_BALANCER_STATE"
 
 log "Unloading $hostname region(s)"
-HBASE_NOEXEC=true "$bin"/hbase --config ${HBASE_CONF_DIR} org.jruby.Main "$bin"/region_mover.rb --file=$filename $debug unload $hostname
+HBASE_NOEXEC=true "$bin"/hbase --config ${HBASE_CONF_DIR} org.jruby.Main "$bin"/region_mover.rb --file=$filename $debug --maxthreads=$maxthreads unload $hostname
 log "Unloaded $hostname region(s)"
 
 # Stop the server(s). Have to put hostname into its own little file for hbase-daemons.sh
@@ -119,7 +122,7 @@ if [ "$restart" != "" ]; then
   fi
   if [ "$reload" != "" ]; then
     log "Reloading $hostname region(s)"
-    HBASE_NOEXEC=true "$bin"/hbase --config ${HBASE_CONF_DIR} org.jruby.Main "$bin"/region_mover.rb --file=$filename $debug load $hostname
+    HBASE_NOEXEC=true "$bin"/hbase --config ${HBASE_CONF_DIR} org.jruby.Main "$bin"/region_mover.rb --file=$filename $debug --maxthreads=$maxthreads load $hostname
     log "Reloaded $hostname region(s)"
   fi
 fi
