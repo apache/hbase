@@ -41,6 +41,9 @@ public class RackManager {
 
   private DNSToSwitchMapping switchMapping;
 
+  public RackManager() {
+  }
+
   public RackManager(Configuration conf) {
     switchMapping = ReflectionUtils.instantiateWithCustomCtor(
         conf.getClass("hbase.util.ip.to.rack.determiner", ScriptBasedMapping.class,

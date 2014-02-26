@@ -21,20 +21,26 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Assert;
 
 /**
  * Class used to be the base of unit tests on load balancers. It gives helper
@@ -77,6 +83,50 @@ public class BalancerTestBase {
       assertTrue(server.getLoad() >= 0);
       assertTrue(server.getLoad() <= max);
       assertTrue(server.getLoad() >= min);
+    }
+  }
+
+  /**
+   * Checks whether region replicas are not hosted on the same host.
+   */
+  public void assertRegionReplicaPlacement(Map<ServerName, List<HRegionInfo>> serverMap, RackManager rackManager) {
+    TreeMap<String, Set<HRegionInfo>> regionsPerHost = new TreeMap<String, Set<HRegionInfo>>();
+    TreeMap<String, Set<HRegionInfo>> regionsPerRack = new TreeMap<String, Set<HRegionInfo>>();
+
+    for (Entry<ServerName, List<HRegionInfo>> entry : serverMap.entrySet()) {
+      String hostname = entry.getKey().getHostname();
+      Set<HRegionInfo> infos = regionsPerHost.get(hostname);
+      if (infos == null) {
+        infos = new HashSet<HRegionInfo>();
+        regionsPerHost.put(hostname, infos);
+      }
+
+      for (HRegionInfo info : entry.getValue()) {
+        HRegionInfo primaryInfo = RegionReplicaUtil.getRegionInfoForDefaultReplica(info);
+        if (!infos.add(primaryInfo)) {
+          Assert.fail("Two or more region replicas are hosted on the same host after balance");
+        }
+      }
+    }
+
+    if (rackManager == null) {
+      return;
+    }
+
+    for (Entry<ServerName, List<HRegionInfo>> entry : serverMap.entrySet()) {
+      String rack = rackManager.getRack(entry.getKey());
+      Set<HRegionInfo> infos = regionsPerRack.get(rack);
+      if (infos == null) {
+        infos = new HashSet<HRegionInfo>();
+        regionsPerRack.put(rack, infos);
+      }
+
+      for (HRegionInfo info : entry.getValue()) {
+        HRegionInfo primaryInfo = RegionReplicaUtil.getRegionInfoForDefaultReplica(info);
+        if (!infos.add(primaryInfo)) {
+          Assert.fail("Two or more region replicas are hosted on the same rack after balance");
+        }
+      }
     }
   }
 
@@ -159,18 +209,18 @@ public class BalancerTestBase {
     map.put(sn, sal);
   }
 
-  protected Map<ServerName, List<HRegionInfo>> mockClusterServers(int[] mockCluster) {
+  protected TreeMap<ServerName, List<HRegionInfo>> mockClusterServers(int[] mockCluster) {
     return mockClusterServers(mockCluster, -1);
   }
 
   protected BaseLoadBalancer.Cluster mockCluster(int[] mockCluster) {
     return new BaseLoadBalancer.Cluster(null,
-      mockClusterServers(mockCluster, -1), null, null, null, null);
+      mockClusterServers(mockCluster, -1), null, null, null, null, null);
   }
 
-  protected Map<ServerName, List<HRegionInfo>> mockClusterServers(int[] mockCluster, int numTables) {
+  protected TreeMap<ServerName, List<HRegionInfo>> mockClusterServers(int[] mockCluster, int numTables) {
     int numServers = mockCluster.length;
-    Map<ServerName, List<HRegionInfo>> servers = new TreeMap<ServerName, List<HRegionInfo>>();
+    TreeMap<ServerName, List<HRegionInfo>> servers = new TreeMap<ServerName, List<HRegionInfo>>();
     for (int i = 0; i < numServers; i++) {
       int numRegions = mockCluster[i];
       ServerAndLoad sal = randomServer(0);
@@ -218,7 +268,7 @@ public class BalancerTestBase {
       ServerName sn = this.serverQueue.poll();
       return new ServerAndLoad(sn, numRegionsPerServer);
     }
-    String host = "srv" + rand.nextInt(100000);
+    String host = "srv" + rand.nextInt(Integer.MAX_VALUE);
     int port = rand.nextInt(60000);
     long startCode = rand.nextLong();
     ServerName sn = ServerName.valueOf(host, port, startCode);

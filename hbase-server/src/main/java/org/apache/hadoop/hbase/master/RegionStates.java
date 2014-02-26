@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -153,7 +154,8 @@ public class RegionStates {
    * @param regions
    * @return a pair containing the groupings as a map
    */
-  synchronized Map<ServerName, List<HRegionInfo>> getRegionAssignments(List<HRegionInfo> regions) {
+  synchronized Map<ServerName, List<HRegionInfo>> getRegionAssignments(
+    Collection<HRegionInfo> regions) {
     Map<ServerName, List<HRegionInfo>> map = new HashMap<ServerName, List<HRegionInfo>>();
     for (HRegionInfo region : regions) {
       HRegionInfo defaultReplica = RegionReplicaUtil.getRegionInfoForDefaultReplica(region);
@@ -898,6 +900,19 @@ public class RegionStates {
 
   protected RegionState getRegionState(final HRegionInfo hri) {
     return getRegionState(hri.getEncodedName());
+  }
+
+  /**
+   * Returns a clone of region assignments per server
+   * @return a Map of ServerName to a List of HRegionInfo's
+   */
+  protected synchronized Map<ServerName, List<HRegionInfo>> getRegionAssignmentsByServer() {
+    Map<ServerName, List<HRegionInfo>> regionsByServer =
+        new HashMap<ServerName, List<HRegionInfo>>(serverHoldings.size());
+    for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
+      regionsByServer.put(e.getKey(), new ArrayList<HRegionInfo>(e.getValue()));
+    }
+    return regionsByServer;
   }
 
   protected synchronized RegionState getRegionState(final String encodedName) {

@@ -36,8 +36,10 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
@@ -123,60 +125,60 @@ public class TestMasterOperationsForRegionReplicas {
           assert (state != null);
         }
       }
-      // TODO: HBASE-10351 should uncomment the following tests (since the tests assume region placements are handled)
-//      List<Result> metaRows = MetaReader.fullScan(ct);
-//      int numRows = 0;
-//      for (Result result : metaRows) {
-//        RegionLocations locations = MetaReader.getRegionLocations(result);
-//        HRegionInfo hri = locations.getRegionLocation().getRegionInfo();
-//        if (!hri.getTable().equals(table)) continue;
-//        numRows += 1;
-//        HRegionLocation[] servers = locations.getRegionLocations();
-//        // have two locations for the replicas of a region, and the locations should be different
-//        assert(servers.length == 2);
-//        assert(!servers[0].equals(servers[1]));
-//      }
-//      assert(numRows == numRegions);
-//
-//      // The same verification of the meta as above but with the SnapshotOfRegionAssignmentFromMeta
-//      // class
-//      validateFromSnapshotFromMeta(table, numRegions, numReplica, ct);
-//
-//      // Now kill the master, restart it and see if the assignments are kept
-//      ServerName master = TEST_UTIL.getHBaseClusterInterface().getClusterStatus().getMaster();
-//      TEST_UTIL.getHBaseClusterInterface().stopMaster(master);
-//      TEST_UTIL.getHBaseClusterInterface().waitForMasterToStop(master, 30000);
-//      TEST_UTIL.getHBaseClusterInterface().startMaster(master.getHostname());
-//      TEST_UTIL.getHBaseClusterInterface().waitForActiveAndReadyMaster();
-//      for (int i = 0; i < numRegions; i++) {
-//        for (int j = 0; j < numReplica; j++) {
-//          HRegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(hris.get(i), j);
-//          RegionState state = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-//              .getRegionStates().getRegionState(replica);
-//          assert (state != null);
-//        }
-//      }
-//      validateFromSnapshotFromMeta(table, numRegions, numReplica, ct);
-//
-//      // Now shut the whole cluster down, and verify the assignments are kept so that the
-//      // availability constraints are met.
-//      TEST_UTIL.getConfiguration().setBoolean("hbase.master.startup.retainassign", true);
-//      TEST_UTIL.shutdownMiniHBaseCluster();
-//      TEST_UTIL.startMiniHBaseCluster(1, numSlaves);
-//      TEST_UTIL.waitTableEnabled(table.getName());
-//      ct = new CatalogTracker(TEST_UTIL.getConfiguration());
-//      validateFromSnapshotFromMeta(table, numRegions, numReplica, ct);
-//
-//      // Now shut the whole cluster down, and verify regions are assigned even if there is only
-//      // one server running
-//      TEST_UTIL.shutdownMiniHBaseCluster();
-//      TEST_UTIL.startMiniHBaseCluster(1, 1);
-//      TEST_UTIL.waitTableEnabled(table.getName());
-//      ct = new CatalogTracker(TEST_UTIL.getConfiguration());
-//      validateSingleRegionServerAssignment(ct, numRegions, numReplica);
-//      for (int i = 1; i < numSlaves; i++) { //restore the cluster
-//        TEST_UTIL.getMiniHBaseCluster().startRegionServer();
-//      }
+
+      List<Result> metaRows = MetaReader.fullScan(ct);
+      int numRows = 0;
+      for (Result result : metaRows) {
+        RegionLocations locations = MetaReader.getRegionLocations(result);
+        HRegionInfo hri = locations.getRegionLocation().getRegionInfo();
+        if (!hri.getTable().equals(table)) continue;
+        numRows += 1;
+        HRegionLocation[] servers = locations.getRegionLocations();
+        // have two locations for the replicas of a region, and the locations should be different
+        assert(servers.length == 2);
+        assert(!servers[0].equals(servers[1]));
+      }
+      assert(numRows == numRegions);
+
+      // The same verification of the meta as above but with the SnapshotOfRegionAssignmentFromMeta
+      // class
+      validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica, ct);
+
+      // Now kill the master, restart it and see if the assignments are kept
+      ServerName master = TEST_UTIL.getHBaseClusterInterface().getClusterStatus().getMaster();
+      TEST_UTIL.getHBaseClusterInterface().stopMaster(master);
+      TEST_UTIL.getHBaseClusterInterface().waitForMasterToStop(master, 30000);
+      TEST_UTIL.getHBaseClusterInterface().startMaster(master.getHostname());
+      TEST_UTIL.getHBaseClusterInterface().waitForActiveAndReadyMaster();
+      for (int i = 0; i < numRegions; i++) {
+        for (int j = 0; j < numReplica; j++) {
+          HRegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(hris.get(i), j);
+          RegionState state = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+              .getRegionStates().getRegionState(replica);
+          assert (state != null);
+        }
+      }
+      validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica, ct);
+
+      // Now shut the whole cluster down, and verify the assignments are kept so that the
+      // availability constraints are met.
+      TEST_UTIL.getConfiguration().setBoolean("hbase.master.startup.retainassign", true);
+      TEST_UTIL.shutdownMiniHBaseCluster();
+      TEST_UTIL.startMiniHBaseCluster(1, numSlaves);
+      TEST_UTIL.waitTableEnabled(table.getName());
+      ct = new CatalogTracker(TEST_UTIL.getConfiguration());
+      validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica, ct);
+
+      // Now shut the whole cluster down, and verify regions are assigned even if there is only
+      // one server running
+      TEST_UTIL.shutdownMiniHBaseCluster();
+      TEST_UTIL.startMiniHBaseCluster(1, 1);
+      TEST_UTIL.waitTableEnabled(table.getName());
+      ct = new CatalogTracker(TEST_UTIL.getConfiguration());
+      validateSingleRegionServerAssignment(ct, numRegions, numReplica);
+      for (int i = 1; i < numSlaves; i++) { //restore the cluster
+        TEST_UTIL.getMiniHBaseCluster().startRegionServer();
+      }
 
       //check on alter table
       admin.disableTable(table);
@@ -288,7 +290,7 @@ public class TestMasterOperationsForRegionReplicas {
     assert(count.get() == numRegions);
   }
 
-  private void validateFromSnapshotFromMeta(TableName table, int numRegions,
+  private void validateFromSnapshotFromMeta(HBaseTestingUtility util, TableName table, int numRegions,
       int numReplica, CatalogTracker ct) throws IOException {
     SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(ct);
     snapshot.initialize();
@@ -296,6 +298,9 @@ public class TestMasterOperationsForRegionReplicas {
     assert(regionToServerMap.size() == numRegions * numReplica + 1); //'1' for the namespace
     Map<ServerName, List<HRegionInfo>> serverToRegionMap = snapshot.getRegionServerToRegionMap();
     for (Map.Entry<ServerName, List<HRegionInfo>> entry : serverToRegionMap.entrySet()) {
+      if (entry.getKey().equals(util.getHBaseCluster().getMaster().getServerName())) {
+        continue;
+      }
       List<HRegionInfo> regions = entry.getValue();
       Set<byte[]> setOfStartKeys = new HashSet<byte[]>();
       for (HRegionInfo region : regions) {
@@ -307,7 +312,7 @@ public class TestMasterOperationsForRegionReplicas {
       }
       // the number of startkeys will be equal to the number of regions hosted in each server
       // (each server will be hosting one replica of a region)
-      assertEquals(setOfStartKeys.size() , numRegions);
+      assertEquals(numRegions, setOfStartKeys.size());
     }
   }
 
@@ -316,9 +321,14 @@ public class TestMasterOperationsForRegionReplicas {
     SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(ct);
     snapshot.initialize();
     Map<HRegionInfo, ServerName>  regionToServerMap = snapshot.getRegionToRegionServerMap();
-    assert(regionToServerMap.size() == numRegions * numReplica + 1); //'1' for the namespace
+    assertEquals(regionToServerMap.size(), numRegions * numReplica + 1); //'1' for the namespace
     Map<ServerName, List<HRegionInfo>> serverToRegionMap = snapshot.getRegionServerToRegionMap();
-    assert(serverToRegionMap.keySet().size() == 1);
-    assert(serverToRegionMap.values().iterator().next().size() == numRegions * numReplica + 1);
+    assertEquals(serverToRegionMap.keySet().size(), 2); // 1 rs + 1 master
+    for (Map.Entry<ServerName, List<HRegionInfo>> entry : serverToRegionMap.entrySet()) {
+      if (entry.getKey().equals(TEST_UTIL.getHBaseCluster().getMaster().getServerName())) {
+        continue;
+      }
+      assertEquals(entry.getValue().size(), numRegions * numReplica);
+    }
   }
 }

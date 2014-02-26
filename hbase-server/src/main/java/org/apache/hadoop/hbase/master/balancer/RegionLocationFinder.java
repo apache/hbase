@@ -147,7 +147,7 @@ class RegionLocationFinder {
   protected HTableDescriptor getTableDescriptor(TableName tableName) throws IOException {
     HTableDescriptor tableDescriptor = null;
     try {
-      if (this.services != null) {
+      if (this.services != null && this.services.getTableDescriptors() != null) {
         tableDescriptor = this.services.getTableDescriptors().get(tableName);
       }
     } catch (FileNotFoundException fnfe) {
