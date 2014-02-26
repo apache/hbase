@@ -357,7 +357,19 @@ public class TestHBaseFsck {
    * @throws KeeperException
    */
   HTable setupTable(TableName tablename) throws Exception {
+    return setupTableWithRegionReplica(tablename, 1);
+  }
+
+  /**
+   * Setup a clean table with a certain region_replica count
+   * @param tableName
+   * @param replicaCount
+   * @return
+   * @throws Exception
+   */
+  HTable setupTableWithRegionReplica(TableName tablename, int replicaCount) throws Exception {
     HTableDescriptor desc = new HTableDescriptor(tablename);
+    desc.setRegionReplication(replicaCount);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
     desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
     TEST_UTIL.getHBaseAdmin().createTable(desc, SPLITS);
@@ -547,6 +559,23 @@ public class TestHBaseFsck {
       HBaseFsck hbck2 = doFsck(conf,false);
       assertNoErrors(hbck2);
       assertEquals(0, hbck2.getOverlapGroups(table).size());
+      assertEquals(ROWKEYS.length, countRows());
+    } finally {
+      deleteTable(table);
+    }
+  }
+
+  /*
+   * This creates a table with region_replica > 1 and verifies hbck runs
+   * successfully
+   */
+  @Test
+  public void testHbckWithRegionReplica() throws Exception {
+    TableName table =
+        TableName.valueOf("tableWithReplica");
+    try {
+      setupTableWithRegionReplica(table, 2);
+      assertNoErrors(doFsck(conf, false));
       assertEquals(ROWKEYS.length, countRows());
     } finally {
       deleteTable(table);
