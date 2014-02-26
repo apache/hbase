@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
 
 /**
  * Scanner class that contains the <code>hbase:meta</code> table scanning logic.
@@ -189,6 +190,7 @@ public class MetaScanner {
         try {
           scanner.close();
         } catch (Throwable t) {
+          ExceptionUtil.rethrowIfInterrupt(t);
           LOG.debug("Got exception in closing the result scanner", t);
         }
       }
@@ -196,6 +198,7 @@ public class MetaScanner {
         try {
           visitor.close();
         } catch (Throwable t) {
+          ExceptionUtil.rethrowIfInterrupt(t);
           LOG.debug("Got exception in closing the meta scanner visitor", t);
         }
       }
@@ -203,6 +206,7 @@ public class MetaScanner {
         try {
           metaTable.close();
         } catch (Throwable t) {
+          ExceptionUtil.rethrowIfInterrupt(t);
           LOG.debug("Got exception in closing the meta table", t);
         }
       }

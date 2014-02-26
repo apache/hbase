@@ -170,7 +170,7 @@ public class TestHRegionServerBulkLoad {
       };
       RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(conf);
       RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
-      caller.callWithRetries(callable);
+      caller.callWithRetries(callable, Integer.MAX_VALUE);
 
       // Periodically do compaction to reduce the number of open file handles.
       if (numBulkLoads.get() % 10 == 0) {
@@ -190,7 +190,7 @@ public class TestHRegionServerBulkLoad {
             return null;
           }
         };
-        caller.callWithRetries(callable);
+        caller.callWithRetries(callable, Integer.MAX_VALUE);
       }
     }
   }

@@ -175,6 +175,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   private boolean aborted;
   private boolean cleanupConnectionOnClose = false; // close the connection in close()
   private boolean closed = false;
+  private int operationTimeout;
 
   private RpcRetryingCallerFactory rpcCallerFactory;
 
@@ -191,6 +192,11 @@ public class HBaseAdmin implements Abortable, Closeable {
     this(ConnectionManager.getConnectionInternal(new Configuration(c)));
     this.cleanupConnectionOnClose = true;
   }
+
+  public int getOperationTimeout() {
+    return operationTimeout;
+  }
+
 
   /**
    * Constructor for externally managed HConnections.
@@ -217,6 +223,9 @@ public class HBaseAdmin implements Abortable, Closeable {
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     this.retryLongerMultiplier = this.conf.getInt(
         "hbase.client.retries.longer.multiplier", 10);
+    this.operationTimeout = this.conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf);
   }
 
@@ -3315,7 +3324,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   private <V> V executeCallable(MasterCallable<V> callable) throws IOException {
     RpcRetryingCaller<V> caller = rpcCallerFactory.newCaller();
     try {
-      return caller.callWithRetries(callable);
+      return caller.callWithRetries(callable, operationTimeout);
     } finally {
       callable.close();
     }

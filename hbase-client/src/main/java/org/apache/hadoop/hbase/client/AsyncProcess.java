@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -49,7 +48,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.cloudera.htrace.Trace;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -118,8 +116,6 @@ class AsyncProcess {
     public void waitUntilDone() throws InterruptedIOException {}
   };
 
-
-  // TODO: many of the fields should be made private
   protected final long id;
 
   protected final ClusterConnection hConnection;
@@ -156,6 +152,7 @@ class AsyncProcess {
   protected final long pause;
   protected int numTries;
   protected int serverTrackerTimeout;
+  protected int operationTimeout;
   // End configuration settings.
 
   protected static class BatchErrors {
@@ -206,6 +203,8 @@ class AsyncProcess {
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
 
     this.maxTotalConcurrentTasks = conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
       HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS);
@@ -303,14 +302,12 @@ class AsyncProcess {
       Iterator<? extends Row> it = rows.iterator();
       while (it.hasNext()) {
         Row r = it.next();
-        HRegionLocation loc = null;
+        HRegionLocation loc;
         try {
           loc = findDestLocation(tableName, r);
         } catch (IOException ex) {
-          if (locationErrors == null) {
-            locationErrors = new ArrayList<Exception>();
-            locationErrorRows = new ArrayList<Integer>();
-          }
+          locationErrors = new ArrayList<Exception>();
+          locationErrorRows = new ArrayList<Integer>();
           LOG.error("Failed to get region location ", ex);
           // This action failed before creating ars. Add it to retained but do not add to submit list.
           // We will then add it to ars in an already-failed state.
@@ -600,7 +597,7 @@ class AsyncProcess {
             try {
               MultiServerCallable<Row> callable = createCallable(server, tableName, multiAction);
               try {
-                res = createCaller(callable).callWithoutRetries(callable);
+                res = createCaller(callable).callWithoutRetries(callable, operationTimeout);
               } catch (IOException e) {
                 // The service itself failed . It may be an error coming from the communication
                 //   layer, but, as well, a functional error raised by the server.
@@ -1010,7 +1007,7 @@ class AsyncProcess {
    * failed operations themselves.
    * @param failedRows an optional list into which the rows that failed since the last time
    *        {@link #waitForAllPreviousOpsAndReset(List)} was called, or AP was created, are saved.
-   * @returns all the errors since the last time {@link #waitForAllPreviousOpsAndReset(List)}
+   * @return all the errors since the last time {@link #waitForAllPreviousOpsAndReset(List)}
    *          was called, or AP was created.
    */
   public RetriesExhaustedWithDetailsException waitForAllPreviousOpsAndReset(

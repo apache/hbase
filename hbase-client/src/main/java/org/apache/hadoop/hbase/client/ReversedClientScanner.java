@@ -60,7 +60,7 @@ public class ReversedClientScanner extends ClientScanner {
     // Close the previous scanner if it's open
     if (this.callable != null) {
       this.callable.setClose();
-      this.caller.callWithRetries(callable);
+      this.caller.callWithRetries(callable, scannerTimeout);
       this.callable = null;
     }
 
@@ -108,7 +108,7 @@ public class ReversedClientScanner extends ClientScanner {
       callable = getScannerCallable(localStartKey, nbRows, locateStartRow);
       // Open a scanner on the region server starting at the
       // beginning of the region
-      this.caller.callWithRetries(callable);
+      this.caller.callWithRetries(callable, scannerTimeout);
       this.currentRegion = callable.getHRegionInfo();
       if (this.scanMetrics != null) {
         this.scanMetrics.countOfRegions.incrementAndGet();

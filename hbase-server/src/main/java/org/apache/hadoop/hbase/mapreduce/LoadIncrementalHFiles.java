@@ -630,7 +630,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       List<LoadQueueItem> toRetry = new ArrayList<LoadQueueItem>();
       Configuration conf = getConf();
       boolean success = RpcRetryingCallerFactory.instantiate(conf).<Boolean> newCaller()
-          .callWithRetries(svrCallable);
+          .callWithRetries(svrCallable, Integer.MAX_VALUE);
       if (!success) {
         LOG.warn("Attempt to bulk load region containing "
             + Bytes.toStringBinary(first) + " into table "

@@ -42,20 +42,14 @@ import com.google.protobuf.ServiceException;
  * Runs an rpc'ing {@link RetryingCallable}. Sets into rpc client
  * threadlocal outstanding timeouts as so we don't persist too much.
  * Dynamic rather than static so can set the generic appropriately.
+ *
+ * This object has a state. It should not be used by in parallel by different threads.
+ * Reusing it is possible however, even between multiple threads. However, the user will
+ *  have to manage the synchronization on its side: there is no synchronization inside the class.
  */
 @InterfaceAudience.Private
-@edu.umd.cs.findbugs.annotations.SuppressWarnings
-    (value = "IS2_INCONSISTENT_SYNC", justification = "na")
 public class RpcRetryingCaller<T> {
   static final Log LOG = LogFactory.getLog(RpcRetryingCaller.class);
-  /**
-   * Timeout for the call including retries
-   */
-  private int callTimeout;
-  /**
-   * The remaining time, for the call to come. Takes into account the tries already done.
-   */
-  private int remainingTime;
   /**
    * When we started making calls.
    */
@@ -70,18 +64,17 @@ public class RpcRetryingCaller<T> {
 
   public RpcRetryingCaller(Configuration conf) {
     this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
-      HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+        HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.retries =
         conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
           HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
-    this.callTimeout = conf.getInt(
-        HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
   }
 
-  private void beforeCall() {
-    if (callTimeout > 0) {
-      remainingTime = (int) (callTimeout -
+  private int getRemainingTime(int callTimeout) {
+    if (callTimeout <= 0) {
+      return 0;
+    } else {
+      int remainingTime = (int) (callTimeout -
           (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime));
       if (remainingTime < MIN_RPC_TIMEOUT) {
         // If there is no time left, we're trying anyway. It's too late.
@@ -89,15 +82,8 @@ public class RpcRetryingCaller<T> {
         // resetting to the minimum.
         remainingTime = MIN_RPC_TIMEOUT;
       }
-    } else {
-      remainingTime = 0;
+      return remainingTime;
     }
-  }
-
-
-  public synchronized T callWithRetries(RetryingCallable<T> callable) throws IOException,
-      RuntimeException {
-    return callWithRetries(callable, HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
   }
 
   /**
@@ -108,11 +94,8 @@ public class RpcRetryingCaller<T> {
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings
-      (value = "SWL_SLEEP_WITH_LOCK_HELD", justification = "na")
-  public synchronized T callWithRetries(RetryingCallable<T> callable, int callTimeout)
+  public T callWithRetries(RetryingCallable<T> callable, int callTimeout)
   throws IOException, RuntimeException {
-    this.callTimeout = callTimeout;
     List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions =
       new ArrayList<RetriesExhaustedException.ThrowableWithExtraContext>();
     this.globalStartTime = EnvironmentEdgeManager.currentTimeMillis();
@@ -120,8 +103,7 @@ public class RpcRetryingCaller<T> {
       long expectedSleep;
       try {
         callable.prepare(tries != 0); // if called with false, check table status on ZK
-        beforeCall();
-        return callable.call(remainingTime);
+        return callable.call(getRemainingTime(callTimeout));
       } catch (Throwable t) {
         ExceptionUtil.rethrowIfInterrupt(t);
         if (LOG.isTraceEnabled()) {
@@ -145,8 +127,8 @@ public class RpcRetryingCaller<T> {
 
         // If, after the planned sleep, there won't be enough time left, we stop now.
         long duration = singleCallDuration(expectedSleep);
-        if (duration > this.callTimeout) {
-          String msg = "callTimeout=" + this.callTimeout + ", callDuration=" + duration +
+        if (duration > callTimeout) {
+          String msg = "callTimeout=" + callTimeout + ", callDuration=" + duration +
               ": " + callable.getExceptionMessageAdditionalDetail();
           throw (SocketTimeoutException)(new SocketTimeoutException(msg).initCause(t));
         }
@@ -163,8 +145,7 @@ public class RpcRetryingCaller<T> {
    * @return Calculate how long a single call took
    */
   private long singleCallDuration(final long expectedSleep) {
-    return (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime)
-      + MIN_RPC_TIMEOUT + expectedSleep;
+    return (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime) + expectedSleep;
   }
 
   /**
@@ -176,7 +157,7 @@ public class RpcRetryingCaller<T> {
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
    */
-  public T callWithoutRetries(RetryingCallable<T> callable)
+  public T callWithoutRetries(RetryingCallable<T> callable, int callTimeout)
   throws IOException, RuntimeException {
     // The code of this method should be shared with withRetries.
     this.globalStartTime = EnvironmentEdgeManager.currentTimeMillis();

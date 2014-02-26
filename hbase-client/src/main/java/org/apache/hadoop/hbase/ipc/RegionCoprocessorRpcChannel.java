@@ -24,6 +24,7 @@ import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
@@ -52,6 +53,7 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
   private final TableName table;
   private final byte[] row;
   private byte[] lastRegion;
+  private int operationTimeout;
 
   private RpcRetryingCallerFactory rpcFactory;
 
@@ -60,6 +62,9 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
     this.table = table;
     this.row = row;
     this.rpcFactory = RpcRetryingCallerFactory.instantiate(conn.getConfiguration());
+    this.operationTimeout = conn.getConfiguration().getInt(
+        HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
   }
 
   @Override
@@ -88,7 +93,7 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
           }
         };
     CoprocessorServiceResponse result = rpcFactory.<CoprocessorServiceResponse> newCaller()
-        .callWithRetries(callable);
+        .callWithRetries(callable, operationTimeout);
     Message response = null;
     if (result.getValue().hasValue()) {
       response = responsePrototype.newBuilderForType()
