@@ -83,12 +83,28 @@ public interface MetricsMasterWrapper {
    *
    * @return Live region servers
    */
-  int getRegionServers();
+  String getRegionServers();
+
+  /**
+   * Get the number of live region servers
+   *
+   * @return number of Live region servers
+   */
+
+  int getNumRegionServers();
 
   /**
    * Get the dead region servers
    *
    * @return Dead region Servers
    */
-  int getDeadRegionServers();
+  String getDeadRegionServers();
+
+  /**
+   * Get the number of dead region servers
+   *
+   * @return number of Dead region Servers
+   */
+  int getNumDeadRegionServers();
+
 }
