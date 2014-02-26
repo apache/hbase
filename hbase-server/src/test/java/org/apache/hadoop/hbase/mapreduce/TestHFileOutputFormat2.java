@@ -342,7 +342,7 @@ public class TestHFileOutputFormat2  {
     // first region start key is always empty
     ret[0] = HConstants.EMPTY_BYTE_ARRAY;
     for (int i = 1; i < numKeys; i++) {
-      ret[i] = PerformanceEvaluation.generateValue(random);
+      ret[i] = PerformanceEvaluation.generateData(random, PerformanceEvaluation.ROW_LENGTH);
     }
     return ret;
   }
