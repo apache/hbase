@@ -95,7 +95,7 @@ public class TimeRangeTracker implements Writable {
    * If required, update the current TimestampRange to include timestamp
    * @param timestamp the timestamp value to include
    */
-  private void includeTimestamp(final long timestamp) {
+  private synchronized void includeTimestamp(final long timestamp) {
     if (maximumTimestamp == -1) {
       minimumTimestamp = timestamp;
       maximumTimestamp = timestamp;
@@ -114,7 +114,7 @@ public class TimeRangeTracker implements Writable {
    * @param tr TimeRange
    * @return True if there is overlap, false otherwise
    */
-  public boolean includesTimeRange(final TimeRange tr) {
+  public synchronized boolean includesTimeRange(final TimeRange tr) {
     return (this.minimumTimestamp < tr.getMax() &&
         this.maximumTimestamp >= tr.getMin());
   }
@@ -122,14 +122,14 @@ public class TimeRangeTracker implements Writable {
   /**
    * @return the minimumTimestamp
    */
-  public long getMinimumTimestamp() {
+  public synchronized long getMinimumTimestamp() {
     return minimumTimestamp;
   }
 
   /**
    * @return the maximumTimestamp
    */
-  public long getMaximumTimestamp() {
+  public synchronized long getMaximumTimestamp() {
     return maximumTimestamp;
   }
 
