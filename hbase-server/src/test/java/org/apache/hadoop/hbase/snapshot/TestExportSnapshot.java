@@ -66,7 +66,7 @@ import org.junit.experimental.categories.Category;
 public class TestExportSnapshot {
   private final Log LOG = LogFactory.getLog(getClass());
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private final static byte[] FAMILY = Bytes.toBytes("cf");
 
@@ -75,15 +75,19 @@ public class TestExportSnapshot {
   private TableName tableName;
   private HBaseAdmin admin;
 
+  public static void setUpBaseConf(Configuration conf) {
+    conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
+    conf.setInt("hbase.regionserver.msginterval", 100);
+    conf.setInt("hbase.client.pause", 250);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
+    conf.setBoolean("hbase.master.enabletable.roundrobin", true);
+    conf.setInt("mapreduce.map.max.attempts", 10);
+    conf.setInt("mapred.map.max.attempts", 10);
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
-    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
-    TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
-    TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
-    TEST_UTIL.getConfiguration().setInt("mapreduce.map.max.attempts", 10);
-    TEST_UTIL.getConfiguration().setInt("mapred.map.max.attempts", 10);
+    setUpBaseConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.startMiniMapReduceCluster();
   }
@@ -180,7 +184,7 @@ public class TestExportSnapshot {
 
   @Test
   public void testConsecutiveExports() throws Exception {
-    Path copyDir = TEST_UTIL.getDataTestDir("export-" + System.currentTimeMillis());
+    Path copyDir = getLocalDestinationDir();
     testExportFileSystemState(tableName, snapshotName, 2, copyDir, false);
     testExportFileSystemState(tableName, snapshotName, 2, copyDir, true);
     removeExportDir(copyDir);
@@ -239,7 +243,7 @@ public class TestExportSnapshot {
 
   private void testExportFileSystemState(final TableName tableName, final byte[] snapshotName,
       int filesExpected) throws Exception {
-    Path copyDir = TEST_UTIL.getDataTestDir("export-" + System.currentTimeMillis());
+    Path copyDir = getHdfsDestinationDir();
     testExportFileSystemState(tableName, snapshotName, filesExpected, copyDir, false);
     removeExportDir(copyDir);
   }
@@ -305,7 +309,7 @@ public class TestExportSnapshot {
    */
   private int runExportAndInjectFailures(final byte[] snapshotName, boolean retry)
       throws Exception {
-    Path copyDir = TEST_UTIL.getDataTestDir("export-" + System.currentTimeMillis());
+    Path copyDir = getLocalDestinationDir();
     URI hdfsUri = FileSystem.get(TEST_UTIL.getConfiguration()).getUri();
     FileSystem fs = FileSystem.get(copyDir.toUri(), new Configuration());
     copyDir = copyDir.makeQualified(fs);
@@ -383,6 +387,19 @@ public class TestExportSnapshot {
       }
     }
     return files;
+  }
+
+  private Path getHdfsDestinationDir() {
+    Path rootDir = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    Path path = new Path(new Path(rootDir, "export-test"), "export-" + System.currentTimeMillis());
+    LOG.info("HDFS export destination path: " + path);
+    return path;
+  }
+
+  private Path getLocalDestinationDir() {
+    Path path = TEST_UTIL.getDataTestDir("local-export-" + System.currentTimeMillis());
+    LOG.info("Local export destination path: " + path);
+    return path;
   }
 
   private void removeExportDir(final Path path) throws IOException {
