@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -272,6 +273,9 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableName tableName, HTableDescriptor htd) throws IOException {
+    if (LABELS_TABLE_NAME.equals(tableName)) {
+      throw new ConstraintException("Cannot alter " + LABELS_TABLE_NAME);
+    }
   }
 
   @Override
@@ -292,6 +296,9 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   @Override
   public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
       HColumnDescriptor column) throws IOException {
+    if (LABELS_TABLE_NAME.equals(tableName)) {
+      throw new ConstraintException("Cannot alter " + LABELS_TABLE_NAME);
+    }
   }
 
   @Override
@@ -312,6 +319,9 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   @Override
   public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableName tableName, HColumnDescriptor descriptor) throws IOException {
+    if (LABELS_TABLE_NAME.equals(tableName)) {
+      throw new ConstraintException("Cannot alter " + LABELS_TABLE_NAME);
+    }
   }
 
   @Override
@@ -332,6 +342,9 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   @Override
   public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableName tableName, byte[] c) throws IOException {
+    if (LABELS_TABLE_NAME.equals(tableName)) {
+      throw new ConstraintException("Cannot alter " + LABELS_TABLE_NAME);
+    }
   }
 
   @Override
@@ -372,6 +385,9 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   @Override
   public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
       throws IOException {
+    if (LABELS_TABLE_NAME.equals(tableName)) {
+      throw new ConstraintException("Cannot disable " + LABELS_TABLE_NAME);
+    }
   }
 
   @Override
