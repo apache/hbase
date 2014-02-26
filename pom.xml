@@ -1219,6 +1219,10 @@
         <version>${jetty.jspapi.version}</version>
         <exclusions>
           <exclusion>
+            <groupId>org.eclipse.jdt</groupId>
+            <artifactId>core</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>ant</groupId>
             <artifactId>ant</artifactId>
           </exclusion>
