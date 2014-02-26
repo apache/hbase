@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.mapreduce.JobUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.security.FsDelegationToken;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -549,7 +551,8 @@ public final class ExportSnapshot extends Configured implements Tool {
   /**
    * Run Map-Reduce Job to perform the files copy.
    */
-  private boolean runCopyJob(final Path inputRoot, final Path outputRoot,
+  private boolean runCopyJob(final FileSystem inputFs, final Path inputRoot,
+      final FileSystem outputFs, final Path outputRoot,
       final List<Pair<Path, Long>> snapshotFiles, final boolean verifyChecksum,
       final String filesUser, final String filesGroup, final int filesMode,
       final int mappers) throws IOException, InterruptedException, ClassNotFoundException {
@@ -576,7 +579,20 @@ public final class ExportSnapshot extends Configured implements Tool {
       SequenceFileInputFormat.addInputPath(job, path);
     }
 
-    return job.waitForCompletion(true);
+    UserProvider userProvider = UserProvider.instantiate(job.getConfiguration());
+    FsDelegationToken inputFsToken = new FsDelegationToken(userProvider, "irenewer");
+    FsDelegationToken outputFsToken = new FsDelegationToken(userProvider, "orenewer");
+    try {
+      // Acquire the delegation Tokens
+      inputFsToken.acquireDelegationToken(inputFs);
+      outputFsToken.acquireDelegationToken(outputFs);
+
+      // Run the MR Job
+      return job.waitForCompletion(true);
+    } finally {
+      inputFsToken.releaseDelegationToken();
+      outputFsToken.releaseDelegationToken();
+    }
   }
 
   /**
@@ -689,7 +705,7 @@ public final class ExportSnapshot extends Configured implements Tool {
       if (files.size() == 0) {
         LOG.warn("There are 0 store file to be copied. There may be no data in the table.");
       } else {
-        if (!runCopyJob(inputRoot, outputRoot, files, verifyChecksum,
+        if (!runCopyJob(inputFs, inputRoot, outputFs, outputRoot, files, verifyChecksum,
             filesUser, filesGroup, filesMode, mappers)) {
           throw new ExportSnapshotException("Snapshot export failed!");
         }

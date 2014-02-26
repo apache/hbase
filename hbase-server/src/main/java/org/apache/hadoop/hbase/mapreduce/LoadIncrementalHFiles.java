@@ -79,10 +79,10 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.security.FsDelegationToken;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -110,8 +110,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private int maxFilesPerRegionPerFamily;
   private boolean assignSeqIds;
 
-  private boolean hasForwardedToken;
-  private Token<?> userToken;
+  private FsDelegationToken fsDelegationToken;
   private String bulkToken;
   private UserProvider userProvider;
 
@@ -123,6 +122,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     getConf().setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
     this.hbAdmin = new HBaseAdmin(conf);
     this.userProvider = UserProvider.instantiate(conf);
+    this.fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
     maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
   }
@@ -261,19 +261,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       //prepare staging directory and token
       if (userProvider.isHBaseSecurityEnabled()) {
         FileSystem fs = FileSystem.get(getConf());
-        //This condition is here for unit testing
-        //Since delegation token doesn't work in mini cluster
-        if (userProvider.isHadoopSecurityEnabled()) {
-          userToken = userProvider.getCurrent().getToken("HDFS_DELEGATION_TOKEN",
-                                                         fs.getCanonicalServiceName());
-          if (userToken == null) {
-            hasForwardedToken = false;
-            userToken = fs.getDelegationToken("renewer");
-          } else {
-            hasForwardedToken = true;
-            LOG.info("Use the existing token: " + userToken);
-          }
-        }
+        fsDelegationToken.acquireDelegationToken(fs);
+
         bulkToken = new SecureBulkLoadClient(table).prepareBulkLoad(table.getName());
       }
 
@@ -312,13 +301,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
     } finally {
       if (userProvider.isHBaseSecurityEnabled()) {
-        if (userToken != null && !hasForwardedToken) {
-          try {
-            userToken.cancel(getConf());
-          } catch (Exception e) {
-            LOG.warn("Failed to cancel HDFS delegation token.", e);
-          }
-        }
+        fsDelegationToken.releaseDelegationToken();
+
         if(bulkToken != null) {
           new SecureBulkLoadClient(table).cleanupBulkLoad(bulkToken);
         }
@@ -609,8 +593,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           } else {
             HTable table = new HTable(conn.getConfiguration(), getTableName());
             secureClient = new SecureBulkLoadClient(table);
-            success = secureClient.bulkLoadHFiles(famPaths, userToken, bulkToken,
-              getLocation().getRegionInfo().getStartKey());
+            success = secureClient.bulkLoadHFiles(famPaths, fsDelegationToken.getUserToken(),
+              bulkToken, getLocation().getRegionInfo().getStartKey());
           }
           return success;
         } finally {
