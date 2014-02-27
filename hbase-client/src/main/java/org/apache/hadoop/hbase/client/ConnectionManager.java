@@ -1162,6 +1162,10 @@ class ConnectionManager {
 
           // convert the row result into the HRegionLocation we need!
           location = MetaReader.getRegionLocations(regionInfoRow);
+          if (location == null || location.getRegionLocation() == null) {
+            throw new IOException("HRegionInfo was null in " +
+              parentTable + ", row=" + regionInfoRow);
+          }
           HRegionInfo regionInfo = location.getRegionLocation().getRegionInfo();
           if (regionInfo == null) {
             throw new IOException("HRegionInfo was null or empty in " +
