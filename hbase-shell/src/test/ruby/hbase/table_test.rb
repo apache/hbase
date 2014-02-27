@@ -29,12 +29,6 @@ module Hbase
       setup_hbase
     end
 
-    define_test "Hbase::Table constructor should fail for non-existent tables" do
-      assert_raise(NativeException) do
-        table('non-existent-table-name')
-      end
-    end
-
     define_test "Hbase::Table constructor should not fail for existent tables" do
       assert_nothing_raised do
         table('hbase:meta')
