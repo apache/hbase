@@ -60,10 +60,9 @@ module Hbase
             namespace_name = table_name[1...table_name.length]
             raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless namespace_exists?(namespace_name)
 
-            #We pass the namespace name along with "@" so that we can differentiate a namespace from a table.
             # invoke cp endpoint to perform access controlse
             org.apache.hadoop.hbase.protobuf.ProtobufUtil.grant(
-              protocol, user, tablebytes, perm.getActions())
+              protocol, user, namespace_name, perm.getActions())
           else
             # Table should exist
             raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
@@ -116,11 +115,10 @@ module Hbase
             namespace_name = table_name[1...table_name.length]
             raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless namespace_exists?(namespace_name)
 
-            #We pass the namespace name along with "@" so that we can differentiate a namespace from a table.
             tablebytes=table_name.to_java_bytes
             # invoke cp endpoint to perform access controlse
             org.apache.hadoop.hbase.protobuf.ProtobufUtil.revoke(
-              protocol, user, tablebytes)
+              protocol, user, namespace_name)
           else
              # Table should exist
              raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
