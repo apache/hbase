@@ -124,6 +124,13 @@ public class TestRestoreSnapshotFromClient {
     admin.enableTable(tableName);
     SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
     snapshot1Rows = TEST_UTIL.countRows(table);
+    admin.disableTable(tableName);
+
+    // take a snapshot of the updated table
+    admin.snapshot(snapshotName1, tableName);
+
+    // re-enable table
+    admin.enableTable(tableName);
     table.close();
   }
 
@@ -137,9 +144,9 @@ public class TestRestoreSnapshotFromClient {
   @Test
   public void testRestoreSnapshot() throws IOException {
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
-    admin.disableTable(tableName);
-    admin.snapshot(snapshotName1, tableName);
+
     // Restore from snapshot-0
+    admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName0);
     admin.enableTable(tableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
