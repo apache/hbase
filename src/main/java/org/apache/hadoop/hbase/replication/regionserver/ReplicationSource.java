@@ -289,19 +289,19 @@ public class ReplicationSource extends Thread
   @Override
   public void run() {
     connectToPeers();
-    // We were stopped while looping to connect to sinks, just abort
-    if (!this.isActive()) {
-      return;
-    }
     int sleepMultiplier = 1;
     // delay this until we are in an asynchronous thread
-    while (this.peerClusterId == null) {
+    while (this.isActive() && this.peerClusterId == null) {
       this.peerClusterId = zkHelper.getPeerUUID(this.peerId);
-      if (this.peerClusterId == null) {
+      if (this.isActive() && this.peerClusterId == null) {
         if (sleepForRetries("Cannot contact the peer's zk ensemble", sleepMultiplier)) {
           sleepMultiplier++;
         }
       }
+    }
+    // We were stopped while looping to connect to sinks, just abort
+    if (!this.isActive()) {
+      return;
     }
     // resetting to 1 to reuse later
     sleepMultiplier = 1;
