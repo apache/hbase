@@ -1437,7 +1437,7 @@ public class Store extends SchemaConfigured implements HeapSize,
                   // if exception happened just write unmodified keyvalue
                   writer.append(kv, kvContext);
                   LOG.error("Exception happened while executing compaction hook, leaving KV unchanged: "
-                      + e.getCause());
+                       ,e);
                   kvsErrors++;
                 }
               } else {

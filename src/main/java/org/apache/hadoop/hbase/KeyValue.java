@@ -2263,7 +2263,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
     KeyValue newKV = new KeyValue(bytes, getRowOffset(), getRowLength(), bytes,
         getFamilyOffset(), getFamilyLength(), bytes, getQualifierOffset(),
         getQualifierLength(), this.getTimestamp(), Type.codeToType(this
-            .getType()), newValue, 0, newValue.length);
+            .getType()), newValue, 0, newValue == null ? 0 : newValue.length);
     newKV.setMemstoreTS(this.getMemstoreTS());
     return newKV;
   }

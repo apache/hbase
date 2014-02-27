@@ -39,6 +39,10 @@ public class LowerToUpperCompactionHook implements CompactionHook {
     if (currentValue.equals("aba")) {
       throw new IllegalArgumentException("dummy exception!");
     }
+    if (currentValue.equals("abb")) {
+      kvModified.modifyValue(null);
+      return kvModified;
+    }
     // create a copy of the kv and transform it to uppercase.
     String newValueString = currentValue;
     newValueString = newValueString.toUpperCase();
