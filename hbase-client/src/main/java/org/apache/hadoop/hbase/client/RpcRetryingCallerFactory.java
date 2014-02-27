@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
@@ -28,13 +29,21 @@ public class RpcRetryingCallerFactory {
   /** Configuration key for a custom {@link RpcRetryingCaller} */
   public static final String CUSTOM_CALLER_CONF_KEY = "hbase.rpc.callerfactory.class";
   protected final Configuration conf;
+  private final long pause;
+  private final int retries;
 
   public RpcRetryingCallerFactory(Configuration conf) {
     this.conf = conf;
+    pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
+        HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    retries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
   }
 
   public <T> RpcRetryingCaller<T> newCaller() {
-    return new RpcRetryingCaller<T>(conf);
+    // We store the values in the factory instance. This way, constructing new objects
+    //  is cheap as it does not require parsing a complex structure.
+    return new RpcRetryingCaller<T>(pause, retries);
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration) {

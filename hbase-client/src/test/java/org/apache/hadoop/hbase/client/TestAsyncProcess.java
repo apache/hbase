@@ -147,7 +147,7 @@ public class TestAsyncProcess {
     protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
       final MultiResponse mr = createMultiResponse(
           callable.getMulti(), nbMultiResponse, nbActions);
-      return new RpcRetryingCaller<MultiResponse>(conf) {
+      return new RpcRetryingCaller<MultiResponse>(100, 10) {
         @Override
         public MultiResponse callWithoutRetries(RetryingCallable<MultiResponse> callable,
                                                 int callTimeout)
