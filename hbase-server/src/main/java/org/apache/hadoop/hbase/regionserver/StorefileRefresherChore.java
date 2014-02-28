@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -104,9 +105,11 @@ public class StorefileRefresherChore extends Chore {
     }
 
     // remove closed regions
-    for (String encodedName : lastRefreshTimes.keySet()) {
+    Iterator<String> lastRefreshTimesIter = lastRefreshTimes.keySet().iterator();
+    while (lastRefreshTimesIter.hasNext()) {
+      String encodedName = lastRefreshTimesIter.next();
       if (regionServer.getFromOnlineRegions(encodedName) == null) {
-        lastRefreshTimes.remove(encodedName);
+        lastRefreshTimesIter.remove();
       }
     }
   }
