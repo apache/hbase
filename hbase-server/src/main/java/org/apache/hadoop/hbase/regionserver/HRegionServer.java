@@ -1695,8 +1695,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // Verify that all threads are alive
     if (!(leases.isAlive()
         && cacheFlusher.isAlive() && hlogRoller.isAlive()
-        && this.compactionChecker.isAlive())
-        && this.periodicFlusher.isAlive()) {
+        && this.compactionChecker.isAlive()
+        && this.periodicFlusher.isAlive())) {
       stop("One or more threads are no longer alive -- stop");
       return false;
     }
