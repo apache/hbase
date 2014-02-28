@@ -340,6 +340,10 @@ def unloadRegions(options, hostname)
   # Remove the servers in our exclude list from list of servers.
   servers = stripExcludes(servers, options[:excludesFile])
   puts "Valid region move targets: ", servers
+  if servers.length == 0
+    puts "No regions were moved - there was no server available"
+    exit 4
+  end
   movedRegions = java.util.ArrayList.new()
   while true
     rs = getRegions(config, servername)
