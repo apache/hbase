@@ -287,7 +287,7 @@ public class FileLink {
         if (path.equals(currentPath)) continue;
         try {
           in = fs.open(path, bufferSize);
-          in.seek(pos);
+          if (pos != 0) in.seek(pos);
           assert(in.getPos() == pos) : "Link unable to seek to the right position=" + pos;
           if (LOG.isTraceEnabled()) {
             if (currentPath != null) {
