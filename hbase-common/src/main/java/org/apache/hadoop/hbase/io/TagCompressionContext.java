@@ -41,12 +41,12 @@ import org.apache.hadoop.io.IOUtils;
 public class TagCompressionContext {
   private final Dictionary tagDict;
 
-  public TagCompressionContext(Class<? extends Dictionary> dictType) throws SecurityException,
-      NoSuchMethodException, InstantiationException, IllegalAccessException,
-      InvocationTargetException {
+  public TagCompressionContext(Class<? extends Dictionary> dictType, int dictCapacity)
+      throws SecurityException, NoSuchMethodException, InstantiationException,
+      IllegalAccessException, InvocationTargetException {
     Constructor<? extends Dictionary> dictConstructor = dictType.getConstructor();
     tagDict = dictConstructor.newInstance();
-    tagDict.init(Short.MAX_VALUE);
+    tagDict.init(dictCapacity);
   }
 
   public void clear() {
@@ -131,10 +131,12 @@ public class TagCompressionContext {
    * @param dest Destination array where to write the uncompressed tags
    * @param offset Offset in destination where tags to be written
    * @param length Length of all tag bytes
+   * @return bytes count read from source to uncompress all tags.
    * @throws IOException
    */
-  public void uncompressTags(ByteBuffer src, byte[] dest, int offset, int length)
+  public int uncompressTags(ByteBuffer src, byte[] dest, int offset, int length)
       throws IOException {
+    int srcBeginPos = src.position();
     int endOffset = offset + length;
     while (offset < endOffset) {
       byte status = src.get();
@@ -158,6 +160,7 @@ public class TagCompressionContext {
         offset += tagLen;
       }
     }
+    return src.position() - srcBeginPos;
   }
 
   /**

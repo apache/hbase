@@ -195,9 +195,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   /**
    * Default compress tags along with any type of DataBlockEncoding.
-   * Disabled to false by default in 0.98.0
    */
-  public static final boolean DEFAULT_COMPRESS_TAGS = false;
+  public static final boolean DEFAULT_COMPRESS_TAGS = true;
 
   private final static Map<String, String> DEFAULT_VALUES
     = new HashMap<String, String>();

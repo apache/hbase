@@ -52,12 +52,20 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     HFileBlockDefaultDecodingContext decodingCtx =
         (HFileBlockDefaultDecodingContext) blkDecodingCtx;
-    if (decodingCtx.getHFileContext().isCompressTags()) {
-      try {
-        TagCompressionContext tagCompressionContext = new TagCompressionContext(LRUDictionary.class);
-        decodingCtx.setTagCompressionContext(tagCompressionContext);
-      } catch (Exception e) {
-        throw new IOException("Failed to initialize TagCompressionContext", e);
+    if (decodingCtx.getHFileContext().isIncludesTags()
+        && decodingCtx.getHFileContext().isCompressTags()) {
+      if (decodingCtx.getTagCompressionContext() != null) {
+        // It will be overhead to create the TagCompressionContext again and again for every block
+        // decoding.
+        decodingCtx.getTagCompressionContext().clear();
+      } else {
+        try {
+          TagCompressionContext tagCompressionContext = new TagCompressionContext(
+              LRUDictionary.class, Byte.MAX_VALUE);
+          decodingCtx.setTagCompressionContext(tagCompressionContext);
+        } catch (Exception e) {
+          throw new IOException("Failed to initialize TagCompressionContext", e);
+        }
       }
     }
     return internalDecodeKeyValues(source, 0, 0, decodingCtx);
@@ -70,6 +78,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected int lastCommonPrefix;
     protected int tagsLength = 0;
     protected int tagsOffset = -1;
+    protected int tagsCompressedLength = 0;
+    protected boolean uncompressTags = true;
 
     /** We need to store a copy of the key. */
     protected byte[] keyBuffer = new byte[INITIAL_KEY_BUFFER_SIZE];
@@ -84,6 +94,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     protected void invalidate() {
       valueOffset = -1;
+      tagsCompressedLength = 0;
+      uncompressTags = true;
     }
 
     protected void ensureSpaceForKey() {
@@ -160,7 +172,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       this.decodingCtx = decodingCtx;
       if (decodingCtx.getHFileContext().isCompressTags()) {
         try {
-          tagCompressionContext = new TagCompressionContext(LRUDictionary.class);
+          tagCompressionContext = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
         } catch (Exception e) {
           throw new RuntimeException("Failed to initialize TagCompressionContext", e);
         }
@@ -249,6 +261,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     @Override
     public void rewind() {
       currentBuffer.rewind();
+      if (tagCompressionContext != null) {
+        tagCompressionContext.clear();
+      }
       decodeFirst();
       previous.invalidate();
     }
@@ -266,13 +281,18 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected void decodeTags() {
       current.tagsLength = ByteBufferUtils.readCompressedInt(currentBuffer);
       if (tagCompressionContext != null) {
-        // Tag compression is been used. uncompress it into tagsBuffer
-        current.ensureSpaceForTags();
-        try {
-          tagCompressionContext.uncompressTags(currentBuffer, current.tagsBuffer, 0,
-              current.tagsLength);
-        } catch (IOException e) {
-          throw new RuntimeException("Exception while uncompressing tags", e);
+        if (current.uncompressTags) {
+          // Tag compression is been used. uncompress it into tagsBuffer
+          current.ensureSpaceForTags();
+          try {
+            current.tagsCompressedLength = tagCompressionContext.uncompressTags(currentBuffer,
+                current.tagsBuffer, 0, current.tagsLength);
+          } catch (IOException e) {
+            throw new RuntimeException("Exception while uncompressing tags", e);
+          }
+        } else {
+          ByteBufferUtils.skip(currentBuffer, current.tagsCompressedLength);
+          current.uncompressTags = true;// Reset this.
         }
         current.tagsOffset = -1;
       } else {
@@ -355,7 +375,15 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
       // move after last key value
       currentBuffer.position(current.nextKvOffset);
-
+      // Already decoded the tag bytes. We cache this tags into current state and also the total
+      // compressed length of the tags bytes. For the next time decodeNext() we don't need to decode
+      // the tags again. This might pollute the Data Dictionary what we use for the compression.
+      // When current.uncompressTags is false, we will just reuse the current.tagsBuffer and skip
+      // 'tagsCompressedLength' bytes of source stream.
+      // See in decodeTags()
+      current.tagsBuffer = previous.tagsBuffer;
+      current.tagsCompressedLength = previous.tagsCompressedLength;
+      current.uncompressTags = false;
       previous.invalidate();
     }
 
@@ -468,12 +496,20 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         (HFileBlockDefaultEncodingContext) blkEncodingCtx;
     encodingCtx.prepareEncoding();
     DataOutputStream dataOut = encodingCtx.getOutputStreamForEncoder();
-    if (encodingCtx.getHFileContext().isCompressTags()) {
-      try {
-        TagCompressionContext tagCompressionContext = new TagCompressionContext(LRUDictionary.class);
-        encodingCtx.setTagCompressionContext(tagCompressionContext);
-      } catch (Exception e) {
-        throw new IOException("Failed to initialize TagCompressionContext", e);
+    if (encodingCtx.getHFileContext().isIncludesTags()
+        && encodingCtx.getHFileContext().isCompressTags()) {
+      if (encodingCtx.getTagCompressionContext() != null) {
+        // It will be overhead to create the TagCompressionContext again and again for every block
+        // encoding.
+        encodingCtx.getTagCompressionContext().clear();
+      } else {
+        try {
+          TagCompressionContext tagCompressionContext = new TagCompressionContext(
+              LRUDictionary.class, Byte.MAX_VALUE);
+          encodingCtx.setTagCompressionContext(tagCompressionContext);
+        } catch (Exception e) {
+          throw new IOException("Failed to initialize TagCompressionContext", e);
+        }
       }
     }
     internalEncodeKeyValues(dataOut, in, encodingCtx);

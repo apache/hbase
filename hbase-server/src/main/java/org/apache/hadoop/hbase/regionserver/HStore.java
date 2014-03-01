@@ -891,15 +891,11 @@ public class HStore implements Store {
     if (compression == null) {
       compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
     }
-    if(family.shouldCompressTags()) {
-      LOG.warn("HFile tag compression attribute ignored for '" + family.getNameAsString()
-          + "', see HBASE-10443.");
-    }
     HFileContext hFileContext = new HFileContextBuilder()
                                 .withIncludesMvcc(includeMVCCReadpoint)
                                 .withIncludesTags(includesTag)
                                 .withCompression(compression)
-                                .withCompressTags(false)
+                                .withCompressTags(family.shouldCompressTags())
                                 .withChecksumType(checksumType)
                                 .withBytesPerCheckSum(bytesPerChecksum)
                                 .withBlockSize(blocksize)

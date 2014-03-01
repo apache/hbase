@@ -70,7 +70,6 @@ public class TestEncodedSeekers {
 
   private final HBaseTestingUtility testUtil = HBaseTestingUtility.createLocalHTU();
   private final DataBlockEncoding encoding;
-  private final boolean encodeOnDisk;
   private final boolean includeTags;
   private final boolean compressTags;
 
@@ -82,28 +81,24 @@ public class TestEncodedSeekers {
     List<Object[]> paramList = new ArrayList<Object[]>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       for (boolean includeTags : new boolean[] { false, true }) {
-        for (boolean encodeOnDisk : new boolean[] { false, true }) {
-          for (boolean compressTags : new boolean[] { false, true }) {
-            paramList.add(new Object[] { encoding, encodeOnDisk, includeTags, compressTags });
-          }
+        for (boolean compressTags : new boolean[] { false, true }) {
+          paramList.add(new Object[] { encoding, includeTags, compressTags });
         }
       }
     }
     return paramList;
   }
 
-  public TestEncodedSeekers(DataBlockEncoding encoding, boolean encodeOnDisk, boolean includeTags,
-      boolean compressTags) {
+  public TestEncodedSeekers(DataBlockEncoding encoding, boolean includeTags, boolean compressTags) {
     this.encoding = encoding;
-    this.encodeOnDisk = encodeOnDisk;
     this.includeTags = includeTags;
     this.compressTags = compressTags;
   }
 
   @Test
   public void testEncodedSeeker() throws IOException {
-    System.err.println("Testing encoded seekers for encoding : " + encoding + ", encodeOnDisk : "
-        + encodeOnDisk + ", includeTags : " + includeTags + ", compressTags : " + compressTags);
+    System.err.println("Testing encoded seekers for encoding : " + encoding + ", includeTags : "
+        + includeTags + ", compressTags : " + compressTags);
     if(includeTags) {
       testUtil.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 3);
     }

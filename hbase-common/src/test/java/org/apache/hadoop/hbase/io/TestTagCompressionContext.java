@@ -45,7 +45,7 @@ public class TestTagCompressionContext {
   @Test
   public void testCompressUncompressTags1() throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    TagCompressionContext context = new TagCompressionContext(LRUDictionary.class);
+    TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
     KeyValue kv1 = createKVWithTags(2);
     short tagsLength1 = kv1.getTagsLength();
     ByteBuffer ib = ByteBuffer.wrap(kv1.getTagsArray(), kv1.getTagsOffset(), tagsLength1);
@@ -71,7 +71,7 @@ public class TestTagCompressionContext {
   @Test
   public void testCompressUncompressTags2() throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    TagCompressionContext context = new TagCompressionContext(LRUDictionary.class);
+    TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
     KeyValue kv1 = createKVWithTags(1);
     short tagsLength1 = kv1.getTagsLength();
     context.compressTags(baos, kv1.getTagsArray(), kv1.getTagsOffset(), tagsLength1);
