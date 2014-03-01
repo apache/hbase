@@ -64,7 +64,7 @@ class CompressionContext {
     familyDict.init(Byte.MAX_VALUE);
     qualifierDict.init(Byte.MAX_VALUE);
     if (hasTagCompression) {
-      tagCompressionContext = new TagCompressionContext(dictType);
+      tagCompressionContext = new TagCompressionContext(dictType, Short.MAX_VALUE);
     }
   }
 
