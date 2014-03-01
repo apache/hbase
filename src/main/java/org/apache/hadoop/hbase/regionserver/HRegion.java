@@ -629,6 +629,7 @@ public class HRegion implements HeapSize {
         for (final HColumnDescriptor family : families) {
           status.setStatus("Instantiating store for column family " + family);
           completionService.submit(new Callable<Store>() {
+            @Override
             public Store call() throws IOException {
               return instantiateHStore(tableDir, family);
             }
@@ -767,13 +768,19 @@ public class HRegion implements HeapSize {
   /**
    * Increase the size of mem store in this region and the sum of global mem
    * stores' size
-   * @param memStoreSize
+   * @param delta
    * @return the size of memstore in this region
    */
-  public long incMemoryUsage(long memStoreSize) {
+  public long incMemoryUsage(long delta) {
     if (this.regionServer != null)
-      this.regionServer.getGlobalMemstoreSize().addAndGet(memStoreSize);
-    return this.memstoreSize.addAndGet(memStoreSize);
+      this.regionServer.getGlobalMemstoreSize().addAndGet(delta);
+    long vl = this.memstoreSize.addAndGet(delta);
+    if (vl < 0) {
+      LOG.error(String.format("memstoreSize of region %s becomes negative %d "
+          + "increased by %d called by %s", this.toString(), vl, delta, Thread
+          .currentThread().getStackTrace()[2]));
+    }
+    return vl;
   }
 
   /** @return a HRegionInfo object for this region */
@@ -922,6 +929,7 @@ public class HRegion implements HeapSize {
               assert store.getFlushableMemstoreSize() == 0;
               completionService
                   .submit(new Callable<ImmutableList<StoreFile>>() {
+                    @Override
                     public ImmutableList<StoreFile> call() throws IOException {
                       ImmutableList<StoreFile> result = store.close();
                       HRegionServer.configurationManager.
@@ -1501,6 +1509,11 @@ public class HRegion implements HeapSize {
     final long startTime = EnvironmentEdgeManager.currentTimeMillis();
     // If nothing to flush, return and avoid logging start/stop flush.
     if (this.memstoreSize.get() <= 0) {
+      if (this.memstoreSize.get() < 0) {
+        LOG.error(String.format(
+            "HRegion.memstoreSize is a negative number %ld for region %s",
+            memstoreSize.get(), this.toString()));
+      }
       // Since there is nothing to flush, we will reset the flush times for all
       // the stores.
       for (Store store : stores.values()) {

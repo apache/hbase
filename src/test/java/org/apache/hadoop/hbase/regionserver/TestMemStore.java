@@ -26,8 +26,6 @@ import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.NavigableSet;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
 
 import junit.framework.TestCase;
@@ -38,17 +36,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.kvaggregator.DefaultKeyValueAggregator;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HasThread;
+import org.junit.Test;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.util.HasThread;
 
 /** memstore test case */
 public class TestMemStore extends TestCase {
@@ -81,6 +80,19 @@ public class TestMemStore extends TestCase {
     assertEquals(1, this.memstore.kvset.size());
     assertTrue(Bytes.toString(found.getValue()), Bytes.equals(samekey.getValue(),
       found.getValue()));
+  }
+
+  @Test
+  public void testUpdateColumnValueSizeChange() {
+    byte[] bytes = Bytes.toBytes(getName());
+    KeyValue kv = new KeyValue(bytes, bytes, bytes, 0, Type.Put,
+        Bytes.toBytes((long) 0));
+    long size = this.memstore.size.get();
+    size += this.memstore.add(kv);
+    assertEquals("memstore.size()", size, memstore.size.get());
+
+    size += this.memstore.updateColumnValue(bytes, bytes, bytes, 1, 1, 1);
+    assertEquals("memstore.size()", size, memstore.size.get());
   }
 
   /**
@@ -406,6 +418,7 @@ public class TestMemStore extends TestCase {
       row = Bytes.toBytes(id);
     }
 
+    @Override
     public void run() {
       try {
         internalRun();
@@ -576,6 +589,7 @@ public class TestMemStore extends TestCase {
         // Clear out set.  Otherwise row results accumulate.
         results.clear();
       }
+      scanner.close();
     }
   }
 
@@ -909,15 +923,6 @@ public class TestMemStore extends TestCase {
     }
   }
 
-  private KeyValue getDeleteKV(byte [] row) {
-    return new KeyValue(row, Bytes.toBytes("test_col"), null,
-      HConstants.LATEST_TIMESTAMP, KeyValue.Type.Delete, null);
-  }
-
-  private KeyValue getKV(byte [] row, byte [] value) {
-    return new KeyValue(row, Bytes.toBytes("test_col"), null,
-      HConstants.LATEST_TIMESTAMP, value);
-  }
   private static void addRows(int count, final MemStore mem) {
     long nanos = System.nanoTime();
 

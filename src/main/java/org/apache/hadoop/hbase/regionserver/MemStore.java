@@ -549,7 +549,9 @@ public class MemStore implements HeapSize {
 
           if (kv.getType() == KeyValue.Type.Put.getCode()) {
             // false means there was a change, so give us the size.
-            addedSize -= heapSizeChange(kv, true);
+            long sz = heapSizeChange(kv, true);
+            addedSize -= sz;
+            this.size.addAndGet(-sz);
 
             it.remove();
           }
@@ -713,6 +715,7 @@ public class MemStore implements HeapSize {
       return ret;
     }
 
+    @Override
     public synchronized boolean seek(KeyValue key) {
       if (key == null) {
         close();
@@ -777,11 +780,13 @@ public class MemStore implements HeapSize {
       return (kvsetNextRow != null || snapshotNextRow != null);
     }
 
+    @Override
     public synchronized KeyValue peek() {
       return getLowest();
     }
 
 
+    @Override
     public synchronized KeyValue next() {
       KeyValue theNext = getLowest();
 
@@ -820,6 +825,7 @@ public class MemStore implements HeapSize {
       return (first != null ? first : second);
     }
 
+    @Override
     public synchronized void close() {
       this.kvsetNextRow = null;
       this.snapshotNextRow = null;
