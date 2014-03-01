@@ -68,7 +68,12 @@ public class FsDelegationToken {
                                                       fs.getCanonicalServiceName());
       if (userToken == null) {
         hasForwardedToken = false;
-        userToken = fs.getDelegationToken(renewer);
+        try {
+          userToken = fs.getDelegationToken(renewer);
+        } catch (NullPointerException npe) {
+          // we need to handle NullPointerException in case HADOOP-10009 is missing
+          LOG.error("Failed to get token for " + renewer);
+        }
       } else {
         hasForwardedToken = true;
         LOG.info("Use the existing token: " + userToken);
