@@ -228,7 +228,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
           servers[serverIndex] = entry.getKey();
         }
 
-        regionsPerServer[serverIndex] = new int[entry.getValue().size()];
+        if (regionsPerServer[serverIndex] != null) {
+          // there is another server with the same hostAndPort in ClusterState.
+          // allocate the array for the total size
+          regionsPerServer[serverIndex] = new int[entry.getValue().size() + regionsPerServer[serverIndex].length];
+        } else {
+          regionsPerServer[serverIndex] = new int[entry.getValue().size()];
+        }
         primariesOfRegionsPerServer[serverIndex] = new int[entry.getValue().size()];
         serverIndicesSortedByRegionCount[serverIndex] = serverIndex;
       }
@@ -417,7 +423,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         for (int i=0; i < loc.size(); i++) {
           regionLocations[regionIndex][i] =
               loc.get(i) == null ? -1 :
-                (serversToIndex.get(loc.get(i)) == null ? -1 : serversToIndex.get(loc.get(i)));
+                (serversToIndex.get(loc.get(i).getHostAndPort()) == null ? -1 : serversToIndex.get(loc.get(i).getHostAndPort()));
         }
       }
     }
