@@ -358,7 +358,7 @@ def unloadRegions(options, hostname)
     server_index = 0
     while counter < rs.length do
       pool.launch(rs,counter,server_index) do |_rs,_counter,_server_index|
-        $LOG.info("Moving region " + _rs[_counter].getEncodedName() + " (" + _counter.to_s +
+        $LOG.info("Moving region " + _rs[_counter].getEncodedName() + " (" + (_counter + 1).to_s +
         " of " + _rs.length.to_s + ") to server=" + servers[_server_index] + " for " + servername)
         # Assert we can scan region in its current location
         isSuccessfulScan(admin, _rs[_counter])
@@ -426,7 +426,7 @@ def loadRegions(options, hostname)
       next
     end
     pool.launch(r,currentServer,count) do |_r,_currentServer,_count|
-      $LOG.info("Moving region " + _r.getRegionNameAsString() + " (" + _count.to_s +
+      $LOG.info("Moving region " + _r.getRegionNameAsString() + " (" + (_count + 1).to_s +
         " of " + regions.length.to_s + ") from " + _currentServer + " to server=" + 
         servername);      
       move(admin, _r, servername, _currentServer)
