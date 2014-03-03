@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -2638,6 +2639,10 @@ public class TestHRegion {
       Scan scan = new Scan();
       scan.setLoadColumnFamiliesOnDemand(true);
       Filter bogusFilter = new FilterBase() {
+        @Override
+        public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+          return ReturnCode.INCLUDE;
+        }
         @Override
         public boolean isFamilyEssential(byte[] name) {
           return Bytes.equals(name, cf_first);

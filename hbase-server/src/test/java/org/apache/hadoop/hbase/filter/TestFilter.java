@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -597,6 +598,11 @@ public class TestFilter {
     public boolean filterRow() {
       // always filter out rows
       return true;
+    }
+    
+    @Override
+    public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+      return ReturnCode.INCLUDE;
     }
   }
   
@@ -1983,6 +1989,11 @@ public class TestFilter {
     
     @Override
     public byte [] toByteArray() {return null;}
+
+    @Override
+    public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+      return ReturnCode.INCLUDE;
+    }
 
     @Override
     public boolean filterRow() throws IOException {

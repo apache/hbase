@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.filter;
 
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
 import com.google.common.base.Preconditions;
@@ -57,6 +59,11 @@ public class KeyOnlyFilter extends FilterBase {
     return v.createKeyOnly(this.lenAsVal);
   }
 
+  @Override
+  public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+    return ReturnCode.INCLUDE;
+  }
+  
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
     Preconditions.checkArgument((filterArguments.size() == 0 || filterArguments.size() == 1),
                                 "Expected: 0 or 1 but got: %s", filterArguments.size());

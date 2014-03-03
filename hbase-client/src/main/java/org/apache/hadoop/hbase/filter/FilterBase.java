@@ -73,17 +73,6 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
-   * Filters that dont filter by key value can inherit this implementation that
-   * includes all Cells.
-   *
-   * @inheritDoc
-   */
-  @Override
-  public ReturnCode filterKeyValue(Cell ignored) throws IOException {
-    return ReturnCode.INCLUDE;
-  }
-
-  /**
    * By default no transformation takes place
    *
    * @inheritDoc

@@ -419,7 +419,14 @@ public class TestFilterList {
 
     Filter filterNoHint = new FilterBase() {
       @Override
-      public byte [] toByteArray() {return null;}
+      public byte [] toByteArray() {
+        return null;
+      }
+      
+      @Override
+      public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+        return ReturnCode.INCLUDE;
+      }
     };
 
     Filter filterMinHint = new FilterBase() {

@@ -98,6 +98,10 @@ public abstract class Filter {
    * code is described below. This allows filters to filter only certain number of columns, then
    * terminate without matching ever column.
    * 
+   * If filterRowKey returns true, filterKeyValue needs to be consistent with it.
+   * 
+   * filterKeyValue can assume that filterRowKey has already been called for the row.
+   * 
    * If your filter returns <code>ReturnCode.NEXT_ROW</code>, it should return
    * <code>ReturnCode.NEXT_ROW</code> until {@link #reset()} is called just in case the caller calls
    * for the next row.

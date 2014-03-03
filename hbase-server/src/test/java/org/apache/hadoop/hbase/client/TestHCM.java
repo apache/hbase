@@ -516,6 +516,10 @@ public class TestHCM {
       syncBlockingFilter.set(true);
       return false;
     }
+    @Override
+    public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+      return ReturnCode.INCLUDE;
+    }
 
     public static Filter parseFrom(final byte [] pbBytes) throws DeserializationException{
       return new BlockingFilter();
