@@ -19,17 +19,16 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -140,7 +139,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
           servers[serverIndex] = entry.getKey();
         }
 
-        regionsPerServer[serverIndex] = new int[entry.getValue().size()];
+        if (regionsPerServer[serverIndex] != null) {
+          // there is another server with the same hostAndPort in ClusterState.
+          // allocate the array for the total size
+          regionsPerServer[serverIndex] = new int[entry.getValue().size() + regionsPerServer[serverIndex].length];
+        } else {
+          regionsPerServer[serverIndex] = new int[entry.getValue().size()];
+        }
         serverIndicesSortedByRegionCount[serverIndex] = serverIndex;
       }
 
@@ -181,7 +186,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
             for (int i=0; i < loc.size(); i++) {
               regionLocations[regionIndex][i] =
                   loc.get(i) == null ? -1 :
-                    (serversToIndex.get(loc.get(i)) == null ? -1 : serversToIndex.get(loc.get(i)));
+                    (serversToIndex.get(loc.get(i).getHostAndPort()) == null ? -1 : serversToIndex.get(loc.get(i).getHostAndPort()));
             }
           }
 
@@ -369,10 +374,12 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return this.config;
   }
 
+  @Override
   public void setClusterStatus(ClusterStatus st) {
     // Not used except for the StocasticBalancer
   }
 
+  @Override
   public void setMasterServices(MasterServices masterServices) {
     this.services = masterServices;
   }
@@ -422,6 +429,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * @return map of server to the regions it should take, or null if no
    *         assignment is possible (ie. no regions or no servers)
    */
+  @Override
   public Map<ServerName, List<HRegionInfo>> roundRobinAssignment(List<HRegionInfo> regions,
       List<ServerName> servers) {
     metricsBalancer.incrMiscInvocations();
@@ -467,6 +475,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * @param servers
    * @return map of regions to the server it should be assigned to
    */
+  @Override
   public Map<HRegionInfo, ServerName> immediateAssignment(List<HRegionInfo> regions,
       List<ServerName> servers) {
     metricsBalancer.incrMiscInvocations();
@@ -481,6 +490,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   /**
    * Used to assign a single region to a random server.
    */
+  @Override
   public ServerName randomAssignment(HRegionInfo regionInfo, List<ServerName> servers) {
     metricsBalancer.incrMiscInvocations();
 
@@ -508,6 +518,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * @param servers available servers
    * @return map of servers and regions to be assigned to them
    */
+  @Override
   public Map<ServerName, List<HRegionInfo>> retainAssignment(Map<HRegionInfo, ServerName> regions,
       List<ServerName> servers) {
     // Update metrics
