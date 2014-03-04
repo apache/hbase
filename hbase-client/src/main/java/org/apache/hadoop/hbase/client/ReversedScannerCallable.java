@@ -70,7 +70,7 @@ public class ReversedScannerCallable extends ScannerCallable {
         this.location = connection.getRegionLocation(tableName, row, reload);
         if (this.location == null) {
           throw new IOException("Failed to find location, tableName="
-              + tableName + ", row=" + Bytes.toString(row) + ", reload="
+              + tableName + ", row=" + Bytes.toStringBinary(row) + ", reload="
               + reload);
         }
       } else {

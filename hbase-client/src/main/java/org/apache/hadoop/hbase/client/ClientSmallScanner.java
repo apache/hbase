@@ -153,21 +153,23 @@ public class ClientSmallScanner extends ClientScanner {
       LOG.trace("Advancing internal small scanner to startKey at '"
           + Bytes.toStringBinary(localStartKey) + "'");
     }
-    smallScanCallable = getSmallScanCallable(localStartKey, cacheNum);
+    smallScanCallable = getSmallScanCallable(
+        scan, getConnection(), getTable(), localStartKey, cacheNum);
     if (this.scanMetrics != null && skipRowOfFirstResult == null) {
       this.scanMetrics.countOfRegions.incrementAndGet();
     }
     return true;
   }
 
-  private RegionServerCallable<Result[]> getSmallScanCallable(
+  static RegionServerCallable<Result[]> getSmallScanCallable(
+      final Scan sc, HConnection connection, TableName table,
       byte[] localStartKey, final int cacheNum) {
-    this.scan.setStartRow(localStartKey);
+    sc.setStartRow(localStartKey);
     RegionServerCallable<Result[]> callable = new RegionServerCallable<Result[]>(
-        getConnection(), getTable(), scan.getStartRow()) {
+        connection, table, sc.getStartRow()) {
       public Result[] call(int callTimeout) throws IOException {
         ScanRequest request = RequestConverter.buildScanRequest(getLocation()
-            .getRegionInfo().getRegionName(), scan, cacheNum, true);
+            .getRegionInfo().getRegionName(), sc, cacheNum, true);
         PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
         controller.setPriority(getTableName());
         controller.setCallTimeout(callTimeout);

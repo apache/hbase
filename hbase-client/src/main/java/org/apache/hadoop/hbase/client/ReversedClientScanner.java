@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
 
 /**
  * A reversed client scanner which support backward scanning
@@ -114,6 +115,7 @@ public class ReversedClientScanner extends ClientScanner {
         this.scanMetrics.countOfRegions.incrementAndGet();
       }
     } catch (IOException e) {
+      ExceptionUtil.rethrowIfInterrupt(e);
       close();
       throw e;
     }
@@ -151,7 +153,7 @@ public class ReversedClientScanner extends ClientScanner {
    * @param row
    * @return a new byte array which is the closest front row of the specified one
    */
-  private byte[] createClosestRowBefore(byte[] row) {
+  protected byte[] createClosestRowBefore(byte[] row) {
     if (row == null) {
       throw new IllegalArgumentException("The passed row is empty");
     }
