@@ -383,6 +383,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   // A non-capture group so that this can be embedded.
   public static final String VALID_USER_TABLE_REGEX = "(?:[a-zA-Z_0-9][a-zA-Z_0-9.-]*)";
 
+  public static byte [] isLegalTableName(final byte [] tableName) {
+    return isLegalTableName(tableName, false);
+  }
+
   /**
    * Check passed byte buffer, "tableName", is legal user-space table name.
    * @return Returns passed <code>tableName</code> param
@@ -391,23 +395,25 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * that is made of other than 'word' characters or underscores: i.e.
    * <code>[a-zA-Z_0-9].
    */
-  public static byte [] isLegalTableName(final byte [] tableName) {
+  public static byte [] isLegalTableName(final byte [] tableName, boolean isSnapshot) {
     if (tableName == null || tableName.length <= 0) {
       throw new IllegalArgumentException("Name is null or empty");
     }
     if (tableName[0] == '.' || tableName[0] == '-') {
       throw new IllegalArgumentException("Illegal first character <" + tableName[0] +
-          "> at 0. User-space table names can only start with 'word " +
-          "characters': i.e. [a-zA-Z_0-9]: " + Bytes.toString(tableName));
+          "> at 0. " + (isSnapshot ? "snapshot" : "User-space table") +
+          " can only start with 'word characters': i.e. [a-zA-Z_0-9]: " +
+          Bytes.toString(tableName));
     }
     for (int i = 0; i < tableName.length; i++) {
-      if (Character.isLetterOrDigit(tableName[i]) || tableName[i] == '_' || 
-    		  tableName[i] == '-' || tableName[i] == '.') {
+      if (Character.isLetterOrDigit(tableName[i]) || tableName[i] == '_' ||
+          tableName[i] == '-' || tableName[i] == '.') {
         continue;
       }
       throw new IllegalArgumentException("Illegal character <" + tableName[i] +
-        "> at " + i + ". User-space table names can only contain " +
-        "'word characters': i.e. [a-zA-Z_0-9-.]: " + Bytes.toString(tableName));
+        "> at " + i + ". " + (isSnapshot ? "snapshot" : "User-space table") +
+        " can only contain 'word characters': i.e. [a-zA-Z_0-9-.]: " +
+        Bytes.toString(tableName));
     }
     return tableName;
   }

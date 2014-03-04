@@ -137,7 +137,7 @@ public class SnapshotDescriptionUtils {
       throw new IllegalArgumentException(".META. and -ROOT- snapshots are not allowed");
     }
     // make sure the snapshot name is valid
-    HTableDescriptor.isLegalTableName(Bytes.toBytes(snapshot.getName()));
+    HTableDescriptor.isLegalTableName(Bytes.toBytes(snapshot.getName()), true);
     // make sure the table name is valid
     HTableDescriptor.isLegalTableName(Bytes.toBytes(snapshot.getTable()));
   }

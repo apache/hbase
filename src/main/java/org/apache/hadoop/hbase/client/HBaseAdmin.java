@@ -2336,7 +2336,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void deleteSnapshot(final byte[] snapshotName) throws IOException {
     // make sure the snapshot is possibly valid
-    HTableDescriptor.isLegalTableName(snapshotName);
+    HTableDescriptor.isLegalTableName(snapshotName, true);
     // do the delete
     SnapshotDescription snapshot = SnapshotDescription.newBuilder()
       .setName(Bytes.toString(snapshotName)).build();
