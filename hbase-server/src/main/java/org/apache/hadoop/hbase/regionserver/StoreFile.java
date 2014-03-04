@@ -684,7 +684,7 @@ public class StoreFile {
   public Long getMinimumTimestamp() {
     return (getReader().timeRangeTracker == null) ?
         null :
-        getReader().timeRangeTracker.minimumTimestamp;
+        getReader().timeRangeTracker.getMinimumTimestamp();
   }
 
   /**
@@ -1533,7 +1533,7 @@ public class StoreFile {
     }
 
     public long getMaxTimestamp() {
-      return timeRangeTracker == null ? Long.MAX_VALUE : timeRangeTracker.maximumTimestamp;
+      return timeRangeTracker == null ? Long.MAX_VALUE : timeRangeTracker.getMaximumTimestamp();
     }
   }
 
