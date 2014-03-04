@@ -133,18 +133,18 @@ public class TimeRangeTracker implements Writable {
     return maximumTimestamp;
   }
 
-  public void write(final DataOutput out) throws IOException {
+  public synchronized void write(final DataOutput out) throws IOException {
     out.writeLong(minimumTimestamp);
     out.writeLong(maximumTimestamp);
   }
 
-  public void readFields(final DataInput in) throws IOException {
+  public synchronized void readFields(final DataInput in) throws IOException {
     this.minimumTimestamp = in.readLong();
     this.maximumTimestamp = in.readLong();
   }
 
   @Override
-  public String toString() {
+  public synchronized String toString() {
     return "[" + minimumTimestamp + "," + maximumTimestamp + "]";
   }
 
