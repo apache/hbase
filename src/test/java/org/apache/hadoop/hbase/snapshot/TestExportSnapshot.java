@@ -295,14 +295,6 @@ public class TestExportSnapshot {
     assertEquals(1, runExportAndInjectFailures(snapshotName, false));
   }
 
-  /**
-   * Check that ExportSnapshot will succede if something fails but the retry succede.
-   */
-  @Test
-  public void testExportRetry() throws Exception {
-    assertEquals(0, runExportAndInjectFailures(snapshotName, true));
-  }
-
   /*
    * Execute the ExportSnapshot job injecting failures
    */
