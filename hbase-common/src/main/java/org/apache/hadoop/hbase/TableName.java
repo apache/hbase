@@ -145,10 +145,16 @@ public final class TableName implements Comparable<TableName> {
     return tableName;
   }
 
-  public static byte [] isLegalTableQualifierName(final byte[] qualifierName){
-    isLegalTableQualifierName(qualifierName, 0, qualifierName.length);
+  public static byte [] isLegalTableQualifierName(final byte[] qualifierName) {
+    isLegalTableQualifierName(qualifierName, 0, qualifierName.length, false);
     return qualifierName;
   }
+
+  public static byte [] isLegalTableQualifierName(final byte[] qualifierName, boolean isSnapshot) {
+    isLegalTableQualifierName(qualifierName, 0, qualifierName.length, isSnapshot);
+    return qualifierName;
+  }
+
 
   /**
    * Qualifier names can only contain 'word' characters
@@ -161,15 +167,23 @@ public final class TableName implements Comparable<TableName> {
    */
   public static void isLegalTableQualifierName(final byte[] qualifierName,
                                                 int start,
-                                                int end){
+                                                int end) {
+      isLegalTableQualifierName(qualifierName, start, end, false);
+  }
+
+  public static void isLegalTableQualifierName(final byte[] qualifierName,
+                                                int start,
+                                                int end,
+                                                boolean isSnapshot) {
     if(end - start < 1) {
-      throw new IllegalArgumentException("Table qualifier must not be empty");
+      throw new IllegalArgumentException(isSnapshot ? "Snapshot" : "Table" + " qualifier must not be empty");
     }
 
     if (qualifierName[start] == '.' || qualifierName[start] == '-') {
       throw new IllegalArgumentException("Illegal first character <" + qualifierName[0] +
-          "> at 0. Namespaces can only start with alphanumeric " +
-          "characters': i.e. [a-zA-Z_0-9]: " + Bytes.toString(qualifierName));
+                                         "> at 0. Namespaces can only start with alphanumeric " +
+                                         "characters': i.e. [a-zA-Z_0-9]: " +
+                                         Bytes.toString(qualifierName));
     }
     for (int i = start; i < end; i++) {
       if (Character.isLetterOrDigit(qualifierName[i]) ||
@@ -179,13 +193,13 @@ public final class TableName implements Comparable<TableName> {
         continue;
       }
       throw new IllegalArgumentException("Illegal character code:" + qualifierName[i] +
-        ", <" + (char) qualifierName[i] + "> at " + i +
-          ". User-space table qualifiers can only contain " +
-        "'alphanumeric characters': i.e. [a-zA-Z_0-9-.]: " +
-          Bytes.toString(qualifierName, start, end));
+                                         ", <" + (char) qualifierName[i] + "> at " + i +
+                                         ". " + (isSnapshot ? "snapshot" : "User-space table") +
+                                         " qualifiers can only contain " +
+                                         "'alphanumeric characters': i.e. [a-zA-Z_0-9-.]: " +
+                                         Bytes.toString(qualifierName, start, end));
     }
   }
-
   public static void isLegalNamespaceName(byte[] namespaceName) {
     isLegalNamespaceName(namespaceName, 0, namespaceName.length);
   }

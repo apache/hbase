@@ -39,7 +39,7 @@ public class ClientSnapshotDescriptionUtils {
   public static void assertSnapshotRequestIsValid(HBaseProtos.SnapshotDescription snapshot)
       throws IllegalArgumentException {
     // make sure the snapshot name is valid
-    TableName.isLegalTableQualifierName(Bytes.toBytes(snapshot.getName()));
+    TableName.isLegalTableQualifierName(Bytes.toBytes(snapshot.getName()), true);
     if(snapshot.hasTable()) {
       // make sure the table name is valid, this will implicitly check validity
       TableName tableName = TableName.valueOf(snapshot.getTable());
