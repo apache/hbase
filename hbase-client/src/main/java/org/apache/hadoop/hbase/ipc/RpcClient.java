@@ -877,8 +877,13 @@ public class RpcClient {
     }
 
     protected synchronized void setupIOstreams() throws IOException {
-      if (socket != null || shouldCloseConnection.get()) {
+      if (socket != null) {
+        // The connection is already available. Perfect.
         return;
+      }
+
+      if (shouldCloseConnection.get()){
+        throw new IOException("This connection is closing");
       }
 
       if (failedServers.isFailedServer(remoteId.getAddress())) {
@@ -926,6 +931,7 @@ public class RpcClient {
                 }
               });
             } catch (Exception ex) {
+              ExceptionUtil.rethrowIfInterrupt(ex);
               if (rand == null) {
                 rand = new Random();
               }
@@ -952,12 +958,14 @@ public class RpcClient {
           return;
         }
       } catch (Throwable t) {
-        failedServers.addToFailedServers(remoteId.address);
-        IOException e;
-        if (t instanceof IOException) {
-          e = (IOException)t;
-        } else {
-          e = new IOException("Could not set up IO Streams", t);
+        IOException e = ExceptionUtil.asInterrupt(t);
+        if (e == null) {
+          failedServers.addToFailedServers(remoteId.address);
+          if (t instanceof IOException) {
+            e = (IOException) t;
+          } else {
+            e = new IOException("Could not set up IO Streams to " + server, t);
+          }
         }
         markClosed(e);
         close();
@@ -1063,6 +1071,8 @@ public class RpcClient {
       // Only pass priority if there one.  Let zero be same as no priority.
       if (priority != 0) builder.setPriority(priority);
       RequestHeader header = builder.build();
+
+      setupIOstreams();
 
       // Now we're going to write the call. We take the lock, then check that the connection
       //  is still valid, and, if so we do the write to the socket. If the write fails, we don't
@@ -1445,8 +1455,7 @@ public class RpcClient {
       Message returnType, User ticket, InetSocketAddress addr, int callTimeout, int priority)
       throws IOException, InterruptedException {
     Call call = new Call(md, param, cells, returnType, callTimeout);
-    Connection connection =
-      getConnection(ticket, call, addr, this.codec, this.compressor);
+    Connection connection = getConnection(ticket, call, addr, this.codec, this.compressor);
 
     CallFuture cts = null;
     if (connection.callSender != null){
@@ -1552,15 +1561,6 @@ public class RpcClient {
         connections.put(remoteId, connection);
       }
     }
-
-    //we don't invoke the method below inside "synchronized (connections)"
-    //block above. The reason for that is if the server happens to be slow,
-    //it will take longer to establish a connection and that will slow the
-    //entire system down.
-    //Moreover, if the connection is currently created, there will be many threads
-    // waiting here; as setupIOstreams is synchronized. If the connection fails with a
-    // timeout, they will all fail simultaneously. This is checked in setupIOstreams.
-    connection.setupIOstreams();
 
     return connection;
   }
