@@ -154,11 +154,18 @@ public class SimpleRpcScheduler implements RpcScheduler {
   }
 
   private void consumerLoop(BlockingQueue<CallRunner> myQueue) {
-    while (running) {
-      try {
-        CallRunner task = myQueue.take();
-        task.run();
-      } catch (InterruptedException e) {
+    boolean interrupted = false;
+    try {
+      while (running) {
+        try {
+          CallRunner task = myQueue.take();
+          task.run();
+        } catch (InterruptedException e) {
+          interrupted = true;
+        }
+      }
+    } finally {
+      if (interrupted) {
         Thread.currentThread().interrupt();
       }
     }
