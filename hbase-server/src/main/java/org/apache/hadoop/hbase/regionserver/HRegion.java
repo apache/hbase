@@ -1130,13 +1130,21 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public void waitForFlushesAndCompactions() {
     synchronized (writestate) {
-      while (writestate.compacting > 0 || writestate.flushing) {
-        LOG.debug("waiting for " + writestate.compacting + " compactions"
+      boolean interrupted = false;
+      try {
+        while (writestate.compacting > 0 || writestate.flushing) {
+          LOG.debug("waiting for " + writestate.compacting + " compactions"
             + (writestate.flushing ? " & cache flush" : "") + " to complete for region " + this);
-        try {
-          writestate.wait();
-        } catch (InterruptedException iex) {
-          // essentially ignore and propagate the interrupt back up
+          try {
+            writestate.wait();
+          } catch (InterruptedException iex) {
+            // essentially ignore and propagate the interrupt back up
+            LOG.warn("Interrupted while waiting");
+            interrupted = true;
+          }
+        }
+      } finally {
+        if (interrupted) {
           Thread.currentThread().interrupt();
         }
       }

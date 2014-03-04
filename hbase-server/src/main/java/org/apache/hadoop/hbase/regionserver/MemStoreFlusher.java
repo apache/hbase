@@ -548,27 +548,36 @@ class MemStoreFlusher implements FlushRequester {
       synchronized (this.blockSignal) {
         boolean blocked = false;
         long startTime = 0;
-        while (isAboveHighWaterMark() && !server.isStopped()) {
-          if (!blocked) {
-            startTime = EnvironmentEdgeManager.currentTimeMillis();
-            LOG.info("Blocking updates on " + server.toString() +
-            ": the global memstore size " +
-            StringUtils.humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreSize()) +
-            " is >= than blocking " +
-            StringUtils.humanReadableInt(globalMemStoreLimit) + " size");
+        boolean interrupted = false;
+        try {
+          while (isAboveHighWaterMark() && !server.isStopped()) {
+            if (!blocked) {
+              startTime = EnvironmentEdgeManager.currentTimeMillis();
+              LOG.info("Blocking updates on " + server.toString() +
+                ": the global memstore size " +
+                StringUtils.humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreSize()) +
+                " is >= than blocking " +
+                StringUtils.humanReadableInt(globalMemStoreLimit) + " size");
+            }
+            blocked = true;
+            wakeupFlushThread();
+            try {
+              // we should be able to wait forever, but we've seen a bug where
+              // we miss a notify, so put a 5 second bound on it at least.
+              blockSignal.wait(5 * 1000);
+            } catch (InterruptedException ie) {
+              LOG.warn("Interrupted while waiting");
+              interrupted = true;
+            }
+            long took = System.currentTimeMillis() - start;
+            LOG.warn("Memstore is above high water mark and block " + took + "ms");
           }
-          blocked = true;
-          wakeupFlushThread();
-          try {
-            // we should be able to wait forever, but we've seen a bug where
-            // we miss a notify, so put a 5 second bound on it at least.
-            blockSignal.wait(5 * 1000);
-          } catch (InterruptedException ie) {
+        } finally {
+          if (interrupted) {
             Thread.currentThread().interrupt();
           }
-          long took = System.currentTimeMillis() - start;
-          LOG.warn("Memstore is above high water mark and block " + took + "ms");
         }
+
         if(blocked){
           final long totalTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
           if(totalTime > 0){
