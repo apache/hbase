@@ -2249,6 +2249,19 @@ public class TestHBaseFsck {
     }
   }
 
+  @Test
+  public void testRegionBoundariesCheck() throws Exception {
+    HBaseFsck hbck = doFsck(conf, false);
+    assertNoErrors(hbck); // no errors
+    try {
+      hbck.checkRegionBoundaries();
+    } catch (IllegalArgumentException e) {
+      if (e.getMessage().endsWith("not a valid DFS filename.")) {
+        fail("Table directory path is not valid." + e.getMessage());
+      }
+    }
+  }
+
   @org.junit.Rule
   public TestName name = new TestName();
 }
