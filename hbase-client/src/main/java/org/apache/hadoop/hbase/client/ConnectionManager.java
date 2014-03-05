@@ -738,10 +738,19 @@ class ConnectionManager {
      * @param rpcClient Client we should use instead.
      * @return Previous rpcClient
      */
+    @VisibleForTesting
     RpcClient setRpcClient(final RpcClient rpcClient) {
       RpcClient oldRpcClient = this.rpcClient;
       this.rpcClient = rpcClient;
       return oldRpcClient;
+    }
+
+    /**
+     * For tests only.
+     */
+    @VisibleForTesting
+    RpcClient getRpcClient() {
+      return rpcClient;
     }
 
     /**

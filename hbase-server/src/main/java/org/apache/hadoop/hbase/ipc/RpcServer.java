@@ -791,7 +791,7 @@ public class RpcServer implements RpcServerInterface {
       } catch (InterruptedException ieo) {
         throw ieo;
       } catch (Exception e) {
-        LOG.warn(getName() + ": count of bytes read: " + count, e);
+        LOG.info(getName() + ": count of bytes read: " + count, e);
         count = -1; //so that the (count < 0) block is executed
       }
       if (count < 0) {
