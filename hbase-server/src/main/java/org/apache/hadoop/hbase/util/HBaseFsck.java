@@ -301,10 +301,10 @@ public class HBaseFsck extends Configured {
    * online state.
    */
   public void connect() throws IOException {
-    admin = new HBaseAdmin(getConf());
-    meta = new HTable(getConf(), TableName.META_TABLE_NAME);
+    connection = HConnectionManager.createConnection(getConf());
+    admin = new HBaseAdmin(connection);
+    meta = new HTable(TableName.META_TABLE_NAME, connection);
     status = admin.getClusterStatus();
-    connection = admin.getConnection();
   }
 
   /**
