@@ -29,7 +29,6 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -65,15 +64,9 @@ public class RpcRetryingCaller<T> {
   private final long pause;
   private final int retries;
 
-  public RpcRetryingCaller(Configuration conf) {
-    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
-      HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
-    this.retries =
-        conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-          HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
-    this.callTimeout = conf.getInt(
-        HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+  public RpcRetryingCaller(long pause, int retries) {
+    this.pause = pause;
+    this.retries = retries;
   }
 
   private void beforeCall() {
