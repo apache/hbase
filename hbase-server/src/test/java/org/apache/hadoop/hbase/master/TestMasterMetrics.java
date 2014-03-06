@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -25,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
@@ -45,15 +48,24 @@ public class TestMasterMetrics {
   private static HMaster master;
   private static HBaseTestingUtility TEST_UTIL;
 
+  private static class MyRegionServer extends MiniHBaseClusterRegionServer {
+    public MyRegionServer(Configuration conf) throws IOException,
+        InterruptedException {
+      super(conf);
+     }
+
+    @Override
+    protected void tryRegionServerReport(
+        long reportStartTime, long reportEndTime) {
+      // do nothing
+    }
+  }
 
   @BeforeClass
   public static void startCluster() throws Exception {
     LOG.info("Starting cluster");
     TEST_UTIL = new HBaseTestingUtility();
-    Configuration conf = TEST_UTIL.getConfiguration();
-    // Prevent region server report any load during the test
-    conf.setInt("hbase.regionserver.msginterval", 3000000);
-    TEST_UTIL.startMiniCluster(1, 1);
+    TEST_UTIL.startMiniCluster(1, 1, 1, null, HMaster.class, MyRegionServer.class);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
