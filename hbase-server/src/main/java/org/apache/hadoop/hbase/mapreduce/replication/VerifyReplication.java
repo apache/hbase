@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HConnectable;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -45,6 +46,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This map-only job compares the data from a local table with a remote one.
@@ -56,7 +59,7 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
  * Two counters are provided, Verifier.Counters.GOODROWS and BADROWS. The reason
  * for a why a row is different is shown in the map's log.
  */
-public class VerifyReplication {
+public class VerifyReplication extends Configured implements Tool {
 
   private static final Log LOG =
       LogFactory.getLog(VerifyReplication.class);
@@ -293,6 +296,16 @@ public class VerifyReplication {
         " --starttime=1265875194289 --endtime=1265878794289 5 TestTable ");
   }
 
+  @Override
+  public int run(String[] args) throws Exception {
+    Configuration conf = this.getConf();
+    Job job = createSubmittableJob(conf, args);
+    if (job != null) {
+      return job.waitForCompletion(true) ? 0 : 1;
+    } 
+    return 1;
+  }
+
   /**
    * Main entry point.
    *
@@ -300,10 +313,7 @@ public class VerifyReplication {
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    Job job = createSubmittableJob(conf, args);
-    if (job != null) {
-      System.exit(job.waitForCompletion(true) ? 0 : 1);
-    }
+    int res = ToolRunner.run(HBaseConfiguration.create(), new VerifyReplication(), args);
+    System.exit(res);
   }
 }
