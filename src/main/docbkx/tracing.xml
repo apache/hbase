@@ -30,7 +30,7 @@
   <para>
     <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6449">HBASE-6449</link>
     added support for tracing requests through HBase, using the open source tracing library,
-    <link xlink:href="http://github.com/cloudera/htrace">HTrace</link>. 
+    <link xlink:href="http://github.com/cloudera/htrace">HTrace</link>.
     Setting up tracing is quite simple,
     however it currently requires some very minor changes to your client code
     (it would not be very difficult to remove this requirement).
@@ -43,9 +43,9 @@
       It is up to you to choose how you want to receive this information
       by implementing the <classname>SpanReceiver</classname> interface,
       which defines one method:
-<programlisting>
+<programlisting><![CDATA[
   public void receiveSpan(Span span);
-</programlisting>
+]]></programlisting>
       This method serves as a callback whenever a span is completed.
       HTrace allows you to use as many SpanReceivers as you want
       so you can easily send trace information to multiple destinations.
@@ -60,20 +60,58 @@
     </para>
 
     <para>
-      HBase includes a <classname>HBaseLocalFileSpanReceiver</classname>
+      HTrace includes a <classname>LocalFileSpanReceiver</classname>
       that writes all span information to local files in a JSON-based format.
-      The <classname>HBaseLocalFileSpanReceiver</classname>
+      The <classname>LocalFileSpanReceiver</classname>
       looks in <filename>hbase-site.xml</filename>
-      for a <varname>hbase.trace.spanreceiver.localfilespanreceiver.filename</varname>
+      for a <varname>hbase.local-file-span-receiver.path</varname>
       property with a value describing the name of the file
       to which nodes should write their span information.
+<programlisting><![CDATA[
+  <property>
+    <name>hbase.trace.spanreceiver.classes</name>
+    <value>org.cloudera.htrace.impl.LocalFileSpanReceiver</value>
+  </property>
+  <property>
+    <name>hbase.local-file-span-receiver.path</name>
+    <value>/var/log/hbase/htrace.out</value>
+  </property>
+]]></programlisting>
     </para>
 
     <para>
-      If you do not want to use the included
-      <classname>HBaseLocalFileSpanReceiver</classname>,
+      HTrace also includes a <classname>ZipkinSpanReceiver</classname>
+      that converts all span information to
+      <link xlink:href="http://github.com/twitter/zipkin">Zipkin</link>
+      span format and send them to Zipkin server.
+      You need to install htrace-zipkin jar and add it to your HBase classpath
+      in order to use this receiver.
+      The <classname>ZipkinSpanReceiver</classname>
+      looks in <filename>hbase-site.xml</filename>
+      for a <varname>hbase.zipkin.collector-hostname</varname>
+      and <varname>hbase.zipkin.collector-port</varname>
+      property with a value describing the Zipkin server
+      to which span information are sent.
+<programlisting><![CDATA[
+  <property>
+    <name>hbase.trace.spanreceiver.classes</name>
+    <value>org.cloudera.htrace.impl.ZipkinSpanReceiver</value>
+  </property> 
+  <property>
+    <name>hbase.zipkin.collector-hostname</name>
+    <value>localhost</value>
+  </property> 
+  <property>
+    <name>hbase.zipkin.collector-port</name>
+    <value>9410</value>
+  </property> 
+]]></programlisting>
+    </para>
+
+    <para>
+      If you do not want to use the included span receivers,
       you are encouraged to write your own receiver
-      (take a look at <classname>HBaseLocalFileSpanReceiver</classname> for an example).
+      (take a look at <classname>LocalFileSpanReceiver</classname> for an example).
       If you think others would benefit from your receiver,
       file a JIRA or send a pull request to
       <link xlink:href="http://github.com/cloudera/htrace">HTrace</link>.
@@ -86,36 +124,40 @@
       In order to turn on tracing in your client code,
       you must initialize the module sending spans to receiver
       once per client process.
-<programlisting>
+      (Because <classname>SpanReceiverHost</classname> is included in hbase-server jar,
+      you need it on the client classpath in order to run this example.)
+<programlisting><![CDATA[
   private SpanReceiverHost spanReceiverHost;
   
   ...
   
-    spanReceiverHost = SpanReceiverHost.getInstance(conf);
-</programlisting>
+    Configuration conf = HBaseConfiguration.create();
+    SpanReceiverHost spanReceiverHost = SpanReceiverHost.getInstance(conf);
+]]></programlisting>
       Then you simply start tracing span before requests you think are interesting,
       and close it when the request is done.
       For example, if you wanted to trace all of your get operations,
       you change this:
-<programlisting>
-  HTable table = new HTable(...);
-  Get get = new Get(...);
-</programlisting>
+<programlisting><![CDATA[
+  HTable table = new HTable(conf, "t1");
+  Get get = new Get(Bytes.toBytes("r1"));
+  Result res = table.get(get);
+]]></programlisting>
       into:
-<programlisting>
-  TraceScope traceScope = Trace.startSpan("doing get", Sampler.ALWAYS);
+<programlisting><![CDATA[
+  TraceScope ts = Trace.startSpan("Gets", Sampler.ALWAYS);
   try {
-    HTable table = new HTable(...);
-    Get get = new Get(...);
-    ...
+    HTable table = new HTable(conf, "t1");
+    Get get = new Get(Bytes.toBytes("r1"));
+    Result res = table.get(get);
   } finally {
-    traceScope.close();
+    ts.close();
   }
-</programlisting>
+]]></programlisting>
       If you wanted to trace half of your 'get' operations, you would pass in:
-<programlisting>
+<programlisting><![CDATA[
   new ProbabilitySampler(0.5)
-</programlisting>
+]]></programlisting>
       in lieu of <varname>Sampler.ALWAYS</varname>
       to <classname>Trace.startSpan()</classname>.
       See the HTrace <filename>README</filename> for more information on Samplers.
@@ -129,11 +171,11 @@
       for tracing requests from HBase Shell.
       <command>trace 'start'</command> command turns on tracing and 
       <command>trace 'stop'</command> command turns off tracing.
-<programlisting>
+<programlisting><![CDATA[
   hbase(main):001:0> trace 'start'
   hbase(main):002:0> put 'test', 'row1', 'f:', 'val1'   # traced commands
   hbase(main):003:0> trace 'stop'
-</programlisting>
+]]></programlisting>
     </para>
     <para>
       <command>trace 'start'</command> and 
@@ -144,7 +186,7 @@
       returns false on suceess.
       <command>trace 'status'</command>
       just returns if or not tracing is turned on.
-<programlisting>
+<programlisting><![CDATA[
   hbase(main):001:0> trace 'start'
   => true
   
@@ -156,7 +198,7 @@
   
   hbase(main):004:0> trace 'status'
   => false
-</programlisting>
+]]></programlisting>
     </para>
   </section>
 
