@@ -3204,7 +3204,14 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       return builder.build();
     } catch (IOException ie) {
       if (scannerName != null && ie instanceof NotServingRegionException) {
-        scanners.remove(scannerName);
+        RegionScannerHolder rsh = scanners.remove(scannerName);
+        if (rsh != null) {
+          try {
+            RegionScanner scanner = rsh.s;
+            scanner.close();
+            leases.cancelLease(scannerName);
+          } catch (IOException e) {}
+        }
       }
       throw new ServiceException(ie);
     }
