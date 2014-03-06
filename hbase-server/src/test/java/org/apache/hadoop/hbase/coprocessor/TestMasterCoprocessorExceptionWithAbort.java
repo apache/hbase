@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
@@ -144,6 +145,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         BuggyMasterObserver.class.getName());
     conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, true);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);  // Fail fast
     UTIL.startMiniCluster();
   }
 
@@ -228,7 +230,6 @@ public class TestMasterCoprocessorExceptionWithAbort {
           " createTableThread.join().", true);
     }
   }
-
 
 }
 
