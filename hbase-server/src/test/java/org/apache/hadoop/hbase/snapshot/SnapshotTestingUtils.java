@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
@@ -47,6 +45,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -240,6 +239,8 @@ public class SnapshotTestingUtils {
 
     // check the region snapshot for all the regions
     List<HRegionInfo> regions = admin.getTableRegions(tableName);
+    // remove the non-default regions
+    RegionReplicaUtil.removeNonDefaultRegions(regions);
     assertEquals(regions.size(), snapshotRegions.size());
 
     // Verify Regions
@@ -449,20 +450,32 @@ public class SnapshotTestingUtils {
   }
 
   public static void createTable(final HBaseTestingUtility util, final TableName tableName,
-      final byte[]... families) throws IOException, InterruptedException {
+      int regionReplication, final byte[]... families) throws IOException, InterruptedException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.setRegionReplication(regionReplication);
     for (byte[] family: families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       htd.addFamily(hcd);
     }
+    byte[][] splitKeys = getSplitKeys();
+    util.getHBaseAdmin().createTable(htd, splitKeys);
+    waitForTableToBeOnline(util, tableName);
+    assertEquals((splitKeys.length + 1) * regionReplication,
+        util.getHBaseAdmin().getTableRegions(tableName).size());
+  }
+
+  public static byte[][] getSplitKeys() {
     byte[][] splitKeys = new byte[14][];
     byte[] hex = Bytes.toBytes("123456789abcde");
     for (int i = 0; i < splitKeys.length; ++i) {
       splitKeys[i] = new byte[] { hex[i] };
     }
-    util.getHBaseAdmin().createTable(htd, splitKeys);
-    waitForTableToBeOnline(util, tableName);
-    assertEquals(15, util.getHBaseAdmin().getTableRegions(tableName).size());
+    return splitKeys;
+  }
+
+  public static void createTable(final HBaseTestingUtility util, final TableName tableName,
+      final byte[]... families) throws IOException, InterruptedException {
+    createTable(util, tableName, 1, families);
   }
 
   public static void loadData(final HBaseTestingUtility util, final TableName tableName, int rows,
@@ -531,5 +544,21 @@ public class SnapshotTestingUtils {
     } finally {
       table.close();
     }
+  }
+
+  public static void verifyReplicasCameOnline(TableName tableName, HBaseAdmin admin,
+      int regionReplication) throws IOException {
+    List<HRegionInfo> regions = admin.getTableRegions(tableName);
+    HashSet<HRegionInfo> set = new HashSet<HRegionInfo>();
+    for (HRegionInfo hri : regions) {
+      set.add(RegionReplicaUtil.getRegionInfoForDefaultReplica(hri));
+      for (int i = 0; i < regionReplication; i++) {
+        HRegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(hri, i);
+        if (!regions.contains(replica)) {
+          Assert.fail(replica + " is not contained in the list of online regions");
+        }
+      }
+    }
+    assert(set.size() == getSplitKeys().length + 1);
   }
 }

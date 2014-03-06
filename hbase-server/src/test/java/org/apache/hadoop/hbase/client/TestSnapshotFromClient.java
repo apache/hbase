@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -57,11 +58,11 @@ import org.junit.experimental.categories.Category;
 @Category(LargeTests.class)
 public class TestSnapshotFromClient {
   private static final Log LOG = LogFactory.getLog(TestSnapshotFromClient.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final int NUM_RS = 2;
   private static final String STRING_TABLE_NAME = "test";
-  private static final byte[] TEST_FAM = Bytes.toBytes("fam");
-  private static final TableName TABLE_NAME =
+  protected static final byte[] TEST_FAM = Bytes.toBytes("fam");
+  protected static final TableName TABLE_NAME =
       TableName.valueOf(STRING_TABLE_NAME);
 
   /**
@@ -93,7 +94,13 @@ public class TestSnapshotFromClient {
 
   @Before
   public void setup() throws Exception {
-    UTIL.createTable(TABLE_NAME, TEST_FAM);
+    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
+    htd.setRegionReplication(getNumReplicas());
+    UTIL.createTable(htd, new byte[][]{TEST_FAM}, UTIL.getConfiguration());
+  }
+
+  protected int getNumReplicas() {
+    return 1;
   }
 
   @After

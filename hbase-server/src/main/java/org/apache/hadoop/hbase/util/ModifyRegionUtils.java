@@ -111,13 +111,7 @@ public abstract class ModifyRegionUtils {
     CompletionService<HRegionInfo> completionService = new ExecutorCompletionService<HRegionInfo>(
         regionOpenAndInitThreadPool);
     List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
-    int defaultReplicas = 0;
     for (final HRegionInfo newRegion : newRegions) {
-      regionInfos.add(newRegion);
-      if (!RegionReplicaUtil.isDefaultReplica(newRegion)) {
-        continue;
-      }
-      defaultReplicas++;
       completionService.submit(new Callable<HRegionInfo>() {
         @Override
         public HRegionInfo call() throws IOException {
@@ -127,8 +121,8 @@ public abstract class ModifyRegionUtils {
     }
     try {
       // wait for all regions to finish creation
-      for (int i = 0; i < defaultReplicas; i++) {
-        completionService.take().get();
+      for (int i = 0; i < regionNumber; i++) {
+        regionInfos.add(completionService.take().get());
       }
     } catch (InterruptedException e) {
       LOG.error("Caught " + e + " during region creation");

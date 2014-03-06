@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -87,7 +88,11 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
       // extract each pair to separate lists
       Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
       for (Pair<HRegionInfo, ServerName> p : regionsAndLocations) {
-        regions.add(p.getFirst());
+        // Don't include non-default regions
+        HRegionInfo hri = p.getFirst();
+        if (RegionReplicaUtil.isDefaultReplica(hri)) {
+          regions.add(hri);
+        }
       }
 
       // 2. for each region, write all the info to disk

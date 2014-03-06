@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.util.Collection;
+import java.util.Iterator;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 
@@ -70,5 +73,19 @@ public class RegionReplicaUtil {
   /** @return true if this region is a default replica for the region */
   public static boolean isDefaultReplica(HRegionInfo hri) {
     return  hri.getReplicaId() == DEFAULT_REPLICA_ID;
+  }
+
+  /**
+   * Removes the non-default replicas from the passed regions collection
+   * @param regions
+   */
+  public static void removeNonDefaultRegions(Collection<HRegionInfo> regions) {
+    Iterator<HRegionInfo> iterator = regions.iterator();
+    while (iterator.hasNext()) {
+      HRegionInfo hri = iterator.next();
+      if (!RegionReplicaUtil.isDefaultReplica(hri)) {
+        iterator.remove();
+      }
+    }
   }
 }
