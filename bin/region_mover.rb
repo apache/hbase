@@ -412,7 +412,7 @@ def loadRegions(options, hostname)
     end
     $LOG.info("Moving region " + r.getRegionNameAsString() + " (" + 
       count.to_s + " of " + regions.length.to_s + ") from server=" + 
-      currentServer + " to server=" + servername);
+      currentServer.to_s + " to server=" + servername.to_s);
     move(admin, r, servername, currentServer)
   end
 end
