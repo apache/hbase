@@ -206,6 +206,9 @@ public class RpcRetryingCaller<T> {
     if (t instanceof RemoteException) {
       t = ((RemoteException)t).unwrapRemoteException();
     }
+    if (t instanceof LinkageError) {
+      throw new DoNotRetryIOException(t);
+    }
     if (t instanceof ServiceException) {
       ServiceException se = (ServiceException)t;
       Throwable cause = se.getCause();

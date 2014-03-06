@@ -1711,6 +1711,10 @@ public class RpcServer implements RpcServerInterface {
         String msg = "Unable to read call parameter from client " + getHostAddress();
         LOG.warn(msg, t);
 
+        // probably the hbase hadoop version does not match the running hadoop version
+        if (t instanceof LinkageError) {
+          t = new DoNotRetryIOException(t);
+        }
         // If the method is not present on the server, do not retry.
         if (t instanceof UnsupportedOperationException) {
           t = new DoNotRetryIOException(t);
@@ -2041,6 +2045,7 @@ public class RpcServer implements RpcServerInterface {
       // putting it on the wire.  Its needed to adhere to the pb Service Interface but we don't
       // need to pass it over the wire.
       if (e instanceof ServiceException) e = e.getCause();
+      if (e instanceof LinkageError) throw new DoNotRetryIOException(e);
       if (e instanceof IOException) throw (IOException)e;
       LOG.error("Unexpected throwable object ", e);
       throw new IOException(e.getMessage(), e);

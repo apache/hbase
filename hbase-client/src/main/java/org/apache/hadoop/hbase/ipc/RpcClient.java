@@ -56,6 +56,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -920,7 +921,11 @@ public class RpcClient {
       } catch (Throwable t) {
         failedServers.addToFailedServers(remoteId.address);
         IOException e = null;
-        if (t instanceof IOException) {
+        if (t instanceof LinkageError) {
+          // probably the hbase hadoop version does not match the running hadoop version
+          e = new DoNotRetryIOException(t);
+          markClosed(e);
+        } else if (t instanceof IOException) {
           e = (IOException)t;
           markClosed(e);
         } else {
