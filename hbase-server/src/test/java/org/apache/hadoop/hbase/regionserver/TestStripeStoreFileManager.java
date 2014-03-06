@@ -18,6 +18,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,9 +32,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
-import static org.junit.Assert.*;
-import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -551,7 +555,7 @@ public class TestStripeStoreFileManager {
       long size, long seqNum, byte[] startKey, byte[] endKey) throws Exception {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path testFilePath = StoreFile.getUniqueFile(fs, CFDIR);
-    fs.create(testFilePath);
+    fs.create(testFilePath).close();
     MockStoreFile sf = new MockStoreFile(TEST_UTIL, testFilePath, size, 0, false, seqNum);
     if (startKey != null) {
       sf.setMetadataValue(StripeStoreFileManager.STRIPE_START_KEY, startKey);
