@@ -1281,7 +1281,7 @@ public class SplitLogManager extends ZooKeeperListener {
     volatile TaskBatch batch;
     volatile TerminationStatus status;
     volatile int incarnation;
-    volatile AtomicInteger unforcedResubmits = new AtomicInteger();
+    final AtomicInteger unforcedResubmits = new AtomicInteger();
     volatile boolean resubmitThresholdReached;
 
     @Override

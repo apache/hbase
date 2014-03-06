@@ -249,7 +249,7 @@ public class HFile {
   }
 
   // for test purpose
-  public static volatile AtomicLong dataBlockReadCnt = new AtomicLong(0);
+  public static final AtomicLong dataBlockReadCnt = new AtomicLong(0);
 
   // number of sequential reads
   public static final int getReadOps() {
