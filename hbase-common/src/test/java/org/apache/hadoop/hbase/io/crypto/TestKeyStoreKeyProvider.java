@@ -16,7 +16,8 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,7 +33,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.SmallTests;
-
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -84,7 +84,7 @@ public class TestKeyStoreKeyProvider {
   @Test(timeout=30000)
   public void testKeyStoreKeyProviderWithPassword() throws Exception {
     KeyProvider provider = new KeyStoreKeyProvider();
-    provider.init("jceks://" + storeFile.getAbsolutePath() + "?password=" + PASSWORD);
+    provider.init("jceks://" + storeFile.toURI().getPath() + "?password=" + PASSWORD);
     Key key = provider.getKey(ALIAS);
     assertNotNull(key);
     byte[] keyBytes = key.getEncoded();
@@ -97,7 +97,7 @@ public class TestKeyStoreKeyProvider {
   @Test(timeout=30000)
   public void testKeyStoreKeyProviderWithPasswordFile() throws Exception {
     KeyProvider provider = new KeyStoreKeyProvider();
-    provider.init("jceks://" + storeFile.getAbsolutePath() + "?passwordFile=" +
+    provider.init("jceks://" + storeFile.toURI().getPath() + "?passwordFile=" +
       URLEncoder.encode(passwordFile.getAbsolutePath(), "UTF-8"));
     Key key = provider.getKey(ALIAS);
     assertNotNull(key);
