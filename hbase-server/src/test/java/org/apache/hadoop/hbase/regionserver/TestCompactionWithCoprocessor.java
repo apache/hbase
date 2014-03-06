@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.junit.experimental.categories.Category;
 
 /**
- * Make sure all compaction tests still pass with the preFlush and preCompact
+ * Make sure compaction tests still pass with the preFlush and preCompact
  * overridden to implement the default behavior
  */
 @Category(MediumTests.class)
