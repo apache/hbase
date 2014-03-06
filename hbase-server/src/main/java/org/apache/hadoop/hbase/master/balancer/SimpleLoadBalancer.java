@@ -104,21 +104,21 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
    * have either floor(average) or ceiling(average) regions.
    *
    * HBASE-3609 Modeled regionsToMove using Guava's MinMaxPriorityQueue so that
-   *   we can fetch from both ends of the queue. 
-   * At the beginning, we check whether there was empty region server 
+   *   we can fetch from both ends of the queue.
+   * At the beginning, we check whether there was empty region server
    *   just discovered by Master. If so, we alternately choose new / old
    *   regions from head / tail of regionsToMove, respectively. This alternation
    *   avoids clustering young regions on the newly discovered region server.
    *   Otherwise, we choose new regions from head of regionsToMove.
-   *   
+   *
    * Another improvement from HBASE-3609 is that we assign regions from
    *   regionsToMove to underloaded servers in round-robin fashion.
    *   Previously one underloaded server would be filled before we move onto
    *   the next underloaded server, leading to clustering of young regions.
-   *   
+   *
    * Finally, we randomly shuffle underloaded servers so that they receive
    *   offloaded regions relatively evenly across calls to balanceCluster().
-   *         
+   *
    * The algorithm is currently implemented as such:
    *
    * <ol>
@@ -179,6 +179,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
    * @return a list of regions to be moved, including source and destination,
    *         or null if cluster is already balanced
    */
+  @Override
   public List<RegionPlan> balanceCluster(
       Map<ServerName, List<HRegionInfo>> clusterMap) {
     List<RegionPlan> regionsToReturn = balanceMasterRegions(clusterMap);
@@ -192,9 +193,12 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     Collection<ServerName> backupMasters = getBackupMasters();
     ClusterLoadState cs = new ClusterLoadState(masterServerName,
       backupMasters, backupMasterWeight, clusterMap);
+    // construct a Cluster object with clusterMap and rest of the
+    // argument as defaults
+    Cluster c = new Cluster(masterServerName, clusterMap, null, this.regionFinder,
+      getBackupMasters(), tablesOnMaster, this.rackManager);
+    if (!this.needsBalance(c)) return null;
 
-    if (!this.needsBalance(cs)) return null;
-    
     int numServers = cs.getNumServers();
     NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad = cs.getServersByLoad();
     int numRegions = cs.getNumRegions();
@@ -239,7 +243,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
       }
       int numToOffload = Math.min((load - max) / w, regions.size());
       // account for the out-of-band regions which were assigned to this server
-      // after some other region server crashed 
+      // after some other region server crashed
       Collections.sort(regions, riComparator);
       int numTaken = 0;
       for (int i = 0; i <= numToOffload; ) {

@@ -118,10 +118,14 @@ public class TestRegionRebalancing {
     UTIL.getHBaseCluster().getMaster().balance();
     assertRegionsAreBalanced();
 
+    // On a balanced cluster, calling balance() should return false
+    assert(UTIL.getHBaseCluster().getMaster().balance() == false);
+
+    // However if we add a server, then the balance() call should return true 
     // add a region server - total of 3
     LOG.info("Started third server=" +
         UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
-    UTIL.getHBaseCluster().getMaster().balance();
+    assert(UTIL.getHBaseCluster().getMaster().balance() == true);
     assertRegionsAreBalanced();
 
     // kill a region server - total of 2
@@ -135,14 +139,14 @@ public class TestRegionRebalancing {
         UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
     LOG.info("Added fourth server=" +
         UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
-    UTIL.getHBaseCluster().getMaster().balance();
+    assert(UTIL.getHBaseCluster().getMaster().balance() == true);
     assertRegionsAreBalanced();
 
     for (int i = 0; i < 6; i++){
       LOG.info("Adding " + (i + 5) + "th region server");
       UTIL.getHBaseCluster().startRegionServer();
     }
-    UTIL.getHBaseCluster().getMaster().balance();
+    assert(UTIL.getHBaseCluster().getMaster().balance() == true);
     assertRegionsAreBalanced();
     table.close();
   }

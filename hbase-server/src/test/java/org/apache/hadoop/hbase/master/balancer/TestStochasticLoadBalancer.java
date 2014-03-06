@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
@@ -383,6 +385,34 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertTrue(costWith2ReplicasOnTwoServers < costWith3ReplicasSameServer);
   }
 
+  @Test
+  public void testNeedsBalanceForColocatedReplicas() {
+    // check for the case where there are two hosts and with one rack, and where
+    // both the replicas are hosted on the same server
+    List<HRegionInfo> regions = randomRegions(1);
+    ServerName s1 = ServerName.valueOf("host1", 1000, 11111);
+    ServerName s2 = ServerName.valueOf("host11", 1000, 11111);
+    Map<ServerName, List<HRegionInfo>> map = new HashMap<ServerName, List<HRegionInfo>>();
+    map.put(s1, regions);
+    regions.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(0), 1));
+    // until the step above s1 holds two replicas of a region
+    regions = randomRegions(1);
+    map.put(s2, regions);
+    assertTrue(loadBalancer.needsBalance(new Cluster(master, map, null, null, null, null, null)));
+    // check for the case where there are two hosts on the same rack and there are two racks
+    // and both the replicas are on the same rack
+    map.clear();
+    regions = randomRegions(1);
+    List<HRegionInfo> regionsOnS2 = new ArrayList<HRegionInfo>(1);
+    regionsOnS2.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(0), 1));
+    map.put(s1, regions);
+    map.put(s2, regionsOnS2);
+    // add another server so that the cluster has some host on another rack
+    map.put(ServerName.valueOf("host2", 1000, 11111), randomRegions(1));
+    assertTrue(loadBalancer.needsBalance(new Cluster(master, map, null, null, null, null,
+        new ForTestRackManagerOne())));
+  }
+
   @Test (timeout = 60000)
   public void testSmallCluster() {
     int numNodes = 10;
@@ -547,6 +577,13 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     }
   }
 
+  private static class ForTestRackManagerOne extends RackManager {
+  @Override
+    public String getRack(ServerName server) {
+      return server.getHostname().endsWith("1") ? "rack1" : "rack2";
+    }
+  }
+
   @Test (timeout = 120000)
   public void testRegionReplicationOnMidClusterWithRacks() {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 4000000L);
@@ -650,7 +687,6 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
     public MyRackResolver(Configuration conf) {}
 
-    @Override
     public List<String> resolve(List<String> names) {
       List<String> racks = new ArrayList<String>(names.size());
       for (int i = 0; i < names.size(); i++) {
@@ -659,10 +695,8 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       return racks;
     }
 
-    @Override
     public void reloadCachedMappings() {}
 
-    @Override
     public void reloadCachedMappings(List<String> names) {
     }
   }

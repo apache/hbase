@@ -998,7 +998,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       long cutoffTime = System.currentTimeMillis() + maximumBalanceTime;
       int rpCount = 0;  // number of RegionPlans balanced so far
       long totalRegPlanExecTime = 0;
-      balancerRan = plans != null;
+      balancerRan = plans.size() != 0;
       if (plans != null && !plans.isEmpty()) {
         for (RegionPlan plan: plans) {
           LOG.info("balance " + plan);
