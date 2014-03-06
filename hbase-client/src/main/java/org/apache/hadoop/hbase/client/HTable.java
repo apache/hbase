@@ -323,7 +323,6 @@ public class HTable implements HTableInterface {
    * setup this HTable's parameter based on the passed configuration
    */
   private void finishSetup() throws IOException {
-    this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
     this.operationTimeout = tableName.isSystemTable() ?
       this.configuration.getInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT,
         HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT):

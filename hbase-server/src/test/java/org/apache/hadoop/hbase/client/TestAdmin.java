@@ -1281,7 +1281,9 @@ public class TestAdmin {
    */
   @Test (expected=TableNotFoundException.class, timeout=300000)
   public void testTableNotFoundExceptionWithoutAnyTables() throws IOException {
-    new HTable(TEST_UTIL.getConfiguration(),"testTableNotFoundExceptionWithoutAnyTables");
+    HTable ht =
+        new HTable(TEST_UTIL.getConfiguration(),"testTableNotFoundExceptionWithoutAnyTables");
+    ht.get(new Get("e".getBytes()));
   }
 
 
