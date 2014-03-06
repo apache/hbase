@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -961,7 +962,10 @@ public class RpcClient {
         IOException e = ExceptionUtil.asInterrupt(t);
         if (e == null) {
           failedServers.addToFailedServers(remoteId.address);
-          if (t instanceof IOException) {
+          if (t instanceof LinkageError) {
+            // probably the hbase hadoop version does not match the running hadoop version
+            e = new DoNotRetryIOException(t);
+          } else if (t instanceof IOException) {
             e = (IOException) t;
           } else {
             e = new IOException("Could not set up IO Streams to " + server, t);
