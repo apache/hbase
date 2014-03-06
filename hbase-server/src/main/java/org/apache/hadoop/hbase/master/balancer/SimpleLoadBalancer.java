@@ -184,8 +184,10 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     long startTime = System.currentTimeMillis();
 
     ClusterLoadState cs = new ClusterLoadState(clusterMap);
-
-    if (!this.needsBalance(cs)) return null;
+    // construct a Cluster object with clusterMap and rest of the 
+    // argument as defaults
+    Cluster c = new Cluster(clusterMap, null, this.regionFinder, this.rackManager);
+    if (!this.needsBalance(c)) return null;
     
     int numServers = cs.getNumServers();
     NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad = cs.getServersByLoad();

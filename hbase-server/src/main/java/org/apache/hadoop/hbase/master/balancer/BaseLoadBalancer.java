@@ -131,6 +131,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
     int numMovedRegions = 0; //num moved regions from the initial configuration
     int numMovedMetaRegions = 0;       //num of moved regions that are META
+    Map<ServerName, List<HRegionInfo>> clusterState;
 
     protected final RackManager rackManager;
 
@@ -163,6 +164,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
       List<List<Integer>> serversPerHostList = new ArrayList<List<Integer>>();
       List<List<Integer>> serversPerRackList = new ArrayList<List<Integer>>();
+      this.clusterState = clusterState;
 
       // Use servername and port as there can be dead servers in this list. We want everything with
       // a matching hostname and port to have the same index.
@@ -821,7 +823,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     this.rackManager = rackManager;
   }
 
-  protected boolean needsBalance(ClusterLoadState cs) {
+  protected boolean needsBalance(Cluster c) {
+    ClusterLoadState cs = new ClusterLoadState(c.clusterState);
     if (cs.getNumServers() < MIN_SERVER_BALANCE) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Not running balancer because only " + cs.getNumServers()
@@ -829,8 +832,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
       return false;
     }
-    // TODO: check for co-located region replicas as well
-
+    if(areSomeRegionReplicasColocated(c)) return true;
     // Check if we even need to do any load balancing
     // HBASE-3681 check sloppiness first
     float average = cs.getLoadAverage(); // for logging
@@ -849,6 +851,17 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Subclasses should implement this to return true if the cluster has nodes that hosts
+   * multiple replicas for the same region, or, if there are multiple racks and the same
+   * rack hosts replicas of the same region
+   * @param c
+   * @return
+   */
+  protected boolean areSomeRegionReplicasColocated(Cluster c) {
+    return false;
   }
 
   /**

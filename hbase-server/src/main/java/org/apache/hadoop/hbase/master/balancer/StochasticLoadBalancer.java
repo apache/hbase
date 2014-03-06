@@ -123,6 +123,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   // when new services are offered
   private LocalityBasedCandidateGenerator localityCandidateGenerator;
   private LocalityCostFunction localityCost;
+  private RegionReplicaHostCostFunction regionReplicaHostCostFunction;
+  private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
 
   @Override
   public void setConf(Configuration conf) {
@@ -152,13 +154,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       new StoreFileCostFunction(conf)
     };
 
+    regionReplicaHostCostFunction = new RegionReplicaHostCostFunction(conf);
+    regionReplicaRackCostFunction = new RegionReplicaRackCostFunction(conf);
+
     costFunctions = new CostFunction[]{
       new RegionCountSkewCostFunction(conf),
       new MoveCostFunction(conf),
       localityCost,
       new TableSkewCostFunction(conf),
-      new RegionReplicaHostCostFunction(conf),
-      new RegionReplicaRackCostFunction(conf),
+      regionReplicaHostCostFunction,
+      regionReplicaRackCostFunction,
       regionLoadFunctions[0],
       regionLoadFunctions[1],
       regionLoadFunctions[2],
@@ -189,6 +194,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   }
 
+  @Override
+  protected boolean areSomeRegionReplicasColocated(Cluster c) {
+    regionReplicaHostCostFunction.init(c);
+    if (regionReplicaHostCostFunction.cost() > 0) return true;
+    regionReplicaRackCostFunction.init(c);
+    if (regionReplicaRackCostFunction.cost() > 0) return true;
+    return false;
+  }
+
   /**
    * Given the cluster state this will try and approach an optimal balance. This
    * should always approach the optimal state given enough steps.
@@ -197,14 +211,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState) {
     //The clusterState that is given to this method contains the state
     //of all the regions in the table(s) (that's true today)
-    if (!needsBalance(new ClusterLoadState(clusterState))) {
+    // Keep track of servers to iterate through them.
+    Cluster cluster = new Cluster(clusterState, loads, regionFinder, rackManager);
+    if (!needsBalance(cluster)) {
       return null;
     }
 
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
-    // Keep track of servers to iterate through them.
-    Cluster cluster = new Cluster(clusterState, loads, regionFinder, rackManager);
     initCosts(cluster);
     double currentCost = computeCost(cluster, Double.MAX_VALUE);
 
