@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.snapshot;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -36,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.snapshot.MasterSnapshotVerifier;
@@ -220,7 +222,16 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
    * @throws IOException
    */
   private List<HRegion> getRegionsToSnapshot(SnapshotDescription snapshot) throws IOException {
-    return rss.getOnlineRegions(TableName.valueOf(snapshot.getTable()));
+    List<HRegion> onlineRegions = rss.getOnlineRegions(TableName.valueOf(snapshot.getTable()));
+    Iterator<HRegion> iterator = onlineRegions.iterator();
+    // remove the non-default regions
+    while (iterator.hasNext()) {
+      HRegion r = iterator.next();
+      if (!RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())) {
+        iterator.remove();
+      }
+    }
+    return onlineRegions;
   }
 
   /**

@@ -99,7 +99,7 @@ public class TestCloneSnapshotFromClient {
     snapshotName2 = Bytes.toBytes("snaptb2-" + tid);
 
     // create Table and disable it
-    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, FAMILY);
+    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, getNumReplicas(), FAMILY);
     admin.disableTable(tableName);
 
     // take an empty snapshot
@@ -130,6 +130,10 @@ public class TestCloneSnapshotFromClient {
     } finally {
       table.close();
     }
+  }
+
+  protected int getNumReplicas() {
+    return 1;
   }
 
   @After
@@ -168,7 +172,12 @@ public class TestCloneSnapshotFromClient {
     admin.cloneSnapshot(snapshotName, tableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshotRows);
 
+    verifyReplicasCameOnline(tableName);
     TEST_UTIL.deleteTable(tableName);
+  }
+
+  protected void verifyReplicasCameOnline(TableName tableName) throws IOException {
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
   }
 
   @Test

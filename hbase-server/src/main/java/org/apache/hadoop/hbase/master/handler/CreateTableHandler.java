@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -84,6 +86,7 @@ public class CreateTableHandler extends EventHandler {
         , EventType.C_M_CREATE_TABLE.toString());
   }
 
+  @Override
   public CreateTableHandler prepare()
       throws NotAllMetaRegionsOnlineException, TableExistsException, IOException {
     int timeout = conf.getInt("hbase.client.catalog.timeout", 10000);
@@ -240,8 +243,10 @@ public class CreateTableHandler extends EventHandler {
     if (regionInfos != null && regionInfos.size() > 0) {
       // 4. Add regions to META
       addRegionsToMeta(this.catalogTracker, regionInfos);
+      // 5. Add replicas if needed
+      regionInfos = addReplicas(hTableDescriptor, regionInfos);
 
-      // 5. Trigger immediate assignment of the regions in round-robin fashion
+      // 6. Trigger immediate assignment of the regions in round-robin fashion
       ModifyRegionUtils.assignRegions(assignmentManager, regionInfos);
     }
 
@@ -253,6 +258,30 @@ public class CreateTableHandler extends EventHandler {
       throw new IOException("Unable to ensure that " + tableName + " will be" +
         " enabled because of a ZooKeeper issue", e);
     }
+  }
+
+  /**
+   * Create any replicas for the regions (the default replicas that was
+   * already created is passed to the method)
+   * @param hTableDescriptor
+   * @param regions default replicas
+   * @return the combined list of default and non-default replicas
+   */
+  protected List<HRegionInfo> addReplicas(HTableDescriptor hTableDescriptor,
+      List<HRegionInfo> regions) {
+    int numRegionReplicas = hTableDescriptor.getRegionReplication() - 1;
+    if (numRegionReplicas <= 0) {
+      return regions;
+    }
+    List<HRegionInfo> hRegionInfos =
+        new ArrayList<HRegionInfo>((numRegionReplicas+1)*regions.size());
+    for (int i = 0; i < regions.size(); i++) {
+      for (int j = 1; j <= numRegionReplicas; j++) {
+        hRegionInfos.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(i), j));
+      }
+    }
+    hRegionInfos.addAll(regions);
+    return hRegionInfos;
   }
 
   private void releaseTableLock() {

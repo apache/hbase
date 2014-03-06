@@ -104,7 +104,7 @@ public class TestRestoreSnapshotFromClient {
     snapshotName2 = Bytes.toBytes("snaptb2-" + tid);
 
     // create Table and disable it
-    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, FAMILY);
+    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, getNumReplicas(), FAMILY);
     admin.disableTable(tableName);
 
     // take an empty snapshot
@@ -143,23 +143,31 @@ public class TestRestoreSnapshotFromClient {
     admin.restoreSnapshot(snapshotName0);
     admin.enableTable(tableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
 
     // Restore from emptySnapshot
     admin.disableTable(tableName);
     admin.restoreSnapshot(emptySnapshot);
     admin.enableTable(tableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, 0);
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
 
     // Restore from snapshot-1
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName1);
     admin.enableTable(tableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
 
     // Restore from snapshot-1
     TEST_UTIL.deleteTable(tableName);
     admin.restoreSnapshot(snapshotName1);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
+  }
+
+  protected int getNumReplicas() {
+    return 1;
   }
 
   @Test
@@ -224,6 +232,7 @@ public class TestRestoreSnapshotFromClient {
         TableName.valueOf("clonedtb-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
+    SnapshotTestingUtils.verifyReplicasCameOnline(clonedTableName, admin, getNumReplicas());
     admin.disableTable(clonedTableName);
     admin.snapshot(snapshotName2, clonedTableName);
     TEST_UTIL.deleteTable(clonedTableName);
@@ -231,6 +240,7 @@ public class TestRestoreSnapshotFromClient {
 
     admin.cloneSnapshot(snapshotName2, clonedTableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
+    SnapshotTestingUtils.verifyReplicasCameOnline(clonedTableName, admin, getNumReplicas());
     TEST_UTIL.deleteTable(clonedTableName);
   }
 
@@ -241,12 +251,14 @@ public class TestRestoreSnapshotFromClient {
 
     admin.cloneSnapshot(snapshotName0, tableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
     waitCleanerRun();
 
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName0);
     admin.enableTable(tableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
   }
 
   @Test

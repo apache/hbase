@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -151,6 +152,8 @@ public final class MasterSnapshotVerifier {
   private void verifyRegions(final SnapshotManifest manifest) throws IOException {
     List<HRegionInfo> regions = MetaReader.getTableRegions(this.services.getCatalogTracker(),
         tableName);
+    // Remove the non-default regions
+    RegionReplicaUtil.removeNonDefaultRegions(regions);
 
     Map<String, SnapshotRegionManifest> regionManifests = manifest.getRegionManifestsMap();
     if (regionManifests == null) {
