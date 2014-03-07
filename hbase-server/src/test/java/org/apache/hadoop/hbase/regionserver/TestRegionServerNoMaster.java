@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -52,6 +53,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mortbay.log.Log;
 
 import com.google.protobuf.ServiceException;
 
@@ -95,6 +97,11 @@ public class TestRegionServerNoMaster {
     // No master
     HTU.getHBaseCluster().getMaster().stopMaster();
 
+    Log.info("Waiting until master thread exits");
+    while (HTU.getHBaseCluster().getMasterThread() != null
+        && HTU.getHBaseCluster().getMasterThread().isAlive()) {
+      Threads.sleep(100);
+    }
     // Master is down, so is the meta. We need to assign it somewhere
     // so that regions can be assigned during the mocking phase.
     HRegionServer hrs = HTU.getHBaseCluster().getRegionServer(0);

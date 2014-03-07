@@ -138,8 +138,12 @@ public class HTable implements HTableInterface {
   private ExecutorService pool;  // For Multi
   private boolean closed;
   private int operationTimeout;
+  private int retries;
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final boolean cleanupConnectionOnClose; // close the connection in close()
+  private Consistency defaultConsistency = Consistency.STRONG;
+  private int primaryCallTimeoutMicroSecond;
+
 
   /** The Async process for puts with autoflush set to false or multiputs */
   protected AsyncProcess ap;
@@ -361,6 +365,10 @@ public class HTable implements HTableInterface {
     this.scannerCaching = this.configuration.getInt(
         HConstants.HBASE_CLIENT_SCANNER_CACHING,
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
+    this.primaryCallTimeoutMicroSecond =
+        this.configuration.getInt("hbase.client.primaryCallTimeout.get", 10000); // 10 ms
+    this.retries = configuration.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+            HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
 
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(configuration);
     this.rpcControllerFactory = RpcControllerFactory.instantiate(configuration);
@@ -817,26 +825,40 @@ public class HTable implements HTableInterface {
    */
   @Override
   public Result get(final Get get) throws IOException {
-    RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
-        getName(), get.getRow()) {
-      @Override
-      public Result call(int callTimeout) throws IOException {
-        ClientProtos.GetRequest request =
-            RequestConverter.buildGetRequest(getLocation().getRegionInfo().getRegionName(), get);
-        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
-        controller.setPriority(tableName);
-        controller.setCallTimeout(callTimeout);
-        try {
-          ClientProtos.GetResponse response = getStub().get(controller, request);
-          if (response == null) return null;
-          return ProtobufUtil.toResult(response.getResult());
-        } catch (ServiceException se) {
-          throw ProtobufUtil.getRemoteException(se);
+    if (get.getConsistency() == null){
+      get.setConsistency(defaultConsistency);
+    }
+
+    if (get.getConsistency() == Consistency.STRONG) {
+      // Good old call.
+      RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
+          getName(), get.getRow()) {
+        @Override
+        public Result call(int callTimeout) throws IOException {
+          ClientProtos.GetRequest request =
+              RequestConverter.buildGetRequest(getLocation().getRegionInfo().getRegionName(), get);
+          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+          controller.setPriority(tableName);
+          controller.setCallTimeout(callTimeout);
+          try {
+            ClientProtos.GetResponse response = getStub().get(controller, request);
+            if (response == null) return null;
+            return ProtobufUtil.toResult(response.getResult());
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
+          }
         }
-      }
-    };
-    return rpcCallerFactory.<Result>newCaller().callWithRetries(callable, this.operationTimeout);
+      };
+      return rpcCallerFactory.<Result>newCaller().callWithRetries(callable, this.operationTimeout);
+    }
+
+    // Call that takes into account the replica
+    RpcRetryingCallerWithReadReplicas callable = new RpcRetryingCallerWithReadReplicas(
+      rpcControllerFactory, tableName, this.connection, get, pool, retries,
+      operationTimeout, primaryCallTimeoutMicroSecond);
+    return callable.call();
   }
+
 
   /**
    * {@inheritDoc}

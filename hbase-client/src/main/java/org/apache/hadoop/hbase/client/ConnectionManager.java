@@ -986,7 +986,8 @@ class ConnectionManager {
     }
 
 
-    private RegionLocations locateRegion(final TableName tableName,
+    @Override
+    public RegionLocations locateRegion(final TableName tableName,
       final byte [] row, boolean useCache, boolean retry)
     throws IOException {
       if (this.closed) throw new IOException(toString() + " closed");

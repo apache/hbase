@@ -154,7 +154,17 @@ interface ClusterConnection extends HConnection {
       final boolean useCache,
       final boolean offlined) throws IOException;
 
-
+  /**
+   *
+   * @param tableName table to get regions of
+   * @param row the row
+   * @param useCache Should we use the cache to retrieve the region information.
+   * @param retry do we retry
+   * @return region locations for this row.
+   * @throws IOException
+   */
+  RegionLocations locateRegion(TableName tableName,
+                               byte[] row, boolean useCache, boolean retry) throws IOException;
   /**
    * Returns a {@link MasterKeepAliveConnection} to the active master
    */

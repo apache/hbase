@@ -968,7 +968,7 @@ public class TestAsyncProcess {
     //       that the replica call has happened and that way control the ordering.
     Configuration conf = new Configuration();
     ClusterConnection conn = createHConnectionWithReplicas();
-    conf.setInt(AsyncProcess.PRIMARY_CALL_TIMEOUT_KEY, replicaAfterMs);
+    conf.setInt(AsyncProcess.PRIMARY_CALL_TIMEOUT_KEY, replicaAfterMs * 1000);
     if (retries > 0) {
       conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
     }

@@ -288,6 +288,12 @@ class CoprocessorHConnection implements ClusterConnection {
   }
 
   @Override
+  public RegionLocations locateRegion(TableName tableName, byte[] row,
+                                      boolean useCache, boolean retry) throws IOException {
+    return delegate.locateRegion(tableName, row, useCache, retry);
+  }
+
+  @Override
   public List<HRegionLocation> locateRegions(byte[] tableName, boolean useCache, boolean offlined)
       throws IOException {
     return delegate.locateRegions(tableName, useCache, offlined);

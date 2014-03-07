@@ -204,6 +204,12 @@ class ConnectionAdapter implements ClusterConnection {
   }
 
   @Override
+  public RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache,
+      boolean retry) throws IOException {
+    return wrappedConnection.locateRegion(tableName, row, useCache, retry);
+  }
+
+  @Override
   public RegionLocations locateRegionAll(TableName tableName, byte[] row) throws IOException {
     return wrappedConnection.locateRegionAll(tableName, row);
   }

@@ -47,7 +47,7 @@ public class StorefileRefresherChore extends Chore {
   /**
    * The period (in milliseconds) for refreshing the store files for the secondary regions.
    */
-  static final String REGIONSERVER_STOREFILE_REFRESH_PERIOD
+  public static final String REGIONSERVER_STOREFILE_REFRESH_PERIOD
     = "hbase.regionserver.storefile.refresh.period";
   static final int DEFAULT_REGIONSERVER_STOREFILE_REFRESH_PERIOD = 0; //disabled by default
 
