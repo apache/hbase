@@ -28,7 +28,7 @@ import java.nio.channels.ClosedByInterruptException;
  * - InterruptedException
  * - InterruptedIOException (inherits IOException); used in IO
  * - ClosedByInterruptException (inherits IOException)
- * , - SocketTimeoutException inherits InterruptedIOException but is not a real
+ * - SocketTimeoutException inherits InterruptedIOException but is not a real
  * interruption, so we have to distinguish the case. This pattern is unfortunately common.
  */
 public class ExceptionUtil {
@@ -39,7 +39,7 @@ public class ExceptionUtil {
   public static boolean isInterrupt(Throwable t) {
     if (t instanceof InterruptedException) return true;
     if (t instanceof SocketTimeoutException) return false;
-    return (t instanceof InterruptedIOException);
+    return (t instanceof InterruptedIOException || t instanceof ClosedByInterruptException);
   }
 
   /**
@@ -58,7 +58,7 @@ public class ExceptionUtil {
 
     if (t instanceof InterruptedIOException) return (InterruptedIOException) t;
 
-    if (t instanceof InterruptedException) {
+    if (t instanceof InterruptedException || t instanceof ClosedByInterruptException) {
       InterruptedIOException iie = new InterruptedIOException();
       iie.initCause(t);
       return iie;
