@@ -18,21 +18,31 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertEquals;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
+import org.junit.Test;
+
 /**
  * Test of simple partitioner.
  */
 @Category(SmallTests.class)
-public class TestSimpleTotalOrderPartitioner extends HBaseTestCase {
+public class TestSimpleTotalOrderPartitioner {
+  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  Configuration conf = TEST_UTIL.getConfiguration();
+  
+  @Test
   public void testSplit() throws Exception {
     String start = "a";
     String end = "{";
     SimpleTotalOrderPartitioner<byte []> p =
       new SimpleTotalOrderPartitioner<byte []>();
+    
     this.conf.set(SimpleTotalOrderPartitioner.START, start);
     this.conf.set(SimpleTotalOrderPartitioner.END, end);
     p.setConf(this.conf);
