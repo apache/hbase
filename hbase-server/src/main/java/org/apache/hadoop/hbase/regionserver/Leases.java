@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 
 import java.util.ConcurrentModificationException;
@@ -132,7 +133,7 @@ public class Leases extends HasThread {
    * Shuts down this lease instance when all outstanding leases expire.
    * Like {@link #close()} but rather than violently end all leases, waits
    * first on extant leases to finish.  Use this method if the lease holders
-   * could loose data, leak locks, etc.  Presumes client has shutdown
+   * could lose data, leak locks, etc.  Presumes client has shutdown
    * allocation of new leases.
    */
   public void closeAfterLeasesExpire() {
@@ -151,7 +152,7 @@ public class Leases extends HasThread {
   }
 
   /**
-   * Obtain a lease.
+   * Create a lease and insert it to the map of leases.
    *
    * @param leaseName name of the lease
    * @param leaseTimeoutPeriod length of the lease in milliseconds
@@ -172,10 +173,10 @@ public class Leases extends HasThread {
     if (this.stopRequested) {
       return;
     }
-    lease.resetExpirationTime();
     if (leases.containsKey(lease.getLeaseName())) {
       throw new LeaseStillHeldException(lease.getLeaseName());
     }
+    lease.resetExpirationTime();
     leases.put(lease.getLeaseName(), lease);
   }
 
@@ -186,10 +187,11 @@ public class Leases extends HasThread {
    * @throws LeaseException
    */
   public void renewLease(final String leaseName) throws LeaseException {
+    if (this.stopRequested) {
+      return;
+    }
     Lease lease = leases.get(leaseName);
-    // We need to check to see if the remove is successful as the poll in the run()
-    // method could have completed between the get and the remove which will result
-    // in a corrupt leaseQueue.
+
     if (lease == null ) {
       throw new LeaseException("lease '" + leaseName +
           "' does not exist or has already expired");
@@ -208,8 +210,8 @@ public class Leases extends HasThread {
 
   /**
    * Remove named lease.
-   * Lease is removed from the list of leases and removed from the delay queue.
-   * Lease can be resinserted using {@link #addLease(Lease)}
+   * Lease is removed from the map of leases.
+   * Lease can be reinserted using {@link #addLease(Lease)}
    *
    * @param leaseName name of lease
    * @throws org.apache.hadoop.hbase.regionserver.LeaseException
@@ -224,7 +226,7 @@ public class Leases extends HasThread {
   }
 
   /**
-   * Thrown if we are asked create a lease but lease on passed name already
+   * Thrown if we are asked to create a lease but lease on passed name already
    * exists.
    */
   @SuppressWarnings("serial")
@@ -288,7 +290,7 @@ public class Leases extends HasThread {
     }
 
     public long getDelay(TimeUnit unit) {
-      return unit.convert(this.expirationTime - System.currentTimeMillis(),
+      return unit.convert(this.expirationTime - EnvironmentEdgeManager.currentTimeMillis(),
           TimeUnit.MILLISECONDS);
     }
 
@@ -303,7 +305,7 @@ public class Leases extends HasThread {
      * Resets the expiration time of the lease.
      */
     public void resetExpirationTime() {
-      this.expirationTime = System.currentTimeMillis() + this.leaseTimeoutPeriod;
+      this.expirationTime = EnvironmentEdgeManager.currentTimeMillis() + this.leaseTimeoutPeriod;
     }
   }
 }

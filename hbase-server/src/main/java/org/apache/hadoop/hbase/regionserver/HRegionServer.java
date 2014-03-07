@@ -2497,7 +2497,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
               + s.getRegionInfo().getRegionNameAsString(), e);
         }
       } else {
-        LOG.info("Scanner " + this.scannerName + " lease expired");
+        LOG.warn("Scanner " + this.scannerName + " lease expired, but no related" +
+            " scanner found, hence no chance to close that related scanner!");
       }
     }
   }
