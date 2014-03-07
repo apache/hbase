@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -49,12 +50,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.ipc.RemoteException;
 import org.cloudera.htrace.Trace;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ServiceException;
 
 /**
  * This class  allows a continuous flow of requests. It's written to be compatible with a
@@ -95,7 +93,7 @@ class AsyncProcess {
   protected static final Log LOG = LogFactory.getLog(AsyncProcess.class);
   protected static final AtomicLong COUNTER = new AtomicLong();
 
-  public static final String PRIMARY_CALL_TIMEOUT_KEY = "hbase.client.primaryCallTimeout";
+  public static final String PRIMARY_CALL_TIMEOUT_KEY = "hbase.client.primaryCallTimeout.multiget";
 
   /**
    * The context used to wait for results from one submit call.
@@ -180,7 +178,7 @@ class AsyncProcess {
   protected int numTries;
   protected int serverTrackerTimeout;
   protected long clientOpTimeout;
-  protected long primaryCallTimeout;
+  protected long primaryCallTimeoutMicroseconds;
   // End configuration settings.
 
   protected static class BatchErrors {
@@ -239,7 +237,7 @@ class AsyncProcess {
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     this.clientOpTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
         HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
-    this.primaryCallTimeout = conf.getInt(PRIMARY_CALL_TIMEOUT_KEY, 10);
+    this.primaryCallTimeoutMicroseconds = conf.getInt(PRIMARY_CALL_TIMEOUT_KEY, 10000);
 
     this.maxTotalConcurrentTasks = conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
       HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS);
@@ -564,9 +562,9 @@ class AsyncProcess {
       @Override
       public void run() {
         boolean done = false;
-        if (primaryCallTimeout > 0) {
+        if (primaryCallTimeoutMicroseconds > 0) {
           try {
-            done = waitUntilDone(startTime + primaryCallTimeout);
+            done = waitUntilDone(startTime * 1000L + primaryCallTimeoutMicroseconds);
           } catch (InterruptedException ex) {
             LOG.error("Replica thread was interrupted - no replica calls: " + ex.getMessage());
             return;
@@ -875,7 +873,7 @@ class AsyncProcess {
       long startTime = EnvironmentEdgeManager.currentTimeMillis();
       ReplicaCallIssuingRunnable replicaRunnable = new ReplicaCallIssuingRunnable(
           actionsForReplicaThread, startTime);
-      if (primaryCallTimeout == 0) {
+      if (primaryCallTimeoutMicroseconds == 0) {
         // Start replica calls immediately.
         replicaRunnable.run();
       } else {
@@ -1287,22 +1285,25 @@ class AsyncProcess {
 
     private boolean waitUntilDone(long cutoff) throws InterruptedException {
       boolean hasWait = cutoff != Long.MAX_VALUE;
-      long lastLog = hasWait ? 0 : EnvironmentEdgeManager.currentTimeMillis();
+      long lastLog = EnvironmentEdgeManager.currentTimeMillis();
       long currentInProgress;
       while (0 != (currentInProgress = actionsInProgress.get())) {
-        long now = 0;
-        if (hasWait && (now = EnvironmentEdgeManager.currentTimeMillis()) > cutoff) {
+        long now = EnvironmentEdgeManager.currentTimeMillis();
+        if (hasWait && (now * 1000L) > cutoff) {
           return false;
         }
-        if (!hasWait) {
-          // Only log if wait is infinite.
-          now = EnvironmentEdgeManager.currentTimeMillis();
+        if (!hasWait) { // Only log if wait is infinite.
           if (now > lastLog + 10000) {
             lastLog = now;
             LOG.info("#" + id + ", waiting for " + currentInProgress + "  actions to finish");
           }
-          synchronized (actionsInProgress) {
-            actionsInProgress.wait(Math.min(100, hasWait ? (cutoff - now) : Long.MAX_VALUE));
+        }
+        synchronized (actionsInProgress) {
+          if (!hasWait) {
+            actionsInProgress.wait(100);
+          } else {
+            long waitMicroSecond = Math.min(100000L, (cutoff - now * 1000L));
+            TimeUnit.MICROSECONDS.timedWait(actionsInProgress, waitMicroSecond);
           }
         }
       }
