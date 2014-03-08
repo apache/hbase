@@ -710,6 +710,9 @@ public class ReplicationSource extends Thread
             } catch (InterruptedException e) {
               LOG.debug("Interrupted while sleeping for throttling control");
               Thread.currentThread().interrupt();
+              // current thread might be interrupted to terminate
+              // directly go back to while() for confirm this
+              continue;
             }
             // reset throttler's cycle start tick when sleep for throttling occurs
             this.throttler.resetStartTick();
@@ -753,6 +756,11 @@ public class ReplicationSource extends Thread
                 + "Replication cannot proceed without losing data.", sleepMultiplier)) {
               sleepMultiplier++;
             }
+            // current thread might be interrupted to terminate
+            // directly go back to while() for confirm this
+            if (isInterrupted()) {
+              continue;
+            }
           }
         } else {
           if (ioe instanceof SocketTimeoutException) {
@@ -763,6 +771,11 @@ public class ReplicationSource extends Thread
               "call to the remote cluster timed out, which is usually " +
               "caused by a machine failure or a massive slowdown",
               this.socketTimeoutMultiplier);
+            // current thread might be interrupted to terminate
+            // directly go back to while() for confirm this
+            if (isInterrupted()) {
+              continue;
+            }
           } else if (ioe instanceof ConnectException) {
             LOG.warn("Peer is unavailable, rechecking all sinks: ", ioe);
             replicationSinkMgr.chooseSinks();
@@ -849,7 +862,8 @@ public class ReplicationSource extends Thread
           + " because an error occurred: " + reason, cause);
     }
     this.running = false;
-    Threads.shutdown(this, this.sleepForRetries);
+    this.interrupt();
+    Threads.shutdown(this, this.sleepForRetries * this.maxRetriesMultiplier);
   }
 
   public String getPeerClusterZnode() {
@@ -865,7 +879,7 @@ public class ReplicationSource extends Thread
   }
 
   private boolean isActive() {
-    return !this.stopper.isStopped() && this.running;
+    return !this.stopper.isStopped() && this.running && !isInterrupted();
   }
 
   /**
