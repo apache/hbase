@@ -393,7 +393,7 @@ public class ZKUtil {
   public static String[] transformClusterKey(String key) throws IOException {
     String[] parts = key.split(":");
     if (parts.length != 3) {
-      throw new IOException("Cluster key invalid, the format should be:" +
+      throw new IOException("Cluster key passed " + key + " is invalid, the format should be:" +
           HConstants.ZOOKEEPER_QUORUM + ":hbase.zookeeper.client.port:"
           + HConstants.ZOOKEEPER_ZNODE_PARENT);
     }
