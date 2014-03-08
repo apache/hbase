@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -42,6 +43,9 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.TableSnapshotRegionSplit;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
@@ -55,6 +59,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -195,6 +200,40 @@ public class TestTableSnapshotInputFormat {
     // cause flush to create new files in the region
     admin.flush(tableName.toString());
     table.close();
+  }
+
+  @Test
+  public void testInitTableSnapshotMapperJobConfig() throws Exception {
+    setupCluster();
+    TableName tableName = TableName.valueOf("testInitTableSnapshotMapperJobConfig");
+    String snapshotName = "foo";
+
+    try {
+      createTableAndSnapshot(UTIL, tableName, snapshotName, 1);
+      Job job = new Job(UTIL.getConfiguration());
+      Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+
+      TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName,
+        new Scan(), TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
+        NullWritable.class, job, false, tmpTableDir);
+
+      // TODO: would be better to examine directly the cache instance that results from this
+      // config. Currently this is not possible because BlockCache initialization is static.
+      Assert.assertEquals(
+        "Snapshot job should be configured for default LruBlockCache.",
+        HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT,
+        job.getConfiguration().getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, -1), 0.01);
+      Assert.assertEquals(
+        "Snapshot job should not use SlabCache.",
+        0, job.getConfiguration().getFloat("hbase.offheapcache.percentage", -1), 0.01);
+      Assert.assertEquals(
+        "Snapshot job should not use BucketCache.",
+        0, job.getConfiguration().getFloat("hbase.bucketcache.size", -1), 0.01);
+    } finally {
+      UTIL.getHBaseAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+      tearDownCluster();
+    }
   }
 
   @Test

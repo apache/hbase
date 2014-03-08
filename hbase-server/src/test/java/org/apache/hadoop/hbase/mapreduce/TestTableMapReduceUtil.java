@@ -34,6 +34,11 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestTableMapReduceUtil {
 
+  /*
+   * initTableSnapshotMapperJob is tested in {@link TestTableSnapshotInputFormat} because
+   * the method depends on an online cluster.
+   */
+
   @Test
   public void testInitTableMapperJob1() throws Exception {
     Configuration configuration = new Configuration();
