@@ -231,6 +231,8 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       // region is immutable, this should be fine,
       // otherwise we have to set the thread read point
       scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
+      // disable caching of data blocks
+      scan.setCacheBlocks(false);
 
       scanner = new ClientSideRegionScanner(conf, fs, tmpRootDir, htd, hri, scan, null);
       if (context != null) {
