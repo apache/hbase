@@ -113,9 +113,10 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
     conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
     conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
-    conf.set("hbase.superuser", "admin," + User.getCurrent().getName());
+    String adminName = User.getCurrent().getName();
+    conf.set("hbase.superuser", adminName);
     super.setUpCluster();
-    ADMIN = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
+    ADMIN = User.createUserForTesting(conf, adminName, new String[] { "supergroup" });
     NORMAL_USER = User.createUserForTesting(conf, "user1", new String[] {});
     addLabelsAndAuths();
   }
