@@ -333,4 +333,16 @@ public final class CellUtil {
       // Serialization is probably preceded by a length (it is in the KeyValueCodec at least).
       Bytes.SIZEOF_INT;
   }
+
+  /**
+   * Returns true if the first range start1...end1 overlaps with the second range
+   * start2...end2, assuming the byte arrays represent row keys
+   */
+  public static boolean overlappingKeys(final byte[] start1, final byte[] end1,
+      final byte[] start2, final byte[] end2) {
+    return (end2.length == 0 || start1.length == 0 || Bytes.compareTo(start1,
+        end2) < 0)
+        && (end1.length == 0 || start2.length == 0 || Bytes.compareTo(start2,
+            end1) < 0);
+  }
 }

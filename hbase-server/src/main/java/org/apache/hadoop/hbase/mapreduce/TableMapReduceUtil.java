@@ -66,6 +66,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
+import org.cliffc.high_scale_lib.Counter;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -122,6 +123,32 @@ public class TableMapReduceUtil {
               job, true);
   }
 
+   /**
+    * Use this before submitting a TableMap job. It will appropriately set up
+    * the job.
+    *
+    * @param table  The table name to read from.
+    * @param scan  The scan instance with the columns, time range etc.
+    * @param mapper  The mapper class to use.
+    * @param outputKeyClass  The class of the output key.
+    * @param outputValueClass  The class of the output value.
+    * @param job  The current job to adjust.  Make sure the passed job is
+    * carrying all necessary HBase configuration.
+    * @param addDependencyJars upload HBase jars and jars for any of the configured
+    *           job classes via the distributed cache (tmpjars).
+    * @throws IOException When setting up the details fails.
+    */
+   public static void initTableMapperJob(String table, Scan scan,
+       Class<? extends TableMapper> mapper,
+       Class<?> outputKeyClass,
+       Class<?> outputValueClass, Job job,
+       boolean addDependencyJars, Class<? extends InputFormat> inputFormatClass)
+   throws IOException {
+     initTableMapperJob(table, scan, mapper, outputKeyClass, outputValueClass, job,
+         addDependencyJars, true, inputFormatClass);
+   }
+
+
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
    * the job.
@@ -135,13 +162,16 @@ public class TableMapReduceUtil {
    * carrying all necessary HBase configuration.
    * @param addDependencyJars upload HBase jars and jars for any of the configured
    *           job classes via the distributed cache (tmpjars).
+   * @param initCredentials whether to initialize hbase auth credentials for the job
+   * @param inputFormatClass the input format
    * @throws IOException When setting up the details fails.
    */
   public static void initTableMapperJob(String table, Scan scan,
       Class<? extends TableMapper> mapper,
       Class<?> outputKeyClass,
       Class<?> outputValueClass, Job job,
-      boolean addDependencyJars, Class<? extends InputFormat> inputFormatClass)
+      boolean addDependencyJars, boolean initCredentials,
+      Class<? extends InputFormat> inputFormatClass)
   throws IOException {
     job.setInputFormatClass(inputFormatClass);
     if (outputValueClass != null) job.setMapOutputValueClass(outputValueClass);
@@ -160,7 +190,9 @@ public class TableMapReduceUtil {
     if (addDependencyJars) {
       addDependencyJars(job);
     }
-    initCredentials(job);
+    if (initCredentials) {
+      initCredentials(job);
+    }
   }
 
   /**
@@ -237,6 +269,40 @@ public class TableMapReduceUtil {
   throws IOException {
       initTableMapperJob(table, scan, mapper, outputKeyClass,
               outputValueClass, job, addDependencyJars, TableInputFormat.class);
+  }
+
+  /**
+   * Sets up the job for reading from a table snapshot. It bypasses hbase servers
+   * and read directly from snapshot files.
+   *
+   * @param snapshotName The name of the snapshot (of a table) to read from.
+   * @param scan  The scan instance with the columns, time range etc.
+   * @param mapper  The mapper class to use.
+   * @param outputKeyClass  The class of the output key.
+   * @param outputValueClass  The class of the output value.
+   * @param job  The current job to adjust.  Make sure the passed job is
+   * carrying all necessary HBase configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured
+   *           job classes via the distributed cache (tmpjars).
+   *
+   * @param tmpRestoreDir a temporary directory to copy the snapshot files into. Current user should
+   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
+   * After the job is finished, restore directory can be deleted.
+   * @throws IOException When setting up the details fails.
+   * @see TableSnapshotInputFormat
+   */
+  public static void initTableSnapshotMapperJob(String snapshotName, Scan scan,
+      Class<? extends TableMapper> mapper,
+      Class<?> outputKeyClass,
+      Class<?> outputValueClass, Job job,
+      boolean addDependencyJars, Path tmpRestoreDir)
+  throws IOException {
+    TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir);
+    initTableMapperJob(snapshotName, scan, mapper, outputKeyClass,
+        outputValueClass, job, addDependencyJars, false, TableSnapshotInputFormat.class);
+
+    // We would need even more libraries that hbase-server depends on
+    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), Counter.class);
   }
 
   /**
