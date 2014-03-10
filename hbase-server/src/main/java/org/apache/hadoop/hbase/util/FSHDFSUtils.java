@@ -22,7 +22,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
+import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -41,6 +47,82 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 @InterfaceStability.Evolving
 public class FSHDFSUtils extends FSUtils {
   private static final Log LOG = LogFactory.getLog(FSHDFSUtils.class);
+  private static Class dfsUtilClazz;
+  private static Method getNNAddressesMethod;
+
+  /**
+   * @param fs
+   * @param conf
+   * @return A set containing all namenode addresses of fs
+   */
+  private static Set<InetSocketAddress> getNNAddresses(DistributedFileSystem fs,
+                                                      Configuration conf) {
+    Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>();
+    String serviceName = fs.getCanonicalServiceName();
+
+    if (serviceName.startsWith("ha-hdfs")) {
+      try {
+        if (dfsUtilClazz == null) {
+          dfsUtilClazz = Class.forName("org.apache.hadoop.hdfs.DFSUtil");
+        }
+        if (getNNAddressesMethod == null) {
+          getNNAddressesMethod =
+                  dfsUtilClazz.getMethod("getNNServiceRpcAddresses", Configuration.class);
+        }
+
+        Map<String, Map<String, InetSocketAddress>> addressMap =
+                (Map<String, Map<String, InetSocketAddress>>) getNNAddressesMethod
+                        .invoke(null, conf);
+        for (Map.Entry<String, Map<String, InetSocketAddress>> entry : addressMap.entrySet()) {
+          Map<String, InetSocketAddress> nnMap = entry.getValue();
+          for (Map.Entry<String, InetSocketAddress> e2 : nnMap.entrySet()) {
+            InetSocketAddress addr = e2.getValue();
+            addresses.add(addr);
+          }
+        }
+      } catch (Exception e) {
+        LOG.warn("DFSUtil.getNNServiceRpcAddresses failed. serviceName=" + serviceName, e);
+      }
+    } else {
+      URI uri = fs.getUri();
+      InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
+      addresses.add(addr);
+    }
+
+    return addresses;
+  }
+
+  /**
+   * @param conf the Configuration of HBase
+   * @param srcFs
+   * @param desFs
+   * @return Whether srcFs and desFs are on same hdfs or not
+   */
+  public static boolean isSameHdfs(Configuration conf, FileSystem srcFs, FileSystem desFs) {
+    // By getCanonicalServiceName, we could make sure both srcFs and desFs
+    // show a unified format which contains scheme, host and port.
+    String srcServiceName = srcFs.getCanonicalServiceName();
+    String desServiceName = desFs.getCanonicalServiceName();
+
+    if (srcServiceName == null || desServiceName == null) {
+      return false;
+    }
+    if (srcServiceName.equals(desServiceName)) {
+      return true;
+    }
+    if (srcFs instanceof DistributedFileSystem && desFs instanceof DistributedFileSystem) {
+      //If one serviceName is an HA format while the other is a non-HA format,
+      // maybe they refer to the same FileSystem.
+      //For example, srcFs is "ha-hdfs://nameservices" and desFs is "hdfs://activeNamenode:port"
+      Set<InetSocketAddress> srcAddrs = getNNAddresses((DistributedFileSystem) srcFs, conf);
+      Set<InetSocketAddress> desAddrs = getNNAddresses((DistributedFileSystem) desFs, conf);
+      if (Sets.intersection(srcAddrs, desAddrs).size() > 0) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   /**
    * Recover the lease from HDFS, retrying multiple times.
