@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.security.access.AccessController;
@@ -41,10 +42,11 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
 
   private static final char COLON = ':';
   public static final char HYPHEN = '-';
-  private static final char COMMA = ',';
   private static final int SPECIAL_PERM_CELL_INSERTION_FACTOR = 100;
-  public static final String[] userNames = { "user1", "user2", "user3", "user4" };
-
+  public static final String OPT_SUPERUSER = "superuser";
+  public static final String OPT_USERS = "userlist";
+  private String superUser = "owner";
+  private String userNames = "user1,user2,user3,user4"; 
   @Override
   public void setUpCluster() throws Exception {
     util = getTestingUtil(null);
@@ -64,11 +66,32 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
     tmp.add(HYPHEN + LoadTestTool.OPT_GENERATOR);
     StringBuilder sb = new StringBuilder(LoadTestDataGeneratorWithACL.class.getName());
     sb.append(COLON);
-    sb.append(asCommaSeperatedString(userNames));
+    sb.append(superUser);
+    sb.append(COLON);
+    sb.append(userNames);
     sb.append(COLON);
     sb.append(Integer.toString(SPECIAL_PERM_CELL_INSERTION_FACTOR));
     tmp.add(sb.toString());
     return tmp.toArray(new String[tmp.size()]);
+  }
+  @Override
+  protected void addOptions() {
+    super.addOptions();
+    super.addOptWithArg(OPT_SUPERUSER,
+        "Super user name used to add the ACL permissions");
+    super.addOptWithArg(OPT_USERS,
+        "List of users to be added with the ACLs.  Should be comma seperated.");
+  }
+
+  @Override
+  protected void processOptions(CommandLine cmd) {
+    super.processOptions(cmd);
+    if (cmd.hasOption(OPT_SUPERUSER)) {
+      superUser = cmd.getOptionValue(OPT_SUPERUSER);
+    }
+    if (cmd.hasOption(OPT_USERS)) {
+      userNames = cmd.getOptionValue(OPT_USERS);
+    }
   }
 
   public static void main(String[] args) throws Exception {
@@ -76,18 +99,5 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret = ToolRunner.run(conf, new IntegrationTestIngestWithACL(), args);
     System.exit(ret);
-  }
-
-  private static String asCommaSeperatedString(String[] list) {
-    StringBuilder sb = new StringBuilder();
-    for (String item : list) {
-      sb.append(item);
-      sb.append(COMMA);
-    }
-    if (sb.length() > 0) {
-      // Remove the trailing ,
-      sb.deleteCharAt(sb.length() - 1);
-    }
-    return sb.toString();
   }
 }

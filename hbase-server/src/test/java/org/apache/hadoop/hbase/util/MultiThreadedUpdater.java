@@ -174,7 +174,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
               Map<byte[], byte[]> columnValues =
                 result != null ? result.getFamilyMap(cf) : null;
               if (columnValues == null) {
-                int specialPermCellInsertionFactor = Integer.parseInt(dataGenerator.getArgs()[1]);
+                int specialPermCellInsertionFactor = Integer.parseInt(dataGenerator.getArgs()[2]);
                 if (((int) rowKeyBase % specialPermCellInsertionFactor == 0)) {
                   LOG.info("Null result expected for the rowkey " + Bytes.toString(rowKey));
                 } else {

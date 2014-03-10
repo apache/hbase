@@ -22,7 +22,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -59,10 +58,10 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
   private String[] userNames;
 
   public MultiThreadedUpdaterWithACL(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName, double updatePercent, User userOwner) {
+      TableName tableName, double updatePercent, User userOwner, String userNames) {
     super(dataGen, conf, tableName, updatePercent);
     this.userOwner = userOwner;
-    userNames = dataGenerator.getArgs()[0].split(COMMA);
+    this.userNames = userNames.split(COMMA);
   }
 
   @Override

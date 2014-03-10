@@ -41,17 +41,17 @@ public class LoadTestDataGeneratorWithACL extends DefaultDataGenerator {
   @Override
   public void initialize(String[] args) {
     super.initialize(args);
-    if (args.length != 2) {
+    if (args.length != 3) {
       throw new IllegalArgumentException(
           "LoadTestDataGeneratorWithACL can have "
-              + "1st arguement which would be the user list and the 2nd argument "
-              + "should be the factor representing "
+              + "1st arguement which would be super user, the 2nd argument "
+              + "would be the user list and the 3rd argument should be the factor representing "
               + "the row keys for which only write ACLs will be added.");
     }
-    String temp = args[0];
+    String temp = args[1];
     // This will be comma separated list of expressions.
     this.userNames = temp.split(COMMA);
-    this.specialPermCellInsertionFactor = Integer.parseInt(args[1]);
+    this.specialPermCellInsertionFactor = Integer.parseInt(args[2]);
   }
 
   @Override
