@@ -516,6 +516,9 @@ class FSHLog implements HLog, Syncable {
     this.disruptor =
       new Disruptor<RingBufferTruck>(RingBufferTruck.EVENT_FACTORY, preallocatedEventCount,
         this.appendExecutor, ProducerType.MULTI, new BlockingWaitStrategy());
+    // Advance the ring buffer sequence so that it starts from 1 instead of 0,
+    // because SyncFuture.NOT_DONE = 0.
+    this.disruptor.getRingBuffer().next();
     this.ringBufferEventHandler =
       new RingBufferEventHandler(conf.getInt("hbase.regionserver.hlog.syncer.count", 5),
         maxHandlersCount);

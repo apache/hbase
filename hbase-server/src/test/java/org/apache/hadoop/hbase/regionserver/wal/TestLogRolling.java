@@ -35,7 +35,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -62,12 +62,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -193,6 +190,23 @@ public class TestLogRolling  {
           // continue
         }
       }
+    }
+  }
+
+  /**
+   * Tests that log rolling doesn't hang when no data is written.
+   */
+  @Test(timeout=120000)
+  public void testLogRollOnNothingWritten() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    HFileSystem fs = new HFileSystem(conf, false);
+    HLog newLog = HLogFactory.createHLog(fs.getBackingFs(),
+      FSUtils.getRootDir(conf), "test", conf, null, "test.com:8080:1");
+    try {
+      // Now roll the log before we write anything.
+      newLog.rollWriter(true);
+    } finally {
+      newLog.closeAndDelete();
     }
   }
 
