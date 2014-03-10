@@ -278,6 +278,15 @@ possible configurations would overwhelm and obscure the important.
       which a region server should use to determine the host name used by the
       master for communication and display purposes.</description>
   </property>
+  <property>
+    <name>hbase.regionserver.region.split.policy</name>
+    <value>org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy</value>
+    <description>
+      A split policy determines when a region should be split. The various other split policies that
+      are available currently are ConstantSizeRegionSplitPolicy, DisabledRegionSplitPolicy, 
+      DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy etc.  
+    </description>
+  </property>
 
   <!--ZooKeeper configuration-->
   <property>
