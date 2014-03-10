@@ -563,6 +563,15 @@
         for short operation. For example, short rpc timeout for region server's trying
         to report to active master can benefit quicker master failover process.</description>
   </property>
+  <property>
+    <name>hbase.regionserver.region.split.policy</name>
+    <value>org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy</value>
+    <description>
+      A split policy determines when a region should be split. The various other split policies that
+      are available currently are ConstantSizeRegionSplitPolicy, DisabledRegionSplitPolicy, 
+      DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy etc.  
+    </description>
+  </property>
 
   <!-- The following properties configure authentication information for
        HBase processes when using Kerberos security.  There are no default
