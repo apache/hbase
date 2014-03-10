@@ -48,9 +48,9 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
   private String[] userNames;
 
   public MultiThreadedReaderWithACL(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName, double verifyPercent) {
+      TableName tableName, double verifyPercent, String userNames) {
     super(dataGen, conf, tableName, verifyPercent);
-    userNames = dataGenerator.getArgs()[0].split(COMMA);
+    this.userNames = userNames.split(COMMA);
   }
 
   @Override
@@ -97,7 +97,7 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
           try {
             get.setACLStrategy(true);
             Result result = null;
-            int specialPermCellInsertionFactor = Integer.parseInt(dataGenerator.getArgs()[1]);
+            int specialPermCellInsertionFactor = Integer.parseInt(dataGenerator.getArgs()[2]);
             int mod = ((int) keyToRead % userNames.length);
             if (userVsTable.get(userNames[mod]) == null) {
               localTable = new HTable(conf, tableName);

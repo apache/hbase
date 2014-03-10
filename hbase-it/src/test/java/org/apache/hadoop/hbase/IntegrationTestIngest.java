@@ -104,7 +104,6 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       util.deleteTable(Bytes.toBytes(getTablename()));
     }
   }
-
   protected void runIngestTest(long defaultRunTime, int keysPerServerPerIter, int colsPerKey,
       int recordSize, int writeThreads) throws Exception {
     LOG.info("Running ingest");
