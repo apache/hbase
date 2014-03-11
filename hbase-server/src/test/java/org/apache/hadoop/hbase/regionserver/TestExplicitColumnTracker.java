@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,12 +30,12 @@ import java.util.Arrays;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 
 @Category(SmallTests.class)
-public class TestExplicitColumnTracker extends HBaseTestCase {
-  private boolean PRINT = false;
+public class TestExplicitColumnTracker {
 
   private final byte[] col1 = Bytes.toBytes("col1");
   private final byte[] col2 = Bytes.toBytes("col2");
@@ -62,18 +64,11 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     assertEquals(expected.size(), result.size());
     for(int i=0; i< expected.size(); i++){
       assertEquals(expected.get(i), result.get(i));
-      if(PRINT){
-        System.out.println("Expected " +expected.get(i) + ", actual " +
-            result.get(i));
-      }
     }
   }
 
+  @Test
   public void testGet_SingleVersion() throws IOException{
-    if(PRINT){
-      System.out.println("SingleVersion");
-    }
-
     //Create tracker
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     //Looking for every other
@@ -98,11 +93,8 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     runTest(maxVersions, columns, scanner, expected, 0);
   }
 
+  @Test
   public void testGet_MultiVersion() throws IOException{
-    if(PRINT){
-      System.out.println("\nMultiVersion");
-    }
-
     //Create tracker
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     //Looking for every other
@@ -153,11 +145,8 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     runTest(maxVersions, columns, scanner, expected, 0);
   }
 
+  @Test
   public void testGet_MultiVersionWithLookAhead() throws IOException{
-    if(PRINT){
-      System.out.println("\nMultiVersion");
-    }
-
     //Create tracker
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     //Looking for every other
@@ -211,6 +200,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
   /**
    * hbase-2259
    */
+  @Test
   public void testStackOverflow() throws IOException{
     int maxVersions = 1;
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
@@ -237,6 +227,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
   /**
    * Regression test for HBASE-2545
    */
+  @Test
   public void testInfiniteLoop() throws IOException {
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     columns.addAll(Arrays.asList(new byte[][] {
