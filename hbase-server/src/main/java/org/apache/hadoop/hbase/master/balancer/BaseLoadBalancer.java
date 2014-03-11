@@ -1159,6 +1159,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     // assign the remaining by going through the list and try to assign to servers one-by-one
     int serverIdx = RANDOM.nextInt(numServers);
     for (HRegionInfo region : unassignedRegions) {
+      boolean assigned = false;
       for (int j = 0; j < numServers; j++) { // try all servers one by one
         ServerName serverName = servers.get((j + serverIdx) % numServers);
         if (serverName.equals(masterServerName)) {
@@ -1173,10 +1174,12 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
           serverRegions.add(region);
           cluster.doAssignRegion(region, serverName);
           serverIdx = (j + serverIdx + 1) % numServers; //remain from next server
+          assigned = true;
           break;
-        } else {
-          lastFewRegions.add(region);
         }
+      }
+      if (!assigned) {
+        lastFewRegions.add(region);
       }
     }
     // just sprinkle the rest of the regions on random regionservers. The balanceCluster will
