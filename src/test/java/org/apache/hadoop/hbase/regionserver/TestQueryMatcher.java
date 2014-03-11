@@ -83,22 +83,11 @@ public class TestQueryMatcher extends HBaseTestCase {
 
   }
 
-  public void testMatch_ExplicitColumns()
-  throws IOException {
+  private void _testMatch_ExplicitColumns(Scan scan, List<MatchCode> expected) throws IOException {
     //Moving up from the Tracker by using Gets and List<KeyValue> instead
     //of just byte []
 
-    //Expected result
-    List<MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL);
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW);
-    expected.add(ScanQueryMatcher.MatchCode.DONE);
-
-    // 2,4,5
-    
+    // 2,4,5    
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new Store.ScanInfo(fam2,
         0, 1, ttl, false, 0, rowComparator), get.getFamilyMap().get(fam2),
         EnvironmentEdgeManager.currentTimeMillis() - ttl);
@@ -128,6 +117,42 @@ public class TestQueryMatcher extends HBaseTestCase {
             ", actual " +actual.get(i));
       }
     }
+  }
+
+  public void testMatch_ExplicitColumns()
+  throws IOException {
+    //Moving up from the Tracker by using Gets and List<KeyValue> instead
+    //of just byte []
+
+    //Expected result
+    List<MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW);
+    expected.add(ScanQueryMatcher.MatchCode.DONE);
+
+    _testMatch_ExplicitColumns(scan, expected);
+  }
+
+  public void testMatch_ExplicitColumnsWithLookAhead()
+  throws IOException {
+    //Moving up from the Tracker by using Gets and List<KeyValue> instead
+    //of just byte []
+
+    //Expected result
+    List<MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL);
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW);
+    expected.add(ScanQueryMatcher.MatchCode.DONE);
+
+    Scan s = new Scan(scan);
+    s.setAttribute(Scan.HINT_LOOKAHEAD, Bytes.toBytes(2));
+    _testMatch_ExplicitColumns(s, expected);
   }
 
 

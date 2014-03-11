@@ -441,6 +441,21 @@ Deferred log flush can be configured on tables via <link
       in the input scan because attribute over-selection is a non-trivial performance penalty over large datasets.
       </para>
     </section>
+    <section xml:id="perf.hbase.client.seek">
+      <title>Avoid scan seeks</title>
+      <para>When columns are selected explicitly with <code>scan.addColumn</code>, HBase will schedule seek operations to seek between the
+      selected columns. When rows have few columns and each column has only a few versions this can be inefficient. A seek operation is generally
+      slower if does not seek at least past 5-10 columns/versions or 512-1024 bytes.</para>
+      <para>In order to opportunistically look ahead a few columns/versions to see if the next column/version can be found that
+      way before a seek operation is scheduled, a new attribute <code>Scan.HINT_LOOKAHEAD</code> can be set the on Scan object. The following code instructs the
+      RegionServer to attempt two iterations of next before a seek is scheduled:<programlisting>
+Scan scan = new Scan();
+scan.addColumn(...);
+scan.setAttribute(Scan.HINT_LOOKAHEAD, Bytes.toBytes(2));
+table.getScanner(scan);
+</programlisting></para>
+	</section>
+	</section>
     <section xml:id="perf.hbase.mr.input">
         <title>MapReduce - Input Splits</title>
         <para>For MapReduce jobs that use HBase tables as a source, if there a pattern where the "slow" map tasks seem to
