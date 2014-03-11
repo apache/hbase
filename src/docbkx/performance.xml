@@ -455,7 +455,6 @@ scan.setAttribute(Scan.HINT_LOOKAHEAD, Bytes.toBytes(2));
 table.getScanner(scan);
 </programlisting></para>
 	</section>
-	</section>
     <section xml:id="perf.hbase.mr.input">
         <title>MapReduce - Input Splits</title>
         <para>For MapReduce jobs that use HBase tables as a source, if there a pattern where the "slow" map tasks seem to
