@@ -39,7 +39,7 @@ public class MultiThreadedReader extends MultiThreadedAction
 
   protected Set<HBaseReaderThread> readers = new HashSet<HBaseReaderThread>();
   private final double verifyPercent;
-  private volatile boolean aborted;
+  protected volatile boolean aborted;
 
   protected MultiThreadedWriterBase writer = null;
 
@@ -104,9 +104,13 @@ public class MultiThreadedReader extends MultiThreadedAction
 
   protected void addReaderThreads(int numThreads) throws IOException {
     for (int i = 0; i < numThreads; ++i) {
-      HBaseReaderThread reader = new HBaseReaderThread(i);
+      HBaseReaderThread reader = createReaderThread(i);
       readers.add(reader);
     }
+  }
+
+  protected HBaseReaderThread createReaderThread(int readerId) throws IOException {
+    return new HBaseReaderThread(readerId);
   }
 
   public class HBaseReaderThread extends Thread {
@@ -121,6 +125,8 @@ public class MultiThreadedReader extends MultiThreadedAction
 
     /** If we are ahead of the writer and reading a random key. */
     private boolean readingRandomKey;
+
+    private boolean printExceptionTrace = true;
 
     /**
      * @param readerId only the keys with this remainder from division by
@@ -204,7 +210,7 @@ public class MultiThreadedReader extends MultiThreadedAction
       return Math.min(endKey - 1, writer.wroteUpToKey() - keyWindow);
     }
 
-    private long getNextKeyToRead() {
+    protected long getNextKeyToRead() {
       readingRandomKey = false;
       if (writer == null || curKey <= maxKeyWeCanRead()) {
         return curKey++;
@@ -235,6 +241,24 @@ public class MultiThreadedReader extends MultiThreadedAction
     }
 
     private Get readKey(long keyToRead) {
+      Get get = null;
+      try {
+        get = createGet(keyToRead);
+        queryKey(get, RandomUtils.nextInt(100) < verifyPercent, keyToRead);
+      } catch (IOException e) {
+        numReadFailures.addAndGet(1);
+        LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "")
+            + ", time from start: "
+            + (System.currentTimeMillis() - startTimeMs) + " ms");
+        if (printExceptionTrace) {
+          LOG.warn(e);
+          printExceptionTrace = false;
+        }
+      }
+      return get;
+    }
+
+    protected Get createGet(long keyToRead) throws IOException {
       Get get = new Get(dataGenerator.getDeterministicUniqueKey(keyToRead));
       String cfsString = "";
       byte[][] columnFamilies = dataGenerator.getColumnFamilies();
@@ -247,18 +271,9 @@ public class MultiThreadedReader extends MultiThreadedAction
           cfsString += "[" + Bytes.toStringBinary(cf) + "]";
         }
       }
-
-      try {
-        get = dataGenerator.beforeGet(keyToRead, get);
-        if (verbose) {
-          LOG.info("[" + readerId + "] " + "Querying key " + keyToRead + ", cfs " + cfsString);
-        }
-        queryKey(get, RandomUtils.nextInt(100) < verifyPercent, keyToRead);
-      } catch (IOException e) {
-        numReadFailures.addAndGet(1);
-        LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "")
-            + ", time from start: "
-            + (System.currentTimeMillis() - startTimeMs) + " ms");
+      get = dataGenerator.beforeGet(keyToRead, get);
+      if (verbose) {
+        LOG.info("[" + readerId + "] " + "Querying key " + keyToRead + ", cfs " + cfsString);
       }
       return get;
     }
@@ -267,15 +282,16 @@ public class MultiThreadedReader extends MultiThreadedAction
       String rowKey = Bytes.toString(get.getRow());
 
       // read the data
-      long start = System.currentTimeMillis();
+      long start = System.nanoTime();
       Result result = table.get(get);
-      getResultMetricUpdation(verify, rowKey, start, result, table, false);
+      long end = System.nanoTime();
+      verifyResultsAndUpdateMetrics(verify, rowKey, end - start, result, table, false);
     }
 
-    protected void getResultMetricUpdation(boolean verify, String rowKey, long start,
+    protected void verifyResultsAndUpdateMetrics(boolean verify, String rowKey, long elapsedNano,
         Result result, HTable table, boolean isNullExpected)
         throws IOException {
-      totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+      totalOpTimeMs.addAndGet(elapsedNano / 1000000);
       numKeys.addAndGet(1);
       if (!result.isEmpty()) {
         if (verify) {
