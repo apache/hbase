@@ -85,7 +85,12 @@ public class FSHDFSUtils extends FSUtils {
       }
     } else {
       URI uri = fs.getUri();
-      InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
+      int port = uri.getPort();
+      if (port < 0) {
+        int idx = serviceName.indexOf(':');
+        port = Integer.parseInt(serviceName.substring(idx+1));
+      }
+      InetSocketAddress addr = new InetSocketAddress(uri.getHost(), port);
       addresses.add(addr);
     }
 
