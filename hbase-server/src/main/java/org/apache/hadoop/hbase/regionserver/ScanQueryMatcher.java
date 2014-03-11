@@ -185,8 +185,9 @@ public class ScanQueryMatcher {
 
       // We can share the ExplicitColumnTracker, diff is we reset
       // between rows, not between storefiles.
-      this.columns = new ExplicitColumnTracker(columns,
-          scanInfo.getMinVersions(), maxVersions, oldestUnexpiredTS);
+      byte[] attr = scan.getAttribute(Scan.HINT_LOOKAHEAD);
+      this.columns = new ExplicitColumnTracker(columns, scanInfo.getMinVersions(), maxVersions,
+          oldestUnexpiredTS, attr == null ? 0 : Bytes.toInt(attr));
     }
     this.isReversed = scan.isReversed();
   }
