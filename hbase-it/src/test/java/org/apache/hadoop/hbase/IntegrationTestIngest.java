@@ -42,21 +42,39 @@ import com.google.common.collect.Sets;
 @Category(IntegrationTests.class)
 public class IntegrationTestIngest extends IntegrationTestBase {
   public static final char HIPHEN = '-';
-  private static final int SERVER_COUNT = 4; // number of slaves for the smallest cluster
+  private static final int SERVER_COUNT = 1; // number of slaves for the smallest cluster
   private static final long DEFAULT_RUN_TIME = 20 * 60 * 1000;
   private static final long JUNIT_RUN_TIME = 10 * 60 * 1000;
 
   /** A soft limit on how long we should run */
-  private static final String RUN_TIME_KEY = "hbase.%s.runtime";
+  protected static final String RUN_TIME_KEY = "hbase.%s.runtime";
+
+  protected static final String NUM_KEYS_PER_SERVER_KEY = "num_keys_per_server";
+  protected static final long DEFAULT_NUM_KEYS_PER_SERVER = 2500;
+
+  protected static final String NUM_WRITE_THREADS_KEY = "num_write_threads";
+  protected static final int DEFAULT_NUM_WRITE_THREADS = 20;
+
+  protected static final String NUM_READ_THREADS_KEY = "num_read_threads";
+  protected static final int DEFAULT_NUM_READ_THREADS = 20;
 
   protected static final Log LOG = LogFactory.getLog(IntegrationTestIngest.class);
   protected IntegrationTestingUtility util;
   protected HBaseCluster cluster;
   protected LoadTestTool loadTool;
 
+  protected String[] LOAD_TEST_TOOL_INIT_ARGS = {
+      LoadTestTool.OPT_COMPRESSION,
+      LoadTestTool.OPT_DATA_BLOCK_ENCODING,
+      LoadTestTool.OPT_INMEMORY,
+      LoadTestTool.OPT_ENCRYPTION,
+      LoadTestTool.OPT_NUM_REGIONS_PER_SERVER,
+      LoadTestTool.OPT_REGION_REPLICATION,
+  };
+
   @Override
   public void setUpCluster() throws Exception {
-    util = getTestingUtil(null);
+    util = getTestingUtil(getConf());
     LOG.debug("Initializing/checking cluster has " + SERVER_COUNT + " servers");
     util.initializeCluster(SERVER_COUNT);
     LOG.debug("Done initializing/checking cluster");
@@ -70,7 +88,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   }
 
   protected void initTable() throws IOException {
-    int ret = loadTool.run(new String[] { "-tn", getTablename(), "-init_only" });
+    int ret = loadTool.run(getArgsForLoadTestToolInitTable());
     Assert.assertEquals("Failed to initialize LoadTestTool", 0, ret);
   }
 
@@ -82,16 +100,24 @@ public class IntegrationTestIngest extends IntegrationTestBase {
 
   @Test
   public void testIngest() throws Exception {
-    runIngestTest(JUNIT_RUN_TIME, 2500, 10, 1024, 10);
+    runIngestTest(JUNIT_RUN_TIME, 2500, 10, 1024, 10, 20);
   }
 
-  private void internalRunIngestTest(long runTime) throws Exception {
-    runIngestTest(runTime, 2500, 10, 1024, 10);
+  protected void internalRunIngestTest(long runTime) throws Exception {
+    String clazz = this.getClass().getSimpleName();
+    long numKeysPerServer = conf.getLong(String.format("%s.%s", clazz, NUM_KEYS_PER_SERVER_KEY),
+      DEFAULT_NUM_KEYS_PER_SERVER);
+    int numWriteThreads = conf.getInt(
+      String.format("%s.%s", clazz, NUM_WRITE_THREADS_KEY), DEFAULT_NUM_WRITE_THREADS);
+    int numReadThreads = conf.getInt(
+      String.format("%s.%s", clazz, NUM_READ_THREADS_KEY), DEFAULT_NUM_READ_THREADS);
+    runIngestTest(runTime, numKeysPerServer, 10, 1024, numWriteThreads, numReadThreads);
   }
 
   @Override
   public String getTablename() {
-    return this.getClass().getSimpleName();
+    String clazz = this.getClass().getSimpleName();
+    return conf.get(String.format("%s.%s", clazz, LoadTestTool.OPT_TABLE_NAME), clazz);
   }
 
   @Override
@@ -104,8 +130,10 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       util.deleteTable(Bytes.toBytes(getTablename()));
     }
   }
-  protected void runIngestTest(long defaultRunTime, int keysPerServerPerIter, int colsPerKey,
-      int recordSize, int writeThreads) throws Exception {
+
+  protected void runIngestTest(long defaultRunTime, long keysPerServerPerIter, int colsPerKey,
+      int recordSize, int writeThreads, int readThreads) throws Exception {
+
     LOG.info("Running ingest");
     LOG.info("Cluster size:" + util.getHBaseClusterInterface().getClusterStatus().getServersSize());
 
@@ -136,7 +164,8 @@ public class IntegrationTestIngest extends IntegrationTestBase {
         Assert.fail(errorMsg);
       }
 
-      ret = loadTool.run(getArgsForLoadTestTool("-read", "100:20", startKey, numKeys));
+      ret = loadTool.run(getArgsForLoadTestTool("-read", String.format("100:%d", readThreads)
+        , startKey, numKeys));
       if (0 != ret) {
         String errorMsg = "Verification failed with error code " + ret;
         LOG.error(errorMsg);
@@ -144,6 +173,23 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       }
       startKey += numKeys;
     }
+  }
+
+  protected String[] getArgsForLoadTestToolInitTable() {
+    List<String> args = new ArrayList<String>();
+    args.add("-tn");
+    args.add(getTablename());
+    // pass all remaining args from conf with keys <test class name>.<load test tool arg>
+    String clazz = this.getClass().getSimpleName();
+    for (String arg : LOAD_TEST_TOOL_INIT_ARGS) {
+      String val = conf.get(String.format("%s.%s", clazz, arg));
+      if (val != null) {
+        args.add("-" + arg);
+        args.add(val);
+      }
+    }
+    args.add("-init_only");
+    return args.toArray(new String[args.size()]);
   }
 
   protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
@@ -158,11 +204,12 @@ public class IntegrationTestIngest extends IntegrationTestBase {
     args.add("-num_keys");
     args.add(String.valueOf(numKeys));
     args.add("-skip_init");
+
     return args.toArray(new String[args.size()]);
   }
 
   /** Estimates a data size based on the cluster size */
-  private long getNumKeys(int keysPerServer)
+  protected long getNumKeys(long keysPerServer)
       throws IOException {
     int numRegionServers = cluster.getClusterStatus().getServersSize();
     return keysPerServer * numRegionServers;

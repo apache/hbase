@@ -110,10 +110,11 @@ public class LoadTestTool extends AbstractHBaseTool {
         + "compression) to use for data blocks in the test column family, "
         + "one of " + Arrays.toString(DataBlockEncoding.values()) + ".";
 
-  private static final String OPT_BLOOM = "bloom";
-  private static final String OPT_COMPRESSION = "compression";
-  private static final String OPT_DEFERRED_LOG_FLUSH = "deferredlogflush";
+  public static final String OPT_BLOOM = "bloom";
+  public static final String OPT_COMPRESSION = "compression";
+  public static final String OPT_DEFERRED_LOG_FLUSH = "deferredlogflush";
   public static final String OPT_DEFERRED_LOG_FLUSH_USAGE = "Enable deferred log flush.";
+
   public static final String OPT_DATA_BLOCK_ENCODING =
       HColumnDescriptor.DATA_BLOCK_ENCODING.toLowerCase();
 
@@ -125,6 +126,9 @@ public class LoadTestTool extends AbstractHBaseTool {
   public static final String OPT_GENERATOR_USAGE = "The class which generates load for the tool."
       + " Any args for this class can be passed as colon separated after class name";
 
+  public static final String OPT_READER = "reader";
+  public static final String OPT_READER_USAGE = "The class for executing the read requests";
+
   protected static final String OPT_KEY_WINDOW = "key_window";
   protected static final String OPT_WRITE = "write";
   protected static final String OPT_MAX_READ_ERRORS = "max_read_errors";
@@ -132,7 +136,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_NUM_KEYS = "num_keys";
   protected static final String OPT_READ = "read";
   protected static final String OPT_START_KEY = "start_key";
-  protected static final String OPT_TABLE_NAME = "tn";
+  public static final String OPT_TABLE_NAME = "tn";
   protected static final String OPT_ZK_QUORUM = "zk";
   protected static final String OPT_ZK_PARENT_NODE = "zk_root";
   protected static final String OPT_SKIP_INIT = "skip_init";
@@ -142,10 +146,19 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_BATCHUPDATE = "batchupdate";
   protected static final String OPT_UPDATE = "update";
 
-  protected static final String OPT_ENCRYPTION = "encryption";
+  public static final String OPT_ENCRYPTION = "encryption";
   protected static final String OPT_ENCRYPTION_USAGE =
     "Enables transparent encryption on the test table, one of " +
     Arrays.toString(Encryption.getSupportedCiphers());
+
+  public static final String OPT_NUM_REGIONS_PER_SERVER = "num_regions_per_server";
+  protected static final String OPT_NUM_REGIONS_PER_SERVER_USAGE
+    = "Desired number of regions per region server. Defaults to 5.";
+  protected static int DEFAULT_NUM_REGIONS_PER_SERVER = 5;
+
+  public static final String OPT_REGION_REPLICATION = "region_replication";
+  protected static final String OPT_REGION_REPLICATION_USAGE =
+      "Desired number of replicas per region";
 
   protected static final long DEFAULT_START_KEY = 0;
 
@@ -194,6 +207,9 @@ public class LoadTestTool extends AbstractHBaseTool {
   private String userNames = "user1, user2, user3, user4";
   //This file is used to read authentication information in secure clusters.
   private String authnFileName;
+
+  private int numRegionsPerServer = DEFAULT_NUM_REGIONS_PER_SERVER;
+  private int regionReplication = -1; // not set
 
   // TODO: refactor LoadTestToolImpl somewhere to make the usage from tests less bad,
   //       console tool itself should only be used from console.
@@ -292,6 +308,7 @@ public class LoadTestTool extends AbstractHBaseTool {
         "separate updates for every column in a row");
     addOptNoArg(OPT_INMEMORY, OPT_USAGE_IN_MEMORY);
     addOptWithArg(OPT_GENERATOR, OPT_GENERATOR_USAGE);
+    addOptWithArg(OPT_READER, OPT_READER_USAGE);
 
     addOptWithArg(OPT_NUM_KEYS, "The number of keys to read/write");
     addOptWithArg(OPT_START_KEY, "The first key to read/write " +
@@ -311,6 +328,8 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     addOptWithArg(OPT_ENCRYPTION, OPT_ENCRYPTION_USAGE);
     addOptNoArg(OPT_DEFERRED_LOG_FLUSH, OPT_DEFERRED_LOG_FLUSH_USAGE);
+    addOptWithArg(OPT_NUM_REGIONS_PER_SERVER, OPT_NUM_REGIONS_PER_SERVER_USAGE);
+    addOptWithArg(OPT_REGION_REPLICATION, OPT_REGION_REPLICATION_USAGE);
   }
 
   @Override
@@ -421,13 +440,16 @@ public class LoadTestTool extends AbstractHBaseTool {
     if (cmd.hasOption(NUM_TABLES)) {
       numTables = parseInt(cmd.getOptionValue(NUM_TABLES), 1, Short.MAX_VALUE);
     }
-    regionsPerServer = HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER;
-    if (cmd.hasOption(OPT_REGIONS_PER_SERVER)) {
-      regionsPerServer = parseInt(cmd.getOptionValue(OPT_REGIONS_PER_SERVER), 1,
-        Integer.MAX_VALUE);
-      conf.setInt(HBaseTestingUtility.REGIONS_PER_SERVER_KEY, regionsPerServer);
+
+    numRegionsPerServer = DEFAULT_NUM_REGIONS_PER_SERVER;
+    if (cmd.hasOption(OPT_NUM_REGIONS_PER_SERVER)) {
+      numRegionsPerServer = Integer.parseInt(cmd.getOptionValue(OPT_NUM_REGIONS_PER_SERVER));
     }
-    System.out.println("Regions per server: " + regionsPerServer);
+
+    regionReplication = 1;
+    if (cmd.hasOption(OPT_REGION_REPLICATION)) {
+      regionReplication = Integer.parseInt(cmd.getOptionValue(OPT_REGION_REPLICATION));
+    }
   }
 
   private void parseColumnFamilyOptions(CommandLine cmd) {
@@ -451,14 +473,14 @@ public class LoadTestTool extends AbstractHBaseTool {
   }
 
   public void initTestTable() throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    Durability durability = Durability.USE_DEFAULT;
     if (deferredLogFlush) {
-      desc.setDurability(Durability.ASYNC_WAL);
+      durability = Durability.ASYNC_WAL;
     }
-    HColumnDescriptor hcd = new HColumnDescriptor(COLUMN_FAMILY);
-    hcd.setDataBlockEncoding(dataBlockEncodingAlgo);
-    hcd.setCompressionType(compressAlgo);
-    HBaseTestingUtility.createPreSplitLoadTestTable(conf, desc, hcd);
+
+    HBaseTestingUtility.createPreSplitLoadTestTable(conf, tableName,
+        COLUMN_FAMILY, compressAlgo, dataBlockEncodingAlgo, numRegionsPerServer,
+        regionReplication, durability);
     applyColumnFamilyOptions(tableName, COLUMN_FAMILIES);
   }
 
@@ -588,7 +610,13 @@ public class LoadTestTool extends AbstractHBaseTool {
         readerThreads = new MultiThreadedReaderWithACL(dataGen, conf, tableName, verifyPercent,
             userNames);
       } else {
-        readerThreads = new MultiThreadedReader(dataGen, conf, tableName, verifyPercent);
+        String readerClass = null;
+        if (cmd.hasOption(OPT_READER)) {
+          readerClass = cmd.getOptionValue(OPT_READER);
+        } else {
+          readerClass = MultiThreadedReader.class.getCanonicalName();
+        }
+        readerThreads = getMultiThreadedReaderInstance(readerClass, dataGen);
       }
       readerThreads.setMaxErrors(maxReadErrors);
       readerThreads.setKeyWindow(keyWindow);
@@ -657,6 +685,18 @@ public class LoadTestTool extends AbstractHBaseTool {
           byte[][].class);
       return (LoadTestDataGenerator) constructor.newInstance(minColDataSize, maxColDataSize,
           minColsPerKey, maxColsPerKey, COLUMN_FAMILIES);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  private MultiThreadedReader getMultiThreadedReaderInstance(String clazzName
+      , LoadTestDataGenerator dataGen) throws IOException {
+    try {
+      Class<?> clazz = Class.forName(clazzName);
+      Constructor<?> constructor = clazz.getConstructor(
+        LoadTestDataGenerator.class, Configuration.class, TableName.class, double.class);
+      return (MultiThreadedReader) constructor.newInstance(dataGen, conf, tableName, verifyPercent);
     } catch (Exception e) {
       throw new IOException(e);
     }

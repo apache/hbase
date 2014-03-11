@@ -133,14 +133,22 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     util = getTestingUtil(getConf());
     MonkeyFactory fact = MonkeyFactory.getFactory(monkeyToUse);
     if (fact == null) {
-      // Run with no monkey in distributed context, with real monkey in local test context.
-      fact = MonkeyFactory.getFactory(
-          util.isDistributedCluster() ? MonkeyFactory.CALM : MonkeyFactory.SLOW_DETERMINISTIC);
+      fact = getDefaultMonkeyFactory();
     }
     monkey = fact.setUtil(util)
                  .setTableName(getTablename())
                  .setProperties(monkeyProps)
                  .setColumnFamilies(getColumnFamilies()).build();
+    startMonkey();
+  }
+
+  protected MonkeyFactory getDefaultMonkeyFactory() {
+    // Run with no monkey in distributed context, with real monkey in local test context.
+    return MonkeyFactory.getFactory(
+      util.isDistributedCluster() ? MonkeyFactory.CALM : MonkeyFactory.SLOW_DETERMINISTIC);
+  }
+
+  protected void startMonkey() throws Exception {
     monkey.start();
   }
 
@@ -159,6 +167,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     if (this.util == null) {
       if (conf == null) {
         this.util = new IntegrationTestingUtility();
+        this.setConf(util.getConfiguration());
       } else {
         this.util = new IntegrationTestingUtility(conf);
       }
