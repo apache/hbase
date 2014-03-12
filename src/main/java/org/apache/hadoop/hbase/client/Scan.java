@@ -244,6 +244,7 @@ public class Scan extends Operation implements Writable {
    * @param maxStamp maximum timestamp value, exclusive
    * @throws IOException if invalid time range
    * @see #setMaxVersions()
+    this.preloadBlocks = preloadBlocks;
    * @see #setMaxVersions(int)
    * @return this
    */

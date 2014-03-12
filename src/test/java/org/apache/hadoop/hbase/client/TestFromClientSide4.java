@@ -327,7 +327,7 @@ public class TestFromClientSide4 {
     // All the three values should be positive
     assertTrue(misses + hits > 0);
     // Check that the cache hit ratio is at most 1/10
-    assertTrue(hits * 10 <= hits + misses);
+    assertTrue("hists : " + hits + " misses : " + misses, hits * 9 <= misses);
   }
 
   private void verifyResult(Result result, List<KeyValue> kvList,
