@@ -2254,6 +2254,11 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
   // and it expects the length of the KeyValue to be explicitly passed
   // to it.
   public void readFields(int length, final DataInput in) throws IOException {
+
+    if (length <= 0) {
+      throw new IOException("Failed read " + length + " bytes, stream corrupt?");
+    }
+
     this.length = length;
     this.offset = 0;
     this.bytes = new byte[this.length];

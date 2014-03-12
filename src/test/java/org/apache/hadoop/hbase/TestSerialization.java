@@ -22,7 +22,9 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.*;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -87,6 +89,51 @@ public class TestSerialization {
     byte [] bytes = Writables.getBytes(original);
     KeyValue newone = (KeyValue)Writables.getWritable(bytes, new KeyValue());
     assertTrue(KeyValue.COMPARATOR.compare(original, newone) == 0);
+  }
+
+  @Test public void testCreateKeyValueInvalidNegativeLength() {
+
+    KeyValue kv_0 = new KeyValue(Bytes.toBytes("myRow"), Bytes.toBytes("myCF"),       // 51 bytes
+                                 Bytes.toBytes("myQualifier"), 12345L, Bytes.toBytes("my12345"));
+
+    KeyValue kv_1 = new KeyValue(Bytes.toBytes("myRow"), Bytes.toBytes("myCF"),       // 49 bytes
+                                 Bytes.toBytes("myQualifier"), 12345L, Bytes.toBytes("my123"));
+
+    KeyValue kv_i = new KeyValue();
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(baos);
+
+    long l = 0;
+    try {
+      kv_0.write(dos);
+      l  = dos.size();
+      kv_1.write(dos);
+      l += dos.size();
+      assertEquals(151L, l);
+    } catch (IOException e) {
+      fail("Unexpected IOException" + e.getMessage());
+    }
+
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    DataInputStream dis = new DataInputStream(bais);
+
+    try {
+      kv_i.readFields(dis);
+      assertTrue(kv_0.equals(kv_1));
+    } catch (Exception e) {
+      fail("Unexpected Exception" + e.getMessage());
+    }
+
+    // length -1
+    try {
+      // even if we have a good kv now in dis we will just pass length with -1 for simplicity
+      kv_i.readFields(-1, dis);
+      fail("Expected corrupt stream");
+    } catch (Exception e) {
+      assertEquals("Failed read -1 bytes, stream corrupt?", e.getMessage());
+    }
+
   }
 
   @SuppressWarnings("unchecked")
