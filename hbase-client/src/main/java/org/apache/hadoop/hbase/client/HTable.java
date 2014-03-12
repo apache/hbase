@@ -718,15 +718,24 @@ public class HTable implements HTableInterface {
     if (scan.getCaching() <= 0) {
       scan.setCaching(getScannerCaching());
     }
-    if (scan.isSmall() && !scan.isReversed()) {
-      return new ClientSmallScanner(getConfiguration(), scan, getName(),
-          this.connection);
-    } else if (scan.isReversed()) {
-      return new ReversedClientScanner(getConfiguration(), scan, getName(),
-          this.connection);
+
+    if (scan.isReversed()) {
+      if (scan.isSmall()) {
+        return new ClientSmallReversedScanner(getConfiguration(), scan, getName(),
+            this.connection);
+      } else {
+        return new ReversedClientScanner(getConfiguration(), scan, getName(),
+            this.connection);
+      }
     }
-    return new ClientScanner(getConfiguration(), scan,
-        getName(), this.connection);
+
+    if (scan.isSmall()) {
+      return new ClientSmallScanner(getConfiguration(), scan, getName(),
+          this.connection, this.rpcCallerFactory);
+    } else {
+      return new ClientScanner(getConfiguration(), scan,
+          getName(), this.connection);
+    }
   }
 
   /**

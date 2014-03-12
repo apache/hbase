@@ -5835,4 +5835,170 @@ public class TestFromClientSide {
     assertEquals(insertNum, count);
     table.close();
   }
+
+
+  /**
+   * Tests reversed scan under multi regions
+   */
+  @Test
+  public void testSmallReversedScanUnderMultiRegions() throws Exception {
+    // Test Initialization.
+    byte[] TABLE = Bytes.toBytes("testSmallReversedScanUnderMultiRegions");
+    byte[][] splitRows = new byte[][]{
+        Bytes.toBytes("000"), Bytes.toBytes("002"), Bytes.toBytes("004"),
+        Bytes.toBytes("006"), Bytes.toBytes("008"), Bytes.toBytes("010")};
+    HTable table = TEST_UTIL.createTable(TABLE, FAMILY, splitRows);
+    TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
+
+    assertEquals(splitRows.length + 1, table.getRegionLocations().size());
+    for (byte[] splitRow : splitRows) {
+      Put put = new Put(splitRow);
+      put.add(FAMILY, QUALIFIER, VALUE);
+      table.put(put);
+
+      byte[] nextRow = Bytes.copy(splitRow);
+      nextRow[nextRow.length - 1]++;
+
+      put = new Put(nextRow);
+      put.add(FAMILY, QUALIFIER, VALUE);
+      table.put(put);
+    }
+
+    // scan forward
+    ResultScanner scanner = table.getScanner(new Scan());
+    int count = 0;
+    for (Result r : scanner) {
+      assertTrue(!r.isEmpty());
+      count++;
+    }
+    assertEquals(12, count);
+
+    reverseScanTest(table, false);
+    reverseScanTest(table, true);
+
+    table.close();
+  }
+
+  private void reverseScanTest(HTable table, boolean small) throws IOException {
+    // scan backward
+    Scan scan = new Scan();
+    scan.setReversed(true);
+    ResultScanner scanner = table.getScanner(scan);
+    int count = 0;
+    byte[] lastRow = null;
+    for (Result r : scanner) {
+      assertTrue(!r.isEmpty());
+      count++;
+      byte[] thisRow = r.getRow();
+      if (lastRow != null) {
+        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+            + ",this row=" + Bytes.toString(thisRow),
+            Bytes.compareTo(thisRow, lastRow) < 0);
+      }
+      lastRow = thisRow;
+    }
+    assertEquals(12, count);
+
+    scan = new Scan();
+    scan.setSmall(small);
+    scan.setReversed(true);
+    scan.setStartRow(Bytes.toBytes("002"));
+    scanner = table.getScanner(scan);
+    count = 0;
+    lastRow = null;
+    for (Result r : scanner) {
+      assertTrue(!r.isEmpty());
+      count++;
+      byte[] thisRow = r.getRow();
+      if (lastRow != null) {
+        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+            + ",this row=" + Bytes.toString(thisRow),
+            Bytes.compareTo(thisRow, lastRow) < 0);
+      }
+      lastRow = thisRow;
+    }
+    assertEquals(3, count); // 000 001 002
+
+    scan = new Scan();
+    scan.setSmall(small);
+    scan.setReversed(true);
+    scan.setStartRow(Bytes.toBytes("002"));
+    scan.setStopRow(Bytes.toBytes("000"));
+    scanner = table.getScanner(scan);
+    count = 0;
+    lastRow = null;
+    for (Result r : scanner) {
+      assertTrue(!r.isEmpty());
+      count++;
+      byte[] thisRow = r.getRow();
+      if (lastRow != null) {
+        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+            + ",this row=" + Bytes.toString(thisRow),
+            Bytes.compareTo(thisRow, lastRow) < 0);
+      }
+      lastRow = thisRow;
+    }
+    assertEquals(2, count); // 001 002
+
+    scan = new Scan();
+    scan.setSmall(small);
+    scan.setReversed(true);
+    scan.setStartRow(Bytes.toBytes("001"));
+    scanner = table.getScanner(scan);
+    count = 0;
+    lastRow = null;
+    for (Result r : scanner) {
+      assertTrue(!r.isEmpty());
+      count++;
+      byte[] thisRow = r.getRow();
+      if (lastRow != null) {
+        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+            + ",this row=" + Bytes.toString(thisRow),
+            Bytes.compareTo(thisRow, lastRow) < 0);
+      }
+      lastRow = thisRow;
+    }
+    assertEquals(2, count); // 000 001
+
+    scan = new Scan();
+    scan.setSmall(small);
+    scan.setReversed(true);
+    scan.setStartRow(Bytes.toBytes("000"));
+    scanner = table.getScanner(scan);
+    count = 0;
+    lastRow = null;
+    for (Result r : scanner) {
+      assertTrue(!r.isEmpty());
+      count++;
+      byte[] thisRow = r.getRow();
+      if (lastRow != null) {
+        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+            + ",this row=" + Bytes.toString(thisRow),
+            Bytes.compareTo(thisRow, lastRow) < 0);
+      }
+      lastRow = thisRow;
+    }
+    assertEquals(1, count); // 000
+
+    scan = new Scan();
+    scan.setSmall(small);
+    scan.setReversed(true);
+    scan.setStartRow(Bytes.toBytes("006"));
+    scan.setStopRow(Bytes.toBytes("002"));
+    scanner = table.getScanner(scan);
+    count = 0;
+    lastRow = null;
+    for (Result r : scanner) {
+      assertTrue(!r.isEmpty());
+      count++;
+      byte[] thisRow = r.getRow();
+      if (lastRow != null) {
+        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+            + ",this row=" + Bytes.toString(thisRow),
+            Bytes.compareTo(thisRow, lastRow) < 0);
+      }
+      lastRow = thisRow;
+    }
+    assertEquals(4, count); // 003 004 005 006
+  }
 }

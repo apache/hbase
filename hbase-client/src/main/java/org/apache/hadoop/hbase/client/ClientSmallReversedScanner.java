@@ -16,9 +16,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,112 +29,69 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.protobuf.ServiceException;
+import java.io.IOException;
 
 /**
- * Client scanner for small scan. Generally, only one RPC is called to fetch the
+ * Client scanner for small reversed scan. Generally, only one RPC is called to fetch the
  * scan results, unless the results cross multiple regions or the row count of
- * results excess the caching.
- * 
- * For small scan, it will get better performance than {@link ClientScanner}
+ * results exceed the caching.
+ * <p/>
+ * For small scan, it will get better performance than {@link ReversedClientScanner}
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class ClientSmallScanner extends ClientScanner {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+public class ClientSmallReversedScanner extends ReversedClientScanner {
+  private static final Log LOG = LogFactory.getLog(ClientSmallReversedScanner.class);
   private RegionServerCallable<Result[]> smallScanCallable = null;
-  // When fetching results from server, skip the first result if it has the same
-  // row with this one
   private byte[] skipRowOfFirstResult = null;
 
   /**
-   * Create a new ClientSmallScanner for the specified table. An HConnection
-   * will be retrieved using the passed Configuration. Note that the passed
-   * {@link Scan} 's start row maybe changed.
-   * 
-   * @param conf The {@link Configuration} to use.
-   * @param scan {@link Scan} to use in this scanner
-   * @param tableName The table that we wish to rangeGet
-   * @throws IOException
-   */
-  public ClientSmallScanner(final Configuration conf, final Scan scan,
-      final TableName tableName) throws IOException {
-    this(conf, scan, tableName, HConnectionManager.getConnection(conf));
-  }
-
-  /**
-   * Create a new ClientSmallScanner for the specified table. An HConnection
-   * will be retrieved using the passed Configuration. Note that the passed
-   * {@link Scan} 's start row maybe changed.
-   * @param conf
-   * @param scan
-   * @param tableName
-   * @param connection
-   * @throws IOException
-   */
-  public ClientSmallScanner(final Configuration conf, final Scan scan,
-      final TableName tableName, HConnection connection) throws IOException {
-    this(conf, scan, tableName, connection, new RpcRetryingCallerFactory(conf));
-  }
-
-  /**
-   * Create a new ShortClientScanner for the specified table Note that the
-   * passed {@link Scan}'s start row maybe changed changed.
-   * 
-   * @param conf The {@link Configuration} to use.
-   * @param scan {@link Scan} to use in this scanner
-   * @param tableName The table that we wish to rangeGet
+   * Create a new ReversibleClientScanner for the specified table Note that the
+   * passed {@link org.apache.hadoop.hbase.client.Scan}'s start row maybe changed.
+   *
+   * @param conf       The {@link org.apache.hadoop.conf.Configuration} to use.
+   * @param scan       {@link org.apache.hadoop.hbase.client.Scan} to use in this scanner
+   * @param tableName  The table that we wish to scan
    * @param connection Connection identifying the cluster
-   * @param rpcFactory
-   * @throws IOException
+   * @throws java.io.IOException
    */
-  public ClientSmallScanner(final Configuration conf, final Scan scan,
-      final TableName tableName, HConnection connection,
-      RpcRetryingCallerFactory rpcFactory) throws IOException {
-    super(conf, scan, tableName, connection, rpcFactory);
-  }
-
-  @Override
-  protected void initializeScannerInConstruction() throws IOException {
-    // No need to initialize the scanner when constructing instance, do it when
-    // calling next(). Do nothing here.
+  public ClientSmallReversedScanner(Configuration conf, Scan scan, TableName tableName,
+                                    HConnection connection) throws IOException {
+    super(conf, scan, tableName, connection);
   }
 
   /**
    * Gets a scanner for following scan. Move to next region or continue from the
    * last result or start from the start row.
+   *
    * @param nbRows
-   * @param done true if Server-side says we're done scanning.
+   * @param done              true if Server-side says we're done scanning.
    * @param currentRegionDone true if scan is over on current region
    * @return true if has next scanner
    * @throws IOException
    */
   private boolean nextScanner(int nbRows, final boolean done,
-      boolean currentRegionDone) throws IOException {
+                              boolean currentRegionDone) throws IOException {
     // Where to start the next getter
     byte[] localStartKey;
     int cacheNum = nbRows;
     skipRowOfFirstResult = null;
     // if we're at end of table, close and return false to stop iterating
     if (this.currentRegion != null && currentRegionDone) {
-      byte[] endKey = this.currentRegion.getEndKey();
-      if (endKey == null || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY)
-          || checkScanStopRow(endKey) || done) {
+      byte[] startKey = this.currentRegion.getStartKey();
+      if (startKey == null
+          || Bytes.equals(startKey, HConstants.EMPTY_BYTE_ARRAY)
+          || checkScanStopRow(startKey) || done) {
         close();
         if (LOG.isDebugEnabled()) {
           LOG.debug("Finished with small scan at " + this.currentRegion);
         }
         return false;
       }
-      localStartKey = endKey;
+      // We take the row just under to get to the previous region.
+      localStartKey = createClosestRowBefore(startKey);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Finished with region " + this.currentRegion);
       }
@@ -150,36 +107,14 @@ public class ClientSmallScanner extends ClientScanner {
       LOG.trace("Advancing internal small scanner to startKey at '"
           + Bytes.toStringBinary(localStartKey) + "'");
     }
-    smallScanCallable = getSmallScanCallable(
+
+    smallScanCallable = ClientSmallScanner.getSmallScanCallable(
         scan, getConnection(), getTable(), localStartKey, cacheNum);
+
     if (this.scanMetrics != null && skipRowOfFirstResult == null) {
       this.scanMetrics.countOfRegions.incrementAndGet();
     }
     return true;
-  }
-
-  static RegionServerCallable<Result[]> getSmallScanCallable(
-      final Scan sc, HConnection connection, TableName table, byte[] localStartKey,
-      final int cacheNum) throws IOException { 
-    sc.setStartRow(localStartKey);
-    RegionServerCallable<Result[]> callable = new RegionServerCallable<Result[]>(
-        connection, table, sc.getStartRow()) {
-      public Result[] call() throws IOException {
-        ScanRequest request = RequestConverter.buildScanRequest(getLocation()
-          .getRegionInfo().getRegionName(), sc, cacheNum, true);
-        ScanResponse response = null;
-        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
-        try {
-          controller.setPriority(getTableName());
-          response = getStub().scan(controller, request);
-          return ResponseConverter.getResults(controller.cellScanner(),
-              response);
-        } catch (ServiceException se) {
-          throw ProtobufUtil.getRemoteException(se);
-        }
-      }
-    };
-    return callable;
   }
 
   @Override
@@ -200,7 +135,7 @@ public class ClientSmallScanner extends ClientScanner {
         // Server returns a null values if scanning is to stop. Else,
         // returns an empty array if scanning is to go on and we've just
         // exhausted current region.
-        values = this.caller.callWithRetries(smallScanCallable);
+        values = this.caller.callWithRetries(smallScanCallable, scannerTimeout);
         this.currentRegion = smallScanCallable.getHRegionInfo();
         long currentTime = System.currentTimeMillis();
         if (this.scanMetrics != null) {
@@ -237,9 +172,17 @@ public class ClientSmallScanner extends ClientScanner {
     return null;
   }
 
+
+  @Override
+  protected void initializeScannerInConstruction() throws IOException {
+    // No need to initialize the scanner when constructing instance, do it when
+    // calling next(). Do nothing here.
+  }
+
   @Override
   public void close() {
     if (!scanMetricsPublished) writeScanMetrics();
     closed = true;
   }
+
 }

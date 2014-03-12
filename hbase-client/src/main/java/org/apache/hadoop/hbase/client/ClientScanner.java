@@ -63,7 +63,7 @@ public class ClientScanner extends AbstractClientScanner {
     protected final long maxScannerResultSize;
     private final HConnection connection;
     private final TableName tableName;
-    private final int scannerTimeout;
+    protected final int scannerTimeout;
     protected boolean scanMetricsPublished = false;
     protected RpcRetryingCaller<Result []> caller;
 
