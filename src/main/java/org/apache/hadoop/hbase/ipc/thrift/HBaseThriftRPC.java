@@ -117,7 +117,7 @@ public class HBaseThriftRPC {
       } catch (Exception e) {
         LOG.warn("Failed getting Client without Wrapper for address: " +
           addr.toString(), e);
-        return null;
+        throw new IOException(e);
       }
       return new Pair<> (client, clientsForConf.getThriftClientManager());
     } catch (Exception e) {
