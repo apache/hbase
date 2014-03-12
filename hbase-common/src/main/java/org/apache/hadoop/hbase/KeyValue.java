@@ -2421,7 +2421,12 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @throws IOException
    */
   public static KeyValue create(int length, final DataInput in) throws IOException {
-    if (length == 0) return null;
+
+    if (length <= 0) {
+      if (length == 0) return null;
+      throw new IOException("Failed read " + length + " bytes, stream corrupt?");
+    }
+
     // This is how the old Writables.readFrom used to deserialize.  Didn't even vint.
     byte [] bytes = new byte[length];
     in.readFully(bytes);
