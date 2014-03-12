@@ -216,8 +216,8 @@ create_namespace 'my_ns'
 #create my_table in my_ns namespace
 create 'my_ns:my_table', 'fam'
 
-#delete namespace
-delete_namespace 'my_ns'
+#drop namespace
+drop_namespace 'my_ns'
 
 #alter namespace
 alter_namespace 'my_ns', {METHOD => 'set', 'PROPERTY_NAME' => 'PROPERTY_VALUE'}
