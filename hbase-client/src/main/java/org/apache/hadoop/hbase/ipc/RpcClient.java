@@ -1214,7 +1214,6 @@ public class RpcClient {
       if (e == null) throw new NullPointerException();
 
       if (shouldCloseConnection.compareAndSet(false, true)) {
-        LOG.warn(getName() + ": marking at should close, reason =" + e.getMessage());
         if (LOG.isDebugEnabled()) {
           LOG.debug(getName() + ": marking at should close, reason =" + e.getMessage());
         }
