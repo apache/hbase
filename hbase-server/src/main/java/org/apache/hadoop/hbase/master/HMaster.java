@@ -1435,7 +1435,6 @@ MasterServices, Server {
     }
     // Do this call outside of synchronized block.
     int maximumBalanceTime = getBalancerCutoffTime();
-    boolean balancerRan;
     synchronized (this.balancer) {
       // If balance not true, don't run balancer.
       if (!this.loadBalancerTracker.isBalancerOn()) return false;
@@ -1479,7 +1478,6 @@ MasterServices, Server {
       long cutoffTime = System.currentTimeMillis() + maximumBalanceTime;
       int rpCount = 0;  // number of RegionPlans balanced so far
       long totalRegPlanExecTime = 0;
-      balancerRan = plans.size() != 0;
       if (plans != null && !plans.isEmpty()) {
         for (RegionPlan plan: plans) {
           LOG.info("balance " + plan);
@@ -1507,7 +1505,9 @@ MasterServices, Server {
         }
       }
     }
-    return balancerRan;
+    // If LoadBalancer did not generate any plans, it means the cluster is already balanced.
+    // Return true indicating a success.
+    return true;
   }
 
   @Override
