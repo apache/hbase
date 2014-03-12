@@ -543,15 +543,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         return pickOtherRandomServer(cluster, thisServer);
       }
 
-      int idx = 0;
-
-      while (idx < regionLocations.length && regionLocations[idx] == thisServer) {
-        idx++;
+      for (int loc : regionLocations) {
+        if (loc >= 0 && loc != thisServer) { // find the first suitable server
+          return loc;
+        }
       }
 
-      return idx < regionLocations.length
-          ? regionLocations[idx]
-          : pickOtherRandomServer(cluster, thisServer);
+      // no location found
+      return pickOtherRandomServer(cluster, thisServer);
     }
 
     void setServices(MasterServices services) {
