@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -255,6 +256,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
   private final Random rand;
+
+  private final AtomicLong scannerIdGen = new AtomicLong(0L);
 
   /*
    * Strings to be used in forming the exception message for
@@ -2769,18 +2772,16 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   }
 
   protected long addScanner(RegionScanner s, HRegion r) throws LeaseStillHeldException {
-    long scannerId = -1;
-    while (true) {
-      scannerId = Math.abs(rand.nextLong() << 24) ^ startcode;
-      String scannerName = String.valueOf(scannerId);
-      RegionScannerHolder existing =
-        scanners.putIfAbsent(scannerName, new RegionScannerHolder(s, r));
-      if (existing == null) {
-        this.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod,
-          new ScannerListener(scannerName));
-        break;
-      }
-    }
+    long scannerId = this.scannerIdGen.incrementAndGet();
+    String scannerName = String.valueOf(scannerId);
+
+    RegionScannerHolder existing =
+      scanners.putIfAbsent(scannerName, new RegionScannerHolder(s, r));
+    assert existing == null : "scannerId must be unique within regionserver's whole lifecycle!";
+
+    this.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod,
+        new ScannerListener(scannerName));
+
     return scannerId;
   }
 
