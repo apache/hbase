@@ -28,9 +28,9 @@
 #     Default is ${HADOOP_CONF_DIR}/regionservers
 #   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
 #   HBASE_CONF_DIR  Alternate hbase conf dir. Default is ${HBASE_HOME}/conf.
-#   HADOOP_SLAVE_SLEEP Seconds to sleep between spawning remote commands.
-#   HADOOP_SLAVE_TIMEOUT Seconds to wait for timing out a remote command. 
-#   HADOOP_SSH_OPTS Options passed to ssh when running remote commands.
+#   HBASE_SLAVE_SLEEP Seconds to sleep between spawning remote commands.
+#   HBASE_SLAVE_TIMEOUT Seconds to wait for timing out a remote command. 
+#   HBASE_SSH_OPTS Options passed to ssh when running remote commands.
 #
 # Modelled after $HADOOP_HOME/bin/slaves.sh.
 
