@@ -370,7 +370,7 @@ public class TestHLog  {
         Thread.sleep(1000);
       }
       LOG.info("Waiting a few seconds before re-starting HDFS");
-      Thread.sleep(5000);
+      Thread.sleep(10000);
       cluster = TEST_UTIL.startMiniDFSClusterForTestHLog(namenodePort);
       cluster.waitActive();
       fs = cluster.getFileSystem();
