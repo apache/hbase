@@ -303,6 +303,10 @@ message CoprocessorServiceCall {
   required bytes request = 4;
 }
 
+message CoprocessorServiceResult {
+  optional NameBytesPair value = 1;
+}
+
 message CoprocessorServiceRequest {
   required RegionSpecifier region = 1;
   required CoprocessorServiceCall call = 2;
@@ -320,6 +324,7 @@ message Action {
   optional uint32 index = 1;
   optional MutationProto mutation = 2;
   optional Get get = 3;
+  optional CoprocessorServiceCall service_call = 4;
 }
 
 /**
@@ -343,6 +348,8 @@ message ResultOrException {
   optional uint32 index = 1;
   optional Result result = 2;
   optional NameBytesPair exception = 3;
+  // result if this was a coprocessor service call
+  optional CoprocessorServiceResult service_result = 4;
 }
 
 /**

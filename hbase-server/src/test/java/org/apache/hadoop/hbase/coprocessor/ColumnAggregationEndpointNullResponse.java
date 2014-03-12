@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,12 +27,13 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationProtos.ColumnAggregationService;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationProtos.SumRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationProtos.SumResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.ColumnAggregationServiceNullResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.SumRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.SumResponse;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -41,15 +41,17 @@ import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 
-
 /**
- * The aggregation implementation at a region.
+ * Test coprocessor endpoint that always returns {@code null} for requests to the last region
+ * in the table.  This allows tests to provide assurance of correct {@code null} handling for
+ * response values.
  */
-public class ColumnAggregationEndpoint extends ColumnAggregationService
-implements Coprocessor, CoprocessorService {
-  static final Log LOG = LogFactory.getLog(ColumnAggregationEndpoint.class);
+public class ColumnAggregationEndpointNullResponse
+    extends
+    ColumnAggregationServiceNullResponse
+implements Coprocessor, CoprocessorService  {
+  static final Log LOG = LogFactory.getLog(ColumnAggregationEndpointNullResponse.class);
   private RegionCoprocessorEnvironment env = null;
-
   @Override
   public Service getService() {
     return this;
@@ -74,8 +76,8 @@ implements Coprocessor, CoprocessorService {
     // aggregate at each region
     Scan scan = new Scan();
     // Family is required in pb. Qualifier is not.
-    byte [] family = request.getFamily().toByteArray();
-    byte [] qualifier = request.hasQualifier()? request.getQualifier().toByteArray(): null;
+    byte[] family = request.getFamily().toByteArray();
+    byte[] qualifier = request.hasQualifier() ? request.getQualifier().toByteArray() : null;
     if (request.hasQualifier()) {
       scan.addColumn(family, qualifier);
     } else {
@@ -84,7 +86,13 @@ implements Coprocessor, CoprocessorService {
     int sumResult = 0;
     InternalScanner scanner = null;
     try {
-      scanner = this.env.getRegion().getScanner(scan);
+      HRegion region = this.env.getRegion();
+      // for the last region in the table, return null to test null handling
+      if (Bytes.equals(region.getEndKey(), HConstants.EMPTY_END_ROW)) {
+        done.run(null);
+        return;
+      }
+      scanner = region.getScanner(scan);
       List<Cell> curVals = new ArrayList<Cell>();
       boolean hasMore = false;
       do {
@@ -112,7 +120,8 @@ implements Coprocessor, CoprocessorService {
         }
       }
     }
-    LOG.info("Returning result " + sumResult);
     done.run(SumResponse.newBuilder().setSum(sumResult).build());
+    LOG.info("Returning sum " + sumResult + " for region " +
+        Bytes.toStringBinary(env.getRegion().getRegionName()));
   }
 }

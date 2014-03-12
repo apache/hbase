@@ -42,11 +42,14 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost.Environment;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.io.MultipleIOException;
 
+import com.google.protobuf.Descriptors.MethodDescriptor;
+import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
@@ -327,5 +330,21 @@ public class HTableWrapper implements HTableInterface {
   public long incrementColumnValue(byte[] row, byte[] family,
       byte[] qualifier, long amount, boolean writeToWAL) throws IOException {
     return table.incrementColumnValue(row, family, qualifier, amount, writeToWAL);
+  }
+
+  @Override
+  public <R extends Message> Map<byte[], R> batchCoprocessorService(
+      MethodDescriptor methodDescriptor, Message request, byte[] startKey, byte[] endKey,
+      R responsePrototype) throws ServiceException, Throwable {
+    return table.batchCoprocessorService(methodDescriptor, request, startKey, endKey,
+      responsePrototype);
+  }
+
+  @Override
+  public <R extends Message> void batchCoprocessorService(MethodDescriptor methodDescriptor,
+      Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
+      throws ServiceException, Throwable {
+    table.batchCoprocessorService(methodDescriptor, request, startKey, endKey, responsePrototype,
+      callback);
   }
 }

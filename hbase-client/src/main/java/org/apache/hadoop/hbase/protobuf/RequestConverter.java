@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionCoprocessorServiceExec;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
@@ -533,6 +534,14 @@ public final class RequestConverter {
       } else if (row instanceof Increment) {
         regionActionBuilder.addAction(actionBuilder.setMutation(
             ProtobufUtil.toMutation((Increment)row, mutationBuilder, action.getNonce())));
+      } else if (row instanceof RegionCoprocessorServiceExec) {
+        RegionCoprocessorServiceExec exec = (RegionCoprocessorServiceExec) row;
+        regionActionBuilder.addAction(actionBuilder.setServiceCall(
+            ClientProtos.CoprocessorServiceCall.newBuilder()
+              .setRow(HBaseZeroCopyByteString.wrap(exec.getRow()))
+              .setServiceName(exec.getMethod().getService().getFullName())
+              .setMethodName(exec.getMethod().getName())
+              .setRequest(exec.getRequest().toByteString())));
       } else if (row instanceof RowMutations) {
         throw new UnsupportedOperationException("No RowMutations in multi calls; use mutateRow");
       } else {

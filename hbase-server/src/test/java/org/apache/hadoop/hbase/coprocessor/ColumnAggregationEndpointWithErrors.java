@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,12 +27,14 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationProtos.ColumnAggregationService;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationProtos.SumRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationProtos.SumResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -41,15 +42,17 @@ import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 
-
 /**
- * The aggregation implementation at a region.
+ * Test coprocessor endpoint that always throws a {@link DoNotRetryIOException} for requests on
+ * the last region in the table.  This allows tests to ensure correct error handling of
+ * coprocessor endpoints throwing exceptions.
  */
-public class ColumnAggregationEndpoint extends ColumnAggregationService
-implements Coprocessor, CoprocessorService {
-  static final Log LOG = LogFactory.getLog(ColumnAggregationEndpoint.class);
+public class ColumnAggregationEndpointWithErrors
+    extends
+    ColumnAggregationWithErrorsProtos.ColumnAggregationServiceWithErrors
+implements Coprocessor, CoprocessorService  {
+  static final Log LOG = LogFactory.getLog(ColumnAggregationEndpointWithErrors.class);
   private RegionCoprocessorEnvironment env = null;
-
   @Override
   public Service getService() {
     return this;
@@ -74,8 +77,8 @@ implements Coprocessor, CoprocessorService {
     // aggregate at each region
     Scan scan = new Scan();
     // Family is required in pb. Qualifier is not.
-    byte [] family = request.getFamily().toByteArray();
-    byte [] qualifier = request.hasQualifier()? request.getQualifier().toByteArray(): null;
+    byte[] family = request.getFamily().toByteArray();
+    byte[] qualifier = request.hasQualifier() ? request.getQualifier().toByteArray() : null;
     if (request.hasQualifier()) {
       scan.addColumn(family, qualifier);
     } else {
@@ -84,7 +87,12 @@ implements Coprocessor, CoprocessorService {
     int sumResult = 0;
     InternalScanner scanner = null;
     try {
-      scanner = this.env.getRegion().getScanner(scan);
+      HRegion region = this.env.getRegion();
+      // throw an exception for requests to the last region in the table, to test error handling
+      if (Bytes.equals(region.getEndKey(), HConstants.EMPTY_END_ROW)) {
+        throw new DoNotRetryIOException("An expected exception");
+      }
+      scanner = region.getScanner(scan);
       List<Cell> curVals = new ArrayList<Cell>();
       boolean hasMore = false;
       do {
@@ -112,7 +120,6 @@ implements Coprocessor, CoprocessorService {
         }
       }
     }
-    LOG.info("Returning result " + sumResult);
     done.run(SumResponse.newBuilder().setSum(sumResult).build());
   }
 }

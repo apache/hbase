@@ -120,6 +120,8 @@ public final class ResponseConverter {
           results.add(regionName, roe.getIndex(), ProtobufUtil.toException(roe.getException()));
         } else if (roe.hasResult()) {
           results.add(regionName, roe.getIndex(), ProtobufUtil.toResult(roe.getResult(), cells));
+        } else if (roe.hasServiceResult()) {
+          results.add(regionName, roe.getIndex(), roe.getServiceResult());
         } else {
           // no result & no exception. Unexpected.
           throw new IllegalStateException("No result & no exception roe=" + roe +
