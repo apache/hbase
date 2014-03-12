@@ -503,7 +503,7 @@ public class TestStore extends TestCase {
 
     @Override
     public FSDataOutputStream create(Path p,
-		FsPermission permission,
+        FsPermission permission,
         boolean overwrite,
         int bufferSize,
         short replication,
@@ -511,8 +511,8 @@ public class TestStore extends TestCase {
         int bytesPerChecksum,
         Progressable progress) throws IOException {
       return new FaultyOutputStream(super.create(p,
-		permission, overwrite, bufferSize, replication,
-		blockSize, bytesPerChecksum, progress), faultPos);
+          permission, overwrite, bufferSize, replication,
+          blockSize, bytesPerChecksum, progress), faultPos);
     }
 
     @Override
@@ -658,5 +658,36 @@ public class TestStore extends TestCase {
         assertEquals(answers[i][j], this.store.isPeakTime(tests[i][j]));
       }
     }
+  }
+
+  /**
+   * Checks whether compaction hook is updated in the configuration when we call
+   * {@link Store#notifyOnChange(Configuration)}
+   *
+   * @throws IOException
+   */
+  public void testCompactionHookOnlineConfigurationChange() throws IOException {
+    final String compactionHookExample = "org.apache.hadoop.hbase.regionserver.compactionhook.LowerToUpperCompactionHook";
+    final String compactionHookExample2 =  "org.apache.hadoop.hbase.regionserver.compactionhook.SkipCompactionHook";
+    Configuration conf = HBaseConfiguration.create();
+    init(getName());
+    // compaction hook should be null by default
+    assertNull(this.store.getCompactHook());
+    assertNull(conf.get(HConstants.COMPACTION_HOOK));
+    conf.set(HConstants.COMPACTION_HOOK, compactionHookExample);
+    // confirm it is null before we call notifyOnChange
+    assertNull(this.store.getCompactHook());
+    this.store.notifyOnChange(conf);
+    assertTrue(this.store.getCompactHook().getClass().getName()
+        .equals(compactionHookExample));
+    // change it to another implmentation of compaction hook
+    conf.set(HConstants.COMPACTION_HOOK, compactionHookExample2);
+    this.store.notifyOnChange(conf);
+    // confirm that store has picked up the new compaction hook
+    assertTrue(this.store.getCompactHook().getClass().getName().equals(compactionHookExample2));
+    //set it to empty
+    conf.set(HConstants.COMPACTION_HOOK, "");
+    this.store.notifyOnChange(conf);
+    assertNull(this.store.getCompactHook());;
   }
 }

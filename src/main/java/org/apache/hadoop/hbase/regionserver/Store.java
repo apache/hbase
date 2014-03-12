@@ -44,9 +44,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hadoop.io.WriteOptions;
-import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -54,6 +51,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
@@ -77,6 +75,8 @@ import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
+import org.apache.hadoop.io.WriteOptions;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -342,6 +342,7 @@ public class Store extends SchemaConfigured implements HeapSize,
 
       try {
         this.compactHook = (CompactionHook) Class.forName(compactHookString).newInstance();
+        LOG.info("Compaction hook loaded: " + compactHook.getClass().getName());
       } catch (InstantiationException e) {
         throw new IllegalArgumentException(e);
       } catch (IllegalAccessException e) {
@@ -349,6 +350,9 @@ public class Store extends SchemaConfigured implements HeapSize,
       } catch (ClassNotFoundException e) {
         throw new IllegalArgumentException(e);
       }
+    } else {
+      LOG.info("Compaction hook is null");
+      this.compactHook = null;
     }
   }
 
@@ -998,7 +1002,7 @@ public class Store extends SchemaConfigured implements HeapSize,
     return needsCompaction();
   }
 
-  /*
+  /**
    * Notify all observers that set of Readers has changed.
    * @throws IOException
    */
@@ -2220,11 +2224,29 @@ public class Store extends SchemaConfigured implements HeapSize,
     // Re-create the CompoundConfiguration in the manner that it is created in
     // the hierarchy. Add the conf first, then add the values from the table
     // descriptor, and then the column family descriptor.
-    this.conf = new CompoundConfiguration()
-            .add(confParam)
-            .add(getHRegionInfo().getTableDesc().getValues())
-            .add(family.getValues());
+    this.conf = new CompoundConfiguration().add(confParam)
+        .add(getHRegionInfo().getTableDesc().getValues())
+        .add(family.getValues());
 
+    String compactionHookNew = confParam.get(HConstants.COMPACTION_HOOK);
+    if ((compactHook != null && !compactHook.getClass().getName().equals(compactionHookNew))
+        || (compactHook == null && compactionHookNew != null)) {
+      if (compactionHookNew != null && !compactionHookNew.isEmpty()) {
+        try {
+          this.compactHook = (CompactionHook) Class.forName(compactionHookNew)
+              .newInstance();
+        } catch (InstantiationException | IllegalAccessException
+            | ClassNotFoundException e) {
+          e.printStackTrace();
+        }
+      } else {
+        this.compactHook = null;
+      }
+    }
     compactionManager.updateConfiguration(this.conf);
+  }
+
+  public CompactionHook getCompactHook() {
+    return compactHook;
   }
 }
