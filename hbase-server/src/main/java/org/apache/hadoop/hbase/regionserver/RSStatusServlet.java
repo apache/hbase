@@ -53,7 +53,7 @@ public class RSStatusServlet extends HttpServlet {
       tmpl.setFormat(req.getParameter("format"));
     if (req.getParameter("filter") != null)
       tmpl.setFilter(req.getParameter("filter"));
-    tmpl.render(resp.getWriter(), hrs);
+    if (hrs != null) tmpl.render(resp.getWriter(), hrs);
   }
 
 }
