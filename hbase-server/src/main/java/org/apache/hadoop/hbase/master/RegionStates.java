@@ -159,22 +159,12 @@ public class RegionStates {
     Map<ServerName, List<HRegionInfo>> map = new HashMap<ServerName, List<HRegionInfo>>();
     for (HRegionInfo region : regions) {
       HRegionInfo defaultReplica = RegionReplicaUtil.getRegionInfoForDefaultReplica(region);
-      ServerName server = regionAssignments.get(defaultReplica);
-      List<HRegionInfo> regionsOnServer;
-      if (server != null) {
-        regionsOnServer = map.get(server);
-        if (regionsOnServer == null) {
-          regionsOnServer = new ArrayList<HRegionInfo>(1);
-          map.put(server, regionsOnServer);
-        }
-        regionsOnServer.add(defaultReplica);
-      }
       Set<HRegionInfo> allReplicas = defaultReplicaToOtherReplicas.get(defaultReplica);
       if (allReplicas != null) {
         for (HRegionInfo hri : allReplicas) {
-          server = regionAssignments.get(hri);
+          ServerName server = regionAssignments.get(hri);
           if (server != null) {
-            regionsOnServer = map.get(server);
+            List<HRegionInfo> regionsOnServer = map.get(server);
             if (regionsOnServer == null) {
               regionsOnServer = new ArrayList<HRegionInfo>(1);
               map.put(server, regionsOnServer);
