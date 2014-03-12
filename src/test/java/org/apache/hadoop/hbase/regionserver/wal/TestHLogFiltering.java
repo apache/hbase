@@ -19,9 +19,15 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Random;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Delete;
@@ -30,23 +36,13 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Random;
-import java.util.SortedMap;
-import java.util.TreeMap;
-
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
+import com.google.common.collect.Lists;
 
 public class TestHLogFiltering {
-
-  private static final Log LOG = LogFactory.getLog(TestHLogFiltering.class);
 
   private static final int NUM_MASTERS = 1;
   private static final int NUM_RS = 3;
@@ -144,6 +140,6 @@ public class TestHLogFiltering {
     for (byte[] regionName : getRegionsByServer(rsId)) {
       hrs.flushRegion(regionName);
     }
-    return hrs.getServerInfo().getFlushedSequenceIdByRegion();
+    return (SortedMap<byte[], Long>) hrs.getServerInfo().getFlushedSequenceIdByRegion();
   }
 }

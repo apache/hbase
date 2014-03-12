@@ -19,20 +19,16 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.ThriftHRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -41,6 +37,12 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This class creates a single process HBase cluster.
@@ -58,7 +60,7 @@ public class MiniHBaseCluster {
   static {
     UGI = UserGroupInformation.getCurrentUGI();
   }
-
+  
   static long PREFERRED_ASSIGNMENT = 1000L;
   static long WAIT_FOR_LOADBALANCER = 2000L;
   
@@ -94,9 +96,9 @@ public class MiniHBaseCluster {
     this.conf = conf;
     MiniHBaseCluster.numClusters ++;
     conf.set(HConstants.MASTER_PORT, "0");
-    conf.setLong("hbase.master.applyPreferredAssignment.period",
+    conf.setLong("hbase.master.applyPreferredAssignment.period", 
         PREFERRED_ASSIGNMENT);
-    conf.setLong("hbase.master.holdRegionForBestLocality.period",
+    conf.setLong("hbase.master.holdRegionForBestLocality.period", 
         PREFERRED_ASSIGNMENT / 5);
     init(numMasters, numRegionServers, regionServerClass);
   }
@@ -435,6 +437,10 @@ public class MiniHBaseCluster {
    */
   public HRegionServer getRegionServer(int serverNumber) {
     return hbaseCluster.getRegionServer(serverNumber);
+  }
+
+  public ThriftHRegionInterface getThriftRegionServer(int serverNumber) {
+    return new ThriftHRegionServer(getRegionServer(serverNumber));
   }
 
   public List<HRegion> getRegions(byte[] tableName) {

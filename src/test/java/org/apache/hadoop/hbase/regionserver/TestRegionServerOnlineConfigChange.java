@@ -112,8 +112,7 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
    */
   public void testServerSideProfilingOnlineChange() throws IOException {
     assertTrue(rs1.enableServerSideProfilingForAllCalls != null);
-    boolean origProfiling =
-            rs1.enableServerSideProfilingForAllCalls.get();
+    boolean origProfiling = rs1.enableServerSideProfilingForAllCalls.get();
 
     conf.setBoolean("hbase.regionserver.enable.serverside.profiling",
                     !origProfiling);
@@ -250,6 +249,23 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
     HRegionServer.configurationManager.notifyAllObservers(conf);
     assertEquals(newMajorCompactionJitter,
             s.compactionManager.comConf.getMajorCompactionJitter(), 0.00001);
+  }
+
+  /**
+   * Check if quorum read settings change online properly
+   */
+  public void testQuorumReadConfigurationChange() {
+    int threads = conf.getInt(
+        HConstants.HDFS_QUORUM_READ_THREADS_MAX, 0);
+    long timeout = conf.getLong(
+        HConstants.HDFS_QUORUM_READ_TIMEOUT_MILLIS, 0);
+    threads += 1;
+    timeout += 1;
+    conf.setInt(HConstants.HDFS_QUORUM_READ_THREADS_MAX, threads);
+    conf.setLong(HConstants.HDFS_QUORUM_READ_TIMEOUT_MILLIS, timeout);
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+    assertEquals(threads, rs1.getQuorumReadThreadsMax());
+    assertEquals(timeout, rs1.getQuorumReadTimeoutMillis());
   }
 
   /**

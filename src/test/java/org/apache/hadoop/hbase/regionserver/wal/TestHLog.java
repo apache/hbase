@@ -370,7 +370,7 @@ public class TestHLog  {
         Thread.sleep(1000);
       }
       LOG.info("Waiting a few seconds before re-starting HDFS");
-      Thread.sleep(10000);
+      Thread.sleep(5000);
       cluster = TEST_UTIL.startMiniDFSClusterForTestHLog(namenodePort);
       cluster.waitActive();
       fs = cluster.getFileSystem();
@@ -399,7 +399,7 @@ public class TestHLog  {
       public void run() {
           try {
             FSUtils.recoverFileLease(recoveredFs, walPath, rlConf);
-            assertTrue(recoveredFs.recoverLease(walPath));
+            assertTrue(recoveredFs.recoverLease(walPath, true));
           } catch (IOException e) {
             exception = e;
           }

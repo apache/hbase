@@ -28,9 +28,29 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentSkipListMap;
 
+import junit.framework.Assert;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HServerLoad.RegionLoad;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
+import org.apache.hadoop.hbase.ipc.thrift.HBaseThriftRPC;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.thrift.transport.TMemoryBuffer;
 import org.junit.Test;
+
+import com.facebook.swift.codec.ThriftCodec;
+import com.facebook.swift.codec.ThriftCodecManager;
 
 public class TestHServerInfo {
 
@@ -165,6 +185,57 @@ public class TestHServerInfo {
     assertFalse(HServerInfo.isValidServerName("  ,60020," + Long.MAX_VALUE));
     assertFalse(HServerInfo.isValidServerName("!>;@#@#localhost,60020," +
                                               Long.MAX_VALUE));
+  }
+
+  /**
+   * Tests if the HServerInfo object was correctly serialized and deserialized
+   * @throws Exception
+   */
+  @Test
+  public void testSwiftSerializationDeserialization() throws Exception {
+    ThriftCodec<HServerInfo> codec = new ThriftCodecManager()
+    .getCodec(HServerInfo.class);
+    TMemoryBuffer transport = new TMemoryBuffer(1000 * 1024);
+    TCompactProtocol protocol = new TCompactProtocol(transport);
+    Map<byte[], Long> flushedSequenceIdByRegion = new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
+    flushedSequenceIdByRegion.put(new byte[] {1,  2, 3}, 1L);
+    flushedSequenceIdByRegion.put(new byte[] {4,  5, 6}, 5L);
+    //create HServerLoad object using the thrift constructor
+    ArrayList<RegionLoad> regionLoad = new ArrayList<>();
+    regionLoad.add(new RegionLoad(new byte[]{10, 11, 12}, 5, 30, 512, 530, 450, 410, 456878, 135487));
+    HServerLoad serverLoad = new HServerLoad(3, 100, 50, 3000, regionLoad, 10000, 20000);
+    HServerInfo info = new HServerInfo(new HServerAddress("127.0.0.1:60020"), 1, "localhost", flushedSequenceIdByRegion, true, "bla", serverLoad);
+
+    codec.write(info, protocol);
+    HServerInfo infoCopy = codec.read(protocol);
+    Assert.assertEquals(info, infoCopy);
+  }
+
+
+  /**
+   * Tests the getHserverInfo call using thrift.
+   * @throws Exception
+   */
+  @Test
+  public void testGetHserverInfo() throws Exception {
+    byte[] table = Bytes.toBytes("table");
+    byte[] family = Bytes.toBytes("family");
+
+    HBaseTestingUtility testUtil = new HBaseTestingUtility();
+    testUtil.startMiniCluster();
+    Configuration conf = testUtil.getConfiguration();
+
+    testUtil.createTable(table, family);
+
+    List<HRegion> regions = testUtil.getMiniHBaseCluster().getRegions(table);
+    HRegion region = regions.get(0);
+    HRegionServer regionServer = region.getRegionServer();
+
+    HRegionInterface client = (HRegionInterface) HBaseThriftRPC.getClient(
+        regionServer.getServerInfo().getServerAddress().getInetSocketAddress(),
+        conf, ThriftHRegionInterface.class, HBaseRPCOptions.DEFAULT);
+
+    assertEquals(regionServer.getHServerInfo(), client.getHServerInfo());
   }
 
 }

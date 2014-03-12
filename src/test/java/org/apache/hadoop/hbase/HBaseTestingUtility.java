@@ -19,35 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
-
+import com.google.common.base.Preconditions;
 import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Jdk14Logger;
@@ -60,6 +33,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableAsync;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
 import org.apache.hadoop.hbase.client.PreemptiveFastFailException;
 import org.apache.hadoop.hbase.client.Put;
@@ -100,7 +74,30 @@ import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.ZooKeeper;
 
-import com.google.common.base.Preconditions;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.junit.Assert.*;
 
 /**
  * Facility for testing HBase. Added as tool to abet junit4 testing.  Replaces
@@ -518,10 +515,13 @@ public class HBaseTestingUtility {
    * Create a table.
    * @param tableName
    * @param family
-   * @return An HTable instance for the created table.
+   * @return An HTableAsync instance for the created table, which is a sub-class
+   *         of the HTable class, and HTableAsyncInterface. So you can use both
+   *         the sync API of HTableInterface, and async API in
+   *         HTableAsyncInterface.
    * @throws IOException
    */
-  public HTable createTable(byte[] tableName, byte[] family)
+  public HTableAsync createTable(byte[] tableName, byte[] family)
   throws IOException{
     return createTable(tableName, new byte[][]{family});
   }
@@ -546,17 +546,20 @@ public class HBaseTestingUtility {
    * Create a table.
    * @param tableName
    * @param families
-   * @return An HTable instance for the created table.
+   * @return An HTableAsync instance for the created table, which is a sub-class
+   *         of the HTable class, and HTableAsyncInterface. So you can use both
+   *         the sync API of HTableInterface, and async API in
+   *         HTableAsyncInterface.
    * @throws IOException
    */
-  public HTable createTable(byte[] tableName, byte[][] families)
+  public HTableAsync createTable(byte[] tableName, byte[][] families)
   throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     for(byte[] family : families) {
       desc.addFamily(new HColumnDescriptor(family));
     }
     (new HBaseAdmin(getConfiguration())).createTable(desc);
-    return new HTable(getConfiguration(), tableName);
+    return new HTableAsync(getConfiguration(), tableName);
   }
 
   /**
@@ -924,6 +927,9 @@ public class HBaseTestingUtility {
     byte [] firstrow = metaRows.get(0);
     LOG.debug("FirstRow=" + Bytes.toString(firstrow));
     int index = hbaseCluster.getServerWith(firstrow);
+    if (index < 0) {
+      return null;
+    }
     return hbaseCluster.getRegionServerThreads().get(index).getRegionServer();
   }
 
