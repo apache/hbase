@@ -36,12 +36,14 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -52,12 +54,14 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
@@ -67,6 +71,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
@@ -1374,8 +1380,7 @@ public class HTable implements HTableInterface {
   public static void setRegionCachePrefetch(
       final TableName tableName,
       final boolean enable) throws IOException {
-    HConnectionManager.execute(new HConnectable<Void>(HBaseConfiguration
-        .create()) {
+    HConnectionManager.execute(new HConnectable<Void>(HBaseConfiguration.create()) {
       @Override
       public Void connect(HConnection connection) throws IOException {
         connection.setRegionCachePrefetch(tableName, enable);
@@ -1570,6 +1575,125 @@ public class HTable implements HTableInterface {
       System.out.println(t.get(new Get(Bytes.toBytes(args[1]))));
     } finally {
       t.close();
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public <R extends Message> Map<byte[], R> batchCoprocessorService(
+      Descriptors.MethodDescriptor methodDescriptor, Message request,
+      byte[] startKey, byte[] endKey, R responsePrototype) throws ServiceException, Throwable {
+    final Map<byte[], R> results = Collections.synchronizedMap(new TreeMap<byte[], R>(
+        Bytes.BYTES_COMPARATOR));
+    batchCoprocessorService(methodDescriptor, request, startKey, endKey, responsePrototype,
+        new Callback<R>() {
+
+          @Override
+          public void update(byte[] region, byte[] row, R result) {
+            if (region != null) {
+              results.put(region, result);
+            }
+          }
+        });
+    return results;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public <R extends Message> void batchCoprocessorService(
+      final Descriptors.MethodDescriptor methodDescriptor, final Message request,
+      byte[] startKey, byte[] endKey, final R responsePrototype, final Callback<R> callback)
+      throws ServiceException, Throwable {
+
+    // get regions covered by the row range
+    Pair<List<byte[]>, List<HRegionLocation>> keysAndRegions =
+        getKeysAndRegionsInRange(startKey, endKey, true);
+    List<byte[]> keys = keysAndRegions.getFirst();
+    List<HRegionLocation> regions = keysAndRegions.getSecond();
+
+    // check if we have any calls to make
+    if (keys.isEmpty()) {
+      LOG.info("No regions were selected by key range start=" + Bytes.toStringBinary(startKey) +
+          ", end=" + Bytes.toStringBinary(endKey));
+      return;
+    }
+
+    List<RegionCoprocessorServiceExec> execs = new ArrayList<RegionCoprocessorServiceExec>();
+    final Map<byte[], RegionCoprocessorServiceExec> execsByRow =
+        new TreeMap<byte[], RegionCoprocessorServiceExec>(Bytes.BYTES_COMPARATOR);
+    for (int i = 0; i < keys.size(); i++) {
+      final byte[] rowKey = keys.get(i);
+      final byte[] region = regions.get(i).getRegionInfo().getRegionName();
+      RegionCoprocessorServiceExec exec =
+          new RegionCoprocessorServiceExec(region, rowKey, methodDescriptor, request);
+      execs.add(exec);
+      execsByRow.put(rowKey, exec);
+    }
+
+    // tracking for any possible deserialization errors on success callback
+    // TODO: it would be better to be able to reuse AsyncProcess.BatchErrors here
+    final List<Throwable> callbackErrorExceptions = new ArrayList<Throwable>();
+    final List<Row> callbackErrorActions = new ArrayList<Row>();
+    final List<String> callbackErrorServers = new ArrayList<String>();
+
+    AsyncProcess<ClientProtos.CoprocessorServiceResult> asyncProcess =
+        new AsyncProcess<ClientProtos.CoprocessorServiceResult>(connection, tableName, pool,
+            new AsyncProcess.AsyncProcessCallback<ClientProtos.CoprocessorServiceResult>() {
+          @SuppressWarnings("unchecked")
+          @Override
+          public void success(int originalIndex, byte[] region, Row row,
+              ClientProtos.CoprocessorServiceResult serviceResult) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Received result for endpoint " + methodDescriptor.getFullName() +
+                " call #" + originalIndex + ": region=" + Bytes.toStringBinary(region) +
+                ", row=" + Bytes.toStringBinary(row.getRow()) +
+                ", value=" + serviceResult.getValue().getValue());
+            }
+            try {
+              callback.update(region, row.getRow(),
+                (R) responsePrototype.newBuilderForType().mergeFrom(
+                  serviceResult.getValue().getValue()).build());
+            } catch (InvalidProtocolBufferException e) {
+              LOG.error("Unexpected response type from endpoint " + methodDescriptor.getFullName(),
+                e);
+              callbackErrorExceptions.add(e);
+              callbackErrorActions.add(row);
+              callbackErrorServers.add("null");
+            }
+          }
+
+          @Override
+          public boolean failure(int originalIndex, byte[] region, Row row, Throwable t) {
+            RegionCoprocessorServiceExec exec = (RegionCoprocessorServiceExec) row;
+            LOG.error("Failed calling endpoint " + methodDescriptor.getFullName() + ": region="
+                + Bytes.toStringBinary(exec.getRegion()), t);
+            return true;
+          }
+
+          @Override
+          public boolean retriableFailure(int originalIndex, Row row, byte[] region,
+              Throwable exception) {
+            RegionCoprocessorServiceExec exec = (RegionCoprocessorServiceExec) row;
+            LOG.error("Failed calling endpoint " + methodDescriptor.getFullName() + ": region="
+                + Bytes.toStringBinary(exec.getRegion()), exception);
+            return !(exception instanceof DoNotRetryIOException);
+          }
+        },
+        configuration,
+        RpcRetryingCallerFactory.instantiate(configuration));
+
+    asyncProcess.submitAll(execs);
+    asyncProcess.waitUntilDone();
+
+    if (asyncProcess.hasError()) {
+      throw asyncProcess.getErrors();
+    } else if (!callbackErrorExceptions.isEmpty()) {
+      throw new RetriesExhaustedWithDetailsException(callbackErrorExceptions, callbackErrorActions,
+        callbackErrorServers);
     }
   }
 }

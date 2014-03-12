@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
@@ -585,4 +587,69 @@ public interface HTableInterface extends Closeable {
    * @throws IOException if a remote or network exception occurs.
    */
   void setWriteBufferSize(long writeBufferSize) throws IOException;
+
+  /**
+   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
+   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), all
+   * the invocations to the same region server will be batched into one call. The coprocessor
+   * service is invoked according to the service instance, method name and parameters.
+   * 
+   * @param methodDescriptor
+   *          the descriptor for the protobuf service method to call.
+   * @param request
+   *          the method call parameters
+   * @param startKey
+   *          start region selection with region containing this row. If {@code null}, the
+   *          selection will start with the first table region.
+   * @param endKey
+   *          select regions up to and including the region containing this row. If {@code null},
+   *          selection will continue through the last table region.
+   * @param responsePrototype
+   *          the proto type of the response of the method in Service.
+   * @param <R>
+   *          the response type for the coprocessor Service method
+   * @throws ServiceException
+   * @throws Throwable
+   * @return a map of result values keyed by region name
+   */
+  @InterfaceAudience.Private
+  <R extends Message> Map<byte[], R> batchCoprocessorService(
+      Descriptors.MethodDescriptor methodDescriptor, Message request,
+      byte[] startKey, byte[] endKey, R responsePrototype) throws ServiceException, Throwable;
+
+  /**
+   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
+   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), all
+   * the invocations to the same region server will be batched into one call. The coprocessor
+   * service is invoked according to the service instance, method name and parameters.
+   * 
+   * <p>
+   * The given
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[],byte[],Object)}
+   * method will be called with the return value from each region's invocation.
+   * </p>
+   * 
+   * @param methodDescriptor
+   *          the descriptor for the protobuf service method to call.
+   * @param request
+   *          the method call parameters
+   * @param startKey
+   *          start region selection with region containing this row. If {@code null}, the
+   *          selection will start with the first table region.
+   * @param endKey
+   *          select regions up to and including the region containing this row. If {@code null},
+   *          selection will continue through the last table region.
+   * @param responsePrototype
+   *          the proto type of the response of the method in Service.
+   * @param callback
+   *          callback to invoke with the response for each region
+   * @param <R>
+   *          the response type for the coprocessor Service method
+   * @throws ServiceException
+   * @throws Throwable
+   */
+  @InterfaceAudience.Private
+  <R extends Message> void batchCoprocessorService(Descriptors.MethodDescriptor methodDescriptor,
+      Message request, byte[] startKey, byte[] endKey, R responsePrototype,
+      Batch.Callback<R> callback) throws ServiceException, Throwable;
 }

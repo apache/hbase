@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
@@ -621,6 +623,24 @@ public class HTablePool implements Closeable {
     public long incrementColumnValue(byte[] row, byte[] family,
         byte[] qualifier, long amount, boolean writeToWAL) throws IOException {
       return table.incrementColumnValue(row, family, qualifier, amount, writeToWAL);
+    }
+
+    @Override
+    public <R extends Message> Map<byte[], R> batchCoprocessorService(
+        Descriptors.MethodDescriptor method, Message request,
+        byte[] startKey, byte[] endKey, R responsePrototype) throws ServiceException, Throwable {
+      checkState();
+      return table.batchCoprocessorService(method, request, startKey, endKey,
+          responsePrototype);
+    }
+
+    @Override
+    public <R extends Message> void batchCoprocessorService(
+        Descriptors.MethodDescriptor method, Message request,
+        byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
+        throws ServiceException, Throwable {
+      checkState();
+      table.batchCoprocessorService(method, request, startKey, endKey, responsePrototype, callback);
     }
   }
 }

@@ -33,6 +33,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.protobuf.Descriptors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -62,6 +63,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
@@ -69,6 +71,8 @@ import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.io.MultipleIOException;
 
+import com.google.protobuf.Descriptors.ServiceDescriptor;
+import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
@@ -610,6 +614,21 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       public long incrementColumnValue(byte[] row, byte[] family,
           byte[] qualifier, long amount, boolean writeToWAL) throws IOException {
         return table.incrementColumnValue(row, family, qualifier, amount, writeToWAL);
+      }
+
+      @Override
+      public <R extends Message> Map<byte[], R> batchCoprocessorService(
+          Descriptors.MethodDescriptor method, Message request, byte[] startKey,
+          byte[] endKey, R responsePrototype) throws ServiceException, Throwable {
+        return table.batchCoprocessorService(method, request, startKey, endKey, responsePrototype);
+      }
+
+      @Override
+      public <R extends Message> void batchCoprocessorService(Descriptors.MethodDescriptor method,
+          Message request, byte[] startKey, byte[] endKey, R responsePrototype,
+          Callback<R> callback) throws ServiceException, Throwable {
+        table.batchCoprocessorService(method, request, startKey, endKey, responsePrototype,
+            callback);
       }
     }
 
