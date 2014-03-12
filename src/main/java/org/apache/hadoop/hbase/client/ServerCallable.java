@@ -20,11 +20,12 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.thrift.HBaseToThriftAdapter;
 
 import java.io.IOException;
 import java.util.concurrent.Callable;
@@ -79,7 +80,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
    * @throws IOException e
    */
   public void instantiateServer() throws IOException {
-    this.server = connection.getHRegionConnection(location.getServerAddress(), this.options);
+    this.server = connection.getHRegionConnection(location.getServerAddress(), options);
   }
 
   /** @return the server name */
@@ -109,5 +110,26 @@ public abstract class ServerCallable<T> implements Callable<T> {
   /** @return the row */
   public byte [] getRow() {
     return row;
+  }
+
+  public HRegionLocation getLocation() {
+    return location;
+  }
+
+  public byte[] getTableName() {
+    return tableName;
+  }
+
+  public void refreshServerConnection(Exception e) throws IOException {
+    ((HBaseToThriftAdapter)server).refreshConnectionAndThrowIOException(e);
+  }
+
+  public void updateFailureInfoForServer(boolean didTry, boolean couldNotCommunicate) {
+    ((HConnectionManager.TableServers)connection).updateFailureInfoForServer(
+        getServerAddress(), didTry, couldNotCommunicate);
+  }
+
+  public void handleThrowable(Throwable t, MutableBoolean couldNotCommunicateWithServer) throws Exception {
+    ((HConnectionManager.TableServers)connection).handleThrowable(t, this, couldNotCommunicateWithServer);
   }
 }

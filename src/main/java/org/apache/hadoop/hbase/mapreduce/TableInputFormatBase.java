@@ -190,7 +190,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       splitKeys.setSecond(stopKeys);
     }
 
-    List<InputSplit> splits =
+    List<InputSplit> splits = 
         new ArrayList<InputSplit>(numRegions * numMappers);
     byte[] startRow = scan.getStartRow();
     byte[] stopRow = scan.getStopRow();
@@ -415,10 +415,10 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   protected void setTableRecordReader(TableRecordReader tableRecordReader) {
     this.tableRecordReader = tableRecordReader;
   }
-
+  
   /**
    * Sets the number of mappers assigned to each region.
-   *
+   * 
    * @param num
    * @throws IllegalArgumentException When <code>num</code> <= 0.
    */

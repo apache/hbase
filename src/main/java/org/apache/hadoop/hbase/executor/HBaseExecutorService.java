@@ -62,22 +62,22 @@ public class HBaseExecutorService
   static Map<String, HBaseExecutorService> executorServicesMap =
     Collections.synchronizedMap(new HashMap<String, HBaseExecutorService>());
 
-
+  
   /**
-   * The following is a list of names for the various executor services in both
+   * The following is a list of names for the various executor services in both 
    * the master and the region server.
    */
   public enum HBaseExecutorServiceType {
     NONE                       (-1),
     MASTER_CLOSEREGION         (1),
     MASTER_OPENREGION          (2);
-
+    
     private final int value;
-
+    
     HBaseExecutorServiceType(int intValue) {
       this.value = intValue;
     }
-
+    
     public void startExecutorService(String serverName) {
       // if this is NONE then there is no executor to start
       if(value == NONE.value) {
@@ -90,7 +90,7 @@ public class HBaseExecutorService
       }
       HBaseExecutorService.startExecutorService(name);
     }
-
+    
     public HBaseExecutorService getExecutor(String serverName) {
       // if this is NONE then there is no executor
       if(value == NONE.value) {
@@ -98,7 +98,7 @@ public class HBaseExecutorService
       }
       return HBaseExecutorService.getExecutorService(getExecutorName(serverName));
     }
-
+    
     public String getExecutorName(String serverName) {
       // if this is NONE then there is no executor
       if(value == NONE.value) {
@@ -123,7 +123,7 @@ public class HBaseExecutorService
     executorServicesMap.put(name, hbes);
     LOG.debug("Starting executor service: " + name);
   }
-
+  
   public static boolean isExecutorServiceRunning(String name) {
     return (executorServicesMap.containsKey(name));
   }
@@ -139,7 +139,7 @@ public class HBaseExecutorService
     }
     return executor;
   }
-
+  
   public static void shutdown() {
     for(Entry<String, HBaseExecutorService> entry : executorServicesMap.entrySet()) {
       entry.getValue().threadPoolExecutor.shutdown();

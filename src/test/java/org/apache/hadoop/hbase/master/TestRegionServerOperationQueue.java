@@ -41,7 +41,7 @@ public class TestRegionServerOperationQueue {
       return false;
     }
   };
-
+  
   @Before
   public void setUp() throws Exception {
     this.conf = new Configuration();

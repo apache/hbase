@@ -20,8 +20,13 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
 import junit.framework.Assert;
 import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,10 +40,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * This test verifies the correctness of the Per Column Family flushing strategy
@@ -60,9 +61,8 @@ public class TestPerColumnFamilyFlush extends TestCase {
   public static final byte[] FAMILY2 = families[1];
   public static final byte[] FAMILY3 = families[2];
 
-  private void initHRegion (String callingMethod,
-                            HBaseConfiguration conf)
-          throws IOException {
+  private void initHRegion (String callingMethod, Configuration conf)
+      throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
     for(byte [] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
@@ -105,12 +105,12 @@ public class TestPerColumnFamilyFlush extends TestCase {
   @Test
   public void testSelectiveFlushWhenEnabled() throws IOException {
     // Set up the configuration
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 200*1024);
     conf.setBoolean(HConstants.HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH, true);
     conf.setLong(HConstants.HREGION_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE, 100*1024);
 
-    // Intialize the HRegion
+    // Initialize the HRegion
     initHRegion(getName(), conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
@@ -247,15 +247,123 @@ public class TestPerColumnFamilyFlush extends TestCase {
     Assert.assertEquals(0, region.getMemstoreSize().get());
   }
 
+  public void testSelectiveFlushWithThreshold(long t) throws IOException {
+    /*         t->|
+     * Phase 1    |     |     |
+     *            +-----+-----+
+     *           FM1   FM2   FM3
+     */
+    // flush all
+    region.flushcache(false);
+    region.put(createPut(2, 1));
+    region.put(createPut(3, 1));
+
+
+    int cnt = 0;
+    while (region.getStore(FAMILY1).getMemStoreSize() <= t) {
+      region.put(createPut(1, cnt));
+      cnt ++;
+    }
+
+    final long sizeFamily1_1 = region.getStore(FAMILY1).getMemStoreSize();
+    final long sizeFamily2_1 = region.getStore(FAMILY2).getMemStoreSize();
+    final long sizeFamily3_1 = region.getStore(FAMILY3).getMemStoreSize();
+
+    Assert.assertTrue(sizeFamily1_1 > t);
+    Assert.assertTrue(sizeFamily2_1 > 0);
+    Assert.assertTrue(sizeFamily3_1 > 0);
+
+    /*         t->
+     * Phase 2          |     |
+     *            +-----+-----+
+     *           FM1   FM2   FM3
+     */
+    // flush, should only flush family 1
+    region.flushcache(true);
+
+    final long sizeFamily1_2 = region.getStore(FAMILY1).getMemStoreSize();
+    final long sizeFamily2_2 = region.getStore(FAMILY2).getMemStoreSize();
+    final long sizeFamily3_2 = region.getStore(FAMILY3).getMemStoreSize();
+
+    // should clear FAMILY1 only
+    Assert.assertEquals("sizeFamily1", 0, sizeFamily1_2);
+    Assert.assertEquals("sizeFamily2", sizeFamily2_1, sizeFamily2_2);
+    Assert.assertEquals("sizeFamily3", sizeFamily3_1, sizeFamily3_2);
+    /*         t->,
+     * Phase 3    |     |     |
+     *            +-----+-----+
+     *           FM1   FM2   FM3
+     */
+    // flush all
+    region.flushcache(false);
+
+    region.put(createPut(2, 1));
+    region.put(createPut(3, 1));
+    // reduce cnt to 1 to make the size less than t
+    cnt--;
+    for (int i = 0; i < cnt; i ++) {
+      region.put(createPut(1, i));
+    }
+
+    final long sizeFamily1_3 = region.getStore(FAMILY1).getMemStoreSize();
+    final long sizeFamily2_3 = region.getStore(FAMILY2).getMemStoreSize();
+    final long sizeFamily3_3 = region.getStore(FAMILY3).getMemStoreSize();
+
+    Assert.assertTrue("sizeFamily1 < t", sizeFamily1_3 < t);
+    Assert.assertEquals("sizeFamily2", sizeFamily2_1, sizeFamily2_3);
+    Assert.assertEquals("sizeFamily3", sizeFamily3_1, sizeFamily3_3);
+    /*         t->
+     * Phase 3
+     *            +-----+-----+
+     *           FM1   FM2   FM3
+     */
+    // flush, should flush all
+    region.flushcache(true);
+
+    final long sizeFamily1_4 = region.getStore(FAMILY1).getMemStoreSize();
+    final long sizeFamily2_4 = region.getStore(FAMILY2).getMemStoreSize();
+    final long sizeFamily3_4 = region.getStore(FAMILY3).getMemStoreSize();
+    Assert.assertEquals("sizeFamily1", 0, sizeFamily1_4);
+    Assert.assertEquals("sizeFamily2", 0, sizeFamily2_4);
+    Assert.assertEquals("sizeFamily3", 0, sizeFamily3_4);
+  }
+
+  @Test
+  public void testConfigueChange() throws IOException {
+    final int T_init = 100*1024;
+    final int T_1 = 200*1024;
+    final int T_2 = 50*1024;
+
+    // Set up the configuration
+    Configuration conf = HBaseConfiguration.create();
+    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 200*1024);
+    conf.setBoolean(HConstants.HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH, true);
+    conf.setLong(HConstants.HREGION_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE, T_init);
+
+    // Initialize the HRegion
+    initHRegion(getName(), conf);
+
+    // test for threshold of T_init
+    this.testSelectiveFlushWithThreshold(T_init);
+    // test for threshold of T_1
+    conf.setLong(HConstants.HREGION_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE, T_1);
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+    this.testSelectiveFlushWithThreshold(T_1);
+    // test for threshold of T_2
+    conf.setLong(HConstants.HREGION_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE, T_2);
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+    this.testSelectiveFlushWithThreshold(T_2);
+  }
+
   @Test
   public void testSelectiveFlushWhenNotEnabled() throws IOException {
     // Set up the configuration
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 200 * 1024);
     conf.setBoolean(HConstants.HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH, false);
     conf.setLong(HConstants.HREGION_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE, 100 * 1024);
 
-    // Intialize the HRegion
+    // Initialize the HRegion
     initHRegion(getName(), conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {

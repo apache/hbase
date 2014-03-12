@@ -23,9 +23,9 @@ module Shell
     class AlterAsync < Command
       def help
         return <<-EOF
-          Alter column family schema, does not wait for all regions to receive the
-          schema changes. Pass table name and a dictionary specifying new column
-          family schema. Dictionaries are described on the main help command output.
+          Alter column family schema, does not wait for all regions to receive the 
+          schema changes. Pass table name and a dictionary specifying new column 
+          family schema. Dictionaries are described on the main help command output. 
           Dictionary must include name of column family to alter. For example,
 
           To change or add the 'f1' column family in table 't1' from defaults

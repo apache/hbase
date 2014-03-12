@@ -34,7 +34,7 @@ import java.io.IOException;
  * Scanner class that contains the <code>.META.</code> table scanning logic
  * and uses a Retryable scanner. Provided visitors will be called
  * for each row.
- *
+ * 
  * Although public visibility, this is not a public-facing API and may evolve in
  * minor releases.
  */
@@ -121,8 +121,7 @@ public class MetaScanner {
       byte[] searchRow =
         HRegionInfo.createRegionName(tableName, row, HConstants.NINES,
           false);
-
-      HTable metaTable = new HTable(configuration, metaTableName);
+      HTable metaTable = new HTable(configuration , metaTableName);
       Result startRowResult = metaTable.getRowOrBefore(searchRow,
           HConstants.CATALOG_FAMILY);
       if (startRowResult == null) {

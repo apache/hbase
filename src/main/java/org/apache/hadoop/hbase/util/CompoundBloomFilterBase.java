@@ -28,7 +28,7 @@ public class CompoundBloomFilterBase implements BloomFilterBase {
 
   /** Hash function type to use, as defined in {@link Hash} */
   protected int hashType;
-
+  
   /** Comparator used to compare Bloom filter keys */
   protected RawComparator<byte[]> comparator;
 

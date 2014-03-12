@@ -244,7 +244,7 @@ public final class ParseConstants {
    * RegexStringType byte array
    */
   public static final byte [] regexStringType = new byte [] {'r','e','g','e','x',
-															 's','t','r','i','n','g'};
+	  														 's','t','r','i','n','g'};
 
   /**
    * SubstringType byte array

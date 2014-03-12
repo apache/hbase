@@ -43,7 +43,7 @@ public class MultiThreadedWriter extends MultiThreadedAction
   private static final Log LOG = LogFactory.getLog(MultiThreadedWriter.class);
   Set<HBaseWriter> writers_ = new HashSet<HBaseWriter>();
 
-  /* This is the current key to be inserted by any thread. Each thread does an
+  /* This is the current key to be inserted by any thread. Each thread does an 
      atomic get and increment operation and inserts the current value. */
   public static AtomicLong currentKey_ = null;
   /* The sorted set of keys inserted by the writers */
@@ -81,7 +81,7 @@ public class MultiThreadedWriter extends MultiThreadedAction
     startReporter("W");
   }
 
-
+  
   public void setBulkLoad(boolean bulkLoad) {
     this.bulkLoad = bulkLoad;
   }
@@ -169,7 +169,7 @@ public class MultiThreadedWriter extends MultiThreadedAction
     public void insertKeys(long rowKey,
         ColumnFamilyProperties[] familyProperties) {
       byte[] row = RegionSplitter.getHBaseKeyFromRowID(rowKey);
-      //LOG.info("Inserting row: "+Bytes.toString(row));
+      //LOG.info("Inserting row: "+Bytes.toString(row)); 
       int insertedSize = 0;
       try {
         long start = System.currentTimeMillis();

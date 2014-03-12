@@ -578,7 +578,7 @@ public class TestLruBlockCache {
   private static class CachedItem implements Cacheable {
     BlockCacheKey cacheKey;
     int size;
-
+    
     CachedItem(String blockName, int size) {
       this.cacheKey = new BlockCacheKey(blockName, 0);
       this.size = size;

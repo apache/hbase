@@ -19,6 +19,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -27,12 +33,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
 
 public class TestParallelScanner {
   final Log LOG = LogFactory.getLog(getClass());
@@ -59,7 +59,6 @@ public class TestParallelScanner {
     final int regionCnt = TEST_UTIL.createMultiRegions(table, FAMILY);
     TEST_UTIL.waitUntilAllRegionsAssigned(regionCnt);
     final int rowCount = TEST_UTIL.loadTable(table, FAMILY);
-    table.flushCommits();
     TEST_UTIL.flush(name);
 
     Scan[] rowsPerRegionScanner = new Scan[regionCnt];
@@ -75,9 +74,11 @@ public class TestParallelScanner {
       s.setStopRow(startAndEndKeys.getSecond()[i]);
       s.addFamily(FAMILY);
       rowsPerRegionScanner[i] = s;
-      totalRowsScannedInSequential += TEST_UTIL.countRows(table, s);
+      totalRowsScannedInSequential += HBaseTestingUtility.countRows(table,
+          new Scan(s));
     }
-    assertEquals(rowCount, totalRowsScannedInSequential);
+    assertEquals("Total rows scanned in sequential", rowCount,
+        totalRowsScannedInSequential);
 
     // Construct a ParallelScanner
     ParallelScanner parallelScanner =
@@ -90,6 +91,7 @@ public class TestParallelScanner {
       totalRowScannedInParallel += results.size();
     }
     parallelScanner.close();
-    assertEquals(rowCount, totalRowScannedInParallel);
+    assertEquals("Total row scanned in parallel", rowCount,
+        totalRowScannedInParallel);
   }
 }

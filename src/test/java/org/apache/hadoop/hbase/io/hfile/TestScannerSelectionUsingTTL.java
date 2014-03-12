@@ -155,7 +155,7 @@ public class TestScannerSelectionUsingTTL {
 
     region.close();
   }
-
+  
   private void verifyDataBlockRead(Map<String, Long> metricsBeforeCompaction,
       int expectCompactionDataBlocksRead){
     SchemaMetrics.validateMetricChanges(metricsBeforeCompaction);

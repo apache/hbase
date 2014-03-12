@@ -30,13 +30,13 @@ import org.junit.Test;
 
 /**
  * Tests the BlockCacheColumnFamilySummary class
- *
+ * 
  */
 public class TestBlockCacheColumnFamilySummary {
 
 
   /**
-   *
+   * 
    */
   @Test
   public void testEquals()  {
@@ -44,7 +44,7 @@ public class TestBlockCacheColumnFamilySummary {
     BlockCacheColumnFamilySummary e1 = new BlockCacheColumnFamilySummary();
     e1.setTable("table1");
     e1.setColumnFamily("cf1");
-
+    
     BlockCacheColumnFamilySummary e2 = new BlockCacheColumnFamilySummary();
     e2.setTable("table1");
     e2.setColumnFamily("cf1");
@@ -53,7 +53,7 @@ public class TestBlockCacheColumnFamilySummary {
   }
 
   /**
-   *
+   * 
    */
   @Test
   public void testNotEquals() {
@@ -61,7 +61,7 @@ public class TestBlockCacheColumnFamilySummary {
     BlockCacheColumnFamilySummary e1 = new BlockCacheColumnFamilySummary();
     e1.setTable("table1");
     e1.setColumnFamily("cf1");
-
+    
     BlockCacheColumnFamilySummary e2 = new BlockCacheColumnFamilySummary();
     e2.setTable("tablexxxxxx");
     e2.setColumnFamily("cf1");
@@ -70,12 +70,12 @@ public class TestBlockCacheColumnFamilySummary {
   }
 
   /**
-   *
+   * 
    */
   @Test
   public void testMapLookup() {
-
-    Map<BlockCacheColumnFamilySummary, BlockCacheColumnFamilySummary> bcs =
+    
+    Map<BlockCacheColumnFamilySummary, BlockCacheColumnFamilySummary> bcs = 
       new HashMap<BlockCacheColumnFamilySummary, BlockCacheColumnFamilySummary>();
 
     BlockCacheColumnFamilySummary e1 = new BlockCacheColumnFamilySummary("table1","cf1");
@@ -97,23 +97,23 @@ public class TestBlockCacheColumnFamilySummary {
   }
 
   /**
-   *
+   * 
    */
   @Test
   public void testMapEntry() {
-
-    Map<BlockCacheColumnFamilySummary, BlockCacheColumnFamilySummary> bcs =
+    
+    Map<BlockCacheColumnFamilySummary, BlockCacheColumnFamilySummary> bcs = 
       new HashMap<BlockCacheColumnFamilySummary, BlockCacheColumnFamilySummary>();
 
     BlockCacheColumnFamilySummary e1 = new BlockCacheColumnFamilySummary("table1","cf1");
     bcs.put(e1, e1);
-
+    
     BlockCacheColumnFamilySummary e2 = new BlockCacheColumnFamilySummary("table1","cf1");
     bcs.put(e2, e2);
-
+    
     BlockCacheColumnFamilySummary e3 = new BlockCacheColumnFamilySummary("table1","cf1");
     bcs.put(e3, e3);
-
+    
     assertEquals("mapSize",1,bcs.size());
   }
 

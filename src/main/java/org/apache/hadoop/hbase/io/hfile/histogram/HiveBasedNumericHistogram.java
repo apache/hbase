@@ -50,6 +50,7 @@ public class HiveBasedNumericHistogram implements NumericHistogram {
     double y;
     Map<Enum<?>, Double> stats;
 
+    @Override
     public int compareTo(Coord o) {
       if (x < o.x) {
         return -1;
@@ -132,6 +133,7 @@ public class HiveBasedNumericHistogram implements NumericHistogram {
    * @param num_bins
    *          Number of non-uniform-width histogram bins to use
    */
+  @Override
   public void allocate(int numBins) {
     nbins = numBins;
     bins = new ArrayList<Coord>();
@@ -146,6 +148,7 @@ public class HiveBasedNumericHistogram implements NumericHistogram {
    *          A serialized histogram created by the serialize() method
    * @see #merge
    */
+  @Override
   public NumericHistogram merge(NumericHistogram hist) {
     Preconditions.checkNotNull(hist);
     Preconditions.checkArgument(hist instanceof HiveBasedNumericHistogram);
@@ -205,6 +208,7 @@ public class HiveBasedNumericHistogram implements NumericHistogram {
    * @param v
    *          The data point to add to the histogram approximation.
    */
+  @Override
   public void add(double v) {
     // Binary search to find the closest bucket that v should go into.
     // 'bin' should be interpreted as the bin to shift right in order to
@@ -411,7 +415,7 @@ public class HiveBasedNumericHistogram implements NumericHistogram {
     List<Bucket> buckets = Lists.newArrayList();
     Preconditions.checkArgument(hist != null);
     Preconditions.checkArgument(hist.bins != null);
-    if (hist.bins.size() == 0) {
+    if (hist.bins.isEmpty()) {
       return buckets;
     }
     buckets.add(new Bucket(this.minusInfinity, hist.bins.get(0).x, hist.bins
@@ -451,6 +455,7 @@ public class HiveBasedNumericHistogram implements NumericHistogram {
   /**
    * Constructs a uniform histogram and returns the list of buckets.
    */
+  @Override
   public List<Bucket> getUniformBuckets() {
     return getBuckets(uniform(this.getUsedBins()));
   }

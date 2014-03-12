@@ -37,7 +37,7 @@ public class RowMutation implements Row {
   public static enum Type {
     Put((byte)4),
     Delete((byte)8);
-
+    
     private final byte code;
 
     Type(final byte c) {
@@ -51,7 +51,7 @@ public class RowMutation implements Row {
       return this.code;
     }
   }
-
+  
   /**
    * Union type of field to hold either a Put or Delete
    * Useful for abstractions
@@ -69,14 +69,14 @@ public class RowMutation implements Row {
   private long orderNumber;
 
   /**
-   * To be used for Writable.
+   * To be used for Writable. 
    * DO NOT USE!!!
    */
   public RowMutation() {}
 
   /**
    * Constructor to set the inner union style field.
-   *
+   * 
    * @param request
    *          the Put or Delete to be executed
    * @throws IOException
@@ -112,10 +112,10 @@ public class RowMutation implements Row {
   }
 
   @Override
-  public void readFields(DataInput in)
+  public void readFields(DataInput in) 
   throws IOException {
     byte b = in.readByte();
-
+    
     if (Type.Put.getCode() == b) {
       row = new Put();
     } else if (Type.Delete.getCode() == b) {
@@ -123,16 +123,16 @@ public class RowMutation implements Row {
     } else {
       throw new IOException("Tried to read an invalid type of serialized object!");
     }
-
+    
     this.orderNumber = in.readLong();
     row.readFields(in);
   }
 
   @Override
-  public void write(DataOutput out)
+  public void write(DataOutput out) 
   throws IOException {
     byte b = 0;
-
+    
     if (row instanceof Put) {
       b = Type.Put.getCode();
     } else if (row instanceof Delete) {
@@ -140,7 +140,7 @@ public class RowMutation implements Row {
     } else {
       throw new IOException("Tried to write an invalid type of object to serialize!");
     }
-
+    
     out.write(b);
     out.writeLong(RowMutation.globalOrderCounter.incrementAndGet());
 
@@ -148,7 +148,7 @@ public class RowMutation implements Row {
   }
 
   /**
-   *
+   * 
    * @return
    */
   public long getOrderNumber() {

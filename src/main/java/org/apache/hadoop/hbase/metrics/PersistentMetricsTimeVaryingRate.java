@@ -42,8 +42,8 @@ public class PersistentMetricsTimeVaryingRate extends MetricsTimeVaryingRate {
    * @param registry - where the metrics object will be registered
    * @param description metrics description
    */
-  public PersistentMetricsTimeVaryingRate(final String nam,
-      final MetricsRegistry registry,
+  public PersistentMetricsTimeVaryingRate(final String nam, 
+      final MetricsRegistry registry, 
       final String description) {
     super(nam, registry, description);
   }
@@ -53,14 +53,14 @@ public class PersistentMetricsTimeVaryingRate extends MetricsTimeVaryingRate {
    * @param nam the name of the metrics to be used to publish the metric
    * @param registry - where the metrics object will be registered
    */
-  public PersistentMetricsTimeVaryingRate(final String nam,
+  public PersistentMetricsTimeVaryingRate(final String nam, 
       MetricsRegistry registry) {
     this(nam, registry, NO_DESCRIPTION);
   }
 
   /**
    * Push updated metrics to the mr.
-   *
+   * 
    * Note this does NOT push to JMX
    * (JMX gets the info via {@link #getPreviousIntervalAverageTime()} and
    * {@link #getPreviousIntervalNumOps()}
@@ -88,7 +88,7 @@ public class PersistentMetricsTimeVaryingRate extends MetricsTimeVaryingRate {
       maintainStats();
     }
   }
-
+  
   /**
    * Increment the metrics for numOps operations
    * @param numOps - number of operations
@@ -99,7 +99,7 @@ public class PersistentMetricsTimeVaryingRate extends MetricsTimeVaryingRate {
     super.inc(numOps, time);
     totalOps += numOps;
   }
-
+  
   /**
    * Increment the metrics for numOps operations
    * @param time - time for numOps operations
@@ -109,7 +109,7 @@ public class PersistentMetricsTimeVaryingRate extends MetricsTimeVaryingRate {
     super.inc(time);
     ++totalOps;
   }
-
+  
   /**
    * Rollover to a new interval
    * NOTE: does not reset numOps.  this is an absolute value
@@ -119,7 +119,7 @@ public class PersistentMetricsTimeVaryingRate extends MetricsTimeVaryingRate {
   }
 
   /* MetricsTimeVaryingRate will reset every time pushMetric() is called
-   * This is annoying for long-running stats that might not get a single
+   * This is annoying for long-running stats that might not get a single 
    * operation in the polling period.  This function ensures that values
    * for those stat entries don't get reset.
    */

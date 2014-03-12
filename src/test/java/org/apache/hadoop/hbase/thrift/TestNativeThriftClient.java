@@ -38,10 +38,9 @@ public class TestNativeThriftClient {
     // Spawn the current version of client unit tests from fbcode.
     // Allow the developer to override
     // the default fbcode build location.
-    String fbcodeDir = System.getenv("FBCODE_DIR");
-    if (fbcodeDir == null) {
-      fbcodeDir = "/home/engshare/contbuild/fbcode/hbase";
-    }
+    String fbcodeDir = System.getProperty("fbcode.root",
+        "/home/engshare/contbuild/fbcode/hbase");
+
     executeCommand(new String[] {
       fbcodeDir + "/_bin/hbase/src/testing/native_thrift",
       "--hbase",

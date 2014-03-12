@@ -127,9 +127,9 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   /**
    * Produces a string map for this key. Useful for programmatic use and
-   * manipulation of the data stored in an HLogKey, for example, printing
+   * manipulation of the data stored in an HLogKey, for example, printing 
    * as JSON.
-   *
+   * 
    * @return a Map containing data from this key
    */
   public Map<String, Object> toStringMap() {

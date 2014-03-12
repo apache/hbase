@@ -48,7 +48,7 @@ public interface InternalScanner extends Closeable {
    * @throws IOException e
    */
   public boolean next(List<KeyValue> results) throws IOException;
-
+  
   /**
    * Grab the next row's worth of values.
    * @param results return output array
@@ -67,7 +67,7 @@ public interface InternalScanner extends Closeable {
    * @throws IOException e
    */
   public boolean next(List<KeyValue> result, int limit) throws IOException;
-
+  
   /**
    * Grab the next row's worth of values with a limit on the number of values
    * to return.

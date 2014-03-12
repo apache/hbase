@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -37,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Abstract base class for operations that need to examine all HRegionInfo
@@ -50,7 +52,7 @@ abstract class TableOperation {
   protected final Set<HRegionInfo> unservedRegions = new TreeSet<HRegionInfo>();
   protected final Set<HRegionInfo> regionsToProcess = new TreeSet<HRegionInfo>();
   protected HMaster master;
-
+  
   protected TableOperation(final HMaster master, final byte [] tableName)
   throws IOException {
     this.master = master;
@@ -80,7 +82,7 @@ abstract class TableOperation {
       tableOp = operation;
     }
 
-    public Boolean call() throws IOException {
+    public Boolean call() throws IOException, InterruptedException, ExecutionException {
       boolean tableExists = false;
 
       // Open a scanner on the meta region
@@ -95,11 +97,13 @@ abstract class TableOperation {
       List<byte []> emptyRows = new ArrayList<byte []>();
       try {
         while (true) {
-          Result values = this.server.next(scannerId);
+          Result values =
+              BaseScanner.getOneResultFromScanner(this.server, scannerId);
           if (values == null || values.isEmpty()) {
             break;
           }
-          HRegionInfo info = this.master.getHRegionInfo(values.getRow(), values);
+          HRegionInfo info =
+              this.master.getHRegionInfo(values.getRow(), values);
           if (info == null) {
             emptyRows.add(values.getRow());
             LOG.error(Bytes.toString(HConstants.CATALOG_FAMILY) + ":"
@@ -120,7 +124,7 @@ abstract class TableOperation {
 
           tableExists = true;
           if(tableOp instanceof AddColumn || tableOp instanceof ModifyColumn ||
-              tableOp instanceof DeleteColumn ||
+              tableOp instanceof DeleteColumn || 
               tableOp instanceof MultiColumnOperation) {
             regionsToProcess.add(info);
           }
@@ -153,7 +157,7 @@ abstract class TableOperation {
       if (!tableExists) {
         throw new TableNotFoundException(Bytes.toString(tableName));
       }
-
+      
       postProcessMeta(m, server);
       unservedRegions.clear();
       return Boolean.TRUE;

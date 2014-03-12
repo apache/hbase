@@ -20,15 +20,15 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.KeyValueContext;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
+
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueContext;
 
 /**
  * Implements a heap merge across any number of KeyValueScanners.
@@ -83,6 +83,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
     }
   }
 
+  @Override
   public KeyValue peek() {
     if (this.current == null) {
       return null;
@@ -90,6 +91,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
     return this.current.peek();
   }
 
+  @Override
   public KeyValue next()  throws IOException {
     if(this.current == null) {
       return null;
@@ -121,6 +123,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
    * @param limit limit on row count to get
    * @return true if there are more keys, false if all scanners are done
    */
+  @Override
   public boolean next(List<KeyValue> result, int limit) throws IOException {
     return next(result, limit, null, null);
   }
@@ -149,6 +152,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
    * @param metric the metric name
    * @return true if there are more keys, false if all scanners are done
    */
+  @Override
   public boolean next(List<KeyValue> result, int limit, String metric,
       KeyValueContext kvContext) throws IOException {
     if (this.current == null) {
@@ -186,6 +190,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
    * @param result
    * @return true if there are more keys, false if all scanners are done
    */
+  @Override
   public boolean next(List<KeyValue> result) throws IOException {
     return next(result, -1);
   }
@@ -204,6 +209,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
     public KVScannerComparator(KVComparator kvComparator) {
       this.kvComparator = kvComparator;
     }
+    @Override
     public int compare(KeyValueScanner left, KeyValueScanner right) {
       int comparison = compare(left.peek(), right.peek());
       if (comparison != 0) {
@@ -239,6 +245,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
     }
   }
 
+  @Override
   public void close() {
     if (this.current != null) {
       this.current.close();
@@ -426,7 +433,8 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
    * since it is not included in the heap
    */
   List<KeyValueScanner> getActiveScanners() {
-    List<KeyValueScanner> allScanners = new ArrayList<KeyValueScanner>();
+    List<KeyValueScanner> allScanners = new ArrayList<KeyValueScanner>(
+        this.heap.size() + 1);
     allScanners.addAll(this.heap);
     allScanners.add(current);
     return allScanners;

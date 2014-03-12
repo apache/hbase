@@ -48,6 +48,7 @@ public class IdLock {
       this.id = id;
     }
 
+    @Override
     public String toString() {
       return "id=" + id + ", numWaiter=" + numWaiters + ", isLocked="
           + isLocked;
@@ -114,7 +115,7 @@ public class IdLock {
 
   /** For testing */
   void assertMapEmpty() {
-    assert map.size() == 0;
+    assert map.isEmpty();
   }
 
 }

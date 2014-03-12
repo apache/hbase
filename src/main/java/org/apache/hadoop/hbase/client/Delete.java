@@ -24,6 +24,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +33,10 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 
 /**
@@ -66,16 +71,18 @@ import com.google.common.base.Preconditions;
  * deleteFamily -- then you need to use the method overrides that take a
  * timestamp.  The constructor timestamp is not referenced.
  */
+@ThriftStruct
 public class Delete extends Mutation
   implements Writable, Comparable<Row> {
   private static final byte DELETE_VERSION = (byte)3;
 
   private static final int ADDED_WRITE_TO_WAL_VERSION = 3;
   private static final int ADDED_ATTRIBUTES_VERSION = 2;
+  private static final Delete dummyDelete = new Delete();
 
   /** Constructor for Writable.  DO NOT USE */
   public Delete() {
-    this((byte [])null);
+    this((byte[])null);
   }
 
   /**
@@ -86,7 +93,7 @@ public class Delete extends Mutation
    * families).
    * @param row row key
    */
-  public Delete(byte [] row) {
+  public Delete(byte[] row) {
     this(row, HConstants.LATEST_TIMESTAMP, null);
   }
 
@@ -104,7 +111,7 @@ public class Delete extends Mutation
    * @param timestamp maximum version timestamp (only for delete row)
    * @param rowLock previously acquired row lock, or null
    */
-  public Delete(byte [] row, long timestamp, RowLock rowLock) {
+  public Delete(byte[] row, long timestamp, RowLock rowLock) {
     this.row = row;
     this.ts = timestamp;
     if (rowLock != null) {
@@ -131,9 +138,71 @@ public class Delete extends Mutation
    * @param family family name
    * @return this for invocation chaining
    */
-  public Delete deleteFamily(byte [] family) {
+  public Delete deleteFamily(byte[] family) {
     this.deleteFamily(family, HConstants.LATEST_TIMESTAMP);
     return this;
+  }
+
+  @ThriftConstructor
+  public Delete(@ThriftField(1) final byte[] row,
+      @ThriftField(2) final long timeStamp,
+      @ThriftField(3) final Map<byte[], List<KeyValue>> familyMapSerial,
+      @ThriftField(4) final long lockId,
+      @ThriftField(5) final boolean writeToWAL) {
+    this(row, timeStamp, null);
+    this.lockId = lockId;
+    this.writeToWAL = writeToWAL;
+    // Need to do this, since familyMapSerial might be a HashMap whereas, we
+    // need a TreeMap that uses the Bytes.BYTES_COMPARATOR, as specified in
+    // the Mutation class.
+    this.familyMap.putAll(familyMapSerial);
+  }
+
+  @Override
+  @ThriftField(1)
+  public byte[] getRow() {
+    return this.row;
+  }
+
+  @Override
+  @ThriftField(2)
+  public long getTimeStamp() {
+    return this.ts;
+  }
+
+  /**
+   * Method for retrieving the delete's familyMap
+   * @return familyMap
+   */
+  @Override
+  @ThriftField(3)
+  public Map<byte[], List<KeyValue>> getFamilyMap() {
+    return this.familyMap;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  @ThriftField(4)
+  public long getLockId() {
+    return this.lockId;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  @ThriftField(5)
+  public boolean getWriteToWAL() {
+    return this.writeToWAL;
+  }
+
+  /**
+   * Static factory constructor which can create a dummy put.
+   */
+  static Delete createDummyDelete() {
+    return Delete.dummyDelete;
   }
 
   /**
@@ -146,7 +215,7 @@ public class Delete extends Mutation
    * @param timestamp maximum version timestamp
    * @return this for invocation chaining
    */
-  public Delete deleteFamily(byte [] family, long timestamp) {
+  public Delete deleteFamily(byte[] family, long timestamp) {
     List<KeyValue> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<KeyValue>();
@@ -158,13 +227,17 @@ public class Delete extends Mutation
     return this;
   }
 
+  public boolean isDummy() {
+    return this.row == null || this.row.length == 0;
+  }
+
   /**
    * Delete all versions of the specified column.
    * @param family family name
    * @param qualifier column qualifier
    * @return this for invocation chaining
    */
-  public Delete deleteColumns(byte [] family, byte [] qualifier) {
+  public Delete deleteColumns(byte[] family, byte[] qualifier) {
     this.deleteColumns(family, qualifier, HConstants.LATEST_TIMESTAMP);
     return this;
   }
@@ -177,7 +250,7 @@ public class Delete extends Mutation
    * @param timestamp maximum version timestamp
    * @return this for invocation chaining
    */
-  public Delete deleteColumns(byte [] family, byte [] qualifier, long timestamp) {
+  public Delete deleteColumns(byte[] family, byte[] qualifier, long timestamp) {
     List<KeyValue> list = familyMap.get(family);
     if (list == null) {
       list = new ArrayList<KeyValue>();
@@ -197,7 +270,7 @@ public class Delete extends Mutation
    * @param qualifier column qualifier
    * @return this for invocation chaining
    */
-  public Delete deleteColumn(byte [] family, byte [] qualifier) {
+  public Delete deleteColumn(byte[] family, byte[] qualifier) {
     this.deleteColumn(family, qualifier, HConstants.LATEST_TIMESTAMP);
     return this;
   }
@@ -209,7 +282,7 @@ public class Delete extends Mutation
    * @param timestamp version timestamp
    * @return this for invocation chaining
    */
-  public Delete deleteColumn(byte [] family, byte [] qualifier, long timestamp) {
+  public Delete deleteColumn(byte[] family, byte[] qualifier, long timestamp) {
     List<KeyValue> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<KeyValue>();
@@ -220,15 +293,8 @@ public class Delete extends Mutation
     return this;
   }
 
-  /**
-   * Method for retrieving the delete's familyMap
-   * @return familyMap
-   */
-  public Map<byte [], List<KeyValue>> getFamilyMap() {
-    return this.familyMap;
-  }
-
   //Writable
+  @Override
   public void readFields(final DataInput in) throws IOException {
     int version = in.readByte();
     if (version > DELETE_VERSION) {
@@ -243,7 +309,7 @@ public class Delete extends Mutation
     this.familyMap.clear();
     int numFamilies = in.readInt();
     for(int i=0;i<numFamilies;i++) {
-      byte [] family = Bytes.readByteArray(in);
+      byte[] family = Bytes.readByteArray(in);
       int numColumns = in.readInt();
       List<KeyValue> list = new ArrayList<KeyValue>(numColumns);
       for(int j=0;j<numColumns;j++) {
@@ -258,6 +324,7 @@ public class Delete extends Mutation
     }
   }
 
+  @Override
   public void write(final DataOutput out) throws IOException {
     int version = 1;
     if (!getAttributesMap().isEmpty()) {
@@ -275,7 +342,7 @@ public class Delete extends Mutation
       out.writeBoolean(writeToWAL);
     }
     out.writeInt(familyMap.size());
-    for(Map.Entry<byte [], List<KeyValue>> entry : familyMap.entrySet()) {
+    for(Map.Entry<byte[], List<KeyValue>> entry : familyMap.entrySet()) {
       Bytes.writeByteArray(out, entry.getKey());
       List<KeyValue> list = entry.getValue();
       out.writeInt(list.size());
@@ -297,8 +364,9 @@ public class Delete extends Mutation
    * @deprecated use {@link #deleteColumn(byte[], byte[], long)} instead
    * @return this for invocation chaining
    */
-  public Delete deleteColumns(byte [] column, long timestamp) {
-    byte [][] parts = KeyValue.parseColumn(column);
+  @Deprecated
+  public Delete deleteColumns(byte[] column, long timestamp) {
+    byte[][] parts = KeyValue.parseColumn(column);
     this.deleteColumns(parts[0], parts[1], timestamp);
     return this;
   }
@@ -310,8 +378,9 @@ public class Delete extends Mutation
    * @deprecated use {@link #deleteColumn(byte[], byte[])} instead
    * @return this for invocation chaining
    */
-  public Delete deleteColumn(byte [] column) {
-    byte [][] parts = KeyValue.parseColumn(column);
+  @Deprecated
+  public Delete deleteColumn(byte[] column) {
+    byte[][] parts = KeyValue.parseColumn(column);
     this.deleteColumn(parts[0], parts[1], HConstants.LATEST_TIMESTAMP);
     return this;
   }
@@ -337,9 +406,87 @@ public class Delete extends Mutation
    * @param timestamp will delete data at this timestamp or older 
    */
   public void deleteRow(long timestamp) {
-    Preconditions.checkArgument(familyMap.isEmpty(), 
-        "Cannot delete entire row, column families already specified");
+    Preconditions.checkArgument(familyMap.isEmpty(),
+      "Cannot delete entire row, column families already specified");
     ts = timestamp;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(row, ts, lockId, familyMap);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    Delete other = (Delete) obj;
+    if (ts != other.getTimeStamp()) {
+      return false;
+    }
+    if (writeToWAL != other.getWriteToWAL()) {
+      return false;
+    }
+    if (lockId != other.getLockId()) {
+      return false;
+    }
+    if (!Arrays.equals(other.row, this.getRow())) {
+      return false;
+    }
+    if (familyMap == null && other.getFamilyMap() != null) {
+      return false;
+    } else if (familyMap != null && other.getFamilyMap() == null) {
+      return false;
+    }
+    return familyMap.size() == other.getFamilyMap().size() &&
+      familyMap.entrySet().containsAll(other.getFamilyMap().entrySet());
+  }
+
+  public static class Builder {
+    private byte[] row;
+    private long timeStamp;
+    private Map<byte[], List<KeyValue>> familyMap;
+    private long lockId;
+    private boolean writeToWAL;
+
+    public Builder() {
+    }
+
+    public Builder setRow(byte[] row) {
+      this.row = row;
+      return this;
+    }
+
+    public Builder setTimeStamp(long ts) {
+      this.timeStamp = ts;
+      return this;
+    }
+
+    public Builder setFamilyMap(Map<byte[], List<KeyValue>> familyMap) {
+      this.familyMap = familyMap;
+      return this;
+    }
+
+    public Builder setLockId(long lockId) {
+      this.lockId = lockId;
+      return this;
+    }
+
+    public Builder setWriteToWAL(boolean writeToWAL) {
+      this.writeToWAL = writeToWAL;
+      return this;
+    }
+
+    public Delete create() {
+      return new Delete(row, timeStamp, familyMap, lockId, writeToWAL);
+    }
   }
 
 }

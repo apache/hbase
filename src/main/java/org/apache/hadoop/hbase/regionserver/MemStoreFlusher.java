@@ -251,7 +251,7 @@ class MemStoreFlusher implements FlushRequester {
    * A flushRegion that checks store file count.  If too many, puts the flush
    * on delay queue to retry later.
    * @param fqe
-   * @return true if the region was successfully flushed, false otherwise. If
+   * @return true if the region was successfully flushed, false otherwise. If 
    * false, there will be accompanying log messages explaining why the log was
    * not flushed.
    */
@@ -452,7 +452,7 @@ class MemStoreFlusher implements FlushRequester {
     public int getRequeueCount() {
       return this.requeueCount;
     }
-
+ 
     /**
      * @param when When to expire, when to come up out of the queue.
      * Specify in milliseconds.  This method adds System.currentTimeMillis()

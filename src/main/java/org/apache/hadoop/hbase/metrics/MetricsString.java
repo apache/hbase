@@ -31,19 +31,19 @@ public class MetricsString extends MetricsBase {
 
   private String value;
 
-  public MetricsString(final String name, final MetricsRegistry registry,
+  public MetricsString(final String name, final MetricsRegistry registry, 
       final String value) {
     super(name, NO_DESCRIPTION);
     this.value = value;
     registry.add(name, this);
   }
-  public MetricsString(final String name, final String description,
+  public MetricsString(final String name, final String description, 
       final MetricsRegistry registry, final String value) {
     super(name, description);
     this.value = value;
     registry.add(name, this);
   }
-
+  
   public String getValue() {
     return this.value;
   }

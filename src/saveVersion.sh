@@ -36,8 +36,8 @@ elif [ -d .git ]; then
   url="git://${hostname}${cwd}"
 else
 	which git  > /dev/null
-	if [ $? == 0 ]; then
-   revision=`git log -1 | grep "git-svn-id:" | awk '{print $2}' | cut -f7 -d\/`
+	if [ $? == 0 ]; then 
+		revision=`git log -1 | grep "git-svn-id:" | awk '{print $2}' | cut -f7 -d\/`
 		hostname=`hostname`
 		if [ "$revision" == "" ]; then
 			git_revision=`git log -1 --pretty=format:"%H"`

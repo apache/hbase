@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.SortedMap;
@@ -36,6 +37,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+
 /**
  * HServerInfo is meta info about an {@link HRegionServer}.  It is the token
  * by which a master distingushes a particular regionserver from the rest.
@@ -48,6 +53,7 @@ import org.apache.hadoop.io.WritableComparable;
  * by.  In subsequent communications, the regionserver will pass a HServerInfo
  * with the master-supplied address.
  */
+@ThriftStruct
 public class HServerInfo implements WritableComparable<HServerInfo> {
 
   private static final Log LOG = LogFactory.getLog(HServerInfo.class);
@@ -65,6 +71,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
       "-?[0-9]{1," + String.valueOf(Long.MAX_VALUE).length() + "}");
 
   private HServerAddress serverAddress;
+  // start time of the regionserver
   private long startCode;
   private HServerLoad load;
   // Servername is made of hostname, port and startcode.
@@ -76,7 +83,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
   // For each region, store the last sequence id that was flushed
   // from MemStore to an HFile
-  private final SortedMap<byte[], Long> flushedSequenceIdByRegion =
+  private SortedMap<byte[], Long> flushedSequenceIdByRegion =
       new ConcurrentSkipListMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
 
   public HServerInfo() {
@@ -109,6 +116,25 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.startCode = startCode;
     this.load = new HServerLoad();
     this.hostname = hostname;
+    }
+
+  @ThriftConstructor
+  public HServerInfo(
+      @ThriftField(1) HServerAddress serverAddress,
+      @ThriftField(2) long startCode,
+      @ThriftField(3) String hostname,
+      @ThriftField(4) Map<byte[], Long> flushedSequenceIdByRegion,
+      @ThriftField(5) boolean sendSequenceIds,
+      @ThriftField(6) String cachedHostnamePort,
+      @ThriftField(7) HServerLoad load) {
+    this.serverAddress = serverAddress;
+    this.startCode = startCode;
+    this.hostname = hostname;
+    this.flushedSequenceIdByRegion = new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
+    this.flushedSequenceIdByRegion.putAll(flushedSequenceIdByRegion);
+    this.sendSequenceIds = sendSequenceIds;
+    this.cachedHostnamePort = cachedHostnamePort;
+    this.load = load;
   }
 
   /**
@@ -123,6 +149,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.flushedSequenceIdByRegion.putAll(other.flushedSequenceIdByRegion);
   }
 
+  @ThriftField(7)
   public HServerLoad getLoad() {
     return load;
   }
@@ -131,6 +158,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.load = load;
   }
 
+  @ThriftField(1)
   public synchronized HServerAddress getServerAddress() {
     return new HServerAddress(serverAddress);
   }
@@ -140,13 +168,22 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.serverName = null;
   }
 
+  @ThriftField(2)
   public synchronized long getStartCode() {
     return startCode;
   }
 
+  @ThriftField(3)
   public String getHostname() {
     return this.hostname;
   }
+
+  @ThriftField(4)
+  public Map<byte[], Long> getFlushedSequenceIdByRegion() {
+    return this.flushedSequenceIdByRegion;
+  }
+
+
 
   public void setFlushedSequenceIdForRegion(byte[] region, long sequenceId) {
     flushedSequenceIdByRegion.put(region, sequenceId);
@@ -156,10 +193,6 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     return flushedSequenceIdByRegion.get(region);
   }
 
-  public SortedMap<byte[], Long> getFlushedSequenceIdByRegion() {
-    return flushedSequenceIdByRegion;
-  }
-
   /**
    * @return The hostname and port concatenated with a ':' as separator.
    */
@@ -167,6 +200,11 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     if (this.cachedHostnamePort == null) {
       this.cachedHostnamePort = getHostnamePort(this.hostname, this.serverAddress.getPort());
     }
+    return this.cachedHostnamePort;
+  }
+
+  @ThriftField(6)
+  public String getCachedHostnamePort() {
     return this.cachedHostnamePort;
   }
 
@@ -199,17 +237,8 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
       Integer.parseInt(hostAndPort.substring(index + 1)), startcode);
   }
 
-  /**
-   * @param address Server address
-   * @param startCode Server startcode
-   * @return Server name made of the concatenation of hostname, port and
-   * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
-   */
-  public static String getServerName(HServerAddress address, long startCode) {
-    return getServerName(address.getHostname(), address.getPort(), startCode);
-  }
 
-  /*
+  /**
    * @param hostName
    * @param port
    * @param startCode
@@ -229,6 +258,11 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.sendSequenceIds = sendSequenceIds;
   }
   
+  @ThriftField(5)
+  public boolean getSendSequenceIds() {
+    return this.sendSequenceIds;
+  }
+
   /**
    * @return ServerName and load concatenated.
    * @see #getServerName()
@@ -298,7 +332,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
    * @param hostAndPortOnly If <code>serverName</code> is a
    * <code>hostname ':' port</code>
    * or <code>hostname , port , startcode</code>.
-   * @return True if <code>serverName</code> found in <code>servers</code>
+   * @return true if <code>serverName</code> found in <code>servers</code>
    */
   public static boolean isServer(final Set<String> servers,
       final String serverName, final boolean hostAndPortOnly) {
@@ -323,7 +357,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     String[] components = serverName.split(SERVERNAME_SEPARATOR);
     if (components.length != 3) {
       String msg = "Invalid number of components in server name: " + serverName;
-      LOG.info(msg);
+      LOG.error(msg);
       throw new IllegalArgumentException(msg);
     }
     String hostName = components[0];

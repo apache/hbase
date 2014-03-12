@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * in a scanner object which is then returned
  * <p>
  * More documentation on this Filter Language can be found here
- * http://hbase.apache.org/book.html#thrift.filter-language
+ * https://our.intern.facebook.com/intern/wiki/index.php/HBase/Filter_Language
  *
  */
 public class ParseFilter {

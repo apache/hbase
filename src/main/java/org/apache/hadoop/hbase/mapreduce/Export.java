@@ -92,7 +92,7 @@ public class Export {
     long endTime = args.length > 4? Long.parseLong(args[4]): Long.MAX_VALUE;
     s.setTimeRange(startTime, endTime);
     s.setCacheBlocks(false);
-
+    
     if (conf.get(TableInputFormat.SCAN_COLUMN_FAMILY) != null) {
       s.addFamily(Bytes.toBytes(conf.get(TableInputFormat.SCAN_COLUMN_FAMILY)));
     }

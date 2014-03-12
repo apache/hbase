@@ -31,9 +31,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.WritableComparable;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+
 /**
  * HServerAddress is a "label" for a HBase server made of host and port number.
  */
+@ThriftStruct
 public class HServerAddress implements WritableComparable<HServerAddress> {
 
   private static final Log LOG = LogFactory.getLog(HServerAddress.class);
@@ -92,11 +97,27 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   }
 
   /**
+   * Thrift constructor
    * @param bindAddress Hostname
    * @param port Port number
    */
-  public HServerAddress(String bindAddress, int port) {
-    this.address = new InetSocketAddress(bindAddress, port);
+  @ThriftConstructor
+  public HServerAddress(
+      @ThriftField(1) String bindAddress,
+      @ThriftField(2) int port) {
+    String hostAndPort = createHostAndPort(bindAddress, port);
+    address = addressCache.get(hostAndPort);
+    if (address == null) {
+      this.address = new InetSocketAddress(bindAddress, port);
+      if (getBindAddress() != null) {
+        // Resolved the hostname successfully, cache it.
+        InetSocketAddress existingAddress = addressCache.putIfAbsent(hostAndPort, address);
+        if (existingAddress != null) {
+          // Another thread cached the address ahead of us, reuse it.
+          this.address = existingAddress;
+        }
+      }
+    }
     this.stringValue = getHostAddressWithPort();
     checkBindAddressCanBeResolved();
   }
@@ -156,11 +177,13 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   }
 
   /** @return Port number */
+  @ThriftField(2)
   public int getPort() {
     return address.getPort();
   }
 
   /** @return Hostname */
+  @ThriftField(1)
   public String getHostname() {
     return address.getHostName();
   }
@@ -240,5 +263,13 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     // resolved whereas other only has IP.
     if (address.equals(o.address)) return 0;
     return toString().compareTo(o.toString());
+  }
+
+  public static String createHostAndPort(String host, int port){
+    StringBuilder sb = new StringBuilder();
+    sb.append(host);
+    sb.append(":");
+    sb.append(port);
+    return sb.toString();
   }
 }

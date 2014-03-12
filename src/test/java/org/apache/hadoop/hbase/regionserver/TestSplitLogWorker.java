@@ -54,11 +54,11 @@ public class TestSplitLogWorker {
       new HBaseTestingUtility();
   private ZooKeeperWrapper zkw;
   private SplitLogWorker slw;
-
+  
   private interface Expr {
     public long eval();
   }
-
+  
   private void waitForCounter(final AtomicLong ctr, long oldval, long newval,
       long timems) {
     Expr e = new Expr() {
@@ -69,7 +69,7 @@ public class TestSplitLogWorker {
     waitForCounter(e, oldval, newval, timems);
     return;
   }
-
+ 
   private void waitForCounter(Expr e, long oldval, long newval,
       long timems) {
     long curt = System.currentTimeMillis();

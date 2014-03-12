@@ -79,7 +79,7 @@ public class TableRecordReaderImpl {
    */
   public void init(Configuration conf) throws IOException {
     LOG.info("Scanner init ; " +
-             " start row = " + Bytes.toStringBinary(scan.getStartRow()) +
+             " start row = " + Bytes.toStringBinary(scan.getStartRow()) + 
              " stop row = " + Bytes.toStringBinary(scan.getStopRow()));
     this.conf = conf;
     restart(scan.getStartRow());

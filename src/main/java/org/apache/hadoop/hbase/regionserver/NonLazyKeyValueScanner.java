@@ -49,7 +49,7 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
         "non-lazy scanner");
   }
 
-  public static boolean doRealSeek(KeyValueScanner scanner,
+  public static boolean doRealSeek(KeyValueScanner scanner, 
       KeyValue kv, boolean forward) throws IOException {
     return forward ? scanner.reseek(kv) : scanner.seek(kv);
   }

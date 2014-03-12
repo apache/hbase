@@ -25,16 +25,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
-import org.apache.hadoop.hbase.metrics.RequestMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+
 /**
  * This class encapsulates metrics for determining the load on a HRegionServer
  */
+@ThriftStruct
 public class HServerLoad implements WritableComparable<HServerLoad> {
   /** number of regions */
     // could just use regionLoad.size() but master.RegionManager likes to play
@@ -48,15 +53,17 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   /** the maximum allowable size of the heap, in MB */
   private int maxHeapMB;
   /** per-region load metrics */
-  private ArrayList<RegionLoad> regionLoad = new ArrayList<RegionLoad>();
+  private List<RegionLoad> regionLoad = new ArrayList<RegionLoad>();
   // lastLoadRefreshTime and expireAfter are only maintained by the 
   // master. They are not serialized and reported by the region servers
   public volatile /* transient */ long lastLoadRefreshTime = 0;
   public volatile /* transient */ long expireAfter = Long.MAX_VALUE;
 
+
   /**
    * Encapsulates per-region loading metrics.
    */
+  @ThriftStruct
   public static class RegionLoad implements Writable {
     /** the region name */
     private byte[] name;
@@ -113,11 +120,17 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
      * @param readRequestPerSec
      * @param readRequestPerSec
      */
-    public RegionLoad(final byte[] name, final int stores,
-        final int storefiles, final int storefileSizeMB,
-        final int memstoreSizeMB, final int storefileIndexSizeMB,
-        final int rootIndexSizeKB, final int totalStaticIndexSizeKB,
-        final int totalStaticBloomSizeKB) {
+    @ThriftConstructor
+    public RegionLoad(
+        @ThriftField(1) final byte[] name,
+        @ThriftField(2) final int stores,
+        @ThriftField(3) final int storefiles,
+        @ThriftField(4) final int storefileSizeMB,
+        @ThriftField(5) final int memstoreSizeMB,
+        @ThriftField(6) final int storefileIndexSizeMB,
+        @ThriftField(7) final int rootIndexSizeKB,
+        @ThriftField(8) final int totalStaticIndexSizeKB,
+        @ThriftField(9) final int totalStaticBloomSizeKB) {
       this.name = name;
       this.stores = stores;
       this.storefiles = storefiles;
@@ -134,6 +147,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     /**
      * @return the region name
      */
+    @ThriftField(1)
     public byte[] getName() {
       return name;
     }
@@ -148,6 +162,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     /**
      * @return the number of stores
      */
+    @ThriftField(2)
     public int getStores() {
       return stores;
     }
@@ -155,6 +170,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     /**
      * @return the number of storefiles
      */
+    @ThriftField(3)
     public int getStorefiles() {
       return storefiles;
     }
@@ -162,6 +178,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     /**
      * @return the total size of the storefiles, in MB
      */
+    @ThriftField(4)
     public int getStorefileSizeMB() {
       return storefileSizeMB;
     }
@@ -169,15 +186,32 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     /**
      * @return the memstore size, in MB
      */
-    public int getMemStoreSizeMB() {
+    @ThriftField(5)
+    public int getMemstoreSizeMB() {
       return memstoreSizeMB;
     }
 
     /**
      * @return the approximate size of storefile indexes on the heap, in MB
      */
+    @ThriftField(6)
     public int getStorefileIndexSizeMB() {
       return storefileIndexSizeMB;
+    }
+
+    @ThriftField(7)
+    public int getRootIndexSizeKB() {
+      return rootIndexSizeKB;
+    }
+
+    @ThriftField(8)
+    public int getTotalStaticIndexSizeKB() {
+      return totalStaticIndexSizeKB;
+    }
+
+    @ThriftField(9)
+    public int getTotalStaticBloomSizeKB() {
+      return totalStaticBloomSizeKB;
     }
 
     // Setters
@@ -314,6 +348,24 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     this.regionLoad.addAll(hsl.regionLoad);
   }
 
+  @ThriftConstructor
+  public HServerLoad(
+      @ThriftField(1) int numberOfRegions,
+      @ThriftField(2) int numberOfRequests,
+      @ThriftField(3) int usedHeapMB,
+      @ThriftField(4) int maxHeapMB,
+      @ThriftField(5) List<RegionLoad> regionLoad,
+      @ThriftField(6) long lastLoadRefreshTime,
+      @ThriftField(7) long expireAfter) {
+    this.numberOfRegions = numberOfRegions;
+    this.numberOfRequests = numberOfRequests;
+    this.usedHeapMB = usedHeapMB;
+    this.maxHeapMB = maxHeapMB;
+    this.regionLoad = regionLoad;
+    this.lastLoadRefreshTime = lastLoadRefreshTime;
+    this.expireAfter = expireAfter;
+  }
+
   /**
    * Originally, this method factored in the effect of requests going to the
    * server as well. However, this does not interact very well with the current
@@ -388,6 +440,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   /**
    * @return the numberOfRegions
    */
+  @ThriftField(1)
   public int getNumberOfRegions() {
     return numberOfRegions;
   }
@@ -395,6 +448,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   /**
    * @return the numberOfRequests
    */
+  @ThriftField(2)
   public int getNumberOfRequests() {
     return numberOfRequests;
   }
@@ -402,6 +456,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   /**
    * @return the amount of heap in use, in MB
    */
+  @ThriftField(3)
   public int getUsedHeapMB() {
     return usedHeapMB;
   }
@@ -409,6 +464,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   /**
    * @return the maximum allowable heap size, in MB
    */
+  @ThriftField(4)
   public int getMaxHeapMB() {
     return maxHeapMB;
   }
@@ -426,7 +482,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   public int getStorefiles() {
     int count = 0;
     for (RegionLoad info: regionLoad)
-    	count += info.getStorefiles();
+      count += info.getStorefiles();
     return count;
   }
 
@@ -446,7 +502,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   public int getMemStoreSizeInMB() {
     int count = 0;
     for (RegionLoad info: regionLoad)
-    	count += info.getMemStoreSizeMB();
+      count += info.getMemstoreSizeMB();
     return count;
   }
 
@@ -456,11 +512,29 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   public int getStorefileIndexSizeInMB() {
     int count = 0;
     for (RegionLoad info: regionLoad)
-    	count += info.getStorefileIndexSizeMB();
+      count += info.getStorefileIndexSizeMB();
     return count;
   }
 
+  @ThriftField(5)
+  public List<RegionLoad> getRegionLoad() {
+    return regionLoad;
+  }
+
+  @ThriftField(6)
+  public long getLastLoadRefreshTime() {
+    return lastLoadRefreshTime;
+  }
+
+  @ThriftField(7)
+  public long getExpireAfter() {
+    return expireAfter;
+  }
+
+
+
   // Setters
+
 
   /**
    * @param numberOfRegions the number of regions
@@ -545,4 +619,5 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   public int compareTo(HServerLoad o) {
     return this.getLoad() - o.getLoad();
   }
+
 }

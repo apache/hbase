@@ -249,7 +249,7 @@ public class TestDistributedLogSplitting {
     long curt = System.currentTimeMillis();
     long endt = curt + 30000;
     while (curt < endt) {
-      if ((tot_wkr_task_resigned.get() + tot_wkr_task_err.get() +
+      if ((tot_wkr_task_resigned.get() + tot_wkr_task_err.get() + 
           tot_wkr_final_transistion_failed.get()) == 0) {
         Thread.yield();
         curt = System.currentTimeMillis();

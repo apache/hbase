@@ -297,9 +297,14 @@ public class RegionScanner implements InternalScanner {
       prefetchScanFuture = scanPrefetchThreadPool.submit(callable);
     }
     rowReadCnt.addAndGet(scanResult.outResults.length);
-    return scanResult.outResults == null ||
-        (isFilterDone() && scanResult.outResults.length == 0) ?
-        null : scanResult.outResults;
+    Result[] ret;
+    if (scanResult.outResults == null ||
+        (isFilterDone() && scanResult.outResults.length == 0)) {
+      ret = Result.SENTINEL_RESULT_ARRAY;
+    } else {
+      ret = scanResult.outResults;
+    }
+    return ret;
   }
 
   /**

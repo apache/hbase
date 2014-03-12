@@ -110,7 +110,7 @@ public class TestHTable {
       Assert.assertEquals(address, address2);
     }
   }
-
+  
   @Test
   public void testHTableMultiPutThreadPool() throws Exception {
     byte [] TABLE = Bytes.toBytes("testHTableMultiputThreadPool");
@@ -122,7 +122,7 @@ public class TestHTable {
     int previousPoolSize = pool.getPoolSize();
     int previousLargestPoolSize = pool.getLargestPoolSize();
     long previousCompletedTaskCount = pool.getCompletedTaskCount();
-
+    
     for (int i = 0; i < NUM_REGIONS; i++) {
       Put put = new Put(ROWS[i]);
       put.add(FAMILY, QUALIFIER, VALUE);
@@ -135,7 +135,7 @@ public class TestHTable {
     assertEquals(previousPoolSize, pool.getPoolSize());
     assertEquals(previousLargestPoolSize, pool.getLargestPoolSize());
     assertEquals(previousCompletedTaskCount, pool.getCompletedTaskCount());
-
+    
     ArrayList<Put> multiput = new ArrayList<Put>();
     for (int i = 0; i < NUM_REGIONS; i++) {
       Put put = new Put(ROWS[i]);
@@ -144,11 +144,26 @@ public class TestHTable {
     }
     ht.put(multiput);
     ht.flushCommits();
-
+    
     // verify that HTable does use thread pool for multi put requests.
     assertTrue((SLAVES >= pool.getLargestPoolSize())
       && (pool.getLargestPoolSize() >= previousLargestPoolSize));
-    assertEquals(SLAVES,
+    assertEquals(SLAVES, 
         (pool.getCompletedTaskCount() - previousCompletedTaskCount));
+  }
+
+  /**
+   * Test that when a table could not be found, a TableNotFoundException is
+   * thrown.
+   *
+   * @throws Exception
+   */
+  @Test(expected = TableNotFoundException.class)
+  public void testTableNotFound() throws Exception {
+    // Let's search for a non-existing table, and get a TableNotFoundException.
+    HConnection connection =
+      HConnectionManager.getConnection(TEST_UTIL.getConfiguration());
+    connection.getRegionLocation(Bytes.toBytes("foo"),
+                                 Bytes.toBytes("r1"), false);
   }
 }

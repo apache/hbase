@@ -177,7 +177,7 @@ public class RecoverableZooKeeper {
             LOG.warn("Possibly transient ZooKeeper exception: " + e);
             if (!retryCounter.shouldRetry()) {
               LOG.error("ZooKeeper exists failed after "
-                + retryCounter.getMaxRetries() + " retries");
+                + retryCounter.getMaxRetries() + " retries, " + path);
               throw e;
             }
             break;
@@ -461,7 +461,7 @@ public class RecoverableZooKeeper {
               throw e;
             }
             LOG.error("Node " + path + " already exists and this is not a " +
-            		"retry");
+                "retry");
             throw e;
 
           case CONNECTIONLOSS:

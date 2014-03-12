@@ -1,4 +1,4 @@
-/**
+/** 
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -152,7 +152,7 @@ public class TestAvroServer {
     GenericArray<AFamilyDescriptor> families = new GenericData.Array<AFamilyDescriptor>(1, familyArraySchema);
     families.add(familyA);
     tableA.families = families;
-    impl.createTable(tableA);
+    impl.createTable(tableA);    
     assertEquals(impl.describeTable(tableAname).families.size(), 1);
 
     impl.disableTable(tableAname);
@@ -198,7 +198,7 @@ public class TestAvroServer {
     column.qualifier = qualifierAname;
     columns.add(column);
     getA.columns = columns;
-
+   
     assertFalse(impl.exists(tableAname, getA));
 
     APut putA = new APut();

@@ -107,6 +107,10 @@ public class TableMapReduceUtil {
     }
   }
 
+  public static void initCredentials(JobConf job) throws IOException {
+    // no-op, method added as Hive code calls this method
+  }
+  
   /**
    * Ensures that the given number of reduce tasks for the given job
    * configuration does not exceed the number of regions for the given table.

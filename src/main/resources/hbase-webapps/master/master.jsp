@@ -30,8 +30,8 @@
       frags = master.getTableFragmentation();
   }
 %><?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
 <title>HBase Master: <%= master.getMasterAddress().getHostname()%>:<%= master.getMasterAddress().getPort() %></title>
@@ -84,7 +84,7 @@
 </table>
 
 <h2>Catalog Tables</h2>
-<%
+<% 
   if (rootLocation != null) { %>
 <table>
 <tr>
@@ -110,13 +110,13 @@
 <%  } %>
     <td>The .META. table holds references to all User Table regions</td>
 </tr>
-
+  
 <%  } %>
 </table>
 <%} %>
 
 <h2>User Tables</h2>
-<% HTableDescriptor[] tables = new HBaseAdmin(conf).listTables();
+<% HTableDescriptor[] tables = new HBaseAdmin(conf).listTables(); 
    if(tables != null && tables.length > 0) { %>
 <table>
 <tr>
@@ -143,7 +143,7 @@
 <h2>Region Servers</h2>
 <% if (serverToServerInfos != null && serverToServerInfos.size() > 0) { %>
 <%   int totalRegions = 0;
-     int totalRequests = 0;
+     int totalRequests = 0; 
 %>
 
 <table>

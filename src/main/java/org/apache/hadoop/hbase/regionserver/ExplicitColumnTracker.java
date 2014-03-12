@@ -80,10 +80,12 @@ public class ExplicitColumnTracker implements ColumnTracker {
   /**
    * Done when there are no more columns to match against.
    */
+  @Override
   public boolean done() {
-    return this.columns.size() == 0;
+    return this.columns.isEmpty();
   }
 
+  @Override
   public ColumnCount getColumnHint() {
     return this.column;
   }
@@ -100,11 +102,12 @@ public class ExplicitColumnTracker implements ColumnTracker {
    *   scanners' read points.)
    * @return MatchCode telling ScanQueryMatcher what action to take
    */
+  @Override
   public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset,
       int length, long timestamp, boolean ignoreCount) {
     do {
       // No more columns left, we are done with this query
-      if(this.columns.size() == 0) {
+      if (this.columns.isEmpty()) {
         return ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW; // done_row
       }
 
@@ -179,6 +182,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
   /**
    * Called at the end of every StoreFile or memstore.
    */
+  @Override
   public void update() {
     if(this.columns.size() != 0) {
       this.index = 0;
@@ -190,6 +194,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
   }
 
   // Called between every row.
+  @Override
   public void reset() {
     buildColumnList();
     this.index = 0;

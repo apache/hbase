@@ -31,10 +31,10 @@ class MonitoredTaskImpl implements MonitoredTask {
   private long startTime;
   private long statusTime;
   private long stateTime;
-
+  
   private volatile String status;
   private volatile String description;
-
+  
   protected volatile State state = State.RUNNING;
 
   HBaseServer processingServer;
@@ -58,7 +58,7 @@ class MonitoredTaskImpl implements MonitoredTask {
   public long getStartTime() {
     return startTime;
   }
-
+  
   @Override
   public String getDescription() {
     return description;
@@ -73,17 +73,17 @@ class MonitoredTaskImpl implements MonitoredTask {
   public long getStatusTime() {
     return statusTime;
   }
-
+  
   @Override
   public State getState() {
     return state;
   }
-
+  
   @Override
   public long getStateTime() {
     return stateTime;
   }
-
+  
   @Override
   public long getCompletionTimestamp() {
     if (state == State.COMPLETE || state == State.ABORTED) {
@@ -115,7 +115,7 @@ class MonitoredTaskImpl implements MonitoredTask {
     setStatus(msg);
     setState(State.ABORTED);
   }
-
+  
   @Override
   public void setStatus(String status) {
     this.status = status;

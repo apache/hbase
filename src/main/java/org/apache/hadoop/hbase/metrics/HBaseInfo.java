@@ -34,13 +34,13 @@ import javax.management.ObjectName;
 public class HBaseInfo {
   protected static class HBaseInfoMBean extends MetricsMBeanBase {
     private final ObjectName mbeanName;
-
+  
     public HBaseInfoMBean(MetricsRegistry registry, String rsName) {
       super(registry, "HBaseInfo");
       mbeanName = MBeanUtil.registerMBean("HBase",
           "Info", this);
     }
-
+  
     public void shutdown() {
       if (mbeanName != null)
         MBeanUtil.unregisterMBean(mbeanName);
@@ -58,11 +58,11 @@ public class HBaseInfo {
       }
       return theInstance;
   }
-
+  
   // HBase jar info
   private MetricsString date = new MetricsString("date", registry,
       org.apache.hadoop.hbase.util.VersionInfo.getDate());
-  private MetricsString revision = new MetricsString("revision", registry,
+  private MetricsString revision = new MetricsString("revision", registry, 
       org.apache.hadoop.hbase.util.VersionInfo.getRevision());
   private MetricsString url = new MetricsString("url", registry,
       org.apache.hadoop.hbase.util.VersionInfo.getUrl());

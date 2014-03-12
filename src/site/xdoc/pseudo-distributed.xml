@@ -22,13 +22,13 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title>
+    <title> 
 Running HBase in pseudo-distributed mode
     </title>
   </properties>
 
   <body>
-      <p>This document augments what is described in the HBase 'Getting Started' in the
+      <p>This document augments what is described in the HBase 'Getting Started' in the 
  <a href="http://hbase.apache.org/docs/current/api/overview-summary.html#distributed">Distributed Operation: Pseudo- and Fully-distributed modes</a> section.
  In particular it describes scripts that allow you start extra masters and regionservers when running in pseudo-distributed mode.
  </p>
@@ -74,3 +74,4 @@ Running HBase in pseudo-distributed mode
 </body>
 
 </document>
+

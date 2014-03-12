@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.base.Preconditions;
 import org.apache.commons.lang.mutable.MutableDouble;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,6 +45,8 @@ import org.apache.hadoop.hbase.io.hfile.LruBlockCacheFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.common.base.Preconditions;
 
 /**
  * A collection of metric names in a given column family or a (table, column
@@ -477,7 +478,7 @@ public class SchemaMetrics {
       addToReadTime(BlockCategory.ALL_CATEGORIES, isCompaction, timeMs);
     }
   }
-  
+
   /**
    * Used to accumulate store metrics across multiple regions in a region
    * server.  These metrics are not "persistent", i.e. we keep overriding them
@@ -529,7 +530,7 @@ public class SchemaMetrics {
     HRegion.incrNumericPersistentMetric(
         storeMetricNames[storeMetricType.ordinal()], value);
   }
-  
+
   /**
    * Updates metrics for cacheHit/cacheMiss when a block is read.
    * @param blockCategory category of the block read
@@ -623,7 +624,7 @@ public class SchemaMetrics {
       addToPreloadReadTime(BlockCategory.ALL_CATEGORIES, isCompaction, timeMs);
     }
   }
-  
+
   /**
    * Updates read time, the number of misses, and the total number of block for preloader
    */
@@ -644,7 +645,7 @@ public class SchemaMetrics {
     incrNumericMetric(blockCategory, isCompaction,
             BlockMetricType.PRELOAD_CACHE_HIT);
   }
-  
+
   /**
    * Adds the given delta to the cache size for the given block category and
    * the aggregate metric for all block categories. Updates both the per-CF
@@ -800,15 +801,15 @@ public class SchemaMetrics {
    */
   public static String generateSchemaMetricsPrefix(String tableName,
       Set<byte[]> families) {
-    if (families == null ||  families.size() == 0 ||
+    if (families == null || families.isEmpty() ||
         tableName == null || tableName.length() == 0)
       return "";
 
     if (families.size() == 1) {
-      return SchemaMetrics.generateSchemaMetricsPrefix(tableName, 
+      return SchemaMetrics.generateSchemaMetricsPrefix(tableName,
           Bytes.toString(families.iterator().next()));
     }
-    
+
     tableName = getEffectiveTableName(tableName);
 
     StringBuilder sb = new StringBuilder();
@@ -1158,7 +1159,7 @@ public class SchemaMetrics {
     return sb.toString();
   }
 
-  /** Validates metrics that keep track of the number of cached blocks for each category */ 
+  /** Validates metrics that keep track of the number of cached blocks for each category */
   private static void checkNumBlocksInCache() {
     final LruBlockCache cache =
         LruBlockCacheFactory.getInstance().getCurrentBlockCacheInstance();
@@ -1185,7 +1186,7 @@ public class SchemaMetrics {
   }
 
   public static void clearBlockCacheMetrics() {
-    for (SchemaMetrics metrics : tableAndFamilyToMetrics.values()) { 
+    for (SchemaMetrics metrics : tableAndFamilyToMetrics.values()) {
       for (BlockCategory blockCategory : BlockCategory.values()) {
         String key = metrics.getBlockMetricName(blockCategory, DEFAULT_COMPACTION_FLAG,
             BlockMetricType.CACHE_NUM_BLOCKS);

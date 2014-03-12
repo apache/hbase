@@ -34,14 +34,14 @@ public abstract class Operation {
   private static final int DEFAULT_MAX_COLS = 5;
 
   /**
-   * Produces a Map containing a fingerprint which identifies the type and
+   * Produces a Map containing a fingerprint which identifies the type and 
    * the static schema components of a query (i.e. column families)
    * @return a map containing fingerprint information (i.e. column families)
    */
   public abstract Map<String, Object> getFingerprint();
 
   /**
-   * Produces a Map containing a summary of the details of a query
+   * Produces a Map containing a summary of the details of a query 
    * beyond the scope of the fingerprint (i.e. columns, rows...)
    * @param maxCols a limit on the number of columns output prior to truncation
    * @return a map containing parameters of a query (i.e. rows, columns...)
@@ -57,7 +57,7 @@ public abstract class Operation {
   }
 
   /**
-   * Produces a JSON object for fingerprint and details exposure in a
+   * Produces a JSON object for fingerprint and details exposure in a 
    * parseable format.
    * @param maxCols a limit on the number of columns to include in the JSON
    * @return a JSONObject containing this Operation's information, as a string
@@ -68,7 +68,7 @@ public abstract class Operation {
   }
 
   /**
-   * Produces a JSON object sufficient for description of a query
+   * Produces a JSON object sufficient for description of a query 
    * in a debugging or logging context.
    * @return the produced JSON object, as a string
    */
@@ -77,16 +77,16 @@ public abstract class Operation {
   }
 
   /**
-   * Produces a string representation of this Operation. It defaults to a JSON
-   * representation, but falls back to a string representation of the
+   * Produces a string representation of this Operation. It defaults to a JSON 
+   * representation, but falls back to a string representation of the 
    * fingerprint and details in the case of a JSON encoding failure.
-   * @param maxCols a limit on the number of columns output in the summary
+   * @param maxCols a limit on the number of columns output in the summary 
    * prior to truncation
    * @return a JSON-parseable String
    */
   public String toString(int maxCols) {
-    /* for now this is merely a wrapper from producing a JSON string, but
-     * toJSON is kept separate in case this is changed to be a less parsable
+    /* for now this is merely a wrapper from producing a JSON string, but 
+     * toJSON is kept separate in case this is changed to be a less parsable 
      * pretty printed representation.
      */
     try {
@@ -97,8 +97,8 @@ public abstract class Operation {
   }
 
   /**
-   * Produces a string representation of this Operation. It defaults to a JSON
-   * representation, but falls back to a string representation of the
+   * Produces a string representation of this Operation. It defaults to a JSON 
+   * representation, but falls back to a string representation of the 
    * fingerprint and details in the case of a JSON encoding failure.
    * @return String
    */
@@ -107,3 +107,4 @@ public abstract class Operation {
     return toString(DEFAULT_MAX_COLS);
   }
 }
+

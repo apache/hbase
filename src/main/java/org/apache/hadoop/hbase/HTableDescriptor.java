@@ -22,27 +22,33 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
+
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
 
 /**
  * HTableDescriptor contains the name of an HTable, and its
  * column families.
  */
+@ThriftStruct
 public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   // Changes prior to version 3 were not recorded here.
@@ -50,12 +56,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   // Version 4 adds indexes
   // Version 5 removed transactional pollution -- e.g. indexes
   public static final byte TABLE_DESCRIPTOR_VERSION = 5;
-
+  
   private byte [] name = HConstants.EMPTY_BYTE_ARRAY;
   private String nameAsString = "";
 
   // Table metadata
-  protected final Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
+  protected Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
     new HashMap<ImmutableBytesWritable, ImmutableBytesWritable>();
 
   public static final String FAMILIES = "FAMILIES";
@@ -157,12 +163,40 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     for(HColumnDescriptor descriptor : families) {
       this.families.put(descriptor.getName(), descriptor);
     }
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry:
-        values.entrySet()) {
-      this.values.put(entry.getKey(), entry.getValue());
+    this.values.putAll(values);
+  }
+
+  @ThriftConstructor
+  public HTableDescriptor(
+      @ThriftField(1) final byte[] name,
+      @ThriftField(2) List<HColumnDescriptor> families,
+      @ThriftField(3) Map<byte[], byte[]> values) {
+    this.name = name;
+    this.nameAsString = Bytes.toString(this.name);
+    setMetaFlags(this.name);
+    for (HColumnDescriptor descriptor : families) {
+      this.families.put(descriptor.getName(), descriptor);
+    }
+    for (Entry<byte[], byte[]> entry : values.entrySet()) {
+      this.values.put(new ImmutableBytesWritable(entry.getKey()), new ImmutableBytesWritable(entry.getValue()));
     }
   }
 
+  @ThriftField(2)
+  public List<HColumnDescriptor> getFamiliesForThrift() {
+    List<HColumnDescriptor> listToReturn = new ArrayList<HColumnDescriptor>();
+    listToReturn.addAll(this.families.values());
+    return listToReturn;
+  }
+
+  @ThriftField(3)
+  public Map<byte[], byte[]> getValuesForThrift() {
+    Map<byte[], byte[]> mapToReturn = new HashMap<byte[], byte[]>();
+    for (Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry : this.values.entrySet()) {
+      mapToReturn.put(entry.getKey().get(), entry.getValue().get());
+    }
+    return mapToReturn;
+  }
 
   /**
    * Constructs an empty object.
@@ -193,7 +227,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * <code>[a-zA-Z_0-9-.].
    * @see <a href="HADOOP-1581">HADOOP-1581 HBASE: Un-openable tablename bug</a>
    */
-  public HTableDescriptor(final byte [] name) {
+  public HTableDescriptor(final byte[] name) {
     super();
     setMetaFlags(this.name);
     this.name = this.isMetaRegion()? name: isLegalTableName(name);
@@ -215,10 +249,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     for (HColumnDescriptor c: desc.families.values()) {
       this.families.put(c.getName(), new HColumnDescriptor(c));
     }
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        desc.values.entrySet()) {
-      this.values.put(e.getKey(), e.getValue());
-    }
+    this.values.putAll(desc.values);
   }
 
   /*
@@ -425,7 +456,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /** @return name of table */
-  public byte [] getName() {
+  @ThriftField(1)
+  public byte[] getName() {
     return name;
   }
 

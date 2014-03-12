@@ -305,8 +305,8 @@ module Hbase
            sleep 1
          end while status != nil && status.getFirst() != 0
          puts "Done."
-       end
-
+       end    
+       
     #----------------------------------------------------------------------------------------------
     # Change table structure or table options
     def alter(table_name, wait = true, *args)
@@ -376,7 +376,7 @@ module Hbase
         # Change table attributes
         if method == "table_att"
           # Table should be disabled
-          raise(ArgumentError, "Table #{table_name} is enabled. Disable it first before altering.") if enabled?(table_name)
+          raise(ArgumentError, "Table #{table_name} is enabled. Disable it first before altering.") if enabled?(table_name)          
           htd.setMaxFileSize(JLong.valueOf(arg[MAX_FILESIZE])) if arg[MAX_FILESIZE]
           htd.setReadOnly(JBoolean.valueOf(arg[READONLY])) if arg[READONLY]
           htd.setMemStoreFlushSize(JLong.valueOf(arg[MEMSTORE_FLUSHSIZE])) if arg[MEMSTORE_FLUSHSIZE]
@@ -401,7 +401,7 @@ module Hbase
       if wait == true
         puts "Updating all regions with the new schema..."
         alter_status(table_name)
-      end
+      end            
     end
 
     def status(format)

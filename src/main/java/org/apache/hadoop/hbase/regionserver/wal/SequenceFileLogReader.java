@@ -74,18 +74,25 @@ public class SequenceFileLogReader implements HLog.Reader {
     static class WALReaderFSDataInputStream extends FSDataInputStream {
       private boolean firstGetPosInvocation = true;
       private long length;
+      private FSDataInputStream is;
 
       WALReaderFSDataInputStream(final FSDataInputStream is, final long l)
       throws IOException {
         super(is);
         this.length = l;
+        this.is = is;
+      }
+
+      @Override
+      public boolean isUnderConstruction() throws IOException {
+        return is.isUnderConstruction();
       }
 
       // This section can be confusing.  It is specific to how HDFS works.
       // Let me try to break it down.  This is the problem:
       //
-      //  1. HDFS DataNodes update the NameNode about a filename's length
-      //     on block boundaries or when a file is closed. Therefore,
+      //  1. HDFS DataNodes update the NameNode about a filename's length 
+      //     on block boundaries or when a file is closed. Therefore, 
       //     if an RS dies, then the NN's fs.getLength() can be out of date
       //  2. this.in.available() would work, but it returns int &
       //     therefore breaks for files > 2GB (happens on big clusters)
@@ -93,7 +100,7 @@ public class SequenceFileLogReader implements HLog.Reader {
       //  4. DFSInputStream is wrapped 2 levels deep : this.in.in
       //
       // So, here we adjust getPos() using getFileLength() so the
-      // SequenceFile.Reader constructor (aka: first invokation) comes out
+      // SequenceFile.Reader constructor (aka: first invokation) comes out 
       // with the correct end of the file:
       //         this.end = in.getPos() + length;
       @Override
@@ -208,8 +215,8 @@ public class SequenceFileLogReader implements HLog.Reader {
     } catch(Exception e) { /* reflection fail. keep going */ }
 
     String msg = (this.path == null? "": this.path.toString()) +
-      ", entryStart=" + entryStart + ", pos=" + pos +
-      ((end == Long.MAX_VALUE) ? "" : ", end=" + end) +
+      ", entryStart=" + entryStart + ", pos=" + pos + 
+      ((end == Long.MAX_VALUE) ? "" : ", end=" + end) + 
       ", edit=" + this.edit;
 
     // Enhance via reflection so we don't change the original class type
@@ -219,7 +226,12 @@ public class SequenceFileLogReader implements HLog.Reader {
         .newInstance(msg)
         .initCause(ioe);
     } catch(Exception e) { /* reflection fail. keep going */ }
-
+    
     return ioe;
+  }
+
+  @Override
+  public boolean isComplete() throws IOException {
+    return reader.isComplete();
   }
 }

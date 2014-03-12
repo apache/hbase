@@ -1,23 +1,20 @@
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
-import java.util.concurrent.ThreadPoolExecutor;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -92,7 +89,7 @@ public class TestPerRequestProfiling {
       put.add(FAMILIES[0], QUALIFIER, VALUE);
       table.put(put);
       // autoflush is on by default, or else move this check after flush
-      assertTrue (table.getProfilingData () == null);
+      assertNull(table.getProfilingData());
     }
     LOG.debug("Wrote some puts to table " + new String(TABLE));
 
@@ -102,14 +99,13 @@ public class TestPerRequestProfiling {
 
     // read back the values
     for (int i = 0; i < ROWS.length; i++) {
-      Get get = new Get(ROWS[i]);
-      get.addColumn(FAMILIES[0], QUALIFIER);
+      Get get = new Get.Builder(ROWS[i]).addColumn(FAMILIES[0], QUALIFIER)
+          .create();
       Result result = table.get(get);
       
       assertEquals(new String(VALUE), 
-    		  new String(result.getValue(FAMILIES[0], QUALIFIER)));
-      
-      assertTrue (table.getProfilingData () == null);
+          new String(result.getValue(FAMILIES[0], QUALIFIER)));
+      assertNull(table.getProfilingData());
     }
     LOG.debug("Read and verified from table " + new String(TABLE));
     
@@ -122,7 +118,7 @@ public class TestPerRequestProfiling {
       put.add(FAMILIES[0], QUALIFIER, VALUE);
       table.put(put);
       // autoflush is on by default, or else move this check after flush
-      assertTrue (table.getProfilingData () != null);
+      assertNotNull(table.getProfilingData());
     }
     LOG.debug("Wrote some puts to table " + new String(TABLE));
 
@@ -132,14 +128,13 @@ public class TestPerRequestProfiling {
 
     // read back the values
     for (int i = 0; i < ROWS.length; i++) {
-      Get get = new Get(ROWS[i]);
-      get.addColumn(FAMILIES[0], QUALIFIER);
+      Get get = new Get.Builder(ROWS[i]).addColumn(FAMILIES[0], QUALIFIER)
+          .create();
       Result result = table.get(get);
       
       assertEquals(new String(VALUE), 
           new String(result.getValue(FAMILIES[0], QUALIFIER)));
-      
-      assertTrue (table.getProfilingData () != null);
+      assertNotNull(table.getProfilingData());
     }
     LOG.debug("Read and verified from table " + new String(TABLE));
     
@@ -152,7 +147,7 @@ public class TestPerRequestProfiling {
       put.add(FAMILIES[0], QUALIFIER, VALUE);
       table.put(put);
       // autoflush is on by default, or else move this check after flush
-      assertTrue (table.getProfilingData () == null);
+      assertNull(table.getProfilingData());
     }
     LOG.debug("Wrote some puts to table " + new String(TABLE));
 
@@ -162,14 +157,12 @@ public class TestPerRequestProfiling {
 
     // read back the values
     for (int i = 0; i < ROWS.length; i++) {
-      Get get = new Get(ROWS[i]);
-      get.addColumn(FAMILIES[0], QUALIFIER);
+      Get get = new Get.Builder(ROWS[i]).addColumn(FAMILIES[0], QUALIFIER).create();
       Result result = table.get(get);
       
       assertEquals(new String(VALUE), 
           new String(result.getValue(FAMILIES[0], QUALIFIER)));
-      
-      assertTrue (table.getProfilingData () == null);
+      assertNull(table.getProfilingData());
     }
     LOG.debug("Read and verified from table " + new String(TABLE));
   }

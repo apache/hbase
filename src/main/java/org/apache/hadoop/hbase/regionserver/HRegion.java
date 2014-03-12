@@ -1,5 +1,5 @@
  /*
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2014 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -26,11 +26,13 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -53,8 +55,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.Date;
-import java.text.SimpleDateFormat;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -72,20 +72,23 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowLock;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TRowMutations;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.L2Cache;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
+import org.apache.hadoop.hbase.io.hfile.histogram.HistogramUtils;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -143,7 +146,7 @@ import com.google.common.collect.Lists;
  * regionName is a unique identifier for this HRegion. (startKey, endKey]
  * defines the keyspace for this HRegion.
  */
-public class HRegion implements HeapSize {
+public class HRegion implements HeapSize, ConfigurationObserver {
   public static final Log LOG = LogFactory.getLog(HRegion.class);
   static final String SPLITDIR = "splits";
   static final String MERGEDIR = "merges";
@@ -585,6 +588,8 @@ public class HRegion implements HeapSize {
    */
   public long initialize(final Progressable reporter)
   throws IOException {
+    HRegionServer.configurationManager.registerObserver(this);
+
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Initializing region " + this);
     try {
@@ -842,6 +847,8 @@ public class HRegion implements HeapSize {
    * @throws IOException e
    */
   public List<StoreFile> close(final boolean abort) throws IOException {
+    HRegionServer.configurationManager.deregisterObserver(this);
+
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Closing region " + this + (abort ? " due to abort" : ""));
     if (isClosed()) {
@@ -1411,7 +1418,7 @@ public class HRegion implements HeapSize {
               }
             }
             // Didn't find any CFs which were above the threshold for selection.
-            if (specificStoresToFlush.size() == 0) {
+            if (specificStoresToFlush.isEmpty()) {
               LOG.debug("Since none of the CFs were above the size, flushing all.");
               specificStoresToFlush = stores.values();
             }
@@ -1783,8 +1790,7 @@ public class HRegion implements HeapSize {
       if (key == null) {
         return null;
       }
-      Get get = new Get(key.getRow());
-      get.addFamily(family);
+      Get get = new Get.Builder(key.getRow()).addFamily(family).create();
       return get(get, null);
     } finally {
       splitsAndClosesLock.readLock().unlock();
@@ -1936,9 +1942,8 @@ public class HRegion implements HeapSize {
           }
           count = kvCount.get(qual);
 
-          Get get = new Get(kv.getRow());
-          get.setMaxVersions(count);
-          get.addColumn(family, qual);
+          Get get = new Get.Builder(kv.getRow()).setMaxVersions(count)
+              .addColumn(family, qual).create();
 
           List<KeyValue> result = get(get);
 
@@ -2344,12 +2349,12 @@ public class HRegion implements HeapSize {
       get.addColumn(family, qualifier);
       // Lock row
       Integer lid = getLock(lockId, get.getRow(), true);
-      List<KeyValue> result = new ArrayList<KeyValue>();
+      List<KeyValue> result = new ArrayList<KeyValue>(1);
       try {
         result = get(get);
         boolean matches = false;
 
-        if (result.size() == 0) {
+        if (result.isEmpty()) {
           if (expectedValue == null ) {
             matches = true;
           }
@@ -3731,6 +3736,10 @@ public class HRegion implements HeapSize {
       byte[] byteNow = Bytes.toBytes(now);
       try {
         // 5. Check mutations and apply edits to a single WALEdit
+        if (rm instanceof TRowMutations) {
+          rm = RowMutations.Builder.createFromTRowMutations((TRowMutations)rm);
+        }
+
         for (Mutation m : rm.getMutations()) {
           if (m instanceof Put) {
             Map<byte[], List<KeyValue>> familyMap = m.getFamilyMap();
@@ -3818,8 +3827,7 @@ public class HRegion implements HeapSize {
       Store store = stores.get(family);
 
       // Get the old value:
-      Get get = new Get(row);
-      get.addColumn(family, qualifier);
+      Get get = new Get.Builder(row).addColumn(family, qualifier).create();
 
       List<KeyValue> results = get(get);
 
@@ -4083,21 +4091,13 @@ public class HRegion implements HeapSize {
   };
 
   /**
-   * Returns null is no data is available.
-   * @return
-   * @throws IOException
+   * @return null is no data is available.
    */
   public HFileHistogram getHistogram() throws IOException {
-    List<HFileHistogram> histograms = new ArrayList<HFileHistogram>();
-    if (stores.size() == 0) return null;
-    for (Store s : stores.values()) {
-      HFileHistogram hist = s.getHistogram();
-      if (hist != null) histograms.add(hist);
+    if (stores.isEmpty()) {
+      return null;
     }
-    // If none of the stores produce a histogram returns null.
-    if (histograms.size() == 0) return null;
-    HFileHistogram h = histograms.get(0).compose(histograms);
-    return h;
+    return HistogramUtils.mergeOfStores(stores.values());
   }
 
   /**
@@ -4150,5 +4150,4 @@ public class HRegion implements HeapSize {
       s.updateConfiguration();
     }
   }
-
 }

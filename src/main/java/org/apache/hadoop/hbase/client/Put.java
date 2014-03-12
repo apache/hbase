@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 The Apache Software Foundation
+ * Copyright The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -37,6 +37,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.Writable;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+import com.google.common.base.Objects;
+
 
 /**
  * Used to perform Put operations for a single row.
@@ -45,10 +50,12 @@ import org.apache.hadoop.io.Writable;
  * for each column to be inserted, execute {@link #add(byte[], byte[], byte[]) add} or
  * {@link #add(byte[], byte[], long, byte[]) add} if setting the timestamp.
  */
+@ThriftStruct
 public class Put extends Mutation
   implements HeapSize, Writable, Comparable<Row> {
   private static final byte PUT_VERSION = (byte)2;
   private static final int ADDED_ATTRIBUTES_VERSION = 2;
+  private static final Put dummyPut = new Put();
 
   private static final long OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + 2 * ClassSize.REFERENCE +
@@ -86,13 +93,69 @@ public class Put extends Mutation
   }
 
   /**
+   * Thrift constructor
+   * @param row
+   * @param ts
+   * @param familyMap
+   * @param lockId
+   * @param writeToWAL
+   */
+  @ThriftConstructor
+  public Put(@ThriftField(1) final byte[] row,
+      @ThriftField(2) final long ts,
+      @ThriftField(3) Map<byte[], List<KeyValue>> familyMap,
+      @ThriftField(4) final long lockId,
+      @ThriftField(5) final boolean writeToWAL) {
+    this(row, ts, null);
+    this.familyMap.putAll(familyMap);
+    this.lockId = lockId;
+    this.writeToWAL = writeToWAL;
+  }
+
+  @Override
+  @ThriftField(1)
+  public byte[] getRow() {
+    return row;
+  }
+
+  @ThriftField(2)
+  public long getTs() {
+    return ts;
+  }
+
+  @Override
+  @ThriftField(3)
+  public Map<byte[], List<KeyValue>> getFamilyMap() {
+    return familyMap;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  @ThriftField(4)
+  public long getLockId() {
+    return this.lockId;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  @ThriftField(5)
+  public boolean getWriteToWAL() {
+    return this.writeToWAL;
+  }
+
+  /**
    * Create a Put operation for the specified row, using a given timestamp, and an existing row lock.
    * @param row row key
    * @param ts timestamp
    * @param rowLock previously acquired row lock, or null
    */
-  public Put(byte [] row, long ts, RowLock rowLock) {
-    if(row == null || row.length > HConstants.MAX_ROW_LENGTH) {
+  public Put(byte[] row, long ts, RowLock rowLock) {
+    if (row == null) return;
+    if(row.length > HConstants.MAX_ROW_LENGTH) {
       throw new IllegalArgumentException("Row key is invalid");
     }
     this.row = Arrays.copyOf(row, row.length);
@@ -117,6 +180,12 @@ public class Put extends Mutation
     this.writeToWAL = putToCopy.writeToWAL;
   }
 
+  /**
+   * Static factory constructor which can create a dummy put.
+   */
+  static Put createDummyPut() {
+    return Put.dummyPut;
+  }
   /**
    * Add the specified column and value to this Put operation.
    * @param family family name
@@ -170,15 +239,23 @@ public class Put extends Mutation
     return this;
   }
 
-  /*
+  /**
    * Create a KeyValue with this objects row key and the Put identifier.
    *
    * @return a KeyValue with this objects row key and the Put identifier.
    */
   private KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts,
       byte[] value) {
-  return  new KeyValue(this.row, family, qualifier, ts, KeyValue.Type.Put,
+    return  new KeyValue(this.row, family, qualifier, ts, KeyValue.Type.Put,
       value);
+  }
+
+  /**
+   * Convenience method to identify whether a Put is a dummy put.
+   * @return
+   */
+  public boolean isDummy() {
+    return this.row == null || this.row.length == 0;
   }
 
   /**
@@ -258,7 +335,7 @@ public class Put extends Mutation
   private boolean has(byte [] family, byte [] qualifier, long ts, byte [] value,
       boolean ignoreTS, boolean ignoreValue) {
     List<KeyValue> list = getKeyValueList(family);
-    if (list.size() == 0) {
+    if (list.isEmpty()) {
       return false;
     }
     // Boolean analysis of ignoreTS/ignoreValue.
@@ -322,6 +399,7 @@ public class Put extends Mutation
   }
 
   //HeapSize
+  @Override
   public long heapSize() {
     long heapsize = OVERHEAD;
     //Adding row
@@ -353,6 +431,7 @@ public class Put extends Mutation
   }
 
   //Writable
+  @Override
   public void readFields(final DataInput in)
   throws IOException {
     int version = in.readByte();
@@ -385,6 +464,7 @@ public class Put extends Mutation
     }
   }
 
+  @Override
   public void write(final DataOutput out)
   throws IOException {
     int version = 1;
@@ -439,9 +519,88 @@ public class Put extends Mutation
    * @deprecated use {@link #add(byte[], byte[], long, byte[])} instead
    * @return true
    */
+  @Deprecated
   public Put add(byte [] column, long ts, byte [] value) {
     byte [][] parts = KeyValue.parseColumn(column);
     return add(parts[0], parts[1], ts, value);
 
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    Put other = (Put) obj;
+    if (!(ts == other.getTs() &&
+        lockId == other.getLockId() &&
+        writeToWAL == other.getWriteToWAL() &&
+        Arrays.equals(row, other.getRow()))) {
+      return false;
+    }
+    if (familyMap == other.getFamilyMap()) {
+      return true;
+    }
+    if (other.familyMap == null) {
+      return false;
+    }
+    // To handle the case if other.familyMap() is created as a HashMap
+    // on the other side.
+    return familyMap.size() == other.getFamilyMap().size() &&
+        familyMap.entrySet().containsAll(other.getFamilyMap().entrySet());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(row, ts, lockId, familyMap);
+  }
+
+  /**
+   * Builder class for Put
+   */
+  public static class Builder {
+    private byte[] row;
+    private long timeStamp;
+    private Map<byte[], List<KeyValue>> familyMap;
+    private long lockId;
+    private boolean writeToWAL;
+
+    public Builder() {
+    }
+
+    public Builder setRow(byte[] row) {
+      this.row = row;
+      return this;
+    }
+
+    public Builder setTimeStamp(long ts) {
+      this.timeStamp = ts;
+      return this;
+    }
+
+    public Builder setFamilyMap(Map<byte[], List<KeyValue>> familyMap) {
+      this.familyMap = familyMap;
+      return this;
+    }
+
+    public Builder setLockId(long lockId) {
+      this.lockId = lockId;
+      return this;
+    }
+
+    public Builder setWriteToWAL(boolean writeToWAL) {
+      this.writeToWAL = writeToWAL;
+      return this;
+    }
+
+    public Put create() {
+      return new Put(row, timeStamp, familyMap, lockId, writeToWAL);
+    }
   }
 }

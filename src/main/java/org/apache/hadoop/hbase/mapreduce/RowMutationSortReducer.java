@@ -43,7 +43,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class RowMutationSortReducer extends
     Reducer<ImmutableBytesWritable, RowMutation, ImmutableBytesWritable, KeyValue> {
-
+  
   @Override
   protected void reduce(
       ImmutableBytesWritable row,

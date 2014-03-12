@@ -83,7 +83,7 @@ public class TestZKBasedReopenRegion {
       // Need at least two servers.
       LOG.info("Started new server=" +
         TEST_UTIL.getHBaseCluster().startRegionServer());
-
+      
     }
   }
 
@@ -100,18 +100,18 @@ public class TestZKBasedReopenRegion {
 
     AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
     AtomicBoolean reopenEventProcessed = new AtomicBoolean(false);
-    RegionServerOperationListener listener =
-      new ReopenRegionEventListener(region.getRegionNameAsString(),
+    RegionServerOperationListener listener = 
+      new ReopenRegionEventListener(region.getRegionNameAsString(), 
                                     closeEventProcessed,
                                     reopenEventProcessed);
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     master.getRegionServerOperationQueue().registerRegionServerOperationListener(listener);
-    HMsg closeRegionMsg = new HMsg(HMsg.Type.MSG_REGION_CLOSE,
+    HMsg closeRegionMsg = new HMsg(HMsg.Type.MSG_REGION_CLOSE, 
                                    region.getRegionInfo(),
                                    Bytes.toBytes("Forcing close in test")
                                   );
     TEST_UTIL.getHBaseCluster().addMessageToSendRegionServer(rsIdx, closeRegionMsg);
-
+    
     synchronized(closeEventProcessed) {
       closeEventProcessed.wait(3*60*1000);
     }
@@ -124,19 +124,19 @@ public class TestZKBasedReopenRegion {
     }
     if(!reopenEventProcessed.get()) {
       throw new Exception("Timed out, open event not called on master after region close.");
-    }
-
+    }    
+    
     LOG.info("Done with test, RS informed master successfully.");
   }
-
+  
   public static class ReopenRegionEventListener implements RegionServerOperationListener {
-
+    
     private static final Log LOG = LogFactory.getLog(ReopenRegionEventListener.class);
     String regionToClose;
     AtomicBoolean closeEventProcessed;
     AtomicBoolean reopenEventProcessed;
 
-    public ReopenRegionEventListener(String regionToClose,
+    public ReopenRegionEventListener(String regionToClose, 
                                      AtomicBoolean closeEventProcessed,
                                      AtomicBoolean reopenEventProcessed) {
       this.regionToClose = regionToClose;
@@ -180,13 +180,13 @@ public class TestZKBasedReopenRegion {
           synchronized(reopenEventProcessed) {
             reopenEventProcessed.notifyAll();
           }
-        }
+        }        
       }
-
+      
     }
-
+    
   }
-
+  
 
   private static void waitUntilAllRegionsAssigned(final int countOfRegions)
   throws IOException {
@@ -207,7 +207,7 @@ public class TestZKBasedReopenRegion {
       // If I get to here and all rows have a Server, then all have been assigned.
       if (rows == countOfRegions) break;
       LOG.info("Found=" + rows);
-      Threads.sleep(1000);
+      Threads.sleep(1000); 
     }
   }
 
@@ -255,14 +255,14 @@ public class TestZKBasedReopenRegion {
   private static byte [] getTestQualifier() {
     return getTestFamily();
   }
-
+  
   public static void main(String args[]) throws Exception {
     TestZKBasedReopenRegion.beforeAllTests();
-
+    
     TestZKBasedReopenRegion test = new TestZKBasedReopenRegion();
     test.setup();
     test.testOpenRegion();
-
+    
     TestZKBasedReopenRegion.afterAllTests();
   }
 }

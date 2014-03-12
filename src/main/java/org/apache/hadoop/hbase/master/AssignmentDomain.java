@@ -41,7 +41,7 @@ public class AssignmentDomain {
   private RackManager rackManager;
   private Map<HServerAddress, String> regionServerToRackMap;
   private Random random;
-
+  
   public AssignmentDomain(Configuration conf) {
     rackToRegionServerMap = new HashMap<String, List<HServerAddress>>();
     regionServerToRackMap = new HashMap<HServerAddress, String>();
@@ -49,7 +49,7 @@ public class AssignmentDomain {
     rackManager = new RackManager(conf);
     random = new Random();
   }
-
+  
   /**
    * Set the random seed
    * @param seed
@@ -73,7 +73,7 @@ public class AssignmentDomain {
    * Get a random rack except for the current rack
    * @param skipRackSet
    * @return the random rack except for any Rack from the skipRackSet
-   * @throws IOException
+   * @throws IOException 
    */
   public String getOneRandomRack(Set<String> skipRackSet) throws IOException {
     if (skipRackSet == null || uniqueRackList.size() <= skipRackSet.size()) {
@@ -85,10 +85,10 @@ public class AssignmentDomain {
       int randomIndex = random.nextInt(this.uniqueRackList.size());
       randomRack = this.uniqueRackList.get(randomIndex);
     } while (skipRackSet.contains(randomRack));
-
+    
     return randomRack;
   }
-
+  
   /**
    * Get one random server from the rack
    * @param rack
@@ -98,40 +98,40 @@ public class AssignmentDomain {
   public HServerAddress getOneRandomServer(String rack) throws IOException {
     return this.getOneRandomServer(rack, null);
   }
-
+  
   /**
    * Get a random server from the rack except for the servers in the skipServerSet
    * @param skipServerSet
    * @return the random server except for any servers from the skipServerSet
-   * @throws IOException
+   * @throws IOException 
    */
   public HServerAddress getOneRandomServer(String rack,
       Set<HServerAddress> skipServerSet) throws IOException {
     if(rack == null) return null;
     List<HServerAddress> serverList = this.rackToRegionServerMap.get(rack);
     if (serverList == null) return null;
-
+    
     // Get a random server except for any servers from the skip set
     if (skipServerSet != null && serverList.size() <= skipServerSet.size()) {
       throw new IOException("Cannot randomly pick another random server");
     }
-
+    
     HServerAddress randomServer;
     do {
       int randomIndex = random.nextInt(serverList.size());
       randomServer = serverList.get(randomIndex);
     } while (skipServerSet != null && skipServerSet.contains(randomServer));
-
+    
     return randomServer;
   }
-
+  
   /**
    * @return the total number of unique rack in the domain.
    */
   public int getTotalRackNum() {
     return this.uniqueRackList.size();
   }
-
+  
   /**
    * Get the list of region severs in the rack
    * @param rack
@@ -140,7 +140,7 @@ public class AssignmentDomain {
   public List<HServerAddress> getServersFromRack(String rack) {
     return this.rackToRegionServerMap.get(rack);
   }
-
+  
   /**
    * Add a server to the assignment domain
    * @param server
@@ -170,7 +170,7 @@ public class AssignmentDomain {
       this.addServer(server);
     }
   }
-
+  
   public Set<HServerAddress> getAllServers() {
     return regionServerToRackMap.keySet();
   }
@@ -188,14 +188,14 @@ public class AssignmentDomain {
   public Map<String, List<HServerAddress>> getRackToRegionServerMap() {
     return this.rackToRegionServerMap;
   }
-
+  
   /**
    * @return true if there is no rack in the assignment domain
    */
   public boolean isEmpty() {
     return uniqueRackList.isEmpty();
   }
-
+  
   /**
    * @return true if can place the favored nodes
    */

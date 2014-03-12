@@ -76,7 +76,7 @@ public class TestMiniClusterLoadSequential {
     this.dataBlockEncoding = dataBlockEncoding;
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
 
-    // We don't want any region reassignments by the load balancer during the test.
+    // We don't want any region reassignments by the load balancer during the test. 
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, 10.0f);
   }
 

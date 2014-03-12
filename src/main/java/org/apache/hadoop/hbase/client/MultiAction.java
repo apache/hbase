@@ -19,33 +19,82 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.hbase.util.Bytes;
-
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.DataInput;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
+
+import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
+
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+import com.google.common.base.Objects;
 
 /**
  * Container for Actions (i.e. Get, Delete, or Put), which are grouped by
  * regionName. Intended to be used with HConnectionManager.processBatch()
  */
+@ThriftStruct
 public final class MultiAction implements Writable {
 
   private static final int VERSION_0 = 0;
   // map of regions to lists of puts/gets/deletes for that region.
-  public Map<byte[], List<Get>> gets = null;
-  public Map<byte[], List<Put>> puts = null;
-  public Map<byte[], List<Delete>> deletes = null;
-  public Map<byte[], List<Integer>> originalIndex = null;
+  private Map<byte[], List<Get>> gets = null;
+  private Map<byte[], List<Put>> puts = null;
+  private Map<byte[], List<Delete>> deletes = null;
+  private Map<byte[], List<Integer>> originalIndex = null;
 
   public MultiAction() {
+  }
+
+  /**
+   * Thrift constructor for MultiAction serialization
+   * @param gets
+   * @param puts
+   * @param deletes
+   * @param originalIndex
+   */
+  @ThriftConstructor
+  public MultiAction(@ThriftField(1) Map<byte[], List<Get>> gets,
+      @ThriftField(2) Map<byte[], List<Put>> puts,
+      @ThriftField(3) Map<byte[], List<Delete>> deletes) {
+    if (gets != null) {
+      this.gets = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      this.gets.putAll(gets);
+    }
+    if (puts != null) {
+      this.puts = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      this.puts.putAll(puts);
+    }
+    if (deletes != null) {
+      this.deletes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      this.deletes.putAll(deletes);
+    }
+  }
+
+  @ThriftField(1)
+  public Map<byte[], List<Get>> getGets() {
+    return gets;
+  }
+
+  @ThriftField(2)
+  public Map<byte[], List<Put>> getPuts() {
+    return puts;
+  }
+
+  @ThriftField(3)
+  public Map<byte[], List<Delete>> getDeletes() {
+    return deletes;
+  }
+
+  public Map<byte[], List<Integer>> getOriginalIndex() {
+    return originalIndex;
   }
 
   /**
@@ -122,7 +171,6 @@ public final class MultiAction implements Writable {
     deletes = readMap(in);
   }
 
-  @SuppressWarnings("unchecked")
   private <R extends Row> Map<byte[], List<R>> readMap(DataInput in) throws IOException {
     int mapSize = in.readInt();
 
@@ -134,11 +182,51 @@ public final class MultiAction implements Writable {
       int listSize = in.readInt();
       List<R> lst = new ArrayList<R>(listSize);
       for (int j = 0; j < listSize; j++) {
-        lst.add((R) HbaseObjectWritable.readObject(in, null));
+        @SuppressWarnings("unchecked")
+        R elem = (R) HbaseObjectWritable.readObject(in, null);
+        lst.add(elem);
       }
       map.put(key, lst);
     }
     return map;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(deletes, puts, gets);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    MultiAction other = (MultiAction) obj;
+    if (deletes == null) {
+      if (other.deletes != null)
+        return false;
+    } else if (!deletes.equals(other.deletes))
+      return false;
+    if (gets == null) {
+      if (other.gets != null)
+        return false;
+    } else if (!gets.equals(other.gets))
+      return false;
+    if (puts == null) {
+      if (other.puts != null)
+        return false;
+    } else if (!puts.equals(other.puts))
+      return false;
+    return true;
+  }
+
+  @Override
+  public String toString() {
+    return "MultiAction [gets=" + gets + ", puts=" + puts + ", deletes="
+        + deletes + "]";
   }
 
 }

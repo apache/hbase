@@ -45,7 +45,7 @@ import org.apache.commons.lang.StringUtils;
 public class HBaseUtils
 {
   private static final Log LOG = LogFactory.getLog(HBaseUtils.class);
-
+  
   private final static String MAXMD5 = "FFFFFFFF";
   private final static int rowComparisonLength = MAXMD5.length();
   private static int DEFAULT_REGIONS_PER_SERVER = 5;
@@ -79,7 +79,7 @@ public class HBaseUtils
     try
     {
       HBaseAdmin admin = new HBaseAdmin(conf);
-
+      
       // create a table a pre-splits regions.
       // The number of splits is set as:
       //    region servers * regions per region server).
@@ -107,7 +107,7 @@ public class HBaseUtils
     HRegionLocation hloc = table.getRegionLocation(Bytes.toBytes(""));
     return hloc.getServerAddress();
   }
-
+  
   public static HBaseConfiguration getHBaseConfFromZkNode(String zkNodeName) {
     Configuration c = new Configuration();
     c.set("hbase.zookeeper.quorum", zkNodeName);

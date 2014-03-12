@@ -19,26 +19,37 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NavigableSet;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.TFilter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+import com.google.common.base.Objects;
 
 /**
  * Used to perform Get operations on a single row.
@@ -67,22 +78,26 @@ import java.util.TreeSet;
  * <p>
  * To add a filter, execute {@link #setFilter(Filter) setFilter}.
  */
+
+@ThriftStruct
 public class Get extends OperationWithAttributes
   implements Writable, Row, Comparable<Row> {
+  private static final Log LOG = LogFactory.getLog(Get.class);
   private static final byte STORE_LIMIT_VERSION = (byte) 2;
   private static final byte STORE_OFFSET_VERSION = (byte) 3;
   private static final byte FLASHBACK_VERSION = (byte) 4;
   private static final byte GET_VERSION = FLASHBACK_VERSION;
 
-  private byte [] row = null;
+  private byte[] row = null;
   private long lockId = -1L;
   private int maxVersions = 1;
   private int storeLimit = -1;
   private int storeOffset = 0;
   private Filter filter = null;
+  private TFilter tFilter = null;
   private TimeRange tr = new TimeRange();
-  private Map<byte [], NavigableSet<byte []>> familyMap =
-    new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], NavigableSet<byte[]>> familyMap =
+      new TreeMap<byte[], NavigableSet<byte[]>>(Bytes.BYTES_COMPARATOR);
   // Operation should be performed as if it was performed at the given ts.
   private long effectiveTS = HConstants.LATEST_TIMESTAMP;
 
@@ -96,7 +111,7 @@ public class Get extends OperationWithAttributes
    * all columns in all families of the specified row.
    * @param row row key
    */
-  public Get(byte [] row) {
+  public Get(byte[] row) {
     this(row, null);
   }
 
@@ -108,7 +123,7 @@ public class Get extends OperationWithAttributes
    * @param row row key
    * @param rowLock previously acquired row lock, or null
    */
-  public Get(byte [] row, RowLock rowLock) {
+  public Get(byte[] row, RowLock rowLock) {
     this.row = row;
     if(rowLock != null) {
       this.lockId = rowLock.getLockId();
@@ -116,15 +131,58 @@ public class Get extends OperationWithAttributes
   }
 
   /**
-   * Get all columns from the specified family.
-   * <p>
+   * Thrift Constructor
+   * TODO: add Filter annotations!
+   * @param row
+   * @param lockId
+   * @param maxVersions
+   * @param storeLimit
+   * @param storeOffset
+   * @param tr
+   * @param familyMap
+   * @param effectiveTS
+   */
+  @ThriftConstructor
+  public Get(
+      @ThriftField(1) byte[] row,
+      @ThriftField(2) long lockId,
+      @ThriftField(3) int maxVersions,
+      @ThriftField(4) int storeLimit,
+      @ThriftField(5) int storeOffset,
+      @ThriftField(6) TimeRange tr,
+      @ThriftField(7) Map<byte[], Set<byte[]>> familyMap,
+      @ThriftField(8) long effectiveTS,
+      @ThriftField(9) TFilter tFilter){
+    this.row = row;
+    this.lockId = lockId;
+    this.maxVersions = maxVersions;
+    this.storeLimit = storeLimit;
+    this.storeOffset = storeOffset;
+    this.effectiveTS = effectiveTS;
+    this.tr = tr;
+    this.tFilter = tFilter;
+    this.filter = tFilter;
+    if (familyMap != null) {
+      for (Entry<byte[], Set<byte[]>> entry : familyMap.entrySet()) {
+        NavigableSet<byte[]> set = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+        if (entry.getValue() != null) {
+          set.addAll(entry.getValue());
+        }
+        this.familyMap.put(entry.getKey(), set);
+      }
+    }
+  }
+
+
+  /**
    * Overrides previous calls to addColumn for this family.
    * @param family family name
    * @return the Get object
+   * @deprecated use {@link Builder#addFamily(byte[])} instead.
    */
-  public Get addFamily(byte [] family) {
-    familyMap.remove(family);
-    familyMap.put(family, null);
+  @Deprecated
+  public Get addFamily(byte[] family) {
+    familyMap.put(family, new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR));
     return this;
   }
 
@@ -135,11 +193,13 @@ public class Get extends OperationWithAttributes
    * @param family family name
    * @param qualifier column qualifier
    * @return the Get objec
+   * @deprecated use {@link Builder#addColumn(byte[], byte[])} instead.
    */
-  public Get addColumn(byte [] family, byte [] qualifier) {
-    NavigableSet<byte []> set = familyMap.get(family);
+  @Deprecated
+  public Get addColumn(byte[] family, byte[] qualifier) {
+    NavigableSet<byte[]> set = familyMap.get(family);
     if (set == null) {
-      set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+      set = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     }
     if (qualifier == null) {
       set.add(HConstants.EMPTY_BYTE_ARRAY);
@@ -239,7 +299,14 @@ public class Get extends OperationWithAttributes
    * @return this for invocation chaining
    */
   public Get setFilter(Filter filter) {
-    this.filter = filter;
+    try {
+      this.tFilter = TFilter.getTFilter(filter);
+    } catch (IOException e) {
+      LOG.error("Caught IOException in serializing filter." +
+          " Cannot continue.");
+      throw new RuntimeException(e);
+    }
+    this.filter = tFilter;
     return this;
   }
 
@@ -248,15 +315,27 @@ public class Get extends OperationWithAttributes
   /**
    * @return Filter
    */
+  @ThriftField(9)
+  public TFilter getTFilter() {
+    return this.tFilter;
+  }
+
   public Filter getFilter() {
-    return this.filter;
+    try {
+      if (tFilter == null) return null;
+      return this.tFilter.getFilter();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
    * Method for retrieving the get's row
    * @return row
    */
-  public byte [] getRow() {
+  @Override
+  @ThriftField(1)
+  public byte[] getRow() {
     return this.row;
   }
 
@@ -272,6 +351,7 @@ public class Get extends OperationWithAttributes
    * Method for retrieving the get's lockId
    * @return lockId
    */
+  @ThriftField(2)
   public long getLockId() {
     return this.lockId;
   }
@@ -280,8 +360,19 @@ public class Get extends OperationWithAttributes
    * Method for retrieving the get's maximum number of version
    * @return the maximum number of version to fetch for this get
    */
+  @ThriftField(3)
   public int getMaxVersions() {
     return this.maxVersions;
+  }
+
+  @ThriftField(4)
+  public int getStoreLimit() {
+    return this.storeLimit;
+  }
+
+  @ThriftField(5)
+  public int getStoreOffset() {
+    return this.storeOffset;
   }
 
   /**
@@ -313,6 +404,7 @@ public class Get extends OperationWithAttributes
    * Method for retrieving the get's TimeRange
    * @return timeRange
    */
+  @ThriftField(6)
   public TimeRange getTimeRange() {
     return this.tr;
   }
@@ -345,8 +437,27 @@ public class Get extends OperationWithAttributes
    * Method for retrieving the get's familyMap
    * @return familyMap
    */
-  public Map<byte[],NavigableSet<byte[]>> getFamilyMap() {
-    return this.familyMap;
+  public Map<byte[], NavigableSet<byte[]>> getFamilyMap() {
+    return familyMap;
+  }
+
+
+  @ThriftField(7)
+  public Map<byte[], Set<byte[]>> getSerializableFamilyMap() {
+    Map<byte[], Set<byte[]>> serializableMap = new TreeMap<byte[], Set<byte[]>>(Bytes.BYTES_COMPARATOR);
+    for (Entry<byte[], NavigableSet<byte[]>> entry : familyMap.entrySet()) {
+      Set<byte[]> serilizableSet = new HashSet<byte[]>();
+      for (byte[] setEntry : entry.getValue()) {
+        serilizableSet.add(setEntry);
+      }
+      serializableMap.put(entry.getKey(), serilizableSet);
+    }
+    return serializableMap;
+  }
+
+  @ThriftField(8)
+  public long geEffectiveTS() {
+    return this.effectiveTS;
   }
 
   /**
@@ -358,9 +469,9 @@ public class Get extends OperationWithAttributes
   @Override
   public Map<String, Object> getFingerprint() {
     Map<String, Object> map = new HashMap<String, Object>();
-    List<String> families = new ArrayList<String>();
+    List<String> families = new ArrayList<String>(this.familyMap.size());
     map.put("families", families);
-    for (Map.Entry<byte [], NavigableSet<byte[]>> entry :
+    for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
       this.familyMap.entrySet()) {
       families.add(Bytes.toStringBinary(entry.getKey()));
     }
@@ -386,13 +497,13 @@ public class Get extends OperationWithAttributes
     map.put("row", Bytes.toStringBinary(this.row));
     map.put("maxVersions", this.maxVersions);
     map.put("storeLimit", this.storeLimit);
-    List<Long> timeRange = new ArrayList<Long>();
+    List<Long> timeRange = new ArrayList<Long>(2);
     timeRange.add(this.tr.getMin());
     timeRange.add(this.tr.getMax());
     map.put("timeRange", timeRange);
     int colCount = 0;
     // iterate through affected families and add details
-    for (Map.Entry<byte [], NavigableSet<byte[]>> entry :
+    for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
       this.familyMap.entrySet()) {
       List<String> familyList = new ArrayList<String>();
       columns.put(Bytes.toStringBinary(entry.getKey()), familyList);
@@ -405,7 +516,7 @@ public class Get extends OperationWithAttributes
         if (maxCols <= 0) {
           continue;
         }
-        for (byte [] column : entry.getValue()) {
+        for (byte[] column : entry.getValue()) {
           if (--maxCols <= 0) {
             continue;
           }
@@ -420,11 +531,13 @@ public class Get extends OperationWithAttributes
     return map;
   }
 
+  @Override
   public int compareTo(Row p) {
     return Bytes.compareTo(this.getRow(), p.getRow());
   }
 
   //Writable
+  @Override
   public void readFields(final DataInput in)
   throws IOException {
     int version = in.readByte();
@@ -452,16 +565,16 @@ public class Get extends OperationWithAttributes
     tr.readFields(in);
     int numFamilies = in.readInt();
     this.familyMap =
-      new TreeMap<byte [],NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
+      new TreeMap<byte[],NavigableSet<byte[]>>(Bytes.BYTES_COMPARATOR);
     for(int i=0; i<numFamilies; i++) {
-      byte [] family = Bytes.readByteArray(in);
+      byte[] family = Bytes.readByteArray(in);
       boolean hasColumns = in.readBoolean();
-      NavigableSet<byte []> set = null;
+      NavigableSet<byte[]> set = null;
       if(hasColumns) {
         int numColumns = in.readInt();
-        set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+        set = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
         for(int j=0; j<numColumns; j++) {
-          byte [] qualifier = Bytes.readByteArray(in);
+          byte[] qualifier = Bytes.readByteArray(in);
           set.add(qualifier);
         }
       }
@@ -469,6 +582,7 @@ public class Get extends OperationWithAttributes
     }
   }
 
+  @Override
   public void write(final DataOutput out)
   throws IOException {
     // We try to talk a protocol version as low as possible so that we can be
@@ -503,16 +617,16 @@ public class Get extends OperationWithAttributes
     }
     tr.write(out);
     out.writeInt(familyMap.size());
-    for(Map.Entry<byte [], NavigableSet<byte []>> entry :
+    for(Map.Entry<byte[], NavigableSet<byte[]>> entry :
       familyMap.entrySet()) {
       Bytes.writeByteArray(out, entry.getKey());
-      NavigableSet<byte []> columnSet = entry.getValue();
+      NavigableSet<byte[]> columnSet = entry.getValue();
       if(columnSet == null) {
         out.writeBoolean(false);
       } else {
         out.writeBoolean(true);
         out.writeInt(columnSet.size());
-        for(byte [] qualifier : columnSet) {
+        for(byte[] qualifier : columnSet) {
           Bytes.writeByteArray(out, qualifier);
         }
       }
@@ -538,8 +652,8 @@ public class Get extends OperationWithAttributes
    * @deprecated issue multiple {@link #addColumn(byte[], byte[])} instead
    * @return this for invocation chaining
    */
-  @SuppressWarnings({"deprecation"})
-  public Get addColumns(byte [][] columns) {
+  @Deprecated
+  public Get addColumns(byte[][] columns) {
     if (columns == null) return this;
     for (byte[] column : columns) {
       try {
@@ -556,14 +670,179 @@ public class Get extends OperationWithAttributes
    * @return This.
    * @deprecated use {@link #addColumn(byte[], byte[])} instead
    */
-  public Get addColumn(final byte [] column) {
+  @Deprecated
+  public Get addColumn(final byte[] column) {
     if (column == null) return this;
-    byte [][] split = KeyValue.parseColumn(column);
+    byte[][] split = KeyValue.parseColumn(column);
     if (split.length > 1 && split[1] != null && split[1].length > 0) {
       addColumn(split[0], split[1]);
     } else {
       addFamily(split[0]);
     }
     return this;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(row, lockId, maxVersions, storeLimit, storeOffset,
+        tr, familyMap, effectiveTS);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    Get other = (Get) obj;
+    if (effectiveTS != other.effectiveTS)
+      return false;
+    if (familyMap == null) {
+      if (other.familyMap != null)
+        return false;
+    } else if (!familyMap.equals(other.familyMap))
+      return false;
+    if (filter == null) {
+      if (other.filter != null)
+        return false;
+    } else if (!filter.equals(other.filter))
+      return false;
+    if (lockId != other.lockId)
+      return false;
+    if (maxVersions != other.maxVersions)
+      return false;
+    if (!Arrays.equals(row, other.row))
+      return false;
+    if (storeLimit != other.storeLimit)
+      return false;
+    if (storeOffset != other.storeOffset)
+      return false;
+    if (tr == null) {
+      if (other.tr != null)
+        return false;
+    } else if (!tr.equals(other.tr))
+      return false;
+    return true;
+  }
+
+  @Override
+  public String toString() {
+    return "Get [row=" + Arrays.toString(row) + ", lockId=" + lockId
+        + ", maxVersions=" + maxVersions + ", storeLimit=" + storeLimit
+        + ", storeOffset=" + storeOffset + ", filter=" + filter + ", tr=" + tr
+        + ", familyMap=" + familyMap + ", effectiveTS=" + effectiveTS + "]";
+  }
+
+  /**
+   * Builder class for Get
+   */
+  public static class Builder {
+    private byte[] row;
+    private long lockId;
+    private int maxVersions;
+    private int storeLimit;
+    private int storeOffset;
+    private TimeRange tr;
+    private Map<byte[], Set<byte[]>> familyMap;
+    private long effectiveTS;
+    private TFilter tFilter;
+
+    public Builder(byte[] row) {
+      this.row = row;
+      this.lockId = -1L;
+      this.maxVersions = 1;
+      this.storeLimit = -1;
+      this.storeOffset = 0;
+      this.tr = new TimeRange();
+      this.effectiveTS = HConstants.LATEST_TIMESTAMP;
+    }
+
+    public Builder setLockId(long lockId) {
+      this.lockId = lockId;
+      return this;
+    }
+
+    public Builder setMaxVersions(int maxVersions) {
+      this.maxVersions = maxVersions;
+      return this;
+    }
+
+    public Builder setMaxVersions() {
+      this.maxVersions = Integer.MAX_VALUE;
+      return this;
+    }
+
+    public Builder setStoreLimit(int storeLimit) {
+      this.storeLimit = storeLimit;
+      return this;
+    }
+
+    public Builder setStoreOffset(int storeOffset) {
+      this.storeOffset = storeOffset;
+      return this;
+    }
+
+    public Builder setTr(TimeRange tr) {
+      this.tr = tr;
+      return this;
+    }
+
+    public Builder setFamilyMap(Map<byte[], Set<byte[]>> familyMap) {
+      this.familyMap = familyMap;
+      return this;
+    }
+
+    /**
+     * Overrides previous calls to addColumn for this family.
+     * @param family family name
+     * @return the Build object
+     */
+    public Builder addFamily(byte[] family) {
+      if (this.familyMap == null) {
+        this.familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      }
+      this.familyMap.put(family, new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR));
+      return this;
+    }
+
+    /**
+     * Overrides previous calls to addFamily for this family.
+     * @param family family name
+     * @param qualifier column qualifier
+     * @return the Build object
+     */
+    public Builder addColumn(byte[] family, byte[] qualifier) {
+      if (this.familyMap == null) {
+        this.familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      }
+      Set<byte[]> set = this.familyMap.get(family);
+      if (set == null) {
+        set = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+      }
+      if (qualifier == null) {
+        set.add(HConstants.EMPTY_BYTE_ARRAY);
+      } else {
+        set.add(qualifier);
+      }
+      this.familyMap.put(family, set);
+      return this;
+    }
+
+    public Builder setEffectiveTS(long effectiveTS) {
+      this.effectiveTS = effectiveTS;
+      return this;
+    }
+
+    public Builder setFilter(Filter f) throws IOException {
+      this.tFilter = TFilter.getTFilter(f);
+      return this;
+    }
+
+    public Get create() {
+      return new Get(this.row, this.lockId, this.maxVersions, this.storeLimit,
+          this.storeOffset, this.tr, this.familyMap, this.effectiveTS, this.tFilter);
+    }
   }
 }

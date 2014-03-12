@@ -462,10 +462,8 @@ public class Store extends SchemaConfigured implements HeapSize,
    */
   protected List<StoreFile> loadStoreFiles(FileStatus[] files)
       throws IOException {
-    ArrayList<StoreFile> results = new ArrayList<StoreFile>();
-
     if (files == null || files.length == 0) {
-      return results;
+      return new ArrayList<StoreFile>(0);
     }
     // initialize the thread pool for opening store files in parallel..
     ThreadPoolExecutor storeFileOpenerThreadPool =
@@ -490,6 +488,7 @@ public class Store extends SchemaConfigured implements HeapSize,
 
       // open each store file in parallel
       completionService.submit(new Callable<StoreFile>() {
+        @Override
         public StoreFile call() throws IOException {
           StoreFile storeFile = new StoreFile(fs, p, conf, cacheConf,
               family.getBloomFilterType(), dataBlockEncoder,
@@ -502,6 +501,7 @@ public class Store extends SchemaConfigured implements HeapSize,
       totalValidStoreFile++;
     }
 
+    ArrayList<StoreFile> results = new ArrayList<StoreFile>(totalValidStoreFile);
     try {
       for (int i = 0; i < totalValidStoreFile; i++) {
         Future<StoreFile> future = completionService.take();
@@ -624,7 +624,9 @@ public class Store extends SchemaConfigured implements HeapSize,
     // Append the new storefile into the list
     this.lock.writeLock().lock();
     try {
-      ArrayList<StoreFile> newFiles = new ArrayList<StoreFile>(storefiles);
+      ArrayList<StoreFile> newFiles = new ArrayList<StoreFile>(
+          storefiles.size() + 1);
+      newFiles.addAll(storefiles);
       newFiles.add(sf);
       this.storefiles = sortAndClone(newFiles);
     } finally {
@@ -687,6 +689,7 @@ public class Store extends SchemaConfigured implements HeapSize,
           new ExecutorCompletionService<Void>(storeFileCloserThreadPool);
         for (final StoreFile f : result) {
           completionService.submit(new Callable<Void>() {
+            @Override
             public Void call() throws IOException {
               if (deleteStoreFile) {
                 f.deleteReader();
@@ -768,7 +771,7 @@ public class Store extends SchemaConfigured implements HeapSize,
     long smallestReadPoint = region.getSmallestReadPoint();
     long flushed = 0;
     // Don't flush if there are no entries.
-    if (snapshot.size() == 0) {
+    if (snapshot.isEmpty()) {
       return null;
     }
 
@@ -979,7 +982,9 @@ public class Store extends SchemaConfigured implements HeapSize,
   throws IOException {
     this.lock.writeLock().lock();
     try {
-      ArrayList<StoreFile> newList = new ArrayList<StoreFile>(storefiles);
+      ArrayList<StoreFile> newList = new ArrayList<StoreFile>(
+          storefiles.size() + 1);
+      newList.addAll(storefiles);
       newList.add(sf);
       storefiles = sortAndClone(newList);
 
@@ -1242,8 +1247,7 @@ public class Store extends SchemaConfigured implements HeapSize,
       }
     }
 
-    List<StoreFile> candidates = new ArrayList<StoreFile>(this.storefiles);
-    return compactionManager.isMajorCompaction(candidates);
+    return compactionManager.isMajorCompaction(this.storefiles);
   }
 
   boolean isPeakTime(int currentHour) {
@@ -1523,15 +1527,22 @@ public class Store extends SchemaConfigured implements HeapSize,
   public HFileHistogram getHistogram() throws IOException {
     this.lock.readLock().lock();
     try {
-      if (hist != null) return hist;
-      List<HFileHistogram> histograms = new ArrayList<HFileHistogram>();
-      if (storefiles.size() == 0) return hist;
+      if (hist != null) {
+        return hist;
+      }
+      if (storefiles.isEmpty()) {
+        return null;
+      }
+      HFileHistogram h = null;
       for (StoreFile file : this.storefiles) {
         HFileHistogram hist = file.getHistogram();
-        if (hist != null) histograms.add(hist);
+        if (hist != null) {
+          if (h == null) {
+            h = hist.create(hist.getBinCount());
+          }
+          h.merge(hist);
+        }
       }
-      if (histograms.size() == 0) return hist;
-      HFileHistogram h = histograms.get(0).compose(histograms);
       this.hist = h;
       return hist;
     } catch (Exception e) {

@@ -101,10 +101,10 @@ public class TestMultiParallelPut extends MultiRegionTable {
           Bytes.compareTo(VALUE,
               r.getValue(BYTES_FAMILY, QUALIFIER)));
     }
-
+    
     // waiting for load balancer running
     Thread.sleep(MiniHBaseCluster.WAIT_FOR_LOADBALANCER);
-
+    
     HBaseAdmin admin = new HBaseAdmin(conf);
     ClusterStatus cs = admin.getClusterStatus();
     int expectedServerCount = 2;

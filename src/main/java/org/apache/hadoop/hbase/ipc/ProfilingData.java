@@ -3,23 +3,28 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.lang.mutable.MutableFloat;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.lang.mutable.MutableLong;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.io.Writable;
+
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
 
 /**
  * A map containing profiling data, mapping String to 
  * String, Long, Int, Boolean, and Float. This class is
  * not thread-safe.
  */
-
+@ThriftStruct
 public class ProfilingData implements Writable {
   
   /**
@@ -103,6 +108,35 @@ public class ProfilingData implements Writable {
   private static final int MAX_BUCKETS = 60; // Do not expect to see a delay value > 2^59
 
   public ProfilingData() {}
+
+  @ThriftConstructor
+  public ProfilingData(
+      @ThriftField(1) Map<String, String> mapString,
+      @ThriftField(2) Map<String, Long> mapLong,
+      @ThriftField(3) Map<String, Integer> mapInt,
+      @ThriftField(4) Map<String, Boolean> mapBoolean,
+      @ThriftField(5) Map<String, Float> mapFloat,
+      @ThriftField(6) Map<String, List<Integer>> mapHist) {
+    this.mapString = mapString;
+    this.mapLong = new HashMap<>();
+    for (Entry<String, Long> e : mapLong.entrySet()) {
+      this.mapLong.put(e.getKey(), new MutableLong(e.getValue()));
+    }
+    for (Entry<String, Integer> e : mapInt.entrySet()) {
+      this.mapInt.put(e.getKey(), new MutableInt(e.getValue()));
+    }
+    this.mapBoolean = mapBoolean;
+    for (Entry<String, Float> e : mapFloat.entrySet()) {
+      this.mapFloat.put(e.getKey(), new MutableFloat(e.getValue()));
+    }
+    for (Entry<String, List<Integer>> e : mapHist.entrySet()) {
+      int[] intArray = new int[e.getValue().size()];
+      for (int i = 0; i< e.getValue().size(); i++) {
+        intArray[i] = e.getValue().get(i);
+      }
+      this.mapHist.put(e.getKey(), intArray);
+    }
+  }
 
   public void addString(String key, String val) {
     mapString.put(key, val);
@@ -412,6 +446,56 @@ public class ProfilingData implements Writable {
       sb.delete(sb.length() - delim.length(), sb.length());
     }
     return sb.toString();
+  }
+
+  @ThriftField(1)
+  public Map<String, String> getMapString() {
+    return mapString;
+  }
+
+  @ThriftField(2)
+  public Map<String, Long> getMapLong() {
+    Map<String, Long> map = new HashMap<>();
+    for (Entry<String, MutableLong> e : mapLong.entrySet()) {
+      map.put(e.getKey(), e.getValue().toLong());
+    }
+    return map;
+  }
+
+  @ThriftField(3)
+  public Map<String, Integer> getMapInt() {
+    Map<String, Integer> map = new HashMap<>();
+    for (Entry<String, MutableInt> e : mapInt.entrySet()) {
+      map.put(e.getKey(), e.getValue().toInteger());
+    }
+    return map;
+  }
+
+  @ThriftField(4)
+  public Map<String, Boolean> getMapBoolean() {
+    return mapBoolean;
+  }
+
+  @ThriftField(5)
+  public Map<String, Float> getMapFloat() {
+    Map<String, Float> map = new HashMap<>();
+    for (Entry<String, MutableFloat> e : mapFloat.entrySet()) {
+      map.put(e.getKey(), e.getValue().toFloat());
+    }
+    return map;
+  }
+
+  @ThriftField(6)
+  public Map<String, List<Integer>> getMapHist() {
+    Map<String, List<Integer>> map = new HashMap<>();
+    for (Entry<String, int[]> e : mapHist.entrySet()) {
+      List<Integer> list = new ArrayList<>();
+      for (int i : e.getValue()) {
+        list.add(i);
+      }
+      map.put(e.getKey(), list);
+    }
+    return map;
   }
 
   @Override

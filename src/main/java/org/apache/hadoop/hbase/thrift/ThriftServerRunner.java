@@ -175,7 +175,7 @@ public class ThriftServerRunner implements Runnable {
       if (confType == null) {
         return DEFAULT_SERVER_TYPE;
       }
-
+      
       for (ImplType t : values()) {
         if (confType.equals(t.option)) {
           return t;
@@ -806,7 +806,7 @@ public class ThriftServerRunner implements Runnable {
         if (metrics != null) {
           metrics.incNumBatchGetRowKeys(rows.size());
         }
-
+        
         // For now, don't support ragged gets, with different columns per row
         // Probably pretty sensible indefinitely anyways.
         for (ByteBuffer row : rows) {

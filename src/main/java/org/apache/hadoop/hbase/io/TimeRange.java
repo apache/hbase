@@ -28,6 +28,10 @@ import org.apache.hadoop.io.Writable;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+
 /**
  * Represents an interval of version timestamps.
  * <p>
@@ -36,17 +40,22 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>
  * Only used internally; should not be accessed directly by clients.
  */
+@ThriftStruct
 public class TimeRange implements Writable {
-  private long minStamp = 0L;
-  private long maxStamp = Long.MAX_VALUE;
-  private boolean allTime = false;
+  @ThriftField(1)
+  public boolean allTime = false;
+
+  @ThriftField(2)
+  public long minStamp = 0L;
+
+  @ThriftField(3)
+  public long maxStamp = Long.MAX_VALUE;
 
   /**
    * Default constructor.
    * Represents interval [0, Long.MAX_VALUE) (allTime)
    */
   public TimeRange() {
-    allTime = true;
   }
 
   /**
@@ -62,20 +71,32 @@ public class TimeRange implements Writable {
    * @param minStamp the minimum timestamp value, inclusive
    */
   public TimeRange(byte [] minStamp) {
-  	this.minStamp = Bytes.toLong(minStamp);
+    this.minStamp = Bytes.toLong(minStamp);
   }
 
+  public TimeRange(final long minStamp, final long maxStamp) throws IOException {
+    this(false, minStamp, maxStamp);
+  }
+
+
   /**
+   * Thrift Constructor
    * Represents interval [minStamp, maxStamp)
    * @param minStamp the minimum timestamp, inclusive
    * @param maxStamp the maximum timestamp, exclusive
    * @throws IOException
    */
-  public TimeRange(long minStamp, long maxStamp)
+  @ThriftConstructor
+  public TimeRange(
+    @ThriftField(1) final boolean allTime,
+    @ThriftField(2) final long minStamp,
+    @ThriftField(3) final long maxStamp
+    )
   throws IOException {
     if(maxStamp < minStamp) {
       throw new IOException("maxStamp is smaller than minStamp");
     }
+    this.allTime = allTime;
     this.minStamp = minStamp;
     this.maxStamp = maxStamp;
   }
@@ -115,8 +136,8 @@ public class TimeRange implements Writable {
    * @return true if within TimeRange, false if not
    */
   public boolean withinTimeRange(byte [] bytes, int offset) {
-  	if(allTime) return true;
-  	return withinTimeRange(Bytes.toLong(bytes, offset));
+    if(allTime) return true;
+    return withinTimeRange(Bytes.toLong(bytes, offset));
   }
 
   /**
@@ -128,9 +149,9 @@ public class TimeRange implements Writable {
    * @return true if within TimeRange, false if not
    */
   public boolean withinTimeRange(long timestamp) {
-  	if(allTime) return true;
-  	// check if >= minStamp
-  	return (minStamp <= timestamp && timestamp < maxStamp);
+    if(allTime) return true;
+    // check if >= minStamp
+    return (minStamp <= timestamp && timestamp < maxStamp);
   }
 
   /**
@@ -185,5 +206,33 @@ public class TimeRange implements Writable {
     out.writeLong(minStamp);
     out.writeLong(maxStamp);
     out.writeBoolean(this.allTime);
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + (allTime ? 1231 : 1237);
+    result = prime * result + (int) (maxStamp ^ (maxStamp >>> 32));
+    result = prime * result + (int) (minStamp ^ (minStamp >>> 32));
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    TimeRange other = (TimeRange) obj;
+    if (allTime != other.allTime)
+      return false;
+    if (maxStamp != other.maxStamp)
+      return false;
+    if (minStamp != other.minStamp)
+      return false;
+    return true;
   }
 }

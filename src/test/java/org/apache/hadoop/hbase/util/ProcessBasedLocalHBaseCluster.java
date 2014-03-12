@@ -544,3 +544,4 @@ public class ProcessBasedLocalHBaseCluster {
   }
 
 }
+

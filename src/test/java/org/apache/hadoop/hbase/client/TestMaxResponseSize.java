@@ -284,7 +284,7 @@ public class TestMaxResponseSize{
     String msg) {
     LOG.info(msg);
     LOG.info("Exp cnt: " + kvList.size());
-    LOG.info("True cnt is: " + result.size());	
+    LOG.info("True cnt is: " + result.size());
     assertEquals(kvList.size(), result.size());
 
     if (kvList.size() == 0) return;
@@ -293,7 +293,7 @@ public class TestMaxResponseSize{
       KeyValue kvExp = kvList.get(i++);
       if (toLog) {
         LOG.info("get kv is: " + kv.toString());
-        LOG.info("exp kv is: " + kvExp.toString());	  
+        LOG.info("exp kv is: " + kvExp.toString());
       }
       assertTrue("Not equal", kvExp.equals(kv));
     }

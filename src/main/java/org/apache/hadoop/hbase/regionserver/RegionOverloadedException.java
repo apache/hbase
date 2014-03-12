@@ -29,7 +29,7 @@ public class RegionOverloadedException extends RegionException {
    * @return the new exception with complete information
    */
   public static RegionOverloadedException create(RegionOverloadedException roe,
-      List<Throwable> exceptions, int waitMillis) {
+      List<Throwable> exceptions, long waitMillis) {
     StringBuilder sb = new StringBuilder(roe.getMessage());
     for (Throwable t : exceptions) {
       if (t != roe) {

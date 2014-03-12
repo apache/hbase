@@ -47,7 +47,7 @@ public class TaskMonitor {
 
   @VisibleForTesting
   static final int MAX_TASKS = 1000;
-
+  
   private static TaskMonitor instance;
   private List<TaskAndWeakRefPair> tasks =
     Lists.newArrayList();
@@ -62,7 +62,7 @@ public class TaskMonitor {
     }
     return instance;
   }
-
+  
   public synchronized MonitoredTask createStatus(String description) {
     MonitoredTask stat = new MonitoredTaskImpl();
     stat.setDescription(description);
@@ -89,12 +89,12 @@ public class TaskMonitor {
 
   private synchronized void purgeExpiredTasks() {
     int size = 0;
-
+    
     for (Iterator<TaskAndWeakRefPair> it = tasks.iterator();
          it.hasNext();) {
       TaskAndWeakRefPair pair = it.next();
       MonitoredTask stat = pair.get();
-
+      
       if (pair.isDead()) {
         // The class who constructed this leaked it. So we can
         // assume it's done.
@@ -104,14 +104,14 @@ public class TaskMonitor {
           stat.cleanup();
         }
       }
-
+      
       if (canPurge(stat)) {
         it.remove();
       } else {
         size++;
       }
     }
-
+    
     if (size > MAX_TASKS) {
       LOG.warn("Too many actions in action monitor! Purging some.");
       tasks = tasks.subList(size - MAX_TASKS, size);
@@ -119,7 +119,7 @@ public class TaskMonitor {
   }
 
   /**
-   * Produces a list containing copies of the current state of all non-expired
+   * Produces a list containing copies of the current state of all non-expired 
    * MonitoredTasks handled by this TaskMonitor.
    * @return A complete list of MonitoredTasks.
    */
@@ -137,7 +137,7 @@ public class TaskMonitor {
     long cts = stat.getCompletionTimestamp();
     return (cts > 0 && System.currentTimeMillis() - cts > EXPIRATION_TIME);
   }
-
+  
   /**
    * This class encapsulates an object as well as a weak reference to a proxy
    * that passes through calls to that object. In art form:
@@ -147,7 +147,7 @@ public class TaskMonitor {
    *       v                        \
    * PassthroughInvocationHandler   |  weak reference
    *       |                       /
-   * MonitoredTaskImpl            /
+   * MonitoredTaskImpl            / 
    *       |                     /
    * StatAndWeakRefProxy  ------/
    *
@@ -159,29 +159,29 @@ public class TaskMonitor {
   private static class TaskAndWeakRefPair {
     private MonitoredTask impl;
     private WeakReference<MonitoredTask> weakProxy;
-
+    
     public TaskAndWeakRefPair(MonitoredTask stat,
         MonitoredTask proxy) {
       this.impl = stat;
       this.weakProxy = new WeakReference<MonitoredTask>(proxy);
     }
-
+    
     public MonitoredTask get() {
       return impl;
     }
-
+    
     public boolean isDead() {
       return weakProxy.get() == null;
     }
   }
-
+  
   /**
-   * An InvocationHandler that simply passes through calls to the original
+   * An InvocationHandler that simply passes through calls to the original 
    * object.
    */
   private static class PassthroughInvocationHandler<T> implements InvocationHandler {
     private T delegatee;
-
+    
     public PassthroughInvocationHandler(T delegatee) {
       this.delegatee = delegatee;
     }
@@ -190,6 +190,6 @@ public class TaskMonitor {
     public Object invoke(Object proxy, Method method, Object[] args)
         throws Throwable {
       return method.invoke(delegatee, args);
-    }
+    }    
   }
 }

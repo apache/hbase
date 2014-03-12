@@ -60,7 +60,8 @@ class TableDelete extends TableOperation {
       }
       // Delete the region
       try {
-        HRegion.removeRegionFromMETA(server, m.getRegionName(), i.getRegionName());
+        HRegion.removeRegionFromMETA(server, m.getRegionName(),
+            i.getRegionName());
         HRegion.deleteRegion(this.master.getFileSystem(),
           this.master.getRootDir(), i);
 

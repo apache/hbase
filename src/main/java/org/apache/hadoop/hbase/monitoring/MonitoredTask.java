@@ -57,14 +57,14 @@ public interface MonitoredTask extends Cloneable {
   public abstract void cleanup();
 
   /**
-   * Public exposure of Object.clone() in order to allow clients to easily
+   * Public exposure of Object.clone() in order to allow clients to easily 
    * capture current state.
    * @returns a copy of the object whose references will not change
    */
   public abstract MonitoredTask clone();
 
   /**
-   * Creates a string map of internal details for extensible exposure of
+   * Creates a string map of internal details for extensible exposure of 
    * monitored tasks.
    * @return A Map containing information for this task.
    */

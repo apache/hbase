@@ -19,7 +19,7 @@
 <body>
 
 <h2>User Tables</h2>
-<% HTableDescriptor[] tables = new HBaseAdmin(conf).listTables();
+<% HTableDescriptor[] tables = new HBaseAdmin(conf).listTables(); 
    if(tables != null && tables.length > 0) { %>
 <table>
 <tr>

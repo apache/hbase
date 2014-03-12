@@ -234,7 +234,7 @@ Shell.load_command_group(
     list
     locate_regionservers
     show_filters
-    alter_status
+    alter_status 
     alter_async
   ]
 )

@@ -46,7 +46,7 @@ class SplitRequest implements Runnable {
         // Didn't need to be split
         return;
       }
-
+  
       // When a region is split, the META table needs to updated if we're
       // splitting a 'normal' region, and the ROOT table needs to be
       // updated if we are splitting a META region.
@@ -64,14 +64,14 @@ class SplitRequest implements Runnable {
         }
         t = meta;
       }
-
+  
       // Mark old region as offline and split in META.
       // NOTE: there is no need for retry logic here. HTable does it for us.
       oldRegionInfo.setOffline(true);
       oldRegionInfo.setSplit(true);
       // Inform the HRegionServer that the parent HRegion is no-longer online.
       server.removeFromOnlineRegions(oldRegionInfo);
-
+  
       Put put = new Put(oldRegionInfo.getRegionName());
       put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
           Writables.getBytes(oldRegionInfo));
@@ -84,11 +84,11 @@ class SplitRequest implements Runnable {
       put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER, Writables
           .getBytes(newRegions[1].getRegionInfo()));
       t.put(put);
-
+  
       // If we crash here, then the daughters will not be added and we'll have
       // and offlined parent but no daughters to take up the slack. hbase-2244
       // adds fixup to the metascanners.
-
+  
       // Add new regions to META
       for (int i = 0; i < newRegions.length; i++) {
         put = new Put(newRegions[i].getRegionName());
@@ -96,15 +96,15 @@ class SplitRequest implements Runnable {
             Writables.getBytes(newRegions[i].getRegionInfo()));
         t.put(put);
       }
-
+  
       // If we crash here, the master will not know of the new daughters and they
       // will not be assigned. The metascanner when it runs will notice and take
       // care of assigning the new daughters.
-
+  
       // Now tell the master about the new regions
       server.reportSplit(oldRegionInfo, newRegions[0].getRegionInfo(),
           newRegions[1].getRegionInfo());
-
+  
       LOG.info("region split, META updated, and report to master all"
           + " successful. Old region=" + oldRegionInfo.toString()
           + ", new regions: " + newRegions[0].toString() + ", "

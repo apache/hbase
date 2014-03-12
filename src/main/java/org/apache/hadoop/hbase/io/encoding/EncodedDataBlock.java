@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.Compressor;
 
 import com.google.common.base.Preconditions;
-import com.google.common.io.NullOutputStream;
+import org.apache.commons.io.output.NullOutputStream;
 
 /**
  * Encapsulates a data block compressed using a particular encoding algorithm.
@@ -136,8 +136,8 @@ public class EncodedDataBlock {
    */
   public static int getCompressedSize(Algorithm algo, Compressor compressor,
       byte[] inputBuffer, int offset, int length) throws IOException {
-    DataOutputStream compressedStream = new DataOutputStream(
-        new NullOutputStream());
+    DataOutputStream compressedStream =
+        new DataOutputStream(NullOutputStream.NULL_OUTPUT_STREAM);
     if (compressor != null) {
       compressor.reset();
     }

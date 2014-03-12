@@ -333,12 +333,12 @@ public abstract class AbstractHFileReader extends SchemaConfigured
     public int seekTo(byte[] key) throws IOException {
       return seekTo(key, 0, key.length);
     }
-
+    
     @Override
     public boolean seekBefore(byte[] key) throws IOException {
       return seekBefore(key, 0, key.length);
     }
-
+    
     @Override
     public int reseekTo(byte[] key) throws IOException {
       return reseekTo(key, 0, key.length);

@@ -51,10 +51,10 @@ implements Configurable {
   public static final String START = "hbase.simpletotalorder.start";
   @Deprecated
   public static final String END = "hbase.simpletotalorder.end";
-
+  
   static final String START_BASE64 = "hbase.simpletotalorder.start.base64";
   static final String END_BASE64 = "hbase.simpletotalorder.end.base64";
-
+  
   private Configuration c;
   private byte [] startkey;
   private byte [] endkey;
@@ -64,21 +64,21 @@ implements Configurable {
   public static void setStartKey(Configuration conf, byte[] startKey) {
     conf.set(START_BASE64, Base64.encodeBytes(startKey));
   }
-
+  
   public static void setEndKey(Configuration conf, byte[] endKey) {
     conf.set(END_BASE64, Base64.encodeBytes(endKey));
   }
-
+  
   @SuppressWarnings("deprecation")
   static byte[] getStartKey(Configuration conf) {
     return getKeyFromConf(conf, START_BASE64, START);
   }
-
+  
   @SuppressWarnings("deprecation")
   static byte[] getEndKey(Configuration conf) {
     return getKeyFromConf(conf, END_BASE64, END);
   }
-
+  
   private static byte[] getKeyFromConf(Configuration conf,
       String base64Key, String deprecatedKey) {
     String encoded = conf.get(base64Key);
@@ -93,7 +93,7 @@ implements Configurable {
         " - please use static accessor methods instead.");
     return Bytes.toBytes(oldStyleVal);
   }
-
+  
   @Override
   public int getPartition(final ImmutableBytesWritable key, final VALUE value,
       final int reduces) {

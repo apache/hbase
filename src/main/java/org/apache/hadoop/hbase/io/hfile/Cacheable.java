@@ -28,7 +28,7 @@ public interface Cacheable extends HeapSize {
    * @return the block type of this cached HFile block
    */
   public BlockType getBlockType();
-
+  
   /**
    * @return the metrics object identified by table and column family
    */

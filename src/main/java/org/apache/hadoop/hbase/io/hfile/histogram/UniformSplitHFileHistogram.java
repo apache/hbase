@@ -29,6 +29,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -202,22 +203,6 @@ public class UniformSplitHFileHistogram implements HFileHistogram {
     }.setVal(getUniformBuckets());
   }
 
-  /**
-   * Modifies the elements in the list of histograms.
-   */
-  @Override
-  public HFileHistogram compose(List<HFileHistogram> histograms) {
-    if (histograms.size() <= 0)
-      return null;
-    HFileHistogram h = histograms.get(0);
-    int binCnt = h.getBinCount();
-    HFileHistogram ret = new UniformSplitHFileHistogram(binCnt);
-    for (HFileHistogram h2 : histograms) {
-      ret = ret.merge(h2);
-    }
-    return ret;
-  }
-
   @Override
   public HFileHistogram deserialize(ByteBuffer buf) throws IOException {
     if (buf == null) return null;
@@ -232,7 +217,9 @@ public class UniformSplitHFileHistogram implements HFileHistogram {
       buckets.add(b);
     }
     bais.close();
-    if (buckets.size() == 0) return null;
+    if (buckets.isEmpty()) {
+      return null;
+    }
     HFileHistogram ret = getHistogram(buckets);
     return ret;
   }
@@ -249,5 +236,10 @@ public class UniformSplitHFileHistogram implements HFileHistogram {
   @Override
   public int getBinCount() {
     return this.underlyingHistogram.getBinCount();
+  }
+
+  @Override
+  public HFileHistogram create(int binCount) {
+    return new UniformSplitHFileHistogram(binCount);
   }
 }

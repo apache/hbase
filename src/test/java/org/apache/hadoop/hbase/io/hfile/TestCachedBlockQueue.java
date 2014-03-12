@@ -61,7 +61,7 @@ public class TestCachedBlockQueue extends TestCase {
     assertEquals(queue.heapSize(), expectedSize);
 
     for (int i = 1; i <= 8; i++) {
-      assertEquals(queue.pollLast().getCacheKey().getHfileName(), "cb"+i);
+      assertEquals(queue.pollLast().getCacheKey().getHfileName(), "cb"+i);      
     }
   }
 
@@ -106,7 +106,7 @@ public class TestCachedBlockQueue extends TestCase {
     assertEquals(queue.heapSize(), expectedSize);
 
     for (int i = 0; i <= 8; i++) {
-      assertEquals(queue.pollLast().getCacheKey().getHfileName(), "cb"+i);
+      assertEquals(queue.pollLast().getCacheKey().getHfileName(), "cb"+i);      
     }
   }
 

@@ -49,16 +49,16 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
   final byte[] FIVE_HUNDRED_KBYTES;
 
   final byte [] FAMILY_NAME = Bytes.toBytes("col");
-
+  
   private static int regionServerNum =4;
   private static int regionNum = 16;
   // total region num = region num + root and meta region
   private static int totalRegionNum = regionNum +2;
-
+  
   /** constructor */
   public TestGlobalMemStoreSize() {
     super(regionServerNum);
-
+    
     FIVE_HUNDRED_KBYTES = new byte[500 * 1024];
     for (int i = 0; i < 500 * 1024; i++) {
       FIVE_HUNDRED_KBYTES[i] = 'x';
@@ -81,7 +81,7 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
     }
     startKeys.add(null);
     LOG.debug(startKeys.size() + " start keys generated");
-
+    
     List<HRegion> regions = new ArrayList<HRegion>();
     for (int i = 0; i < regionNum; i++) {
       regions.add(createAregion(startKeys.get(i), startKeys.get(i+1)));
@@ -96,7 +96,7 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
     }
     closeRootAndMeta();
   }
-
+  
   /**
    * Test the global mem store size in the region server is equal to sum of each
    * region's mem store size
@@ -106,7 +106,7 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
   public void testGlobalMemStore() throws IOException {
     waitForAllRegionsAssigned();
     assertEquals(getOnlineRegionServers().size(), regionServerNum);
-
+    
     int totalRegionNum = 0;
     for (HRegionServer server : getOnlineRegionServers()) {
       long globalMemStoreSize = 0;
@@ -117,7 +117,7 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
       assertEquals(server.getGlobalMemstoreSize().get(),globalMemStoreSize);
     }
     assertEquals(totalRegionNum,totalRegionNum);
-
+    
     for (HRegionServer server : getOnlineRegionServers()) {
       for(HRegion region : server.getOnlineRegions()) {
         region.flushcache();
@@ -135,7 +135,7 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
     }
     return total;
   }
-
+  
   private List<HRegionServer> getOnlineRegionServers() {
     List<HRegionServer> list = new ArrayList<HRegionServer>();
     for (JVMClusterUtil.RegionServerThread rst : cluster.getRegionServerThreads()) {
@@ -174,3 +174,4 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
     return region;
   }
 }
+

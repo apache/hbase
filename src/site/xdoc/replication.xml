@@ -63,7 +63,7 @@
         and must be kept in HDFS as long as they are needed to replicate data
         to any slave cluster. Each RS reads from the oldest log it needs to
         replicate and keeps the current position inside ZooKeeper to simplify
-        failure recovery. That position can be different for every slave
+        failure recovery. That position can be different for every slave 
         cluster, same for the queue of HLogs to process.
       </p>
       <p>
@@ -266,7 +266,7 @@
           since ZK doesn't support the rename operation) and will delete all the
           old ones when it's done. The recovered queues' znodes will be named
           with the id of the slave cluster appended with the name of the dead
-          server.
+          server. 
         </p>
         <p>
           Once that is done, the master cluster RS will create one new source thread per

@@ -13,28 +13,28 @@ public class HBaseRPCOptions implements Writable {
   public static final HBaseRPCOptions DEFAULT = new HBaseRPCOptions ();
   
   private static final byte VERSION_INITIAL = 1;
-	
+
   private byte version = VERSION_INITIAL;
   private Compression.Algorithm rxCompression = Compression.Algorithm.NONE;
   private Compression.Algorithm txCompression = Compression.Algorithm.NONE;
-	private boolean requestProfiling = false;
-	private String tag = null;
-	
-	// this will be used as profiling data in htable so it's possible to
-	// set it after receiving profiling data. do not need to serialize this.
-	public ProfilingData profilingResult = null;
-	
-	public HBaseRPCOptions () {}
-	
-	public void setVersion (byte version) {
-	  this.version = version;
-	}
-	
-	public byte getVersion () {
+  private boolean requestProfiling = false;
+  private String tag = null;
+
+  // this will be used as profiling data in htable so it's possible to
+  // set it after receiving profiling data. do not need to serialize this.
+  public ProfilingData profilingResult = null;
+
+  public HBaseRPCOptions () {}
+
+  public void setVersion (byte version) {
+    this.version = version;
+  }
+
+  public byte getVersion () {
     return this.version;
   }
-	
-	public void setRxCompression(Compression.Algorithm compressionAlgo) {
+
+  public void setRxCompression(Compression.Algorithm compressionAlgo) {
     this.rxCompression = compressionAlgo;
   }
 
@@ -49,13 +49,13 @@ public class HBaseRPCOptions implements Writable {
   public Compression.Algorithm getTxCompression() {
     return this.txCompression;
   }
-	
+
   /**
    * set whether to request profiling data form the server
    *
    * @param request request profiling or not
    */
-	public void setRequestProfiling (boolean request) {
+  public void setRequestProfiling (boolean request) {
     this.requestProfiling = request;
   }
   
@@ -77,26 +77,26 @@ public class HBaseRPCOptions implements Writable {
   public String getTag () {
     return this.tag;
   }
-	
-	@Override
+
+  @Override
   public void write(DataOutput out) throws IOException {
-	  // 1. write the object version
-	  out.writeByte(this.version);
-	  
-	  // 2. write the compression algo used to compress the request being sent
+    // 1. write the object version
+    out.writeByte(this.version);
+
+    // 2. write the compression algo used to compress the request being sent
     out.writeUTF(this.txCompression.getName());
     
     // 3. write the compression algo to use for the response
     out.writeUTF(this.rxCompression.getName());
     
     // 4. write profiling request flag
-	  out.writeBoolean(this.requestProfiling);
-	  
-	  // 5. write tag flag and tag if flag is true
-	  out.writeBoolean(this.tag != null ? true : false);
-	  if (this.tag != null) {
-	    out.writeUTF(this.tag);
-	  }
+    out.writeBoolean(this.requestProfiling);
+
+    // 5. write tag flag and tag if flag is true
+    out.writeBoolean(this.tag != null ? true : false);
+    if (this.tag != null) {
+      out.writeUTF(this.tag);
+    }
   }
     
   @Override
@@ -117,4 +117,13 @@ public class HBaseRPCOptions implements Writable {
       this.tag = in.readUTF ();
     }
   }
+
+  @Override
+  public String toString() {
+    return "HBaseRPCOptions [version=" + version + ", rxCompression="
+        + rxCompression + ", txCompression=" + txCompression
+        + ", requestProfiling=" + requestProfiling + ", tag=" + tag
+        + ", profilingResult=" + profilingResult + "]";
+  }
+
 }

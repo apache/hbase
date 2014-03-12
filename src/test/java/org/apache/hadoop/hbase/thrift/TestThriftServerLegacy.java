@@ -355,7 +355,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
   /**
    * Tests some of the getRows*() calls.
-   *
+   * 
    * @throws Exception
    */
   public void doTestTableMultiGet() throws Exception {
@@ -397,7 +397,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
   /**
    * Test some of the checkAndMutate calls
-   *
+   * 
    * @throws Exception
    */
   public void doTestTableCheckAndMutate() throws Exception {
@@ -458,7 +458,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
   }
 
   /**
-   *
+   * 
    * @return a List of Mutations for a row, with columnA having valueC and
    *         columnB having valueD
    */

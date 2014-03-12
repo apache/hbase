@@ -138,7 +138,7 @@ public class TestByteBloomFilter extends TestCase {
 
     // test: foldFactor > log(max/actual)
   }
-
+  
   public void testSizing() {
     int bitSize = 8 * 128 * 1024; // 128 KB
     double errorRate = 0.025; // target false positive rate
@@ -155,7 +155,7 @@ public class TestByteBloomFilter extends TestCase {
     // The bit size comes out a little different due to rounding.
     assertTrue(Math.abs(bitSize2 - bitSize) * 1.0 / bitSize < 1e-5);
   }
-
+  
   public void testFoldableByteSize() {
     assertEquals(128, ByteBloomFilter.computeFoldableByteSize(1000, 5));
     assertEquals(640, ByteBloomFilter.computeFoldableByteSize(5001, 4));

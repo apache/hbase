@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.codehaus.jackson.map.ObjectMapper;
 
 /**
- * Run tests that use the funtionality of the Operation superclass for
+ * Run tests that use the funtionality of the Operation superclass for 
  * Puts, Gets, Deletes, Scans, and MultiPuts.
  */
 public class TestOperation {
@@ -283,7 +283,7 @@ public class TestOperation {
   }
 
   /**
-   * Test the client Operations' JSON encoding to ensure that produced JSON is
+   * Test the client Operations' JSON encoding to ensure that produced JSON is 
    * parseable and that the details are present and not corrupted.
    * @throws IOException
    */
@@ -344,7 +344,7 @@ public class TestOperation {
     assertEquals("Qualifier incorrect in Put.toJSON()",
         Bytes.toStringBinary(QUALIFIER),
         kvMap.get("qualifier"));
-    assertEquals("Value length incorrect in Put.toJSON()",
+    assertEquals("Value length incorrect in Put.toJSON()", 
         VALUE.length, kvMap.get("vlen"));
 
     // produce a Delete operation
@@ -362,7 +362,7 @@ public class TestOperation {
     assertNotNull("Family absent in Delete.toJSON()", familyInfo);
     assertEquals("KeyValue absent in Delete.toJSON()", 1, familyInfo.size());
     kvMap = (Map) familyInfo.get(0);
-    assertEquals("Qualifier incorrect in Delete.toJSON()",
+    assertEquals("Qualifier incorrect in Delete.toJSON()", 
         Bytes.toStringBinary(QUALIFIER), kvMap.get("qualifier"));
     
     // produce a RowMutations operation

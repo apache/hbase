@@ -126,7 +126,7 @@ public abstract class MultithreadedTestUtil {
       this.stopped = true;
     }
   }
-
+  
   /**
    * A test thread that performs a repeating operation.
    */
@@ -134,13 +134,13 @@ public abstract class MultithreadedTestUtil {
     public RepeatingTestThread(TestContext ctx) {
       super(ctx);
     }
-
+    
     public final void doWork() throws Exception {
       while (ctx.shouldRun() && !stopped) {
         doAnAction();
       }
     }
-
+    
     public abstract void doAnAction() throws Exception;
   }
 }

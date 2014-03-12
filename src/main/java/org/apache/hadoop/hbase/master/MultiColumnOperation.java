@@ -34,8 +34,8 @@ class MultiColumnOperation extends ColumnOperation {
   private final List<ColumnOperation> operations;
 
   MultiColumnOperation(final HMaster master, final byte [] tableName,
-      final List<HColumnDescriptor> columnAdditions,
-      final List<Pair<byte [], HColumnDescriptor>> columnModifications,
+      final List<HColumnDescriptor> columnAdditions, 
+      final List<Pair<byte [], HColumnDescriptor>> columnModifications, 
       final List<byte []> columnDeletions) throws IOException {
     super(master, tableName);
     // convert the three separate lists to an internal list of sub-operations
@@ -68,7 +68,7 @@ class MultiColumnOperation extends ColumnOperation {
   }
 
   @Override
-  protected void updateTableDescriptor(HTableDescriptor desc)
+  protected void updateTableDescriptor(HTableDescriptor desc) 
   throws IOException {
     // just ask all of the sub-operations to update the descriptor
     for (ColumnOperation op : operations) {
@@ -76,3 +76,4 @@ class MultiColumnOperation extends ColumnOperation {
     }
   }
 }
+

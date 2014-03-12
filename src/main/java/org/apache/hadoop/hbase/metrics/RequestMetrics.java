@@ -30,7 +30,7 @@ public class RequestMetrics {
   private long lastUpdateTimeStamp = 0;
   private int requestPerSecond = 0;
   private static final long INTERVAL = 1000;
-
+  
   public RequestMetrics() {
     this.lastUpdateTimeStamp = EnvironmentEdgeManager.currentTimeMillis();
   }
@@ -38,11 +38,11 @@ public class RequestMetrics {
   public synchronized long getTotalRequestCount() {
     return totalRequestCount;
   }
-
+  
   public synchronized void incrTotalRequestCount(long incr) {
     this.totalRequestCount += incr;
   }
-
+  
   public synchronized void incrTotalRequestCount() {
     this.totalRequestCount ++;
   }
@@ -53,7 +53,7 @@ public class RequestMetrics {
   public synchronized int getRequestPerSecond() {
     long interval = EnvironmentEdgeManager.currentTimeMillis()
       - lastUpdateTimeStamp;
-    if (interval == 0)
+    if (interval == 0) 
       interval = 1;
 
     if (interval >= INTERVAL) {
@@ -61,12 +61,12 @@ public class RequestMetrics {
       int sec = (int) (interval / INTERVAL);
       long requsts = this.totalRequestCount - this.lastTotalRequestCount;
       requestPerSecond =  (int) (requsts / sec);
-
+      
       //update the last updated time stamp and last total request count
       this.lastTotalRequestCount = this.totalRequestCount;
       this.lastUpdateTimeStamp = EnvironmentEdgeManager.currentTimeMillis();
-    }
-
+    } 
+    
     return requestPerSecond;
   }
 

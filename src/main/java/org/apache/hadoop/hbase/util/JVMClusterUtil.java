@@ -87,6 +87,7 @@ public class JVMClusterUtil {
       HRegionServer server;
       try {
         server = hrsc.getConstructor(Configuration.class).newInstance(c);
+        server.initialize();
       } catch (Exception e) {
         IOException ioe = new IOException();
         ioe.initCause(e);

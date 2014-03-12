@@ -92,7 +92,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
     ProcessBasedLocalHBaseCluster hbaseCluster =
         new ProcessBasedLocalHBaseCluster(conf, NUM_DATANODES, numRegionServers);
     hbaseCluster.startMiniDFS();
-
+    
     // start the process based HBase cluster
     hbaseCluster.startHBase();
 

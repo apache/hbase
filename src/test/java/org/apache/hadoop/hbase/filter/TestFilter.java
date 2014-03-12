@@ -289,8 +289,9 @@ public class TestFilter extends HBaseTestCase {
     final int pageSize = 4;
 
     Scan s = new Scan();
-    WhileMatchFilter filter = new WhileMatchFilter(new PageFilter(pageSize));
+    Filter filter = new WhileMatchFilter(new PageFilter(pageSize));
     s.setFilter(filter);
+    filter = s.getFilter();
 
     InternalScanner scanner = this.region.getScanner(s);
     int scannerCounter = 0;
@@ -320,8 +321,9 @@ public class TestFilter extends HBaseTestCase {
   public void testWhileMatchFilterWithFilterRowKey() throws Exception {
     Scan s = new Scan();
     String prefix = "testRowOne";
-    WhileMatchFilter filter = new WhileMatchFilter(new PrefixFilter(Bytes.toBytes(prefix)));
+    Filter filter = new WhileMatchFilter(new PrefixFilter(Bytes.toBytes(prefix)));
     s.setFilter(filter);
+    filter = s.getFilter();
 
     InternalScanner scanner = this.region.getScanner(s);
     while (true) {
@@ -347,10 +349,11 @@ public class TestFilter extends HBaseTestCase {
    */
   public void testWhileMatchFilterWithFilterKeyValue() throws Exception {
     Scan s = new Scan();
-    WhileMatchFilter filter = new WhileMatchFilter(
+    Filter filter = new WhileMatchFilter(
         new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[0], CompareOp.EQUAL, Bytes.toBytes("foo"))
     );
     s.setFilter(filter);
+    filter = s.getFilter();
 
     InternalScanner scanner = this.region.getScanner(s);
     while (true) {
@@ -1129,7 +1132,7 @@ public class TestFilter extends HBaseTestCase {
         assertFalse("Should not have returned whole value",
             Bytes.equals(kv.getValue(), kvs[idx].getValue()));
         if (useLen) {
-          assertEquals("Value in result is not SIZEOF_INT",
+          assertEquals("Value in result is not SIZEOF_INT", 
                      kv.getValue().length, Bytes.SIZEOF_INT);
           LOG.info("idx = "  + idx + ", len=" + kvs[idx].getValueLength()
               + ", actual=" +  Bytes.toInt(kv.getValue()));
@@ -1137,7 +1140,7 @@ public class TestFilter extends HBaseTestCase {
                      kvs[idx].getValueLength(), Bytes.toInt(kv.getValue()) );
           LOG.info("good");
         } else {
-          assertEquals("Value in result is not empty",
+          assertEquals("Value in result is not empty", 
                      kv.getValue().length, 0);
         }
         idx++;

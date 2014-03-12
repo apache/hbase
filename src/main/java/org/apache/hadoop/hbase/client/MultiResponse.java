@@ -20,24 +20,16 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.util.StringUtils;
-
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.DataInput;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
+import java.util.Map.Entry;
 import java.util.TreeMap;
+
+import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
 
 /**
  * A container for Result objects, grouped by regionName.
@@ -54,15 +46,38 @@ public class MultiResponse implements Writable {
   public MultiResponse() {
   }
 
+  public MultiResponse(Map<byte[], Object> resultsForGet,
+      Map<byte[], Object> resultsForPut,
+      Map<byte[], Object> resultsForDelete) {
+    // TODO @gauravm: Change from copy to direct assignment.
+    if (resultsForGet != null) {
+      this.resultsForGet = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      this.resultsForGet.putAll(resultsForGet);
+    } else {
+      this.resultsForGet = null;
+    }
+
+    if (resultsForPut != null) {
+      this.resultsForPut = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      this.resultsForPut.putAll(resultsForPut);
+    } else {
+      this.resultsForPut = null;
+    }
+
+    if (resultsForDelete != null) {
+      this.resultsForDelete = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      this.resultsForDelete.putAll(resultsForDelete);
+    } else {
+      this.resultsForDelete = null;
+    }
+  }
 
   /**
    * Add the pair to the container, grouped by the regionName
    *
-   * @param regionName
-   * @param r
-   *          First item in the pair is the original index of the Action
-   *          (request). Second item is the Result. Result will be empty for
-   *          successful Put and Delete actions.
+   * @param regionName - name of the region
+   * @param rs - can be Integer, Result[] or Exception - if the
+   * call was not successful.
    */
   public void addGetResponse(byte[] regionName, Object rs) {
     if (resultsForGet == null)
@@ -98,12 +113,12 @@ public class MultiResponse implements Writable {
     return ((Integer)result).intValue();
   }
 
-  public Result[] getGetResult(byte []regionName) throws Exception {
+  public Result[] getGetResult(byte[] regionName) throws Exception {
     Object result = resultsForGet.get(regionName);
     if (result instanceof Exception) // false if result == null
-      throw (Exception)result;
+      throw (Exception) result;
 
-    return ((Result[])result);
+    return ((Result[]) result);
   }
 
   @Override
@@ -153,4 +168,91 @@ public class MultiResponse implements Writable {
     return map;
   }
 
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result
+        + ((resultsForDelete == null) ? 0 : resultsForDelete.hashCode());
+    result = prime * result
+        + ((resultsForGet == null) ? 0 : resultsForGet.hashCode());
+    result = prime * result
+        + ((resultsForPut == null) ? 0 : resultsForPut.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    MultiResponse other = (MultiResponse) obj;
+    if (resultsForDelete == null) {
+      if (other.resultsForDelete != null)
+        return false;
+    } else if (!resultsForDelete.equals(other.resultsForDelete))
+      return false;
+    if (resultsForGet == null) {
+      if (other.resultsForGet != null)
+        return false;
+    } else if (!resultsForGet.equals(other.resultsForGet))
+      return false;
+    if (resultsForPut == null) {
+      if (other.resultsForPut != null)
+        return false;
+    } else if (!resultsForPut.equals(other.resultsForPut))
+      return false;
+    return true;
+  }
+
+  @Override
+  public String toString() {
+    return "MultiResponse [resultsForGet=" + resultsForGet + ", resultsForPut="
+        + resultsForPut + ", resultsForDelete=" + resultsForDelete + "]";
+  }
+
+  public Map<byte[], Object> getResultsForGet() {
+    return resultsForGet;
+  }
+
+  public Map<byte[], Object> getResultsForPut() {
+    return resultsForPut;
+  }
+
+  public Map<byte[], Object> getResultsForDelete() {
+    return resultsForDelete;
+  }
+
+  public static class Builder {
+
+    public static MultiResponse createFromTMultiResponse(
+        TMultiResponse tMultiResponse) {
+      Map<byte[], IntegerOrResultOrException> resultsForGet = tMultiResponse
+          .getResultsForGet();
+      Map<byte[], IntegerOrResultOrException> resutsForPut = tMultiResponse
+          .getResultsForPut();
+      Map<byte[], IntegerOrResultOrException> resultsForDelete = tMultiResponse
+          .getResultsForDelete();
+      return new MultiResponse(transformTmultiResponseMap(resultsForGet),
+          transformTmultiResponseMap(resutsForPut),
+          transformTmultiResponseMap(resultsForDelete));
+    }
+
+    public static Map<byte[], Object> transformTmultiResponseMap(
+        Map<byte[], IntegerOrResultOrException> map) {
+      if (map == null) {
+        return null;
+      }
+      Map<byte[], Object> resultMap = new TreeMap<byte[], Object>(
+          Bytes.BYTES_COMPARATOR);
+      for (Entry<byte[], IntegerOrResultOrException> entry : map.entrySet()) {
+        resultMap.put(entry.getKey(), IntegerOrResultOrException
+            .createObjectFromIntegerOrResultOrException(entry.getValue()));
+      }
+      return resultMap;
+    }
+  }
 }

@@ -374,7 +374,7 @@ public class HLogPrettyPrinter {
           }
         }
 
-        if (actions.size() == 0)
+        if (actions.isEmpty())
           continue;
         txn.put("actions", actions);
         if (outputJSON) {
@@ -484,6 +484,7 @@ public class HLogPrettyPrinter {
 
     Collections.sort(entrySet,
           new Comparator<Map.Entry<String, MutableLong>>() {
+            @Override
             public int compare(Map.Entry<String, MutableLong> o1,
                                Map.Entry<String, MutableLong> o2) {
               return o2.getValue().compareTo(o1.getValue());
@@ -531,7 +532,7 @@ public class HLogPrettyPrinter {
     try {
       CommandLine cmd = parser.parse(options, args);
       files = cmd.getArgList();
-      if (files.size() == 0 || cmd.hasOption("h")) {
+      if (files.isEmpty() || cmd.hasOption("h")) {
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp("HLog filename(s) ", options, true);
         System.exit(-1);

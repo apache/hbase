@@ -77,7 +77,7 @@ public class AssignmentVerificationReport {
   private float minDispersionScore = Float.MAX_VALUE;
   private Set<HServerAddress> minDispersionScoreServerSet =
     new HashSet<HServerAddress>();
-
+  
   private float avgDispersionNum = 0;
   private float maxDispersionNum = 0;
   private Set<HServerAddress> maxDispersionNumServerSet =
@@ -85,7 +85,7 @@ public class AssignmentVerificationReport {
   private float minDispersionNum = Float.MAX_VALUE;
   private Set<HServerAddress> minDispersionNumServerSet =
     new HashSet<HServerAddress>();
-
+  
   public void fillUp(String tableName, RegionAssignmentSnapshot snapshot,
       Map<String, Map<String, Float>> regionLocalityMap) {
     // Set the table name
@@ -144,7 +144,7 @@ public class AssignmentVerificationReport {
           favoredNodes.get(AssignmentPlan.POSITION.SECONDARY.ordinal());
         HServerAddress tertiaryRS =
           favoredNodes.get(AssignmentPlan.POSITION.TERTIARY.ordinal());
-
+        
         // Update the primary rs to its region set map
         Integer regionCounter = primaryRSToRegionCounterMap.get(primaryRS);
         if (regionCounter == null) {
@@ -152,7 +152,7 @@ public class AssignmentVerificationReport {
         }
         regionCounter = regionCounter.intValue() + 1;
         primaryRSToRegionCounterMap.put(primaryRS, regionCounter);
-
+        
         // Update the primary rs to secondary and tertiary rs map
         Set<HServerAddress> secAndTerSet = primaryToSecTerRSMap.get(primaryRS);
         if (secAndTerSet == null) {
@@ -161,7 +161,7 @@ public class AssignmentVerificationReport {
         secAndTerSet.add(secondaryRS);
         secAndTerSet.add(tertiaryRS);
         primaryToSecTerRSMap.put(primaryRS, secAndTerSet);
-
+        
         // Get the position of the current region server in the favored nodes list
         AssignmentPlan.POSITION favoredNodePosition =
           AssignmentPlan.getFavoredServerPosition(favoredNodes, currentRS);
@@ -211,7 +211,7 @@ public class AssignmentVerificationReport {
             "because of " + e);
       }
     }
-
+    
     float dispersionScoreSummary = 0;
     float dispersionNumSummary = 0;
     // Calculate the secondary score for each primary region server
@@ -219,7 +219,7 @@ public class AssignmentVerificationReport {
       primaryRSToRegionCounterMap.entrySet()) {
       HServerAddress primaryRS = entry.getKey();
       Integer regionsOnPrimary = entry.getValue();
-
+      
       // Process the dispersion number and score
       float dispersionScore = 0;
       int dispersionNum = 0;
@@ -237,7 +237,7 @@ public class AssignmentVerificationReport {
       } else if (dispersionScore == this.maxDispersionScore) {
         this.maxDispersionScoreServerSet.add(primaryRS);
       }
-
+      
       // Update the max dispersion num
       if (dispersionNum > this.maxDispersionNum) {
         this.maxDispersionNumServerSet.clear();
@@ -246,7 +246,7 @@ public class AssignmentVerificationReport {
       } else if (dispersionNum == this.maxDispersionNum) {
         this.maxDispersionNumServerSet.add(primaryRS);
       }
-
+      
       // Update the min dispersion score
       if (dispersionScore < this.minDispersionScore) {
         this.minDispersionScoreServerSet.clear();
@@ -255,7 +255,7 @@ public class AssignmentVerificationReport {
       } else if (dispersionScore == this.minDispersionScore) {
         this.minDispersionScoreServerSet.add(primaryRS);
       }
-
+      
       // Update the min dispersion num
       if (dispersionNum < this.minDispersionNum) {
         this.minDispersionNumServerSet.clear();
@@ -264,11 +264,11 @@ public class AssignmentVerificationReport {
       } else if (dispersionNum == this.minDispersionNum) {
         this.minDispersionNumServerSet.add(primaryRS);
       }
-
+      
       dispersionScoreSummary += dispersionScore;
       dispersionNumSummary += dispersionNum;
     }
-
+    
     // Update the avg dispersion score
     if (primaryRSToRegionCounterMap.keySet().size() != 0) {
       this.avgDispersionScore = dispersionScoreSummary /
@@ -276,7 +276,7 @@ public class AssignmentVerificationReport {
       this.avgDispersionNum = dispersionNumSummary /
          (float) primaryRSToRegionCounterMap.keySet().size();
     }
-
+    
     // Fill up the most loaded and least loaded region server information
     for (Map.Entry<HServerAddress, Integer> entry :
       serverToHostingRegionCounterMap.entrySet()) {
@@ -534,7 +534,7 @@ public class AssignmentVerificationReport {
       if (isDetailMode) {
         printHServerAddressSet(maxDispersionNumServerSet);
       }
-
+      
       System.out.println(
           "\tAvg dispersion score: " + df.format(avgDispersionScore) +
           ";\tMax dispersion score: " + df.format(maxDispersionScore) +

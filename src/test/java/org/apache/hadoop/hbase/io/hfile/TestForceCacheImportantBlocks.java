@@ -66,7 +66,7 @@ public class TestForceCacheImportantBlocks {
 
   /** Extremely small block size, so that we can get some index blocks */
   private static final int BLOCK_SIZE = 256;
-
+  
   private static final Algorithm COMPRESSION_ALGORITHM =
       Compression.Algorithm.GZ;
   private static final BloomType BLOOM_TYPE = BloomType.ROW;
@@ -168,3 +168,4 @@ public class TestForceCacheImportantBlocks {
   }
 
 }
+

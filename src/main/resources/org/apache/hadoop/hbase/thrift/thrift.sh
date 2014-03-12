@@ -1,7 +1,7 @@
 #!/bin/bash
 
 LANG="java"
-SOURCE="Hbase.thrift"
+SOURCE="LegacyHBase.thrift"
 THRIFT="thrift-apache"
 OUTPUT="../../../../../../java"
 PKG_PATH="org/apache/hadoop/hbase/thrift/generated"

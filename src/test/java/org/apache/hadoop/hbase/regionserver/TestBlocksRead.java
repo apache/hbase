@@ -12,7 +12,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -46,7 +45,7 @@ public class TestBlocksRead extends HBaseTestCase {
   }
 
   HRegion region = null;
-
+  
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
   private final String DIR = testUtil.getTestDir() + "/TestHRegion/";
 
@@ -447,7 +446,6 @@ public class TestBlocksRead extends HBaseTestCase {
     for (KeyValue kv : results) {
       System.out.println(kv.toString());
     }
-    System.out.println("======");
     for (int i = 1; i < 8; i++) {
       for (int j = 1; j < 6; j++) {
         if (i == 1 && j == 5) {
@@ -458,7 +456,6 @@ public class TestBlocksRead extends HBaseTestCase {
           kvs = getData(FAMILY, "row", Arrays.asList("col" + i), j, 1);
           verifyData(kvs[0], "row", "col" + i, j);
           assertEquals(1, kvs.length);
-          System.out.println("=====");
         } else {
           /**
            * We first go on the KV with max timestamp, then land on the actual
@@ -478,7 +475,6 @@ public class TestBlocksRead extends HBaseTestCase {
      **/
     assertEquals(7 * 3 * 5, optimizedSeeks);
   }
-
 
   @Test
   public void testDeleteColBloomFilterWithDeletesWithoutFlushCache() throws IOException{
@@ -505,10 +501,10 @@ public class TestBlocksRead extends HBaseTestCase {
 
     kvs = getData(FAMILY, "row",  Arrays.asList("col2"), 5, 0);
     assertTrue(kvs.length == 0);
-    kvs = getData(FAMILY, "row",  Arrays.asList("col3"), 3, 0);
+    kvs = getData(FAMILY, "row", Arrays.asList("col3"), 3, 0);
     verifyData(kvs[0], "row", "col3", 3);
     assertEquals(1, kvs.length);
-    kvs = getData(FAMILY, "row",  Arrays.asList("col6"), 4, 0 );
+    kvs = getData(FAMILY, "row", Arrays.asList("col6"), 4, 0 );
     verifyData(kvs[0], "row", "col6", 4);
     assertEquals(1, kvs.length);
     kvs = getData(FAMILY, "row",  Arrays.asList("col7"), 5, 0);
@@ -613,13 +609,11 @@ public class TestBlocksRead extends HBaseTestCase {
           kvs = getData(FAMILY, "row", Arrays.asList("col" + i), j, 1);
           verifyData(kvs[0], "row", "col" + i, j);
           assertEquals(1, kvs.length);
-          System.out.println("=====");
         } else {
           /**
            * We first go on the KV with max timestamp, then land on the actual
            * KV, which is 2 blocks read
            */
-          System.out.println("i: "+ i + "j: "+ j);
           kvs = getData(FAMILY, "row", Arrays.asList("col" + i), j, 2);
           verifyData(kvs[0], "row", "col" + i, j);
           assertEquals(1, kvs.length);
@@ -639,7 +633,8 @@ public class TestBlocksRead extends HBaseTestCase {
      * since there are no deletes, the additional gets for puts which are not
      * flushed will be counted as optimized too
      **/
-    assertEquals((7 * 5 * 3 + 4 *3 * 4), optimizedSeeks);
+    int actualSeeks = 7 * 5 * 3 + (2 * 3 + 1) * 4 * 3;
+    assertEquals(actualSeeks, optimizedSeeks);
   }
 
   /**
@@ -684,5 +679,90 @@ public class TestBlocksRead extends HBaseTestCase {
     blocksEnd = getBlkCount();
 
     assertEquals(2 * BLOOM_TYPE.length, blocksEnd - blocksStart);
+  }
+
+  @Test
+  public void testDeleteColBloomFilterWithoutDeletesWithFlushCacheOneColumn() throws IOException{
+    HRegionServer.numOptimizedSeeks.set(0);
+    byte[] TABLE = Bytes.toBytes("testDeleteColBloomFilterWithoutDeletesWithFlushCacheOneColumn");
+    String FAMILY = "cf1";
+    String col = "";
+    KeyValue kvs[];
+    HBaseConfiguration conf = getConf();
+    conf.setBoolean("io.storefile.delete.column.bloom.enabled", true);
+    initHRegion(TABLE, getName(), conf, FAMILY, true);
+    if (!conf.getBoolean(BloomFilterFactory.IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED, false)) {
+      System.out.println("ignoring this test since the delete bloom filter is not enabled...");
+      return;
+    }
+    for (int i = 1; i < 100; i++) {
+      putData(FAMILY, "row", col, i);
+    }
+    region.flushcache();
+    for (int i = 1; i < 100; i++) {
+        if (i == 99) {
+          kvs = getData(FAMILY, "row", Arrays.asList(col), i, 1);
+        } else if (i == 98){
+          kvs = getData(FAMILY, "row", Arrays.asList(col), i, 2);
+        } else {
+          kvs = getData(FAMILY, "row", Arrays.asList(col), i, 3);
+        }
+        verifyData(kvs[0], "row", col, i);
+        assertEquals(1, kvs.length);
+    }
+  }
+
+  /**
+   * One row, two columns, adding data for both columns, afterwards deleting the
+   * second column. We should not get any data and optimized seeks should not
+   * changed when we try to do get against the deleted column
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testOptimizedSeeksWithAndWithoutDeletes() throws IOException {
+    HRegionServer.numOptimizedSeeks.set(0);
+    byte[] TABLE = Bytes.toBytes("testOptimizedSeeksWithAndWithoutDeletes");
+    String FAMILY = "cf1";
+    HBaseConfiguration conf = getConf();
+    KeyValue kvs[];
+    conf.setBoolean("io.storefile.delete.column.bloom.enabled", true);
+    initHRegion(TABLE, getName(), conf, FAMILY, true);
+    if (!conf.getBoolean(
+        BloomFilterFactory.IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED, false)) {
+      System.out
+          .println("ignoring this test since the delete bloom filter is not enabled...");
+      return;
+    }
+    for (int col = 1; col < 2; col++) {
+      for (int i = 1; i < 5; i++) {
+        putData(FAMILY, "row", "col" + col, i);
+      }
+    }
+    deleteColumn(FAMILY, "col2", "row");
+    region.flushcache();
+
+    int previousOptimizedSeeks = 0;
+    for (int col = 1; col < 2; col++) {
+      for (int i = 1; i < 5; i++) {
+        if (col == 2) {
+          if (previousOptimizedSeeks != HRegionServer.numOptimizedSeeks.get()) {
+            assertFalse("num optimized seeks increased during querying deleted column!", false);
+          }
+          kvs = getData(FAMILY, "row", Arrays.asList("col2"), i,  0);
+          assertTrue(kvs.length == 0);
+        } else {
+          if (i == 4) {
+            kvs = getData(FAMILY, "row", Arrays.asList("col" + col), i, 1);
+          } else {
+            kvs = getData(FAMILY, "row", Arrays.asList("col" + col), i, 2);
+          }
+          verifyData(kvs[0], "row", "col"+col, i);
+          assertEquals(1, kvs.length);
+        }
+        previousOptimizedSeeks = HRegionServer.numOptimizedSeeks.get();
+      }
+    }
+    assertEquals(4 * 3, HRegionServer.numOptimizedSeeks.get());
   }
 }

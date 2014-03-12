@@ -19,22 +19,29 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.facebook.nifty.header.protocol.TFacebookCompactProtocol;
+import com.facebook.swift.codec.ThriftCodec;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.thrift.HBaseNiftyThriftServer;
+import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TMemoryBuffer;
+import org.apache.thrift.transport.TMemoryInputTransport;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.io.RawComparator;
-import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -93,6 +100,9 @@ public class Bytes {
   // JHat says BU is 56 bytes.
   // SizeOf which uses java.lang.instrument says 24 bytes. (3 longs?)
   public static final int ESTIMATED_HEAP_TAX = 16;
+
+  final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+
 
   /**
    * Byte array comparator class.
@@ -254,6 +264,26 @@ public class Bytes {
     byte [] result = new byte[length];
     System.arraycopy(bb.array(), bb.arrayOffset(), result, 0, length);
     return result;
+  }
+
+  /**
+   * Similar to {@link #toBytes(ByteBuffer)}, except return the underlying
+   * array. This is an optimization so that we don't create another copy of the
+   * underlying byte array, if possible.
+   *
+   * @param reuseUnderlyingArray
+   * @return
+   */
+  public static byte[] toBytes(ByteBuffer bb, boolean reuseUnderlyingArray) {
+    // Return the underlying the ByteBuffer, if we want to reuse it and it is
+    // possible to do so (The offset is 0, and the limit of the BB is equal
+    // to the length of the underlying array).
+    if (reuseUnderlyingArray &&
+      (bb.arrayOffset() == 0 && bb.limit() == bb.array().length)) {
+      return bb.array();
+    }
+    // Return a new byte array.
+    return toBytes(bb);
   }
 
   /**
@@ -460,6 +490,27 @@ public class Bytes {
       LOG.error("UTF-8 not supported?", e);
       return null;
     }
+  }
+
+
+  public static String bytesToHex(byte[] bytes, int offset, int length) {
+    char[] hexChars = new char[length * 2];
+    for (int j = 0; j < length; j++) {
+      int v = bytes[offset + j] & 0xFF;
+      hexChars[j * 2] = hexArray[v >>> 4];
+      hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+    }
+    return new String(hexChars);
+  }
+
+  public static byte[] hexToBytes(String s) {
+    int len = s.length();
+    byte[] data = new byte[len / 2];
+    for (int i = 0; i < len; i += 2) {
+      data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character
+          .digit(s.charAt(i + 1), 16));
+    }
+    return data;
   }
 
   /**
@@ -1536,5 +1587,66 @@ public class Bytes {
       return false;
     }
     return Bytes.compareTo(a, aOffs, aLen, b, bOffs, aLen) == 0;
+  }
+
+  /**
+   * This is a utility method, that serializes a Swift annotated class' object
+   * into a byte array. This is equivalent to Writable.getBytes().
+   *
+   * @param t The object to be serialized.
+   * @param clazz The class of the object to be serialized
+   * @param <T>
+   * @return The byte array corresponding to the serialized object.
+   * @throws Exception
+   */
+  public static <T> byte[] writeThriftBytes(T t, Class<T> clazz)
+    throws Exception {
+    TMemoryBuffer buffer = writeThriftBytesAndGetBuffer(t, clazz);
+    return (buffer.getArray().length == buffer.length()) ? buffer.getArray()
+      : Arrays.copyOf(buffer.getArray(), buffer.length());
+   }
+
+  public static <T> String writeThriftBytesAndGetString(T t, Class<T> clazz)
+    throws Exception {
+    TMemoryBuffer buffer = writeThriftBytesAndGetBuffer(t, clazz);
+    return Bytes.bytesToHex(buffer.getArray(), 0, buffer.length());
+
+  }
+
+  /**
+   * @param t
+   * @param clazz
+   * @return
+   * @throws Exception
+   */
+  public static <T> TMemoryBuffer writeThriftBytesAndGetBuffer(T t,
+    Class<T> clazz) throws Exception {
+    ThriftCodec<T> codec =
+      HBaseNiftyThriftServer.THRIFT_CODEC_MANAGER.getCodec(clazz);
+    TMemoryBuffer buffer = new TMemoryBuffer(0);
+    //TODO: adela change this to be configurable in future
+    TProtocol protocol = new TFacebookCompactProtocol(buffer);
+    codec.write(t, protocol);
+    return buffer;
+  }
+
+  /**
+   * This is a utility method, that deserializes a Swift annotated class' object
+   * from a byte array. This is equivalent to Writable.getWritable().
+   *
+   * @param buff
+   * @param clazz
+   * @param <T>
+   * @return
+   * @throws Exception
+   */
+  public static <T> T readThriftBytes(byte[] buff, Class<T> clazz)
+    throws Exception {
+    ThriftCodec<T> codec =
+      HBaseNiftyThriftServer.THRIFT_CODEC_MANAGER.getCodec(clazz);
+    TMemoryInputTransport buffer = new TMemoryInputTransport(buff);
+    // TODO: adela change this to be configurable in future
+    TProtocol protocol = new TFacebookCompactProtocol(buffer);
+    return codec.read(protocol);
   }
 }

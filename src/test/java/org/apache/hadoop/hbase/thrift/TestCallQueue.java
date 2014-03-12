@@ -117,13 +117,13 @@ public class TestCallQueue {
   }
 
   private static void verifyMetrics(ThriftMetrics metrics, String name, int expectValue)
-      throws Exception {
-    MetricsContext context = MetricsUtil.getContext(
-        ThriftMetrics.CONTEXT_NAME);
-    metrics.doUpdates(context);
-    OutputRecord record = context.getAllRecords().get(
-        ThriftMetrics.CONTEXT_NAME).iterator().next();
-    assertEquals(expectValue, record.getMetric(name).intValue());
+      throws Exception { 
+    MetricsContext context = MetricsUtil.getContext( 
+        ThriftMetrics.CONTEXT_NAME); 
+    metrics.doUpdates(context); 
+    OutputRecord record = context.getAllRecords().get( 
+        ThriftMetrics.CONTEXT_NAME).iterator().next(); 
+    assertEquals(expectValue, record.getMetric(name).intValue()); 
   }
 
   private static Runnable createDummyRunnable() {
@@ -134,3 +134,4 @@ public class TestCallQueue {
     };
   }
 }
+

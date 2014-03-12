@@ -8,7 +8,7 @@
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.io.ImmutableBytesWritable"
-  import="org.apache.hadoop.hbase.master.HMaster"
+  import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.master.MetaRegion"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="java.util.Map"
@@ -29,8 +29,8 @@
 %>
 
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <%

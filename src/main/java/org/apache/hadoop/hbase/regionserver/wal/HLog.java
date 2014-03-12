@@ -195,6 +195,7 @@ public class HLog implements Syncable {
     Entry next(Entry reuse) throws IOException;
     void seek(long pos) throws IOException;
     long getPosition() throws IOException;
+    boolean isComplete() throws IOException;
   }
 
   public interface Writer {

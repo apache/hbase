@@ -73,7 +73,7 @@ public class HbaseHandlerMetricsProxy implements InvocationHandler {
     }
     return result;
   }
-
+  
   private static long now() {
     return System.nanoTime();
   }

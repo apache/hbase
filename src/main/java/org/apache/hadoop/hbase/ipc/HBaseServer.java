@@ -43,7 +43,13 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -58,6 +64,10 @@ import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.throttles.SizeBasedMultiThrottler;
+import org.apache.hadoop.hbase.util.throttles.SizeBasedThrottler;
+import org.apache.hadoop.hbase.util.throttles.SizeBasedThrottlerInterface;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -66,10 +76,10 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.hbase.util.HasThread;
-import org.apache.hadoop.hbase.util.throttles.SizeBasedMultiThrottler;
-import org.apache.hadoop.hbase.util.throttles.SizeBasedThrottler;
-import org.apache.hadoop.hbase.util.throttles.SizeBasedThrottlerInterface;
+
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -226,6 +236,7 @@ public abstract class HBaseServer {
   }
 
   /** A call queued for handling. */
+  @ThriftStruct
   public static class Call {
     protected int id;                             // the client's call id
     protected Writable param;                     // the parameter passed
@@ -249,6 +260,54 @@ public abstract class HBaseServer {
       this.response = null;
       this.partialResponseSize = 0;
       this.timestamp = timestamp;
+    }
+
+    /**
+     * Thrift constructor
+     * TODO: serialize more fields, this is just for trial
+     * @param id
+     * @param partialResponseSize
+     * @param shouldProfile
+     */
+    @ThriftConstructor
+    public Call(@ThriftField(1) int id,
+        @ThriftField(2) long partialResponseSize,
+        @ThriftField(3) boolean shouldProfile,
+        @ThriftField(4) ByteBuffer response,
+        @ThriftField(5) long timestamp,
+        @ThriftField(6) ProfilingData profilingData){
+      this.id = id;
+      this.partialResponseSize = partialResponseSize;
+      this.shouldProfile = shouldProfile;
+      this.response = response;
+      this.timestamp = timestamp;
+      this.profilingData = profilingData;
+    }
+
+    /**
+     * This Constructor should be used when the Client sends header to the
+     * Server and in pratice we just need to know whether the call need to be
+     * profiled or not
+     *
+     * @param options
+     */
+    public Call(HBaseRPCOptions options) {
+      this.shouldProfile = options.getRequestProfiling();
+    }
+
+    @ThriftField(1)
+    public int getId() {
+      return id;
+    }
+
+    @ThriftField(5)
+    public long getTimestamp() {
+      return timestamp;
+    }
+
+    @ThriftField(4)
+    public ByteBuffer getResponse() {
+      return response;
     }
 
     public void setTag(String tag) {
@@ -275,6 +334,7 @@ public abstract class HBaseServer {
       return this.compressionAlgo;
     }
 
+    @ThriftField(2)
     public long getPartialResponseSize() {
       return partialResponseSize;
     }
@@ -287,17 +347,36 @@ public abstract class HBaseServer {
       return this.connection;
     }
 
-    @Override
-    public String toString() {
-      return param.toString() + " from " + connection.toString();
-    }
-
     public void setResponse(ByteBuffer response) {
       this.response = response;
     }
 
+    @ThriftField(6)
     public ProfilingData getProfilingData(){
       return this.profilingData;
+    }
+
+    @ThriftField(3)
+    public boolean isShouldProfile() {
+      return shouldProfile;
+    }
+
+    public void setShouldProfile(boolean shouldProfile) {
+      this.shouldProfile = shouldProfile;
+    }
+
+    public void setProfilingData(ProfilingData profilingData) {
+      this.profilingData = profilingData;
+    }
+
+    @Override
+    public String toString() {
+      return "Call [id=" + id + ", param=" + param + ", connection="
+          + connection + ", timestamp=" + timestamp + ", response=" + response
+          + ", compressionAlgo=" + compressionAlgo + ", version=" + version
+          + ", shouldProfile=" + shouldProfile + ", profilingData="
+          + profilingData + ", tag=" + tag + ", partialResponseSize="
+          + partialResponseSize + "]";
     }
   }
 

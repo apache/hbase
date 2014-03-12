@@ -11,25 +11,29 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.cli.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.PosixParser;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A compaction Utility for the Store files of a region Server.
@@ -75,9 +79,6 @@ public class CompactUtility {
     Store store = hRegion.getStore(this.cFamily.getName());
     List<StoreFile> storeFiles = new ArrayList<StoreFile>(
             store.getStorefiles());
-    if (storeFiles == null) {
-      throw new Exception("No Store Files To Compact");
-    }
     if (filesCompacting != null) {
       for (Iterator<StoreFile> sFile = storeFiles.iterator(); sFile.hasNext(); ) {
         if (!filesCompacting.contains(sFile.next().getPath())) {
@@ -134,7 +135,7 @@ public class CompactUtility {
     HColumnDescriptor cFamily = new HColumnDescriptor(cmd.getOptionValue("c"));
 
     String[] files = cmd.getArgs();
-    List<Path> filePaths = new ArrayList<Path>();
+    List<Path> filePaths = new ArrayList<Path>(files.length);
     for (String file : files) {
       filePaths.add(new Path(file));
     }

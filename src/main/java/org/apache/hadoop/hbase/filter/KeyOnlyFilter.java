@@ -22,12 +22,11 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 
 import com.google.common.base.Preconditions;
 
@@ -45,7 +44,7 @@ public class KeyOnlyFilter extends FilterBase {
   public KeyOnlyFilter(boolean lenAsVal) { this.lenAsVal = lenAsVal; }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    Preconditions.checkArgument(filterArguments.size() == 0,
+    Preconditions.checkArgument(filterArguments.isEmpty(),
                                 "Expected: 0 but got: %s", filterArguments.size());
     return new KeyOnlyFilter();
   }
@@ -56,10 +55,12 @@ public class KeyOnlyFilter extends FilterBase {
     return ReturnCode.INCLUDE;
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeBoolean(this.lenAsVal);
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     this.lenAsVal = in.readBoolean();
   }

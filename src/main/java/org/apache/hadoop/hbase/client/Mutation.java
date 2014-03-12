@@ -25,16 +25,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.UUID;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public abstract class Mutation extends OperationWithAttributes implements Row {
-  // Attribute used in Mutations to indicate the originating cluster.
   private static final String CLUSTER_ID_ATTR = "_c.id_";
-
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected long lockId = -1L;
@@ -170,7 +167,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
    * @return The lock ID.
    */
   public long getLockId() {
-  return this.lockId;
+    return this.lockId;
   }
 
   /**

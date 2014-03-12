@@ -208,7 +208,7 @@ public class TestTableResource extends HBaseRESTClusterTestBase {
   }
 
   void doTestTableInfoPB() throws IOException, JAXBException {
-    Response response =
+    Response response = 
       client.get("/" + TABLE + "/regions", MIMETYPE_PROTOBUF);
     assertEquals(response.getCode(), 200);
     TableInfoModel model = new TableInfoModel();

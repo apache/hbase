@@ -44,7 +44,7 @@ public class TestImportTsv {
     assertBytesEquals(Bytes.toBytes("qual"), parser.getQualifier(1));
     assertNull(parser.getFamily(2));
     assertNull(parser.getQualifier(2));
-
+    
     byte[] line = Bytes.toBytes("val_a\tval_b\tval_c\tval_d");
     ParsedLine parsed = parser.parse(line, line.length);
     checkParsing(parsed, Splitter.on("\t").split(Bytes.toString(line)));
@@ -60,11 +60,11 @@ public class TestImportTsv {
           parsed.getColumnLength(i)));
     }
     if (!Iterables.elementsEqual(parsedCols, expected)) {
-      fail("Expected: " + Joiner.on(",").join(expected) + "\n" +
+      fail("Expected: " + Joiner.on(",").join(expected) + "\n" + 
           "Got:" + Joiner.on(",").join(parsedCols));
     }
   }
-
+  
   private void assertBytesEquals(byte[] a, byte[] b) {
     assertEquals(Bytes.toStringBinary(a), Bytes.toStringBinary(b));
   }

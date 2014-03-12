@@ -32,40 +32,40 @@ public class TestTaskMonitor {
     TaskMonitor tm = new TaskMonitor();
     assertTrue("Task monitor should start empty",
         tm.getTasks().isEmpty());
-
+    
     // Make a task and fetch it back out
     MonitoredTask task = tm.createStatus("Test task");
     MonitoredTask taskFromTm = tm.getTasks().get(0);
-
+    
     // Make sure the state is reasonable.
     assertEquals(task.getDescription(), taskFromTm.getDescription());
     assertEquals(-1, taskFromTm.getCompletionTimestamp());
     assertEquals(MonitoredTask.State.RUNNING, taskFromTm.getState());
-
+    
     // Mark it as finished
     task.markComplete("Finished!");
     assertEquals(MonitoredTask.State.COMPLETE, task.getState());
-
+    
     // It should still show up in the TaskMonitor list
     assertEquals(1, tm.getTasks().size());
-
+    
     // If we mark its completion time back a few minutes, it should get gced
     task.expireNow();
     assertEquals(0, tm.getTasks().size());
   }
-
+  
   @Test
   public void testTasksGetAbortedOnLeak() throws InterruptedException {
     final TaskMonitor tm = new TaskMonitor();
     assertTrue("Task monitor should start empty",
         tm.getTasks().isEmpty());
-
+    
     final AtomicBoolean threadSuccess = new AtomicBoolean(false);
     // Make a task in some other thread and leak it
     Thread t = new Thread() {
       @Override
       public void run() {
-        MonitoredTask task = tm.createStatus("Test task");
+        MonitoredTask task = tm.createStatus("Test task");    
         assertEquals(MonitoredTask.State.RUNNING, task.getState());
         threadSuccess.set(true);
       }
@@ -74,17 +74,17 @@ public class TestTaskMonitor {
     t.join();
     // Make sure the thread saw the correct state
     assertTrue(threadSuccess.get());
-
+    
     // Make sure the leaked reference gets cleared
     System.gc();
     System.gc();
     System.gc();
-
-    // Now it should be aborted
+    
+    // Now it should be aborted 
     MonitoredTask taskFromTm = tm.getTasks().get(0);
     assertEquals(MonitoredTask.State.ABORTED, taskFromTm.getState());
   }
-
+  
   @Test
   public void testTaskLimit() throws Exception {
     TaskMonitor tm = new TaskMonitor();

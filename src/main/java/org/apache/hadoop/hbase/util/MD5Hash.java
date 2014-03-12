@@ -42,7 +42,7 @@ public class MD5Hash {
   public static String getMD5AsHex(byte[] key) {
     return getMD5AsHex(key, 0, key.length);
   }
-
+  
   /**
    * Given a byte array, returns its MD5 hash as a hex string.
    * Only "length" number of bytes starting at "offset" within the
@@ -50,7 +50,7 @@ public class MD5Hash {
    *
    * @param key the key to hash (variable length byte array)
    * @param offset
-   * @param length
+   * @param length 
    * @return MD5 hash as a 32 character hex string.
    */
   public static String getMD5AsHex(byte[] key, int offset, int length) {

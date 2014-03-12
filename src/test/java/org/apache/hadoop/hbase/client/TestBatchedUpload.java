@@ -19,9 +19,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Arrays;
-
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -38,8 +39,6 @@ import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.assertTrue;
 
 /**
  * Run tests that use the HBase clients; {@link HTable} and {@link HTablePool}.
@@ -68,7 +67,7 @@ public class TestBatchedUpload {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testBatchedUpload() throws Exception {
     byte [] TABLE = Bytes.toBytes("testBatchedUpload");
     int NUM_REGIONS = 10;
@@ -88,7 +87,7 @@ public class TestBatchedUpload {
     ht.close();
   }
 
-  @Test
+  @Test(timeout=100000)
   /*
    * Test to make sure that if a region moves benignly, and both
    * the source and dest region servers are alive, then the batch
@@ -203,10 +202,10 @@ public class TestBatchedUpload {
     for(long i = 0; i < numRows; i++) {
       byte [] rowKey = longToByteArrayKey(i);
 
-      Get get = new Get(rowKey);
+      Get.Builder get = new Get.Builder(rowKey);
       get.addColumn(FAMILY, QUALIFIER);
       get.setMaxVersions(1);
-      Result result = table.get(get);
+      Result result = table.get(get.create());
       
       assertTrue(Arrays.equals(rowKey, result.getValue(FAMILY, QUALIFIER)));
     }

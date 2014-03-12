@@ -25,7 +25,7 @@ module Shell
         return <<-EOF
 Get the status of the alter command. Indicates the number of regions of the
 table that have received the updated schema
-Pass table name.
+Pass table name. 
 
 hbase> alter_status 't1'
 EOF

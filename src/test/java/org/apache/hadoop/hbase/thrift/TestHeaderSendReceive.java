@@ -27,17 +27,15 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.jruby.RubyProcess.Sys;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Chech whether we correctly receive profiling data with the header protocol enabled
+ * Check whether we correctly receive profiling data with the header protocol enabled
  *
  */
 

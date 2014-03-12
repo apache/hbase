@@ -20,6 +20,9 @@
 
 package org.apache.hadoop.hbase.client;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
@@ -32,6 +35,7 @@ import java.util.TreeMap;
 /**
  * Response class for MultiPut.
  */
+@ThriftStruct
 public class MultiPutResponse implements Writable {
 
   protected MultiPut request; // used in client code ONLY
@@ -39,6 +43,20 @@ public class MultiPutResponse implements Writable {
   protected Map<byte[], Integer> answers = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
 
   public MultiPutResponse() {}
+
+  @ThriftConstructor
+  public MultiPutResponse(@ThriftField(1) final Map<byte[], Integer> answers) {
+    // Adding it to the existing TreeMap, because we want to use the
+    // BYTES_COMPARATOR.
+    for (Map.Entry<byte[], Integer> e : answers.entrySet()) {
+      this.answers.put(e.getKey(), e.getValue());
+    }
+  }
+
+  @ThriftField(1)
+  public Map<byte[], Integer> getAnswers() {
+    return answers;
+  }
 
   public void addResult(byte[] regionName, int result) {
     answers.put(regionName, result);
@@ -68,5 +86,31 @@ public class MultiPutResponse implements Writable {
 
       answers.put(key, value);
     }
+  }
+
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    MultiPutResponse other = (MultiPutResponse)obj;
+    if ((other.answers == null) != (this.answers == null)) {
+      return false;
+    }
+    if (this.answers != null) {
+      // If the answers map is not null, they should be of the same size, and
+      // have the same entries.
+      if (!((this.answers.size() == other.answers.size()) &&
+             this.answers.entrySet().containsAll(other.answers.entrySet()))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public int hashCode() {
+    return answers.hashCode();
   }
 }

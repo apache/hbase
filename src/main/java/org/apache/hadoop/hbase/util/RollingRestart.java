@@ -20,6 +20,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -29,7 +30,6 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.master.RegionPlacement;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -51,6 +51,7 @@ public class RollingRestart {
   int moveTimeoutInterval = 60000;
   int moveRetries = 1;
   boolean useHadoopCtl = true;
+  private int port = HConstants.DEFAULT_REGIONSERVER_PORT;
   HashMap<HServerAddress, HRegionInterface> serverConnectionMap =
       new HashMap<HServerAddress, HRegionInterface>();
   ArrayList<RegionChecker> regionCheckers = new ArrayList<RegionChecker>();
@@ -66,7 +67,7 @@ public class RollingRestart {
   RollingRestart(String serverName, int regionDrainInterval,
       int regionUndrainInterval, int sleepIntervalAfterRestart,
       int sleepIntervalBeforeRestart, int getOpFrequency,
-      boolean useHadoopCtl) throws IOException {
+      boolean useHadoopCtl, int port) throws IOException {
 
     this.sleepIntervalAfterRestart = sleepIntervalAfterRestart;
     this.sleepIntervalBeforeRestart = sleepIntervalBeforeRestart;
@@ -74,6 +75,7 @@ public class RollingRestart {
     this.regionDrainInterval = regionDrainInterval;
     this.regionUndrainInterval = regionUndrainInterval;
     this.getOpFrequency = getOpFrequency;
+    this.port = port;
 
     conf = HBaseConfiguration.create();
     this.moveRetries = conf.getInt("hbase.rollingrestart.move.maxretries", DEFAULT_MOVE_RETRIES);
@@ -85,7 +87,7 @@ public class RollingRestart {
       currentState = STAGE.FAIL;
       return;
     }
-    this.serverAddr = new HServerAddress(serverName, 60020);
+    this.serverAddr = new HServerAddress(serverName, this.port);
 
     currentState = STAGE.SETUP;
   }
@@ -240,6 +242,9 @@ public class RollingRestart {
           break;
         }
      } catch (Exception e) {
+       if (LOG.isDebugEnabled()) {
+         e.printStackTrace();
+       }
        System.out.println("Waiting for region server to come online.");
        Thread.sleep(1000);
      }
@@ -458,6 +463,8 @@ public class RollingRestart {
 
     options.addOption("s", "server", true,
         "Name of the region server to restart");
+    options.addOption("p", "port", true,
+        "Port where the regionserver is listening");
     options.addOption("r", "sleep_after_restart", true,
         "time interval after which the region server should be started assigning regions. Default : 10000ms");
     options.addOption("b", "sleep_before_restart", true,
@@ -474,6 +481,8 @@ public class RollingRestart {
         "Don't use hadoopctl to restart the regionserver. Default : true");
     options.addOption("o", "drain_and_stop_only", false,
       "Drain and stop the region server(Works only with hadoopctl). Default : false");
+    options.addOption("drain", "drain_only", false,
+        "Drain the region server(Works only with hadoopctl). Default : false");
 
     if (args.length == 0) {
       HelpFormatter formatter = new HelpFormatter();
@@ -492,6 +501,8 @@ public class RollingRestart {
     int sleepIntervalBeforeRestart = RollingRestart.DEFAULT_SLEEP_BEFORE_RESTART_INTERVAL;
     boolean useHadoopCtl = true;
     boolean drainAndStopOnly = false;
+    boolean drainOnly = false;
+    int port = HConstants.DEFAULT_REGIONSERVER_PORT;
 
     if (!cmd.hasOption("s")) {
       HelpFormatter formatter = new HelpFormatter();
@@ -529,11 +540,19 @@ public class RollingRestart {
       getOpFrequency = Integer.parseInt(cmd.getOptionValue("g"));
     }
 
+    if (cmd.hasOption("p")) {
+      port = Integer.parseInt(cmd.getOptionValue("p"));
+    }
+
+    if (cmd.hasOption("drain")) {
+      drainOnly = true;
+    }
+
     RollingRestart rr = null;
     try {
       rr = new RollingRestart(serverName, regionDrainInterval,
           regionUndrainInterval, sleepIntervalAfterRestart,
-          sleepIntervalBeforeRestart, getOpFrequency, useHadoopCtl);
+          sleepIntervalBeforeRestart, getOpFrequency, useHadoopCtl, port);
     } catch (IOException e) {
       e.printStackTrace();
       LOG.error("Rolling restart failed for " + serverName);
@@ -551,6 +570,10 @@ public class RollingRestart {
     try  {
       rr.setup();
       rr.drainServer();
+      if (drainOnly) {
+        LOG.info("Drain completed for " + serverName);
+        return;
+      }
       rr.restart(drainAndStopOnly);
       if (!drainAndStopOnly) {
         rr.undrainServer();
@@ -581,7 +604,7 @@ public class RollingRestart {
          default:
        }
     } finally {
-      rr.clear(drainAndStopOnly);
+      rr.clear(drainOnly | drainAndStopOnly);
     }
   }
 }

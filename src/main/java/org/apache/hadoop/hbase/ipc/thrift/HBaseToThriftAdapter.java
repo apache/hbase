@@ -19,11 +19,14 @@
  */
 package org.apache.hadoop.hbase.ipc.thrift;
 
-import com.facebook.nifty.header.transport.THeaderTransport;
-import com.facebook.swift.service.RuntimeTApplicationException;
-import com.facebook.swift.service.ThriftClientManager;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -63,13 +66,11 @@ import org.apache.thrift.TApplicationException;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TTransport;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
+import com.facebook.nifty.header.transport.THeaderTransport;
+import com.facebook.swift.service.RuntimeTApplicationException;
+import com.facebook.swift.service.ThriftClientManager;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * The client should use this class to communicate to the server via thrift
@@ -148,7 +149,8 @@ public class HBaseToThriftAdapter implements HRegionInterface {
         Call call = new Call(options);
         String stringData = Bytes
             .writeThriftBytesAndGetString(call, Call.class);
-        headerTransport.setHeader(HConstants.THRIFT_HEADER_FROM_CLIENT, stringData);
+        headerTransport.setHeader(HConstants.THRIFT_HEADER_FROM_CLIENT,
+            stringData);
       }
     } else {
       LOG.error("output transport for client was not THeaderTransport, client cannot send headers");
@@ -190,6 +192,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
         .getTransport();
     if (inputTransport instanceof THeaderTransport) {
       THeaderTransport headerTransport = (THeaderTransport) outputTransport;
+      headerTransport.clearHeaders();
       String dataString = headerTransport.getReadHeaders().get(HConstants.THRIFT_HEADER_FROM_SERVER);
       if (dataString != null) {
         byte[] dataBytes = Bytes.hexToBytes(dataString);
@@ -1132,8 +1135,10 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     preProcess();
     try {
        List<Bucket> buckets = connection.getHistogram(regionName);
-       if (buckets.size() == 0) return null;
-       return buckets;
+      if (buckets.isEmpty()) {
+        return null;
+      }
+      return buckets;
     } catch (ThriftHBaseException te) {
       Exception e = te.getServerJavaException();
       handleIOException(e);
@@ -1154,7 +1159,9 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     try {
       List<Bucket> buckets =
           connection.getHistogramForStore(regionName, family);
-      if (buckets.size() == 0) return null;
+      if (buckets.isEmpty()) {
+        return null;
+      }
       return buckets;
     } catch (ThriftHBaseException te) {
       Exception e = te.getServerJavaException();

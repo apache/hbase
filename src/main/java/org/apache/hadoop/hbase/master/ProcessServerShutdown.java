@@ -153,7 +153,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     byte [] regionName)
   throws IOException {
     long scannerId = server.openScanner(regionName, scan);
-
+    
     int rows = scan.getCaching();
     // The default caching if not set for scans is -1. Handle it
     if (rows < 1) rows = 1;
@@ -266,7 +266,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     }
     t2 = System.currentTimeMillis();
     if (LOG.isDebugEnabled())
-      LOG.debug("Took " + this.toString() + " " + (t2 - t0)
+      LOG.debug("Took " + this.toString() + " " + (t2 - t0) 
           + " ms. to update RegionManager. And,"
         + (t1 - t0) + " ms. to get the lock.");
 
@@ -274,8 +274,10 @@ class ProcessServerShutdown extends RegionServerOperation {
     t0 = System.currentTimeMillis();
     for (ToDoEntry e: toDoList) {
       if (e.regionOffline) {
-        LOG.debug(this.toString() + " setting offlineRegionInMETA : " + e.info.toString());
-        HRegion.offlineRegionInMETA(server, regionName, e.info);
+        LOG.debug(this.toString() + " setting offlineRegionInMETA : "
+            + e.info.toString());
+        HRegion.offlineRegionInMETA(server, regionName,
+            e.info);
       }
     }
     t1 = System.currentTimeMillis();
@@ -288,7 +290,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
         LOG.debug(this.toString() +
             (skip? "skipping set " : "setting ") + " unassigned: " + info.toString());
-        if (skip)
+        if (skip) 
           continue;
 
         this.setRegionUnassigned(info, false);
@@ -300,10 +302,10 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
     }
     t2 = System.currentTimeMillis();
-
+    
     if (LOG.isDebugEnabled())
-      LOG.debug("Took " + this.toString() + " "
-          + (t1 - t0 ) + " ms. to mark regions offlineInMeta"
+      LOG.debug("Took " + this.toString() + " " 
+          + (t1 - t0 ) + " ms. to mark regions offlineInMeta" 
           + (t2 - t1) + " ms. to set " + regions.size() + " regions unassigned");
     return true;
   }

@@ -51,7 +51,7 @@ import static org.junit.Assert.assertEquals;
  * Tests TableInputFormat with varying numbers of mappers per region.
  */
 public class TestTableInputFormatNMappersPerRegion {
-
+  
   static final String SPECULATIVE_EXECUTION = "mapred.map.tasks.speculative.execution";
   static final Log LOG = LogFactory.getLog(TestTableInputFormatScan.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -109,13 +109,13 @@ public class TestTableInputFormatNMappersPerRegion {
         }
       }
     }
-
+    
   }
-
+  
   /**
    * Tests whether TableInputFormat works correctly when number of mappers
    * per region is set to 1.
-   *
+   * 
    * @throws IOException
    * @throws InterruptedException
    * @throws ClassNotFoundException
@@ -125,10 +125,10 @@ public class TestTableInputFormatNMappersPerRegion {
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("testOneMapperPerRegion", 1, 25);
   }
-
+  
   /**
-   * Tests when number of mappers is set to 3.
-   *
+   * Tests when number of mappers is set to 3. 
+   * 
    * @throws IOException
    * @throws InterruptedException
    * @throws ClassNotFoundException
@@ -138,11 +138,11 @@ public class TestTableInputFormatNMappersPerRegion {
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("testThreeMappersPerRegion", 3, 25);
   }
-
+  
   /**
    * Tests the scenario where there is only one region. Expecting resumption to
    * one mapper per region.
-   *
+   * 
    * @throws IOException
    * @throws InterruptedException
    * @throws ClassNotFoundException
@@ -152,11 +152,11 @@ public class TestTableInputFormatNMappersPerRegion {
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("testOnTableWithOneRegion", 5, 1);
   }
-
+  
   /**
    * Tests the scenario where there is only two regions. Expecting resumption to
    * one mapper per region.
-   *
+   * 
    * @throws IOException
    * @throws InterruptedException
    * @throws ClassNotFoundException
@@ -166,10 +166,10 @@ public class TestTableInputFormatNMappersPerRegion {
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("testOnTableWithTwoRegions", 5, 2);
   }
-
+  
   /**
    * Tests whether the framework correctly detects illegal inputs.
-   *
+   * 
    * @throws IOException
    * @throws InterruptedException
    * @throws ClassNotFoundException
@@ -192,7 +192,7 @@ public class TestTableInputFormatNMappersPerRegion {
       // Expected
     }
   }
-
+  
   // If numRegions > 2, this creates 25 regions, rather than numRegions regions.
   private void testScan(String tableName, int numMappersPerRegion, int numRegions)
   throws IOException, InterruptedException, ClassNotFoundException {
@@ -235,10 +235,10 @@ public class TestTableInputFormatNMappersPerRegion {
     long totalRowCount = counters
         .findCounter(RowCounterMapper.Counters.ROWS).getValue();
     int actualNumMappersPerRegion = (numRegions > 2) ? numMappersPerRegion : 1;
-    assertEquals("Tried to open " + actualNumMappersPerRegion * regionsOpened +
-        " maps but got " + totalMapCount,
+    assertEquals("Tried to open " + actualNumMappersPerRegion * regionsOpened + 
+        " maps but got " + totalMapCount, 
         actualNumMappersPerRegion * regionsOpened, totalMapCount);
-    assertEquals("Supposed to find " + rowsLoaded + " rows but got " + totalRowCount,
+    assertEquals("Supposed to find " + rowsLoaded + " rows but got " + totalRowCount, 
         rowsLoaded, totalRowCount);
   }
 }

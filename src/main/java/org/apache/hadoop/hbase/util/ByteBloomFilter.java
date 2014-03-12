@@ -44,11 +44,11 @@ import java.util.Random;
  * occasionally return a false positive, it will never return a false negative.
  * When creating the filter, the sender can choose its desired point in a
  * trade-off between the false positive rate and the size.
- *
+ * 
  * <p>
  * Originally inspired by <a href="http://www.one-lab.org">European Commission
  * One-Lab Project 034819</a>.
- *
+ * 
  * Bloom filters are very sensitive to the number of elements inserted into
  * them. For HBase, the number of entries depends on the size of the data stored
  * in the column. Currently the default region size is 256MB, so entry count ~=
@@ -56,22 +56,22 @@ import java.util.Random;
  * no efficient way to calculate the entry count after compactions. Therefore,
  * it is often easier to use a dynamic bloom filter that will add extra space
  * instead of allowing the error rate to grow.
- *
+ * 
  * ( http://www.eecs.harvard.edu/~michaelm/NEWWORK/postscripts/BloomFilterSurvey
  * .pdf )
- *
+ * 
  * m denotes the number of bits in the Bloom filter (bitSize) n denotes the
  * number of elements inserted into the Bloom filter (maxKeys) k represents the
  * number of hash functions used (nbHash) e represents the desired false
  * positive rate for the bloom (err)
- *
+ * 
  * If we fix the error rate (e) and know the number of entries, then the optimal
  * bloom size m = -(n * ln(err) / (ln(2)^2) ~= n * ln(err) / ln(0.6185)
- *
+ * 
  * The probability of false positives is minimized when k = m/n ln(2).
- *
+ * 
  * @see BloomFilter The general behavior of a filter
- *
+ * 
  * @see <a
  *      href="http://portal.acm.org/citation.cfm?id=362692&dl=ACM&coll=portal">
  *      Space/Time Trade-Offs in Hash Coding with Allowable Errors</a>
@@ -95,12 +95,12 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
   protected int maxKeys;
   /** Bloom bits */
   protected ByteBuffer bloom;
-
+  
   /** Record separator for the Bloom filter statistics human-readable string */
   public static final String STATS_RECORD_SEP = "; ";
 
   /**
-   * Used in computing the optimal Bloom filter size. This approximately equals
+   * Used in computing the optimal Bloom filter size. This approximately equals 
    * 0.480453.
    */
   public static final double LOG2_SQUARED = Math.log(2) * Math.log(2);
@@ -152,15 +152,15 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
    *         be an integer.
    */
   public static long computeBitSize(long maxKeys, double errorRate) {
-    return (long) Math.ceil(maxKeys * (-Math.log(errorRate) / LOG2_SQUARED));
+    return (long) Math.ceil(maxKeys * (-Math.log(errorRate) / LOG2_SQUARED)); 
   }
-
+  
   /**
    * The maximum number of keys we can put into a Bloom filter of a certain
    * size to maintain the given error rate, assuming the number of hash
    * functions is chosen optimally and does not even have to be an integer
    * (hence the "ideal" in the function name).
-   *
+   * 
    * @param bitSize
    * @param errorRate
    * @return maximum number of keys that can be inserted into the Bloom filter
@@ -172,7 +172,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
     // more keys in a Bloom filter than is allowed by the target error rate.
     return (long) (bitSize * (LOG2_SQUARED / -Math.log(errorRate)));
   }
-
+  
   /**
    * The maximum number of keys we can put into a Bloom filter of a certain
    * size to get the given error rate, with the given number of hash functions.
@@ -186,7 +186,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
    */
   public static long computeMaxKeys(long bitSize, double errorRate,
       int hashCount) {
-    return (long) (-bitSize * 1.0 / hashCount *
+    return (long) (-bitSize * 1.0 / hashCount * 
         Math.log(1 - Math.exp(Math.log(errorRate) / hashCount)));
   }
 
@@ -196,20 +196,20 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
    * this function changes as a Bloom filter is being populated. Used for
    * reporting the actual error rate of compound Bloom filters when writing
    * them out.
-   *
+   * 
    * @return error rate for this particular Bloom filter
    */
   public double actualErrorRate() {
     return actualErrorRate(keyCount, byteSize * 8, hashCount);
   }
-
+  
   /**
    * Computes the actual error rate for the given number of elements, number
-   * of bits, and number of hash functions. Taken directly from the
+   * of bits, and number of hash functions. Taken directly from the 
    * <a href=
    * "http://en.wikipedia.org/wiki/Bloom_filter#Probability_of_false_positives"
    * > Wikipedia Bloom filter article</a>.
-   *
+   * 
    * @param maxKeys
    * @param bitSize
    * @param functionCount
@@ -253,11 +253,11 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
     this.hashType = hashType;
     this.hash = Hash.getInstance(hashType);
   }
-
+  
   /**
    * Determines & initializes bloom filter meta data from user config. Call
    * {@link #allocBloom()} to allocate bloom filter data.
-   *
+   * 
    * @param maxKeys Maximum expected number of keys that will be stored in this
    *          bloom
    * @param errorRate Desired false positive error rate. Lower rate = more
@@ -285,7 +285,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
 
   /**
    * Creates a Bloom filter of the given size.
-   *
+   * 
    * @param byteSizeHint the desired number of bytes for the Bloom filter bit
    *          array. Will be increased so that folding is possible.
    * @param errorRate target false positive rate of the Bloom filter
@@ -309,10 +309,10 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
 
     return bbf;
   }
-
+  
   /**
    * Creates another similar Bloom filter. Does not copy the actual bits, and
-   * sets the new filter's key count to zero.
+   * sets the new filter's key count to zero. 
    *
    * @return a Bloom filter with the same configuration as this
    */
@@ -420,7 +420,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
     int hash1 = hash.hash(buf, offset, length, 0);
     int hash2 = hash.hash(buf, offset, length, hash1);
     int bloomBitSize = bloomSize * 8;
-
+    
     if (randomGeneratorForTest == null) {
       // Production mode.
       for (int i = 0; i < hashCount; i++) {
@@ -591,7 +591,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
 
   public static void setFakeLookupMode(boolean enabled) {
     if (enabled) {
-      randomGeneratorForTest = new Random(283742987L);
+      randomGeneratorForTest = new Random(283742987L);  
     } else {
       randomGeneratorForTest = null;
     }
@@ -623,7 +623,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
 
   /**
    * A human-readable string with statistics for the given Bloom filter.
-   *
+   * 
    * @param bloomFilter the Bloom filter to output statistics for;
    * @return a string consisting of "&lt;key&gt;: &lt;value&gt;" parts
    *         separated by {@link #STATS_RECORD_SEP}.
@@ -636,7 +636,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
     sb.append("BloomSize: " + bloomFilter.getByteSize() + STATS_RECORD_SEP);
     sb.append("No of Keys in bloom: " + k + STATS_RECORD_SEP);
     sb.append("Max Keys for bloom: " + m);
-    if (m > 0) {
+    if (m > 0) { 
       sb.append(STATS_RECORD_SEP + "Percentage filled: "
           + NumberFormat.getPercentInstance().format(k * 1.0 / m));
     }

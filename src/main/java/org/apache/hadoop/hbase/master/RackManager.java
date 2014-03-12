@@ -15,7 +15,7 @@ import org.apache.hadoop.net.IPv4AddressTruncationMapping;
 public class RackManager {
   static final Log LOG = LogFactory.getLog(RackManager.class);
   private DNSToSwitchMapping switchMapping;
-
+  
   public RackManager(Configuration conf) {
     Class<DNSToSwitchMapping> clz = (Class<DNSToSwitchMapping>)
         conf.getClass("hbase.util.ip.to.rack.determiner",
@@ -45,7 +45,7 @@ public class RackManager {
       return HConstants.UNKNOWN_RACK;
     return this.getRack(info.getServerAddress());
   }
-
+  
   /**
    * Get the name of the rack containing a server, according to the DNS to
    * switch mapping.
@@ -55,13 +55,13 @@ public class RackManager {
   public String getRack(HServerAddress server) {
     if (server == null)
       return HConstants.UNKNOWN_RACK;
-
+    
     List<String> racks = switchMapping.resolve(Arrays.asList(
         new String[]{server.getBindAddress()}));
     if (racks != null && racks.size() > 0) {
       return racks.get(0);
     }
-
+    
     return HConstants.UNKNOWN_RACK;
   }
 }

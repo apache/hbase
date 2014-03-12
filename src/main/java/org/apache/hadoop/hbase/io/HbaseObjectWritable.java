@@ -18,15 +18,6 @@
 
 package org.apache.hadoop.hbase.io;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
@@ -41,27 +32,31 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.MultiAction;
-import org.apache.hadoop.hbase.client.MultiResponse;
-import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.IntegerOrResultOrException;
+import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.client.MultiPutResponse;
+import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
+import org.apache.hadoop.hbase.filter.ColumnPaginationFilter;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompoundRowPrefixFilter;
 import org.apache.hadoop.hbase.filter.DependentColumnFilter;
+import org.apache.hadoop.hbase.filter.FamilyFilter;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.MultipleColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
@@ -69,6 +64,7 @@ import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.SkipFilter;
+import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
@@ -86,6 +82,15 @@ import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * This is a customized version of the polymorphic hadoop
@@ -207,7 +212,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     // Online schema change
     addToMap(Integer.class, code++);
     addToMap(Pair.class, code++);
-
+    
     // Favored Assignment
     addToMap(AssignmentPlan.class, code++);
 
@@ -220,6 +225,14 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(MultiResponse.class, code++);
     addToMap(HFileHistogram.Bucket.class, code++);
     addToMap(CompoundRowPrefixFilter.class, code++);
+
+    addToMap(IntegerOrResultOrException.Type.class, code++);
+    addToMap(FilterList.class, code++);
+    addToMap(ColumnPaginationFilter.class, code++);
+    addToMap(TimestampsFilter.class, code++);
+    addToMap(MultipleColumnPrefixFilter.class, code++);
+    addToMap(FamilyFilter.class, code++);
+
   }
 
   private Class<?> declaredClass;
@@ -514,7 +527,9 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
           Array.set(instance, i, readObject(in, conf));
         }
       }
-    } else if (List.class.isAssignableFrom(declaredClass)) {              // List
+    } else if (declaredClass == Exception.class) {
+      instance = new Exception();
+    } else if (List.class.isAssignableFrom(declaredClass)) {   // List
       int length = in.readInt();
       instance = new ArrayList(length);
       for (int i = 0; i < length; i++) {

@@ -193,7 +193,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     super.tearDown();
   }
 
-  void verifyScan(Scan s, long expectedRows, long expectedKeys)
+  void verifyScan(Scan s, long expectedRows, long expectedKeys) 
       throws Exception {
     ScannerModel model = ScannerModel.fromScan(s);
     model.setBatch(Integer.MAX_VALUE); // fetch it all at once
@@ -279,7 +279,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
       kvs.length, idx);
   }
 
-  void verifyScanNoEarlyOut(Scan s, long expectedRows, long expectedKeys)
+  void verifyScanNoEarlyOut(Scan s, long expectedRows, long expectedKeys) 
       throws Exception {
     ScannerModel model = ScannerModel.fromScan(s);
     model.setBatch(Integer.MAX_VALUE); // fetch it all at once
@@ -964,7 +964,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     };
     verifyScanFull(s, kvs);
   }
-
+  
   public void testScannersWithFilters() throws Exception {
     doTestNoFilter();
     doTestPrefixFilter();

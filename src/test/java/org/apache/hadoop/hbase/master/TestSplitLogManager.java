@@ -321,7 +321,7 @@ public class TestSplitLogManager {
       byte[] taskstate = zkw.getData("", tasknode);
       assertTrue(Arrays.equals(TaskState.TASK_UNASSIGNED.get("dummy-master"),
           taskstate));
-
+      
       waitForCounter(tot_mgr_rescan_deleted, 0, 1, 1000);
     } else {
       LOG.warn("Could not run test. Lost ZK connection?");
@@ -430,7 +430,7 @@ public class TestSplitLogManager {
     // now all the nodes are unassigned. manager should post another rescan
     waitForCounter(tot_mgr_resubmit_unassigned, 0, 1, 2 * to + 500);
   }
-
+  
   @Test
   public void testDeadWorker() throws Exception {
     LOG.info("testDeadWorker");

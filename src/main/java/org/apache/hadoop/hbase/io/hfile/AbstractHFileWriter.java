@@ -90,7 +90,7 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
 
   /** The compression algorithm used. NONE if no compression. */
   protected final Compression.Algorithm compressAlgo;
-
+  
   /**
    * The data block encoding which will be used.
    * {@link NoOpDataBlockEncoder#INSTANCE} if there is no encoding.

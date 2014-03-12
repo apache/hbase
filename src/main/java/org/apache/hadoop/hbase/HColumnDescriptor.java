@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -35,7 +38,12 @@ import org.apache.hadoop.io.WritableComparable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * An HColumnDescriptor contains information about a column family such as the
@@ -46,6 +54,7 @@ import java.util.*;
  * column and recreating it. If there is data stored in the column, it will be
  * deleted when the column is deleted.
  */
+@ThriftStruct
 public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> {
   static final Log LOG = LogFactory.getLog(HColumnDescriptor.class);
   // For future backward compatibility
@@ -250,6 +259,16 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       DEFAULT_TTL, DEFAULT_BLOOMFILTER);
   }
 
+  @ThriftConstructor
+  public HColumnDescriptor(@ThriftField(1) final byte[] name,
+    @ThriftField(2) final Map<byte[], byte[]> valuesMap) {
+    this(name);
+    for (Map.Entry<byte[], byte[]> e : valuesMap.entrySet()) {
+      this.values.put(new ImmutableBytesWritable(e.getKey()),
+                      new ImmutableBytesWritable(e.getValue()));
+    }
+  }
+
   /**
    * Constructor.
    * Makes a deep copy of the supplied descriptor.
@@ -412,7 +431,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return Name of this column family
    */
-  public byte [] getName() {
+  @ThriftField(1)
+  public byte[] getName() {
     return name;
   }
 
@@ -451,6 +471,17 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public Map<ImmutableBytesWritable,ImmutableBytesWritable> getValues() {
     // shallow pointer copy
     return Collections.unmodifiableMap(values);
+  }
+
+  @ThriftField(2)
+  public Map<byte[], byte[]> getByteValues() {
+    Map<byte[], byte[]> byteMap =
+      new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e :
+          this.values.entrySet()) {
+      byteMap.put(e.getKey().copyBytes(), e.getValue().copyBytes());
+    }
+    return byteMap;
   }
 
   /**

@@ -218,8 +218,8 @@ public class TestZooKeeper {
     LOG.info("Starting testMasterSessionExpired");
     new HTable(conf, HConstants.META_TABLE_NAME);
     TEST_UTIL.expireMasterSession();
-
-    List<RegionServerThread> regionServerThreadList =
+    
+    List<RegionServerThread> regionServerThreadList = 
       TEST_UTIL.getHBaseCluster().getRegionServerThreads();
     for (RegionServerThread regionServerThread : regionServerThreadList) {
       regionServerThread.getRegionServer().kill();

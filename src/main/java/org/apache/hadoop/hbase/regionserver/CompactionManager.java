@@ -20,8 +20,13 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.List;
+import java.util.Random;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,12 +34,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.GregorianCalendar;
-import java.util.List;
-import java.util.Random;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 
 public class CompactionManager {
 
@@ -108,11 +109,12 @@ public class CompactionManager {
    */
   private CompactSelection selectExpiredSFs
       (CompactSelection candidates, long maxExpiredTimeStamp) {
-    if (candidates.filesToCompact == null || candidates.filesToCompact.size() == 0)
+    if (candidates.filesToCompact == null
+        || candidates.filesToCompact.isEmpty()) {
       return null;
+    }
+
     ArrayList<StoreFile> expiredStoreFiles = null;
-    boolean hasExpiredStoreFiles = false;
-    CompactSelection expiredSFSelection = null;
 
     for (StoreFile storeFile : candidates.filesToCompact) {
       if (storeFile.getReader().getMaxTimestamp() < maxExpiredTimeStamp) {
@@ -120,18 +122,18 @@ public class CompactionManager {
             + storeFile.getPath() + " whose maxTimeStamp is "
             + storeFile.getReader().getMaxTimestamp()
             + " while the max expired timestamp is " + maxExpiredTimeStamp);
-        if (!hasExpiredStoreFiles) {
+        if (expiredStoreFiles == null) {
           expiredStoreFiles = new ArrayList<StoreFile>();
-          hasExpiredStoreFiles = true;
         }
         expiredStoreFiles.add(storeFile);
       }
     }
 
-    if (hasExpiredStoreFiles) {
-      expiredSFSelection = new CompactSelection(expiredStoreFiles);
+    if (expiredStoreFiles == null) {
+      return null;
     }
-    return expiredSFSelection;
+
+    return new CompactSelection(expiredStoreFiles);
   }
 
   /**
@@ -244,12 +246,13 @@ public class CompactionManager {
     int start = 0;
     double r = comConf.getCompactionRatio();
 
-    if (isOffPeakHour() && !(candidates.getNumOutStandingOffPeakCompactions() > 0)) {
+    if (isOffPeakHour()
+        && !(CompactSelection.getNumOutStandingOffPeakCompactions() > 0)) {
       r = comConf.getCompactionRatioOffPeak();
       candidates.setOffPeak();
       LOG.info("Running an off-peak compaction, selection ratio = " + r
           + ", numOutstandingOffPeakCompactions is now "
-          + candidates.getNumOutStandingOffPeakCompactions());
+          + CompactSelection.getNumOutStandingOffPeakCompactions());
     }
 
     // get store file sizes for incremental compacting selection.
@@ -396,9 +399,4 @@ public class CompactionManager {
     }
     return (currentHour >= startHour || currentHour < endHour);
   }
-
-  private boolean isValidHour(int hour) {
-    return (hour >= 0 && hour <= 23);
-  }
-
 }

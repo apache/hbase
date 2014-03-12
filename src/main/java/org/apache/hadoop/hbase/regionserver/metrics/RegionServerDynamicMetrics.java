@@ -84,7 +84,7 @@ public class RegionServerDynamicMetrics implements Updater {
       LOG.error(e);
     }
   }
-
+  
   public static RegionServerDynamicMetrics newInstance(HRegionServer regionServer) {
     RegionServerDynamicMetrics metrics =
       new RegionServerDynamicMetrics(regionServer);

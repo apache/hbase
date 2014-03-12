@@ -32,7 +32,7 @@ public class RegionTransitionEventData implements Writable {
   private String rsName;
   private long timeStamp;
   private HMsg hmsg;
-
+  
   public RegionTransitionEventData() {
   }
 
@@ -46,7 +46,7 @@ public class RegionTransitionEventData implements Writable {
     this.timeStamp = System.currentTimeMillis();
     this.hmsg = hmsg;
   }
-
+  
   public HBaseEventType getHbEvent() {
     return hbEvent;
   }

@@ -48,7 +48,8 @@ import org.apache.hadoop.io.MapWritable;
  * <p>NOTE: if you change the interface, you must change the RPC version
  * number in HBaseRPCProtocolVersion
  */
-public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, Stoppable {
+public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable,
+    Stoppable, ThriftClientInterface {
   /**
    * Get metainfo about an HRegion
    *
@@ -58,7 +59,6 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    */
   public HRegionInfo getRegionInfo(final byte [] regionName)
   throws NotServingRegionException;
-
 
   /**
    * Return all the data for the row that matches <i>row</i> exactly,
@@ -78,7 +78,7 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    *
    * @return the regions served by this regionserver
    */
-  public HRegion [] getOnlineRegionsAsArray();
+  public HRegion[] getOnlineRegionsAsArray();
 
   /**
    * Flush the given region
@@ -131,8 +131,8 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    * @param CF names
    * @return the list of store files
    */
-  public List<String> getStoreFileList(byte[] regionName, byte[][] columnFamilies)
-    throws IllegalArgumentException;
+  public List<String> getStoreFileList(byte[] regionName,
+      byte[][] columnFamilies) throws IllegalArgumentException;
 
   /**
    * Get a list of store files for all CFs in a particular region
@@ -147,16 +147,18 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
   * included in the list returned
   * @return list of HLog files
   */
-  public List<String> getHLogsList(boolean rollCurrentHLog) throws IOException;
+  public List<String> getHLogsList(boolean rollCurrentHLog)
+      throws IOException;
 
   /**
+   * TODO: deprecate this
    * Perform Get operation.
    * @param regionName name of region to get from
    * @param get Get operation
    * @return Result
    * @throws IOException e
    */
-  public Result get(byte [] regionName, Get get) throws IOException;
+  public Result get(byte[] regionName, Get get) throws IOException;
 
   public Result[] get(byte[] regionName, List<Get> gets)
       throws IOException;
@@ -212,7 +214,7 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    * @throws IOException e
    */
   public int delete(final byte[] regionName, final List<Delete> deletes)
-  throws IOException;
+      throws IOException;
 
   /**
    * Atomically checks if a row/family/qualifier value match the expectedValue.
@@ -228,10 +230,9 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    * @throws IOException e
    * @return true if the new put was execute, false otherwise
    */
-  public boolean checkAndPut(final byte[] regionName, final byte [] row,
-      final byte [] family, final byte [] qualifier, final byte [] value,
-      final Put put)
-  throws IOException;
+  public boolean checkAndPut(final byte[] regionName, final byte[] row,
+      final byte[] family, final byte[] qualifier, final byte[] value,
+      final Put put) throws IOException;
 
 
   /**
@@ -248,10 +249,9 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    * @throws IOException e
    * @return true if the new delete was execute, false otherwise
    */
-  public boolean checkAndDelete(final byte[] regionName, final byte [] row,
-      final byte [] family, final byte [] qualifier, final byte [] value,
-      final Delete delete)
-  throws IOException;
+  public boolean checkAndDelete(final byte[] regionName, final byte[] row,
+      final byte[] family, final byte[] qualifier, final byte[] value,
+      final Delete delete) throws IOException;
 
   /**
    * Atomically increments a column value. If the column value isn't long-like,
@@ -267,9 +267,9 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    * @return new incremented column value
    * @throws IOException e
    */
-  public long incrementColumnValue(byte [] regionName, byte [] row,
-      byte [] family, byte [] qualifier, long amount, boolean writeToWAL)
-  throws IOException;
+  public long incrementColumnValue(byte[] regionName, byte[] row,
+      byte[] family, byte[] qualifier, long amount, boolean writeToWAL)
+      throws IOException;
 
   /**
    * Get a configuration property from an HRegion
@@ -292,21 +292,21 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    * @return scannerId scanner identifier used in other calls
    * @throws IOException e
    */
-  public long openScanner(final byte [] regionName, final Scan scan)
-  throws IOException;
+  public long openScanner(final byte[] regionName, final Scan scan)
+      throws IOException;
 
   public void mutateRow(byte[] regionName, RowMutations arm)
       throws IOException;
 
   public void mutateRow(byte[] regionName, List<RowMutations> armList)
       throws IOException;
-
   /**
-   * Get the next set of values
+   * Get the next set of values. Do not use with thrift
    * @param scannerId clientId passed to openScanner
    * @return map of values; returns null if no results.
    * @throws IOException e
    */
+  @Deprecated
   public Result next(long scannerId) throws IOException;
 
   /**
@@ -318,7 +318,8 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    * filter rules that the scan is done).
    * @throws IOException e
    */
-  public Result [] next(long scannerId, int numberOfRows) throws IOException;
+  public Result[] next(long scannerId, int numberOfRows)
+      throws IOException;
 
   /**
    * Close a scanner
@@ -336,8 +337,8 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    * @return lockId lock identifier
    * @throws IOException e
    */
-  public long lockRow(final byte [] regionName, final byte [] row)
-  throws IOException;
+  public long lockRow(final byte[] regionName, final byte[] row)
+      throws IOException;
 
   /**
    * Releases a remote row lock.
@@ -346,8 +347,8 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    * @param lockId the lock id returned by lockRow
    * @throws IOException e
    */
-  public void unlockRow(final byte [] regionName, final long lockId)
-  throws IOException;
+  public void unlockRow(final byte[] regionName, final long lockId)
+      throws IOException;
 
 
   /**
@@ -400,16 +401,16 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
 
   /**
    * Update the assignment plan for each region server.
-   * @param updatedFavoredNodesMap
+   * @param plan
    */
   public int updateFavoredNodes(AssignmentPlan plan)
-  throws IOException;
+      throws IOException;
 
   /**
    * Update the configuration.
    */
-  public void updateConfiguration() throws IOException;
-  
+  public void updateConfiguration();
+
   /**
    * Stop this service.
    * @param why Why we're stopping.
@@ -417,14 +418,12 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
   public void stop(String why);
 
   /** @return why we are stopping */
-  String getStopReason();
-
+  public String getStopReason();
 
   /**
    * Set the number of threads to be used for HDFS Quorum reads
    *
-   * @param maxThreads. quourm reads will be disabled if set to <= 0
-   *
+   * @param maxThreads quourum reads will be disabled if set to <= 0
    */
   public void setNumHDFSQuorumReadThreads(int maxThreads);
 
@@ -432,8 +431,7 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
    * Set the amount of time we wait before initiating a second read when
    * using HDFS Quorum reads
    *
-   * @param timeoutMillis.
-   *
+   * @param timeoutMillis
    */
   public void setHDFSQuorumReadTimeoutMillis(long timeoutMillis);
 

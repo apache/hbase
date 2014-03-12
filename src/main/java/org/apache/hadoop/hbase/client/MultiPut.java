@@ -33,14 +33,19 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
 /**
  * Data type class for putting multiple regions worth of puts in one RPC.
  */
+@ThriftStruct
 public class MultiPut extends Operation implements Writable {
   public HServerAddress address; // client code ONLY
 
@@ -62,6 +67,16 @@ public class MultiPut extends Operation implements Writable {
    */
   public MultiPut(HServerAddress a) {
     address = a;
+  }
+
+  @ThriftConstructor
+  public MultiPut(@ThriftField(1) final Map<byte[], List<Put>> putsSerial) {
+    this.puts.putAll(putsSerial);
+  }
+
+  @ThriftField(1)
+  public Map<byte[], List<Put>> getPuts() {
+    return puts;
   }
 
   public int size() {
@@ -103,17 +118,17 @@ public class MultiPut extends Operation implements Writable {
   }
 
   /**
-   * Compile the table and column family (i.e. schema) information
-   * into a String. Useful for parsing and aggregation by debugging,
+   * Compile the table and column family (i.e. schema) information 
+   * into a String. Useful for parsing and aggregation by debugging, 
    * logging, and administration tools.
    * @return Map
    */
   @Override
   public Map<String, Object> getFingerprint() {
     Map<String, Object> map = new HashMap<String, Object>();
-    // for extensibility, we have a map of table information that we will
+    // for extensibility, we have a map of table information that we will 
     // populate with only family information for each table
-    Map<String, Map> tableInfo =
+    Map<String, Map> tableInfo = 
       new HashMap<String, Map>();
     map.put("tables", tableInfo);
     for (Map.Entry<byte[], List<Put>> entry : puts.entrySet()) {
@@ -121,8 +136,8 @@ public class MultiPut extends Operation implements Writable {
       // not how many Puts touch them, so we use this Set to do just that.
       Set<String> familySet;
       try {
-        // since the puts are stored by region, we may have already
-        // recorded families for this region. if that is the case,
+        // since the puts are stored by region, we may have already 
+        // recorded families for this region. if that is the case, 
         // we want to add to the existing Set. if not, we make a new Set.
         String tableName = Bytes.toStringBinary(
             HRegionInfo.parseRegionName(entry.getKey())[0]);
@@ -141,7 +156,7 @@ public class MultiPut extends Operation implements Writable {
         table.put("families", familySet);
         tableInfo.put(Bytes.toStringBinary(entry.getKey()), table);
       }
-      // we now iterate through each Put and keep track of which families
+      // we now iterate through each Put and keep track of which families 
       // are affected in this table.
       for (Put p : entry.getValue()) {
         for (byte[] fam : p.getFamilyMap().keySet()) {
@@ -153,8 +168,8 @@ public class MultiPut extends Operation implements Writable {
   }
 
   /**
-   * Compile the details beyond the scope of getFingerprint (mostly
-   * toMap from the Puts) into a Map along with the fingerprinted
+   * Compile the details beyond the scope of getFingerprint (mostly 
+   * toMap from the Puts) into a Map along with the fingerprinted 
    * information. Useful for debugging, logging, and administration tools.
    * @param maxCols a limit on the number of columns output prior to truncation
    * @return Map
@@ -171,9 +186,9 @@ public class MultiPut extends Operation implements Writable {
         continue;
       }
       List<Put> regionPuts = entry.getValue();
-      List<Map<String, Object>> putSummaries =
+      List<Map<String, Object>> putSummaries = 
         new ArrayList<Map<String, Object>>();
-      // find out how many of this region's puts we can add without busting
+      // find out how many of this region's puts we can add without busting 
       // the maximum
       int regionPutsToAdd = regionPuts.size();
       putCount += regionPutsToAdd;
@@ -192,11 +207,11 @@ public class MultiPut extends Operation implements Writable {
         // in the case of parse error, default to labeling by region
         tableName = Bytes.toStringBinary(entry.getKey());
       }
-      // since the puts are stored by region, we may have already
-      // recorded puts for this table. if that is the case,
-      // we want to add to the existing List. if not, we place a new list
+      // since the puts are stored by region, we may have already 
+      // recorded puts for this table. if that is the case, 
+      // we want to add to the existing List. if not, we place a new list 
       // in the map
-      Map<String, Object> table =
+      Map<String, Object> table = 
         (Map<String, Object>) tableInfo.get(tableName);
       if (table == null) {
         // in case the Put has changed since getFingerprint's map was built
@@ -245,5 +260,23 @@ public class MultiPut extends Operation implements Writable {
       }
       puts.put(key, ps);
     }
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    MultiPut other = (MultiPut) obj;
+    return (this.getPuts().size() == other.getPuts().size()) &&
+      (this.getPuts().entrySet().containsAll(other.getPuts().entrySet()));
+  }
+
+  @Override
+  public int hashCode() {
+    return puts.hashCode();
   }
 }

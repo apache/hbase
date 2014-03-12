@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.ZooKeeper;
@@ -62,7 +63,7 @@ public class TableMapReduceUtil {
   // calls than required
   static ConcurrentSkipListMap<String, Entry<Job, Integer>> numRegionsCached =
       new ConcurrentSkipListMap<String, Entry<Job, Integer>>();
-
+  
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
    * the job.
@@ -245,6 +246,10 @@ public class TableMapReduceUtil {
     }
   }
 
+  public static void initCredentials(JobConf job) throws IOException {
+    // no-op, method added as Hive code calls this method
+  }
+  
   /**
    * Ensures that the given number of reduce tasks for the given job
    * configuration does not exceed the number of regions for the given table.
@@ -338,9 +343,9 @@ public class TableMapReduceUtil {
           job.getCombinerClass());
     } catch (ClassNotFoundException e) {
       throw new IOException(e);
-    }
+    }    
   }
-
+  
   /**
    * Add the jars containing the given classes to the job's configuration
    * such that JobClient will ship them to the cluster and add them to
@@ -348,13 +353,13 @@ public class TableMapReduceUtil {
    */
   public static void addDependencyJars(Configuration conf,
       Class... classes) throws IOException {
-
+    
     FileSystem localFs = FileSystem.getLocal(conf);
 
     Set<String> jars = new HashSet<String>();
     for (Class clazz : classes) {
       if (clazz == null) continue;
-
+      
       String pathStr = findContainingJar(clazz);
       if (pathStr == null) {
         LOG.warn("Could not find jar for class " + clazz +
@@ -370,7 +375,7 @@ public class TableMapReduceUtil {
       jars.add(path.makeQualified(localFs).toString());
     }
     if (jars.isEmpty()) return;
-
+    
     String tmpJars = conf.get("tmpjars");
     if (tmpJars == null) {
       tmpJars = StringUtils.arrayToString(jars.toArray(new String[0]));
@@ -379,14 +384,14 @@ public class TableMapReduceUtil {
     }
     conf.set("tmpjars", tmpJars);
   }
-
-  /**
+  
+  /** 
    * Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing
    * on the class path that has a class with the same name.
-   *
+   * 
    * This is shamelessly copied from JobConf
-   *
+   * 
    * @param my_class the class to find.
    * @return a jar file that contains the class, or null.
    * @throws IOException

@@ -17,17 +17,14 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.regionserver.metrics.PercentileMetric;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.regionserver.metrics.PercentileMetric;
 
 /**
  * The Histogram class provides a mechanism to sample data points and perform
@@ -172,7 +169,7 @@ public class Histogram {
     double ret = 0.0;
     this.lock.writeLock().lock();
     try {
-      if (underloadSampleList.size() == 0) {
+      if (underloadSampleList.isEmpty()) {
         LOG.warn("Too few data points. Consider increasing the sampling time.");
         return ret;
       } else if (underload) {

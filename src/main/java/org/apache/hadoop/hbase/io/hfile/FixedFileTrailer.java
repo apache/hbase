@@ -27,6 +27,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -36,7 +37,6 @@ import org.apache.hadoop.io.RawComparator;
 import static org.apache.hadoop.hbase.io.hfile.HFile.MIN_FORMAT_VERSION;
 import static org.apache.hadoop.hbase.io.hfile.HFile.MAX_FORMAT_VERSION;
 
-import com.google.common.io.NullOutputStream;
 
 /**
  * The {@link HFile} has a fixed trailer which contains offsets to other
@@ -120,7 +120,8 @@ public class FixedFileTrailer {
          version <= MAX_FORMAT_VERSION;
          ++version) {
       FixedFileTrailer fft = new FixedFileTrailer(version);
-      DataOutputStream dos = new DataOutputStream(new NullOutputStream());
+      DataOutputStream dos =
+          new DataOutputStream(NullOutputStream.NULL_OUTPUT_STREAM);
       try {
         fft.serialize(dos);
       } catch (IOException ex) {

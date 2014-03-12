@@ -628,7 +628,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
         List<HRegionInfo> regionsToMoveFromRack = pickRegionsFromRack(plan,
             mapRackToRegionServers.get(rack), mapServerToRegions, rack,
             moveRegionsPerRack, newRack);
-        if (regionsToMoveFromRack.size() == 0) {
+        if (regionsToMoveFromRack.isEmpty()) {
           System.out
               .println("WARNING: number of regions to be moved from rack "
                   + rack + " is zero!");
@@ -808,7 +808,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
       // Get the all the region servers
       List<HServerAddress> servers = new ArrayList<HServerAddress>();
       servers.addAll(domain.getAllServers());
-      
+
       LOG.info("Start to generate assignment plan for " + numRegions +
           " regions from table " + tableName + " with " +
           servers.size() + " region servers");
@@ -1164,11 +1164,13 @@ public class RegionPlacement implements RegionPlacementPolicy{
           // Update the current region server with its updated favored nodes
           HRegionInterface currentRegionServer =
             connection.getHRegionConnection(entry.getKey());
-          int updatedRegionNum =
+          int updatedRegionNum;
+          String hostName =
+            currentRegionServer.getHServerInfo().getHostnamePort();
+          updatedRegionNum =
             currentRegionServer.updateFavoredNodes(singleServerPlan);
-          LOG.info("Region server " +
-              currentRegionServer.getHServerInfo().getHostnamePort() +
-              " has updated " + updatedRegionNum + " / " +
+          LOG.info("Region server " + hostName + " has updated " +
+              updatedRegionNum + " / " +
               singleServerPlan.getAssignmentMap().size() +
               " regions with the assignment plan");
           succeededNum ++;
@@ -1292,7 +1294,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
    */
   public static InetSocketAddress[] getFavoredInetSocketAddress(
       List<HServerAddress> serverList) {
-    if (serverList == null || serverList.size() == 0)
+    if (serverList == null || serverList.isEmpty())
       return null;
 
     InetSocketAddress[] addresses =
@@ -1347,7 +1349,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
     // sort the map based on region info
     Map<HRegionInfo, List<HServerAddress>> assignmentMap =
       new TreeMap<HRegionInfo, List<HServerAddress>>(plan.getAssignmentMap());
-    
+
     for (Map.Entry<HRegionInfo, List<HServerAddress>> entry :
       assignmentMap.entrySet()) {
       String serverList = RegionPlacement.getFavoredNodes(entry.getValue());

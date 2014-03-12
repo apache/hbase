@@ -35,7 +35,7 @@ import java.io.IOException;
  * number in HBaseRPCProtocolVersion
  *
  */
-public interface HMasterRegionInterface extends HBaseRPCProtocolVersion {
+public interface HMasterRegionInterface extends HBaseRPCProtocolVersion, ThriftClientInterface {
 
   /**
    * Called when a region server first starts

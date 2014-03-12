@@ -300,6 +300,7 @@ public class TestHCM {
   }
 
   private void verifyFailure(HTable table, Exception e) {
+
     List<OperationContext> context = table.getAndResetOperationContext();
     assertTrue(context.size() != 0);
     for (OperationContext c : context) {

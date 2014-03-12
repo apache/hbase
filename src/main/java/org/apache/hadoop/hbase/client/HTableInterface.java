@@ -278,7 +278,7 @@ public interface HTableInterface {
   public void mutateRow(final RowMutations arm) throws IOException;
 
   public void mutateRow(List<RowMutations> armList) throws IOException;
-  
+
   /**
    * Tells whether or not 'auto-flush' is turned on.
    *

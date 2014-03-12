@@ -119,7 +119,26 @@ public class LocalHBaseCluster {
     // Always have masters and regionservers come up on port '0' so we don't
     // clash over default ports.
     conf.set(HConstants.MASTER_PORT, "0");
-    conf.set(HConstants.REGIONSERVER_PORT, "0");
+
+    boolean writeThriftPortToMeta =
+      conf.getBoolean(HConstants.REGION_SERVER_WRITE_THRIFT_INFO_TO_META,
+      HConstants.REGION_SERVER_WRITE_THRIFT_INFO_TO_META_DEFAULT);
+
+
+    // If we are writing the thrift port to meta, then we can start the
+    // thrift server at any ephemeral port. Otherwise, we start it at the
+    // default port. But then, we can only start one server. Similarly for
+    // RPC server.
+    if (writeThriftPortToMeta) {
+      conf.setInt(HConstants.REGIONSERVER_SWIFT_PORT, 0);
+      conf.setInt(HConstants.REGIONSERVER_PORT,
+                  HConstants.DEFAULT_REGIONSERVER_PORT);
+    } else {
+      conf.setInt(HConstants.REGIONSERVER_SWIFT_PORT,
+                  HConstants.DEFAULT_REGIONSERVER_SWIFT_PORT);
+      conf.setInt(HConstants.REGIONSERVER_PORT, 0);
+    }
+
     // Start the HMasters.
     this.masterClass =
       (Class<? extends HMaster>)conf.getClass(HConstants.MASTER_IMPL,
@@ -155,8 +174,8 @@ public class LocalHBaseCluster {
    * @return the new master
    */
   public HMaster addMaster() throws IOException {
-    Configuration masterConf = new Configuration(conf);
-    // Create each master with its own Configuration instance so each has
+    Configuration masterConf = HBaseConfiguration.create(conf);
+    // Creating each master with its own Configuration instance so each has
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
     // the guts of HConnectionManager).
     HMaster m = JVMClusterUtil.createMaster(masterConf, this.masterClass);
@@ -209,7 +228,7 @@ public class LocalHBaseCluster {
   /**
    * Wait for the specified master to stop, and removes this thread from list
    * of running threads.
-   *
+   * 
    * @param serverNumber the 0-based index of the master to stop
    * @return Name of master that just went down.
    */

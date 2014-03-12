@@ -25,8 +25,8 @@ import org.apache.hadoop.io.Writable;
 import java.lang.reflect.Method;
 
 /**
- * A MonitoredTask implementation optimized for use with RPC Handlers
- * handling frequent, short duration tasks. String concatenations and object
+ * A MonitoredTask implementation optimized for use with RPC Handlers 
+ * handling frequent, short duration tasks. String concatenations and object 
  * allocations are avoided in methods that will be hit by every RPC call.
  */
 public interface MonitoredRPCHandler extends MonitoredTask {
@@ -38,7 +38,7 @@ public interface MonitoredRPCHandler extends MonitoredTask {
   public abstract long getRPCQueueTime();
   public abstract boolean isRPCRunning();
   public abstract boolean isOperationRunning();
-
+  
   public abstract void setRPC(String methodName, Object [] params,
       long queueTime, Method realMethod);
   public abstract void setRPCPacket(Writable param);

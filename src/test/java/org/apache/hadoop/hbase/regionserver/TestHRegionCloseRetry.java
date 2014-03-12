@@ -1,5 +1,21 @@
 /**
+ * Copyright 2014 The Apache Software Foundation
  *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
 
@@ -21,17 +37,18 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 
-/**
- * @author pritam
- */
+@RunWith(TagRunner.class)
 public class TestHRegionCloseRetry {
   final Log LOG = LogFactory.getLog(getClass());
   private static final Configuration conf = HBaseConfiguration.create();
@@ -52,7 +69,8 @@ public class TestHRegionCloseRetry {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test(timeout = 300000)
+  @TestTag({ "unstable" })
   public void testCloseHRegionRetry() throws Exception {
 
     // Build some data.
@@ -66,11 +84,10 @@ public class TestHRegionCloseRetry {
     // Pick a regionserver.
     HRegionServer server = null;
     HRegionInfo regionInfo = null;
-    Configuration conf = TEST_UTIL.getConfiguration();
     for (int i = 0; i < 3; i++) {
       server = TEST_UTIL.getHBaseCluster().getRegionServer(i);
 
-      // Some initialiation relevant to zk.
+      // Some initialization relevant to zk.
       HRegion[] region = server.getOnlineRegionsAsArray();
       for (int j = 0; j < region.length; j++) {
         if (!region[j].getRegionInfo().isRootRegion()

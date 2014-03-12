@@ -131,7 +131,7 @@ public class DataGenerator {
    * Returns a set containing keys for the passed row based on the information
    * in familyProperties. This is a slightly redundant form of the above
    * function but is required for efficiency.
-   *
+   * 
    * @param rowID
    * @param familyProperties
    * @return

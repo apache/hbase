@@ -662,7 +662,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * @return Fake TaskAttemptContext to get a KeyValue writer
    */
   public static TaskAttemptContext createFakeTaskAttemptContext(
-      Configuration conf, Path outputDir, int identifier) {
+    Configuration conf, Path outputDir, int identifier) {
     JobID jobId = new JobID();
     TaskID taskId = new TaskID(jobId, false, identifier);
     conf.set("mapred.output.dir", outputDir.toString());

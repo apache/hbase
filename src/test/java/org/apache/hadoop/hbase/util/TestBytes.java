@@ -170,7 +170,7 @@ public class TestBytes extends TestCase {
           Bytes.BYTES_RAWCOMPARATOR));
     }
   }
-
+  
   public void testStartsWith() {
     assertTrue(Bytes.startsWith(Bytes.toBytes("hello"), Bytes.toBytes("h")));
     assertTrue(Bytes.startsWith(Bytes.toBytes("hello"), Bytes.toBytes("")));
@@ -214,7 +214,7 @@ public class TestBytes extends TestCase {
 
     return (Bytes.toLong(testValue) + amount) == incrementResult;
   }
-
+  
   public void testFixedSizeString() throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);

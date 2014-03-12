@@ -22,7 +22,7 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title>
+    <title> 
       Old News
     </title>
   </properties>
@@ -33,7 +33,7 @@
       <p><a href="http://www.meetup.com/hbaseusergroup/calendar/12689351/">HBase User Group Meeting, HUG9</a> hosted by Mozilla, March 10th, 2010</p>
       <p>Sign up for the <a href="http://www.meetup.com/hbaseusergroup/calendar/12241393/">HBase User Group Meeting, HUG8</a>, January 27th, 2010 at StumbleUpon in SF</p>
       <p>September 8th, 2010: HBase 0.20.0 is faster, stronger, slimmer, and sweeter tasting than any previous HBase release.  Get it off the <a href="releases.html">Releases</a> page.</p>
-      <p><a href="http://dev.us.apachecon.com/c/acus2009/">ApacheCon</a> in Oakland: November 2-6th, 2009:
+      <p><a href="http://dev.us.apachecon.com/c/acus2009/">ApacheCon</a> in Oakland: November 2-6th, 2009: 
       The Apache Foundation will be celebrating its 10th anniversary in beautiful Oakland by the Bay. Lots of good talks and meetups including an HBase presentation by a couple of the lads.</p>
       <p>HBase at Hadoop World in NYC: October 2nd, 2009: A few of us will be talking on Practical HBase out east at <a href="http://www.cloudera.com/hadoop-world-nyc">Hadoop World: NYC</a>.</p>
       <p>HUG7 and HBase Hackathon: August 7th-9th, 2009 at StumbleUpon in SF: Sign up for the <a href="http://www.meetup.com/hbaseusergroup/calendar/10950511/">HBase User Group Meeting, HUG7</a> or for the <a href="http://www.meetup.com/hackathon/calendar/10951718/">Hackathon</a> or for both (all are welcome!).</p>

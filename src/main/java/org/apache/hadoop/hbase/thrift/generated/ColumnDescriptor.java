@@ -160,23 +160,23 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.NAME, new org.apache.thrift.meta_data.FieldMetaData("name", org.apache.thrift.TFieldRequirementType.DEFAULT,
+    tmpMap.put(_Fields.NAME, new org.apache.thrift.meta_data.FieldMetaData("name", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , "Text")));
-    tmpMap.put(_Fields.MAX_VERSIONS, new org.apache.thrift.meta_data.FieldMetaData("maxVersions", org.apache.thrift.TFieldRequirementType.DEFAULT,
+    tmpMap.put(_Fields.MAX_VERSIONS, new org.apache.thrift.meta_data.FieldMetaData("maxVersions", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
-    tmpMap.put(_Fields.COMPRESSION, new org.apache.thrift.meta_data.FieldMetaData("compression", org.apache.thrift.TFieldRequirementType.DEFAULT,
+    tmpMap.put(_Fields.COMPRESSION, new org.apache.thrift.meta_data.FieldMetaData("compression", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
-    tmpMap.put(_Fields.IN_MEMORY, new org.apache.thrift.meta_data.FieldMetaData("inMemory", org.apache.thrift.TFieldRequirementType.DEFAULT,
+    tmpMap.put(_Fields.IN_MEMORY, new org.apache.thrift.meta_data.FieldMetaData("inMemory", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
-    tmpMap.put(_Fields.BLOOM_FILTER_TYPE, new org.apache.thrift.meta_data.FieldMetaData("bloomFilterType", org.apache.thrift.TFieldRequirementType.DEFAULT,
+    tmpMap.put(_Fields.BLOOM_FILTER_TYPE, new org.apache.thrift.meta_data.FieldMetaData("bloomFilterType", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
-    tmpMap.put(_Fields.BLOOM_FILTER_VECTOR_SIZE, new org.apache.thrift.meta_data.FieldMetaData("bloomFilterVectorSize", org.apache.thrift.TFieldRequirementType.DEFAULT,
+    tmpMap.put(_Fields.BLOOM_FILTER_VECTOR_SIZE, new org.apache.thrift.meta_data.FieldMetaData("bloomFilterVectorSize", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
-    tmpMap.put(_Fields.BLOOM_FILTER_NB_HASHES, new org.apache.thrift.meta_data.FieldMetaData("bloomFilterNbHashes", org.apache.thrift.TFieldRequirementType.DEFAULT,
+    tmpMap.put(_Fields.BLOOM_FILTER_NB_HASHES, new org.apache.thrift.meta_data.FieldMetaData("bloomFilterNbHashes", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
-    tmpMap.put(_Fields.BLOCK_CACHE_ENABLED, new org.apache.thrift.meta_data.FieldMetaData("blockCacheEnabled", org.apache.thrift.TFieldRequirementType.DEFAULT,
+    tmpMap.put(_Fields.BLOCK_CACHE_ENABLED, new org.apache.thrift.meta_data.FieldMetaData("blockCacheEnabled", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
-    tmpMap.put(_Fields.TIME_TO_LIVE, new org.apache.thrift.meta_data.FieldMetaData("timeToLive", org.apache.thrift.TFieldRequirementType.DEFAULT,
+    tmpMap.put(_Fields.TIME_TO_LIVE, new org.apache.thrift.meta_data.FieldMetaData("timeToLive", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(ColumnDescriptor.class, metaDataMap);
@@ -991,7 +991,7 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
       while (true)
       {
         schemeField = iprot.readFieldBegin();
-        if (schemeField.type == org.apache.thrift.protocol.TType.STOP) {
+        if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
           break;
         }
         switch (schemeField.id) {
@@ -999,7 +999,7 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.name = iprot.readBinary();
               struct.setNameIsSet(true);
-            } else {
+            } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
@@ -1007,7 +1007,7 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
               struct.maxVersions = iprot.readI32();
               struct.setMaxVersionsIsSet(true);
-            } else {
+            } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
@@ -1015,7 +1015,7 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.compression = iprot.readString();
               struct.setCompressionIsSet(true);
-            } else {
+            } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
@@ -1023,7 +1023,7 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
             if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
               struct.inMemory = iprot.readBool();
               struct.setInMemoryIsSet(true);
-            } else {
+            } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
@@ -1031,7 +1031,7 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.bloomFilterType = iprot.readString();
               struct.setBloomFilterTypeIsSet(true);
-            } else {
+            } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
@@ -1039,7 +1039,7 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
               struct.bloomFilterVectorSize = iprot.readI32();
               struct.setBloomFilterVectorSizeIsSet(true);
-            } else {
+            } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
@@ -1047,7 +1047,7 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
               struct.bloomFilterNbHashes = iprot.readI32();
               struct.setBloomFilterNbHashesIsSet(true);
-            } else {
+            } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
@@ -1055,7 +1055,7 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
             if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
               struct.blockCacheEnabled = iprot.readBool();
               struct.setBlockCacheEnabledIsSet(true);
-            } else {
+            } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
@@ -1063,7 +1063,7 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
               struct.timeToLive = iprot.readI32();
               struct.setTimeToLiveIsSet(true);
-            } else {
+            } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;

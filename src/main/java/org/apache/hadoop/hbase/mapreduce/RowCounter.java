@@ -101,7 +101,7 @@ public class RowCounter {
         }
         startKey = startEnd[0];
         endKey = startEnd[1];
-      }
+      } 
       else {
         // if no switch, assume column names
         sb.append(args[i]);

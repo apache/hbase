@@ -135,7 +135,7 @@ public class TestScannerResets extends HBaseTestCase {
     assertEquals("ending index", idx, maxExclusiveTS);
 
     long blocksEnd = getBlkAccessCount(cf);
-
+    
     assertEquals("Blocks Read Check: ", expBlocks, blocksEnd - blocksStart);
     System.out.println("Blocks Read = "
         + (blocksEnd - blocksStart) + "Expected = " + expBlocks);
@@ -156,7 +156,7 @@ public class TestScannerResets extends HBaseTestCase {
 
     // File2: Timestamp range of keys [4..8]
     putData(FAMILY, "row4", "col4", 4);
-    putData(FAMILY, "row5", "col5", 5);
+    putData(FAMILY, "row5", "col5", 5);    
     putData(FAMILY, "row6", "col6", 6);
     putData(FAMILY, "row7", "col7", 7);
     putData(FAMILY, "row8", "col8", 8);

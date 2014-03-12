@@ -20,18 +20,18 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
-import org.apache.hadoop.hbase.util.Bytes;
-
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.DataInput;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.TreeSet;
-import java.util.ArrayList;
+
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This filter is used for selecting only those keys with columns that matches
@@ -67,7 +67,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
 
   @Override
   public ReturnCode filterKeyValue(KeyValue kv, List<KeyValueScanner> scanners) {
-    if (sortedPrefixes.size() == 0 || kv.getBuffer() == null) {
+    if (sortedPrefixes.isEmpty() || kv.getBuffer() == null) {
       return ReturnCode.INCLUDE;
     } else {
       return filterColumn(kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength());
@@ -108,6 +108,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
     return new MultipleColumnPrefixFilter(prefixes);
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(sortedPrefixes.size());
     for (byte [] element : sortedPrefixes) {
@@ -115,6 +116,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
     }
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     int x = in.readInt();
     this.sortedPrefixes = createTreeSet();
@@ -123,6 +125,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
     }
   }
 
+  @Override
   public KeyValue getNextKeyHint(KeyValue kv) {
     return KeyValue.createFirstOnRow(
       kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),

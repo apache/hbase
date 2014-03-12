@@ -136,7 +136,7 @@ public class HMsg implements Writable {
      * Run compaction on a specific column family within a region.
      */
     MSG_REGION_CF_COMPACT,
-
+    
     /**
      * Run major compaction on a specific column family within a region.
      */
@@ -144,7 +144,7 @@ public class HMsg implements Writable {
 
     /**
      * Region server is going down for restart
-     *
+     * 
      * Note that this message is followed by MSG_REPORT_CLOSE messages for each
      * region the region server was serving, unless it was told to quiesce.
      */

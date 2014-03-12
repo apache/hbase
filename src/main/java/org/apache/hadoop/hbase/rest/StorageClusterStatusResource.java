@@ -20,7 +20,13 @@
 
 package org.apache.hadoop.hbase.rest;
 
-import java.io.IOException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
@@ -30,15 +36,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
+import java.io.IOException;
 
 public class StorageClusterStatusResource extends ResourceBase {
   private static final Log LOG =
@@ -85,7 +83,7 @@ public class StorageClusterStatusResource extends ResourceBase {
         for (HServerLoad.RegionLoad region: load.getRegionsLoad()) {
           node.addRegion(region.getName(), region.getStores(),
             region.getStorefiles(), region.getStorefileSizeMB(),
-            region.getMemStoreSizeMB(), region.getStorefileIndexSizeMB());
+            region.getMemstoreSizeMB(), region.getStorefileIndexSizeMB());
         }
       }
       for (String name: status.getDeadServerNames()) {

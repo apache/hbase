@@ -42,22 +42,22 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.mortbay.log.Log;
 
 /**
- * MR based tool to split HBase logs in a distributed fashion.
-
- * The tool first creates a list of directories and puts them into
- * a file in the HDFS root directory. This file is used as the input
- * to the mappers, there are no reducers. Each mapper processes the
+ * MR based tool to split HBase logs in a distributed fashion. 
+ 
+ * The tool first creates a list of directories and puts them into 
+ * a file in the HDFS root directory. This file is used as the input 
+ * to the mappers, there are no reducers. Each mapper processes the 
  * directory it receives as input.
  */
 @Deprecated
 public class HLogSplitter {
   final static String NAME = "splitlogs";
-
-  static class HLogSpliterMap
+  
+  static class HLogSpliterMap 
   extends Mapper<LongWritable, Text, Text, Text> {
 
     /**
-     * Takes an entire HLog directory of a region server as the input
+     * Takes an entire HLog directory of a region server as the input 
      * and splits the logs.
      *
      * @param key     The mapper input key
@@ -75,7 +75,7 @@ public class HLogSplitter {
         Path logOutputPath = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
         Log.info("HLogs input dir      : " + logInputPath.toString());
         Log.info("Split log output dir : " + logOutputPath.toString());
-
+        
         FileSystem fs = FileSystem.get(conf);
         if (!fs.exists(logInputPath)) {
           throw new FileNotFoundException(logInputPath.toString());
@@ -127,15 +127,15 @@ public class HLogSplitter {
       usage("Directory does not exist: " + logsDirPath);
       System.exit(-1);
     }
-
-    // list all the directories in the .logs directory. Typically this there is
+    
+    // list all the directories in the .logs directory. Typically this there is 
     // one directory per regionserver.
     FileStatus[] logFolders = fs.listStatus(logsDirPath);
     if (logFolders == null || logFolders.length == 0) {
       usage("No log files to split in " + logsDirPath);
       System.exit(-1);
     }
-
+    
     // write the list of RS directories to a temp file in HDFS. This will be the
     // input to the mapper.
     String jobInputFile = "/" + NAME + "_" + System.currentTimeMillis();
@@ -149,7 +149,7 @@ public class HLogSplitter {
     }
     out.close();
     dos.close();
-
+    
     // create the job that will do the distributed log splitting
     Job job = new Job(conf, NAME + "_" + logsDirPath);
     job.setJobName(NAME + "_" + logsDirPath);
@@ -159,11 +159,11 @@ public class HLogSplitter {
     job.setInputFormatClass(TextInputFormat.class);
     FileInputFormat.setInputPaths(job, jobInputFile);
     FileOutputFormat.setOutputPath(job, jobOutputPath);
-
+    
     // submit the job
     boolean status = job.waitForCompletion(true);
 
-    // delete jobInputFile and the output directory once we are done with the
+    // delete jobInputFile and the output directory once we are done with the 
     // job
 //    fs.delete(jobInputPath);
 

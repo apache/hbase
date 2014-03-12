@@ -34,8 +34,8 @@ EOF
       def command( )
         now = Time.now
         formatter.row(["Documentation on filters mentioned below can " +
-                       "be found at: http://hbase.apache.org/" +
-                       "book.html#thrift.filter-language"])
+                       "be found at: https://our.intern.facebook.com/intern/" +
+                       "wiki/index.php/HBase/Filter_Language"])
 
         parseFilter = ParseFilter.new
         supportedFilters = parseFilter.getSupportedFilters

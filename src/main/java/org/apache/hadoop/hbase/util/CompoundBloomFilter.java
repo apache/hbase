@@ -168,9 +168,9 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append(ByteBloomFilter.formatStats(this));
-    sb.append(ByteBloomFilter.STATS_RECORD_SEP +
+    sb.append(ByteBloomFilter.STATS_RECORD_SEP + 
         "Number of chunks: " + numChunks);
-    sb.append(ByteBloomFilter.STATS_RECORD_SEP +
+    sb.append(ByteBloomFilter.STATS_RECORD_SEP + 
         "Comparator: " + comparator.getClass().getSimpleName());
     return sb.toString();
   }

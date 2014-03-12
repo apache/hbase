@@ -43,7 +43,7 @@ public class HdfsAppender extends HasThread
   final int minSize;
   final int maxSize;
   final HBaseConfiguration conf;
-
+  
   public HdfsAppender(HBaseConfiguration conf, int minSize, int maxSize) {
     this.conf = conf;
     this.minSize = minSize;
@@ -55,31 +55,31 @@ public class HdfsAppender extends HasThread
     Random r = new Random();
     byte[] t = new byte[] {'t','e','s','t'};
     HLogKey key = new HLogKey(t, t, 0, 0);
-
+    
     try {
       FileSystem fs = FileSystem.get(conf);
       int fileCount = 0;
-
+  
       long blocksize = conf.getLong("hbase.regionserver.hlog.blocksize",
           fs.getDefaultBlockSize());
       // Roll at 95% of block size.
       float multi = conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f);
       long logrollsize = (long)(blocksize * multi);
-
+      
       while(true) {
         Path p = new Path("/appendtest", Integer.toString(fileCount));
         HLog.Writer writer = HLog.createWriter(fs, p, conf);
-
+        
         while (writer.getLength() < logrollsize) {
           int rSize = r.nextInt(maxSize-minSize) + minSize;
           WALEdit value = new WALEdit();
           value.add(new KeyValue(t, t, t, 0, new byte[rSize]));
-
+    
           long now = System.currentTimeMillis();
           writer.append(new HLog.Entry(key, value));
           long took = System.currentTimeMillis() - now;
           LOG.info(String.format("append time (%d) = %d ms", rSize, took));
-
+          
           now = System.currentTimeMillis();
           writer.sync();
           took = System.currentTimeMillis() - now;

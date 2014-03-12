@@ -219,9 +219,9 @@ public class HQuorumPeer {
     LOG.trace("Created ZK properties: " + zkProperties);
     return zkProperties;
   }
-
+  
   /**
-   * Return the ZK Quorum servers string given zk properties returned by
+   * Return the ZK Quorum servers string given zk properties returned by 
    * makeZKProps
    * @param properties
    * @return

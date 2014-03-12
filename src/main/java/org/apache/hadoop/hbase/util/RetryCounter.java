@@ -13,7 +13,7 @@ public class RetryCounter {
   private final int retryIntervalMillis;
   private final TimeUnit timeUnit;
   
-  public RetryCounter(int maxRetries,
+  public RetryCounter(int maxRetries, 
   int retryIntervalMillis, TimeUnit timeUnit) {
     this.maxRetries = maxRetries;
     this.retriesRemaining = maxRetries;
@@ -44,7 +44,7 @@ public class RetryCounter {
   public void useRetry() {
     retriesRemaining--;
   }
-
+  
   public int getAttemptTimes() {
     return maxRetries-retriesRemaining+1;
   }

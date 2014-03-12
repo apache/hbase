@@ -167,12 +167,12 @@ public class TestFastFail {
     LOG.info("Proceeding");
   }
 
-  @Test(timeout = 100000)
+  @Test(timeout = 180000)
   public void testFastFailNormalWithoutClearCache() throws Exception {
     testFastFailNormal(false);
   }
 
-  @Test(timeout = 100000)
+  @Test(timeout = 180000)
   public void testFastFailNormalWithClearCache() throws Exception {
     testFastFailNormal(true);
   }
@@ -197,12 +197,12 @@ public class TestFastFail {
     } while (killedCnt < 1);
   }
 
-  @Test(timeout = 100000)
+  @Test(timeout = 180000)
   public void testFastFailMetaWithoutClearCache() throws Exception {
     testFastFailMeta(false);
   }
 
-  @Test(timeout = 100000)
+  @Test(timeout = 180000)
   public void testFastFailMetaWithClearCache() throws Exception {
     testFastFailMeta(true);
   }
@@ -223,12 +223,12 @@ public class TestFastFail {
     } while (true);
   }
 
-  @Test(timeout = 100000)
+  @Test(timeout = 180000)
   public void testFastFailRootWithoutClearMeta() throws Exception {
     testFastFailRoot(false);
   }
 
-  @Test(timeout = 100000)
+  @Test(timeout = 180000)
   public void testFastFailRootWithClearMeta() throws Exception {
     testFastFailRoot(true);
   }

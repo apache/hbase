@@ -36,7 +36,7 @@ public interface Abortable {
   public void abort(String why, Throwable e);
 
   /**
-   * Check if the server or client was aborted.
+   * Check if the server or client was aborted. 
    * @return true if the server or client was aborted, false otherwise
    */
   public boolean isAborted();

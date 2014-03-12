@@ -136,7 +136,7 @@ public class CompactSplitThread implements ConfigurationObserver {
       requestCompaction(r, s, why, p);
     }
   }
-
+  
   /**
    * @param r HRegion store belongs to
    * @param s Store to request compaction on

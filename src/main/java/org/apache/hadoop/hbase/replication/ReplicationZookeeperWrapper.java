@@ -19,29 +19,28 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.HQuorumPeer;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 
 /**
  * This class serves as a helper for all things related to zookeeper
@@ -176,7 +175,7 @@ public class ReplicationZookeeperWrapper {
    * @return addresses of all region servers
    */
   public List<HServerAddress> getPeersAddresses(String peerClusterId) {
-    if (this.peerClusters.size() == 0) {
+    if (this.peerClusters.isEmpty()) {
       return new ArrayList<HServerAddress>(0);
     }
     ZooKeeperWrapper zkw = this.peerClusters.get(peerClusterId);
@@ -377,7 +376,7 @@ public class ReplicationZookeeperWrapper {
         String clusterPath = this.zookeeperWrapper.getZNode(nodePath, cluster);
         List<String> hlogs = this.zookeeperWrapper.listZnodes(clusterPath, null);
         // That region server didn't have anything to replicate for this cluster
-        if (hlogs == null || hlogs.size() == 0) {
+        if (hlogs == null || hlogs.isEmpty()) {
           continue;
         }
         SortedSet<String> logQueue = new TreeSet<String>();

@@ -19,31 +19,25 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 
 import java.io.IOException;
 
 abstract class ColumnOperation extends TableOperation {
   private final Log LOG = LogFactory.getLog(this.getClass());
-
+  
   protected ColumnOperation(final HMaster master, final byte [] tableName)
   throws IOException {
     super(master, tableName);
@@ -69,7 +63,7 @@ abstract class ColumnOperation extends TableOperation {
   }
 
   /**
-   * Simply updates the given table descriptor with the relevant changes
+   * Simply updates the given table descriptor with the relevant changes 
    * for the given column operation
    * @param desc  The descriptor that will be updated.
    */
@@ -77,7 +71,7 @@ abstract class ColumnOperation extends TableOperation {
     throws IOException;
 
   /**
-   * Is run after META has been updated. Defaults to doing nothing, but
+   * Is run after META has been updated. Defaults to doing nothing, but 
    * some operations make use of this for housekeeping operations.
    * @param hri Info for the region that has just been updated.
    */
@@ -86,8 +80,8 @@ abstract class ColumnOperation extends TableOperation {
   }
 
   /**
-   * Contains all of the logic for updating meta for each type of possible
-   * schema change. By implementing the logic at this level, we are able to
+   * Contains all of the logic for updating meta for each type of possible 
+   * schema change. By implementing the logic at this level, we are able to 
    * easily prevent excess writes to META
    * @param m the region
    */
@@ -103,8 +97,8 @@ abstract class ColumnOperation extends TableOperation {
       updateRegionInfo(server, m.getRegionName(), i);
       // TODO: queue this to occur after reopening region
       postProcess(i);
-      // Ignore regions that are split or disabled,
-      // as we do not want to reopen them
+      // Ignore regions that are split or disabled, 
+      // as we do not want to reopen them  
       if (!(i.isSplit() || i.isOffline())) {
         regionsToReopen.add(i);
       }

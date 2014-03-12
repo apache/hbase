@@ -1,4 +1,4 @@
-/**
+/** 
  * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,9 +19,9 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static junit.framework.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -105,9 +105,9 @@ public class TestHFileOutputFormat  {
   private static final byte[] TABLE_NAME = Bytes.toBytes("TestTable");
   private static final String oldValue = "valAAAAA";
   private static final String newValue = "valBBBBB";
-
+  
   private HBaseTestingUtility util = new HBaseTestingUtility();
-
+  
   private static Log LOG = LogFactory.getLog(TestHFileOutputFormat.class);
 
   /**
@@ -116,7 +116,7 @@ public class TestHFileOutputFormat  {
   static class RandomKVGeneratingMapper
   extends Mapper<NullWritable, NullWritable,
                  ImmutableBytesWritable, KeyValue> {
-
+    
     private int keyLength;
     private static final int KEYLEN_DEFAULT=10;
     private static final String KEYLEN_CONF="randomkv.key.length";
@@ -124,12 +124,12 @@ public class TestHFileOutputFormat  {
     private int valLength;
     private static final int VALLEN_DEFAULT=10;
     private static final String VALLEN_CONF="randomkv.val.length";
-
+    
     @Override
     protected void setup(Context context) throws IOException,
         InterruptedException {
       super.setup(context);
-
+      
       Configuration conf = context.getConfiguration();
       keyLength = conf.getInt(KEYLEN_CONF, KEYLEN_DEFAULT);
       valLength = conf.getInt(VALLEN_CONF, VALLEN_DEFAULT);
@@ -144,7 +144,7 @@ public class TestHFileOutputFormat  {
     {
       byte keyBytes[] = new byte[keyLength];
       byte valBytes[] = new byte[valLength];
-
+      
       int taskId = context.getTaskAttemptID().getTaskID().getId();
       assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
 
@@ -178,9 +178,9 @@ public class TestHFileOutputFormat  {
       Mapper<NullWritable, NullWritable, ImmutableBytesWritable, RowMutation> {
     @Override
     protected void map(
-        NullWritable n1, NullWritable n2,
-        Mapper<NullWritable, NullWritable,
-               ImmutableBytesWritable, RowMutation>.Context context)
+        NullWritable n1, NullWritable n2, 
+        Mapper<NullWritable, NullWritable, 
+               ImmutableBytesWritable, RowMutation>.Context context) 
     throws IOException ,InterruptedException
  {
       byte[] row = Bytes.toBytes("row1");
@@ -296,33 +296,33 @@ public class TestHFileOutputFormat  {
    * @throws Exception on job, sorting, IO or fs errors
    */
   @Test
-  public void testRowSortReducer()
+  public void testRowSortReducer() 
   throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
     conf.setInt("io.sort.mb", 20);
     conf.setInt("mapred.map.tasks", 1);
 
     Path dir = util.getTestDir("testRowSortReducer");
-
+    
     try {
       Job job = new Job(conf);
-
+      
       job.setInputFormatClass(NMapInputFormat.class);
       job.setOutputFormatClass(HFileOutputFormat.class);
-
+      
       job.setNumReduceTasks(1);
 
       job.setMapperClass(RowSorterMapper.class); // local
       job.setReducerClass(RowMutationSortReducer.class);
-
+            
       job.setOutputKeyClass(ImmutableBytesWritable.class);
       job.setOutputValueClass(KeyValue.class);
-
+      
       job.setMapOutputKeyClass(ImmutableBytesWritable.class);
-      job.setMapOutputValueClass(RowMutation.class);
+      job.setMapOutputValueClass(RowMutation.class); 
 
       FileOutputFormat.setOutputPath(job, dir);
-
+      
       assertTrue(job.waitForCompletion(false));
 
       FileSystem fs = dir.getFileSystem(conf);
@@ -340,12 +340,12 @@ public class TestHFileOutputFormat  {
               scanner.seekTo();
 
               int index = 0;
-
+              
               // check things for info-A
               if (Bytes.toString(TestHFileOutputFormat.FAMILIES[0]).equals(cf)) {
                 do {
                   ++index;
-
+                  
                   KeyValue kv = scanner.getKeyValue();
                   long ts = kv.getTimestamp();
 
@@ -437,7 +437,7 @@ public class TestHFileOutputFormat  {
       dir.getFileSystem(conf).delete(dir, true);
     }
   }
-
+  
   /**
    * Test that {@link HFileOutputFormat} RecordWriter amends timestamps if
    * passed a keyvalue whose timestamp is {@link HConstants#LATEST_TIMESTAMP}.
@@ -491,22 +491,22 @@ public class TestHFileOutputFormat  {
     Configuration conf = util.getConfiguration();
     Path testDir = util.getTestDir("testWritingPEData");
     FileSystem fs = testDir.getFileSystem(conf);
-
+    
     // Set down this value or we OOME in eclipse.
     conf.setInt("io.sort.mb", 20);
     // Write a few files.
     conf.setLong("hbase.hregion.max.filesize", 64 * 1024);
-
+    
     Job job = new Job(conf, "testWritingPEData");
     setupRandomGeneratorMapper(job);
     // This partitioner doesn't work well for number keys but using it anyways
     // just to demonstrate how to configure it.
     byte[] startKey = new byte[RandomKVGeneratingMapper.KEYLEN_DEFAULT];
     byte[] endKey = new byte[RandomKVGeneratingMapper.KEYLEN_DEFAULT];
-
+    
     Arrays.fill(startKey, (byte)0);
     Arrays.fill(endKey, (byte)0xff);
-
+    
     job.setPartitionerClass(SimpleTotalOrderPartitioner.class);
     // Set start and end rows for partitioner.
     SimpleTotalOrderPartitioner.setStartKey(job.getConfiguration(), startKey);
@@ -514,13 +514,13 @@ public class TestHFileOutputFormat  {
     job.setReducerClass(KeyValueSortReducer.class);
     job.setOutputFormatClass(HFileOutputFormat.class);
     job.setNumReduceTasks(4);
-
+    
     FileOutputFormat.setOutputPath(job, testDir);
     assertTrue(job.waitForCompletion(false));
     FileStatus [] files = fs.listStatus(testDir);
     assertTrue(files.length > 0);
   }
-
+  
   @Test
   public void testJobConfiguration() throws Exception {
     Job job = new Job();
@@ -540,26 +540,26 @@ public class TestHFileOutputFormat  {
     }
     return ret;
   }
-
+  
   @Test
   public void testMRIncrementalLoad() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoad\n");
     doIncrementalLoadTest(false);
   }
-
+  
   @Test
   public void testMRIncrementalLoadWithSplit() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoadWithSplit\n");
     doIncrementalLoadTest(true);
   }
-
+  
   private void doIncrementalLoadTest(
       boolean shouldChangeRegions) throws Exception {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
     Path testDir = util.getTestDir("testLocalMRIncrementalLoad");
     byte[][] startKeys = generateRandomStartKeys(5);
-
+    
     try {
       util.startMiniCluster();
       HBaseAdmin admin = new HBaseAdmin(conf);
@@ -606,10 +606,10 @@ public class TestHFileOutputFormat  {
           LOG.info("Waiting for new region assignment to happen");
         }
       }
-
+      
       // Perform the actual load
       new LoadIncrementalHFiles(conf).doBulkLoad(testDir, table);
-
+      
       // Ensure data shows up
       int expectedRows = conf.getInt("mapred.map.tasks", 1) * ROWSPERSPLIT;
       assertEquals("LoadIncrementalHFiles should put expected data in table",
@@ -626,16 +626,16 @@ public class TestHFileOutputFormat  {
       }
       results.close();
       String tableDigestBefore = util.checksumRows(table);
-
+            
       // Cause regions to reopen
       admin.disableTable(TABLE_NAME);
       while (table.getRegionsInfo().size() != 0) {
         Thread.sleep(1000);
-        LOG.info("Waiting for table to disable");
+        LOG.info("Waiting for table to disable"); 
       }
       admin.enableTable(TABLE_NAME);
       util.waitTableAvailable(TABLE_NAME, 30000);
-
+      
       assertEquals("Data should remain after reopening of regions",
           tableDigestBefore, util.checksumRows(table));
     } finally {
@@ -643,7 +643,7 @@ public class TestHFileOutputFormat  {
       util.shutdownMiniCluster();
     }
   }
-
+  
   private void runIncrementalPELoad(
       Configuration conf, HTable table, Path outDir)
   throws Exception {
@@ -651,10 +651,10 @@ public class TestHFileOutputFormat  {
     setupRandomGeneratorMapper(job);
     HFileOutputFormat.configureIncrementalLoad(job, table);
     FileOutputFormat.setOutputPath(job, outDir);
-
+    
     assertEquals(table.getRegionsInfo().size(),
         job.getNumReduceTasks());
-
+    
     assertTrue(job.waitForCompletion(true));
   }
 
@@ -711,7 +711,7 @@ public class TestHFileOutputFormat  {
    * Test for
    * {@link HFileOutputFormat#createFamilyCompressionMap(Configuration)}. Tests
    * that the compression map is correctly deserialized from configuration
-   *
+   * 
    * @throws IOException
    */
   @Test
@@ -777,7 +777,7 @@ public class TestHFileOutputFormat  {
     }
     return familyToCompression;
   }
-
+  
   /**
    * Test that {@link HFileOutputFormat} RecordWriter uses compression settings
    * from the column family descriptor
@@ -827,7 +827,7 @@ public class TestHFileOutputFormat  {
 
       // Make sure that a directory was created for every CF
       FileSystem fileSystem = dir.getFileSystem(conf);
-
+      
       // commit so that the filesystem has one directory per column family
       hof.getOutputCommitter(context).commitTask(context);
       for (byte[] family : FAMILIES) {
@@ -1239,13 +1239,13 @@ public class TestHFileOutputFormat  {
       }
     }
   }
-
+  
   public static void main(String args[]) throws Exception {
     new TestHFileOutputFormat().manualTest(args);
   }
-
+  
   public void manualTest(String args[]) throws Exception {
-    Configuration conf = HBaseConfiguration.create();
+    Configuration conf = HBaseConfiguration.create();    
     util = new HBaseTestingUtility(conf);
     if ("newtable".equals(args[0])) {
       byte[] tname = args[1].getBytes();
@@ -1293,10 +1293,10 @@ public class TestHFileOutputFormat  {
     ImmutableBytesWritable someWritable = new ImmutableBytesWritable();
     for (int i = 0; i < 100; i++) {
       KeyValue kv = new KeyValue(
-          Bytes.add(row, Bytes.toBytes(i)),
-          family,
-          qualifier,
-          Bytes.add(value, Bytes.toBytes(i)));
+        Bytes.add(row, Bytes.toBytes(i)),
+        family,
+        qualifier,
+        Bytes.add(value, Bytes.toBytes(i)));
       writer.write(someWritable, kv);
     }
 

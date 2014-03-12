@@ -143,13 +143,13 @@ public class TestFromClientSide {
     put.add(FAMILY, null, value);
     ht.put(put);
    
-    Get g1 = new Get(r1);
+    Get.Builder g1 = new Get.Builder(r1);
     g1.addColumn(FAMILY, null);
-    result1 = ht.get(g1);
+    result1 = ht.get(g1.create());
     
-    Get g2 = new Get(r1);
+    Get.Builder g2 = new Get.Builder(r1);
     g2.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
-    result2 = ht.get(g2);
+    result2 = ht.get(g2.create());
     
     assertEquals(result1.getBytes(), result2.getBytes());
     assertEquals(1, result2.raw().length);
@@ -160,13 +160,13 @@ public class TestFromClientSide {
     ht.put(put);
     ht.flushCommits();
     
-    g1 = new Get(r2);
+    g1 = new Get.Builder(r2);
     g1.addColumn(FAMILY, null);
-    result1 = ht.get(g1);
+    result1 = ht.get(g1.create());
     
-    g2 = new Get(r2);
+    g2 = new Get.Builder(r2);
     g2.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
-    result2 = ht.get(g2);
+    result2 = ht.get(g2.create());
     
     assertEquals(result1.getBytes(), result2.getBytes());
     assertEquals(1, result2.raw().length);
@@ -348,7 +348,7 @@ public class TestFromClientSide {
     int rowCount = TEST_UTIL.loadTable(t, FAMILY);
     assertRowCount(t, rowCount);
     // Split the table.  Should split on a reasonable key; 'lqj'
-    Map<HRegionInfo, HServerAddress> regions  = splitTable(t);
+    Map<HRegionInfo, HServerAddress> regions = splitTable(t);
     assertRowCount(t, rowCount);
     // Get end key of first region.
     byte [] endKey = regions.keySet().iterator().next().getEndKey();
@@ -399,6 +399,7 @@ public class TestFromClientSide {
    * @return Count of rows loaded.
    * @throws IOException
    */
+  @SuppressWarnings("unused")
   private int loadTable(final HTable t) throws IOException {
     // Add data to table.
     byte[] k = new byte[3];
@@ -440,6 +441,7 @@ public class TestFromClientSide {
       Bytes.BYTES_COMPARATOR.compare(key, new byte [] {'a', 'a', 'a'}) >= 0);
     LOG.info("Key=" + Bytes.toString(key));
     Scan s = startRow == null? new Scan(): new Scan(startRow);
+    s.setCaching(1000);
     Filter f = new RowFilter(op, new BinaryComparator(key));
     f = new WhileMatchFilter(f);
     s.setFilter(f);
@@ -467,7 +469,9 @@ public class TestFromClientSide {
 
   private void assertRowCount(final HTable t, final int expected)
   throws IOException {
-    assertEquals(expected, countRows(t, new Scan()));
+    Scan s = new Scan();
+    s.setCaching(1000);
+    assertEquals(expected, countRows(t, s));
   }
 
   /*
@@ -625,18 +629,18 @@ public class TestFromClientSide {
     byte [][] ROWS = makeN(ROW, 4);
 
     // Try to get a row on an empty table
-    Get get = new Get(ROWS[0]);
-    Result result = ht.get(get);
+    Get.Builder get = new Get.Builder(ROWS[0]);
+    Result result = ht.get(get.create());
     assertEmptyResult(result);
 
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addFamily(FAMILY);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILY, QUALIFIER);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
     Scan scan = new Scan();
@@ -670,18 +674,18 @@ public class TestFromClientSide {
 
     // Try to get empty rows around it
 
-    get = new Get(ROWS[1]);
-    result = ht.get(get);
+    get = new Get.Builder(ROWS[1]);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addFamily(FAMILY);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
-    get = new Get(ROWS[3]);
+    get = new Get.Builder(ROWS[3]);
     get.addColumn(FAMILY, QUALIFIER);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
     // Try to scan empty rows around it
@@ -696,18 +700,18 @@ public class TestFromClientSide {
 
     // Make sure we can actually get the row
 
-    get = new Get(ROWS[2]);
-    result = ht.get(get);
+    get = new Get.Builder(ROWS[2]);
+    result = ht.get(get.create());
     assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-    get = new Get(ROWS[2]);
+    get = new Get.Builder(ROWS[2]);
     get.addFamily(FAMILY);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-    get = new Get(ROWS[2]);
+    get = new Get.Builder(ROWS[2]);
     get.addColumn(FAMILY, QUALIFIER);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
     // Make sure we can scan the row
@@ -809,7 +813,7 @@ public class TestFromClientSide {
 
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
 
-    Get get;
+    Get.Builder get;
     Scan scan;
     Delete delete;
     Put put;
@@ -894,9 +898,9 @@ public class TestFromClientSide {
     ht.delete(delete);
 
     // Try to get deleted column
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[7]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
     // Try to scan deleted column
@@ -906,14 +910,14 @@ public class TestFromClientSide {
     assertNullResult(result);
 
     // Make sure we can still get a column before it and after it
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[6]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
 
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[8]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[8], VALUES[8]);
 
     // Make sure we can still scan a column before it and after it
@@ -935,9 +939,9 @@ public class TestFromClientSide {
     ht.delete(delete);
 
     // Try to get deleted column
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[8]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
     // Try to scan deleted column
@@ -947,14 +951,14 @@ public class TestFromClientSide {
     assertNullResult(result);
 
     // Make sure we can still get a column before it and after it
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[6]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
 
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[9]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
 
     // Make sure we can still scan a column before it and after it
@@ -977,21 +981,21 @@ public class TestFromClientSide {
     ht.delete(delete);
 
     // Try to get storefile column in deleted family
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[4]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
     // Try to get memstore column in deleted family
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[3]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
     // Try to get deleted family
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addFamily(FAMILIES[4]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
     // Try to scan storefile column in deleted family
@@ -1013,14 +1017,14 @@ public class TestFromClientSide {
     assertNullResult(result);
 
     // Make sure we can still get another family
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[2], QUALIFIERS[2]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertSingleResult(result, ROWS[0], FAMILIES[2], QUALIFIERS[2], VALUES[2]);
 
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[9]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
 
     // Make sure we can still scan another family
@@ -1041,21 +1045,21 @@ public class TestFromClientSide {
     TEST_UTIL.flush();
 
     // Try to get storefile column in deleted family
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[4]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
     // Try to get memstore column in deleted family
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[3]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
     // Try to get deleted family
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addFamily(FAMILIES[4]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEmptyResult(result);
 
     // Try to scan storefile column in deleted family
@@ -1077,14 +1081,14 @@ public class TestFromClientSide {
     assertNullResult(result);
 
     // Make sure we can still get another family
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[2], QUALIFIERS[2]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertSingleResult(result, ROWS[0], FAMILIES[2], QUALIFIERS[2], VALUES[2]);
 
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[9]);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
 
     // Make sure we can still scan another family
@@ -1140,8 +1144,8 @@ public class TestFromClientSide {
       delete.deleteColumns(FAMILY, null);
       ht.delete(delete);
 
-      Get get = new Get(ROW);
-      Result result = ht.get(get);
+      Get.Builder get = new Get.Builder(ROW);
+      Result result = ht.get(get.create());
       assertEmptyResult(result);
     }
 
@@ -1185,9 +1189,9 @@ public class TestFromClientSide {
       put.add(FAMILY, QUALIFIER, null);
       ht.put(put);
 
-      Get get = new Get(ROW);
+      Get.Builder get = new Get.Builder(ROW);
       get.addColumn(FAMILY, QUALIFIER);
-      Result result = ht.get(get);
+      Result result = ht.get(get.create());
       assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
 
       Scan scan = new Scan();
@@ -1199,8 +1203,8 @@ public class TestFromClientSide {
       delete.deleteColumns(FAMILY, QUALIFIER);
       ht.delete(delete);
 
-      get = new Get(ROW);
-      result = ht.get(get);
+      get = new Get.Builder(ROW);
+      result = ht.get(get.create());
       assertEmptyResult(result);
 
     } catch(Exception e) {
@@ -1244,10 +1248,10 @@ public class TestFromClientSide {
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
 
     // Ensure maxVersions in query is respected
-    Get get = new Get(ROW);
+    Get.Builder get = new Get.Builder(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(2);
-    Result result = ht.get(get);
+    Result result = ht.get(get.create());
     assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[4], STAMPS[5]},
         new byte[][] {VALUES[4], VALUES[5]},
@@ -1285,10 +1289,10 @@ public class TestFromClientSide {
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
 
     // Ensure maxVersions in query is respected
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(2);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[4], STAMPS[5]},
         new byte[][] {VALUES[4], VALUES[5]},
@@ -1315,10 +1319,10 @@ public class TestFromClientSide {
     ht.put(put);
 
     // Ensure maxVersions in query is respected
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions();
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
@@ -1333,9 +1337,9 @@ public class TestFromClientSide {
         new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
         0, 7);
 
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.setMaxVersions();
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
@@ -1377,10 +1381,10 @@ public class TestFromClientSide {
     put.add(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
     ht.put(put);
 
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
         new byte[][] {VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
@@ -1402,10 +1406,10 @@ public class TestFromClientSide {
     ht.delete(delete);
 
     // Test that it's gone
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
@@ -1452,19 +1456,19 @@ public class TestFromClientSide {
 
     // Family0
 
-    Get get = new Get(ROW);
+    Get.Builder get = new Get.Builder(ROW);
     get.addColumn(FAMILIES[0], QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
-    Result result = ht.get(get);
+    Result result = ht.get(get.create());
     assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {STAMPS[1]},
         new byte[][] {VALUES[1]},
         0, 0);
 
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addFamily(FAMILIES[0]);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {STAMPS[1]},
         new byte[][] {VALUES[1]},
@@ -1490,19 +1494,19 @@ public class TestFromClientSide {
 
     // Family1
 
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addColumn(FAMILIES[1], QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
 
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addFamily(FAMILIES[1]);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
@@ -1528,19 +1532,19 @@ public class TestFromClientSide {
 
     // Family2
 
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addColumn(FAMILIES[2], QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
         new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
         new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
         0, 4);
 
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addFamily(FAMILIES[2]);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
         new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
         new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
@@ -1566,27 +1570,27 @@ public class TestFromClientSide {
 
     // Try all families
 
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertTrue("Expected 9 keys but received " + result.size(),
         result.size() == 9);
 
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addFamily(FAMILIES[0]);
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertTrue("Expected 9 keys but received " + result.size(),
         result.size() == 9);
 
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addColumn(FAMILIES[0], QUALIFIER);
     get.addColumn(FAMILIES[1], QUALIFIER);
     get.addColumn(FAMILIES[2], QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertTrue("Expected 9 keys but received " + result.size(),
         result.size() == 9);
 
@@ -1636,10 +1640,10 @@ public class TestFromClientSide {
     delete.deleteFamily(FAMILIES[0], ts[0]);
     ht.delete(delete);
 
-    Get get = new Get(ROW);
+    Get.Builder get = new Get.Builder(ROW);
     get.addFamily(FAMILIES[0]);
     get.setMaxVersions(Integer.MAX_VALUE);
-    Result result = ht.get(get);
+    Result result = ht.get(get.create());
     assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {ts[1]},
         new byte[][] {VALUES[1]},
@@ -1668,10 +1672,10 @@ public class TestFromClientSide {
     delete.deleteColumn(FAMILIES[0], QUALIFIER); // ts[4]
     ht.delete(delete);
 
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addColumn(FAMILIES[0], QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {ts[1], ts[2], ts[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
@@ -1708,10 +1712,10 @@ public class TestFromClientSide {
     // It used to be due to the internal implementation of Get, that
     // the Get() call would return ts[4] UNLIKE the Scan below. With
     // the switch to using Scan for Get this is no longer the case.
-    get = new Get(ROW);
+    get = new Get.Builder(ROW);
     get.addFamily(FAMILIES[0]);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {ts[1], ts[2], ts[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
@@ -1752,11 +1756,11 @@ public class TestFromClientSide {
     ht.put(put);
 
     // Assert that above went in.
-    get = new Get(ROWS[2]);
+    get = new Get.Builder(ROWS[2]);
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertTrue("Expected 4 key but received " + result.size() + ": " + result,
         result.size() == 4);
 
@@ -1774,11 +1778,11 @@ public class TestFromClientSide {
     delete.deleteColumn(FAMILIES[2], QUALIFIER);
     ht.delete(delete);
 
-    get = new Get(ROWS[0]);
+    get = new Get.Builder(ROWS[0]);
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertTrue("Expected 2 keys but received " + result.size(),
         result.size() == 2);
     assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER,
@@ -1798,11 +1802,11 @@ public class TestFromClientSide {
         new byte[][] {VALUES[0], VALUES[1]},
         0, 1);
 
-    get = new Get(ROWS[1]);
+    get = new Get.Builder(ROWS[1]);
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertTrue("Expected 2 keys but received " + result.size(),
         result.size() == 2);
 
@@ -1814,11 +1818,11 @@ public class TestFromClientSide {
     assertTrue("Expected 2 keys but received " + result.size(),
         result.size() == 2);
 
-    get = new Get(ROWS[2]);
+    get = new Get.Builder(ROWS[2]);
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertEquals(1, result.size());
     assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
         new long [] {ts[2]},
@@ -1851,19 +1855,19 @@ public class TestFromClientSide {
     put.add(FAMILIES[2], QUALIFIER, VALUES[2]);
     ht.put(put);
 
-    get = new Get(ROWS[3]);
+    get = new Get.Builder(ROWS[3]);
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertTrue("Expected 1 key but received " + result.size(),
         result.size() == 1);
 
-    get = new Get(ROWS[4]);
+    get = new Get.Builder(ROWS[4]);
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
     get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
+    result = ht.get(get.create());
     assertTrue("Expected 2 keys but received " + result.size(),
         result.size() == 2);
 
@@ -1906,9 +1910,9 @@ public class TestFromClientSide {
 
       for (int i = 0; i < 10; i++) {
         byte [] bytes = Bytes.toBytes(i);
-        get = new Get(bytes);
+        get = new Get.Builder(bytes);
         get.addFamily(FAMILIES[0]);
-        result = ht.get(get);
+        result = ht.get(get.create());
         assertTrue(result.size() == 1);
       }
       ArrayList<Delete> deletes = new ArrayList<Delete>();
@@ -1926,9 +1930,9 @@ public class TestFromClientSide {
 
       for (int i = 0; i < 10; i++) {
         byte [] bytes = Bytes.toBytes(i);
-        get = new Get(bytes);
+        get = new Get.Builder(bytes);
         get.addFamily(FAMILIES[0]);
-        result = ht.get(get);
+        result = ht.get(get.create());
         assertTrue(result.size() == 0);
       }
     }
@@ -3531,7 +3535,7 @@ public class TestFromClientSide {
     }
   }
 
-
+  
   @Test
   public void testRowsPutMultiGet() throws IOException {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");

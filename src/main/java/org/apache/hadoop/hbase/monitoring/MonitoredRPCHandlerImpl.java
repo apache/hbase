@@ -33,11 +33,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A MonitoredTask implementation designed for use with RPC Handlers
- * handling frequent, short duration tasks. String concatenations and object
+ * A MonitoredTask implementation designed for use with RPC Handlers 
+ * handling frequent, short duration tasks. String concatenations and object 
  * allocations are avoided in methods that will be hit by every RPC call.
  */
-public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
+public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl 
   implements MonitoredRPCHandler {
   private String clientAddress;
   private int remotePort;
@@ -50,7 +50,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
 
   public MonitoredRPCHandlerImpl() {
     super();
-    // in this implementation, WAITING indicates that the handler is not
+    // in this implementation, WAITING indicates that the handler is not 
     // actively servicing an RPC call.
     setState(State.WAITING);
   }
@@ -61,7 +61,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   }
 
   /**
-   * Gets the status of this handler; if it is currently servicing an RPC,
+   * Gets the status of this handler; if it is currently servicing an RPC, 
    * this status will include the RPC information.
    * @return a String describing the current status.
    */
@@ -74,7 +74,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   }
 
   /**
-   * Accesses the queue time for the currently running RPC on the
+   * Accesses the queue time for the currently running RPC on the 
    * monitored Handler.
    * @return the queue timestamp or -1 if there is no RPC currently running.
    */
@@ -86,7 +86,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   }
 
   /**
-   * Accesses the start time for the currently running RPC on the
+   * Accesses the start time for the currently running RPC on the 
    * monitored Handler.
    * @return the start timestamp or -1 if there is no RPC currently running.
    */
@@ -149,9 +149,9 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   }
 
   /**
-   * If an RPC call is currently running, produces a String representation of
+   * If an RPC call is currently running, produces a String representation of 
    * the connection from which it was received.
-   * @return A human-readable string representation of the address and port
+   * @return A human-readable string representation of the address and port 
    *  of the client.
    */
   public String getClient() {
@@ -159,7 +159,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   }
 
   /**
-   * Indicates to the client whether this task is monitoring a currently active
+   * Indicates to the client whether this task is monitoring a currently active 
    * RPC call.
    * @return true if the monitored handler is currently servicing an RPC call.
    */
@@ -168,8 +168,8 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   }
 
   /**
-   * Indicates to the client whether this task is monitoring a currently active
-   * RPC call to a database command. (as defined by
+   * Indicates to the client whether this task is monitoring a currently active 
+   * RPC call to a database command. (as defined by 
    * o.a.h.h.client.Operation)
    * @return true if the monitored handler is currently servicing an RPC call
    * to a database command.
@@ -191,7 +191,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * @param methodName The name of the method that will be called by the RPC.
    * @param params The parameters that will be passed to the indicated method.
    */
-  public synchronized void setRPC(String methodName, Object [] params,
+  public synchronized void setRPC(String methodName, Object [] params, 
       long queueTime, Method realMethod) {
     this.realMethod = realMethod;
     this.methodName = methodName;
@@ -202,7 +202,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   }
 
   /**
-   * Gives this instance a reference to the Writable received by the RPC, so
+   * Gives this instance a reference to the Writable received by the RPC, so 
    * that it can later compute its size if asked for it.
    * @param param The Writable received by the RPC for this call
    */
@@ -215,7 +215,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * @param clientAddress the address of the current client
    * @param remotePort the port from which the client connected
    */
-  public synchronized void setConnection(String clientAddress,
+  public synchronized void setConnection(String clientAddress, 
       int remotePort) {
     this.clientAddress = clientAddress;
     this.remotePort = remotePort;

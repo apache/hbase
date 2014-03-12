@@ -24,10 +24,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -36,10 +38,16 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
+import org.apache.hadoop.hbase.filter.TFilter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
+
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+import com.google.common.base.Objects;
 
 /**
  * Used to perform Scan operations.
@@ -82,6 +90,7 @@ import org.apache.hadoop.io.WritableFactories;
  * Expert: To explicitly disable server-side block caching for this scan,
  * execute {@link #setCacheBlocks(boolean)}.
  */
+@ThriftStruct
 public class Scan extends Operation implements Writable {
   private static final byte STORE_LIMIT_VERSION = (byte)2;
   private static final byte STORE_OFFSET_VERSION = (byte)3;
@@ -104,6 +113,7 @@ public class Scan extends Operation implements Writable {
   private boolean partialRow = false;
   private boolean cacheBlocks = true;
   private Filter filter = null;
+  private TFilter tFilter = null;
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
@@ -118,7 +128,7 @@ public class Scan extends Operation implements Writable {
 
   public Scan(byte [] startRow, Filter filter) {
     this(startRow);
-    this.filter = filter;
+    this.setFilter(filter);
   }
 
   /**
@@ -160,7 +170,7 @@ public class Scan extends Operation implements Writable {
     maxResponseSize = scan.getMaxResponseSize();
     partialRow = scan.isPartialRow();
     cacheBlocks = scan.getCacheBlocks();
-    filter = scan.getFilter(); // clone?
+    setFilter(scan.getFilter());
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
@@ -185,13 +195,57 @@ public class Scan extends Operation implements Writable {
   public Scan(Get get) {
     this.startRow = get.getRow();
     this.stopRow = Bytes.nextOf(get.getRow());
-    this.filter = get.getFilter();
+    setFilter(get.getFilter());
     this.maxVersions = get.getMaxVersions();
     this.storeLimit = get.getMaxResultsPerColumnFamily();
     this.storeOffset = get.getRowOffsetPerColumnFamily();
     this.tr = get.getTimeRange();
     this.familyMap = get.getFamilyMap();
     this.effectiveTS = get.getEffectiveTS();
+  }
+
+  @ThriftConstructor
+  public Scan(@ThriftField(1) final byte[] startRow,
+              @ThriftField(2) final byte[] stopRow,
+              @ThriftField(3) final int maxVersions,
+              @ThriftField(4) final int batch,
+              @ThriftField(5) final int caching,
+              @ThriftField(6) final int storeLimit,
+              @ThriftField(7) final int storeOffset,
+              @ThriftField(8) final boolean serverPrefetching,
+              @ThriftField(9) final int maxResponseSize,
+              @ThriftField(10) final boolean partialRow,
+              @ThriftField(11) final boolean cacheBlocks,
+              @ThriftField(12) final TimeRange tr,
+              @ThriftField(13) final Map<byte[], Set<byte[]>> familyMap,
+              @ThriftField(14) final long effectiveTS,
+              @ThriftField(15) final int currentPartialResponseSize,
+              @ThriftField(16) final TFilter tFilter,
+              @ThriftField(17) final boolean preloadBlocks) throws IOException {
+    this.startRow = startRow;
+    this.stopRow = stopRow;
+    this.maxVersions = maxVersions;
+    this.batch = batch;
+    this.storeLimit = storeLimit;
+    this.storeOffset = storeOffset;
+    this.caching = caching;
+    this.serverPrefetching = serverPrefetching;
+    this.maxResponseSize = maxResponseSize;
+    this.partialRow = partialRow;
+    this.cacheBlocks = cacheBlocks;
+    this.tr = new TimeRange(tr.getMin(), tr.getMax());
+    this.effectiveTS = effectiveTS;
+    this.currentPartialResponseSize = currentPartialResponseSize;
+    for (Map.Entry<byte[], Set<byte[]>> e : familyMap.entrySet()) {
+      NavigableSet<byte[]> set = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+      for (byte[] setEntry : e.getValue()) {
+        set.add(setEntry);
+      }
+      this.familyMap.put(e.getKey(), set);
+    }
+    this.tFilter = tFilter;
+    this.filter = tFilter;
+    this.preloadBlocks = preloadBlocks;
   }
 
   public boolean isGetScan() {
@@ -207,7 +261,7 @@ public class Scan extends Operation implements Writable {
    */
   public Scan addFamily(byte [] family) {
     familyMap.remove(family);
-    familyMap.put(family, null);
+    familyMap.put(family, new TreeSet<byte []>(Bytes.BYTES_COMPARATOR));
     return this;
   }
 
@@ -244,7 +298,6 @@ public class Scan extends Operation implements Writable {
    * @param maxStamp maximum timestamp value, exclusive
    * @throws IOException if invalid time range
    * @see #setMaxVersions()
-    this.preloadBlocks = preloadBlocks;
    * @see #setMaxVersions(int)
    * @return this
    */
@@ -404,6 +457,7 @@ public class Scan extends Operation implements Writable {
     this.serverPrefetching = enablePrefetching;
   }
 
+  @ThriftField(8)
   public boolean getServerPrefetching() {
     return serverPrefetching;
   }
@@ -411,6 +465,7 @@ public class Scan extends Operation implements Writable {
   /**
    * @return maximum response size that client can handle for a single call to next()
    */
+  @ThriftField(9)
   public int getMaxResponseSize() {
     return this.maxResponseSize;
   }
@@ -436,17 +491,39 @@ public class Scan extends Operation implements Writable {
    * Get current PartialResponseSize. This is only used at server side,
    * and not used as a client API.
    */
+  @ThriftField(15)
   public int getCurrentPartialResponseSize() {
     return this.currentPartialResponseSize;
+  }
+
+  @ThriftField(16)
+  public TFilter getTFilter() {
+    return this.tFilter;
+  }
+
+  @ThriftField(17)
+  public boolean getPreloadBlocks() {
+    return this.preloadBlocks;
   }
 
   /**
    * Apply the specified server-side filter when performing the Scan.
    * @param filter filter to run on the server
    * @return this
+   * @throws IOException
    */
   public Scan setFilter(Filter filter) {
-    this.filter = filter;
+    if (filter == null) return this;
+    try {
+      this.tFilter = TFilter.getTFilter(filter);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    try {
+      this.filter = this.tFilter.getFilter();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     return this;
   }
 
@@ -464,6 +541,7 @@ public class Scan extends Operation implements Writable {
    * Getting the familyMap
    * @return familyMap
    */
+  @ThriftField(13)
   public Map<byte [], NavigableSet<byte []>> getFamilyMap() {
     return this.familyMap;
   }
@@ -498,6 +576,7 @@ public class Scan extends Operation implements Writable {
   /**
    * @return the startrow
    */
+  @ThriftField(1)
   public byte [] getStartRow() {
     return this.startRow;
   }
@@ -505,6 +584,7 @@ public class Scan extends Operation implements Writable {
   /**
    * @return the stoprow
    */
+  @ThriftField(2)
   public byte [] getStopRow() {
     return this.stopRow;
   }
@@ -512,6 +592,7 @@ public class Scan extends Operation implements Writable {
   /**
    * @return the max number of versions to fetch
    */
+  @ThriftField(3)
   public int getMaxVersions() {
     return this.maxVersions;
   }
@@ -519,6 +600,7 @@ public class Scan extends Operation implements Writable {
   /**
    * @return the effective timestamp for this operation
    */
+  @ThriftField(14)
   public long getEffectiveTS() {
     return this.effectiveTS;
   }
@@ -526,6 +608,7 @@ public class Scan extends Operation implements Writable {
   /**
    * @return maximum number of values to return for a single call to next()
    */
+  @ThriftField(4)
   public int getBatch() {
     return this.batch;
   }
@@ -549,6 +632,7 @@ public class Scan extends Operation implements Writable {
   /**
    * @return caching the number of rows fetched when calling next on a scanner
    */
+  @ThriftField(5)
   public int getCaching() {
     return this.caching;
   }
@@ -556,6 +640,7 @@ public class Scan extends Operation implements Writable {
   /**
    * @return TimeRange
    */
+  @ThriftField(12)
   public TimeRange getTimeRange() {
     return this.tr;
   }
@@ -564,7 +649,12 @@ public class Scan extends Operation implements Writable {
    * @return RowFilter
    */
   public Filter getFilter() {
-    return filter;
+    try {
+      if (tFilter == null) return null;
+      return tFilter.getFilter();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -593,8 +683,24 @@ public class Scan extends Operation implements Writable {
    * @return true if default caching should be used, false if blocks should not
    * be cached
    */
+  @ThriftField(11)
   public boolean getCacheBlocks() {
     return cacheBlocks;
+  }
+
+  @ThriftField(6)
+  public int getStoreLimit() {
+    return storeLimit;
+  }
+
+  @ThriftField(7)
+  public int getStoreOffset() {
+    return storeOffset;
+  }
+
+  @ThriftField(10)
+  public boolean getPartialRow() {
+    return this.partialRow;
   }
 
   /**
@@ -607,7 +713,7 @@ public class Scan extends Operation implements Writable {
   public Map<String, Object> getFingerprint() {
     Map<String, Object> map = new HashMap<String, Object>();
     List<String> families = new ArrayList<String>();
-    if(this.familyMap.size() == 0) {
+    if (this.familyMap.isEmpty()) {
       map.put("families", "ALL");
       return map;
     } else {
@@ -726,6 +832,8 @@ public class Scan extends Operation implements Writable {
       this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
       this.filter.readFields(in);
     }
+    setFilter(filter);
+
     this.tr = new TimeRange();
     tr.readFields(in);
     int numFamilies = in.readInt();
@@ -903,5 +1011,363 @@ public class Scan extends Operation implements Writable {
       }
     }
     return cols.toString();
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(batch, cacheBlocks, caching,
+      currentPartialResponseSize, effectiveTS, familyMap, filter, tFilter,
+      maxResponseSize, maxVersions, partialRow, serverPrefetching,
+      startRow, stopRow, storeLimit, storeOffset, tr);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    Scan other = (Scan) obj;
+    if (batch != other.batch) {
+      return false;
+    }
+    if (cacheBlocks != other.cacheBlocks) {
+      return false;
+    }
+    if (caching != other.caching) {
+      return false;
+    }
+    if (currentPartialResponseSize != other.currentPartialResponseSize) {
+      return false;
+    }
+    if (effectiveTS != other.effectiveTS) {
+      return false;
+    }
+    if (familyMap == null) {
+      if (other.familyMap != null) {
+        return false;
+      }
+    } else if (!familyMap.equals(other.familyMap)) {
+      return false;
+    }
+    if (filter == null) {
+      if (other.filter != null) {
+        return false;
+      }
+    } else if (!filter.equals(other.filter)) {
+      return false;
+    }
+    if (maxResponseSize != other.maxResponseSize) {
+      return false;
+    }
+    if (maxVersions != other.maxVersions) {
+      return false;
+    }
+    if (partialRow != other.partialRow) {
+      return false;
+    }
+    if (serverPrefetching != other.serverPrefetching) {
+      return false;
+    }
+    if (!Arrays.equals(startRow, other.startRow)) {
+      return false;
+    }
+    if (!Arrays.equals(stopRow, other.stopRow)) {
+      return false;
+    }
+    if (storeLimit != other.storeLimit) {
+      return false;
+    }
+    if (storeOffset != other.storeOffset) {
+      return false;
+    }
+    if (tFilter == null) {
+      if (other.tFilter != null) {
+        return false;
+      }
+    } else if (!tFilter.equals(other.tFilter)) {
+      return false;
+    }
+    if (tr == null) {
+      if (other.tr != null) {
+        return false;
+      }
+    } else if (!tr.equals(other.tr)) {
+      return false;
+    }
+    return true;
+  }
+
+  public static class Builder {
+    private byte[] startRow = HConstants.EMPTY_START_ROW;
+    private byte[] stopRow = HConstants.EMPTY_END_ROW;
+    private int maxVersions = 1;
+    private int batch = -1;
+    private int storeLimit = -1;
+    private int storeOffset = 0;
+    private int caching = -1;
+    private boolean serverPrefetching = false;
+    private int maxResponseSize = HConstants.DEFAULT_HBASE_SCANNER_MAX_RESULT_SIZE;
+    private int currentPartialResponseSize = 0;
+    private boolean partialRow = false;
+    private boolean cacheBlocks = true;
+    private Filter filter = null;
+    private TimeRange tr = new TimeRange();
+    private Map<byte[], Set<byte[]>> familyMap = new TreeMap<byte[], Set<byte[]>>(
+        Bytes.BYTES_COMPARATOR);
+    private long effectiveTS = HConstants.LATEST_TIMESTAMP;
+    private TFilter tFilter = null;
+    private boolean preloadBlocks = false;
+
+    public Builder() {
+    }
+
+    /**
+     * {@link Scan#setBatch(int)}
+     * @param batch
+     * @return
+     */
+    public Builder setBatch(int batch) {
+      if ((this.filter != null) && this.filter.hasFilterRow()) {
+        throw new IncompatibleFilterException(
+            "Cannot set batch on a scan using a filter"
+                + " that returns true for filter.hasFilterRow");
+      }
+      this.batch = batch;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setCacheBlocks(boolean)}
+     * @param cacheBlocks
+     * @return
+     */
+    public Builder setCacheBlocks(boolean cacheBlocks) {
+      this.cacheBlocks = cacheBlocks;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setCaching(int)}
+     * @param caching
+     * @return
+     */
+    public Builder setCaching(int caching) {
+      this.caching = caching;
+      this.partialRow = false;
+      this.maxResponseSize = HConstants.DEFAULT_HBASE_SCANNER_MAX_RESULT_SIZE;
+      return this;
+    }
+
+    /**
+     * Builder function to set the Response Size of the next call
+     * @param responseSize
+     * @return
+     */
+    public Builder setResponseSize(int responseSize) {
+      this.maxResponseSize = responseSize;
+      this.caching = Integer.MAX_VALUE;
+      return this;
+    }
+
+    /**
+     * Setter function to set partial rows
+     * @param partialRow
+     * @return
+     */
+    public Builder setPartialRow(boolean partialRow) {
+      this.partialRow = partialRow;
+      this.caching = Integer.MAX_VALUE;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setCurrentPartialResponseSize(int)}
+     * @param responseSize
+     * @return
+     */
+    public Builder setCurrentPartialResponseSize(int responseSize) {
+      this.currentPartialResponseSize = responseSize;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setEffectiveTS(long)}
+     * @param effectiveTS
+     * @return
+     */
+    public Builder setEffectiveTS(long effectiveTS) {
+      this.effectiveTS = effectiveTS;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setFilter(Filter)}
+     * @param filter
+     * @return
+     * @throws IOException
+     */
+    public Builder setFilter(Filter filter) throws IOException {
+      this.tFilter = TFilter.getTFilter(filter);
+      this.filter = tFilter;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setMaxResultsPerColumnFamily(int)}
+     * @param limit
+     * @return
+     */
+    public Builder setMaxResultsPerColumnFamily(int limit) {
+      this.storeLimit = limit;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setMaxVersions()}
+     * @return
+     */
+    public Builder setMaxVersions() {
+      this.maxVersions = Integer.MAX_VALUE;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setMaxVersions(int)}
+     * @param maxVersions
+     * @return
+     */
+    public Builder setMaxVersions(int maxVersions) {
+      this.maxVersions = maxVersions;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setRowOffsetPerColumnFamily(int)}
+     * @param offset
+     * @return
+     */
+    public Builder setRowOffsetPerColumnFamily(int offset) {
+      this.storeOffset = offset;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setServerPrefetching(boolean)}
+     * @param enablePrefetching
+     * @return
+     */
+    public Builder setServerPrefetching(boolean enablePrefetching) {
+      this.serverPrefetching = enablePrefetching;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setStartRow(byte[])}
+     * @param startRow
+     * @return
+     */
+    public Builder setStartRow(byte[] startRow) {
+      this.startRow = startRow;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setStopRow(byte[])}
+     * @param stopRow
+     * @return
+     */
+    public Builder setStopRow(byte[] stopRow) {
+      this.stopRow = stopRow;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setPreloadBlocks(boolean)}
+     * @param preloadBlocks
+     * @return
+     */
+    public Builder setPreloadBlocks(boolean preloadBlocks) {
+      this.preloadBlocks = preloadBlocks;
+      return this;
+    }
+
+    /**
+     * {@link Scan#setTimeRange(long, long)}
+     * @param minStamp
+     * @param maxStamp
+     * @return
+     * @throws IOException
+     */
+    public Builder setTimeRange(long minStamp, long maxStamp)
+        throws IOException {
+      tr = new TimeRange(minStamp, maxStamp);
+      return this;
+    }
+
+    /**
+     * {@link Scan#setTimeStamp(long)}
+     * @param timestamp
+     * @return
+     */
+    public Builder setTimeStamp(long timestamp) {
+      try {
+        tr = new TimeRange(timestamp, timestamp + 1);
+      } catch (IOException e) {
+        // Will never happen
+      }
+      return this;
+    }
+
+    /**
+     * {@link Scan#addFamily(byte[])}
+     * @param family
+     * @return
+     */
+    public Builder addFamily(byte [] family) {
+      familyMap.remove(family);
+      familyMap.put(family, new TreeSet<byte []>(Bytes.BYTES_COMPARATOR));
+      return this;
+    }
+
+    /**
+     * {@link Scan#addColumn(byte[], byte[])}
+     * @param family
+     * @param qualifier
+     * @return
+     */
+    public Builder addColumn(byte[] family, byte[] qualifier) {
+      Set<byte[]> set = familyMap.get(family);
+      if (set == null) {
+        set = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+      }
+      if (qualifier == null) {
+        set.add(HConstants.EMPTY_BYTE_ARRAY);
+      } else {
+        set.add(qualifier);
+      }
+      familyMap.put(family, set);
+
+      return this;
+    }
+
+    /**
+     * Builder's create method which gives a Scan object that is created from
+     * all the optional fields that were set on this Builder class.
+     * @return
+     * @throws IOException
+     */
+    public Scan create() throws IOException {
+      return new Scan(this.startRow, this.stopRow, this.maxVersions, this.batch,
+          this.caching, this.storeLimit, this.storeOffset,
+          this.serverPrefetching, this.maxResponseSize, this.partialRow,
+          this.cacheBlocks, this.tr, this.familyMap, this.effectiveTS,
+          this.currentPartialResponseSize, this.tFilter, this.preloadBlocks);
+    }
   }
 }

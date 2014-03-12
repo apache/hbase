@@ -80,10 +80,10 @@ public class NMapInputFormat extends InputFormat<NullWritable, NullWritable> {
     public void write(DataOutput out) throws IOException {
     }
   }
-
+  
   private static class SingleRecordReader<K, V>
     extends RecordReader<K, V> {
-
+    
     private final K key;
     private final V value;
     boolean providedKey = false;
@@ -122,6 +122,6 @@ public class NMapInputFormat extends InputFormat<NullWritable, NullWritable> {
       providedKey = true;
       return true;
     }
-
+    
   }
 }

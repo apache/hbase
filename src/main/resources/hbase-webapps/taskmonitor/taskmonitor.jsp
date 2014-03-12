@@ -22,11 +22,11 @@
       if (!(t instanceof MonitoredRPCHandler))
         iter.remove();
     } else if (filter.equals("rpc")) {
-      if (!(t instanceof MonitoredRPCHandler) ||
+      if (!(t instanceof MonitoredRPCHandler) || 
           !((MonitoredRPCHandler) t).isRPCRunning())
         iter.remove();
     } else if (filter.equals("operation")) {
-      if (!(t instanceof MonitoredRPCHandler) ||
+      if (!(t instanceof MonitoredRPCHandler) || 
           !((MonitoredRPCHandler) t).isOperationRunning())
         iter.remove();
     }
@@ -49,8 +49,8 @@
       %><%= "]" %><%
   } else {
 %><?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
   <title>Task Monitor</title>
@@ -87,7 +87,7 @@
         <td>ABORTED</td>
       </tr>
     </table>
-    <p>Each task's state is indicated by its background color according to the
+    <p>Each task's state is indicated by its background color according to the 
     key.</p>
     <table style="clear:right">
       <tr>
@@ -101,11 +101,11 @@
           <td><%= new Date(task.getStartTime()) %></td>
           <td><%= task.getDescription() %></td>
           <td><%= task.getState() %>
-              (since <%= StringUtils.formatTimeDiff(now,
+              (since <%= StringUtils.formatTimeDiff(now, 
                               task.getStateTime()) %> ago)
           </td>
           <td><%= task.getStatus() %>
-              (since <%= StringUtils.formatTimeDiff(now,
+              (since <%= StringUtils.formatTimeDiff(now, 
                               task.getStatusTime()) %> ago)
           </td>
         </tr>

@@ -228,7 +228,7 @@ public class TestTimestampsFilter {
 
   private void testWithVersionDeletes(boolean flushTables) throws IOException {
     byte [] TABLE = Bytes.toBytes("testWithVersionDeletes_" +
-                                   (flushTables ? "flush" : "noflush"));
+                                   (flushTables ? "flush" : "noflush")); 
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
@@ -465,3 +465,4 @@ public class TestTimestampsFilter {
     assertTrue(results.isEmpty());
   }
 }
+

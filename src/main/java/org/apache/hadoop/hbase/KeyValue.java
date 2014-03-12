@@ -19,14 +19,10 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+import com.google.common.primitives.Longs;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
@@ -37,7 +33,13 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
-import com.google.common.primitives.Longs;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * An HBase Key/Value.
@@ -67,6 +69,7 @@ import com.google.common.primitives.Longs;
  * <p>TODO: Group Key-only comparators and operations into a Key class, just
  * for neatness sake, if can figure what to call it.
  */
+@ThriftStruct
 public class KeyValue implements Writable, HeapSize, Cloneable {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
 
@@ -255,7 +258,8 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * Presumes <code>bytes</code> content is formatted as a KeyValue blob.
    * @param bytes byte array
    */
-  public KeyValue(final byte [] bytes) {
+  @ThriftConstructor
+  public KeyValue(@ThriftField(1) final byte [] bytes) {
     this(bytes, 0);
   }
 
@@ -277,7 +281,9 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * @param offset offset to start of the KeyValue
    * @param length length of the KeyValue
    */
-  public KeyValue(final byte [] bytes, final int offset, final int length) {
+  public KeyValue(final byte [] bytes,
+                  final int offset,
+                  final int length) {
     this.bytes = bytes;
     this.offset = offset;
     this.length = length;
@@ -698,6 +704,16 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    */
   public int getLength() {
     return length;
+  }
+
+  @ThriftField(1)
+  public byte[] getKeyValueBytes() {
+    if (this.bytes.length == getLength()) {
+      return this.bytes;
+    }
+    byte [] kv = new byte[getLength()];
+    System.arraycopy(getBuffer(), getOffset(), kv, 0, getLength());
+    return kv;
   }
 
   //---------------------------------------------------------------------------

@@ -106,6 +106,6 @@ public class TestRpcMetricWrapper extends TestCase {
     assertEquals(1, dummyMetricsRecord.getMetric("foo_min").longValue());
     assertEquals(100, dummyMetricsRecord.getMetric("foo_max").longValue());
     assertEquals(100, dummyMetricsRecord.getMetric("foo_num_ops").longValue());
-    assertEquals(95, dummyMetricsRecord.getMetric("foo_p95").longValue());
+    assertEquals(96, dummyMetricsRecord.getMetric("foo_p95").longValue());
   }
 }

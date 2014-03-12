@@ -20,10 +20,8 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.DataInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -48,9 +46,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.SequenceFile;
 
@@ -118,7 +114,7 @@ public class FSUtils {
 
   /**
    * Checks to see if the specified file system is available
-   *
+   * 
    * @param fs
    *          filesystem
    * @param shutdown
@@ -632,60 +628,14 @@ public class FSUtils {
     if (!(fs instanceof DistributedFileSystem)) {
       return true;
     }
-    long startWaiting = System.currentTimeMillis();
-
+    DistributedFileSystem dfs = (DistributedFileSystem)fs;
     boolean discardlastBlock =  conf.getBoolean("hbase.regionserver.discardLastNonExistantBlock",
                                                  true);
     LOG.info("Recovering file " + p + ", discard last block: "
         + discardlastBlock);
 
-    try {
-      try {
-        if (fs instanceof DistributedFileSystem) {
-          DistributedFileSystem dfs = (DistributedFileSystem)fs;
-          try {
-            return (Boolean) DistributedFileSystem.class.getMethod("recoverLease",
-                new Class[] {Path.class, Boolean.class}).
-                invoke(dfs, p, new Boolean(discardlastBlock));
-          } catch (NoSuchMethodException nsme) {
-            return (Boolean) DistributedFileSystem.class.getMethod("recoverLease",
-                new Class[] {Path.class}).invoke(dfs, p);
-          }
-        } else {
-          throw new Exception("Not a DistributedFileSystem");
-        }
-      } catch (InvocationTargetException ite) {
-        // function was properly called, but threw it's own exception
-        throw (IOException) ite.getCause();
-      } catch (Exception e) {
-        LOG.debug("Failed fs.recoverLease invocation, " + e.toString() +
-            ", trying fs.append instead");
-        FSDataOutputStream out = fs.append(p);
-        out.close();
-      }
-      return true;
-    } catch (IOException e) {
-      e = RemoteExceptionHandler.checkIOException(e);
-      if (e instanceof AlreadyBeingCreatedException) {
-        // We expect that we'll get this message while the lease is still
-        // within its soft limit, but if we get it past that, it means
-        // that the RS is holding onto the file even though it lost its
-        // znode. We could potentially abort after some time here.
-        long waitedFor = System.currentTimeMillis() - startWaiting;
-        if (waitedFor > FSConstants.LEASE_SOFTLIMIT_PERIOD) {
-          LOG.warn("Waited " + waitedFor + "ms for lease recovery on " + p +
-              ":" + e.getMessage());
-        }
-      } else if (e instanceof LeaseExpiredException &&
-          e.getMessage().contains("File does not exist")) {
-        // This exception comes out instead of FNFE, fix it
-        throw new FileNotFoundException(
-            "The given HLog wasn't found at " + p.toString());
-      } else {
-        throw new IOException("Failed to open " + p + " for append", e);
-      }
-    }
-    return false;
+    // Trying recovery
+    return dfs.recoverLease(p, discardlastBlock);
   }
 
   /*
@@ -709,8 +659,8 @@ public class FSUtils {
 
 
   /**
-   * Runs through the HBase rootdir and creates a reverse lookup map for
-   * table StoreFile names to the full Path.
+   * Runs through the HBase rootdir and creates a reverse lookup map for 
+   * table StoreFile names to the full Path. 
    * <br>
    * Example...<br>
    * Key = 3944417774205889744  <br>
@@ -725,17 +675,17 @@ public class FSUtils {
     final FileSystem fs, final Path hbaseRootDir)
   throws IOException {
     Map<String, Path> map = new HashMap<String, Path>();
-
-    // if this method looks similar to 'getTableFragmentation' that is because
+    
+    // if this method looks similar to 'getTableFragmentation' that is because 
     // it was borrowed from it.
-
+    
     DirFilter df = new DirFilter(fs);
     // presumes any directory under hbase.rootdir is a table
     FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
     for (FileStatus tableDir : tableDirs) {
       // Skip the .log directory.  All others should be tables.  Inside a table,
       // there are compaction.dir directories to skip.  Otherwise, all else
-      // should be regions.
+      // should be regions. 
       Path d = tableDir.getPath();
       if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
         continue;
@@ -757,7 +707,7 @@ public class FSUtils {
             Path sf = sfStatus.getPath();
             map.put( sf.getName(), sf);
           }
-
+          
         }
       }
     }
@@ -767,7 +717,7 @@ public class FSUtils {
   /**
    * This function is to scan the root path of the file system to get the
    * mapping between the region name and its best locality region server
-   *
+   * 
    * @param fs
    *          the file system to use
    * @param rootPath
@@ -790,7 +740,7 @@ public class FSUtils {
   /**
    * This function is to scan the root path of the file system to get the
    * mapping between the region name and its best locality region server
-   *
+   * 
    * @param fs
    *          the file system to use
    * @param rootPath
@@ -832,7 +782,7 @@ public class FSUtils {
     return getRegionDegreeLocalityMappingFromFS(
         conf, null,
         conf.getInt("hbase.client.localityCheck.threadPoolSize", 2));
-
+     
   }
 
   /**
@@ -854,7 +804,7 @@ public class FSUtils {
     return getRegionDegreeLocalityMappingFromFS(
         conf, tableName,
         conf.getInt("hbase.client.localityCheck.threadPoolSize", 2));
-
+     
   }
 
   /**
@@ -1006,7 +956,7 @@ public class FSUtils {
         throw new IOException(e);
       }
     }
-
+    
     long overhead = System.currentTimeMillis() - startTime;
     String overheadMsg = "Scan DFS for locality info takes " + overhead + " ms";
 

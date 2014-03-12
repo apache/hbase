@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.regionserver.kvaggregator.KeyValueAggregator;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 
+
 /**
  * Scanner scans both the memstore and the HStore. Coalesce KeyValue stream
  * into List<KeyValue> for a single row.
@@ -138,7 +139,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
             store.comparator.getRawComparator(),
             store.versionsToReturn(scan.getMaxVersions()), Long.MAX_VALUE,
             Long.MAX_VALUE, // do not include the deletes
-            oldestUnexpiredTS);
+            oldestUnexpiredTS, isUsingDeleteColBloom);
   }
 
   public synchronized void initialize() throws IOException {
@@ -218,7 +219,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
         new ScanQueryMatcher(scan, store.getFamily().getName(), null,
             store.comparator.getRawComparator(),
             store.versionsToReturn(scan.getMaxVersions()), smallestReadPoint,
-            retainDeletesInOutputUntil, oldestUnexpiredTS, oldestFlashBackTS);
+            retainDeletesInOutputUntil, oldestUnexpiredTS, oldestFlashBackTS, isUsingDeleteColBloom);
 
     // Filter the list of scanners using Bloom filters, time range, TTL, etc.
     scanners = selectScannersFrom(scanners);
@@ -256,7 +257,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
             comparator.getRawComparator(), scan.getMaxVersions(),
             Long.MAX_VALUE,
             retainDeletesInOutputUntil,
-            oldestUnexpiredTS);
+            oldestUnexpiredTS, isUsingDeleteColBloom);
 
     // Seek all scanners to the initial key
     for(KeyValueScanner scanner : scanners) {
@@ -420,7 +421,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
               "smaller key " + kv + " in cf " + store);
         }
         prevKV = kv;
-        ScanQueryMatcher.MatchCode qcode = matcher.match(copyKv);
+        ScanQueryMatcher.MatchCode qcode = matcher.match(copyKv, this.heap.getActiveScanners());
         if ((qcode == MatchCode.INCLUDE) ||
           (qcode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL) ||
           (qcode == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
@@ -432,7 +433,12 @@ public class StoreScanner extends NonLazyKeyValueScanner
             qcode = keyValueAggregator.nextAction(qcode);
           }
         }
-        switch(qcode) {
+        switch (qcode) {
+          case SEEK_TO_EXACT_KV:
+            KeyValue queriedKV = kv.createFirstOnRowColTS(Math.max(
+                matcher.tr.getMax() - 1, matcher.tr.getMin()));
+            reseek(queriedKV);
+            break;
           case SEEK_TO_EFFECTIVE_TS:
             reseek(matcher.getKeyForEffectiveTSOnRow(kv));
             break;
@@ -748,3 +754,4 @@ public class StoreScanner extends NonLazyKeyValueScanner
     return true;
   }
 }
+

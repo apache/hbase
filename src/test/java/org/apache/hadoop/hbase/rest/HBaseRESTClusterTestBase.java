@@ -78,7 +78,7 @@ public class HBaseRESTClusterTestBase extends HBaseClusterTestCase
     server.start();
       // get the port
     testServletPort = server.getConnectors()[0].getLocalPort();
-
+    
     LOG.info("started " + server.getClass().getName() + " on port " + 
       testServletPort);
   }

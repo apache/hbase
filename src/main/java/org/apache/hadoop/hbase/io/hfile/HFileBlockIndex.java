@@ -610,7 +610,7 @@ public class HFileBlockIndex {
      * what was written into the root level by
      * {@link BlockIndexWriter#writeIndexBlocks(FSDataOutputStream)} at the
      * offset that function returned.
-     *
+     * 
      * @param in the buffered input stream or wrapped byte input stream
      * @param numEntries the number of root-level index entries
      * @throws IOException
@@ -636,7 +636,7 @@ public class HFileBlockIndex {
      * Read the root-level metadata of a multi-level block index. Based on
      * {@link #readRootIndex(DataInput, int)}, but also reads metadata
      * necessary to compute the mid-key in a multi-level index.
-     *
+     * 
      * @param in the buffered or byte input stream to read from
      * @param numEntries the number of root-level index entries
      * @throws IOException

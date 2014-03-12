@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.executor.HBaseExecutorService;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
@@ -233,14 +234,14 @@ public class HMaster extends HasThread implements HMasterInterface,
   private volatile boolean isActiveMaster = false;
 
   public ThreadPoolExecutor logSplitThreadPool;
-  
+
   public RegionPlacementPolicy regionPlacement;
 
   /** Log directories split on startup for testing master failover */
   private List<String> logDirsSplitOnStartup;
 
   private boolean shouldAssignRegionsWithFavoredNodes = false;
-  
+
   /**
    * The number of dead server log split requests received. This is not
    * incremented during log splitting on startup. This field is never
@@ -252,12 +253,14 @@ public class HMaster extends HasThread implements HMasterInterface,
   private String stopReason = "not stopping";
 
   private ZKClusterStateRecovery clusterStateRecovery;
-  
+
   private AtomicBoolean isLoadBalancerDisabled = new AtomicBoolean(false);
 
   private ConfigurationManager configurationManager =
       new ConfigurationManager();
-  
+
+  protected boolean useThrift = false;
+
   private long schemaChangeTryLockTimeoutMs;
 
   /**
@@ -296,6 +299,14 @@ public class HMaster extends HasThread implements HMasterInterface,
         10 * 1000);
 
     this.sleeper = new Sleeper(this.threadWakeFrequency, getStopper());
+
+    /**
+     * Overriding the useThrift parameter depending upon the configuration.
+     * We set CLIENT_TO_RS_USE_THRIFT to MASTER_TO_RS_USE_THRIFT_STRING
+     */
+    this.useThrift = conf.getBoolean(HConstants.MASTER_TO_RS_USE_THRIFT,
+        HConstants.MASTER_TO_RS_USE_THRIFT_DEFAULT);
+    conf.setBoolean(HConstants.CLIENT_TO_RS_USE_THRIFT, this.useThrift);
     this.connection = ServerConnectionManager.getConnection(conf);
 
     // hack! Maps DFSClient => Master for logs.  HDFS made this
@@ -357,12 +368,13 @@ public class HMaster extends HasThread implements HMasterInterface,
 
     final String masterName = getServerName();
     // initialize the thread pool for non-distributed log splitting.
-    int maxSplitLogThread = 
+    int maxSplitLogThread =
       conf.getInt("hbase.master.splitLogThread.max", 1000);
     logSplitThreadPool = Threads.getBoundedCachedThreadPool(
         maxSplitLogThread, 30L, TimeUnit.SECONDS,
         new ThreadFactory() {
           private int count = 1;
+          @Override
           public Thread newThread(Runnable r) {
             Thread t = new Thread(r, masterName + "-LogSplittingThread" + "-"
                 + count++);
@@ -373,7 +385,7 @@ public class HMaster extends HasThread implements HMasterInterface,
         });
 
     regionPlacement = new RegionPlacement(this.conf);
-    
+
     // Only read favored nodes if using the assignment-based load balancer.
     this.shouldAssignRegionsWithFavoredNodes = conf.getClass(
         HConstants.LOAD_BALANCER_IMPL, Object.class).equals(
@@ -398,17 +410,20 @@ public class HMaster extends HasThread implements HMasterInterface,
       tableLockManager = null;
     }
   }
-  
+
+  @Override
   public void enableLoadBalancer() {
     this.isLoadBalancerDisabled.set(false);
     LOG.info("Enable the load balancer");
   }
-  
+
+  @Override
   public void disableLoadBalancer() {
     this.isLoadBalancerDisabled.set(true);
     LOG.info("Disable the load balancer");
   }
-  
+
+  @Override
   public boolean isLoadBalancerDisabled() {
     return this.isLoadBalancerDisabled.get();
   }
@@ -440,7 +455,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     // directory is complete, they will be queued for further processing.
     unassignedWatcher = new ZKUnassignedWatcher(this);
   }
-  
+
   /**
    * @return true if successfully became primary master
    */
@@ -845,7 +860,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     if (!isStopped()) {
       clusterStateRecovery.backgroundRecoverRegionStateFromZK();
     }
-    
+
     try {
       /* Main processing loop */
       FINISHED: while (!this.closed.get()) {
@@ -1158,7 +1173,7 @@ public class HMaster extends HasThread implements HMasterInterface,
       splitCount += contentSummary.getFileCount();
       splitLogSize += contentSummary.getSpaceConsumed();
     }
-    if (logDirs.size() == 0) {
+    if (logDirs.isEmpty()) {
       LOG.info("No logs to split");
       this.metrics.addSplit(0, 0, 0);
       return;
@@ -1308,7 +1323,7 @@ public class HMaster extends HasThread implements HMasterInterface,
   }
 
   void updateLastFlushedSequenceIds(HServerInfo serverInfo) {
-    SortedMap<byte[], Long> flushedSequenceIds = serverInfo.getFlushedSequenceIdByRegion();
+    SortedMap<byte[], Long> flushedSequenceIds = (SortedMap<byte[], Long>) serverInfo.getFlushedSequenceIdByRegion();
     for (Entry<byte[], Long> entry : flushedSequenceIds.entrySet()) {
       Long existingValue = flushedSequenceIdByRegion.get(entry.getKey());
       if (existingValue != null) {
@@ -1359,6 +1374,7 @@ public class HMaster extends HasThread implements HMasterInterface,
    * Request a shutdown the whole HBase cluster. This only modifies state
    * flags in memory and in ZK, so it is safe to be called multiple times.
    */
+  @Override
   public void requestClusterShutdown() {
     if (!clusterShutdownRequested.compareAndSet(false, true)) {
       // Only request cluster shutdown once.
@@ -1372,7 +1388,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     stopped = true;
     stopReason = "cluster shutdown";
   }
-  
+
   /** Shutdown the cluster quickly, don't quiesce regionservers */
   private void shutdownClusterNow() {
     closed.set(true);
@@ -1462,7 +1478,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     } catch (TableExistsException e) {
       throw e;
     } catch (IOException e) {
-      LOG.error("Cannot create table " + desc.getNameAsString() + 
+      LOG.error("Cannot create table " + desc.getNameAsString() +
         " because of " + e.toString());
       throw RemoteExceptionHandler.checkIOException(e);
     }
@@ -1494,14 +1510,15 @@ public class HMaster extends HasThread implements HMasterInterface,
   }
 
   private static boolean tableExists(HRegionInterface srvr,
-    byte[] metaRegionName, String tableName)
-  throws IOException {
+      byte[] metaRegionName, String tableName)
+      throws IOException {
     byte[] firstRowInTable = Bytes.toBytes(tableName + ",,");
     Scan scan = new Scan(firstRowInTable);
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     long scannerid = srvr.openScanner(metaRegionName, scan);
     try {
-      Result data = srvr.next(scannerid);
+      Result data =
+          BaseScanner.getOneResultFromScanner(srvr, scannerid);
       if (data != null && data.size() > 0) {
         HRegionInfo info = Writables.getHRegionInfo(
           data.getValue(HConstants.CATALOG_FAMILY,
@@ -1557,7 +1574,8 @@ public class HMaster extends HasThread implements HMasterInterface,
     // created. Throw already-exists exception.
     MetaRegion m = regionManager.getFirstMetaRegionForRegion(newRegions[0]);
     byte [] metaRegionName = m.getRegionName();
-    HRegionInterface srvr = this.connection.getHRegionConnection(m.getServer());
+    HRegionInterface srvr = this.connection.getHRegionConnection(m.getServer(),
+        true, new HBaseRPCOptions());
     if (tableExists(srvr, metaRegionName, tableName)) {
       throw new TableExistsException(tableName);
     }
@@ -1598,7 +1616,7 @@ public class HMaster extends HasThread implements HMasterInterface,
    * Get the assignment domain for the table.
    * Currently the domain would be generated by shuffling all the online
    * region servers.
-   * 
+   *
    * It would be easy to extend for the multi-tenancy in the future.
    * @param tableName
    * @return the assignment domain for the table.
@@ -1629,7 +1647,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     domain.addServers(servers);
     return domain;
   }
-  
+
   @Override
   public void deleteTable(final byte [] tableName) throws IOException {
     lockTable(tableName, "delete");
@@ -1682,6 +1700,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     alterTable(tableName, columnAdditions, columnModifications, columnDeletions, waitInterval, maxClosedRegions);
   }
 
+  @Override
   public Pair<Integer, Integer> getAlterStatus(byte [] tableName)
       throws IOException {
     Pair <Integer, Integer> p = new Pair<Integer, Integer>(0,0);
@@ -1838,6 +1857,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     return result.get();
   }
 
+  @SuppressWarnings("deprecation")
   Pair<HRegionInfo,HServerAddress> getTableRegionFromName(
       final byte [] regionName)
   throws IOException {
@@ -1865,6 +1885,7 @@ public class HMaster extends HasThread implements HMasterInterface,
    * @return Result
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   protected Result getFromMETA(final byte [] row, final byte [] family)
   throws IOException {
     MetaRegion meta = this.regionManager.getMetaRegionForRow(row);
@@ -2415,6 +2436,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     return numDeadServerLogSplitRequests.get();
   }
 
+  @Override
   public boolean isClusterShutdownRequested() {
     return clusterShutdownRequested.get();
   }
@@ -2422,7 +2444,7 @@ public class HMaster extends HasThread implements HMasterInterface,
   public StoppableMaster getStopper() {
     return this;
   }
-  
+
   public StopStatus getClosedStatus() {
     return new StopStatus() {
       @Override
@@ -2466,6 +2488,15 @@ public class HMaster extends HasThread implements HMasterInterface,
 
   public ConfigurationManager getConfigurationManager() {
     return configurationManager;
+  }
+
+  public static boolean useThriftMasterToRS(Configuration c) {
+    return c.getBoolean(HConstants.MASTER_TO_RS_USE_THRIFT,
+        HConstants.MASTER_TO_RS_USE_THRIFT_DEFAULT);
+  }
+
+  @Override
+  public void close() throws Exception {
   }
 }
 

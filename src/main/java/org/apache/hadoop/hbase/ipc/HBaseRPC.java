@@ -20,40 +20,38 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.Operation;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.util.ParamFormatHelper;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.security.UserGroupInformation;
-
-import org.codehaus.jackson.map.ObjectMapper;
-
-import javax.net.SocketFactory;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.net.SocketFactory;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.Operation;
+import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ParamFormatHelper;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.codehaus.jackson.map.ObjectMapper;
 
 /** A simple RPC mechanism.
  *
@@ -381,7 +379,7 @@ public class HBaseRPC {
         (VersionedProtocol) Proxy.newProxyInstance(
             protocol.getClassLoader(), new Class[]{protocol},
             new Invoker(addr, ticket, conf, factory, rpcTimeout, options));
-    
+
     Long serverVersion = versions.get (addr);
     if (serverVersion == null) {
       serverVersion = proxy.getProtocolVersion(protocol.getName(), clientVersion);
@@ -504,7 +502,7 @@ public class HBaseRPC {
       this(instance, conf,  bindAddress, port, 1, false);
     }
 
-    private static String classNameBase(String className) {
+    public static String classNameBase(String className) {
       String[] names = className.split("\\.", -1);
       if (names == null || names.length == 0) {
         return className;

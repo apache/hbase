@@ -20,19 +20,43 @@
 
 package org.apache.hadoop.hbase.rest.client;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.ResultScannerIterator;
+import org.apache.hadoop.hbase.client.RowLock;
+import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.rest.Constants;
-import org.apache.hadoop.hbase.rest.model.*;
+import org.apache.hadoop.hbase.rest.model.CellModel;
+import org.apache.hadoop.hbase.rest.model.CellSetModel;
+import org.apache.hadoop.hbase.rest.model.RowModel;
+import org.apache.hadoop.hbase.rest.model.ScannerModel;
+import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
-
-import java.io.IOException;
-import java.util.*;
 
 /**
  * HTable interface to remote tables accessed via REST gateway
@@ -190,14 +214,17 @@ public class RemoteHTable implements HTableInterface {
     this.sleepTime = conf.getLong("hbase.rest.client.sleep", 1000);
   }
 
+  @Override
   public byte[] getTableName() {
     return name.clone();
   }
 
+  @Override
   public Configuration getConfiguration() {
     return conf;
   }
 
+  @Override
   public HTableDescriptor getTableDescriptor() throws IOException {
     StringBuilder sb = new StringBuilder();
     sb.append('/');
@@ -228,14 +255,17 @@ public class RemoteHTable implements HTableInterface {
     throw new IOException("schema request timed out");
   }
 
+  @Override
   public void close() throws IOException {
     client.shutdown();
   }
 
+  @Override
   public Result[] get(List<Get> gets) throws IOException {
     throw new IOException("multi get is not supported here");
   }
 
+  @Override
   public Result get(Get get) throws IOException {
     TimeRange range = get.getTimeRange();
     String spec = buildRowSpec(get.getRow(), get.getFamilyMap(),
@@ -272,12 +302,14 @@ public class RemoteHTable implements HTableInterface {
     throw new IOException("get request timed out");
   }
 
+  @Override
   public boolean exists(Get get) throws IOException {
     LOG.warn("exists() is really get(), just use get()");
     Result result = get(get);
     return (result != null && !(result.isEmpty()));
   }
 
+  @Override
   public void put(Put put) throws IOException {
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();
@@ -308,6 +340,7 @@ public class RemoteHTable implements HTableInterface {
     throw new IOException("put request timed out");
   }
 
+  @Override
   public void put(List<Put> puts) throws IOException {
     // this is a trick: The gateway accepts multiple rows in a cell set and
     // ignores the row specification in the URI
@@ -365,6 +398,7 @@ public class RemoteHTable implements HTableInterface {
     throw new IOException("multiput request timed out");
   }
 
+  @Override
   public void delete(Delete delete) throws IOException {
     String spec = buildRowSpec(delete.getRow(), delete.getFamilyMap(),
       delete.getTimeStamp(), delete.getTimeStamp(), 1);
@@ -386,12 +420,14 @@ public class RemoteHTable implements HTableInterface {
     throw new IOException("delete request timed out");
   }
 
+  @Override
   public void delete(List<Delete> deletes) throws IOException {
     for (Delete delete: deletes) {
       delete(delete);
     }
   }
 
+  @Override
   public void flushCommits() throws IOException {
     // no-op
   }
@@ -475,45 +511,9 @@ public class RemoteHTable implements HTableInterface {
       return results[0];
     }
 
-    class Iter implements Iterator<Result> {
-
-      Result cache;
-
-      public Iter() {
-        try {
-          cache = Scanner.this.next();
-        } catch (IOException e) {
-          LOG.warn(StringUtils.stringifyException(e));
-        }
-      }
-
-      @Override
-      public boolean hasNext() {
-        return cache != null;
-      }
-
-      @Override
-      public Result next() {
-        Result result = cache;
-        try {
-          cache = Scanner.this.next();
-        } catch (IOException e) {
-          LOG.warn(StringUtils.stringifyException(e));
-          cache = null;
-        }
-        return result;
-      }
-
-      @Override
-      public void remove() {
-        throw new RuntimeException("remove() not supported");
-      }
-
-    }
-
     @Override
     public Iterator<Result> iterator() {
-      return new Iter();
+      return new ResultScannerIterator(this);
     }
 
     @Override
@@ -533,16 +533,19 @@ public class RemoteHTable implements HTableInterface {
 
   }
 
+  @Override
   public ResultScanner getScanner(Scan scan) throws IOException {
     return new Scanner(scan);
   }
 
+  @Override
   public ResultScanner getScanner(byte[] family) throws IOException {
     Scan scan = new Scan();
     scan.addFamily(family);
     return new Scanner(scan);
   }
 
+  @Override
   public ResultScanner getScanner(byte[] family, byte[] qualifier)
       throws IOException {
     Scan scan = new Scan();
@@ -550,38 +553,46 @@ public class RemoteHTable implements HTableInterface {
     return new Scanner(scan);
   }
 
+  @Override
   public boolean isAutoFlush() {
     return true;
   }
 
+  @Override
   public Result getRowOrBefore(byte[] row, byte[] family) throws IOException {
     throw new IOException("getRowOrBefore not supported");
   }
 
+  @Override
   public RowLock lockRow(byte[] row) throws IOException {
     throw new IOException("lockRow not implemented");
   }
 
+  @Override
   public void unlockRow(RowLock rl) throws IOException {
     throw new IOException("unlockRow not implemented");
   }
 
+  @Override
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Put put) throws IOException {
     throw new IOException("checkAndPut not supported");
   }
 
+  @Override
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Delete delete) throws IOException {
     throw new IOException("checkAndDelete not supported");
   }
 
 
+  @Override
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount) throws IOException {
     throw new IOException("incrementColumnValue not supported");
   }
 
+  @Override
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount, boolean writeToWAL) throws IOException {
     throw new IOException("incrementColumnValue not supported");
@@ -614,6 +625,7 @@ public class RemoteHTable implements HTableInterface {
     return null;
   }
 
+  @Override
   public Result[] batchGet(List<Get> actions) throws IOException {
     // TODO Auto-generated method stub
     throw new IOException("batchGet not supported");

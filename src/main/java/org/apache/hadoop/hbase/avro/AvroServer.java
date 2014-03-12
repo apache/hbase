@@ -135,7 +135,7 @@ public class AvroServer {
     // TODO(hammer): figure out appropriate setting of maxSize for htablePool
     /**
      * Constructs an HBaseImpl object.
-     *
+     * 
      * @throws MasterNotRunningException
      */
     HBaseImpl(Configuration conf) throws MasterNotRunningException {
@@ -251,7 +251,7 @@ public class AvroServer {
     // Table admin
     //
 
-    public Void createTable(ATableDescriptor table) throws AIOError,
+    public Void createTable(ATableDescriptor table) throws AIOError, 
                                                            AIllegalArgument,
                                                            ATableExists,
                                                            AMasterNotRunning {
@@ -313,7 +313,7 @@ public class AvroServer {
         throw ioe;
       }
     }
-
+    
     public Void disableTable(ByteBuffer table) throws AIOError {
       try {
 	admin.disableTable(Bytes.toBytes(table));
@@ -324,7 +324,7 @@ public class AvroServer {
         throw ioe;
       }
     }
-
+    
     // NB: Asynchronous operation
     public Void flush(ByteBuffer table) throws AIOError {
       try {
@@ -355,7 +355,7 @@ public class AvroServer {
 
     public Void addFamily(ByteBuffer table, AFamilyDescriptor family) throws AIOError {
       try {
-	admin.addColumn(Bytes.toBytes(table),
+	admin.addColumn(Bytes.toBytes(table), 
                         AvroUtil.afdToHCD(family));
 	return null;
       } catch (IOException e) {
@@ -404,7 +404,7 @@ public class AvroServer {
       try {
         return AvroUtil.resultToAResult(htable.get(AvroUtil.agetToGet(aget)));
       } catch (IOException e) {
-	AIOError ioe = new AIOError();
+    	AIOError ioe = new AIOError();
 	ioe.message = new Utf8(e.getMessage());
         throw ioe;
       } finally {
@@ -417,7 +417,7 @@ public class AvroServer {
       try {
         return htable.exists(AvroUtil.agetToGet(aget));
       } catch (IOException e) {
-	AIOError ioe = new AIOError();
+    	AIOError ioe = new AIOError();
 	ioe.message = new Utf8(e.getMessage());
         throw ioe;
       } finally {
@@ -445,7 +445,7 @@ public class AvroServer {
         htable.delete(AvroUtil.adeleteToDelete(adelete));
         return null;
       } catch (IOException e) {
-	AIOError ioe = new AIOError();
+    	AIOError ioe = new AIOError();
 	ioe.message = new Utf8(e.getMessage());
         throw ioe;
       } finally {
@@ -476,7 +476,7 @@ public class AvroServer {
         Scan scan = AvroUtil.ascanToScan(ascan);
         return addScanner(htable.getScanner(scan));
       } catch (IOException e) {
-	AIOError ioe = new AIOError();
+    	AIOError ioe = new AIOError();
 	ioe.message = new Utf8(e.getMessage());
         throw ioe;
       } finally {
@@ -488,7 +488,7 @@ public class AvroServer {
       try {
         ResultScanner scanner = getScanner(scannerId);
         if (scanner == null) {
-	  AIllegalArgument aie = new AIllegalArgument();
+      	  AIllegalArgument aie = new AIllegalArgument();
 	  aie.message = new Utf8("scanner ID is invalid: " + scannerId);
           throw aie;
         }
@@ -496,7 +496,7 @@ public class AvroServer {
         removeScanner(scannerId);
         return null;
       } catch (IOException e) {
-	AIOError ioe = new AIOError();
+    	AIOError ioe = new AIOError();
 	ioe.message = new Utf8(e.getMessage());
         throw ioe;
       }
@@ -506,14 +506,14 @@ public class AvroServer {
       try {
         ResultScanner scanner = getScanner(scannerId);
         if (scanner == null) {
-	  AIllegalArgument aie = new AIllegalArgument();
+      	  AIllegalArgument aie = new AIllegalArgument();
 	  aie.message = new Utf8("scanner ID is invalid: " + scannerId);
           throw aie;
         }
         Result[] results = null;
         return AvroUtil.resultsToAResults(scanner.next(numberOfRows));
       } catch (IOException e) {
-	AIOError ioe = new AIOError();
+    	AIOError ioe = new AIOError();
 	ioe.message = new Utf8(e.getMessage());
         throw ioe;
       }
@@ -527,7 +527,7 @@ public class AvroServer {
   private static void printUsageAndExit() {
     printUsageAndExit(null);
   }
-
+  
   private static void printUsageAndExit(final String message) {
     if (message != null) {
       System.err.println(message);
@@ -563,7 +563,7 @@ public class AvroServer {
           "bin/hbase-daemon.sh stop avro or send a kill signal to " +
           "the Avro server pid");
       }
-
+      
       // Print out usage if we get to here.
       printUsageAndExit();
     }

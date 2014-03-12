@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 
 /** Instantiated to modify table descriptor metadata */
 class ModifyTableMeta extends TableOperation {
@@ -52,7 +53,8 @@ class ModifyTableMeta extends TableOperation {
     HRegionInfo i)
   throws IOException {
     Put put = new Put(i.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, Writables.getBytes(i));
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(i));
     server.put(regionName, put);
     LOG.debug("updated HTableDescriptor for region " + i.getRegionNameAsString());
   }

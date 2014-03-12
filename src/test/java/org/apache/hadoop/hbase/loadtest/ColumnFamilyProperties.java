@@ -8,7 +8,7 @@ public class ColumnFamilyProperties {
   private static final Log LOG = LogFactory.getLog(ColumnFamilyProperties.class);
 
   public static int familyIndex = 1;
-
+  
   public String familyName;
   public int startTimestamp;
   public int endTimestamp;
@@ -32,7 +32,7 @@ public class ColumnFamilyProperties {
     LOG.info("Compression type: " + compressionType +  "\n\n");
   }
 
-  public static final String defaultColumnProperties =
+  public static final String defaultColumnProperties = 
     "\nReaderThreads=10" +
     "\nWriterThreads=10" +
     "\nStartKey=1" +
@@ -82,7 +82,7 @@ public class ColumnFamilyProperties {
     "";
 }
 
-/**
+/** 
 If creating an external file, you should use the following as a starting point and
 make whatever changes you want. It would be best not to omit any fields.
 

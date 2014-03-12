@@ -193,7 +193,7 @@ public class SplitLogWorker implements Runnable, Watcher {
     try {
       LOG.info("SplitLogWorker starting");
       this.watcher.createZNodeIfNotExists(this.watcher.splitLogZNode, new byte[0],
-          CreateMode.PERSISTENT, false /* set watch? */);
+          CreateMode.PERSISTENT, false /* set watch? */); 
       this.watcher.registerListener(this);
       int res;
       // the above creation might have failed. Don't proceed until someone

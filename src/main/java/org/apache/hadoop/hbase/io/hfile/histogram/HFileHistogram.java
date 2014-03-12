@@ -34,6 +34,10 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+
 /**
  * Captures histogram of statistics about the distribution of rows in the HFile.
  * This needs to be serialized onto the HFile.
@@ -43,6 +47,7 @@ public interface HFileHistogram {
    * This enum provides the set of additional stats the Histogram can store.
    * (TODO) manukranthk : Integrate HFileStats.
    */
+  @ThriftStruct
   public static enum HFileStat {
     KEYVALUECOUNT
   }
@@ -50,14 +55,19 @@ public interface HFileHistogram {
   public final String HFILEHISTOGRAM_BINCOUNT = "hfile.histogram.bin.count";
   public final int DEFAULT_HFILEHISTOGRAM_BINCOUNT = 100;
 
+  @ThriftStruct
   public static class Bucket implements Writable {
     private byte[] startRow;
     private byte[] endRow;
     private double numRows;
     private Map<HFileStat, Double> hfileStats;
 
-    private Bucket(byte[] startRow, byte[] endRow, double numRows,
-        Map<HFileStat, Double> hfileStats) {
+    @ThriftConstructor
+    public Bucket(
+        @ThriftField(1) byte[] startRow,
+        @ThriftField(2) byte[] endRow,
+        @ThriftField(3) double numRows,
+        @ThriftField(4) Map<HFileStat, Double> hfileStats) {
       this.startRow = startRow;
       this.endRow = endRow;
       this.numRows = numRows;
@@ -67,8 +77,38 @@ public interface HFileHistogram {
     public Bucket() {
     }
 
+    /**
+     * @return returns a copy of last.
+     */
+    @ThriftField(1)
+    public byte[] getStartRow() {
+      return Bytes.copyOfByteArray(this.startRow);
+    }
+
+    /**
+     * @return returns a copy of the endRow.
+     */
+    @ThriftField(2)
+    public byte[] getEndRow() {
+      return Bytes.copyOfByteArray(this.endRow);
+    }
+
+    @ThriftField(3)
+    /**
+     * Returns the number of rows in this bucket.
+     * @return
+     */
     public double getCount() {
       return numRows;
+    }
+
+    /**
+     * Returns the underlying map of HFileStats.
+     * @return
+     */
+    @ThriftField(4)
+    public Map<HFileStat, Double> getStatsMap() {
+      return this.hfileStats;
     }
 
     /**
@@ -80,19 +120,6 @@ public interface HFileHistogram {
       return this.hfileStats.get(HFileStat.KEYVALUECOUNT);
     }
 
-    /**
-     * @return returns a copy of the endRow
-     */
-    public byte[] getEndRow() {
-      return Bytes.copyOfByteArray(this.endRow);
-    }
-
-    /**
-     * @return returns a copy of last
-     */
-    public byte[] getStartRow() {
-      return Bytes.copyOfByteArray(this.startRow);
-    }
 
     @Override
     public void readFields(DataInput in) throws IOException {
@@ -238,16 +265,6 @@ public interface HFileHistogram {
   public Writable serialize();
 
   /**
-   * Composes a list of HFileHistograms and returns a HFileHistogram which is a
-   * merge of all the given Histograms. Assumes that the HFileHistogram objects
-   * in the list are of the same type as this object.
-   *
-   * @param histograms
-   * @return
-   */
-  public HFileHistogram compose(List<HFileHistogram> histograms);
-
-  /**
    * Method to deserialize the histogram from the HFile. This is the inverse of
    * the serialize function.
    *
@@ -260,4 +277,13 @@ public interface HFileHistogram {
   public HFileHistogram merge(HFileHistogram h2);
 
   public int getBinCount();
+
+  /**
+   * Creates a new instance of the same object as self.
+   *
+   * @param binCount
+   *          the number of binCount.
+   * @return a new instance of HFileHistogram object.
+   */
+  public HFileHistogram create(int binCount);
 }

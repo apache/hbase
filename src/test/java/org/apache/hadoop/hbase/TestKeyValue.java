@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.facebook.swift.codec.ThriftCodec;
+import com.facebook.swift.codec.ThriftCodecManager;
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
@@ -30,6 +32,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.thrift.transport.TMemoryBuffer;
 
 public class TestKeyValue extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
@@ -364,4 +368,16 @@ public class TestKeyValue extends TestCase {
         kv.toString().replaceAll("=[0-9]+$", "=0"));
   }
 
+  public void testSwiftSerDe() throws Exception {
+    ThriftCodec<KeyValue> codec =
+        new ThriftCodecManager().getCodec(KeyValue.class);
+    TMemoryBuffer transport = new TMemoryBuffer(10 * 1024);
+    TCompactProtocol protocol = new TCompactProtocol(transport);
+    KeyValue kv = new KeyValue(Bytes.toBytes("myRow"), Bytes.toBytes("myCF"),
+        Bytes.toBytes("myQualifier"), 12345L, Bytes.toBytes("myValue"));
+    codec.write(kv, protocol);
+    KeyValue kvCopy = codec.read(protocol);
+    assertEquals(kv, kvCopy);
+    assertEquals(kv.toString(), kvCopy.toString());
+  }
 }

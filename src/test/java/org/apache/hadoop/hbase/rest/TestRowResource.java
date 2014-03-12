@@ -128,7 +128,7 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
     return response;
   }
 
-  Response getValuePB(String table, String row, String column)
+  Response getValuePB(String table, String row, String column) 
       throws IOException {
     StringBuilder path = new StringBuilder();
     path.append('/');

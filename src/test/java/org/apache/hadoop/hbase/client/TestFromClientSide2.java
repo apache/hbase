@@ -100,7 +100,7 @@ public class TestFromClientSide2 {
 
     // table: row, family, c0:0, c1:1, ... , c7:7
     put = new Put(ROW);
-    for (int i=0; i < QUALIFIERS.length; i++) {
+    for (int i=0; i < QUALIFIERS.length; i++) { 
       KeyValue kv = new KeyValue(ROW, FAMILY, QUALIFIERS[i], i, VALUE);
       put.add(kv);
     }
@@ -146,14 +146,14 @@ public class TestFromClientSide2 {
     } else {
       scanner = ht.getScanner(scan);
     }
-
+    
     // First batch: c4:4, c5:5
     kvListExp = new ArrayList<KeyValue>();
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[4], 4, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[5], 5, VALUE));
     result = scanner.next();
     verifyResult(result, kvListExp, toLog, "Testing first batch of scan");
-
+    
     // Second batch: c6:6, c7:7
     kvListExp = new ArrayList<KeyValue>();
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[6], 6, VALUE));
@@ -169,7 +169,7 @@ public class TestFromClientSide2 {
    * @throws Exception
    */
   @Test
-  public void testGetMaxResults() throws Exception {
+  public void testGetMaxResults() throws Exception {    
     byte [] TABLE = Bytes.toBytes("testGetMaxResults");
     byte [][] FAMILIES = makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = makeNAscii(QUALIFIER, 20);
@@ -182,10 +182,10 @@ public class TestFromClientSide2 {
     boolean toLog = true;
     List<KeyValue> kvListExp;
 
-    kvListExp = new ArrayList<KeyValue>();
+    kvListExp = new ArrayList<KeyValue>();  
     // Insert one CF for row[0]
     put = new Put(ROW);
-    for (int i=0; i < 10; i++) {
+    for (int i=0; i < 10; i++) { 
       KeyValue kv = new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE);
       put.add(kv);
       kvListExp.add(kv);
@@ -220,14 +220,14 @@ public class TestFromClientSide2 {
     // Insert two more CF for row[0]
     // 20 columns for CF2, 10 columns for CF1
     put = new Put(ROW);
-    for (int i=0; i < QUALIFIERS.length; i++) {
+    for (int i=0; i < QUALIFIERS.length; i++) { 
       KeyValue kv = new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE);
       put.add(kv);
     }
     ht.put(put);
 
     put = new Put(ROW);
-    for (int i=0; i < 10; i++) {
+    for (int i=0; i < 10; i++) { 
       KeyValue kv = new KeyValue(ROW, FAMILIES[1], QUALIFIERS[i], 1, VALUE);
       put.add(kv);
     }
@@ -240,13 +240,13 @@ public class TestFromClientSide2 {
     result = ht.get(get);
     kvListExp = new ArrayList<KeyValue>();
     //Exp: CF1:q0, ..., q9, CF2: q0, q1, q10, q11, ..., q19
-    for (int i=0; i < 10; i++) {
+    for (int i=0; i < 10; i++) { 
       kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[i], 1, VALUE));
     }
-    for (int i=0; i < 2; i++) {
+    for (int i=0; i < 2; i++) { 
         kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
       }
-    for (int i=10; i < 20; i++) {
+    for (int i=10; i < 20; i++) { 
       kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
     }
     verifyResult(result, kvListExp, toLog, "Testing multiple CFs");
@@ -257,13 +257,13 @@ public class TestFromClientSide2 {
     get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, null, true));
     result = ht.get(get);
     kvListExp = new ArrayList<KeyValue>();
-    for (int i=2; i < 5; i++) {
+    for (int i=2; i < 5; i++) { 
       kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE));
     }
-    for (int i=2; i < 5; i++) {
+    for (int i=2; i < 5; i++) { 
       kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[i], 1, VALUE));
     }
-    for (int i=2; i < 5; i++) {
+    for (int i=2; i < 5; i++) { 
       kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
     }
     verifyResult(result, kvListExp, toLog, "Testing multiple CFs + CRF");
@@ -276,7 +276,7 @@ public class TestFromClientSide2 {
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[1], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[1], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[1], 1, VALUE));
-    for (int i=10; i < 16; i++) {
+    for (int i=10; i < 16; i++) { 
       kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
     }
     verifyResult(result, kvListExp, toLog, "Testing multiple CFs + PFF");
@@ -289,7 +289,7 @@ public class TestFromClientSide2 {
    * @throws Exception
    */
   @Test
-  public void testScanMaxResults() throws Exception {
+  public void testScanMaxResults() throws Exception {    
     byte [] TABLE = Bytes.toBytes("testScanLimit");
     byte [][] ROWS= makeNAscii(ROW, 2);
     byte [][] FAMILIES = makeNAscii(FAMILY, 3);
@@ -303,12 +303,12 @@ public class TestFromClientSide2 {
     boolean toLog = true;
     List<KeyValue> kvListExp, kvListScan;
 
-    kvListExp = new ArrayList<KeyValue>();
+    kvListExp = new ArrayList<KeyValue>();  
 
-    for (int r=0; r < ROWS.length; r++) {
+    for (int r=0; r < ROWS.length; r++) { 
       put = new Put(ROWS[r]);
-      for (int c=0; c < FAMILIES.length; c++) {
-        for (int q=0; q < QUALIFIERS.length; q++) {
+      for (int c=0; c < FAMILIES.length; c++) { 
+        for (int q=0; q < QUALIFIERS.length; q++) { 
           KeyValue kv = new KeyValue(ROWS[r], FAMILIES[c], QUALIFIERS[q], 1, VALUE);
           put.add(kv);
           if (q < 4) {
@@ -322,7 +322,7 @@ public class TestFromClientSide2 {
     scan = new Scan();
     scan.setMaxResultsPerColumnFamily(4);
     ResultScanner scanner = ht.getScanner(scan);
-    kvListScan = new ArrayList<KeyValue>();
+    kvListScan = new ArrayList<KeyValue>();      
     while ((result = scanner.next()) != null) {
       for (KeyValue kv : result.list()) {
         kvListScan.add(kv);
@@ -459,5 +459,5 @@ public class TestFromClientSide2 {
     }
     return ret;
   }
-
+  
 }

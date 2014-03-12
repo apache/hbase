@@ -109,7 +109,7 @@ public class SplitLogManager implements Watcher {
   private ConcurrentMap<String, Task> tasks =
     new ConcurrentHashMap<String, Task>();
   private TimeoutMonitor timeoutMonitor;
-
+  
   private Set<String> deadServers = null;
   private Object deadServersLock = new Object();
 
@@ -119,7 +119,7 @@ public class SplitLogManager implements Watcher {
    * copying recovered edits to their final destination. The task finisher
    * has to be robust because it can be arbitrarily restarted or called
    * multiple times.
-   *
+   * 
    * @param zkw
    * @param conf
    * @param stopper
@@ -155,13 +155,13 @@ public class SplitLogManager implements Watcher {
    * @param conf
    * @param stopper
    * @param serverName
-   * @param tf task finisher
+   * @param tf task finisher 
    */
   public SplitLogManager(ZooKeeperWrapper zkw, Configuration conf,
       Stoppable stopper, String serverName, TaskFinisher tf) {
     this.watcher = zkw;
     this.watcher.createZNodeIfNotExists(this.watcher.splitLogZNode, new byte[0],
-        CreateMode.PERSISTENT, false /* set watch? */);
+        CreateMode.PERSISTENT, false /* set watch? */); 
     this.taskFinisher = tf;
     this.conf = conf;
     this.stopper = stopper;
@@ -702,7 +702,7 @@ public class SplitLogManager implements Watcher {
       return oldtask;
     }
   }
-
+  
   Task findOrCreateOrphanTask(String path) {
     Task orphanTask = new Task();
     Task task;
@@ -842,7 +842,7 @@ public class SplitLogManager implements Watcher {
     public void heartbeatNoDetails(long time) {
       last_update = time;
     }
-
+    
     public void heartbeat(long time, int version, String server, String worker) {
       last_version = version;
       last_update = time;
@@ -862,7 +862,7 @@ public class SplitLogManager implements Watcher {
       last_update = -1;
     }
   }
-
+  
   public void handleDeadServer(String server_name) {
     // resubmit the tasks on the TimeoutMonitor thread. Makes it easier
     // to reason about concurrency. Makes it easier to retry.
@@ -1085,7 +1085,7 @@ public class SplitLogManager implements Watcher {
           // Therefore, we just bail out in this case.
           LOG.error("ZK session expired, cannot delete " + path + ". Master must be killed " +
               "in this case.");
-          return;
+          return; 
         }
         if (rc != KeeperException.Code.NONODE.intValue()) {
           tot_mgr_node_delete_err.incrementAndGet();
@@ -1187,7 +1187,7 @@ public class SplitLogManager implements Watcher {
     TerminationStatus(String msg) {
       statusMsg = msg;
     }
-
+    
     @Override
     public String toString() {
       return statusMsg;

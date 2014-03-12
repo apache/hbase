@@ -73,7 +73,7 @@ public class ImportTsv {
     private final byte separatorByte;
 
     private int rowKeyColumnIndex;
-
+    
     public static String ROWKEY_COLUMN_SPEC="HBASE_ROW_KEY";
 
     /**
@@ -90,7 +90,7 @@ public class ImportTsv {
       // Configure columns
       ArrayList<String> columnStrings = Lists.newArrayList(
         Splitter.on(',').trimResults().split(columnsSpecification));
-
+      
       families = new byte[columnStrings.size()][];
       qualifiers = new byte[columnStrings.size()][];
 
@@ -110,7 +110,7 @@ public class ImportTsv {
         }
       }
     }
-
+    
     public int getRowKeyColumnIndex() {
       return rowKeyColumnIndex;
     }
@@ -120,7 +120,7 @@ public class ImportTsv {
     public byte[] getQualifier(int idx) {
       return qualifiers[idx];
     }
-
+    
     public ParsedLine parse(byte[] lineBytes, int length)
     throws BadTsvLineException {
       // Enumerate separator offsets
@@ -137,16 +137,16 @@ public class ImportTsv {
 
       return new ParsedLine(tabOffsets, lineBytes);
     }
-
+    
     class ParsedLine {
       private final ArrayList<Integer> tabOffsets;
       private byte[] lineBytes;
-
+      
       ParsedLine(ArrayList<Integer> tabOffsets, byte[] lineBytes) {
         this.tabOffsets = tabOffsets;
         this.lineBytes = lineBytes;
       }
-
+      
       public int getRowKeyOffset() {
         return getColumnOffset(rowKeyColumnIndex);
       }
@@ -158,7 +158,7 @@ public class ImportTsv {
           return tabOffsets.get(idx - 1) + 1;
         else
           return 0;
-      }
+      }      
       public int getColumnLength(int idx) {
         return tabOffsets.get(idx) - getColumnOffset(idx);
       }
@@ -169,7 +169,7 @@ public class ImportTsv {
         return lineBytes;
       }
     }
-
+    
     public static class BadTsvLineException extends Exception {
       public BadTsvLineException(String err) {
         super(err);
@@ -177,14 +177,14 @@ public class ImportTsv {
       private static final long serialVersionUID = 1L;
     }
   }
-
+  
   /**
    * Write table content out to files in hdfs.
    */
   static class TsvImporter
   extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
   {
-
+    
     /** Timestamp for all inserted rows */
     private long ts;
 
@@ -288,9 +288,9 @@ public class ImportTsv {
       TableMapReduceUtil.initTableReducerJob(tableName, null, job);
       job.setNumReduceTasks(0);
     }
-
+    
     TableMapReduceUtil.addDependencyJars(job);
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), 
         com.google.common.base.Function.class /* Guava used by TsvParser */);
     return job;
   }
@@ -302,7 +302,7 @@ public class ImportTsv {
     if (errorMsg != null && errorMsg.length() > 0) {
       System.err.println("ERROR: " + errorMsg);
     }
-    String usage =
+    String usage = 
       "Usage: " + NAME + " -Dimporttsv.columns=a,b,c <tablename> <inputdir>\n" +
       "\n" +
       "Imports the given input directory of TSV data into the specified table.\n" +

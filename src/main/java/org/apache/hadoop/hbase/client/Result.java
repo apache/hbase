@@ -20,15 +20,21 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.KeyValue;
@@ -38,6 +44,10 @@ import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.ipc.HBaseClient;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
+
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
 
 /**
  * Single row result of a {@link Get} or {@link Scan} query.<p>
@@ -64,40 +74,50 @@ import org.apache.hadoop.io.Writable;
  * through {@link KeyValue#getRow()}, {@link KeyValue#getFamily()}, {@link KeyValue#getQualifier()},
  * {@link KeyValue#getTimestamp()}, and {@link KeyValue#getValue()}.
  */
+@ThriftStruct
 public class Result implements Writable, WritableWithSize {
   private static final byte RESULT_VERSION = (byte)1;
 
-  private KeyValue [] kvs = null;
+  private KeyValue[] kvs = null;
   private NavigableMap<byte[],
      NavigableMap<byte[], NavigableMap<Long, byte[]>>> familyMap = null;
   // We're not using java serialization.  Transient here is just a marker to say
   // that this is where we cache row if we're ever asked for it.
-  private transient byte [] row = null;
+  private transient byte[] row = null;
   private ImmutableBytesWritable bytes = null;
 
   /**
    * Constructor used for Writable.
    */
-  public Result() {}
+  public Result() {
+    this.kvs = EMPTY_KEY_VALUE_ARRAY;
+  }
 
   /**
    * Instantiate a Result with the specified array of KeyValues.
    * @param kvs array of KeyValues
    */
-  public Result(KeyValue [] kvs) {
+  public Result(KeyValue[] kvs) {
     if(kvs != null && kvs.length > 0) {
       this.kvs = kvs;
     }
   }
 
   private static final KeyValue[] EMPTY_KEY_VALUE_ARRAY = new KeyValue[0];
+  public static final Result SENTINEL_RESULT = new Result();
+  public static final Result[] SENTINEL_RESULT_ARRAY =
+      new Result[] { SENTINEL_RESULT };
 
   /**
+   * Thrift constructor
    * Instantiate a Result with the specified List of KeyValues.
    * @param kvs List of KeyValues
    */
-  public Result(List<KeyValue> kvs) {
-    this(kvs.toArray(EMPTY_KEY_VALUE_ARRAY));
+  @ThriftConstructor
+  public Result(@ThriftField(1) List<KeyValue> kvs) {
+    if(kvs != null) {
+      this.kvs = kvs.toArray(new KeyValue[kvs.size()]);
+    }
   }
 
   /**
@@ -112,7 +132,7 @@ public class Result implements Writable, WritableWithSize {
    * Method for retrieving the row that this result is for
    * @return row
    */
-  public synchronized byte [] getRow() {
+  public synchronized byte[] getRow() {
     if (this.row == null) {
       if(this.kvs == null) {
         readFields();
@@ -181,7 +201,7 @@ public class Result implements Writable, WritableWithSize {
       (Bytes.BYTES_COMPARATOR);
     for(KeyValue kv : this.kvs) {
       SplitKeyValue splitKV = kv.split();
-      byte [] family = splitKV.getFamily();
+      byte[] family = splitKV.getFamily();
       NavigableMap<byte[], NavigableMap<Long, byte[]>> columnMap =
         familyMap.get(family);
       if(columnMap == null) {
@@ -189,10 +209,11 @@ public class Result implements Writable, WritableWithSize {
           (Bytes.BYTES_COMPARATOR);
         familyMap.put(family, columnMap);
       }
-      byte [] qualifier = splitKV.getQualifier();
+      byte[] qualifier = splitKV.getQualifier();
       NavigableMap<Long, byte[]> versionMap = columnMap.get(qualifier);
       if(versionMap == null) {
         versionMap = new TreeMap<Long, byte[]>(new Comparator<Long>() {
+          @Override
           public int compare(Long l1, Long l2) {
             return l2.compareTo(l1);
           }
@@ -200,18 +221,52 @@ public class Result implements Writable, WritableWithSize {
         columnMap.put(qualifier, versionMap);
       }
       Long timestamp = Bytes.toLong(splitKV.getTimestamp());
-      byte [] value = splitKV.getValue();
+      byte[] value = splitKV.getValue();
       versionMap.put(timestamp, value);
     }
     return this.familyMap;
   }
 
   /**
+   * Searches for the latest version of a value with specified family and
+   * qualifier.
+   *
+   * This method calls getValue if familyMap has been established.
+   * Otherwise, it performs a linear search over the whole kv-list at that time.
+   *
+   * @param family
+   *          the family name.
+   * @param qualifier
+   *          the qualifier name.
+   * @return the value if found, nil if not.
+   */
+  public byte[] searchValue(byte[] family, byte[] qualifier) {
+    if (this.familyMap != null) {
+      return this.getValue(family, qualifier);
+    }
+    byte[] res = null;
+    long timeStamp = -1;
+    for (KeyValue kv : this.kvs) {
+
+      if (kv.matchingFamily(family) && kv.matchingQualifier(qualifier)) {
+        long kvTimestamp = kv.getTimestamp();
+        if (kvTimestamp > timeStamp) {
+          timeStamp = kvTimestamp;
+          res = kv.getValue();
+        }
+      }
+    }
+    return res;
+  }
+
+  /**
    * Map of families to their most recent qualifiers and values.
    * <p>
-   * Returns a two level Map of the form: <code>Map<family,Map&lt;qualifier,value>></code>
+   * Returns a two level Map of the form:
+   * <code>Map<family,Map&lt;qualifier,value>></code>
    * <p>
    * The most recent version of each qualifier will be used.
+   *
    * @return map from families to qualifiers and value
    */
   public NavigableMap<byte[], NavigableMap<byte[], byte[]>> getNoVersionMap() {
@@ -229,7 +284,7 @@ public class Result implements Writable, WritableWithSize {
         new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
       for(Map.Entry<byte[], NavigableMap<Long, byte[]>> qualifierEntry :
         familyEntry.getValue().entrySet()) {
-        byte [] value =
+        byte[] value =
           qualifierEntry.getValue().get(qualifierEntry.getValue().firstKey());
         qualifierMap.put(qualifierEntry.getKey(), value);
       }
@@ -245,7 +300,7 @@ public class Result implements Writable, WritableWithSize {
    * @param family column family to get
    * @return map of qualifiers to values
    */
-  public NavigableMap<byte[], byte[]> getFamilyMap(byte [] family) {
+  public NavigableMap<byte[], byte[]> getFamilyMap(byte[] family) {
     if(this.familyMap == null) {
       getMap();
     }
@@ -261,7 +316,7 @@ public class Result implements Writable, WritableWithSize {
     }
     for(Map.Entry<byte[], NavigableMap<Long, byte[]>> entry :
       qualifierMap.entrySet()) {
-      byte [] value =
+      byte[] value =
         entry.getValue().get(entry.getValue().firstKey());
       returnMap.put(entry.getKey(), value);
     }
@@ -296,7 +351,7 @@ public class Result implements Writable, WritableWithSize {
    * @param qualifier
    * @return KeyValue for the column or null
    */
-  public KeyValue getColumnLatest(byte [] family, byte [] qualifier) {
+  public KeyValue getColumnLatest(byte[] family, byte[] qualifier) {
     KeyValue [] kvs = raw(); // side effect possibly.
     if (kvs == null || kvs.length == 0) {
       return null;
@@ -318,22 +373,22 @@ public class Result implements Writable, WritableWithSize {
    * @param qualifier column qualifier
    * @return value of latest version of column, null if none found
    */
-  public byte [] getValue(byte [] family, byte [] qualifier) {
+  public byte[] getValue(byte[] family, byte[] qualifier) {
     Map.Entry<Long,byte[]> entry = getKeyValue(family, qualifier);
     return entry == null? null: entry.getValue();
   }
 
-  /**
-   * Get the latest time stamp.
-   * @param family family name
-   * @param qualifier column qualifier
-   * @return the latest time stamp
-   */
-  public long getLastestTimeStamp(byte [] family, byte [] qualifier) {
-    Map.Entry<Long,byte[]> entry = getKeyValue(family, qualifier);
-    return entry == null? Long.MIN_VALUE: entry.getKey();
+  /** 
+   * Get the latest time stamp. 
+   * @param family family name  
+   * @param qualifier column qualifier  
+   * @return the latest time stamp  
+   */ 
+  public long getLastestTimeStamp(byte[] family, byte[] qualifier) {
+    Map.Entry<Long,byte[]> entry = getKeyValue(family, qualifier);  
+    return entry == null? Long.MIN_VALUE: entry.getKey(); 
   }
-
+  
   private Map.Entry<Long,byte[]> getKeyValue(byte[] family, byte[] qualifier) {
     if(this.familyMap == null) {
       getMap();
@@ -341,7 +396,7 @@ public class Result implements Writable, WritableWithSize {
     if(isEmpty()) {
       return null;
     }
-    NavigableMap<byte [], NavigableMap<Long, byte[]>> qualifierMap =
+    NavigableMap<byte[], NavigableMap<Long, byte[]>> qualifierMap =
       familyMap.get(family);
     if(qualifierMap == null) {
       return null;
@@ -355,7 +410,7 @@ public class Result implements Writable, WritableWithSize {
   }
 
   private NavigableMap<Long, byte[]> getVersionMap(
-      NavigableMap<byte [], NavigableMap<Long, byte[]>> qualifierMap, byte [] qualifier) {
+      NavigableMap<byte[], NavigableMap<Long, byte[]>> qualifierMap, byte[] qualifier) {
     return qualifier != null?
       qualifierMap.get(qualifier): qualifierMap.get(new byte[0]);
   }
@@ -366,14 +421,14 @@ public class Result implements Writable, WritableWithSize {
    * @param qualifier column qualifier
    * @return true if at least one value exists in the result, false if not
    */
-  public boolean containsColumn(byte [] family, byte [] qualifier) {
+  public boolean containsColumn(byte[] family, byte[] qualifier) {
     if(this.familyMap == null) {
       getMap();
     }
     if(isEmpty()) {
       return false;
     }
-    NavigableMap<byte [], NavigableMap<Long, byte[]>> qualifierMap =
+    NavigableMap<byte[], NavigableMap<Long, byte[]>> qualifierMap =
       familyMap.get(family);
     if(qualifierMap == null) {
       return false;
@@ -386,7 +441,7 @@ public class Result implements Writable, WritableWithSize {
    * Returns the value of the first column in the Result.
    * @return value of the first column
    */
-  public byte [] value() {
+  public byte[] value() {
     if (isEmpty()) {
       return null;
     }
@@ -402,6 +457,20 @@ public class Result implements Writable, WritableWithSize {
    * @return pointer to raw binary of Result
    */
   public ImmutableBytesWritable getBytes() {
+    if (this.bytes == null) {
+      Result[] res = new Result[1];
+      res[0] = this;
+      ByteArrayOutputStream stream = new ByteArrayOutputStream();
+      DataOutputStream out = new DataOutputStream(stream);
+      try {
+        writeArray(out, res);
+        DataInput in = new DataInputStream(
+            new ByteArrayInputStream(stream.toByteArray()));
+        this.bytes = readArray(in)[0].bytes;
+      } catch (IOException e) {
+        return null;
+      }
+    }
     return this.bytes;
   }
 
@@ -413,6 +482,17 @@ public class Result implements Writable, WritableWithSize {
     if(this.kvs == null) {
       readFields();
     }
+    return this.kvs == null || this.kvs.length == 0;
+  }
+
+  /**
+   * Returns if this is a sentinel result, a place-holder for a null result.
+   * Should be used in in the Thrift channel only i.e. HBaseToThriftAdapter.
+   * This function does not handle the lazy loading using this.bytes which
+   * happens on the HadoopRPC side.
+   * @return
+   */
+  public boolean isSentinelResult() {
     return this.kvs == null || this.kvs.length == 0;
   }
 
@@ -452,6 +532,7 @@ public class Result implements Writable, WritableWithSize {
   }
 
   //Writable
+  @Override
   public void readFields(final DataInput in)
   throws IOException {
     familyMap = null;
@@ -462,7 +543,7 @@ public class Result implements Writable, WritableWithSize {
       bytes = null;
       return;
     }
-    byte [] raw = new byte[totalBuffer];
+    byte[] raw = new byte[totalBuffer];
     HBaseClient.readFromSocket(in, raw, 0, totalBuffer);
     bytes = new ImmutableBytesWritable(raw, 0, totalBuffer);
   }
@@ -473,7 +554,7 @@ public class Result implements Writable, WritableWithSize {
       this.kvs = new KeyValue[0];
       return;
     }
-    byte [] buf = bytes.get();
+    byte[] buf = bytes.get();
     int offset = bytes.getOffset();
     int finalOffset = bytes.getSize() + offset;
     List<KeyValue> kvs = new ArrayList<KeyValue>();
@@ -486,6 +567,7 @@ public class Result implements Writable, WritableWithSize {
     this.kvs = kvs.toArray(new KeyValue[kvs.size()]);
   }
 
+  @Override
   public long getWritableSize() {
     if (isEmpty())
       return Bytes.SIZEOF_INT; // int size = 0
@@ -500,6 +582,7 @@ public class Result implements Writable, WritableWithSize {
     return size;
   }
 
+  @Override
   public void write(final DataOutput out)
   throws IOException {
     if(isEmpty()) {
@@ -592,7 +675,7 @@ public class Result implements Writable, WritableWithSize {
     }
     Result [] results = new Result[numResults];
     int bufSize = in.readInt();
-    byte [] buf = new byte[bufSize];
+    byte[] buf = new byte[bufSize];
     int offset = 0;
     for(int i=0;i<numResults;i++) {
       int numKeys = in.readInt();
@@ -615,4 +698,40 @@ public class Result implements Writable, WritableWithSize {
     }
     return results;
   }
+
+  /**
+   * Returns a copy of the kv-list.
+   * @return a copy of the kv-list.
+   */
+  @ThriftField(1)
+  public List<KeyValue> getKvs() {
+    List<KeyValue> listToReturn = new ArrayList<KeyValue>(kvs.length);
+    Collections.addAll(listToReturn, kvs);
+    return listToReturn;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(kvs);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    Result other = (Result) obj;
+    if (bytes == null) {
+      if (other.bytes != null)
+        return false;
+    }
+    if (!Arrays.equals(kvs, other.kvs))
+      return false;
+    return true;
+  }
+
+
 }

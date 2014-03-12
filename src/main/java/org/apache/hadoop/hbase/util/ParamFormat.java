@@ -42,3 +42,4 @@ public @interface ParamFormat {
    */
   FormatTypes formatType() default FormatTypes.DEFAULT;
 }
+

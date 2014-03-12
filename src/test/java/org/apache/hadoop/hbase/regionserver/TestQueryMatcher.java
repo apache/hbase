@@ -53,6 +53,7 @@ public class TestQueryMatcher extends HBaseTestCase {
   long ttl = Long.MAX_VALUE;
   KeyComparator rowComparator;
   private Scan scan;
+  public static final boolean USE_BLOOM_DEL_COLFILTER = false;
 
   public void setUp() throws Exception {
     super.setUp();
@@ -97,7 +98,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     // 2,4,5
     ScanQueryMatcher qm =
         new ScanQueryMatcher(scan, fam2, get.getFamilyMap().get(fam2),
-            rowComparator, 1, EnvironmentEdgeManager.currentTimeMillis() - ttl);
+            rowComparator, 1, EnvironmentEdgeManager.currentTimeMillis() - ttl, USE_BLOOM_DEL_COLFILTER);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, 1, data));
@@ -112,7 +113,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     qm.setRow(memstore.get(0).getRow());
 
     for (KeyValue kv : memstore){
-      actual.add(qm.match(kv));
+      actual.add(qm.match(kv, null));
     }
 
     assertEquals(expected.size(), actual.size());
@@ -141,7 +142,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     expected.add(ScanQueryMatcher.MatchCode.DONE);
 
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, fam2, null, rowComparator,
-        1, EnvironmentEdgeManager.currentTimeMillis() - ttl);
+        1, EnvironmentEdgeManager.currentTimeMillis() - ttl, USE_BLOOM_DEL_COLFILTER);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, 1, data));
@@ -156,7 +157,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     qm.setRow(memstore.get(0).getRow());
 
     for(KeyValue kv : memstore) {
-      actual.add(qm.match(kv));
+      actual.add(qm.match(kv, null));
     }
 
     assertEquals(expected.size(), actual.size());
@@ -194,7 +195,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     ScanQueryMatcher qm =
         new ScanQueryMatcher(scan, fam2, get.getFamilyMap().get(fam2),
             rowComparator, 1, EnvironmentEdgeManager.currentTimeMillis()
-                - testTTL);
+                - testTTL, USE_BLOOM_DEL_COLFILTER);
 
     long now = System.currentTimeMillis();
     KeyValue [] kvs = new KeyValue[] {
@@ -210,7 +211,7 @@ public class TestQueryMatcher extends HBaseTestCase {
 
     List<MatchCode> actual = new ArrayList<MatchCode>(kvs.length);
     for (KeyValue kv : kvs) {
-      actual.add( qm.match(kv) );
+      actual.add( qm.match(kv, null) );
     }
 
     assertEquals(expected.length, actual.size());
@@ -247,7 +248,7 @@ public class TestQueryMatcher extends HBaseTestCase {
 
     ScanQueryMatcher qm =
         new ScanQueryMatcher(scan, fam2, null, rowComparator, 1,
-            EnvironmentEdgeManager.currentTimeMillis() - testTTL);
+            EnvironmentEdgeManager.currentTimeMillis() - testTTL, USE_BLOOM_DEL_COLFILTER);
 
     long now = System.currentTimeMillis();
     KeyValue [] kvs = new KeyValue[] {
@@ -262,7 +263,7 @@ public class TestQueryMatcher extends HBaseTestCase {
 
     List<ScanQueryMatcher.MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>(kvs.length);
     for (KeyValue kv : kvs) {
-      actual.add( qm.match(kv) );
+      actual.add( qm.match(kv, null) );
     }
 
     assertEquals(expected.length, actual.size());

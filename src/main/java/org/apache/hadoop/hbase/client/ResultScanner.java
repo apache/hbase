@@ -30,9 +30,12 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
 
   /**
    * Grab the next row's worth of values. The scanner will return a Result.
+   * The caller may call this method even if the scanner is closed.
+   *
    * @return Result object if there is another row, null if the scanner is
-   * exhausted.
-   * @throws IOException e
+   *         exhausted.
+   * @throws IOException
+   *           e
    */
   public Result next() throws IOException;
 
@@ -41,11 +44,12 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
    * @return Between zero and <param>nbRows</param> Results
    * @throws IOException e
    */
-  public Result [] next(int nbRows) throws IOException;
+  public Result[] next(int nbRows) throws IOException;
 
   /**
    * Closes the scanner and releases any resources it has allocated
    */
+  @Override
   public void close();
 
   /**

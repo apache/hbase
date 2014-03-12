@@ -40,7 +40,7 @@ import org.apache.hadoop.io.Writable;
  * number in HBaseRPCProtocolVersion
  *
  */
-public interface HMasterInterface extends HBaseRPCProtocolVersion {
+public interface HMasterInterface extends HBaseRPCProtocolVersion, ThriftClientInterface {
 
   /** @return true if master is available */
   public boolean isMasterRunning();
@@ -78,7 +78,7 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
 
   /**
    * Batch adds, modifies, and deletes columns from the specified table.
-   * Any of the lists may be null, in which case those types of alterations
+   * Any of the lists may be null, in which case those types of alterations 
    * will not occur.
    *
    * @param tableName table to modify
@@ -186,7 +186,7 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
   /**
    * Used by the client to get the number of regions that have received the
    * updated schema
-   *
+   * 
    * @param tableName
    * @return Pair getFirst() is the number of regions pending an update
    *              getSecond() total number of regions of the table

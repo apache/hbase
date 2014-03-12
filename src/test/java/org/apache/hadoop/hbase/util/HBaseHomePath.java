@@ -39,17 +39,17 @@ public class HBaseHomePath {
       throw new RuntimeException("Could not lookup class location for " + className);
     }
 
-    String path = url.getPath();
+    String path = url.getPath(); 
     if (!path.endsWith(relPathForClass)) {
-      throw new RuntimeException("Got invalid path trying to look up class " + className +
-          ": " + path);
+      throw new RuntimeException("Got invalid path trying to look up class " + className + 
+          ": " + path); 
     }
     path = path.substring(0, path.length() - relPathForClass.length());
 
     if (path.startsWith(FILE_PREFIX)) {
       path = path.substring(FILE_PREFIX.length());
     }
-
+    
     if (path.endsWith(TARGET_CLASSES)) {
       path = path.substring(0, path.length() - TARGET_CLASSES.length());
     } else if (path.endsWith(JAR_SUFFIX)) {

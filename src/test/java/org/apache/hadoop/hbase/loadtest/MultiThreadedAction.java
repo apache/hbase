@@ -94,12 +94,12 @@ public abstract class MultiThreadedAction
           LOG.info(threadsLeft + "Rows = " + numRowsNumber +
               ", keys = " + DisplayFormatUtils.formatNumber(numKeys_.get()) +
               ", time = " + DisplayFormatUtils.formatTime(time) +
-              ((numRowsNumber > 0 && time > 0)?
+              ((numRowsNumber > 0 && time > 0)? 
                   (" Overall: [" +
                       "keys/s = " + numRowsNumber*1000/time +
                       ", latency = " + cumulativeOpTime/numRowsNumber + " ms]")
                       : "") +
-                      ((numRowsDelta > 0) ?
+                      ((numRowsDelta > 0) ? 
                           (" Current: [" +
                           "rows/s = " + numRowsDelta*1000/reportingInterval +
                           ", latency = " + cumulativeOpTimeDelta/numRowsDelta +
@@ -127,7 +127,7 @@ public abstract class MultiThreadedAction
   public void setVerbose(boolean verbose) {
     this.verbose = verbose;
   }
-
+  
   public boolean getVerbose() {
     return this.verbose;
   }

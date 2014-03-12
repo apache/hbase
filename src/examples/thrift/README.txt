@@ -10,7 +10,7 @@ To run/compile this clients, you will first need to install the thrift package
 the language files:
 
 thrift --gen cpp --gen java --gen rb --gen py -php \
-    ../../../src/java/org/apache/hadoop/hbase/thrift/Hbase.thrift
+    ../../../src/java/org/apache/hadoop/hbase/thrift/LegacyHBase.thrift
 
 See the individual DemoClient test files for more specific instructions on 
 running each test.

@@ -134,17 +134,17 @@
     The port at which the clients will connect.
     </description>
   </property>
-
+  
   <property>
     <name>hbase.server.thread.wakefrequency</name>
     <value>100</value>
   </property>
-
+  
   <property>
     <name>zookeeper.session.timeout</name>
     <value>60000</value>
   </property>
-
+  
   <property>
     <name>hbase.zookeeper.sessionExpired.abortProcess</name>
     <value>false</value>

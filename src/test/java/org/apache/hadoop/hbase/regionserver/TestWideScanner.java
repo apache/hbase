@@ -131,7 +131,7 @@ public class TestWideScanner extends HBaseTestCase {
         }
 
         results.clear();
-
+        
         // trigger ChangedReadersObservers
         Iterator<KeyValueScanner> scanners =
             ((RegionScanner)s).storeHeap.getHeap().iterator();

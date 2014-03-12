@@ -20,16 +20,18 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.ipc.RemoteException;
-import org.mortbay.log.Log;
-
-import java.io.IOException;
-import java.util.Arrays;
 
 
 /**
@@ -37,11 +39,11 @@ import java.util.Arrays;
  * Used by {@link ResultScanner}s made by {@link HTable}.
  */
 public class ScannerCallable extends ServerCallable<Result[]> {
+  private static final Log LOG = LogFactory.getLog(ScannerCallable.class);
   private long scannerId = -1L;
   private boolean closed = false;
   private Scan scan;
   private int caching = 1;
-  private boolean skipFirstRow = false;
   private boolean forceReopen = false;
   private byte[] lastRowSeen = null;
 
@@ -50,7 +52,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
    * @param tableName table callable is on
    * @param scan the scan to execute
    */
-  public ScannerCallable (HConnection connection, byte [] tableName, 
+  public ScannerCallable (HConnection connection, byte [] tableName,
       Scan scan, HBaseRPCOptions options) {
     super(connection, tableName, scan.getStartRow(), options);
     this.scan = scan;
@@ -59,7 +61,8 @@ public class ScannerCallable extends ServerCallable<Result[]> {
   /**
    * @see java.util.concurrent.Callable#call()
    */
-  public Result [] call() throws IOException {
+  @Override
+  public Result [] call() throws IOException, InterruptedException, ExecutionException {
     if (scannerId != -1L && closed) {
       close();
     } else if (scannerId == -1L && !closed && !forceReopen) {
@@ -83,7 +86,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
       ioe = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
     }
     if (ioe == null) {
-      ioe = new IOException(e);
+      throw e;
     }
     if (ioe instanceof NotServingRegionException) {
       // Throw a DNRE so that we break out of cycle of calling NSRE
@@ -104,25 +107,15 @@ public class ScannerCallable extends ServerCallable<Result[]> {
       if (lastRow.length > 0) {
         lastRowSeen = lastRow;
       }
-      if (skipFirstRow) {
-        skipFirstRow = false;
-        // We can't return empty results as it will prematurely signal end of region
-        if (results.length > 1) {
-          results = Arrays.copyOfRange(results, 1, results.length);
-        } else {
-          return next();
-        }
-      }
     }
     return results;
   }
 
   private void fixStateForFutureRetries() {
-    Log.info("Fixing scan state for future retries");
+    LOG.info("Fixing scan state for future retries");
     close();
     if (lastRowSeen != null && lastRowSeen.length > 0) {
-      scan.setStartRow(lastRowSeen);
-      skipFirstRow = true;
+      scan.setStartRow(Bytes.nextOf(lastRowSeen));
     }
     forceReopen = true;
   }
@@ -141,7 +134,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     try {
       this.server.close(this.scannerId);
     } catch (IOException e) {
-      Log.warn("Ignore, probably already closed", e);
+      LOG.warn("Ignore, probably already closed", e);
     }
     this.scannerId = -1L;
   }

@@ -33,7 +33,7 @@ members of a column family, leave the qualifier empty as in
 
 The filter can be specified in two ways:
 1. Using a filterString - more information on this is available at:
-http://hbase.apache.org/book.html#thrift.filter-language
+https://our.intern.facebook.com/intern/wiki/index.php/HBase/Filter_Language
 2. Using the entire package name of the filter.
 
 Examples:

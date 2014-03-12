@@ -38,7 +38,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * Partitioner effecting a total order by reading split points from
  * an externally generated source.
- *
+ * 
  * This is an identical copy of o.a.h.mapreduce.lib.partition.TotalOrderPartitioner
  * from Hadoop trunk at r910774.
  */
@@ -47,11 +47,11 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
 
   private Node partitions;
   public static final String DEFAULT_PATH = "_partition.lst";
-  public static final String PARTITIONER_PATH =
+  public static final String PARTITIONER_PATH = 
     "mapreduce.totalorderpartitioner.path";
-  public static final String MAX_TRIE_DEPTH =
-    "mapreduce.totalorderpartitioner.trie.maxdepth";
-  public static final String NATURAL_ORDER =
+  public static final String MAX_TRIE_DEPTH = 
+    "mapreduce.totalorderpartitioner.trie.maxdepth"; 
+  public static final String NATURAL_ORDER = 
     "mapreduce.totalorderpartitioner.naturalorder";
   Configuration conf;
 
@@ -96,11 +96,11 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
       if (natOrder && BinaryComparable.class.isAssignableFrom(keyClass)) {
         partitions = buildTrie((BinaryComparable[])splitPoints, 0,
             splitPoints.length, new byte[0],
-            // Now that blocks of identical splitless trie nodes are
+            // Now that blocks of identical splitless trie nodes are 
             // represented reentrantly, and we develop a leaf for any trie
             // node with only one split point, the only reason for a depth
             // limit is to refute stack overflow or bloat in the pathological
-            // case where the split points are long and mostly look like bytes
+            // case where the split points are long and mostly look like bytes 
             // iii...iixii...iii   .  Therefore, we make the default depth
             // limit large but not huge.
             conf.getInt(MAX_TRIE_DEPTH, 200));
@@ -115,7 +115,7 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
   public Configuration getConf() {
     return conf;
   }
-
+  
   // by construction, we know if our keytype
   @SuppressWarnings("unchecked") // is memcmp-able and uses the trie
   public int getPartition(K key, V value, int numPartitions) {
@@ -201,7 +201,7 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
       return child[0xFF & key.getBytes()[level]].findPartition(key);
     }
   }
-
+  
   /**
    * @param level        the tree depth at this node
    * @param splitPoints  the full split point vector, which holds
@@ -209,7 +209,7 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
    *                     should contain
    * @param lower        first INcluded element of splitPoints
    * @param upper        first EXcluded element of splitPoints
-   * @return  a leaf node.  They come in three kinds: no split points
+   * @return  a leaf node.  They come in three kinds: no split points 
    *          [and the findParttion returns a canned index], one split
    *          point [and we compare with a single comparand], or more
    *          than one [and we do a binary search].  The last case is
@@ -220,10 +220,10 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
       switch (upper - lower) {
       case 0:
           return new UnsplitTrieNode(level, lower);
-
+          
       case 1:
           return new SinglySplitTrieNode(level, splitPoints, lower);
-
+          
       default:
           return new LeafTrieNode(level, splitPoints, lower, upper);
       }
@@ -231,8 +231,8 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
 
   /**
    * A leaf trie node that scans for the key between lower..upper.
-   *
-   * We don't generate many of these now, since we usually continue trie-ing
+   * 
+   * We don't generate many of these now, since we usually continue trie-ing 
    * when more than one split point remains at this level. and we make different
    * objects for nodes with 0 or 1 split point.
    */
@@ -251,30 +251,30 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
       return (pos < 0) ? -pos : pos;
     }
   }
-
+  
   private class UnsplitTrieNode extends TrieNode {
       final int result;
-
+      
       UnsplitTrieNode(int level, int value) {
           super(level);
           this.result = value;
       }
-
+      
       public int findPartition(BinaryComparable key) {
           return result;
       }
   }
-
+  
   private class SinglySplitTrieNode extends TrieNode {
       final int               lower;
       final BinaryComparable  mySplitPoint;
-
+      
       SinglySplitTrieNode(int level, BinaryComparable[] splitPoints, int lower) {
           super(level);
           this.lower = lower;
           this.mySplitPoint = splitPoints[lower];
       }
-
+      
       public int findPartition(BinaryComparable key) {
           return lower + (key.compareTo(mySplitPoint) < 0 ? 0 : 1);
       }
@@ -304,25 +304,25 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
     reader.close();
     return parts.toArray((K[])Array.newInstance(keyClass, parts.size()));
   }
-
+  
   /**
-   *
+   * 
    * This object contains a TrieNodeRef if there is such a thing that
-   * can be repeated.  Two adjacent trie node slots that contain no
+   * can be repeated.  Two adjacent trie node slots that contain no 
    * split points can be filled with the same trie node, even if they
    * are not on the same level.  See buildTreeRec, below.
    *
-   */
+   */  
   private class CarriedTrieNodeRef
   {
       TrieNode   content;
-
+      
       CarriedTrieNodeRef() {
           content = null;
       }
   }
 
-
+  
   /**
    * Given a sorted set of cut points, build a trie that will find the correct
    * partition quickly.
@@ -338,31 +338,31 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
       return buildTrieRec
                (splits, lower, upper, prefix, maxDepth, new CarriedTrieNodeRef());
   }
-
+  
   /**
    * This is the core of buildTrie.  The interface, and stub, above, just adds
-   * an empty CarriedTrieNodeRef.
-   *
+   * an empty CarriedTrieNodeRef.  
+   * 
    * We build trie nodes in depth first order, which is also in key space
    * order.  Every leaf node is referenced as a slot in a parent internal
    * node.  If two adjacent slots [in the DFO] hold leaf nodes that have
-   * no split point, then they are not separated by a split point either,
+   * no split point, then they are not separated by a split point either, 
    * because there's no place in key space for that split point to exist.
-   *
+   * 
    * When that happens, the leaf nodes would be semantically identical, and
-   * we reuse the object.  A single CarriedTrieNodeRef "ref" lives for the
+   * we reuse the object.  A single CarriedTrieNodeRef "ref" lives for the 
    * duration of the tree-walk.  ref carries a potentially reusable, unsplit
-   * leaf node for such reuse until a leaf node with a split arises, which
+   * leaf node for such reuse until a leaf node with a split arises, which 
    * breaks the chain until we need to make a new unsplit leaf node.
-   *
-   * Note that this use of CarriedTrieNodeRef means that for internal nodes,
-   * for internal nodes if this code is modified in any way we still need
+   * 
+   * Note that this use of CarriedTrieNodeRef means that for internal nodes, 
+   * for internal nodes if this code is modified in any way we still need 
    * to make or fill in the subnodes in key space order.
    */
   private TrieNode buildTrieRec(BinaryComparable[] splits, int lower,
       int upper, byte[] prefix, int maxDepth, CarriedTrieNodeRef ref) {
     final int depth = prefix.length;
-    // We generate leaves for a single split point as well as for
+    // We generate leaves for a single split point as well as for 
     // no split points.
     if (depth >= maxDepth || lower >= upper - 1) {
         // If we have two consecutive requests for an unsplit trie node, we
@@ -393,9 +393,9 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
     }
     // pick up the rest
     trial[depth] = (byte)0xFF;
-    result.child[0xFF]
+    result.child[0xFF] 
                  = buildTrieRec(splits, lower, currentBound, trial, maxDepth, ref);
-
+    
     return result;
   }
 }

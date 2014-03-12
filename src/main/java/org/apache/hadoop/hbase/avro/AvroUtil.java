@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.hbase.avro;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.List;
-
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericArray;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.util.Utf8;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -31,13 +30,6 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.avro.generated.AClusterStatus;
 import org.apache.hadoop.hbase.avro.generated.AColumn;
 import org.apache.hadoop.hbase.avro.generated.AColumnValue;
@@ -55,11 +47,18 @@ import org.apache.hadoop.hbase.avro.generated.AServerAddress;
 import org.apache.hadoop.hbase.avro.generated.AServerInfo;
 import org.apache.hadoop.hbase.avro.generated.AServerLoad;
 import org.apache.hadoop.hbase.avro.generated.ATableDescriptor;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.util.Bytes;
 
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericArray;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.util.Utf8;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.List;
 
 public class AvroUtil {
 
@@ -77,7 +76,7 @@ public class AvroUtil {
 
   static public ARegionLoad hrlToARL(HServerLoad.RegionLoad rl) throws IOException {
     ARegionLoad arl = new ARegionLoad();
-    arl.memStoreSizeMB = rl.getMemStoreSizeMB();
+    arl.memStoreSizeMB = rl.getMemstoreSizeMB();
     arl.name = ByteBuffer.wrap(rl.getName());
     arl.storefileIndexSizeMB = rl.getStorefileIndexSizeMB();
     arl.storefiles = rl.getStorefiles();

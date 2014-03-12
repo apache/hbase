@@ -103,7 +103,7 @@ public class TestFSErrorsExposed {
       }
       fail("Scanner didn't throw after faults injected");
     } catch (IOException ioe) {
-      LOG.info("Got expected exception", ioe);
+      LOG.info("Got expected exception", ioe);  
       assertTrue(ioe.getMessage().contains("Fault"));
     }
     reader.close(true); // end of test so evictOnClose

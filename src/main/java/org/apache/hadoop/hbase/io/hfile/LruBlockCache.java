@@ -325,7 +325,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * Helper function that updates the local size counter and also updates any
    * per-cf or per-blocktype metrics it can discern from given
    * {@link CachedBlock}
-   *
+   * 
    * @param cb
    * @param evict
    */
@@ -371,7 +371,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     evictBlock(cb);
     return true;
   }
-
+  
   /**
    * Adds specific HFile to a list of recently closed files. Next time the eviction happens
    * all blocks of the File will be evicted.

@@ -19,9 +19,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+
 /**
  * Holds row name and lock id.
  */
+@ThriftStruct
 public class RowLock {
   private byte [] row = null;
   private long lockId = -1L;
@@ -31,7 +36,10 @@ public class RowLock {
    * @param row row to lock on
    * @param lockId the lock id
    */
-  public RowLock(final byte [] row, final long lockId) {
+  @ThriftConstructor
+  public RowLock(
+      @ThriftField(1) final byte [] row,
+      @ThriftField(2) final long lockId) {
     this.row = row;
     this.lockId = lockId;
   }
@@ -48,6 +56,7 @@ public class RowLock {
    * Get the row for this RowLock
    * @return the row
    */
+  @ThriftField(1)
   public byte [] getRow() {
     return row;
   }
@@ -56,6 +65,7 @@ public class RowLock {
    * Get the lock id from this RowLock
    * @return the lock id
    */
+  @ThriftField(2)
   public long getLockId() {
     return lockId;
   }

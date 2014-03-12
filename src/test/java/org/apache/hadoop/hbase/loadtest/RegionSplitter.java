@@ -150,7 +150,7 @@ public class RegionSplitter {
   }
 
   /////////////////////////////////////
-  /**Code for hashing*/
+  /**Code from Prometheus for hashing*/
   /////////////////////////////////////
 
   public static byte[] getHBaseKeyFromRowID(long rowID) {
@@ -334,7 +334,7 @@ public class RegionSplitter {
             byte[] sk = regionLoc.getRegionInfo().getStartKey();
             if (sk.length != 0) {
               if (Bytes.equals(split, sk)) {
-                LOG.debug("Region already split on "
+                LOG.debug("Region already split on " 
                     + Bytes.toStringBinary(split)
                     + ".  Skipping this region...");
                   dr = null;

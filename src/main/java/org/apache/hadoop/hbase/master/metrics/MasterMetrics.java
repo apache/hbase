@@ -61,36 +61,36 @@ public class MasterMetrics implements Updater {
   final MetricsLongValue  splitTime =
     new MetricsLongValue("splitTime", registry);
 
-
-  /*  Number of active region servers. This number is updated
-   *  every time a regionserver joins or leaves.
+  
+  /*  Number of active region servers. This number is updated 
+   *  every time a regionserver joins or leaves.   
    */
   public MetricsIntValue numRegionServers =
 	new MetricsIntValue("numRegionServers", registry);
-
-  /*  This is the number of dead region servers.
+   
+  /*  This is the number of dead region servers. 
    *  This is cumululative across all intervals from startup time.
    */
-  public MetricsIntValue numRSExpired =
+  public MetricsIntValue numRSExpired = 
 	new MetricsIntValue("numRSExpired", registry);
-
-  /** Metrics to keep track of the number and size of logs split.
-   *  This is cumulative across all intervals from startup time.
+  
+  /** Metrics to keep track of the number and size of logs split. 
+   *  This is cumulative across all intervals from startup time. 
    */
-  public MetricsLongValue numLogsSplit =
+  public MetricsLongValue numLogsSplit = 
 	  new MetricsLongValue("numLogsSplit", registry);
-
-  private MetricsLongValue sizeOfLogsSplit =
+  
+  private MetricsLongValue sizeOfLogsSplit = 
 	  new MetricsLongValue("sizeOfLogsSplit", registry);
-
-  /** Track the number of regions opened. Useful for identifying
-   *  open/close of regions due to load balancing.
-   *  This is a cumulative metric.
+  
+  /** Track the number of regions opened. Useful for identifying 
+   *  open/close of regions due to load balancing. 
+   *  This is a cumulative metric.   
    */
-  private MetricsIntValue numRegionsOpened =
+  private MetricsIntValue numRegionsOpened = 
 	  new MetricsIntValue("numRegionsOpened", registry);
-
-  private ServerManager serverManager;
+  
+  private ServerManager serverManager; 
 
   public MasterMetrics(final String name) {
     MetricsContext context = MetricsUtil.getContext("hbase");
@@ -101,23 +101,23 @@ public class MasterMetrics implements Updater {
     HBaseInfo.init();
     // expose the MBean for metrics
     masterStatistics = new MasterStatistics(this.registry);
-
+  
     // get custom attributes
     try {
-      Object m =
+      Object m = 
         ContextFactory.getFactory().getAttribute("hbase.extendedperiod");
       if (m instanceof String) {
         this.extendedPeriod = Long.parseLong((String) m)*1000;
       }
-    } catch (IOException ioe) {
+    } catch (IOException ioe) { 
       LOG.info("Couldn't load ContextFactory for Metrics config info");
     }
-
+    
     LOG.info("Initialized");
   }
   public MasterMetrics(final String name, ServerManager serverMgr) {
 	  this(name);
-	  serverManager = serverMgr;
+	  serverManager = serverMgr;	 
   }
 
   public void shutdown() {
@@ -131,12 +131,12 @@ public class MasterMetrics implements Updater {
    * @param unused
    */
   public void doUpdates(MetricsContext unused) {
-
+	  	
     synchronized (this) {
       this.lastUpdate = System.currentTimeMillis();
       this.numRegionServers.set(this.serverManager.numServers());
       // has the extended period for long-living stats elapsed?
-      if (this.extendedPeriod > 0 &&
+      if (this.extendedPeriod > 0 && 
           this.lastUpdate - this.lastExtUpdate >= this.extendedPeriod) {
         this.lastExtUpdate = this.lastUpdate;
         this.resetAllMinMax();
@@ -156,7 +156,7 @@ public class MasterMetrics implements Updater {
   public void resetAllMinMax() {
     // Nothing to do
   }
-
+  
   /**
    * Record a single instance of a split
    * @param time time that the split took
@@ -181,19 +181,19 @@ public class MasterMetrics implements Updater {
   public void incrementRequests(final int inc) {
     this.cluster_requests.inc(inc);
   }
-
+ 
   public synchronized void incRegionsOpened() {
 	  numRegionsOpened.set(numRegionsOpened.get() + 1);
   }
-
+  
   public synchronized int getRegionsOpened() {
     return numRegionsOpened.get();
   }
-
+   
   public synchronized void incRegionServerExpired() {
 	  numRSExpired.set(numRSExpired.get() + 1);
   }
-
+  
   public synchronized int getRegionServerExpired() {
     return numRSExpired.get();
   }

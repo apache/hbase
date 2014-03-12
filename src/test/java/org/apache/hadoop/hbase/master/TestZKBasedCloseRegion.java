@@ -82,7 +82,7 @@ public class TestZKBasedCloseRegion {
       // Need at least two servers.
       LOG.info("Started new server=" +
         TEST_UTIL.getHBaseCluster().startRegionServer());
-
+      
     }
   }
 
@@ -99,16 +99,16 @@ public class TestZKBasedCloseRegion {
     LOG.debug("Asking RS to close region " + region.getRegionNameAsString());
 
     AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
-    RegionServerOperationListener listener =
+    RegionServerOperationListener listener = 
       new CloseRegionEventListener(region.getRegionNameAsString(), closeEventProcessed);
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     master.getRegionServerOperationQueue().registerRegionServerOperationListener(listener);
-    HMsg closeRegionMsg = new HMsg(HMsg.Type.MSG_REGION_CLOSE,
+    HMsg closeRegionMsg = new HMsg(HMsg.Type.MSG_REGION_CLOSE, 
                                    region.getRegionInfo(),
                                    Bytes.toBytes("Forcing close in test")
                                   );
     TEST_UTIL.getHBaseCluster().addMessageToSendRegionServer(rsIdx, closeRegionMsg);
-
+    
     synchronized(closeEventProcessed) {
       // wait for 3 minutes
       closeEventProcessed.wait(3*60*1000);
@@ -120,9 +120,9 @@ public class TestZKBasedCloseRegion {
       LOG.info("Done with test, RS informed master successfully.");
     }
   }
-
+  
   public static class CloseRegionEventListener implements RegionServerOperationListener {
-
+    
     private static final Log LOG = LogFactory.getLog(CloseRegionEventListener.class);
     String regionToClose;
     AtomicBoolean closeEventProcessed;
@@ -157,9 +157,9 @@ public class TestZKBasedCloseRegion {
         }
       }
     }
-
+    
   }
-
+  
 
   private static void waitUntilAllRegionsAssigned(final int countOfRegions)
   throws IOException {
@@ -180,7 +180,7 @@ public class TestZKBasedCloseRegion {
       // If I get to here and all rows have a Server, then all have been assigned.
       if (rows == countOfRegions) break;
       LOG.info("Found=" + rows);
-      Threads.sleep(1000);
+      Threads.sleep(1000); 
     }
   }
 
@@ -228,14 +228,14 @@ public class TestZKBasedCloseRegion {
   private static byte [] getTestQualifier() {
     return getTestFamily();
   }
-
+  
   public static void main(String args[]) throws Exception {
     TestZKBasedCloseRegion.beforeAllTests();
-
+    
     TestZKBasedCloseRegion test = new TestZKBasedCloseRegion();
     test.setup();
     test.testCloseRegion();
-
+    
     TestZKBasedCloseRegion.afterAllTests();
   }
 }

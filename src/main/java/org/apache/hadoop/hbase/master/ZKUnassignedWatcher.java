@@ -116,7 +116,7 @@ public class ZKUnassignedWatcher implements Watcher {
 
     LOG.debug("ZK-EVENT-PROCESS: Got zkEvent " + eventType +
               " path:" + event.getPath());
-
+ 
     try
     {
       /*

@@ -20,17 +20,17 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedList;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
 
 /**
  * This abstract class was designed in order to share code across ClientScanner
@@ -136,10 +136,10 @@ public abstract class ResultScannerImpl implements ResultScanner {
   public Result next() throws IOException {
     // If the scanner is closed but there is some rows left in the cache,
     // it will first empty it before returning null
-    if (cache.size() == 0 && this.closed) {
+    if (cache.isEmpty() && this.closed) {
       return null;
     }
-    if (cache.size() == 0) {
+    if (cache.isEmpty()) {
       cacheNextResults();
     }
     if (cache.size() > 0) {
@@ -194,33 +194,6 @@ public abstract class ResultScannerImpl implements ResultScanner {
    */
   @Override
   public Iterator<Result> iterator() {
-    return new Iterator<Result>() {
-      Result next = null;
-      public boolean hasNext() {
-        if (next == null) {
-          try {
-            // Since ResultScannerImpl contains this anonymous
-            // Iterator<Result> class inside it, we can access the methods of
-            // ResultScannerImpl by this way.
-            next = ResultScannerImpl.this.next();
-            return next != null;
-          } catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        }
-        return true;
-      }
-      public Result next() {
-        if (!hasNext()) {
-          return null;
-        }
-        Result temp = next;
-        next = null;
-        return temp;
-      }
-      public void remove() {
-        throw new UnsupportedOperationException();
-      }
-    };
+    return new ResultScannerIterator(this);
   }
 }

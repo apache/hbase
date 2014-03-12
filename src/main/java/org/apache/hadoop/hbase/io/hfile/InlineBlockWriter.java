@@ -31,7 +31,7 @@ public interface InlineBlockWriter {
 
   /**
    * Determines whether there is a new block to be written out.
-   *
+   * 
    * @param closing
    *          whether the file is being closed, in which case we need to write
    *          out all available data and not wait to accumulate another block
@@ -41,7 +41,7 @@ public interface InlineBlockWriter {
   /**
    * Writes the block to the provided stream. Must not write any magic records.
    * Called only if {@link #shouldWriteBlock(boolean)} returned true.
-   *
+   * 
    * @param out
    *          a stream (usually a compressing stream) to write the block to
    */
@@ -52,7 +52,7 @@ public interface InlineBlockWriter {
    * compressed size have been determined. Can be used to add an entry to a
    * block index. If this type of inline blocks needs a block index, the inline
    * block writer is responsible for maintaining it.
-   *
+   * 
    * @param offset the offset of the block in the stream
    * @param onDiskSize the on-disk size of the block
    * @param uncompressedSize the uncompressed size of the block
@@ -64,7 +64,7 @@ public interface InlineBlockWriter {
    * The type of blocks this block writer produces.
    */
   BlockType getInlineBlockType();
-
+  
   /**
    * @return true if inline blocks produced by this writer should be cached
    */

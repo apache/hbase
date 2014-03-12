@@ -15,7 +15,7 @@ public interface RegionPlacementPolicy {
  */
   public AssignmentPlan getNewAssignmentPlan(HRegionInfo[] regions,
       AssignmentDomain domain) throws IOException;
-
+  
   /**
    * Get the favored assignment plan for all the regions
    * @return the favored assignment plan for all the regions
@@ -23,7 +23,7 @@ public interface RegionPlacementPolicy {
    */
   public AssignmentPlan getNewAssignmentPlan()
   throws IOException;
-
+  
   /**
    * Get the existing assignment plan for all the regions
    * @return the existing favored assignment plan for all the regions
@@ -31,7 +31,7 @@ public interface RegionPlacementPolicy {
    */
   public AssignmentPlan getExistingAssignmentPlan()
   throws IOException;
-
+  
   /**
    * Update the favored assignment plan
    * @param plan

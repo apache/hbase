@@ -73,9 +73,10 @@ public class CompositeOperationGenerator implements OperationGenerator {
    * @throws ExhaustedException if the last of this instance's child generators
    *         has itself become exhausted
    */
+  @Override
   public Operation nextOperation(DataGenerator dataGenerator)
       throws ExhaustedException {
-    if (generators.size() == 0) {
+    if (generators.isEmpty()) {
       throw new ExhaustedException();
     }
 

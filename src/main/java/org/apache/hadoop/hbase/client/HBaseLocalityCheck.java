@@ -75,9 +75,9 @@ public class HBaseLocalityCheck {
       HbckInfo hbckInfo = entry.getValue();
       if (hbckInfo == null || hbckInfo.metaEntry == null
           || localityInfo == null || hbckInfo.deployedOn == null
-          || hbckInfo.deployedOn.size() == 0) {
+          || hbckInfo.deployedOn.isEmpty()) {
         LOG.warn("<" + regionEncodedName + "> no info" +
-			" obtained for this region from any of the region servers.");
+        		" obtained for this region from any of the region servers.");
         numUnknownRegion++;
         continue;
       }
@@ -99,7 +99,7 @@ public class HBaseLocalityCheck {
       }
       LOG.info("<" + tableName + " : " + regionEncodedName +
           "> is running on host: " + realHostName + " \n " +
-			"and the locality is " + localityPercentage);
+          		"and the locality is " + localityPercentage);
     }
 
     LOG.info("======== Locality Summary ===============");

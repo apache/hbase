@@ -33,11 +33,16 @@ import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.io.VersionedWritable;
 import org.apache.hadoop.io.WritableComparable;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+
 /**
  * HRegion information.
  * Contains HRegion id, start and end keys, a reference to this
  * HRegions' table descriptor, etc.
  */
+@ThriftStruct
 public class HRegionInfo extends VersionedWritable implements WritableComparable<HRegionInfo>{
   private static final byte VERSION = 0;
   private static final Log LOG = LogFactory.getLog(HRegionInfo.class);
@@ -126,7 +131,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     new HRegionInfo(1L, HTableDescriptor.META_TABLEDESC);
 
   private byte [] endKey = HConstants.EMPTY_BYTE_ARRAY;
-  private boolean offLine = false;
+  private boolean offline = false;
   private long regionId = -1;
   private transient byte [] regionName = HConstants.EMPTY_BYTE_ARRAY;
   private String regionNameStr = "";
@@ -144,7 +149,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     result ^= this.regionId;
     result ^= Arrays.hashCode(this.startKey);
     result ^= Arrays.hashCode(this.endKey);
-    result ^= Boolean.valueOf(this.offLine).hashCode();
+    result ^= Boolean.valueOf(this.offline).hashCode();
     result ^= this.tableDesc.hashCode();
     this.hashCode = result;
   }
@@ -154,7 +159,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * first meta regions
    */
   private HRegionInfo(long regionId, HTableDescriptor tableDesc) {
-    super();
     this.regionId = regionId;
     this.tableDesc = tableDesc;
     
@@ -167,7 +171,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
 
   /** Default constructor - creates empty object */
   public HRegionInfo() {
-    super();
     this.tableDesc = new HTableDescriptor();
   }
 
@@ -212,23 +215,69 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * @param regionid Region id to use.
    * @throws IllegalArgumentException
    */
-  public HRegionInfo(HTableDescriptor tableDesc, final byte [] startKey,
-    final byte [] endKey, final boolean split, final long regionid)
-  throws IllegalArgumentException {
-    super();
+  public HRegionInfo(HTableDescriptor tableDesc,
+      final byte[] startKey,
+      final byte[] endKey,
+      final boolean split,
+      final long regionid)
+      throws IllegalArgumentException {
     if (tableDesc == null) {
       throw new IllegalArgumentException("tableDesc cannot be null");
     }
-    this.offLine = false;
+    this.offline = false;
     this.regionId = regionid;
-    this.regionName = createRegionName(tableDesc.getName(), startKey, regionId, true);
+    this.regionName = createRegionName(tableDesc.getName(), startKey, regionId,
+        true);
     this.regionNameStr = Bytes.toStringBinary(this.regionName);
     this.split = split;
-    this.endKey = endKey == null? HConstants.EMPTY_END_ROW: endKey.clone();
-    this.startKey = startKey == null?
-      HConstants.EMPTY_START_ROW: startKey.clone();
+    this.endKey = endKey == null ? HConstants.EMPTY_END_ROW : endKey.clone();
+    this.startKey = startKey == null ? HConstants.EMPTY_START_ROW : startKey
+        .clone();
     this.tableDesc = tableDesc;
     setHashCode();
+  }
+
+  /**
+   * Thrift constructor
+   * Construct HRegionInfo with explicit parameters
+   *
+   * @param tableDesc the table descriptor
+   * @param startKey first key in region
+   * @param endKey end of key range
+   * @param split true if this region has split and we have daughter regions
+   * regions that may or may not hold references to this region.
+   * @param regionid Region id to use.
+   * @throws IllegalArgumentException
+   */
+  @ThriftConstructor
+  public HRegionInfo(@ThriftField(1) HTableDescriptor tableDesc,
+      @ThriftField(2) final byte[] startKey,
+      @ThriftField(3) final byte[] endKey,
+      @ThriftField(4) final boolean split,
+      @ThriftField(5) final long regionid,
+      @ThriftField(6) final byte[] splitPoint,
+      @ThriftField(7) final boolean offline)
+  throws IllegalArgumentException {
+    if (tableDesc == null) {
+      throw new IllegalArgumentException("tableDesc cannot be null");
+    }
+    this.offline = false;
+    this.regionId = regionid;
+    boolean newFormat = true;
+    if (tableDesc.isMetaRegion()) {
+      newFormat = false;
+    }
+    this.regionName = createRegionName(tableDesc.getName(), startKey, regionId,
+        newFormat);
+    this.regionNameStr = Bytes.toStringBinary(this.regionName);
+    this.split = split;
+    this.endKey = endKey == null ? HConstants.EMPTY_END_ROW : endKey.clone();
+    this.startKey = startKey == null ? HConstants.EMPTY_START_ROW : startKey
+        .clone();
+    this.tableDesc = tableDesc;
+    setHashCode();
+    this.splitPoint = splitPoint;
+    this.offline = offline;
   }
 
   /**
@@ -237,9 +286,8 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * @param other
    */
   public HRegionInfo(HRegionInfo other) {
-    super();
     this.endKey = other.getEndKey();
-    this.offLine = other.isOffline();
+    this.offline = other.isOffline();
     this.regionId = other.getRegionId();
     this.regionName = other.getRegionName();
     this.regionNameStr = Bytes.toStringBinary(this.regionName);
@@ -264,7 +312,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    *                  (such that it contains its encoded name?).
    * @return Region name made of passed tableName, startKey and id
    */
-  public static byte [] createRegionName(final byte [] tableName,
+  public static byte[] createRegionName(final byte [] tableName,
       final byte [] startKey, final String id, boolean newFormat) {
     return createRegionName(tableName, startKey, Bytes.toBytes(id), newFormat);
   }
@@ -369,6 +417,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   }
 
   /** @return the regionId */
+  @ThriftField(5)
   public long getRegionId(){
     return regionId;
   }
@@ -405,12 +454,14 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   }
 
   /** @return the startKey */
-  public byte [] getStartKey(){
+  @ThriftField(2)
+  public byte[] getStartKey() {
     return startKey;
   }
   
   /** @return the endKey */
-  public byte [] getEndKey(){
+  @ThriftField(3)
+  public byte[] getEndKey() {
     return endKey;
   }
 
@@ -445,6 +496,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   }
 
   /** @return the tableDesc */
+  @ThriftField(1)
   public HTableDescriptor getTableDesc(){
     return tableDesc;
   }
@@ -488,9 +540,15 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   /**
    * @return point to explicitly split the region on
    */
+  @ThriftField(6)
   public byte[] getSplitPoint() {
     return (this.splitPoint != null && this.splitPoint.length > 0) 
       ? this.splitPoint : null;
+  }
+
+  @ThriftField(4)
+  public boolean getSplit() {
+    return this.split;
   }
 
   /**
@@ -504,15 +562,16 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   /**
    * @return True if this region is offline.
    */
+  @ThriftField(7)
   public boolean isOffline() {
-    return this.offLine;
+    return this.offline;
   }
 
   /**
    * @param offLine set online - offline status
    */
-  public void setOffline(boolean offLine) {
-    this.offLine = offLine;
+  public void setOffline(boolean offline) {
+    this.offline = offline;
   }
 
   /**
@@ -570,7 +629,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public void write(DataOutput out) throws IOException {
     super.write(out);
     Bytes.writeByteArray(out, endKey);
-    out.writeBoolean(offLine);
+    out.writeBoolean(offline);
     out.writeLong(regionId);
     Bytes.writeByteArray(out, regionName);
     out.writeBoolean(split);
@@ -586,7 +645,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
     this.endKey = Bytes.readByteArray(in);
-    this.offLine = in.readBoolean();
+    this.offline = in.readBoolean();
     this.regionId = in.readLong();
     this.regionName = Bytes.readByteArray(in);
     this.regionNameStr = Bytes.toStringBinary(this.regionName);

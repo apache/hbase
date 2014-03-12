@@ -19,13 +19,13 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.CompactionManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.nativeio.NativeIO;
-
-import java.nio.ByteBuffer;
 
 /**
  * HConstants holds a bunch of HBase-related constants
@@ -191,8 +191,70 @@ public final class HConstants {
   /** Parameter name for port region server listens on. */
   public static final String REGIONSERVER_PORT = "hbase.regionserver.port";
 
+  /** The Parameter for the thrift clients to talk to the thrift server **/
+  public static final String REGIONSERVER_SWIFT_PORT = "hbase.regionserver.swift.port";
+
   /** Default port region server listens on. */
   public static final int DEFAULT_REGIONSERVER_PORT = 60020;
+
+  /** Parameter name for thrift port master listens to. */
+  public static final String MASTER_THRIFT_PORT = "hbase.master.thrift.port";
+
+  public static final int MASTER_THRIFT_PORT_DEFAULT = 60022;
+
+  /** The port on which thrit server is listen at **/
+  public static final int DEFAULT_REGIONSERVER_SWIFT_PORT = 60021;
+
+  /** Boolean flag to represent whether to use Hadoop RPC or not **/
+  public static final String REGIONSERVER_USE_HADOOP_RPC = "hbase.regionserver.rpc.hadoop.enabled";
+
+  /** Default value of REGIONSERVER_USE_HADOOP_RPC boolean flag **/
+  public static final boolean DEFAULT_REGIONSERVER_USE_HADOOP_RPC = false;
+
+  /** Boolean flag to represent whether to use THRIFT or not **/
+  public static final String REGIONSERVER_USE_THRIFT = "hbase.regionserver.rpc.thrift.enabled";
+
+  /** Value of the REGIONSERVER_USE_THRIFT boolean flag **/
+  public static final boolean DEFAULT_REGIONSERVER_USE_THRIFT = true;
+
+  /** Flag to enable/disable client to regionserver communication via Thrift **/
+  public static final String CLIENT_TO_RS_USE_THRIFT = "hbase.client.rpc.tors.thrift.enabled";
+
+  /**
+   * The default value represent whether to use thrift in
+   * client to regionserver communication
+   */
+  public static final boolean CLIENT_TO_RS_USE_THRIFT_DEFAULT = true;
+
+  /** Flag to enable/disable master to regionserver communication via Thrift **/
+  public static final String MASTER_TO_RS_USE_THRIFT = "hbase.master.regionserver.thrift.enabled";
+
+  /** Value of {@link HConstants#MASTER_TO_RS_USE_THRIFT} **/
+  public static final boolean MASTER_TO_RS_USE_THRIFT_DEFAULT = true;
+
+  /**
+   * The configuration parameter by which we set the client --> master
+   * communication to happen via thrift.
+   */
+  public static final String CLIENT_TO_MASTER_USE_THRIFT =
+      "hbase.client.rpc.tomaster.thrift.enabled";
+
+  /**
+   * The default value of {@link HConstants#CLIENT_TO_MASTER_USE_THRIFT}
+   */
+  public static final boolean CLIENT_TO_MASTER_USE_THRIFT_DEFAULT = false;
+
+  /**
+   * Knob to override the hadoop port info with thrift port info.
+   */
+  public static final String REGION_SERVER_WRITE_THRIFT_INFO_TO_META =
+      "hbase.regionserver.write.thrift.info.to.meta";
+
+  /**
+   * Default value of {@link HConstants#REGION_SERVER_WRITE_THRIFT_INFO_TO_META}
+   */
+  public static final boolean REGION_SERVER_WRITE_THRIFT_INFO_TO_META_DEFAULT =
+      true;
 
   /** default port for region server web api */
   public static final int DEFAULT_REGIONSERVER_INFOPORT = 60030;
@@ -218,6 +280,9 @@ public final class HConstants {
   public static final String REGION_CHECKER_ENABLED = "hbase.master.regionchecker.enabled";
   /** Default value for enabling regionChecker */
   public static final Boolean DEFAULT_REGION_CHECKER_ENABLED = false;
+
+  /** Parameter name for what thrift region server implementation class to use */
+  public static final String THRIFT_REGION_SERVER_IMPL = "hbase.thriftregionserver.impl";
 
   /** Parameter name for what compaction manager to use. */
   public static final String COMPACTION_MANAGER_CLASS = "hbase.compactionmanager.class";
@@ -337,6 +402,14 @@ public final class HConstants {
    */
   public static final int DEFAULT_HDFS_QUORUM_READ_THREADS_MAX = 50;
 
+  /**
+   * If using quorum reads from HDFS, the timeout of using another region server.
+   */
+  public static final String HDFS_QUORUM_READ_TIMEOUT_MILLIS =
+    "hbase.dfsclient.quorum.reads.timeout";
+  public static final long DEFAULT_HDFS_QUORUM_READ_TIMEOUT_MILLIS = 0;
+
+
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
 
@@ -398,7 +471,7 @@ public final class HConstants {
       "hbase.regionserver.preload.blocks.kept.in.cache";
   /** Default maximum number of preload blocks to keep in block cache per hfilescanner */
   public static final int DEFAULT_MAX_PRELOAD_BLOCKS_KEPT_IN_CACHE = 128;
-  
+
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
 
@@ -444,6 +517,9 @@ public final class HConstants {
 
   /** The regioninfo column qualifier */
   public static final byte [] REGIONINFO_QUALIFIER = Bytes.toBytes("regioninfo");
+
+  /** The thriftregioninfo column qualifier */
+  public static final byte [] THRIFT_REGIONINFO_QUALIFIER = Bytes.toBytes("tregioninfo");
 
   /** The server column qualifier */
   public static final byte [] SERVER_QUALIFIER = Bytes.toBytes("server");
@@ -577,11 +653,19 @@ public final class HConstants {
    */
   public static final byte DEFAULT_CLUSTER_ID = 0;
 
-    /**
-     * Parameter name for maximum number of bytes returned when calling a
-     * scanner's next method.
-     */
+  /**
+   * Parameter name for maximum number of bytes returned when calling a
+   * scanner's next method.
+   */
   public static final String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY = "hbase.client.scanner.max.result.size";
+
+  /**
+   * Parameter name for queue length of HTableResultScanner. The total number of
+   * prefetched and cached Results are this number times scanner.getCaching().
+   *
+   */
+  public static final String HBASE_CLIENT_SCANNER_QUEUE_LENGTH = "hbase.client.scanner.queue.length";
+  public static final int DEFAULT_HBASE_CLIENT_SCANNER_QUEUE_LENGTH = 1;
 
   /**
    * Parameter name for the number of threads for the ParallelScanner
@@ -721,6 +805,30 @@ public final class HConstants {
       "hbase.regionserver.hlog.format.backward.compatibility";
 
   /**
+   * Number of threads for swift server
+   */
+  public static final String SWIFT_WORKER_THREADS = "hbase.swift.worker.threads";
+  public static final int SWIFT_WORKER_THREADS_DEFAULT = 300;
+
+  /**
+   * Number of io threads for swift server
+   */
+  public static final String SWIFT_IO_THREADS = "hbase.swift.io.threads";
+  public static final int SWIFT_IO_THREADS_DEFAULT = 60;
+
+  /**
+   * Frame size used for both client and server
+   */
+  public static final String SWIFT_MAX_FRAME_SIZE_BYTES = "hbase.swift.max.response.size";
+  public static final int SWIFT_MAX_FRAME_SIZE_BYTES_DEFAULT = Integer.MAX_VALUE;
+
+  /**
+   * Number of connections for swift server
+   */
+  public static final String SWIFT_CONNECTION_LIMIT = "hbase.swift.connection.limit";
+  public static final int SWIFT_CONNECTION_LIMIT_DEFAULT = 50000;
+
+  /**
    * The byte array represents for NO_NEXT_INDEXED_KEY;
    * The actual value is irrelevant because this is always compared by reference.
    */
@@ -819,6 +927,22 @@ public final class HConstants {
    public static final String MAX_LARGER_CALL_QUEUE_MEMORY_SIZE_STRING = "max.larger.callqueue.memory.size";
    public static final int SMALL_QUEUE_REQUEST_LIMIT = 25*1024*1024;
    public static final String SMALL_QUEUE_REQUEST_LIMIT_STRING = "small.queue.request.limit";
+  public static final String USE_LOCATEREGION_V2 = "hbase.Client.hconnectionmanager.use.locateregionv2";
+
+
+  public static final String CLIENT_RETRY_NUM_STRING = "hbase.client.retries.number";
+  public static final int DEFAULT_CLIENT_RETRY_NUM = 10;
+
+  public static final String SERVER_REQUESTED_RETRIES_STRING = "hbase.client.server.requested.retries.max";
+  public static final int DEFAULT_SERVER_REQUESTED_RETRIES = 0;
+
+  public static final String CLIENT_RPC_RETRY_TIMEOUT_STRING = "hbase.client.rpc.retry.timeout";
+  public static final long DEFAULT_CLIENT_RPC_RETRY_TIMEOUT = Long.MAX_VALUE;
+
+  public static final String HTABLE_ASYNC_CALLS = "hbase.htable.async.calls";
+  public static final boolean HTABLE_ASYNC_CALLS_DEFAULT = false;
+
+  public static final int DEFAULT_HTABLE_ASYNC_CORE_THREADS = 100;
 
   // These are the IO priority values for various regionserver operations. Note
   // that these are priorities relative to each other. See the man page for
@@ -919,6 +1043,19 @@ public final class HConstants {
   public static final String IN_MEMORY_BLOOM_ENABLED =
       "hbase.hregion.memstore.bloom.filter.enabled";
   public static final boolean DEFAULT_IN_MEMORY_BLOOM_ENABLED = false;
+
+
+  /**
+   * Use header protocol on client and server. This is used for call context
+   * and disabling/enabling this would do it for both the client and server.
+   */
+  public static final String USE_HEADER_PROTOCOL = "hbase.client.headerprotocol.enabled";
+  public static final boolean DEFAULT_USE_HEADER_PROTOCOL = true;
+
+  public static final String THRIFT_HEADER_FROM_SERVER = "serverHeader";
+  public static final String THRIFT_HEADER_FROM_CLIENT = "clientHeader";
+
+  public static final boolean DISABLE_THRIFT_REGION_INFO_QUALIFIER = false;
 
   private HConstants() {
     // Can't be instantiated with this constructor.

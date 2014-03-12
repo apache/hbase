@@ -97,6 +97,7 @@ public class HBaseClient {
   final protected long failureSleep; // Time to sleep before retry on failure.
   protected final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
   protected final boolean tcpKeepAlive; // if T then use keepalives
+  protected final int ipTosValue; // specify a datagram's type-of-service priority
   protected int pingInterval; // how often sends ping to the server in msecs
   private final int connectionTimeOutMillSec; // the connection time out
 
@@ -194,9 +195,9 @@ public class HBaseClient {
     }
 
     public void setVersion(int version) {
-      this.version = version;
+      this.version = version; 
     }
-
+     
     public int getVersion() {
       return version;
     }
@@ -336,7 +337,7 @@ public class HBaseClient {
             this.socket.setTcpNoDelay(tcpNoDelay);
             this.socket.setKeepAlive(tcpKeepAlive);
             NetUtils.connect(this.socket, remoteId.getAddress(),
-                connectionTimeOutMillSec);
+                connectionTimeOutMillSec, ipTosValue);
             if (remoteId.rpcTimeout > 0) {
               pingInterval = remoteId.rpcTimeout; // overwrite pingInterval
             }
@@ -605,7 +606,7 @@ public class HBaseClient {
       Decompressor decompressor = null;
       try {
         DataInputStream localIn = in;
-
+        
         // 1. Read the call id uncompressed which is an int
         int id = localIn.readInt();
         if (LOG.isDebugEnabled())
@@ -620,9 +621,9 @@ public class HBaseClient {
           String compressionAlgoName = localIn.readUTF();
           rpcCompression =  
             Compression.getCompressionAlgorithmByName(compressionAlgoName);
-
+          
           // 4. setup the correct decompressor (if any)
-          if (rpcCompression != Compression.Algorithm.NONE) {
+          if (rpcCompression != Compression.Algorithm.NONE) { 
             decompressor = rpcCompression.getDecompressor();
             InputStream is = rpcCompression.createDecompressionStream(
                   in, decompressor, 0);
@@ -792,6 +793,7 @@ public class HBaseClient {
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.tcpNoDelay = conf.getBoolean("hbase.ipc.client.tcpnodelay", false);
     this.tcpKeepAlive = conf.getBoolean("hbase.ipc.client.tcpkeepalive", true);
+    this.ipTosValue = conf.getInt("hbase.ipc.client.tos.value", NetUtils.NOT_SET_IP_TOS);
     this.pingInterval = getPingInterval(conf);
     if (LOG.isDebugEnabled()) {
       LOG.debug("The ping interval is" + this.pingInterval + "ms.");
@@ -1011,7 +1013,7 @@ public class HBaseClient {
      * connectionsId object and with set() method. We need to manage the
      * refs for keys in HashMap properly. For now its ok.
      */
-    ConnectionId remoteId = new ConnectionId(addr, ticket, rpcTimeout,
+    ConnectionId remoteId = new ConnectionId(addr, ticket, rpcTimeout, 
         call.getVersion(), connectionNum);
     do {
       connection = connections.get(remoteId);
@@ -1081,7 +1083,7 @@ public class HBaseClient {
 
   /**
    * This class holds the address and the user ticket. The client connections
-   * to servers are uniquely identified by
+   * to servers are uniquely identified by 
    * <remoteAddress, ticket, RPC version>
    */
   private static class ConnectionId {
@@ -1121,7 +1123,7 @@ public class HBaseClient {
 
     @Override
     public int hashCode() {
-      return address.hashCode() ^ System.identityHashCode(ticket) ^
+      return address.hashCode() ^ System.identityHashCode(ticket) ^ 
           rpcTimeout ^ version ^ connectionNum;
     }
   }

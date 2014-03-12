@@ -80,6 +80,8 @@ public class ScanQueryMatcher {
 
   private final long effectiveTS;
 
+  private boolean isDeleteColumnUsageEnabled = false;
+
   /**
    * Constructs a ScanQueryMatcher for a Scan.
    * @param scan
@@ -91,10 +93,10 @@ public class ScanQueryMatcher {
       NavigableSet<byte[]> columnSet, KeyValue.KeyComparator rowComparator,
       int maxVersions, long readPointToUse,
       long retainDeletesInOutputUntil,
-      long oldestUnexpiredTS) {
+      long oldestUnexpiredTS, boolean isDeleteColumnUsageEnabled) {
     this(scan, family, columnSet, rowComparator, maxVersions, readPointToUse,
         retainDeletesInOutputUntil, oldestUnexpiredTS,
-        HConstants.LATEST_TIMESTAMP);
+        HConstants.LATEST_TIMESTAMP, isDeleteColumnUsageEnabled);
   }
 
   /**
@@ -108,7 +110,7 @@ public class ScanQueryMatcher {
   public ScanQueryMatcher(Scan scan, byte[] family,
       NavigableSet<byte[]> columnSet, KeyValue.KeyComparator rowComparator,
       int maxVersions, long readPointToUse, long retainDeletesInOutputUntil,
-      long oldestUnexpiredTS, long oldestFlashBackTS) {
+      long oldestUnexpiredTS, long oldestFlashBackTS, boolean isDeleteColumnUsageEnabled) {
     this.tr = scan.getTimeRange();
     this.oldestStamp = oldestUnexpiredTS;
     this.rowComparator = rowComparator;
@@ -121,9 +123,10 @@ public class ScanQueryMatcher {
     this.retainDeletesInOutputUntil = retainDeletesInOutputUntil;
     this.maxReadPointToTrackVersions = readPointToUse;
     this.oldestFlashBackTS = oldestFlashBackTS;
+    this.isDeleteColumnUsageEnabled = isDeleteColumnUsageEnabled;
 
     // Single branch to deal with two types of reads (columns vs all in family)
-    if (columnSet == null || columnSet.size() == 0) {
+    if (columnSet == null || columnSet.isEmpty()) {
       // there is always a null column in the wildcard column query.
       hasNullColumn = true;
 
@@ -133,7 +136,6 @@ public class ScanQueryMatcher {
     } else {
       // whether there is null column in the explicit column query
       hasNullColumn = (columnSet.first().length == 0);
-
       // We can share the ExplicitColumnTracker, diff is we reset
       // between rows, not between storefiles.
       // Note that we do not use oldestFlashBackTS here since
@@ -152,13 +154,13 @@ public class ScanQueryMatcher {
 
   public ScanQueryMatcher(Scan scan, byte [] family,
       NavigableSet<byte[]> columns, KeyValue.KeyComparator rowComparator,
-      int maxVersions, long oldestUnexpiredTS) {
+      int maxVersions, long oldestUnexpiredTS, boolean isDeleteColumnUsageEnabled) {
       // By default we will not include deletes.
       // Deletes are included explicitly (for minor compaction).
       this(scan, family, columns, rowComparator, maxVersions,
           Long.MAX_VALUE, // max Readpoint to Track versions
           Long.MAX_VALUE, // do not include deletes
-          oldestUnexpiredTS);
+          oldestUnexpiredTS, isDeleteColumnUsageEnabled);
   }
 
   /**
@@ -170,11 +172,12 @@ public class ScanQueryMatcher {
    * - got to the next row (MatchCode.DONE)
    *
    * @param kv KeyValue to check
+   * @param allScanners scanners from the current heap
    * @return The match code instance.
    * @throws IOException in case there is an internal consistency problem
    *      caused by a data corruption.
    */
-  public MatchCode match(KeyValue kv) throws IOException {
+  public MatchCode match(KeyValue kv, List<KeyValueScanner> allScanners) throws IOException {
     if (kv.getTimestamp() > effectiveTS) {
       return MatchCode.SEEK_TO_EFFECTIVE_TS;
     }
@@ -264,7 +267,22 @@ public class ScanQueryMatcher {
 
     int timestampComparison = tr.compare(timestamp);
     if (timestampComparison >= 1) {
-      return MatchCode.SKIP;
+      // we have to have the delete column bloom enabled to be able to seek to
+      // the exact kv - (if we don't know if there are any deletes we are unable
+      // to do that
+      if (isDeleteColumnUsageEnabled) {
+        KeyValue queriedKV = kv.createFirstOnRowColTS(Math.max(tr.getMax() - 1,
+            tr.getMin()));
+        for (KeyValueScanner kvScanner : allScanners) {
+          if (kvScanner.passesDeleteColumnCheck(queriedKV)) {
+            return MatchCode.SKIP;
+          }
+        }
+        HRegionServer.numOptimizedSeeks.incrementAndGet();
+        return MatchCode.SEEK_TO_EXACT_KV;
+      } else {
+        return MatchCode.SKIP;
+      }
     } else if (timestampComparison <= -1) {
       return getNextRowOrNextColumn(bytes, offset, qualLength);
     }
@@ -497,5 +515,10 @@ public class ScanQueryMatcher {
      * Include KeyValue and done with row, seek to next.
      */
     INCLUDE_AND_SEEK_NEXT_ROW,
+
+    /**
+     * Go to the the exact KV
+     */
+    SEEK_TO_EXACT_KV
   }
 }

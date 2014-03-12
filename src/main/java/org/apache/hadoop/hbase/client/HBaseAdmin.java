@@ -450,7 +450,7 @@ public class HBaseAdmin {
         scannerId = server.openScanner(
           firstMetaServer.getRegionInfo().getRegionName(), scan);
         // Get a batch at a time.
-        Result [] values = server.next(scannerId, batchCount);
+        Result[] values = server.next(scannerId, batchCount);
         if (values == null || values.length == 0) {
           break;
         }
@@ -1096,7 +1096,8 @@ public class HBaseAdmin {
       compactCF(tableOrRegionName, columnFamily, HConstants.Modify.TABLE_COMPACT);
       return;
     }
-    byte [] tableName = HRegionInfo.parseRegionName(tableOrRegionName)[0];
+    @SuppressWarnings("unused")
+    byte[] tableName = HRegionInfo.parseRegionName(tableOrRegionName)[0];
     // Perform compaction only if a valid column family was passed.
     modifyTable(null, HConstants.Modify.TABLE_COMPACT,
         new Object[] {tableOrRegionName, columnFamily});

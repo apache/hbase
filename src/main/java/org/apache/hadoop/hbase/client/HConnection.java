@@ -19,7 +19,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -145,8 +150,8 @@ public interface HConnection extends Closeable {
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
    */
-  public HRegionInterface getHRegionConnection(HServerAddress regionServer, HBaseRPCOptions options)
-  throws IOException;
+  public HRegionInterface getHRegionConnection(HServerAddress regionServer,
+      HBaseRPCOptions options) throws IOException;
 
   /**
    * Establishes a connection to the region server at the specified address.
@@ -216,7 +221,10 @@ public interface HConnection extends Closeable {
    * @throws RuntimeException other unspecified error
    */
   public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
-  throws IOException, RuntimeException;
+      throws IOException, RuntimeException;
+
+  public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable, boolean instantiateRegionLocation)
+      throws IOException, RuntimeException;
 
   /**
    * Process a batch of Gets. Does the retries.
@@ -262,8 +270,7 @@ public interface HConnection extends Closeable {
   throws IOException;
 
   public int processBatchOfRowMutations(final List<RowMutations> list,
-    final byte[] tableName, HBaseRPCOptions options)
-  throws IOException;
+      final byte[] tableName, final HBaseRPCOptions options) throws IOException;
 
   /**
    * Process a mixed batch of Get actions. All actions for a
@@ -294,8 +301,8 @@ public interface HConnection extends Closeable {
    * @param pool thread pool for parallel execution
    * @param failures populated with failed operation if there are errors.
    * @param options HBaseRPCOptions to be used
-   * @throws IOException,InterruptedException if there are problems talking to META.
-   *  Or, operations were not successfully completed.
+   * @throws IOException,InterruptedException if there are problems talking to
+   * META. Or, operations were not successfully completed.
    */
   public void processBatchedMutations(List<Mutation> actions, final byte[] tableName,
       ExecutorService pool, List<Mutation> failures, HBaseRPCOptions options)
@@ -388,6 +395,7 @@ public interface HConnection extends Closeable {
    */
   public void resetOperationContext();
 
+  public Configuration getConf();
   /**
    * Returns if the most recent flush on this region happens in the window
    * [current server time - acceptableWindowForLastFlush,

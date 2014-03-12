@@ -19,18 +19,18 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.master.AssignmentPlan.POSITION;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.Threads;
 
 /**
- * Manages the preferences for assigning regions to specific servers. 
+ * Manages the preferences for assigning regions to specific servers.
  * It get the assignment plan from scanning the META region and keep this
  * assignment plan updated.
- * 
+ *
  * The assignment manager executes the assignment plan by adding the regions
  * with its most favored live region server into the transient assignment.
  * Each transient assignment will be only valid for a configurable time
- * before expire. During these valid time, the region will only be assigned 
+ * before expire. During these valid time, the region will only be assigned
  * based on the transient assignment.
  *
  * All access to this class is thread-safe.
@@ -69,12 +69,12 @@ public class AssignmentManager {
    * favored region server list.
    */
   private AssignmentPlan assignmentPlan;
-  
+
   private final HMaster master;
   private final Configuration conf;
   private long millisecondDelay;
   private POSITION[] positions;
-  
+
   public AssignmentManager(HMaster master) {
     this.master = master;
     this.conf = master.getConfiguration();
@@ -169,12 +169,12 @@ public class AssignmentManager {
       Set<HRegionInfo> regions = transientAssignments.get(server);
       if (regions != null) {
         regions.remove(region);
-        if (regions.size() == 0) {
+        if (regions.isEmpty()) {
           transientAssignments.remove(server);
         }
         LOG.debug("Remove the transisent assignment: region " +
             region.getRegionNameAsString() + " to " +
-            server.getHostNameWithPort()); 
+            server.getHostNameWithPort());
         return true;
       }
       return false;

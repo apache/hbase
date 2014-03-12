@@ -43,13 +43,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Tests the block cache summary functionality in StoreFile,
+ * Tests the block cache summary functionality in StoreFile, 
  * which contains the BlockCache
  *
  */
 public class TestStoreFileBlockCacheSummary {
   final Log LOG = LogFactory.getLog(getClass());
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();  
   private static final String TEST_TABLE = "testTable";
   private static final String TEST_TABLE2 = "testTable2";
   private static final String TEST_CF = "testFamily";
@@ -58,7 +58,7 @@ public class TestStoreFileBlockCacheSummary {
   private static byte [] VALUE = Bytes.toBytes("testValue");
 
   private final int TOTAL_ROWS = 4;
-
+  
   /**
    * @throws java.lang.Exception exception
    */
@@ -74,14 +74,14 @@ public class TestStoreFileBlockCacheSummary {
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
-
+  
 
   private Put createPut(byte[] family, String row) {
     Put put = new Put( Bytes.toBytes(row));
     put.add(family, QUALIFIER, VALUE);
     return put;
   }
-
+  
   /**
   * This test inserts data into multiple tables and then reads both tables to ensure
   * they are in the block cache.
@@ -97,18 +97,18 @@ public class TestStoreFileBlockCacheSummary {
    addRows(ht2, FAMILY);
 
    TEST_UTIL.flush();
-
+   
    scan(ht, FAMILY);
    scan(ht2, FAMILY);
-
+      
    BlockCache bc =
      new CacheConfig(TEST_UTIL.getConfiguration()).getBlockCache();
-   List<BlockCacheColumnFamilySummary> bcs =
+   List<BlockCacheColumnFamilySummary> bcs = 
      bc.getBlockCacheColumnFamilySummaries(TEST_UTIL.getConfiguration());
    LOG.info("blockCacheSummary: " + bcs);
 
    assertEquals("blockCache summary has entries", 3, bcs.size());
-
+   
    BlockCacheColumnFamilySummary e = bcs.get(0);
    assertEquals("table", "-ROOT-", e.getTable());
    assertEquals("cf", "info", e.getColumnFamily());
@@ -126,7 +126,7 @@ public class TestStoreFileBlockCacheSummary {
  }
 
  private void addRows(HTable ht, byte[] family) throws IOException {
-
+ 
    for (int i = 0; i < TOTAL_ROWS;i++) {
      ht.put(createPut(family, "row" + i));
    }
@@ -135,7 +135,7 @@ public class TestStoreFileBlockCacheSummary {
  private void scan(HTable ht, byte[] family) throws IOException {
    Scan scan = new Scan();
    scan.addColumn(family, QUALIFIER);
-
+   
    int count = 0;
    for(@SuppressWarnings("unused") Result result : ht.getScanner(scan)) {
      count++;

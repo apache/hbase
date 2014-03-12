@@ -217,7 +217,7 @@ public class RegionServerOperationQueue {
     // for the missing meta region(s) to come back online, but since it
     // is waiting, it cannot process the meta region online operation it
     // is waiting for. So put this operation back on the queue for now.
-    if (toDoQueue.size() == 0) {
+    if (toDoQueue.isEmpty()) {
       // The queue is currently empty so wait for a while to see if what
       // we need comes in first
       this.sleeper.sleep();

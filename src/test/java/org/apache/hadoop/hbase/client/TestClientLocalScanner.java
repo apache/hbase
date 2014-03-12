@@ -76,7 +76,7 @@ public class TestClientLocalScanner {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test(timeout=200000)
   public void testCompareLocalScanToRemoteScan() throws IOException {
     byte [] name = Bytes.toBytes("testCompareLocalScanToRemoteScan");
     HTable t = TEST_UTIL.createTable(name, new byte[][] {FAMILY, FAMILY2});

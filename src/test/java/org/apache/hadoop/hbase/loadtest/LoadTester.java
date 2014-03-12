@@ -74,7 +74,7 @@ public class LoadTester {
     }
     this.config = HBaseUtils.getHBaseConfFromZkNode(zkNodeName);
 
-    // for admin operations create a similar config, except
+    // for admin operations create a similar config, except 
     // set the RPC timeout much higher (5 mins).
     this.adminConfig = HBaseUtils.getHBaseConfFromZkNode(zkNodeName);
     this.adminConfig.setInt("hbase.rpc.timeout", 5 * 60 * 1000);

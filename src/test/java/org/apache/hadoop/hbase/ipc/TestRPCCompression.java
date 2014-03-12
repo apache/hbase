@@ -64,7 +64,7 @@ public class TestRPCCompression {
   public void tearDown() throws Exception {
     // Nothing to do.
   }
-
+  
   @Test
   public void testCompressedRPC() throws Exception {
     byte[] TABLE = Bytes.toBytes("testRPCCompression");
@@ -75,14 +75,14 @@ public class TestRPCCompression {
     // create a table
     TEST_UTIL.createTable(TABLE, FAMILIES);
     LOG.debug("Created table " + new String(TABLE));
-
+    
     // open the table with compressed RPC
     Configuration conf = HBaseConfiguration.create();
     String zkPortStr = TEST_UTIL.getConfiguration().get(
         "hbase.zookeeper.property.clientPort");
-    conf.setInt("hbase.zookeeper.property.clientPort",
+    conf.setInt("hbase.zookeeper.property.clientPort", 
         Integer.parseInt(zkPortStr));
-    conf.set(HConstants.HBASE_RPC_COMPRESSION_KEY,
+    conf.set(HConstants.HBASE_RPC_COMPRESSION_KEY, 
         Compression.Algorithm.GZ.getName());
     HTable table = new HTable(conf, TABLE);
 
@@ -104,9 +104,9 @@ public class TestRPCCompression {
       Get get = new Get(ROWS[i]);
       get.addColumn(FAMILIES[0], QUALIFIER);
       Result result = table.get(get);
-
-      assertEquals(new String(VALUE),
-		  new String(result.getValue(FAMILIES[0], QUALIFIER)));
+      
+      assertEquals(new String(VALUE), 
+    		  new String(result.getValue(FAMILIES[0], QUALIFIER)));
     }
     LOG.debug("Read and verified from table " + new String(TABLE));
   }

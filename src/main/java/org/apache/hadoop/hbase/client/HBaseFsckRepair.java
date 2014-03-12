@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-import org.apache.zookeeper.KeeperException;
 
 public class HBaseFsckRepair {
 
@@ -73,27 +72,27 @@ public class HBaseFsckRepair {
     // Clear status in master and zk
     clearInMaster(conf, actualRegion);
     clearInZK(conf, actualRegion);
-
+    
     // Clear assignment in META or ROOT
     clearAssignment(conf, actualRegion);
     return true;
   }
-
+  
   public static int getEstimatedFixTime(Configuration conf)
   throws IOException {
     // Fix Time ~=
     //   META rescan interval (when master notices region is unassigned)
     // + Time to Replay Recovered Edits (flushing HLogs == main bottleneck)
 
-    int metaRescan = conf.getInt("hbase.master.meta.thread.rescanfrequency",
+    int metaRescan = conf.getInt("hbase.master.meta.thread.rescanfrequency", 
         60 * 1000);
     // estimate = HLog Size * Max HLogs / Throughput [1 Gbps / 2 == 60MBps]
     Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
     FileSystem fs = rootDir.getFileSystem(conf);
     long logSize = conf.getLong("hbase.regionserver.hlog.blocksize",
-        fs.getDefaultBlockSize())
+        fs.getDefaultBlockSize()) 
         * conf.getInt("hbase.regionserver.maxlogs", 32);
-    int recoverEdits = (int)(logSize / (60*1000*1000));
+    int recoverEdits = (int)(logSize / (60*1000*1000));    
     int pad = 1000; // 1 sec pad
 
     return metaRescan + recoverEdits + pad;
@@ -122,7 +121,7 @@ public class HBaseFsckRepair {
   private static void closeRegion(Configuration conf, HServerAddress server,
       HRegionInfo region)
   throws IOException {
-    HRegionInterface rs =
+    HRegionInterface rs = 
       HConnectionManager.getConnection(conf).getHRegionConnection(server);
     rs.closeRegion(region, false);
   }

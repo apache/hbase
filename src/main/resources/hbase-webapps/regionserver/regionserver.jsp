@@ -27,8 +27,8 @@
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;
 
 %><?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
 <title>HBase Region Server: <%= serverInfo.getServerAddress().getHostname() %>:<%= serverInfo.getServerAddress().getPort() %></title>
@@ -71,7 +71,7 @@
     <td><%= onlineRegionInfoAndOpenDate.get(r) %></td>
 </tr>
 <%
-     }
+     } 
 %>
 </table>
 <h2>Recently Closed Regions</h2>
@@ -101,7 +101,7 @@
 <p>Region names are made of the containing table's name, a comma,
 the start key, a comma, and a randomly generated region id.  To illustrate,
 the region named
-<em>domains,apache.org,5464829424211263407</em> is party to the table
+<em>domains,apache.org,5464829424211263407</em> is party to the table 
 <em>domains</em>, has an id of <em>5464829424211263407</em> and the first key
 in the region is <em>apache.org</em>.  The <em>-ROOT-</em>
 and <em>.META.</em> 'tables' are internal sytem tables (or 'catalog' tables in db-speak).

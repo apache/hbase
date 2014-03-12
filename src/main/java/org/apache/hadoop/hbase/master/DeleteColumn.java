@@ -49,7 +49,7 @@ class DeleteColumn extends ColumnOperation {
   }
 
   @Override
-  protected void updateTableDescriptor(HTableDescriptor desc)
+  protected void updateTableDescriptor(HTableDescriptor desc) 
   throws IOException {
     if (!desc.hasFamily(columnDeletion)) {
       // we have an error.

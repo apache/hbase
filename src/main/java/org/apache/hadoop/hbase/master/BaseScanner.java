@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -141,11 +142,23 @@ abstract class BaseScanner extends Chore {
     maintenanceScan();
   }
 
+  public static Result getOneResultFromScanner(HRegionInterface srvr,
+      long scannerId)
+          throws IOException{
+    Result values = null;
+    Result[] results = srvr.next(scannerId, 1);
+    values = (results == null || results.length == 0) ? null : results[0];
+    return values;
+  }
+
   /**
    * @param metaRegion Region to scan
    * @throws IOException
+   * @throws ExecutionException
+   * @throws InterruptedException
    */
-  protected void scanRegion(final MetaRegion metaRegion) throws IOException {
+  protected void scanRegion(final MetaRegion metaRegion) throws IOException,
+      InterruptedException, ExecutionException {
     HRegionInterface regionServer = null;
     long scannerId = -1L;
     LOG.info(Thread.currentThread().getName() + " scanning meta region " +
@@ -166,7 +179,8 @@ abstract class BaseScanner extends Chore {
       s.setCacheBlocks(true);
       scannerId = regionServer.openScanner(metaRegion.getRegionName(), s);
       while (true) {
-        Result values = regionServer.next(scannerId);
+        Result values = BaseScanner.getOneResultFromScanner(
+            regionServer, scannerId);
         if (values == null || values.size() == 0) {
           break;
         }
@@ -181,7 +195,6 @@ abstract class BaseScanner extends Chore {
               HConstants.FAVOREDNODES_QUALIFIER);
           AssignmentManager assignmentManager =
             this.master.getRegionManager().getAssignmentManager();
-          
           if (favoredNodes != null) {
             // compare the update TS
             long updateTimeStamp = 
@@ -382,6 +395,7 @@ abstract class BaseScanner extends Chore {
    * @return True, if parent row has marker for "daughter row verified present"
    * else, false (and will do fixup adding daughter if daughter not present).
    */
+  @SuppressWarnings("deprecation")
   private boolean verifyDaughterRowPresent(final Result rowContent,
       final byte [] daughter, final HRegionInterface srvr,
       final byte [] metaRegionName,
@@ -556,6 +570,7 @@ abstract class BaseScanner extends Chore {
    * @param checkTwice should we check twice before adding a region to unassigned pool.
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   protected void checkAssigned(final HRegionInterface regionServer,
     final MetaRegion meta, HRegionInfo info,
     final String hostnameAndPort, final long startCode, boolean checkTwice)

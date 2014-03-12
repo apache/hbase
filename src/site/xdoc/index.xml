@@ -20,7 +20,7 @@
   <properties>
     <title>HBase Home</title>
   </properties>
-
+  
   <body>
     <section name="This is Apache HBase">
     <p>
@@ -54,5 +54,5 @@ HBase includes:
       <p><a href="old_news.html">...</a></p>
     </section>
   </body>
-
+  
 </document>

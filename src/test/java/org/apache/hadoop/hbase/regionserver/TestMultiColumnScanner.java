@@ -70,7 +70,7 @@ public class TestMultiColumnScanner {
       LogFactory.getLog(TestMultiColumnScanner.class);
 
   private static final String TABLE_NAME = "TestMultiColumnScanner";
-
+  
   // These fields are used in other unit tests
   static final String FAMILY = "CF";
   static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
@@ -135,11 +135,11 @@ public class TestMultiColumnScanner {
     schemaMetrics = SchemaMetrics.getInstance(TABLE_NAME, FAMILY);
   }
 
-
+  
   @Parameters
   public static final Collection<Object[]> parameters() {
     List<Object[]> parameters = new ArrayList<Object[]>();
-    for (Object[] bloomAndCompressionParams :
+    for (Object[] bloomAndCompressionParams : 
         HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS) {
       for (boolean useDataBlockEncoding : new boolean[]{false, true}) {
         parameters.add(ArrayUtils.add(bloomAndCompressionParams,

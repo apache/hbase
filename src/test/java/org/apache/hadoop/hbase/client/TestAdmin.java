@@ -88,16 +88,16 @@ public class TestAdmin {
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
   }
-
+  
   @Test
   public void testGetTableRegions() throws IOException {
     TEST_UTIL.createTable(Bytes.toBytes("testCreateNormalTable"),
       HConstants.CATALOG_FAMILY);
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    List<Pair<HRegionInfo,HServerAddress>>  tableRegions =
+    List<Pair<HRegionInfo,HServerAddress>>  tableRegions = 
         master.getTableRegions(Bytes.toBytes("testCreateTable"));
     assertTrue(tableRegions.size() != 0);
-    List<Pair<HRegionInfo,HServerAddress>>  metaRegions =
+    List<Pair<HRegionInfo,HServerAddress>>  metaRegions = 
         master.getTableRegions(HConstants.META_TABLE_NAME);
     assertTrue(metaRegions.size() != 0);
   }
@@ -288,11 +288,11 @@ public class TestAdmin {
       ok = true;
     }
     
-    // with online schema change it is possible to add column
+    // with online schema change it is possible to add column 
     // without disabling the table
     assertEquals(true, ok);
     this.admin.enableTable(table);
-    ok = true;
+    ok = true; 
     //Test that table is enabled
     try {
       ht.get(get);
@@ -323,7 +323,7 @@ public class TestAdmin {
     splitTest(null);
     splitTest(Bytes.toBytes("pwn"));
   }
-
+  
   void splitTest(byte[] splitPoint) throws Exception {
     byte [] familyName = HConstants.CATALOG_FAMILY;
     byte [] tableName = Bytes.toBytes("testForceSplit");
@@ -344,12 +344,12 @@ public class TestAdmin {
           }
         }
       }
-
+  
       // get the initial layout (should just be one region)
       Map<HRegionInfo,HServerAddress> m = table.getRegionsInfo();
       System.out.println("Initial regions (" + m.size() + "): " + m);
       assertTrue(m.size() == 1);
-
+  
       // Verify row count
       Scan scan = new Scan();
       ResultScanner scanner = table.getScanner(scan);
@@ -359,13 +359,13 @@ public class TestAdmin {
       }
       scanner.close();
       assertEquals(rowCount, rows);
-
+  
       // Have an outstanding scan going on to make sure we can scan over splits.
       scan = new Scan();
       scanner = table.getScanner(scan);
       // Scan first row so we are into first region before split happens.
       scanner.next();
-
+  
       final AtomicInteger count = new AtomicInteger(0);
       Thread t = new Thread("CheckForSplit") {
         public void run() {
@@ -397,7 +397,7 @@ public class TestAdmin {
         admin.split(tableName);
       }
       t.join();
-
+  
       // Verify row count
       rows = 1; // We counted one row above.
       for (@SuppressWarnings("unused") Result result : scanner) {
@@ -409,7 +409,7 @@ public class TestAdmin {
       }
       scanner.close();
       assertEquals(rowCount, rows);
-
+      
       if (splitPoint != null) {
         // make sure the split point matches our explicit configuration
         Map<HRegionInfo, HServerAddress> regions = null;
@@ -420,9 +420,9 @@ public class TestAdmin {
         }
         assertEquals(2, regions.size());
         HRegionInfo[] r = regions.keySet().toArray(new HRegionInfo[0]);
-        assertEquals(Bytes.toString(splitPoint),
+        assertEquals(Bytes.toString(splitPoint), 
             Bytes.toString(r[0].getEndKey()));
-        assertEquals(Bytes.toString(splitPoint),
+        assertEquals(Bytes.toString(splitPoint), 
             Bytes.toString(r[1].getStartKey()));
         LOG.debug("Properly split on " + Bytes.toString(splitPoint));
       }
@@ -601,7 +601,7 @@ public class TestAdmin {
         "testTableNotFoundExceptionWithoutAnyTables");
   }
 
-  @Test
+  @Test(timeout = 300000)
   public void testHundredsOfTable() throws IOException{
     final int times = 100;
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
@@ -640,7 +640,7 @@ public class TestAdmin {
 
     assertEquals(htd.compareTo(confirmedHtd), 0);
   }
-
+  
   @Test
   public void testOnlineChangeTableSchema() throws IOException,
       InterruptedException {
@@ -679,7 +679,7 @@ public class TestAdmin {
     List<Pair<HRegionInfo,HServerAddress>> regionToRegionServer = master.getTableRegions(tableName);
     // check if all regions have the column the correct schema.
     for (Pair<HRegionInfo, HServerAddress> p : regionToRegionServer) {
-      HRegionInfo regionInfo = p.getFirst();
+      HRegionInfo regionInfo = p.getFirst();  
       HTableDescriptor modifiedHtd = regionInfo.getTableDesc();
       // ensure that the Htable descriptor on the master and the region servers
       // of all regions is the same

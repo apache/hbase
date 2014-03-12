@@ -50,7 +50,7 @@ public class InfoServer extends HttpServer {
    * increment by 1 until it finds a free port.
    * @throws IOException e
    */
-  public InfoServer(String name, String bindAddress, int port,
+  public InfoServer(String name, String bindAddress, int port, 
       boolean findPort, Configuration conf) throws IOException {
     super(name, bindAddress, port, findPort, conf);
     webServer.addHandler(new ContextHandlerCollection());
@@ -82,7 +82,7 @@ public class InfoServer extends HttpServer {
       defaultContexts.put(logContext, true);
     }
     // Now bring up the task monitor
-    WebAppContext taskMonitorContext =
+    WebAppContext taskMonitorContext = 
       new WebAppContext(parent, "taskmontior", "/taskmonitor");
     taskMonitorContext.addServlet(DefaultServlet.class, "/");
     taskMonitorContext.setWar(appDir + "/taskmonitor");

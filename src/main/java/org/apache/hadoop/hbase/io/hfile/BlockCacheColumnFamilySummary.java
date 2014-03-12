@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 
 /**
- * BlockCacheColumnFamilySummary represents a summary of the blockCache usage
+ * BlockCacheColumnFamilySummary represents a summary of the blockCache usage 
  * at Table/ColumnFamily granularity.
  * <br><br>
  * As ColumnFamilies are owned by Tables, a summary by ColumnFamily implies that
@@ -45,11 +45,11 @@ public class BlockCacheColumnFamilySummary implements Writable, Comparable<Block
    * Default constructor for Writable
    */
   public BlockCacheColumnFamilySummary() {
-
+    
   }
-
+  
   /**
-   *
+   * 
    * @param table table
    * @param columnFamily columnFamily
    */
@@ -57,59 +57,59 @@ public class BlockCacheColumnFamilySummary implements Writable, Comparable<Block
     this.table = table;
     this.columnFamily = columnFamily;
   }
-
+  
   /**
-   *
+   * 
    * @return table
    */
   public String getTable() {
     return table;
   }
   /**
-   *
+   * 
    * @param table (table that owns the cached block)
    */
   public void setTable(String table) {
     this.table = table;
   }
   /**
-   *
+   * 
    * @return columnFamily
    */
   public String getColumnFamily() {
     return columnFamily;
   }
   /**
-   *
+   * 
    * @param columnFamily (columnFamily that owns the cached block)
    */
   public void setColumnFamily(String columnFamily) {
     this.columnFamily = columnFamily;
   }
-
+  
   /**
-   *
+   * 
    * @return blocks in the cache
    */
   public int getBlocks() {
     return blocks;
   }
   /**
-   *
+   * 
    * @param blocks in the cache
    */
   public void setBlocks(int blocks) {
     this.blocks = blocks;
   }
-
+  
   /**
-   *
+   * 
    * @return heapSize in the cache
    */
   public long getHeapSize() {
     return heapSize;
   }
-
+  
   /**
    * Increments the number of blocks in the cache for this entry
    */
@@ -118,7 +118,7 @@ public class BlockCacheColumnFamilySummary implements Writable, Comparable<Block
   }
 
   /**
-   *
+   * 
    * @param heapSize to increment
    */
   public void incrementHeapSize(long heapSize) {
@@ -126,13 +126,13 @@ public class BlockCacheColumnFamilySummary implements Writable, Comparable<Block
   }
 
   /**
-   *
+   * 
    * @param heapSize (total heapSize for the table/CF)
    */
   public void setHeapSize(long heapSize) {
     this.heapSize = heapSize;
   }
-
+  
   @Override
   public void readFields(DataInput in) throws IOException {
     table = in.readUTF();
@@ -140,7 +140,7 @@ public class BlockCacheColumnFamilySummary implements Writable, Comparable<Block
     blocks = in.readInt();
     heapSize = in.readLong();
   }
-
+  
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeUTF(table);
@@ -148,7 +148,7 @@ public class BlockCacheColumnFamilySummary implements Writable, Comparable<Block
     out.writeInt(blocks);
     out.writeLong(heapSize);
   }
-
+  
   @Override
   public int hashCode() {
     final int prime = 31;
@@ -179,15 +179,15 @@ public class BlockCacheColumnFamilySummary implements Writable, Comparable<Block
       return false;
     return true;
   }
-
-
-
+  
+  
+  
   @Override
   public String toString() {
     return "BlockCacheSummaryEntry [table=" + table + ", columnFamily="
         + columnFamily + ", blocks=" + blocks + ", heapSize=" + heapSize + "]";
   }
-
+  
   /**
    * Construct a BlockCacheSummaryEntry from a full StoreFile Path
    * <br><br>
@@ -200,12 +200,12 @@ public class BlockCacheColumnFamilySummary implements Writable, Comparable<Block
    * '70236052' = Region <br>
    * 'info' = ColumnFamily <br>
    * '3944417774205889744' = StoreFile
-   *
+   * 
    * @param path (full StoreFile Path)
    * @return BlockCacheSummaryEntry
    */
   public static BlockCacheColumnFamilySummary createFromStoreFilePath(Path path) {
-
+       
     // The full path will look something like this...
     // hdfs://localhost:51169/user/doug.meil/-ROOT-/70236052/info/3944417774205889744
     //                                        tbl    region   cf   sf
@@ -218,7 +218,7 @@ public class BlockCacheColumnFamilySummary implements Writable, Comparable<Block
       String table = s[s.length - 4];  // 4th from the end
       String cf = s[s.length - 2];     // 2nd from the end
       bcse = new BlockCacheColumnFamilySummary(table, cf);
-    }
+    } 
     return bcse;
   }
 
@@ -227,13 +227,13 @@ public class BlockCacheColumnFamilySummary implements Writable, Comparable<Block
     int i = table.compareTo(o.getTable());
     if (i != 0) {
       return i;
-    }
+    } 
     return columnFamily.compareTo(o.getColumnFamily());
   }
 
   /**
    * Creates a new BlockCacheSummaryEntry
-   *
+   * 
    * @param e BlockCacheSummaryEntry
    * @return new BlockCacheSummaryEntry
    */

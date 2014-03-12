@@ -19,14 +19,23 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * ParallelScanner is a utility class for the HBase client to perform multiple scan
@@ -75,7 +84,7 @@ public class ParallelScanner {
    * @throws IOException if any of the getScanners throws out the exceptions
    */
   public void initialize() throws IOException {
-    Map<Scan, Future<ResultScanner>> results = new HashMap();
+    Map<Scan, Future<ResultScanner>> results = new HashMap<Scan, Future<ResultScanner>>();
 
     for (final Scan scan : scans) {
       // setCaching for each scan
@@ -83,6 +92,7 @@ public class ParallelScanner {
 
       results.put(scan,
         parallelScannerPool.submit(new Callable<ResultScanner>() {
+          @Override
           public ResultScanner call() throws IOException {
             return hTable.getScanner(scan);
           }
@@ -95,6 +105,7 @@ public class ParallelScanner {
         resultScanners.add(resultEntry.getValue().get());
         // TODO: switch to use multi-catch when compiling client jar with JDK7
       } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new IOException("Could not get scanners for the scan: "
           + resultEntry.getKey() + " due to " + e);
       } catch (ExecutionException e) {
@@ -121,8 +132,8 @@ public class ParallelScanner {
       return null;
     }
 
-    List<Result> results = new ArrayList();
-    Map<ResultScanner, Future<Result[]>> context = new HashMap();
+    List<Result> results = new ArrayList<Result>();
+    Map<ResultScanner, Future<Result[]>> context = new HashMap<ResultScanner, Future<Result[]>>();
     for (final ResultScanner scanner : resultScanners) {
 
       if (scanner.isClosed()) {
@@ -131,9 +142,11 @@ public class ParallelScanner {
 
       context.put(scanner,
         parallelScannerPool.submit(new Callable<Result[]>() {
+          @Override
           public Result[] call() throws IOException {
             Result[] tmp = scanner.next(numRows);
-            if (tmp.length == 0) { // scanner.next() returns a NON-NULL result.
+          if (tmp == null || tmp.length == 0) { // scanner.next() returns a
+                                                // NON-NULL result.
               scanner.close(); // close the scanner as there is no data left.
             }
             return tmp;
@@ -145,15 +158,15 @@ public class ParallelScanner {
     for (Map.Entry<ResultScanner, Future<Result[]>> contextEntry : context.entrySet()) {
       try {
         Result[] result = contextEntry.getValue().get();
-        if (result.length != 0) {
+        if (result != null && result.length != 0) {
           results.addAll(Arrays.asList(result));
         }
       // TODO: switch to use multi-catch when compiling client jar with JDK7
       } catch (InterruptedException e) {
-        throw new IOException("Could not get scanners for the scan: "
+        throw new IOException("Could not get next value for the scan: "
           + contextEntry.getKey() + " due to " + e);
       } catch (ExecutionException e) {
-        throw new IOException("Could not get scanners for the scan: "
+        throw new IOException("Could not get next value for the scan: "
           + contextEntry.getKey() + " due to " + e);
       }
     }
