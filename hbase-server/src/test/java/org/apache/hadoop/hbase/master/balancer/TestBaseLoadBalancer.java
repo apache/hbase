@@ -295,6 +295,8 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
       Lists.newArrayList(servers.get(0), servers.get(1)));
     when(locationFinder.getTopBlockLocations(regions.get(42))).thenReturn(
       Lists.newArrayList(servers.get(4), servers.get(9), servers.get(5)));
+    when(locationFinder.getTopBlockLocations(regions.get(43))).thenReturn(
+      Lists.newArrayList(ServerName.valueOf("foo", 0, 0))); // this server does not exists in clusterStatus
 
     BaseLoadBalancer.Cluster cluster = new Cluster(clusterState, null, locationFinder);
 
@@ -302,6 +304,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     int r1 = ArrayUtils.indexOf(cluster.regions, regions.get(1));
     int r10 = ArrayUtils.indexOf(cluster.regions, regions.get(10));
     int r42 = ArrayUtils.indexOf(cluster.regions, regions.get(42));
+    int r43 = ArrayUtils.indexOf(cluster.regions, regions.get(43));
 
     int s0 = cluster.serversToIndex.get(servers.get(0).getHostAndPort());
     int s1 = cluster.serversToIndex.get(servers.get(1).getHostAndPort());
@@ -326,6 +329,10 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertEquals(s4, cluster.regionLocations[r42][0]);
     assertEquals(s9, cluster.regionLocations[r42][1]);
     assertEquals(s5, cluster.regionLocations[r42][2]);
+
+    // region 43 locations
+    assertEquals(1, cluster.regionLocations[r43].length);
+    assertEquals(-1, cluster.regionLocations[r43][0]);
   }
 
 }
