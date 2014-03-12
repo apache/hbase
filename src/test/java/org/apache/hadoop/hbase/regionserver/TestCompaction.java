@@ -634,8 +634,8 @@ public class TestCompaction extends HBaseClusterTestCase {
     }
 
     CompactUtility util = new CompactUtility(
-            "TestCompaction", new HColumnDescriptor("colfamily1"),
-            hri.getRegionId(), pathList, conf);
+      "TestCompaction", new HColumnDescriptor("colfamily1"), hri.getStartKey(),
+      hri.getRegionId(), pathList, conf);
     util.compact();
     Path tableDir = HTableDescriptor.getTableDir(
             new Path(HConstants.HBASE_DIR), COLUMN_FAMILY);

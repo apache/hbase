@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -47,7 +48,8 @@ public class CompactUtility {
   private HRegion hRegion;
 
 
-  public CompactUtility(String table, HColumnDescriptor cFamily, long regionId,
+  public CompactUtility(String table, HColumnDescriptor cFamily,
+                        byte[] startKey, long regionId,
                         List<Path> filesCompacting, Configuration conf)
           throws IOException {
     this.conf = conf;
@@ -57,7 +59,8 @@ public class CompactUtility {
     FileSystem fs = FileSystem.get(conf);
     HTableDescriptor htd = new HTableDescriptor(this.table);
     htd.addFamily(this.cFamily);
-    HRegionInfo hri = new HRegionInfo(htd, null, null, false, regionId);
+
+    HRegionInfo hri = new HRegionInfo(htd, startKey, null, false, regionId);
     Path tableDir = HTableDescriptor.getTableDir(
             new Path(HConstants.HBASE_DIR), this.table.getBytes());
     Path regionDir = HRegion.getRegionDir(tableDir, hri.getEncodedName());
@@ -100,12 +103,12 @@ public class CompactUtility {
 
   public static void main(String[] args) throws Exception {
     Options options = new Options();
-    options.addOption("t", "table name", false,
+    options.addOption("t", "table name", true,
             "Table for which the files hold data");
-    options.addOption("c", "Column Family", false,
+    options.addOption("c", "Column Family", true,
             "Column Family of the table");
-    options.addOption("r", "Region Id", false,
-            "Region Id of the region which stores the table");
+    options.addOption("r", "Region Name", true,
+            "Region Name for which we need to compact the files");
     CommandLineParser parser = new PosixParser();
     CommandLine cmd = parser.parse(options, args);
     if (!cmd.hasOption("t") || !cmd.hasOption("c") || !cmd.hasOption("r")) {
@@ -113,8 +116,23 @@ public class CompactUtility {
       throw new IOException("Incomplete arguments");
     }
     String table = cmd.getOptionValue("t");
-    long regionId = Long.valueOf(cmd.getOptionValue("r"));
+    String regionName = cmd.getOptionValue("r");
+
+    byte[] startKey = null;
+    long regionId = -1;
+    try {
+      // the regionName is of format "<tableName>,<startKey>,<regionId.md5hash>"
+      String[] splits = regionName.split(",");
+      startKey = Bytes.toBytes(splits[1]);
+      regionId = Long.valueOf(splits[2].split("\\.")[0]);
+    } catch (Exception e) {
+      System.out.println("Invalid region name specified. The expected format" +
+        " is " + "<tableName>,<startKey>,<regionId.md5hash>");
+      System.exit(-1);
+    }
+
     HColumnDescriptor cFamily = new HColumnDescriptor(cmd.getOptionValue("c"));
+
     String[] files = cmd.getArgs();
     List<Path> filePaths = new ArrayList<Path>();
     for (String file : files) {
@@ -123,7 +141,7 @@ public class CompactUtility {
     Configuration conf = HBaseConfiguration.create();
     SchemaMetrics.configureGlobally(conf);
     CompactUtility compactUtility = new CompactUtility(
-            table, cFamily, regionId, filePaths, conf);
+            table, cFamily, startKey, regionId, filePaths, conf);
     compactUtility.compact();
   }
 }
