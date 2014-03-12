@@ -40,7 +40,7 @@ t to table 't1', the corresponding command would be:
 EOF
       end
 
-      def command(table, row, column, value)
+      def command(table, row, column, value = nil)
         incr(table(table), row, column, value)
       end
 
