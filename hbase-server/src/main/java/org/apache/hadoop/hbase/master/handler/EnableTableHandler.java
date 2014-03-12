@@ -201,10 +201,15 @@ public class EnableTableHandler extends EventHandler {
       // need to potentially create some regions for the replicas
       List<HRegionInfo> unrecordedReplicas = AssignmentManager.replicaRegionsNotRecordedInMeta(
           new HashSet<HRegionInfo>(regionsToAssign.keySet()), services);
-      for (HRegionInfo h : unrecordedReplicas) {
-        regionsToAssign.put(h, 
-            this.assignmentManager.getBalancer().randomAssignment(h,
-                serverManager.getOnlineServersList()));
+      Map<ServerName, List<HRegionInfo>> srvToUnassignedRegs =
+            this.assignmentManager.getBalancer().roundRobinAssignment(unrecordedReplicas,
+                serverManager.getOnlineServersList());
+      if (srvToUnassignedRegs != null) {
+        for (Map.Entry<ServerName, List<HRegionInfo>> entry : srvToUnassignedRegs.entrySet()) {
+          for (HRegionInfo h : entry.getValue()) {
+            regionsToAssign.put(h, entry.getKey());
+          }
+        }
       }
     }
     int regionsCount = regionsToAssign.size();
