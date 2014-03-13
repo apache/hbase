@@ -110,7 +110,7 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
             boolean isNullExpected = ((((int) keyToRead % specialPermCellInsertionFactor)) == 0);
             LOG.info("Read happening from ACL " + isNullExpected);
             long end = System.nanoTime();
-            verifyResultsAndUpdateMetrics(verify, rowKey, end - start, result, localTable, isNullExpected);
+            verifyResultsAndUpdateMetrics(verify, get, end - start, result, localTable, isNullExpected);
           } catch (IOException e) {
             recordFailure(keyToRead);
           }

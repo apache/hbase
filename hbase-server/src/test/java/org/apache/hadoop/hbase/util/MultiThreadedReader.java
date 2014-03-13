@@ -17,6 +17,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -64,13 +65,18 @@ public class MultiThreadedReader extends MultiThreadedAction
    */
   public static final int DEFAULT_KEY_WINDOW = 0;
 
+  /**
+   * Default batch size for multigets
+   */
+  public static final int DEFAULT_BATCH_SIZE = 1; //translates to simple GET (no multi GET)
+
   protected AtomicLong numKeysVerified = new AtomicLong(0);
   protected AtomicLong numReadErrors = new AtomicLong(0);
   protected AtomicLong numReadFailures = new AtomicLong(0);
   protected AtomicLong nullResult = new AtomicLong(0);
-
   private int maxErrors = DEFAULT_MAX_ERRORS;
   private int keyWindow = DEFAULT_KEY_WINDOW;
+  private int batchSize = DEFAULT_BATCH_SIZE;
 
   public MultiThreadedReader(LoadTestDataGenerator dataGen, Configuration conf,
       TableName tableName, double verifyPercent) {
@@ -89,6 +95,10 @@ public class MultiThreadedReader extends MultiThreadedAction
 
   public void setKeyWindow(int keyWindow) {
     this.keyWindow = keyWindow;
+  }
+
+  public void setMultiGetBatchSize(int batchSize) {
+    this.batchSize = batchSize;
   }
 
   @Override
@@ -169,28 +179,38 @@ public class MultiThreadedReader extends MultiThreadedAction
 
       startTimeMs = System.currentTimeMillis();
       curKey = startKey;
+      long [] keysForThisReader = new long[batchSize];
+      int readingRandomKeyStartIndex = -1;
       while (curKey < endKey && !aborted) {
-        long k = getNextKeyToRead();
+        int numKeys = 0;
+        // if multiGet, loop until we have the number of keys equal to the batch size
+        do {
+          long k = getNextKeyToRead();
+          if (k < startKey || k >= endKey) {
+            numReadErrors.incrementAndGet();
+            throw new AssertionError("Load tester logic error: proposed key " +
+                "to read " + k + " is out of range (startKey=" + startKey +
+                ", endKey=" + endKey + ")");
+          }
+          if (k % numThreads != readerId ||
+              writer != null && writer.failedToWriteKey(k)) {
+            // Skip keys that this thread should not read, as well as the keys
+            // that we know the writer failed to write.
+            continue;
+          }
+          keysForThisReader[numKeys] = k;
+          if (readingRandomKey && readingRandomKeyStartIndex == -1) {
+            //store the first index of a random read
+            readingRandomKeyStartIndex = numKeys;
+          }
+          numKeys++;
+        } while (numKeys < batchSize);
 
-        // A sanity check for the key range.
-        if (k < startKey || k >= endKey) {
-          numReadErrors.incrementAndGet();
-          throw new AssertionError("Load tester logic error: proposed key " +
-              "to read " + k + " is out of range (startKey=" + startKey +
-              ", endKey=" + endKey + ")");
-        }
-
-        if (k % numThreads != readerId ||
-            writer != null && writer.failedToWriteKey(k)) {
-          // Skip keys that this thread should not read, as well as the keys
-          // that we know the writer failed to write.
-          continue;
-        }
-
-        readKey(k);
-        if (k == curKey - 1 && !readingRandomKey) {
-          // We have verified another unique key.
-          numUniqueKeysVerified.incrementAndGet();
+        if (numKeys > 1) { //meaning there is some key to read
+          readKey(keysForThisReader);
+          // We have verified some unique key(s).
+          numUniqueKeysVerified.getAndAdd(readingRandomKeyStartIndex == -1 ?
+              numKeys : readingRandomKeyStartIndex);
         }
       }
     }
@@ -240,22 +260,44 @@ public class MultiThreadedReader extends MultiThreadedAction
           % (maxKeyToRead - startKey + 1);
     }
 
-    private Get readKey(long keyToRead) {
-      Get get = null;
-      try {
-        get = createGet(keyToRead);
-        queryKey(get, RandomUtils.nextInt(100) < verifyPercent, keyToRead);
-      } catch (IOException e) {
-        numReadFailures.addAndGet(1);
-        LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "")
-            + ", time from start: "
-            + (System.currentTimeMillis() - startTimeMs) + " ms");
-        if (printExceptionTrace) {
-          LOG.warn(e);
-          printExceptionTrace = false;
+    private Get[] readKey(long[] keysToRead) {
+      Get [] gets = new Get[keysToRead.length];
+      int i = 0;
+      for (long keyToRead : keysToRead) {
+        try {
+          gets[i] = createGet(keyToRead);
+          if (keysToRead.length == 1) {
+            queryKey(gets[i], RandomUtils.nextInt(100) < verifyPercent, keyToRead);
+          }
+          i++;
+        } catch (IOException e) {
+          numReadFailures.addAndGet(1);
+          LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "")
+              + ", time from start: "
+              + (System.currentTimeMillis() - startTimeMs) + " ms");
+          if (printExceptionTrace) {
+            LOG.warn(e);
+            printExceptionTrace = false;
+          }
         }
       }
-      return get;
+      if (keysToRead.length > 1) {
+        try {
+          queryKey(gets, RandomUtils.nextInt(100) < verifyPercent, keysToRead);
+        } catch (IOException e) {
+          numReadFailures.addAndGet(gets.length);
+          for (long keyToRead : keysToRead) {
+            LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "")
+                + ", time from start: "
+                + (System.currentTimeMillis() - startTimeMs) + " ms");
+          }
+          if (printExceptionTrace) {
+            LOG.warn(e);
+            printExceptionTrace = false;
+          }
+        }
+      }
+      return gets;
     }
 
     protected Get createGet(long keyToRead) throws IOException {
@@ -278,28 +320,53 @@ public class MultiThreadedReader extends MultiThreadedAction
       return get;
     }
 
-    public void queryKey(Get get, boolean verify, long keyToRead) throws IOException {
-      String rowKey = Bytes.toString(get.getRow());
-
+    public void queryKey(Get[] gets, boolean verify, long[] keysToRead) throws IOException {
       // read the data
       long start = System.nanoTime();
-      Result result = table.get(get);
+      // Uses multi/batch gets
+      Result[] results = table.get(Arrays.asList(gets));
       long end = System.nanoTime();
-      verifyResultsAndUpdateMetrics(verify, rowKey, end - start, result, table, false);
+      verifyResultsAndUpdateMetrics(verify, gets, end - start, results, table, false);
     }
 
-    protected void verifyResultsAndUpdateMetrics(boolean verify, String rowKey, long elapsedNano,
-        Result result, HTable table, boolean isNullExpected)
+    public void queryKey(Get get, boolean verify, long keyToRead) throws IOException {
+      // read the data
+      
+      long start = System.nanoTime();
+      // Uses simple get
+      Result result = table.get(get);
+      long end = System.nanoTime();
+      verifyResultsAndUpdateMetrics(verify, get, end - start, result, table, false);
+    }
+
+    protected void verifyResultsAndUpdateMetrics(boolean verify, Get[] gets, long elapsedNano,
+        Result[] results, HTable table, boolean isNullExpected)
         throws IOException {
       totalOpTimeMs.addAndGet(elapsedNano / 1000000);
-      numKeys.addAndGet(1);
+      numKeys.addAndGet(gets.length);
+      int i = 0;
+      for (Result result : results) {
+        verifyResultsAndUpdateMetricsOnAPerGetBasis(verify, gets[i++], result, table,
+            isNullExpected);
+      }
+    }
+
+    protected void verifyResultsAndUpdateMetrics(boolean verify, Get get, long elapsedNano,
+        Result result, HTable table, boolean isNullExpected)
+        throws IOException {
+      verifyResultsAndUpdateMetrics(verify, new Get[]{get}, elapsedNano,
+          new Result[]{result}, table, isNullExpected);
+    }
+
+    private void verifyResultsAndUpdateMetricsOnAPerGetBasis(boolean verify, Get get,
+        Result result, HTable table, boolean isNullExpected) throws IOException {
       if (!result.isEmpty()) {
         if (verify) {
           numKeysVerified.incrementAndGet();
         }
       } else {
-         HRegionLocation hloc = table.getRegionLocation(
-             Bytes.toBytes(rowKey));
+         HRegionLocation hloc = table.getRegionLocation(get.getRow());
+         String rowKey = Bytes.toString(get.getRow());
         LOG.info("Key = " + rowKey + ", RegionServer: "
             + hloc.getHostname());
         if(isNullExpected) {

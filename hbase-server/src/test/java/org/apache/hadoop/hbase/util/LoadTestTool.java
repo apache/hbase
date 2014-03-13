@@ -133,6 +133,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_WRITE = "write";
   protected static final String OPT_MAX_READ_ERRORS = "max_read_errors";
   protected static final String OPT_MULTIPUT = "multiput";
+  public static final String OPT_MULTIGET = "multiget_batchsize";
   protected static final String OPT_NUM_KEYS = "num_keys";
   protected static final String OPT_READ = "read";
   protected static final String OPT_START_KEY = "start_key";
@@ -154,7 +155,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   public static final String OPT_NUM_REGIONS_PER_SERVER = "num_regions_per_server";
   protected static final String OPT_NUM_REGIONS_PER_SERVER_USAGE
     = "Desired number of regions per region server. Defaults to 5.";
-  protected static int DEFAULT_NUM_REGIONS_PER_SERVER = 5;
+  public static int DEFAULT_NUM_REGIONS_PER_SERVER = 5;
 
   public static final String OPT_REGION_REPLICATION = "region_replication";
   protected static final String OPT_REGION_REPLICATION_USAGE =
@@ -196,6 +197,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   // Reader options
   private int numReaderThreads = DEFAULT_NUM_THREADS;
   private int keyWindow = MultiThreadedReader.DEFAULT_KEY_WINDOW;
+  private int multiGetBatchSize = MultiThreadedReader.DEFAULT_BATCH_SIZE;
   private int maxReadErrors = MultiThreadedReader.DEFAULT_MAX_ERRORS;
   private int verifyPercent;
 
@@ -298,6 +300,8 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptWithArg(OPT_MAX_READ_ERRORS, "The maximum number of read errors " +
         "to tolerate before terminating all reader threads. The default is " +
         MultiThreadedReader.DEFAULT_MAX_ERRORS + ".");
+    addOptWithArg(OPT_MULTIGET, "Whether to use multi-gets as opposed to " +
+        "separate gets for every column in a row");
     addOptWithArg(OPT_KEY_WINDOW, "The 'key window' to maintain between " +
         "reads and writes for concurrent write/read workload. The default " +
         "is " + MultiThreadedReader.DEFAULT_KEY_WINDOW + ".");
@@ -432,6 +436,12 @@ public class LoadTestTool extends AbstractHBaseTool {
             0, Integer.MAX_VALUE);
       }
 
+      if (cmd.hasOption(OPT_MULTIGET)) {
+        multiGetBatchSize = parseInt(cmd.getOptionValue(OPT_MULTIGET),
+            0, Integer.MAX_VALUE);
+      }
+
+      System.out.println("Multi-gets (value of 1 means no multigets): " + multiGetBatchSize);
       System.out.println("Percent of keys to verify: " + verifyPercent);
       System.out.println("Reader threads: " + numReaderThreads);
     }
@@ -620,6 +630,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       }
       readerThreads.setMaxErrors(maxReadErrors);
       readerThreads.setKeyWindow(keyWindow);
+      readerThreads.setMultiGetBatchSize(multiGetBatchSize);
     }
 
     if (isUpdate && isWrite) {
