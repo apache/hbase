@@ -128,7 +128,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
       process();
       if (getListener() != null) getListener().afterProcess(this);
     } catch(Throwable t) {
-      LOG.error("Caught throwable while processing event " + eventType, t);
+      handleException(t);
     } finally {
       chunk.close();
     }
@@ -216,5 +216,13 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
    */
   public String getInformativeName() {
     return this.getClass().toString();
+  }
+
+  /**
+   * Event exception handler, may be overridden
+   * @param t Throwable object
+   */
+  protected void handleException(Throwable t) {
+    LOG.error("Caught throwable while processing event " + eventType, t);
   }
 }
