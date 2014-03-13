@@ -2534,6 +2534,9 @@ public class HConnectionManager {
       if (clusterStatusListener != null) {
         clusterStatusListener.close();
       }
+      if (rpcClient != null) {
+        rpcClient.stop();
+      }
     }
 
     @Override
