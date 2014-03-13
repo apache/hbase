@@ -412,6 +412,7 @@ public class RegionStates {
     if (!serverName.equals(oldServerName)) {
       LOG.info("Onlined " + hri.getShortNameToLog() + " on " + serverName);
       addToServerHoldings(serverName, hri);
+      addToReplicaMapping(hri);
       if (oldServerName != null) {
         LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
         removeFromServerHoldings(oldServerName, hri);
@@ -426,7 +427,9 @@ public class RegionStates {
       serverHoldings.put(serverName, regions);
     }
     regions.add(hri);
+  }
 
+  private void addToReplicaMapping(HRegionInfo hri) {
     HRegionInfo defaultReplica = RegionReplicaUtil.getRegionInfoForDefaultReplica(hri);
     Set<HRegionInfo> replicas =
         defaultReplicaToOtherReplicas.get(defaultReplica);
@@ -443,6 +446,9 @@ public class RegionStates {
     if (oldRegions.isEmpty()) {
       serverHoldings.remove(serverName);
     }
+  }
+
+  private void removeFromReplicaMapping(HRegionInfo hri) {
     HRegionInfo defaultReplica = RegionReplicaUtil.getRegionInfoForDefaultReplica(hri);
     Set<HRegionInfo> replicas = defaultReplicaToOtherReplicas.get(defaultReplica);
     if (replicas != null) {
@@ -521,6 +527,7 @@ public class RegionStates {
     if (oldServerName != null) {
       LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
       removeFromServerHoldings(oldServerName, hri);
+      removeFromReplicaMapping(hri);
     }
   }
 
