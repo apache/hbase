@@ -33,6 +33,8 @@ public interface StoreConfigInformation {
   /**
    * @return Gets the Memstore flush size for the region that this store works with.
    */
+  // TODO: Why is this in here?  It should be in Store and it should return the Store flush size,
+  // not the Regions.  St.Ack
   long getMemstoreFlushSize();
 
   /**

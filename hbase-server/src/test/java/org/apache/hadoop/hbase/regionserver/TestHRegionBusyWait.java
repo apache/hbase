@@ -42,7 +42,7 @@ public class TestHRegionBusyWait extends TestHRegion {
   @Before
   public void setup() throws IOException {
     super.setup();
-    conf.set("hbase.busy.wait.duration", "1000");
+    CONF.set("hbase.busy.wait.duration", "1000");
   }
 
   /**
@@ -53,7 +53,7 @@ public class TestHRegionBusyWait extends TestHRegion {
     String method = "testRegionTooBusy";
     byte[] tableName = Bytes.toBytes(method);
     byte[] family = Bytes.toBytes("family");
-    region = initHRegion(tableName, method, conf, family);
+    region = initHRegion(tableName, method, CONF, family);
     final AtomicBoolean stopped = new AtomicBoolean(true);
     Thread t = new Thread(new Runnable() {
       @Override
