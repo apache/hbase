@@ -254,6 +254,13 @@ public interface Store extends HeapSize, StoreConfigInformation {
    */
   long getMemStoreSize();
 
+  /**
+   * @return The amount of memory we could flush from this memstore; usually this is equal to
+   * {@link #getMemStoreSize()} unless we are carrying snapshots and then it will be the size of
+   * outstanding snapshots.
+   */
+  long getFlushableSize();
+
   HColumnDescriptor getFamily();
 
   /**

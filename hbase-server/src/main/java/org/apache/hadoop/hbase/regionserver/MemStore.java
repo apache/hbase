@@ -86,6 +86,7 @@ public class MemStore implements HeapSize {
 
   // Used to track own heapSize
   final AtomicLong size;
+  private volatile long snapshotSize;
 
   // Used to track when to flush
   volatile long timeOfOldestEdit = Long.MAX_VALUE;
@@ -117,6 +118,7 @@ public class MemStore implements HeapSize {
     timeRangeTracker = new TimeRangeTracker();
     snapshotTimeRangeTracker = new TimeRangeTracker();
     this.size = new AtomicLong(DEEP_OVERHEAD);
+    this.snapshotSize = 0;
     if (conf.getBoolean(USEMSLAB_KEY, USEMSLAB_DEFAULT)) {
       this.chunkPool = MemStoreChunkPool.getPool(conf);
       this.allocator = new MemStoreLAB(conf, chunkPool);
@@ -148,6 +150,7 @@ public class MemStore implements HeapSize {
           "Doing nothing. Another ongoing flush or did we fail last attempt?");
     } else {
       if (!this.kvset.isEmpty()) {
+        this.snapshotSize = keySize();
         this.snapshot = this.kvset;
         this.kvset = new KeyValueSkipListSet(this.comparator);
         this.snapshotTimeRangeTracker = this.timeRangeTracker;
@@ -177,6 +180,18 @@ public class MemStore implements HeapSize {
   }
 
   /**
+   * On flush, how much memory we will clear.
+   * Flush will first clear out the data in snapshot if any (It will take a second flush
+   * invocation to clear the current Cell set). If snapshot is empty, current
+   * Cell set will be flushed.
+   *
+   * @return size of data that is going to be flushed
+   */
+  long getFlushableSize() {
+    return this.snapshotSize > 0 ? this.snapshotSize : keySize();
+  }
+
+  /**
    * The passed snapshot was successfully persisted; it can be let go.
    * @param ss The snapshot to clean out.
    * @throws UnexpectedException
@@ -195,6 +210,7 @@ public class MemStore implements HeapSize {
       this.snapshot = new KeyValueSkipListSet(this.comparator);
       this.snapshotTimeRangeTracker = new TimeRangeTracker();
     }
+    this.snapshotSize = 0;
     if (this.snapshotAllocator != null) {
       tmpAllocator = this.snapshotAllocator;
       this.snapshotAllocator = null;
@@ -983,7 +999,7 @@ public class MemStore implements HeapSize {
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (10 * ClassSize.REFERENCE) + Bytes.SIZEOF_LONG);
+      ClassSize.OBJECT + (10 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG));
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.ATOMIC_LONG + (2 * ClassSize.TIMERANGE_TRACKER) +
