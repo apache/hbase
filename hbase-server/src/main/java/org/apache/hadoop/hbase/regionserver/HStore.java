@@ -299,7 +299,13 @@ public class HStore implements Store {
 
   @Override
   public long getMemstoreFlushSize() {
+    // TODO: Why is this in here?  The flushsize of the region rather than the store?  St.Ack
     return this.region.memstoreFlushSize;
+  }
+
+  @Override
+  public long getFlushableSize() {
+    return this.memstore.getFlushableSize();
   }
 
   @Override
@@ -722,7 +728,7 @@ public class HStore implements Store {
           }
         }
       } catch (IOException e) {
-        LOG.warn("Failed flushing store file, retring num=" + i, e);
+        LOG.warn("Failed flushing store file, retrying num=" + i, e);
         lastException = e;
       }
       if (lastException != null) {

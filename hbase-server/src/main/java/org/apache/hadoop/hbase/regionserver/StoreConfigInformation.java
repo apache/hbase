@@ -34,6 +34,8 @@ public interface StoreConfigInformation {
    * TODO: remove after HBASE-7252 is fixed.
    * @return Gets the Memstore flush size for the region that this store works with.
    */
+  // TODO: Why is this in here?  It should be in Store and it should return the Store flush size,
+  // not the Regions.  St.Ack
   long getMemstoreFlushSize();
 
   /**
