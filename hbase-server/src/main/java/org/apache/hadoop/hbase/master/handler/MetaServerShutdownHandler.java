@@ -33,7 +33,12 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
+
+import com.google.common.annotations.VisibleForTesting;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Shutdown handler for the server hosting <code>hbase:meta</code>
@@ -41,6 +46,10 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class MetaServerShutdownHandler extends ServerShutdownHandler {
   private static final Log LOG = LogFactory.getLog(MetaServerShutdownHandler.class);
+  private AtomicInteger eventExceptionCount = new AtomicInteger(0);
+  @VisibleForTesting
+  static final int SHOW_STRACKTRACE_FREQUENCY = 100;
+
   public MetaServerShutdownHandler(final Server server,
       final MasterServices services,
       final DeadServer deadServers, final ServerName serverName) {
@@ -115,8 +124,10 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
         this.deadServers.finish(serverName);
       }     
     }
-    
+
     super.process();
+    // Clear this counter on successful handling.
+    this.eventExceptionCount.set(0);
   }
 
   @Override
@@ -194,5 +205,21 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       name = server.getServerName().toString();
     }
     return getClass().getSimpleName() + "-" + name + "-" + getSeqid();
+  }
+
+  @Override
+  protected void handleException(Throwable t) {
+    int count = eventExceptionCount.getAndIncrement();
+    if (count < 0) count = eventExceptionCount.getAndSet(0);
+    if (count > SHOW_STRACKTRACE_FREQUENCY) { // Too frequent, let's slow reporting
+      Threads.sleep(1000);
+    }
+    if (count % SHOW_STRACKTRACE_FREQUENCY == 0) {
+      LOG.error("Caught " + eventType + ", count=" + this.eventExceptionCount, t); 
+    } else {
+      LOG.error("Caught " + eventType + ", count=" + this.eventExceptionCount +
+        "; " + t.getMessage() + "; stack trace shows every " + SHOW_STRACKTRACE_FREQUENCY +
+        "th time.");
+    }
   }
 }
