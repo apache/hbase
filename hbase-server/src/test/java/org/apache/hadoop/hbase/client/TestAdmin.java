@@ -27,6 +27,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -61,14 +62,23 @@ import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtilsForTests;
+import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.ServiceException;
@@ -90,6 +100,7 @@ public class TestAdmin {
     TEST_UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable", true);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.REPLICATION_ENABLE_KEY, HConstants.REPLICATION_ENABLE_DEFAULT);
     TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
     TEST_UTIL.getConfiguration().setBoolean(
         "hbase.master.enabletable.roundrobin", true);
@@ -365,23 +376,27 @@ public class TestAdmin {
            assertTrue(exceptionThrown);
        }
    }
-  
+
   /**
    * Verify schema modification takes.
+   *
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test (timeout=300000)
-  public void testOnlineChangeTableSchema() throws IOException, InterruptedException {
-    final TableName tableName =
-        TableName.valueOf("changeTableSchemaOnline");
-    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
-        "hbase.online.schema.update.enable", true);
-    HTableDescriptor [] tables = admin.listTables();
+  @Test(timeout = 300000)
+  public void testOnlineChangeTableSchema() throws IOException,
+      InterruptedException {
+    final TableName tableName = TableName.valueOf("changeTableSchemaOnline");
+    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration()
+        .setBoolean("hbase.online.schema.update.enable", true);
+    HTableDescriptor[] tables = admin.listTables();
     int numTables = tables.length;
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
+
+    final int EXPECTED_NUM_REGIONS = TEST_UTIL.getHBaseAdmin()
+        .getTableRegions(tableName).size();
 
     // FIRST, do htabledescriptor changes.
     HTableDescriptor htd = this.admin.getTableDescriptor(tableName);
@@ -390,7 +405,7 @@ public class TestAdmin {
     assertTrue(htd.equals(copy));
     // Now amend the copy. Introduce differences.
     long newFlushSize = htd.getMemStoreFlushSize() / 2;
-    if (newFlushSize <=0) {
+    if (newFlushSize <= 0) {
       newFlushSize = HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE / 2;
     }
     copy.setMemStoreFlushSize(newFlushSize);
@@ -417,7 +432,7 @@ public class TestAdmin {
     int maxversions = hcd.getMaxVersions();
     final int newMaxVersions = maxversions + 1;
     hcd.setMaxVersions(newMaxVersions);
-    final byte [] hcdName = hcd.getName();
+    final byte[] hcdName = hcd.getName();
     expectedException = false;
     try {
       this.admin.modifyColumn(tableName, hcd);
@@ -427,7 +442,10 @@ public class TestAdmin {
     assertFalse(expectedException);
     modifiedHtd = this.admin.getTableDescriptor(tableName);
     HColumnDescriptor modifiedHcd = modifiedHtd.getFamily(hcdName);
-    assertEquals(newMaxVersions, modifiedHcd.getMaxVersions());
+    assertEquals(
+        newMaxVersions,
+        waitForColumnSchemasToSettle(TEST_UTIL.getMiniHBaseCluster(),
+            tableName, EXPECTED_NUM_REGIONS).getMaxVersions());
 
     // Try adding a column
     assertFalse(this.admin.isTableDisabled(tableName));
@@ -453,6 +471,38 @@ public class TestAdmin {
     hcd = modifiedHtd.getFamily(xtracol.getName());
     assertTrue(hcd == null);
 
+    // Modify bloom filter
+    countOfFamilies = modifiedHtd.getFamilies().size();
+    assertTrue(countOfFamilies > 0);
+    hcd = modifiedHtd.getFamilies().iterator().next();
+    BloomType initialBT = hcd.getBloomFilterType();
+    BloomType newBloomType = null;
+    BloomType[] possibleBloomFilters = BloomType.values();
+    for (BloomType type : possibleBloomFilters) {
+
+      if (initialBT == null || !initialBT.equals(type)) {
+
+        newBloomType = type;
+        break;
+      }
+    }
+
+    hcd.setBloomFilterType(newBloomType);
+    expectedException = false;
+
+    try {
+      this.admin.modifyColumn(tableName, hcd);
+    } catch (TableNotDisabledException re) {
+      expectedException = true;
+    }
+    assertFalse(expectedException);
+    modifiedHtd = this.admin.getTableDescriptor(tableName);
+    modifiedHcd = modifiedHtd.getFamily(hcdName);
+    assertEquals(
+        newBloomType,
+        waitForColumnSchemasToSettle(TEST_UTIL.getMiniHBaseCluster(),
+            tableName, EXPECTED_NUM_REGIONS).getBloomFilterType());
+
     // Delete the table
     this.admin.disableTable(tableName);
     this.admin.deleteTable(tableName);
@@ -460,12 +510,12 @@ public class TestAdmin {
     assertFalse(this.admin.tableExists(tableName));
   }
 
-  @Test (timeout=300000)
+  @Test(timeout = 300000)
   public void testShouldFailOnlineSchemaUpdateIfOnlineSchemaIsNotEnabled()
       throws Exception {
     final byte[] tableName = Bytes.toBytes("changeTableSchemaOnlineFailure");
-    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
-        "hbase.online.schema.update.enable", false);
+    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration()
+        .setBoolean("hbase.online.schema.update.enable", false);
     HTableDescriptor[] tables = admin.listTables();
     int numTables = tables.length;
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
@@ -479,7 +529,7 @@ public class TestAdmin {
     assertTrue(htd.equals(copy));
     // Now amend the copy. Introduce differences.
     long newFlushSize = htd.getMemStoreFlushSize() / 2;
-    if (newFlushSize <=0) {
+    if (newFlushSize <= 0) {
       newFlushSize = HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE / 2;
     }
     copy.setMemStoreFlushSize(newFlushSize);
@@ -495,8 +545,79 @@ public class TestAdmin {
     assertTrue("Online schema update should not happen.", expectedException);
 
     // Reset the value for the other tests
-    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
-        "hbase.online.schema.update.enable", true);
+    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration()
+        .setBoolean("hbase.online.schema.update.enable", true);
+  }
+
+  @Test
+  public void testOnlineChangeReplicationScope() throws Exception {
+
+    final TableName tableName = TableName.valueOf("changeReplicationTable");
+    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration()
+        .setBoolean("hbase.online.schema.update.enable", true);
+    HTableDescriptor[] tables = admin.listTables();
+    int numTables = tables.length;
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
+    tables = this.admin.listTables();
+    assertEquals(numTables + 1, tables.length);
+
+    final int EXPECTED_NUM_REGIONS = TEST_UTIL.getHBaseAdmin()
+        .getTableRegions(tableName).size();
+
+    HTableDescriptor htd = this.admin.getTableDescriptor(tableName);
+    // Make a copy and assert copy is good.
+    HColumnDescriptor hcd = new HColumnDescriptor(HConstants.CATALOG_FAMILY);
+
+    HColumnDescriptor originalHCD = htd.getFamily(HConstants.CATALOG_FAMILY);
+    assertEquals(
+        "Replication is enabled by default, which should not be the case", 0,
+        hcd.getScope());
+    originalHCD.setScope(1);
+    this.admin.modifyColumn(tableName, originalHCD);
+
+    // verify that the replication scope is off (0) by default
+
+    HColumnDescriptor[] hcds = this.admin.getTableDescriptor(tableName)
+        .getColumnFamilies();
+    assertEquals("Unexpected number of column families returned", 1,
+        hcds.length);
+
+    assertEquals(
+        1,
+        waitForColumnSchemasToSettle(TEST_UTIL.getHBaseCluster(), tableName,
+            EXPECTED_NUM_REGIONS).getScope());
+    
+    this.admin.disableTable(tableName);
+    this.admin.deleteTable(tableName);
+    this.admin.listTables();
+    assertFalse(this.admin.tableExists(tableName));
+  }
+
+  @Test
+  public void testOnlineSetTableOwner() throws Exception {
+
+    final TableName tableName = TableName.valueOf("changeTableOwnerTable");
+    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration()
+        .setBoolean("hbase.online.schema.update.enable", true);
+    HTableDescriptor[] tables = admin.listTables();
+    int numTables = tables.length;
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
+    tables = this.admin.listTables();
+    assertEquals(numTables + 1, tables.length);
+
+    HTableDescriptor htd = this.admin.getTableDescriptor(tableName);
+    // Make a copy and assert copy is good.
+
+    assertEquals("There is an owner by default, which should not be the case",
+        null, htd.getOwnerString());
+
+    htd.setOwnerString("someUser"); // does this need to be a valid user
+    admin.modifyTable(tableName, htd);
+
+    // verify that the replication scope is off (0) by default
+
+    HTableDescriptor modifiedHtd = this.admin.getTableDescriptor(tableName);
+    assertEquals("Owner was not set", modifiedHtd.getOwnerString(), "someUser");
   }
 
   /**
@@ -1713,6 +1834,69 @@ public class TestAdmin {
       assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
     } finally {
       ct.stop();
+    }
+  }
+
+  public static HColumnDescriptor waitForColumnSchemasToSettle(
+      MiniHBaseCluster miniCluster, TableName tableName, int totalRegions)
+      throws InterruptedException {
+
+    Thread.sleep(2000); // wait 2s so that at least some of the RSes have the
+                        // info
+
+    Set<HColumnDescriptor> descriptorSet = new HashSet<HColumnDescriptor>();
+
+    final int MAX_POLLS = 5;
+    int numRegionsEncountered = 0;
+    for (int i = 0; i < MAX_POLLS; i++) {
+      for (JVMClusterUtil.RegionServerThread rst : miniCluster
+          .getRegionServerThreads()) {
+
+        for (HRegion hri : rst.getRegionServer().getOnlineRegions(tableName)) {
+          numRegionsEncountered++;
+          HColumnDescriptor hcd = hri.getTableDesc().getColumnFamilies()[0];
+          descriptorSet.add(hcd);
+
+        }
+      }
+      if (descriptorSet.size() == 1) {
+        break;
+      }
+      Thread.sleep(2000);
+    }
+
+    if (descriptorSet.size() != 1) {
+      System.out
+          .println("FAIL: HColumnDescriptor definition did not settle. Here is the output:");
+      Iterator<HColumnDescriptor> hcIter = descriptorSet.iterator();
+      while (hcIter.hasNext()) {
+        System.out.println("HCD entry: " + hcIter.next());
+      }
+      fail("HColumnDescription did not settle as expected.");
+    }
+
+    assertEquals("The number of regions did not match. Expected "
+        + totalRegions + " but received " + numRegionsEncountered,
+        totalRegions, numRegionsEncountered);
+
+    return descriptorSet.iterator().next();
+  }
+
+  public static void verifyBloomFilterPropertyOnEachRS(
+      MiniHBaseCluster miniCluster, TableName tableName, BloomType expectedType)
+      throws Exception {
+
+    for (JVMClusterUtil.RegionServerThread rst : miniCluster
+        .getRegionServerThreads()) {
+
+      for (HRegion hri : rst.getRegionServer().getOnlineRegions(tableName)) {
+
+        assertEquals(
+            "The bloom filter did not match expected value " + expectedType
+                + " on RS " + rst.getName() + " region "
+                + hri.getRegionNameAsString(), expectedType, hri.getTableDesc()
+                .getColumnFamilies()[0].getBloomFilterType());
+      }
     }
   }
 }
