@@ -81,14 +81,7 @@ public class TestClientTimeouts {
     HConnection lastConnection = null;
     boolean lastFailed = false;
     int initialInvocations = RandomTimeoutBlockingRpcChannel.invokations.get();
-    RpcClient rpcClient = new RpcClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey()) {
-      // Return my own instance, one that does random timeouts
-      @Override
-      public BlockingRpcChannel createBlockingRpcChannel(ServerName sn,
-          User ticket, int rpcTimeout) {
-        return new RandomTimeoutBlockingRpcChannel(this, sn, ticket, rpcTimeout);
-      }
-    };
+    RpcClient rpcClient = newRandomTimeoutRpcClient();
     try {
       for (int i = 0; i < 5 || (lastFailed && i < 100); ++i) {
         lastFailed = false;
@@ -102,7 +95,12 @@ public class TestClientTimeouts {
           assertFalse(connection == lastConnection);
           lastConnection = connection;
           // Override the connection's rpc client for timeout testing
-          ((HConnectionManager.HConnectionImplementation)connection).setRpcClient(rpcClient);
+          RpcClient oldRpcClient =
+            ((HConnectionManager.HConnectionImplementation)connection).setRpcClient(
+              rpcClient);
+          if (oldRpcClient != null) {
+            oldRpcClient.stop();
+          }
           // run some admin commands
           HBaseAdmin.checkHBaseAvailable(conf);
           admin.setBalancerRunning(false, false);
@@ -112,6 +110,9 @@ public class TestClientTimeouts {
           lastFailed = true;
         } finally {
           admin.close();
+          if (admin.getConnection().isClosed()) {
+            rpcClient = newRandomTimeoutRpcClient();
+          }
         }
       }
       // Ensure the RandomTimeoutRpcEngine is actually being used.
@@ -120,6 +121,18 @@ public class TestClientTimeouts {
     } finally {
       rpcClient.stop();
     }
+  }
+
+  private static RpcClient newRandomTimeoutRpcClient() {
+    return new RpcClient(
+        TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey()) {
+      // Return my own instance, one that does random timeouts
+      @Override
+      public BlockingRpcChannel createBlockingRpcChannel(ServerName sn,
+          User ticket, int rpcTimeout) {
+        return new RandomTimeoutBlockingRpcChannel(this, sn, ticket, rpcTimeout);
+      }
+    };
   }
 
   /**
