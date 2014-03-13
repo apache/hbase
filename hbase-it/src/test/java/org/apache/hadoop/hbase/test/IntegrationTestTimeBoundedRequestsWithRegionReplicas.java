@@ -323,9 +323,10 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
       }
 
       @Override
-      protected void verifyResultsAndUpdateMetrics(boolean verify, String rowKey, long elapsedNano,
-          Result result, HTable table, boolean isNullExpected) throws IOException {
-        super.verifyResultsAndUpdateMetrics(verify, rowKey, elapsedNano, result, table, isNullExpected);
+      protected void verifyResultsAndUpdateMetrics(boolean verify, Get[] gets, long elapsedNano,
+          Result[] results, HTable table, boolean isNullExpected)
+          throws IOException {
+        super.verifyResultsAndUpdateMetrics(verify, gets, elapsedNano, results, table, isNullExpected);
         // we actually do not timeout and cancel the reads after timeout. We just wait for the RPC
         // to complete, but if the request took longer than timeout, we treat that as error.
         if (elapsedNano > timeoutNano) {
