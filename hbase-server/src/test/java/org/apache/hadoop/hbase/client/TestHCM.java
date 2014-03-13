@@ -252,6 +252,7 @@ public class TestHCM {
       }
     });
 
+    t.close();
     hci.getClient(sn);  // will throw an exception: RegionServerStoppedException
   }
 
@@ -300,6 +301,8 @@ public class TestHCM {
       LOG.info("We received an exception, as expected ", e);
     } catch (IOException e) {
       Assert.fail("Wrong exception:" + e.getMessage());
+    } finally {
+      table.close();
     }
   }
 
@@ -369,13 +372,14 @@ public class TestHCM {
     step.compareAndSet(1, 2);
     // The test may fail here if the thread doing the gets is stuck. The way to find
     //  out what's happening is to look for the thread named 'testConnectionCloseThread'
-    TEST_UTIL.waitFor(20000, new Waiter.Predicate<Exception>() {
+    TEST_UTIL.waitFor(40000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
         return step.get() == 3;
       }
     });
 
+    table.close();
     Assert.assertTrue("Unexpected exception is " + failed.get(), failed.get() == null);
     TEST_UTIL.getHBaseAdmin().setBalancerRunning(previousBalance, true);
   }
@@ -431,6 +435,7 @@ public class TestHCM {
 
     LOG.info("we're done - time will change back");
 
+    table.close();
     EnvironmentEdgeManager.reset();
     TEST_UTIL.getHBaseAdmin().setBalancerRunning(previousBalance, true);
   }
@@ -736,7 +741,7 @@ public class TestHCM {
    */
   @Test
   public void testConnectionManagement() throws Exception{
-    TEST_UTIL.createTable(TABLE_NAME1, FAM_NAM);
+    HTable table0 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAM);
     HConnection conn = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
     HTableInterface table = conn.getTable(TABLE_NAME1.getName());
     table.close();
@@ -747,6 +752,7 @@ public class TestHCM {
     assertFalse(((HTable)table).getPool().isShutdown());
     conn.close();
     assertTrue(((HTable)table).getPool().isShutdown());
+    table0.close();
   }
 
   /**
@@ -794,6 +800,7 @@ public class TestHCM {
         ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() - 1);
     location = conn.getCachedLocation(TABLE_NAME2, ROW);
     Assert.assertEquals(nextPort - 1, location.getPort());
+    table.close();
   }
 
   /**

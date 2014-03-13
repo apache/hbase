@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -48,7 +47,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -2441,6 +2439,9 @@ class ConnectionManager {
       if (clusterStatusListener != null) {
         clusterStatusListener.close();
       }
+      if (rpcClient != null) {
+        rpcClient.stop();
+      }
     }
 
     @Override
@@ -2532,7 +2533,7 @@ class ConnectionManager {
     @Override
     public HTableDescriptor[] getHTableDescriptors(
         List<String> names) throws IOException {
-      List<TableName> tableNames = new ArrayList(names.size());
+      List<TableName> tableNames = new ArrayList<TableName>(names.size());
       for(String name : names) {
         tableNames.add(TableName.valueOf(name));
       }
