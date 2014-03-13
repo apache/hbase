@@ -33,11 +33,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * service calls are performed against a region, this class implements {@link Row} in order to
  * make use of the {@link AsyncProcess} framework for batching multi-region calls per region server.
  *
- * <p><b>Note:</b> This class should not be instantiated directly.  Use either
- * {@link HTable#batchCoprocessorService(MethodDescriptor, Message, byte[], byte[],
- * Message, Batch.Callback)}
- * or {@link HTable#batchCoprocessorService(MethodDescriptor, Message, byte[], byte[], Message)}
- * instead.</p>
+ * <p><b>Note:</b> This class should not be instantiated directly.  Use 
+ * HTable#batchCoprocessorService instead.</p>
  */
 @InterfaceAudience.Private
 public class RegionCoprocessorServiceExec implements Row {
