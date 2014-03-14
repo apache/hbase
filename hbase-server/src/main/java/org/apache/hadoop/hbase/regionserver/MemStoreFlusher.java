@@ -50,10 +50,10 @@ import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.cliffc.high_scale_lib.Counter;
-
-import com.google.common.base.Preconditions;
 import org.cloudera.htrace.Trace;
 import org.cloudera.htrace.TraceScope;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Thread that flushes cache on request
@@ -419,7 +419,7 @@ class MemStoreFlusher implements FlushRequester {
     if (!region.getRegionInfo().isMetaRegion() &&
         isTooManyStoreFiles(region)) {
       if (fqe.isMaximumWait(this.blockingWaitTime)) {
-        LOG.info("Waited " + (System.currentTimeMillis() - fqe.createTime) +
+        LOG.info("Waited " + (EnvironmentEdgeManager.currentTimeMillis() - fqe.createTime) +
           "ms on a compaction to clean up 'too many store files'; waited " +
           "long enough... proceeding with flush of " +
           region.getRegionNameAsString());
@@ -544,7 +544,7 @@ class MemStoreFlusher implements FlushRequester {
       if (Trace.isTracing()) {
         scope.getSpan().addTimelineAnnotation("Force Flush. We're above high water mark.");
       }
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTimeMillis();
       synchronized (this.blockSignal) {
         boolean blocked = false;
         long startTime = 0;
@@ -569,7 +569,7 @@ class MemStoreFlusher implements FlushRequester {
               LOG.warn("Interrupted while waiting");
               interrupted = true;
             }
-            long took = System.currentTimeMillis() - start;
+            long took = EnvironmentEdgeManager.currentTimeMillis() - start;
             LOG.warn("Memstore is above high water mark and block " + took + "ms");
           }
         } finally {
@@ -683,7 +683,7 @@ class MemStoreFlusher implements FlushRequester {
 
     FlushRegionEntry(final HRegion r) {
       this.region = r;
-      this.createTime = System.currentTimeMillis();
+      this.createTime = EnvironmentEdgeManager.currentTimeMillis();
       this.whenToExpire = this.createTime;
     }
 
@@ -692,7 +692,7 @@ class MemStoreFlusher implements FlushRequester {
      * @return True if we have been delayed > <code>maximumWait</code> milliseconds.
      */
     public boolean isMaximumWait(final long maximumWait) {
-      return (System.currentTimeMillis() - this.createTime) > maximumWait;
+      return (EnvironmentEdgeManager.currentTimeMillis() - this.createTime) > maximumWait;
     }
 
     /**
@@ -705,19 +705,19 @@ class MemStoreFlusher implements FlushRequester {
 
     /**
      * @param when When to expire, when to come up out of the queue.
-     * Specify in milliseconds.  This method adds System.currentTimeMillis()
+     * Specify in milliseconds.  This method adds EnvironmentEdgeManager.currentTimeMillis()
      * to whatever you pass.
      * @return This.
      */
     public FlushRegionEntry requeue(final long when) {
-      this.whenToExpire = System.currentTimeMillis() + when;
+      this.whenToExpire = EnvironmentEdgeManager.currentTimeMillis() + when;
       this.requeueCount++;
       return this;
     }
 
     @Override
     public long getDelay(TimeUnit unit) {
-      return unit.convert(this.whenToExpire - System.currentTimeMillis(),
+      return unit.convert(this.whenToExpire - EnvironmentEdgeManager.currentTimeMillis(),
           TimeUnit.MILLISECONDS);
     }
 
