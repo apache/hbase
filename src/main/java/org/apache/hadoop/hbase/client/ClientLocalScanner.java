@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ipc.thrift.HBaseToThriftAdapter;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionUtilities;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -123,6 +124,15 @@ public class ClientLocalScanner extends ResultScannerImpl {
       flushRegionAndWaitForFlush(this.currentRegion,
         table.getRegionsInfo().get(info));
     }
+
+    if (conf.getBoolean(HConstants.USE_CONF_FROM_SERVER,
+        HConstants.DEFAULT_USE_CONF_FROM_SERVER)) {
+      conf.set("fs.default.name",
+          this.htable.getServerConfProperty("fs.default.name"));
+      if (this.areHardlinksCreated) {
+        conf.set("hbase.rootdir", htable.getServerConfProperty("hbase.rootdir"));
+      }
+    }
     Path rootDir = FSUtils.getRootDir(conf);
     final Path tableDir =
       HTableDescriptor.getTableDir(rootDir, info.getTableDesc().getName());
@@ -210,7 +220,8 @@ public class ClientLocalScanner extends ResultScannerImpl {
   public Result[] nextOnRS(int nbRows) throws IOException {
     try {
       RegionScanner s = (RegionScanner)this.currentScanner;
-      return s.nextRows(nbRows, HRegion.METRIC_NEXTSIZE);
+      Result[] ret = s.nextRows(nbRows, HRegion.METRIC_NEXTSIZE);
+      return HBaseToThriftAdapter.validateResults(ret);
     } catch (IOException e) {
       close();
       throw e;

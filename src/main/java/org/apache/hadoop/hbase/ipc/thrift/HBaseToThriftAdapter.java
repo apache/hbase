@@ -839,7 +839,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
    * @param res
    * @return
    */
-  private Result[] validateResults(Result[] res) {
+  public static Result[] validateResults(Result[] res) {
     if (res == null) return null;
     if (res.length == 1) {
       return res[0].isSentinelResult() ? null : res;

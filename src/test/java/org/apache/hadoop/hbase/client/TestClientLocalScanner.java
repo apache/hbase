@@ -87,7 +87,7 @@ public class TestClientLocalScanner {
     TEST_UTIL.loadTable(t, FAMILY2);
     t.flushCommits();
     TEST_UTIL.flush(name);
-    TEST_UTIL.assertRowCount(t, rowCount);
+    HBaseTestingUtility.assertRowCount(t, rowCount);
     Scan scan = getScan(100, 100, true, FAMILY);
     assertTrue(compareScanners(tmpTable.getScanner(scan),
         t.getLocalScanner(scan)));
@@ -179,10 +179,10 @@ public class TestClientLocalScanner {
     t.flushCommits();
     TEST_UTIL.flush(name);
 
-    TEST_UTIL.assertRowCount(t, rowCount);
+    HBaseTestingUtility.assertRowCount(t, rowCount);
     // Split the table.  Should split on a reasonable key; 'lqj'
     Map<HRegionInfo, HServerAddress> regions  = splitTable(t);
-    TEST_UTIL.assertRowCount(t, rowCount);
+    HBaseTestingUtility.assertRowCount(t, rowCount);
     // Get end key of first region.
     byte [] endKey = regions.keySet().iterator().next().getEndKey();
     // Count rows with a filter that stops us before passed 'endKey'.
@@ -199,6 +199,11 @@ public class TestClientLocalScanner {
     // New test.  Make it so scan goes into next region by one and then two.
     // Make sure count comes out right.
     byte [] key = new byte [] {endKey[0], endKey[1], (byte)(endKey[2] + 1)};
+    String defaultName = t.getConfiguration().get("fs.default.name");
+    String rootdir = t.getConfiguration().get("hbase.rootdir");
+
+    t.getConfiguration().set("fs.default.name", "");
+    t.getConfiguration().set("hbase.rootdir", "");
     int plusOneCount = countRows(t, t.getLocalScanner(createScanWithRowFilter(key)));
     assertEquals(endKeyCount + 1, plusOneCount);
     key = new byte [] {endKey[0], endKey[1], (byte)(endKey[2] + 2)};
@@ -224,6 +229,10 @@ public class TestClientLocalScanner {
     countGreater = countRows(t, t.getLocalScanner(createScanWithRowFilter(endKey, endKey,
       CompareFilter.CompareOp.GREATER_OR_EQUAL)));
     assertEquals(rowCount - endKeyCount, countGreater);
+
+    t.getConfiguration().set("fs.default.name", defaultName);
+    t.getConfiguration().set("hbase.rootdir", rootdir);
+    t.close();
   }
 
   @Test
@@ -237,14 +246,18 @@ public class TestClientLocalScanner {
     assertTrue(fs.listStatus(p).length == 0);
     TEST_UTIL.getConfiguration().set("hbase.rootdir", tmpPath);
     HTable t = TEST_UTIL.createTable(tableName, FAMILY);
+    t.getConfiguration().setBoolean(HConstants.USE_CONF_FROM_SERVER, false);
     TEST_UTIL.loadTable(t, FAMILY);
     try {
       t.getLocalScanner(new Scan());
-    } catch (IOException e) {
+    } catch (Exception e) {
+      LOG.debug("Exception", e);
       assertTrue(fs.listStatus(p).length == 0);
       return;
     } finally {
       TEST_UTIL.getConfiguration().set("hbase.rootdir", rootDir);
+      t.getConfiguration().setBoolean(HConstants.USE_CONF_FROM_SERVER, false);
+      t.close();
     }
     assertTrue(false);
   }
@@ -257,7 +270,7 @@ public class TestClientLocalScanner {
     int rowCount = TEST_UTIL.loadTable(t, FAMILY);
     t.flushCommits();
     TEST_UTIL.flush(tableName);
-    TEST_UTIL.assertRowCount(t, rowCount);
+    HBaseTestingUtility.assertRowCount(t, rowCount);
 
     Scan scan = getScan(100, 100, true, FAMILY);
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
@@ -289,6 +302,8 @@ public class TestClientLocalScanner {
 
     assertTrue(fs.exists(homedir));
     assertTrue(fs.listStatus(homedir).length == files);
+    t.close();
+    fs.close();
   }
 
   public Scan getScan(int caching, int batching,

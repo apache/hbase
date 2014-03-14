@@ -1058,6 +1058,9 @@ public final class HConstants {
   public static final String THRIFT_HEADER_FROM_CLIENT = "clientHeader";
 
   public static final boolean DISABLE_THRIFT_REGION_INFO_QUALIFIER = false;
+  public static final String USE_CONF_FROM_SERVER =
+      "hbase.client.use.conf.from.server";
+  public static final boolean DEFAULT_USE_CONF_FROM_SERVER = true;
 
   private HConstants() {
     // Can't be instantiated with this constructor.
