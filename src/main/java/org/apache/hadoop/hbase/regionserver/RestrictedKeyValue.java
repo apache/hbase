@@ -84,7 +84,7 @@ public class RestrictedKeyValue {
 
   /**
    * Compare how many bytes the value of this keyvalue is taking comparing to
-   * the other. Negative value is good, positive is bad!
+   * the other. Positive value is good, negative is bad!
    *
    * @param other
    * @return
@@ -93,11 +93,11 @@ public class RestrictedKeyValue {
     if (keyValue == null && other == null) {
       return 0;
     } else if (keyValue == null) {
-      return -other.getLength();
+      return other.getLength();
     } else if (other == null) {
-      return keyValue.getLength();
+      return -keyValue.getLength();
     } else {
-      return this.keyValue.getValueLength() - other.getValueLength();
+      return other.getValueLength() - this.keyValue.getValueLength();
     }
   }
 

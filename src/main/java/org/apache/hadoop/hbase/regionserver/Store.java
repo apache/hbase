@@ -1435,11 +1435,19 @@ public class Store extends SchemaConfigured implements HeapSize,
                     bytesSaved += modifiedKv.differenceInBytes(kv);
                   } else {
                     if (kv != null) {
+                      // TODO: adela check if we are too spamy with this logging
+                      LOG.info("Skipping keyvalue during compaction, due to compaction hook decision: "
+                          + kv);
                       bytesSaved += kv.getLength();
                     }
                   }
                   if (!restrictedKv.equals(modifiedKv)) {
                     kvsConverted++;
+                  } else {
+                    // TODO: adela check if we are too spamy with this logging
+                    LOG.info("Keyvalue is not modified by compaction hook!"
+                        + " modified: " + modifiedKv + "original: "
+                        + restrictedKv);
                   }
                 } catch (Exception e) {
                   // if exception happened just write unmodified keyvalue
