@@ -198,12 +198,12 @@ public class ShutdownHook {
       if (hdfsClientFinalizer == null) {
         throw new RuntimeException("Client finalizer is null, can't suppress!");
       }
-      if (!fsShutdownHooks.containsKey(hdfsClientFinalizer) &&
-          !ShutdownHookManager.deleteShutdownHook(hdfsClientFinalizer)) {
-        throw new RuntimeException("Failed suppression of fs shutdown hook: " +
-          hdfsClientFinalizer);
-      }
       synchronized (fsShutdownHooks) {
+        if (!fsShutdownHooks.containsKey(hdfsClientFinalizer) &&
+            !ShutdownHookManager.deleteShutdownHook(hdfsClientFinalizer)) {
+          throw new RuntimeException("Failed suppression of fs shutdown hook: " +
+            hdfsClientFinalizer);
+        }
         Integer refs = fsShutdownHooks.get(hdfsClientFinalizer);
         fsShutdownHooks.put(hdfsClientFinalizer, refs == null ? 1 : refs + 1);
       }
