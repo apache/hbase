@@ -21,7 +21,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -35,15 +34,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -56,7 +52,6 @@ import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.TestAdmin;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
@@ -79,7 +74,6 @@ public class TestEndToEndSplitTransaction {
   private static final Log LOG = LogFactory.getLog(TestEndToEndSplitTransaction.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
-
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -178,13 +172,11 @@ public class TestEndToEndSplitTransaction {
   /**
    * Tests that the client sees meta table changes as atomic during splits
    */
-
-  private void runTestFromClientSideWhileSplitting(boolean onlineSchemaChange) throws Throwable {
-
-    final String tableName = "testFromClientSideWhileSplitting" + System.currentTimeMillis();
-    LOG.info("Starting " + tableName);
+  @Test
+  public void testFromClientSideWhileSplitting() throws Throwable {
+    LOG.info("Starting testFromClientSideWhileSplitting");
     final TableName TABLENAME =
-        TableName.valueOf(tableName);
+        TableName.valueOf("testFromClientSideWhileSplitting");
     final byte[] FAMILY = Bytes.toBytes("family");
 
     //SplitTransaction will update the meta table by offlining the parent region, and adding info
@@ -192,16 +184,7 @@ public class TestEndToEndSplitTransaction {
     HTable table = TEST_UTIL.createTable(TABLENAME, FAMILY);
 
     Stoppable stopper = new StoppableImplementation();
-
-    RegionSplitter regionSplitter = null;
-    if (onlineSchemaChange) {
-
-      regionSplitter = new RegionSplitterWithSchemaChange(table);
-    } else {
-
-      regionSplitter = new RegionSplitter(table);
-    }
-
+    RegionSplitter regionSplitter = new RegionSplitter(table);
     RegionChecker regionChecker = new RegionChecker(conf, stopper, TABLENAME);
 
     regionChecker.start();
@@ -221,16 +204,6 @@ public class TestEndToEndSplitTransaction {
 
     //one final check
     regionChecker.verify();
-  }
-
-  @Test
-  public void testFromClientSideOnlineSchemaChangeWhileSplitting() throws Throwable {
-    runTestFromClientSideWhileSplitting(true);
-  }
-
-  @Test
-  public void testFromClientSideWhileSplitting() throws Throwable {
-    runTestFromClientSideWhileSplitting(false);
   }
 
   static class RegionSplitter extends Thread {
@@ -305,104 +278,6 @@ public class TestEndToEndSplitTransaction {
       }
       table.flushCommits();
     }
-  }
-
-  static class RegionSplitterWithSchemaChange extends RegionSplitter {
-
-    RegionSplitterWithSchemaChange(HTable table) throws IOException {
-      super(table);
-    }
-
-    @Override
-    public void run() {
-
-      try {
-        Random random = new Random();
-        for (int i = 0; i < 5; i++) {
-          NavigableMap<HRegionInfo, ServerName> regions = MetaScanner
-              .allTableRegions(conf, null, tableName, false);
-          if (regions.size() == 0) {
-            continue;
-          }
-          int regionIndex = random.nextInt(regions.size());
-
-          // pick a random region and split it into two
-          HRegionInfo region = Iterators.get(regions.keySet().iterator(),
-              regionIndex);
-
-          // pick the mid split point
-          int start = 0, end = Integer.MAX_VALUE;
-          if (region.getStartKey().length > 0) {
-            start = Bytes.toInt(region.getStartKey());
-          }
-          if (region.getEndKey().length > 0) {
-            end = Bytes.toInt(region.getEndKey());
-          }
-          int mid = start + ((end - start) / 2);
-          byte[] splitPoint = Bytes.toBytes(mid);
-
-          // put some rows to the regions
-          addData(start);
-          addData(mid);
-
-          flushAndBlockUntilDone(admin, rs, region.getRegionName());
-          compactAndBlockUntilDone(admin, rs, region.getRegionName());
-
-          log("Initiating region split for:" + region.getRegionNameAsString());
-          try {
-            admin.split(region.getRegionName(), splitPoint);
-
-            for (int j = 0; j < 5; j++) {
-              HTableDescriptor htd = null;
-              try {
-                htd = admin.getTableDescriptor(tableName);
-              } catch (IOException ioe) {
-
-                ioe.printStackTrace();
-                fail("Issue pulling table descriptor");
-              }
-
-              HColumnDescriptor hcd = null;
-              assertTrue(htd != null);
-              final int countOfFamilies = htd.getFamilies().size();
-              assertTrue(countOfFamilies > 0);
-              hcd = htd.getColumnFamilies()[0];
-              boolean expectedException = false;
-              assertFalse(expectedException);
-
-              int initMaxVersions = hcd.getMaxVersions();
-              int newMaxVersions = initMaxVersions + 1;
-              hcd.setMaxVersions(newMaxVersions);
-              admin.modifyColumn(tableName, hcd);
-
-              try {
-
-                int EXPECTED_NUM_REGIONS = TEST_UTIL.getHBaseAdmin().getTableRegions(tableName).size();
-                assertEquals("The max version count was not updated", newMaxVersions, TestAdmin.waitForColumnSchemasToSettle(TEST_UTIL.getMiniHBaseCluster(), tableName, EXPECTED_NUM_REGIONS).getMaxVersions());
-                Thread.sleep(2000);
-              } catch (TableNotFoundException e) {
-                e.printStackTrace();
-                fail("Table not found. Failing.");
-              } catch (IOException e) {
-                e.printStackTrace();
-                fail("IO Issue while modifying column");
-              } catch (InterruptedException e) {
-                LOG.warn("Sleep was interrupted. This is unusual, but not grounds for TF");
-                e.printStackTrace();
-              }
-            }
-            // wait until the split is complete
-            blockUntilRegionSplit(conf, 50000, region.getRegionName(), true);
-
-          } catch (NotServingRegionException ex) {
-            // ignore
-          }
-        }
-      } catch (Throwable ex) {
-        this.ex = ex;
-      }
-    }
-
   }
 
   /**

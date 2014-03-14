@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,13 +33,10 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
@@ -53,7 +45,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.TestAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -66,7 +57,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionReque
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -84,8 +74,6 @@ public class TestHRegionServerBulkLoad {
   private final static byte[] QUAL = Bytes.toBytes("qual");
   private final static int NUM_CFS = 10;
   public static int BLOCKSIZE = 64 * 1024;
-  public final static int NUM_ROWS = 2048;
-  public final static int NUM_CF_ITERATIONS = 2;
   public static Algorithm COMPRESSION = Compression.Algorithm.NONE;
 
   private final static byte[][] families = new byte[NUM_CFS][];
@@ -160,7 +148,7 @@ public class TestHRegionServerBulkLoad {
       for (int i = 0; i < NUM_CFS; i++) {
         Path hfile = new Path(dir, family(i));
         byte[] fam = Bytes.toBytes(family(i));
-        createHFile(fs, hfile, fam, QUAL, val, NUM_ROWS);
+        createHFile(fs, hfile, fam, QUAL, val, 1000);
         famPaths.add(new Pair<byte[], String>(fam, hfile.toString()));
       }
 
@@ -203,110 +191,6 @@ public class TestHRegionServerBulkLoad {
           }
         };
         caller.callWithRetries(callable);
-      }
-    }
-  }
-
-  public static class OnlineSchemaChangeMaxVersionsThread extends
-      RepeatingTestThread {
-
-    private HBaseAdmin admin;
-    private TableName tableName;
-    private int totalNumIterations;
-    byte[][] targetFamilies;
-
-    public OnlineSchemaChangeMaxVersionsThread(String tableName,
-        TestContext ctx, byte targetFamilies[][], int totalNumIterations) {
-      super(ctx);
-
-      this.tableName = TableName.valueOf(tableName);
-      this.targetFamilies = targetFamilies; // this should be validated, but
-                                            // it's only a test-facing API, so I
-                                            // can live with this
-      if (totalNumIterations < 1 || totalNumIterations > 20) {
-        fail("Unreasonable input provided to schema change thread. Please select a value between 1 and 20");
-      }
-      this.totalNumIterations = totalNumIterations;
-      try {
-        admin = UTIL.getHBaseAdmin();
-        Assert.assertNotNull(admin);
-      } catch (IOException e) {
-        fail("Not able to get a handle on the hbase admin.");
-      }
-    }
-
-    @Override
-    public void doAnAction() throws Exception {
-
-      final long START_TIME = System.currentTimeMillis();
-      final int ONLINE_CHANGE_TIMEOUT = 2000000;
-      HTableDescriptor htd = null;
-      try {
-        htd = admin.getTableDescriptor(tableName);
-      } catch (IOException ioe) {
-
-        ioe.printStackTrace();
-        fail("Issue pulling table descriptor");
-      }
-
-      HColumnDescriptor hcd = null;
-      assertTrue(htd != null);
-      final int countOfFamilies = htd.getFamilies().size();
-      assertTrue(countOfFamilies > 0);
-      boolean expectedException = false;
-
-      int numIterations = 0;
-
-      while (numIterations < totalNumIterations) {
-
-        htd = admin.getTableDescriptor(tableName);
-        if (System.currentTimeMillis() - START_TIME > ONLINE_CHANGE_TIMEOUT) {
-          fail("Timed out reaching before required modify count. Only had "
-              + numIterations + " updates");
-        }
-
-        for (byte[] targetFamily : targetFamilies) {
-
-          hcd = htd.getFamily(targetFamily);
-          int maxversions = hcd.getMaxVersions();
-          System.out.println("NumIterations is: " + numIterations);
-          System.out.println("DEBUG: Current number of versions for family "
-              + Bytes.toString(targetFamily) + " is " + maxversions);
-          int newMaxVersions = maxversions + 1;
-          System.out.println("Setting max versions on CF to " + newMaxVersions
-              + " on CF " + Bytes.toString(targetFamily));
-
-          hcd.setMaxVersions(newMaxVersions);
-          final byte[] hcdName = hcd.getName();
-          expectedException = false;
-          try {
-            this.admin.modifyColumn(tableName, hcd);
-          } catch (TableNotDisabledException re) {
-            expectedException = true;
-          } catch (IOException e) {
-            e.printStackTrace();
-            fail("IO Issue while modifying column");
-          }
-          assertFalse(expectedException);
-          HColumnDescriptor modifiedHcd;
-          try {
-            int EXPECTED_NUM_REGIONS = UTIL.getHBaseAdmin().getTableRegions(tableName).size();
-            assertEquals("The max version count was not updated", newMaxVersions, TestAdmin.waitForColumnSchemasToSettle(UTIL.getMiniHBaseCluster(), tableName, EXPECTED_NUM_REGIONS).getMaxVersions());
-
-            Thread.sleep(2000);
-          } catch (TableNotFoundException e) {
-            e.printStackTrace();
-            fail("Table not found. Failing.");
-          } catch (IOException e) {
-            e.printStackTrace();
-            fail("IO Issue while modifying column");
-          } catch (InterruptedException e) {
-            System.out
-                .println("WARN: Sleep was interrupted. This is unusual, but not grounds for TF");
-            e.printStackTrace();
-          }
-        }
-        numIterations++;
       }
     }
   }
@@ -378,7 +262,7 @@ public class TestHRegionServerBulkLoad {
     try {
       LOG.info("Creating table " + table);
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-      for (int i = 0; i < NUM_CFS; i++) {
+      for (int i = 0; i < 10; i++) {
         htd.addFamily(new HColumnDescriptor(family(i)));
       }
 
@@ -395,42 +279,23 @@ public class TestHRegionServerBulkLoad {
   public void testAtomicBulkLoad() throws Exception {
     String TABLE_NAME = "atomicBulkLoad";
 
-    int millisToRun = 100000;
+    int millisToRun = 30000;
     int numScanners = 50;
-    UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable", true);
+
     UTIL.startMiniCluster(1);
     try {
-      runAtomicBulkloadTest(TABLE_NAME, millisToRun, numScanners, false);
+      runAtomicBulkloadTest(TABLE_NAME, millisToRun, numScanners);
     } finally {
       UTIL.shutdownMiniCluster();
     }
   }
 
-  @Test
-  public void testAtomicBulkLoadWithSchemaChange() throws Exception {
-    String TABLE_NAME = "atomicBulkLoad";
-
-    int millisToRun = 100000;
-    int numScanners = 50;
-    UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable",
-        true);
-    UTIL.startMiniCluster(1);
-    try {
-      runAtomicBulkloadTest(TABLE_NAME, millisToRun, numScanners, true);
-    } finally {
-      UTIL.shutdownMiniCluster();
-    }
-  }
-
-  void runAtomicBulkloadTest(String tableName, int millisToRun,
-      int numScanners, boolean schemaChange) throws Exception {
-    setupTable(tableName, NUM_CFS);
+  void runAtomicBulkloadTest(String tableName, int millisToRun, int numScanners)
+      throws Exception {
+    setupTable(tableName, 10);
 
     TestContext ctx = new TestContext(UTIL.getConfiguration());
-    HTableDescriptor htd = UTIL.getHBaseAdmin().getTableDescriptor(
-        TableName.valueOf(tableName));
-    final int INITIAL_UPDATE_COUNT = htd.getColumnFamilies()[0]
-        .getMaxVersions();
+
     AtomicHFileLoader loader = new AtomicHFileLoader(tableName, ctx, null);
     ctx.addThread(loader);
 
@@ -439,12 +304,6 @@ public class TestHRegionServerBulkLoad {
       AtomicScanReader scanner = new AtomicScanReader(tableName, ctx, families);
       scanners.add(scanner);
       ctx.addThread(scanner);
-    }
-
-    if (schemaChange) {
-      OnlineSchemaChangeMaxVersionsThread maxVersionsChangeThread = new OnlineSchemaChangeMaxVersionsThread(
-          tableName, ctx, families, NUM_CF_ITERATIONS);
-      ctx.addThread(maxVersionsChangeThread);
     }
 
     ctx.startThreads();
@@ -460,27 +319,6 @@ public class TestHRegionServerBulkLoad {
       LOG.info("  scanned " + scanner.numScans.get());
       LOG.info("  verified " + scanner.numRowsScanned.get() + " rows");
     }
-
-    // Verification of data insertion
-    Assert.assertEquals("Incorrect number of rows found.", NUM_ROWS,
-        UTIL.countRows(new HTable(UTIL.getConfiguration(), tableName)));
-
-    if (schemaChange) {
-      // Verification of data updated
-      htd = UTIL.getHBaseAdmin().getTableDescriptor(
-          TableName.valueOf(tableName));
-      for (byte[] family : families) {
-
-        // verify that at least one pass occurred through the loop
-        HColumnDescriptor hcd = htd.getFamily(family);
-        assertTrue(
-            "The full number of iterations for family "
-                + Bytes.toString(family) + " was not done. Expecting at least "
-                + (NUM_CF_ITERATIONS + INITIAL_UPDATE_COUNT) + " but received "
-                + hcd.getMaxVersions(),
-            hcd.getMaxVersions() >= (NUM_CF_ITERATIONS + INITIAL_UPDATE_COUNT));
-      }
-    }
   }
 
   /**
@@ -492,7 +330,7 @@ public class TestHRegionServerBulkLoad {
       Configuration c = HBaseConfiguration.create();
       TestHRegionServerBulkLoad test = new TestHRegionServerBulkLoad();
       test.setConf(c);
-      test.runAtomicBulkloadTest("atomicTableTest", 5 * 60 * 1000, 50, false);
+      test.runAtomicBulkloadTest("atomicTableTest", 5 * 60 * 1000, 50);
     } finally {
       System.exit(0); // something hangs (believe it is lru threadpool)
     }
@@ -501,4 +339,6 @@ public class TestHRegionServerBulkLoad {
   private void setConf(Configuration c) {
     UTIL = new HBaseTestingUtility(c);
   }
+
 }
+
