@@ -3128,7 +3128,14 @@ public class TestHRegion {
       flushThread.join();
       flushThread.checkNoError();
     } finally {
-      HRegion.closeHRegion(this.region);
+      try {
+        HRegion.closeHRegion(this.region);
+      } catch (DroppedSnapshotException dse) {
+        // We could get this on way out because we interrupt the background flusher and it could
+        // fail anywhere causing a DSE over in the background flusher... only it is not properly
+        // dealt with so could still be memory hanging out when we get to here -- memory we can't
+        // flush because the accounting is 'off' since original DSE.
+      }
       this.region = null;
     }
   }
