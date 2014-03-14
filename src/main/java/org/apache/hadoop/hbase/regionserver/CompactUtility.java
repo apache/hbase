@@ -35,6 +35,9 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.io.IOException;
+import java.util.*;
+
 /**
  * A compaction Utility for the Store files of a region Server.
  * This utility exposes a hook to compact specific store files.
@@ -47,14 +50,13 @@ public class CompactUtility {
   static final Log LOG = LogFactory.getLog(CompactUtility.class);
   private String table;
   private HColumnDescriptor cFamily;
-  private List<Path> filesCompacting;
+  private Set<String> filesCompacting;
   private Configuration conf;
   private HRegion hRegion;
 
-
   public CompactUtility(String table, HColumnDescriptor cFamily,
                         byte[] startKey, long regionId,
-                        List<Path> filesCompacting, Configuration conf)
+                        Set<String> filesCompacting, Configuration conf)
           throws IOException {
     this.conf = conf;
     this.table = table;
@@ -79,13 +81,17 @@ public class CompactUtility {
     Store store = hRegion.getStore(this.cFamily.getName());
     List<StoreFile> storeFiles = new ArrayList<StoreFile>(
             store.getStorefiles());
+
+    StoreFile file;
     if (filesCompacting != null) {
-      for (Iterator<StoreFile> sFile = storeFiles.iterator(); sFile.hasNext(); ) {
-        if (!filesCompacting.contains(sFile.next().getPath())) {
+      for (Iterator<StoreFile> sFile = storeFiles.iterator(); sFile.hasNext();) {
+        file = sFile.next();
+        if (!filesCompacting.contains(file.getPath().toString())) {
           sFile.remove();
         }
       }
     }
+
     long maxId = StoreFile.getMaxSequenceIdInList(storeFiles, true);
     StoreFile.Writer writer = store.compactStores(storeFiles, false, maxId);
     StoreFile result = store.completeCompaction(storeFiles, writer);
@@ -99,20 +105,23 @@ public class CompactUtility {
   private static void printHelp(Options opt) {
     new HelpFormatter().printHelp(
       "Compact Utility < -t tableName -c ColumnFamilyName -r regionID" +
-      " [List of store file Paths]", opt);
+      " -f List of comma-separated store files", opt);
   }
 
   public static void main(String[] args) throws Exception {
     Options options = new Options();
-    options.addOption("t", "table name", true,
+    options.addOption("t", "table_name", true,
             "Table for which the files hold data");
-    options.addOption("c", "Column Family", true,
+    options.addOption("c", "column_family", true,
             "Column Family of the table");
-    options.addOption("r", "Region Name", true,
+    options.addOption("r", "region_name", true,
             "Region Name for which we need to compact the files");
+    options.addOption("f", "files", true,
+      "Comma separated list of files");
     CommandLineParser parser = new PosixParser();
     CommandLine cmd = parser.parse(options, args);
-    if (!cmd.hasOption("t") || !cmd.hasOption("c") || !cmd.hasOption("r")) {
+    if (!cmd.hasOption("t") || !cmd.hasOption("c") || !cmd.hasOption("r") ||
+      !cmd.hasOption("f")) {
       printHelp(options);
       throw new IOException("Incomplete arguments");
     }
@@ -123,7 +132,7 @@ public class CompactUtility {
     long regionId = -1;
     try {
       // the regionName is of format "<tableName>,<startKey>,<regionId.md5hash>"
-      String[] splits = regionName.split(",");
+      String[] splits = regionName.split (",");
       startKey = Bytes.toBytes(splits[1]);
       regionId = Long.valueOf(splits[2].split("\\.")[0]);
     } catch (Exception e) {
@@ -134,15 +143,13 @@ public class CompactUtility {
 
     HColumnDescriptor cFamily = new HColumnDescriptor(cmd.getOptionValue("c"));
 
-    String[] files = cmd.getArgs();
-    List<Path> filePaths = new ArrayList<Path>(files.length);
-    for (String file : files) {
-      filePaths.add(new Path(file));
-    }
+    String filePaths = cmd.getOptionValue("f");
+    Set<String> files = new HashSet<>(Arrays.asList(filePaths.split(",")));
+
     Configuration conf = HBaseConfiguration.create();
     SchemaMetrics.configureGlobally(conf);
     CompactUtility compactUtility = new CompactUtility(
-            table, cFamily, startKey, regionId, filePaths, conf);
+            table, cFamily, startKey, regionId, files, conf);
     compactUtility.compact();
   }
 }

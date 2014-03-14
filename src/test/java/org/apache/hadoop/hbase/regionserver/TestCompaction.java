@@ -628,9 +628,9 @@ public class TestCompaction extends HBaseClusterTestCase {
     Store store = hRegion.getStore(COLUMN_FAMILY);
     List<StoreFile> storeFiles = store.getStorefiles();
     int numFiles1 = storeFiles.size();
-    List<Path> pathList = new ArrayList<Path>();
+    Set<String> pathList = new HashSet<>();
     for (StoreFile storeFile : storeFiles) {
-      pathList.add(storeFile.getPath());
+      pathList.add(storeFile.getPath().toString());
     }
 
     CompactUtility util = new CompactUtility(
