@@ -67,7 +67,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
-import org.cliffc.high_scale_lib.Counter;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -312,9 +311,6 @@ public class TableMapReduceUtil {
       HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
     job.getConfiguration().setFloat("hbase.offheapcache.percentage", 0f);
     job.getConfiguration().setFloat("hbase.bucketcache.size", 0f);
-
-    // We would need even more libraries that hbase-server depends on
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), Counter.class);
   }
 
   /**

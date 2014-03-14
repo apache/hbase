@@ -133,6 +133,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
@@ -140,7 +141,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
-import org.cliffc.high_scale_lib.Counter;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -5357,9 +5357,9 @@ public class HRegion implements HeapSize { // , Writable{
 
   // woefully out of date - currently missing:
   // 1 x HashMap - coprocessorServiceHandlers
-  // 6 org.cliffc.high_scale_lib.Counter - numMutationsWithoutWAL, dataInMemoryWithoutWAL,
+  // 6 x Counter - numMutationsWithoutWAL, dataInMemoryWithoutWAL,
   //   checkAndMutateChecksPassed, checkAndMutateChecksFailed, readRequestsCount,
-  //   writeRequestsCount, updatesBlockedMs
+  //   writeRequestsCount
   // 1 x HRegion$WriteState - writestate
   // 1 x RegionCoprocessorHost - coprocessorHost
   // 1 x RegionSplitPolicy - splitPolicy

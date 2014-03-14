@@ -123,7 +123,6 @@ git clone git://github.com/apache/hbase.git
 Description	Resource	Path	Location	Type
 The project cannot be built until build path errors are resolved	hbase		Unknown	Java Problem
 Unbound classpath variable: 'M2_REPO/asm/asm/3.1/asm-3.1.jar' in project 'hbase'	hbase		Build path	Build Path Problem
-Unbound classpath variable: 'M2_REPO/com/github/stephenc/high-scale-lib/high-scale-lib/1.1.1/high-scale-lib-1.1.1.jar' in project 'hbase'	hbase		Build path	Build Path Problem
 Unbound classpath variable: 'M2_REPO/com/google/guava/guava/r09/guava-r09.jar' in project 'hbase'	hbase		Build path	Build Path Problem
 Unbound classpath variable: 'M2_REPO/com/google/protobuf/protobuf-java/2.3.0/protobuf-java-2.3.0.jar' in project 'hbase'	hbase		Build path	Build Path Problem Unbound classpath variable:
             </programlisting>
