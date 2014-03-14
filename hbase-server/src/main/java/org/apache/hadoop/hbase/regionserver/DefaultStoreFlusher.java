@@ -21,16 +21,12 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -45,21 +41,20 @@ public class DefaultStoreFlusher extends StoreFlusher {
   }
 
   @Override
-  public List<Path> flushSnapshot(SortedSet<KeyValue> snapshot, long cacheFlushId,
-      TimeRangeTracker snapshotTimeRangeTracker, AtomicLong flushedSize,
+  public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
       MonitoredTask status) throws IOException {
     ArrayList<Path> result = new ArrayList<Path>();
-    if (snapshot.size() == 0) return result; // don't flush if there are no entries
+    int cellsCount = snapshot.getCellsCount();
+    if (cellsCount == 0) return result; // don't flush if there are no entries
 
     // Use a store scanner to find which rows to flush.
     long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot, smallestReadPoint);
+    InternalScanner scanner = createScanner(snapshot.getScanner(), smallestReadPoint);
     if (scanner == null) {
       return result; // NULL scanner returned from coprocessor hooks means skip normal processing
     }
 
     StoreFile.Writer writer;
-    long flushed = 0;
     try {
       // TODO:  We can fail in the below block before we complete adding this flush to
       //        list of store files.  Add cleanup of anything put on filesystem if we fail.
@@ -67,20 +62,19 @@ public class DefaultStoreFlusher extends StoreFlusher {
         status.setStatus("Flushing " + store + ": creating writer");
         // Write the map out to the disk
         writer = store.createWriterInTmp(
-            snapshot.size(), store.getFamily().getCompression(), false, true, true);
-        writer.setTimeRangeTracker(snapshotTimeRangeTracker);
+            cellsCount, store.getFamily().getCompression(), false, true, true);
+        writer.setTimeRangeTracker(snapshot.getTimeRangeTracker());
         try {
-          flushed = performFlush(scanner, writer, smallestReadPoint);
+          performFlush(scanner, writer, smallestReadPoint);
         } finally {
           finalizeWriter(writer, cacheFlushId, status);
         }
       }
     } finally {
-      flushedSize.set(flushed);
       scanner.close();
     }
     LOG.info("Flushed, sequenceid=" + cacheFlushId +", memsize="
-        + StringUtils.humanReadableInt(flushed) +
+        + StringUtils.humanReadableInt(snapshot.getSize()) +
         ", hasBloomFilter=" + writer.hasGeneralBloom() +
         ", into tmp file " + writer.getPath());
     result.add(writer.getPath());

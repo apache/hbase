@@ -44,10 +44,10 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.regionserver.DefaultMemStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.KeyValueSkipListSet;
-import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.BeforeClass;
@@ -291,17 +291,17 @@ public class TestHeapSize  {
       assertEquals(expected, actual);
     }
 
-    // MemStore Overhead
-    cl = MemStore.class;
-    actual = MemStore.FIXED_OVERHEAD;
+    // DefaultMemStore Overhead
+    cl = DefaultMemStore.class;
+    actual = DefaultMemStore.FIXED_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
     if(expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
 
-    // MemStore Deep Overhead
-    actual = MemStore.DEEP_OVERHEAD;
+    // DefaultMemStore Deep Overhead
+    actual = DefaultMemStore.DEEP_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
     expected += ClassSize.estimateBase(AtomicLong.class, false);
     expected += (2 * ClassSize.estimateBase(KeyValueSkipListSet.class, false));

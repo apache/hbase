@@ -28,7 +28,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -114,7 +113,7 @@ public class TestReversibleScanners {
 
   @Test
   public void testReversibleMemstoreScanner() throws IOException {
-    MemStore memstore = new MemStore();
+    MemStore memstore = new DefaultMemStore();
     writeMemstore(memstore);
     List<KeyValueScanner> scanners = memstore.getScanners(Long.MAX_VALUE);
     seekTestOfReversibleKeyValueScanner(scanners.get(0));
@@ -144,7 +143,7 @@ public class TestReversibleScanners {
         TEST_UTIL.getConfiguration(), cacheConf, fs).withOutputDir(
         hfilePath).withFileContext(hFileContext).build();
 
-    MemStore memstore = new MemStore();
+    MemStore memstore = new DefaultMemStore();
     writeMemstoreAndStoreFiles(memstore, new StoreFile.Writer[] { writer1,
         writer2 });
 
@@ -234,7 +233,7 @@ public class TestReversibleScanners {
         TEST_UTIL.getConfiguration(), cacheConf, fs).withOutputDir(
         hfilePath).withFileContext(hFileContext).build();
 
-    MemStore memstore = new MemStore();
+    MemStore memstore = new DefaultMemStore();
     writeMemstoreAndStoreFiles(memstore, new StoreFile.Writer[] { writer1,
         writer2 });
 
@@ -627,7 +626,6 @@ public class TestReversibleScanners {
 
   private static void writeMemstoreAndStoreFiles(MemStore memstore,
       final StoreFile.Writer[] writers) throws IOException {
-    Random rand = new Random();
     try {
       for (int i = 0; i < ROWSIZE; i++) {
         for (int j = 0; j < QUALSIZE; j++) {

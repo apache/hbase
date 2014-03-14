@@ -54,22 +54,19 @@ import com.google.common.collect.Lists;
 
 /** memstore test case */
 @Category(MediumTests.class)
-public class TestMemStore extends TestCase {
+public class TestDefaultMemStore extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
-  private MemStore memstore;
+  private DefaultMemStore memstore;
   private static final int ROW_COUNT = 10;
   private static final int QUALIFIER_COUNT = ROW_COUNT;
   private static final byte [] FAMILY = Bytes.toBytes("column");
-  private static final byte [] CONTENTS = Bytes.toBytes("contents");
-  private static final byte [] BASIC = Bytes.toBytes("basic");
-  private static final String CONTENTSTR = "contentstr";
   private MultiVersionConsistencyControl mvcc;
 
   @Override
   public void setUp() throws Exception {
     super.setUp();
     this.mvcc = new MultiVersionConsistencyControl();
-    this.memstore = new MemStore();
+    this.memstore = new DefaultMemStore();
   }
 
   public void testPutSameKey() {
@@ -154,8 +151,8 @@ public class TestMemStore extends TestCase {
         assertEquals("count=" + count + ", result=" + result, rowCount, result.size());
         count++;
         if (count == snapshotIndex) {
-          this.memstore.snapshot();
-          this.memstore.clearSnapshot(this.memstore.getSnapshot());
+          MemStoreSnapshot snapshot = this.memstore.snapshot();
+          this.memstore.clearSnapshot(snapshot.getId());
           // Added more rows into kvset.  But the scanner wont see these rows.
           addRows(this.memstore, ts);
           LOG.info("Snapshotted, cleared it and then added values (which wont be seen)");
@@ -195,7 +192,7 @@ public class TestMemStore extends TestCase {
     verifyScanAcrossSnapshot2(kv1, kv2);
 
     // use case 3: first in snapshot second in kvset
-    this.memstore = new MemStore();
+    this.memstore = new DefaultMemStore();
     this.memstore.add(kv1.clone());
     this.memstore.snapshot();
     this.memstore.add(kv2.clone());
@@ -459,13 +456,12 @@ public class TestMemStore extends TestCase {
     for (int i = 0; i < snapshotCount; i++) {
       addRows(this.memstore);
       runSnapshot(this.memstore);
-      KeyValueSkipListSet ss = this.memstore.getSnapshot();
-      assertEquals("History not being cleared", 0, ss.size());
+      assertEquals("History not being cleared", 0, this.memstore.snapshot.size());
     }
   }
 
   public void testMultipleVersionsSimple() throws Exception {
-    MemStore m = new MemStore(new Configuration(), KeyValue.COMPARATOR);
+    DefaultMemStore m = new DefaultMemStore(new Configuration(), KeyValue.COMPARATOR);
     byte [] row = Bytes.toBytes("testRow");
     byte [] family = Bytes.toBytes("testFamily");
     byte [] qf = Bytes.toBytes("testQualifier");
@@ -522,8 +518,10 @@ public class TestMemStore extends TestCase {
         int rowId = startRowId + i;
         Cell left = results.get(0);
         byte[] row1 = Bytes.toBytes(rowId);
-        assertTrue("Row name",
-          KeyValue.COMPARATOR.compareRows(left.getRowArray(), left.getRowOffset(), (int) left.getRowLength(), row1, 0, row1.length) == 0);
+        assertTrue(
+            "Row name",
+            KeyValue.COMPARATOR.compareRows(left.getRowArray(), left.getRowOffset(),
+                (int) left.getRowLength(), row1, 0, row1.length) == 0);
         assertEquals("Count of columns", QUALIFIER_COUNT, results.size());
         List<Cell> row = new ArrayList<Cell>();
         for (Cell kv : results) {
@@ -774,8 +772,8 @@ public class TestMemStore extends TestCase {
    */
   public void testUpsertMSLAB() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    conf.setBoolean(MemStore.USEMSLAB_KEY, true);
-    memstore = new MemStore(conf, KeyValue.COMPARATOR);
+    conf.setBoolean(DefaultMemStore.USEMSLAB_KEY, true);
+    memstore = new DefaultMemStore(conf, KeyValue.COMPARATOR);
 
     int ROW_SIZE = 2048;
     byte[] qualifier = new byte[ROW_SIZE - 4];
@@ -816,7 +814,7 @@ public class TestMemStore extends TestCase {
    */
   public void testUpsertMemstoreSize() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    memstore = new MemStore(conf, KeyValue.COMPARATOR);
+    memstore = new DefaultMemStore(conf, KeyValue.COMPARATOR);
     long oldSize = memstore.size.get();
 
     List<Cell> l = new ArrayList<Cell>();
@@ -853,7 +851,7 @@ public class TestMemStore extends TestCase {
     try {
       EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
       EnvironmentEdgeManager.injectEdge(edge);
-      MemStore memstore = new MemStore();
+      DefaultMemStore memstore = new DefaultMemStore();
       long t = memstore.timeOfOldestEdit();
       assertEquals(t, Long.MAX_VALUE);
 
@@ -962,16 +960,15 @@ public class TestMemStore extends TestCase {
     return ROW_COUNT;
   }
 
-  private long runSnapshot(final MemStore hmc) throws UnexpectedException {
+  private long runSnapshot(final DefaultMemStore hmc) throws UnexpectedException {
     // Save off old state.
-    int oldHistorySize = hmc.getSnapshot().size();
-    hmc.snapshot();
-    KeyValueSkipListSet ss = hmc.getSnapshot();
+    int oldHistorySize = hmc.snapshot.size();
+    MemStoreSnapshot snapshot = hmc.snapshot();
     // Make some assertions about what just happened.
-    assertTrue("History size has not increased", oldHistorySize < ss.size());
+    assertTrue("History size has not increased", oldHistorySize < hmc.snapshot.size());
     long t = memstore.timeOfOldestEdit();
     assertTrue("Time of oldest edit is not Long.MAX_VALUE", t == Long.MAX_VALUE);
-    hmc.clearSnapshot(ss);
+    hmc.clearSnapshot(snapshot.getId());
     return t;
   }
 
@@ -989,15 +986,6 @@ public class TestMemStore extends TestCase {
     }
   }
 
-  private KeyValue getDeleteKV(byte [] row) {
-    return new KeyValue(row, Bytes.toBytes("test_col"), null,
-      HConstants.LATEST_TIMESTAMP, KeyValue.Type.Delete, null);
-  }
-
-  private KeyValue getKV(byte [] row, byte [] value) {
-    return new KeyValue(row, Bytes.toBytes("test_col"), null,
-      HConstants.LATEST_TIMESTAMP, value);
-  }
   private static void addRows(int count, final MemStore mem) {
     long nanos = System.nanoTime();
 
@@ -1027,13 +1015,13 @@ public class TestMemStore extends TestCase {
     int cnt=0;
     while(s.next() != null) ++cnt;
 
-    System.out.println(iteration + " took usec: " + (System.nanoTime() - nanos)/1000 + " for: " + cnt);
+    System.out.println(iteration + " took usec: " + (System.nanoTime() - nanos) / 1000 + " for: "
+        + cnt);
 
   }
 
   public static void main(String [] args) throws IOException {
-    MultiVersionConsistencyControl mvcc = new MultiVersionConsistencyControl();
-    MemStore ms = new MemStore();
+    MemStore ms = new DefaultMemStore();
 
     long n1 = System.nanoTime();
     addRows(25000, ms);
@@ -1043,7 +1031,6 @@ public class TestMemStore extends TestCase {
 
     for (int i = 0 ; i < 50 ; i++)
       doScan(ms, i);
-
   }
 }
 

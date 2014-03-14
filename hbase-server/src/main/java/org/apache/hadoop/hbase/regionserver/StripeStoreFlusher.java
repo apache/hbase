@@ -21,21 +21,16 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
 import org.apache.hadoop.hbase.regionserver.StripeMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
-import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -57,33 +52,32 @@ public class StripeStoreFlusher extends StoreFlusher {
   }
 
   @Override
-  public List<Path> flushSnapshot(SortedSet<KeyValue> snapshot, long cacheFlushSeqNum,
-      final TimeRangeTracker tracker, AtomicLong flushedSize, MonitoredTask status)
-          throws IOException {
+  public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushSeqNum,
+      MonitoredTask status) throws IOException {
     List<Path> result = null;
-    int kvCount = snapshot.size();
-    if (kvCount == 0) return result; // don't flush if there are no entries
+    int cellsCount = snapshot.getCellsCount();
+    if (cellsCount == 0) return result; // don't flush if there are no entries
 
     long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot, smallestReadPoint);
+    InternalScanner scanner = createScanner(snapshot.getScanner(), smallestReadPoint);
     if (scanner == null) {
       return result; // NULL scanner returned from coprocessor hooks means skip normal processing
     }
 
     // Let policy select flush method.
-    StripeFlushRequest req = this.policy.selectFlush(this.stripes, kvCount);
+    StripeFlushRequest req = this.policy.selectFlush(this.stripes, cellsCount);
 
-    long flushedBytes = 0;
     boolean success = false;
     StripeMultiFileWriter mw = null;
     try {
       mw = req.createWriter(); // Writer according to the policy.
-      StripeMultiFileWriter.WriterFactory factory = createWriterFactory(tracker, kvCount);
+      StripeMultiFileWriter.WriterFactory factory = createWriterFactory(
+          snapshot.getTimeRangeTracker(), cellsCount);
       StoreScanner storeScanner = (scanner instanceof StoreScanner) ? (StoreScanner)scanner : null;
       mw.init(storeScanner, factory, store.getComparator());
 
       synchronized (flushLock) {
-        flushedBytes = performFlush(scanner, mw, smallestReadPoint);
+        performFlush(scanner, mw, smallestReadPoint);
         result = mw.commitWriters(cacheFlushSeqNum, false);
         success = true;
       }
@@ -100,7 +94,6 @@ public class StripeStoreFlusher extends StoreFlusher {
           }
         }
       }
-      flushedSize.set(flushedBytes);
       try {
         scanner.close();
       } catch (IOException ex) {

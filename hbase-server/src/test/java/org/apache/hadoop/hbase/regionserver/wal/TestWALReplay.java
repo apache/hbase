@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -69,10 +68,10 @@ import org.apache.hadoop.hbase.regionserver.FlushRequestListener;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.MemStoreSnapshot;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
@@ -560,14 +559,12 @@ public class TestWALReplay {
       super(conf, store);
     }
     @Override
-    public List<Path> flushSnapshot(SortedSet<KeyValue> snapshot, long cacheFlushId,
-        TimeRangeTracker snapshotTimeRangeTracker, AtomicLong flushedSize, MonitoredTask status)
-            throws IOException {
+    public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
+        MonitoredTask status) throws IOException {
       if (throwExceptionWhenFlushing.get()) {
         throw new IOException("Simulated exception by tests");
       }
-      return super.flushSnapshot(snapshot, cacheFlushId, snapshotTimeRangeTracker,
-          flushedSize, status);
+      return super.flushSnapshot(snapshot, cacheFlushId, status);
     }
 
   };

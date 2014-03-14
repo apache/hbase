@@ -30,7 +30,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,7 +38,6 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -83,6 +81,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -116,6 +115,7 @@ import com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 public class HStore implements Store {
+  private static final String MEMSTORE_CLASS_NAME = "hbase.regionserver.memstore.class";
   public static final String COMPACTCHECKER_INTERVAL_MULTIPLIER_KEY =
       "hbase.server.compactchecker.interval.multiplier";
   public static final String BLOCKING_STOREFILES_KEY = "hbase.hstore.blockingStoreFiles";
@@ -224,7 +224,9 @@ public class HStore implements Store {
     // Why not just pass a HColumnDescriptor in here altogether?  Even if have
     // to clone it?
     scanInfo = new ScanInfo(family, ttl, timeToPurgeDeletes, this.comparator);
-    this.memstore = new MemStore(conf, this.comparator);
+    String className = conf.get(MEMSTORE_CLASS_NAME, DefaultMemStore.class.getName());
+    this.memstore = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
+        Configuration.class, KeyValue.KVComparator.class }, new Object[] { conf, this.comparator });
     this.offPeakHours = OffPeakHours.getInstance(conf);
 
     // Setting up cache configuration for this family
@@ -752,7 +754,7 @@ public class HStore implements Store {
 
   /**
    * Snapshot this stores memstore. Call before running
-   * {@link #flushCache(long, SortedSet, TimeRangeTracker, AtomicLong, MonitoredTask)}
+   * {@link #flushCache(long, MemStoreSnapshot, MonitoredTask)}
    *  so it has some work to do.
    */
   void snapshot() {
@@ -769,16 +771,11 @@ public class HStore implements Store {
    * previously.
    * @param logCacheFlushId flush sequence number
    * @param snapshot
-   * @param snapshotTimeRangeTracker
-   * @param flushedSize The number of bytes flushed
    * @param status
    * @return The path name of the tmp file to which the store was flushed
    * @throws IOException
    */
-  protected List<Path> flushCache(final long logCacheFlushId,
-      SortedSet<KeyValue> snapshot,
-      TimeRangeTracker snapshotTimeRangeTracker,
-      AtomicLong flushedSize,
+  protected List<Path> flushCache(final long logCacheFlushId, MemStoreSnapshot snapshot,
       MonitoredTask status) throws IOException {
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
@@ -789,8 +786,7 @@ public class HStore implements Store {
     IOException lastException = null;
     for (int i = 0; i < flushRetriesNumber; i++) {
       try {
-        List<Path> pathNames = flusher.flushSnapshot(
-            snapshot, logCacheFlushId, snapshotTimeRangeTracker, flushedSize, status);
+        List<Path> pathNames = flusher.flushSnapshot(snapshot, logCacheFlushId, status);
         Path lastPathName = null;
         try {
           for (Path pathName : pathNames) {
@@ -826,14 +822,11 @@ public class HStore implements Store {
   /*
    * @param path The pathname of the tmp file into which the store was flushed
    * @param logCacheFlushId
+   * @param status
    * @return StoreFile created.
    * @throws IOException
    */
-  private StoreFile commitFile(final Path path,
-      final long logCacheFlushId,
-      TimeRangeTracker snapshotTimeRangeTracker,
-      AtomicLong flushedSize,
-      MonitoredTask status)
+  private StoreFile commitFile(final Path path, final long logCacheFlushId, MonitoredTask status)
       throws IOException {
     // Write-out finished successfully, move into the right spot
     Path dstPath = fs.commitStoreFile(getColumnFamilyName(), path);
@@ -916,16 +909,16 @@ public class HStore implements Store {
   /*
    * Change storeFiles adding into place the Reader produced by this new flush.
    * @param sfs Store files
-   * @param set That was used to make the passed file.
+   * @param snapshotId
    * @throws IOException
    * @return Whether compaction is required.
    */
-  private boolean updateStorefiles(
-      final List<StoreFile> sfs, final SortedSet<KeyValue> set) throws IOException {
+  private boolean updateStorefiles(final List<StoreFile> sfs, final long snapshotId)
+      throws IOException {
     this.lock.writeLock().lock();
     try {
       this.storeEngine.getStoreFileManager().insertNewFiles(sfs);
-      this.memstore.clearSnapshot(set);
+      this.memstore.clearSnapshot(snapshotId);
     } finally {
       // We need the lock, as long as we are updating the storeFiles
       // or changing the memstore. Let us release it before calling
@@ -1827,7 +1820,7 @@ public class HStore implements Store {
 
   @Override
   public long getMemStoreSize() {
-    return this.memstore.heapSize();
+    return this.memstore.size();
   }
 
   @Override
@@ -1918,10 +1911,8 @@ public class HStore implements Store {
   private class StoreFlusherImpl implements StoreFlushContext {
 
     private long cacheFlushSeqNum;
-    private SortedSet<KeyValue> snapshot;
+    private MemStoreSnapshot snapshot;
     private List<Path> tempFiles;
-    private TimeRangeTracker snapshotTimeRangeTracker;
-    private final AtomicLong flushedSize = new AtomicLong();
 
     private StoreFlusherImpl(long cacheFlushSeqNum) {
       this.cacheFlushSeqNum = cacheFlushSeqNum;
@@ -1933,15 +1924,12 @@ public class HStore implements Store {
      */
     @Override
     public void prepare() {
-      memstore.snapshot();
-      this.snapshot = memstore.getSnapshot();
-      this.snapshotTimeRangeTracker = memstore.getSnapshotTimeRangeTracker();
+      this.snapshot = memstore.snapshot();
     }
 
     @Override
     public void flushCache(MonitoredTask status) throws IOException {
-      tempFiles = HStore.this.flushCache(
-        cacheFlushSeqNum, snapshot, snapshotTimeRangeTracker, flushedSize, status);
+      tempFiles = HStore.this.flushCache(cacheFlushSeqNum, snapshot, status);
     }
 
     @Override
@@ -1952,8 +1940,7 @@ public class HStore implements Store {
       List<StoreFile> storeFiles = new ArrayList<StoreFile>(this.tempFiles.size());
       for (Path storeFilePath : tempFiles) {
         try {
-          storeFiles.add(HStore.this.commitFile(storeFilePath, cacheFlushSeqNum,
-              snapshotTimeRangeTracker, flushedSize, status));
+          storeFiles.add(HStore.this.commitFile(storeFilePath, cacheFlushSeqNum, status));
         } catch (IOException ex) {
           LOG.error("Failed to commit store file " + storeFilePath, ex);
           // Try to delete the files we have committed before.
@@ -1976,7 +1963,7 @@ public class HStore implements Store {
         }
       }
       // Add new file to store files.  Clear snapshot too while we have the Store write lock.
-      return HStore.this.updateStorefiles(storeFiles, snapshot);
+      return HStore.this.updateStorefiles(storeFiles, snapshot.getId());
     }
   }
 
