@@ -95,7 +95,7 @@ public class ThriftClientCacheWithConnectionPooling implements
    * @param clazz
    * @return
    */
-  public GenericObjectPool<ThriftClientInterface> createGenericObjectPool(
+  private GenericObjectPool<ThriftClientInterface> createGenericObjectPool(
       InetSocketAddress address, Class<? extends ThriftClientInterface> clazz) {
     ThriftClientObjectFactory factory = new ThriftClientObjectFactory(address,
         clazz, this.clientManager, this.conf);

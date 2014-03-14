@@ -120,8 +120,10 @@ public abstract class ServerCallable<T> implements Callable<T> {
     return tableName;
   }
 
-  public void refreshServerConnection(Exception e) throws IOException {
-    ((HBaseToThriftAdapter)server).refreshConnectionAndThrowIOException(e);
+  public void cleanUpServerConnection(Exception e) throws IOException {
+    if (server instanceof HBaseToThriftAdapter) {
+      ((HBaseToThriftAdapter)server).cleanUpServerConnection(e);
+    }
   }
 
   public void updateFailureInfoForServer(boolean didTry, boolean couldNotCommunicate) {
@@ -131,5 +133,11 @@ public abstract class ServerCallable<T> implements Callable<T> {
 
   public void handleThrowable(Throwable t, MutableBoolean couldNotCommunicateWithServer) throws Exception {
     ((HConnectionManager.TableServers)connection).handleThrowable(t, this, couldNotCommunicateWithServer);
+  }
+
+  public void readHeader() {
+    if (server instanceof HBaseToThriftAdapter) {
+      ((HBaseToThriftAdapter)server).readHeader();
+    }
   }
 }

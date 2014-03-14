@@ -54,11 +54,6 @@ public class HBaseThriftRPC {
 
   private static Configuration metaConf = null;
 
-  private static boolean USE_POOLING = true;
-  private static ConcurrentHashMap<InetSocketAddress, ThriftClientObjectFactory> factoryMap =
-      new ConcurrentHashMap<>();
-  private static ThriftClientManager sharedManager = new ThriftClientManager();
-
   public static void clearAll() throws Exception {
     metaConf = null;
     isMeta.get().clear();
@@ -84,20 +79,6 @@ public class HBaseThriftRPC {
       InetSocketAddress addr,
       Configuration conf,
       Class<? extends ThriftClientInterface> clazz) throws IOException {
-    if (!USE_POOLING) {
-      ThriftClientObjectFactory factory = factoryMap.get(addr);
-      if (factory == null) {
-        ThriftClientManager manager = new ThriftClientManager();
-        factory = new ThriftClientObjectFactory(addr, clazz, manager, conf);
-        factoryMap.putIfAbsent(addr, factory);
-      }
-      try {
-        return new Pair<>(factory.makeObject(), sharedManager);
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
-    }
-
     conf = checkIfInMeta(conf);
     ThriftClientCache clientsForConf = CLIENT_CACHE.get(conf);
     if (clientsForConf == null) {
@@ -111,7 +92,7 @@ public class HBaseThriftRPC {
       }
     }
     try {
-      ThriftClientInterface client = null;
+      ThriftClientInterface client;
       try {
         client = clientsForConf.getClient(addr, clazz);
       } catch (Exception e) {
@@ -158,14 +139,6 @@ public class HBaseThriftRPC {
       InetSocketAddress inetSocketAddress,
       Configuration conf, ThriftClientInterface thriftClient,
       Class<? extends ThriftClientInterface> clientInterface) throws IOException {
-    if (!USE_POOLING) {
-      try {
-        thriftClient.close();
-      } catch (Exception e) {
-        LOG.warn("Unable to close client because: ", e);
-      }
-      return new Pair<>(null, null);
-    }
     conf = checkIfInMeta(conf);
     ThriftClientCache clientsForConf = CLIENT_CACHE.get(conf);
     try {
@@ -182,11 +155,42 @@ public class HBaseThriftRPC {
     }
   }
 
+  /**
+   * Clean up current connection.
+   *
+   * @param inetSocketAddress
+   * @param conf
+   * @param thriftClient
+   * @param clientInterface
+   * @throws IOException
+   */
+  protected static void cleanUpConnection(
+      InetSocketAddress inetSocketAddress,
+      Configuration conf,
+      ThriftClientInterface thriftClient,
+      Class<? extends ThriftClientInterface> clientInterface) throws IOException {
+    conf = checkIfInMeta(conf);
+    ThriftClientCache clientsForConf = CLIENT_CACHE.get(conf);
+    try {
+      if (clientsForConf == null) {
+        LOG.error("Client cache pool for current configuration is null.");
+        thriftClient.close();
+      } else {
+        clientsForConf.close(inetSocketAddress, clientInterface, thriftClient);
+      }
+      LOG.debug("Clean up connection due to an error in the channel");
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
   private static Configuration checkIfInMeta(Configuration inputConf) {
     Configuration conf = inputConf;
     if (!isMeta.get().isEmpty() && isMeta.get().peek()) {
       if (metaConf == null) {
         metaConf = (HBaseConfiguration.create(inputConf));
+        // Make metaConf different from inputConf
+        metaConf.setStrings("metaConf", "yes");
       }
       conf = metaConf;
     }
@@ -196,27 +200,11 @@ public class HBaseThriftRPC {
   public static void putBackClient(ThriftClientInterface server,
       InetSocketAddress addr, Configuration conf,
       Class<? extends ThriftClientInterface> clazz) throws Exception {
-    if (!USE_POOLING) {
-      try {
-        // FIXME
-        // When using async, without connection pooling, because as per @fan,
-        // we would just close the connection before the async call finishes.
-        server.close();
-      } catch (Exception e) {
-        LOG.warn("Could not close connection to " + addr.toString(), e);
-      }
-      return;
-    }
-
     conf = checkIfInMeta(conf);
     ThriftClientCache clientsForConf = CLIENT_CACHE.get(conf);
     if (clientsForConf == null) {
       return;
     }
     clientsForConf.putBackClient(server, addr, clazz);
-  }
-
-  public static void setUsePooling(boolean b) {
-    USE_POOLING = b;
   }
 }

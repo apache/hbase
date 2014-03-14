@@ -943,6 +943,8 @@ public final class HConstants {
   public static final boolean HTABLE_ASYNC_CALLS_DEFAULT = false;
 
   public static final int DEFAULT_HTABLE_ASYNC_CORE_THREADS = 100;
+  public static final int DEFAULT_HTABLE_ASYNC_MAX_THREADS = 1000;
+  public static final int DEFAULT_HTABLE_ASYNC_KEEPALIVE_SECONDS = 60;
 
   // These are the IO priority values for various regionserver operations. Note
   // that these are priorities relative to each other. See the man page for

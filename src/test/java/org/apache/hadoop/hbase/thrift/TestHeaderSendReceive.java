@@ -18,7 +18,8 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 
@@ -26,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableAsync;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -69,28 +71,28 @@ public class TestHeaderSendReceive {
    * The client requests profiling
    */
   @Test
-  public void testProfilingData() throws IOException {
+  public void testProfilingData() throws Exception {
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
     Put put = new Put(r1);
     put.add(FAMILY, null, value);
     ht.setProfiling(true);
     ht.put(put);
     ProfilingData pd = ht.getProfilingData();
-    assertTrue(pd != null);
+    assertNotNull(pd);
     System.out.println("profiling data after first put: " + pd);
 
     // disable profiling and check that we get no profiling data back
     ht.setProfiling(false);
     ht.put(put);
     pd = ht.getProfilingData();
-    assertTrue(pd == null);
+    assertNull(pd);
 
     put = new Put(r2);
     put.add(FAMILY, null, value);
     ht.setProfiling(true);
     ht.put(put);
     pd = ht.getProfilingData();
-    assertTrue(pd != null);
+    assertNotNull(pd);
     System.out.println("profiling data after second put: " + pd);
 
     // make a get
@@ -99,7 +101,14 @@ public class TestHeaderSendReceive {
     ht.get(get);
     pd = ht.getProfilingData();
     System.out.println("profiling data after get: " + pd);
-    assertTrue(pd != null);
+    assertNotNull(pd);
+
+    // test async get
+    ht.setProfiling(true);
+    ((HTableAsync)ht).getAsync(get).get();
+    pd = ht.getProfilingData();
+    System.out.println("profiling data after get: " + pd);
+    assertNotNull(pd);
   }
 
   /**
@@ -116,7 +125,7 @@ public class TestHeaderSendReceive {
     p.add(FAMILY, null, value);
     ht.put(p);
     ProfilingData pd = ht.getProfilingData();
-    assertTrue(pd != null);
+    assertNotNull(pd);
     System.out.println("profiling data: " + pd);
   }
 

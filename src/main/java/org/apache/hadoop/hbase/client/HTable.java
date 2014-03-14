@@ -102,7 +102,7 @@ public class HTable implements HTableInterface {
 
   public void initHTableAsync() throws IOException {
     if (doAsync && hta == null) {
-      hta = new HTableAsync(configuration, tableName);
+      hta = new HTableAsync(this);
     }
   }
 
@@ -192,7 +192,27 @@ public class HTable implements HTableInterface {
         HConstants.HTABLE_ASYNC_CALLS_DEFAULT)
         && configuration.getBoolean(HConstants.CLIENT_TO_RS_USE_THRIFT,
             HConstants.CLIENT_TO_RS_USE_THRIFT_DEFAULT);
-    HBaseThriftRPC.setUsePooling(conf.getBoolean("hbase.client.useconnectionpooling", true));
+  }
+
+  /**
+   * Shallow copy constructor
+   *
+   * @param t HTable instance to copy from
+   */
+  public HTable(HTable t) {
+    this.tableName = t.tableName;
+    this.scannerTimeout = t.scannerTimeout;
+    this.connection = t.connection;
+    this.configuration = t.configuration;
+    this.writeBufferSize = t.writeBufferSize;
+    this.clearBufferOnFail = t.clearBufferOnFail;
+    this.autoFlush = t.autoFlush;
+    this.currentWriteBufferSize = t.currentWriteBufferSize;
+    this.scannerCaching = t.scannerCaching;
+    this.maxKeyValueSize = t.maxKeyValueSize;
+    this.options = t.options;
+    this.recordClientContext = t.recordClientContext;
+    this.maxScannerResultSize = t.maxScannerResultSize;
   }
 
   @Override

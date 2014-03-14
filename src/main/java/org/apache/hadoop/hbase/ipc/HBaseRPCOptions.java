@@ -22,7 +22,7 @@ public class HBaseRPCOptions implements Writable {
 
   // this will be used as profiling data in htable so it's possible to
   // set it after receiving profiling data. do not need to serialize this.
-  public ProfilingData profilingResult = null;
+  public volatile ProfilingData profilingResult = null;
 
   public HBaseRPCOptions () {}
 

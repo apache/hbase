@@ -24,6 +24,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -43,10 +46,15 @@ import org.apache.hadoop.hbase.util.DaemonThreadFactory;
  */
 public class HTableAsync extends HTable implements HTableAsyncInterface {
 
-  //TODO: decide what is a good number of core threads. Max thread number seems unconfigurable.
-  private final ListeningScheduledExecutorService executorService =
-      MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(
-          HConstants.DEFAULT_HTABLE_ASYNC_CORE_THREADS, new DaemonThreadFactory("htable-async-thread-")));
+  private static final ListeningScheduledExecutorService executorService;
+  static {
+    ScheduledExecutorService executor = Executors.newScheduledThreadPool(
+        HConstants.DEFAULT_HTABLE_ASYNC_CORE_THREADS, new DaemonThreadFactory("htable-async-thread-"));
+    ((ThreadPoolExecutor)executor).setMaximumPoolSize(HConstants.DEFAULT_HTABLE_ASYNC_MAX_THREADS);
+    ((ThreadPoolExecutor)executor).setKeepAliveTime(
+        HConstants.DEFAULT_HTABLE_ASYNC_KEEPALIVE_SECONDS, TimeUnit.SECONDS);
+    executorService = MoreExecutors.listeningDecorator(executor);
+  }
 
   private HConnectionParams hConnectionParams;
 
@@ -76,6 +84,12 @@ public class HTableAsync extends HTable implements HTableAsyncInterface {
     super(conf, tableName);
 
     this.hConnectionParams = HConnectionParams.getInstance(conf);
+  }
+
+  public HTableAsync(HTable t) {
+    super(t);
+
+    this.hConnectionParams = HConnectionParams.getInstance(getConfiguration());
   }
 
   /**

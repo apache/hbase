@@ -118,11 +118,32 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     } else if (e instanceof RuntimeTApplicationException) {
       throw new RuntimeException(e);
     } else {
+      //TODO: creating a new connection is unnecessary. We should replace it with cleanUpConnection later
       Pair<ThriftClientInterface, ThriftClientManager> interfaceAndManager = HBaseThriftRPC
           .refreshConnection(this.addr, this.conf, this.connection, this.clazz);
       this.connection = (ThriftHRegionInterface) interfaceAndManager.getFirst();
       this.clientManager = interfaceAndManager.getSecond();
       throw new IOException(e);
+    }
+  }
+
+  /**
+   * In contrast to refreshConnectionAndThrowIOException(), it tries to clean
+   * up failed connection from the pool without creating new ones, because that's
+   * unnecessary.
+   *
+   * @param e
+   * @throws IOException
+   */
+  public void cleanUpServerConnection(Exception e) throws IOException {
+    if (e instanceof TApplicationException) {
+      throw new RuntimeException(e);
+    } else if (e instanceof RuntimeTApplicationException) {
+      throw new RuntimeException(e);
+    } else {
+      HBaseThriftRPC.cleanUpConnection(this.addr, this.conf, this.connection, this.clazz);
+      this.connection = null;
+      this.clientManager = null;
     }
   }
 
@@ -213,10 +234,17 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       if (this.useHeaderProtocol) {
         readHeader();
       }
-      HBaseThriftRPC.putBackClient(this.connection, this.addr, this.conf,
-        this.clazz);
+      HBaseThriftRPC.putBackClient(this.connection, this.addr, this.conf, this.clazz);
       this.connection = null;
       this.clientManager = null;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private void putBackClient() {
+    try {
+      HBaseThriftRPC.putBackClient(this.connection, this.addr, this.conf, this.clazz);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -332,7 +360,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     try {
       return connection.getClosestRowBeforeAsync(regionName, row, family);
     } finally {
-      postProcess();
+      putBackClient();
     }
   }
 
@@ -557,7 +585,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     try {
       return connection.getAsync(regionName, get);
     } finally {
-      postProcess();
+      putBackClient();
     }
   }
 
@@ -632,7 +660,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     try {
       return connection.deleteAsync(regionName, delete);
     } finally {
-      postProcess();
+      putBackClient();
     }
   }
 
@@ -755,7 +783,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     } catch (IOException e) {
       return Futures.immediateFailedFuture(e);
     } finally {
-      postProcess();
+      putBackClient();
     }
   }
 
@@ -878,7 +906,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     try {
       return connection.lockRowAsync(regionName, row);
     } finally {
-      postProcess();
+      putBackClient();
     }
   }
 
@@ -904,7 +932,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     try {
       return connection.unlockRowAsync(regionName, lockId);
     } finally {
-      postProcess();
+      putBackClient();
     }
   }
 

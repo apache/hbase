@@ -72,7 +72,6 @@ public class SelfRetryingListenableFuture<V> extends AbstractFuture<V> {
 
   private int tries = 0;
   private List<Throwable> exceptions = new ArrayList<>();
-  private RegionOverloadedException roe = null;
 
   long callStartTime = 0;
   int serverRequestedRetries = 0;
@@ -123,7 +122,6 @@ public class SelfRetryingListenableFuture<V> extends AbstractFuture<V> {
     }
 
     tries++;
-    LOG.debug("Try number: " + tries);
 
     didTry = false;
     try {
@@ -152,7 +150,7 @@ public class SelfRetryingListenableFuture<V> extends AbstractFuture<V> {
         }
       }, executorService);
     } catch (Exception e) {
-      LOG.error("Cannot create upstream listenable future at the first place", e);
+      LOG.error("Cannot create upstream listenable future at the first place, try number: " + tries, e);
       handleException(e);
     }
   }
@@ -163,6 +161,7 @@ public class SelfRetryingListenableFuture<V> extends AbstractFuture<V> {
    * @param v Result from server
    */
   private void setSuccess(V v) {
+    callable.readHeader();
     downstream.set(v);
   }
 
@@ -190,12 +189,12 @@ public class SelfRetryingListenableFuture<V> extends AbstractFuture<V> {
       // Skip exception handling in TableServers and just fast fail to next retry.
       retryOrStop(t);
     } else {
-      LOG.debug("Other exception type, detecting if it's need to refresh connection", t);
+      LOG.debug("Other exception type, detecting if it's need to cleanup connection", t);
       if (!didTry) {
         // When the call to server is actually made,
-        //   try to refresh server connection if it's necessary.
+        //   try to clean up server connection if it's necessary.
         try {
-          callable.refreshServerConnection((Exception)t);
+          callable.cleanUpServerConnection((Exception) t);
         } catch (Exception e) {
           // Decide next step according to the original exception. Do not use the this exception
           //   which is wrapped by connection refreshing.
@@ -234,7 +233,7 @@ public class SelfRetryingListenableFuture<V> extends AbstractFuture<V> {
       // So there is no retry
       setFailure(t);
     } else if (t instanceof RegionOverloadedException) {
-      roe = (RegionOverloadedException)t;
+      RegionOverloadedException roe = (RegionOverloadedException)t;
       serverRequestedWaitTime = roe.getBackoffTimeMillis();
 
       // If server requests wait. We will wait for that time, and start
