@@ -750,23 +750,14 @@ public class TestAssignmentManagerOnCluster {
       // You can't assign a dead region before SSH
       am.assign(hri, true, true);
       RegionState state = regionStates.getRegionState(hri);
-      assertTrue(state.isFailedClose());
+      assertTrue(state.isOffline());
 
       // You can't unassign a dead region before SSH either
       am.unassign(hri, true);
-      state = regionStates.getRegionState(hri);
-      assertTrue(state.isFailedClose());
+      assertTrue(state.isOffline());
 
-      synchronized (regionStates) {
-        // Enable SSH so that log can be split
-        master.enableSSH(true);
-
-        // We hold regionStates now, so logSplit
-        // won't be known to AM yet.
-        am.unassign(hri, true);
-        state = regionStates.getRegionState(hri);
-        assertTrue(state.isOffline());
-      }
+      // Enable SSH so that log can be split
+      master.enableSSH(true);
 
       // let's check if it's assigned after it's out of transition.
       // no need to assign it manually, SSH should do it
