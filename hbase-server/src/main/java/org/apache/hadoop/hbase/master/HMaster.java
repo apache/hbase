@@ -284,8 +284,8 @@ MasterServices, Server {
   private DrainingServerTracker drainingServerTracker;
   // Tracker for load balancer state
   private LoadBalancerTracker loadBalancerTracker;
-  // master address manager and watcher
-  private MasterAddressTracker masterAddressManager;
+  // master address tracker
+  private MasterAddressTracker masterAddressTracker;
 
   // RPC server for the HMaster
   private final RpcServerInterface rpcServer;
@@ -574,8 +574,8 @@ MasterServices, Server {
     startupStatus.setDescription("Master startup");
     masterStartTime = System.currentTimeMillis();
     try {
-      this.masterAddressManager = new MasterAddressTracker(getZooKeeperWatcher(), this);
-      this.masterAddressManager.start();
+      this.masterAddressTracker = new MasterAddressTracker(getZooKeeperWatcher(), this);
+      this.masterAddressTracker.start();
 
       // Put up info server.
       int port = this.conf.getInt("hbase.master.info.port", 60010);
@@ -1148,8 +1148,8 @@ MasterServices, Server {
     return this.activeMasterManager;
   }
 
-  public MasterAddressTracker getMasterAddressManager() {
-    return this.masterAddressManager;
+  public MasterAddressTracker getMasterAddressTracker() {
+    return this.masterAddressTracker;
   }
 
   /*

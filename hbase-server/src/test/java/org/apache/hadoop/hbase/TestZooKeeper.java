@@ -388,7 +388,7 @@ public class TestZooKeeper {
     // Assumes the  root of the ZooKeeper space is writable as it creates a node
     // wherever the cluster home is defined.
     ZooKeeperWatcher zk2 = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-      "testMasterAddressManagerFromZK", null);
+      "testCreateSilentIsReallySilent", null);
 
     // Save the previous ACL
     Stat s =  null;

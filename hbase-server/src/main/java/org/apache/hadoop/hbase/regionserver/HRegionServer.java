@@ -427,8 +427,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   // zookeeper connection and watcher
   private ZooKeeperWatcher zooKeeper;
 
-  // master address manager and watcher
-  private MasterAddressTracker masterAddressManager;
+  // master address tracker
+  private MasterAddressTracker masterAddressTracker;
 
   // Cluster Status Tracker
   private ClusterStatusTracker clusterStatusTracker;
@@ -722,12 +722,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     this.zooKeeper = new ZooKeeperWatcher(conf, REGIONSERVER + ":" +
       this.isa.getPort(), this);
 
-    // Create the master address manager, register with zk, and start it.  Then
+    // Create the master address tracker, register with zk, and start it.  Then
     // block until a master is available.  No point in starting up if no master
     // running.
-    this.masterAddressManager = new MasterAddressTracker(this.zooKeeper, this);
-    this.masterAddressManager.start();
-    blockAndCheckIfStopped(this.masterAddressManager);
+    this.masterAddressTracker = new MasterAddressTracker(this.zooKeeper, this);
+    this.masterAddressTracker.start();
+    blockAndCheckIfStopped(this.masterAddressTracker);
 
     // Wait on cluster being up.  Master will set this flag up in zookeeper
     // when ready.
@@ -1567,8 +1567,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   /**
    * @return Master address tracker instance.
    */
-  public MasterAddressTracker getMasterAddressManager() {
-    return this.masterAddressManager;
+  public MasterAddressTracker getMasterAddressTracker() {
+    return this.masterAddressTracker;
   }
 
   /*
@@ -1936,7 +1936,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     boolean refresh = false; // for the first time, use cached data
     RegionServerStatusService.BlockingInterface intf = null;
     while (keepLooping() && master == null) {
-      sn = this.masterAddressManager.getMasterAddress(refresh);
+      sn = this.masterAddressTracker.getMasterAddress(refresh);
       if (sn == null) {
         if (!keepLooping()) {
           // give up with no connection.
