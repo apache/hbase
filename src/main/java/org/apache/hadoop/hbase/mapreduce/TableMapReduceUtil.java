@@ -64,6 +64,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.zookeeper.KeeperException;
+import org.cliffc.high_scale_lib.Counter;
 
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
@@ -287,6 +288,67 @@ public class TableMapReduceUtil {
     if (addDependencyJars) {
       addDependencyJars(job);
     }
+  }
+
+  /**
+   * Sets up the job for reading from a table snapshot. It bypasses hbase
+   * servers and read directly from snapshot files.
+   * 
+   * @param snapshotName
+   *          The name of the snapshot (of a table) to read from.
+   * @param scan
+   *          The scan instance with the columns, time range etc.
+   * @param mapper
+   *          The mapper class to use.
+   * @param outputKeyClass
+   *          The class of the output key.
+   * @param outputValueClass
+   *          The class of the output value.
+   * @param job
+   *          The current job to adjust. Make sure the passed job is carrying
+   *          all necessary HBase configuration.
+   * @param addDependencyJars
+   *          upload HBase jars and jars for any of the configured job classes
+   *          via the distributed cache (tmpjars).
+   * @param tableRootDir
+   *          The directory where the temp table will be created
+   * @throws IOException
+   *           When setting up the details fails.
+   * @see TableSnapshotInputFormat
+   */
+  public static void initTableSnapshotMapperJob(String snapshotName, Scan scan,
+      Class<? extends TableMapper> mapper, Class<?> outputKeyClass, Class<?> outputValueClass,
+      Job job, boolean addDependencyJars, Path tableRootDir) throws IOException {
+
+    TableSnapshotInputFormat.setInput(job, snapshotName, tableRootDir);
+
+    Configuration conf = job.getConfiguration();
+
+    job.setInputFormatClass(TableSnapshotInputFormat.class);
+    if (outputValueClass != null) {
+      job.setMapOutputValueClass(outputValueClass);
+    }
+    if (outputKeyClass != null) {
+      job.setMapOutputKeyClass(outputKeyClass);
+    }
+    job.setMapperClass(mapper);
+    conf.set(TableInputFormat.SCAN, convertScanToString(scan));
+
+    /*
+     * Enable a basic on-heap cache for these jobs. Any BlockCache implementation based on
+     * direct memory will likely cause the map tasks to OOM when opening the region. This
+     * is done here instead of in TableSnapshotRegionRecordReader in case an advanced user
+     * wants to override this behavior in their job.
+     */
+    job.getConfiguration().setFloat(
+      HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
+    job.getConfiguration().setFloat("hbase.offheapcache.percentage", 0f);
+
+    if (addDependencyJars) {
+      TableMapReduceUtil.addDependencyJars(job);
+    }
+    // We would need even more libraries that hbase-server depends on
+    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), Counter.class);
   }
 
   public static void initCredentials(Job job) throws IOException {
