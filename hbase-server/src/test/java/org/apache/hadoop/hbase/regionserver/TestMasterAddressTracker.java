@@ -36,8 +36,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
-public class TestMasterAddressManager {
-  private static final Log LOG = LogFactory.getLog(TestMasterAddressManager.class);
+public class TestMasterAddressTracker {
+  private static final Log LOG = LogFactory.getLog(TestMasterAddressTracker.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -56,17 +56,17 @@ public class TestMasterAddressManager {
    * @throws Exception
    */
   @Test
-  public void testMasterAddressManagerFromZK() throws Exception {
+  public void testMasterAddressTrackerFromZK() throws Exception {
 
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-        "testMasterAddressManagerFromZK", null);
+        "testMasterAddressTrackerFromZK", null);
     ZKUtil.createAndFailSilent(zk, zk.baseZNode);
 
     // Should not have a master yet
-    MasterAddressTracker addressManager = new MasterAddressTracker(zk, null);
-    addressManager.start();
-    assertFalse(addressManager.hasMaster());
-    zk.registerListener(addressManager);
+    MasterAddressTracker addressTracker = new MasterAddressTracker(zk, null);
+    addressTracker.start();
+    assertFalse(addressTracker.hasMaster());
+    zk.registerListener(addressTracker);
 
     // Use a listener to capture when the node is actually created
     NodeCreationListener listener = new NodeCreationListener(zk, zk.getMasterAddressZNode());
@@ -83,8 +83,8 @@ public class TestMasterAddressManager {
     LOG.info("Waiting for master address manager to be notified");
     listener.waitForCreation();
     LOG.info("Master node created");
-    assertTrue(addressManager.hasMaster());
-    ServerName pulledAddress = addressManager.getMasterAddress();
+    assertTrue(addressTracker.hasMaster());
+    ServerName pulledAddress = addressTracker.getMasterAddress();
     assertTrue(pulledAddress.equals(sn));
 
   }

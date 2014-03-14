@@ -32,7 +32,7 @@ if (master.isActiveMaster()) {
   ClusterStatus status = master.getClusterStatus();
   masters = status.getBackupMasters();
 } else{
-  ServerName sn = master.getMasterAddressManager().getMasterAddress();
+  ServerName sn = master.getMasterAddressTracker().getMasterAddress();
   assert sn != null : "Failed to retreive master's ServerName!";
   masters = Collections.singletonList(sn);
 }

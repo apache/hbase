@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
-import org.apache.hadoop.hbase.regionserver.TestMasterAddressManager.NodeCreationListener;
+import org.apache.hadoop.hbase.regionserver.TestMasterAddressTracker.NodeCreationListener;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;

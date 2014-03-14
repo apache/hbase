@@ -78,7 +78,7 @@ public class TestRSStatusServlet {
     // Fake MasterAddressTracker
     MasterAddressTracker mat = Mockito.mock(MasterAddressTracker.class);
     Mockito.doReturn(fakeMasterAddress).when(mat).getMasterAddress();
-    Mockito.doReturn(mat).when(rs).getMasterAddressManager();
+    Mockito.doReturn(mat).when(rs).getMasterAddressTracker();
 
     MetricsRegionServer rms = Mockito.mock(MetricsRegionServer.class);
     Mockito.doReturn(new MetricsRegionServerWrapperStub()).when(rms).getRegionServerWrapper();
