@@ -52,11 +52,15 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(TagRunner.class)
 public class TestRegionStateOnMasterFailure extends MultiMasterTest {
 
   private static final Log LOG =
@@ -78,15 +82,16 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
   private static final int NUM_MASTERS = 2;
   private static final int NUM_RS = 3;
 
-  private static final int TEST_TIMEOUT_MS = 90 * 1000 * 1234567; 
+  private static final int TEST_TIMEOUT_MS = 90 * 1000 * 1234567;
 
   private static final Pattern META_AND_ROOT_RE = Pattern.compile(
-      (Bytes.toStringBinary(HConstants.META_TABLE_NAME) + "|" + 
+      (Bytes.toStringBinary(HConstants.META_TABLE_NAME) + "|" +
       Bytes.toStringBinary(HConstants.ROOT_TABLE_NAME)).replace(".", "\\."));
 
   private List<HBaseEventHandlerListener> toUnregister =
       new ArrayList<HBaseEventHandlerListener>();
 
+  @Override
   @After
   public void tearDown() throws IOException {
     for (HBaseEventHandlerListener listener : toUnregister) {
@@ -100,7 +105,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
     void closeRegion(HRegion region) throws IOException;
   }
 
-  private class CloseRegionThroughAdmin implements WayToCloseRegion { 
+  private class CloseRegionThroughAdmin implements WayToCloseRegion {
     @Override
     public void closeRegion(HRegion region) throws IOException {
       header("Closing region " + region.getRegionNameAsString());
@@ -109,6 +114,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
   };
 
   private class KillRegionServerWithRegion implements WayToCloseRegion {
+    @Override
     public void closeRegion(HRegion region) throws IOException {
       header("Aborting the region server with the region " +
           region.getRegionNameAsString());
@@ -116,13 +122,14 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
           "region " + region);
     }
   }
-  
+
   /** Kills -ROOT- and .META. regionservers */
   private class KillRootAndMetaRS implements WayToCloseRegion {
+    @Override
     public void closeRegion(HRegion ignored) throws IOException {
       // Copy the list of region server threads because it will be modified as we kill
       // -ROOT-/.META. regionservers.
-      for (RegionServerThread rst : 
+      for (RegionServerThread rst :
            new ArrayList<RegionServerThread>(miniCluster().getRegionServerThreads())) {
         HRegionServer rs = rst.getRegionServer();
         for (HRegionInfo hri : rs.getRegionsAssignment()) {
@@ -181,6 +188,8 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
         HBaseEventType.RS2ZK_REGION_OPENED);
   }
 
+  // Marked as unstable and recorded in #3920920
+  @TestTag({ "unstable" })
   @Test(timeout=TEST_TIMEOUT_MS)
   public void testKillRSWithUserRegion() throws IOException,
       InterruptedException, KeeperException {
@@ -205,7 +214,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
     closeRegionAndKillMaster(HConstants.META_TABLE_NAME, new KillRootAndMetaRS(),
         HBaseEventType.RS2ZK_REGION_OPENED);
   }
-  
+
   public void closeRegionAndKillMaster(byte[] tableName,
       WayToCloseRegion howToClose, HBaseEventType eventToWatch)
       throws IOException, InterruptedException, KeeperException {
@@ -405,7 +414,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
       LOG.info(REGION_EVENT_MSG + "Event: " + eventType + ", handler: " +
           event.getClass().getSimpleName());
 
-      if (eventType != eventToWatch || 
+      if (eventType != eventToWatch ||
          !(event instanceof MasterOpenRegionHandler ||
            event instanceof MasterCloseRegionHandler)) {
         LOG.info(REGION_EVENT_MSG + "Unrecognized event type/class: " + eventType + ", " +

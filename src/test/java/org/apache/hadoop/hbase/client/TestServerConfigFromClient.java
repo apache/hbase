@@ -20,18 +20,23 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(TagRunner.class)
 public class TestServerConfigFromClient {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -71,6 +76,8 @@ public class TestServerConfigFromClient {
     // Nothing to do.
   }
 
+  // Marked as unstable and recorded in #3922005
+  @TestTag({ "unstable" })
   @Test
   public void testReadConfig() throws IOException {
     final byte [] CONTENTS_FAMILY = Bytes.toBytes("contents");

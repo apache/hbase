@@ -30,10 +30,12 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * A basic unit test that spins up a local HBase cluster.
  */
+@RunWith(TagRunner.class)
 public class TestProcessBasedCluster {
 
   private static final Log LOG = LogFactory.getLog(TestProcessBasedCluster.class);
@@ -45,6 +47,8 @@ public class TestProcessBasedCluster {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
+  // Marked as unstable, recorded as #3866088
+  @TestTag({ "unstable" })
   @Test(timeout=300 * 1000)
   public void testProcessBasedCluster() throws Exception {
     ProcessBasedLocalHBaseCluster cluster = new ProcessBasedLocalHBaseCluster(

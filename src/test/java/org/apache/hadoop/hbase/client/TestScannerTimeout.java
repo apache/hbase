@@ -28,14 +28,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * Test various scanner timeout issues.
  */
+@RunWith(TagRunner.class)
 public class TestScannerTimeout {
 
   private final static HBaseTestingUtility
@@ -84,6 +88,8 @@ public class TestScannerTimeout {
    * Test that we do get a ScannerTimeoutException
    * @throws Exception
    */
+  // Marked as unstable and recored in #3921333
+  @TestTag({ "unstable" })
   @Test
   public void test2481() throws Exception {
     Scan scan = new Scan();

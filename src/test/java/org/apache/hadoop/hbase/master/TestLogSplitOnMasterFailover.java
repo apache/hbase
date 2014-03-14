@@ -18,8 +18,8 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,10 +49,13 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InjectionEvent;
+import org.apache.hadoop.hbase.util.InjectionHandler;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * Tests that the master splits the logs of dead regionservers on startup and
@@ -60,6 +63,7 @@ import org.junit.Test;
  * regionserver to create a need to split logs, and quickly killing a master to
  * cause master failover.
  */
+@RunWith(TagRunner.class)
 public class TestLogSplitOnMasterFailover extends MultiMasterTest {
 
   private static final Log LOG =
@@ -250,6 +254,8 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     runTest();
   }
 
+  // Marked as unstable and recored in 3376780
+  @TestTag({ "unstable" })
   @Test(timeout=280000)
   public void testWithDistributedLogSplittingAndErrors() throws Exception {
     // add a split log worker to handle InjectionEvent.SPLITLOGWORKER_SPLIT_LOG_START.
@@ -258,12 +264,12 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     InjectionHandler.set(new SplitLogKillInjectionHandler());
     runTest();
   }
-  
+
   static  class SplitLogKillInjectionHandler extends InjectionHandler {
       static int count = 0;
-      
+
       @Override
-      // kill split log workers the first few times. 
+      // kill split log workers the first few times.
       protected void _processEventIO(InjectionEvent event, Object... args) throws IOException{
         if (event == InjectionEvent.SPLITLOGWORKER_SPLIT_LOG_START) {
           count++;
@@ -275,8 +281,8 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
         }
       }
    }
-    
-  
+
+
   private void runTest() throws Exception {
     startMiniCluster(NUM_MASTERS, NUM_RS);
     Thread.currentThread().setName(getClass().getSimpleName());
@@ -330,7 +336,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
 
     masters = miniCluster().getMasters();
     assertEquals(1, masters.size());
-    
+
     // Start a few new regionservers.
     final int EXTRA_RS = 2;
     for (int i = NUM_RS; i < NUM_RS + EXTRA_RS; ++i) {
@@ -338,7 +344,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
       otherRsNames.add(
           miniCluster().getRegionServer(i).getServerInfo().getServerName());
     }
-    
+
     // wait for an active master to show up and be ready
     assertTrue(miniCluster().waitForActiveAndReadyMaster());
 

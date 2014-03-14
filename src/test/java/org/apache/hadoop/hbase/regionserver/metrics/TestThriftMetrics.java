@@ -20,7 +20,10 @@
 
 package org.apache.hadoop.hbase.regionserver.metrics;
 
+import java.io.IOException;
+
 import junit.framework.TestCase;
+
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Get;
@@ -28,14 +31,16 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.Test;
-
-import java.io.IOException;
+import org.junit.runner.RunWith;
 
 /**
  * Test to verify that the thrift metrics are calculated and propagated in the
  * HBaseRpcMetrics.
  */
+@RunWith(TagRunner.class)
 public class TestThriftMetrics extends TestCase {
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final int SLAVES = 1;
@@ -47,6 +52,8 @@ public class TestThriftMetrics extends TestCase {
    * A simple test to see if the metrics are populated.
    * @throws IOException
    */
+  // Marked as unstable and recored in #3921380
+  @TestTag({ "unstable" })
   @Test
   public void testThriftMetricsArePopulated() throws IOException,
     InterruptedException {

@@ -22,17 +22,23 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.KeeperException;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * Tests that the regionserver correctly picks up the new master location and
  * does not get stuck in a retry loop trying to contact the old master.
  */
+@RunWith(TagRunner.class)
 public class TestRSLivenessOnMasterFailover extends MultiMasterTest {
 
+  // Marked as unstable and recorded in 3921469
+  @TestTag({ "unstable" })
   @Test(timeout=60000)
   public void testAgainstRSDeadlock() throws IOException,
       InterruptedException, KeeperException {

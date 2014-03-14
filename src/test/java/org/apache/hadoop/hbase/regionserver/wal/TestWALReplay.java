@@ -40,9 +40,12 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -52,20 +55,20 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.ResultScanner;
-
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 
 /**
  * Test replay of edits out of a WAL split.
  */
+@RunWith(TagRunner.class)
 public class TestWALReplay {
   public static final Log LOG = LogFactory.getLog(TestWALReplay.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -229,6 +232,7 @@ public class TestWALReplay {
    * @throws IllegalArgumentException
    * @throws SecurityException
    */
+  @TestTag({ "unstable" })
   @Test
   public void testReplayEditsWrittenViaHRegion()
   throws IOException, SecurityException, IllegalArgumentException,
@@ -456,6 +460,7 @@ public class TestWALReplay {
     try {
       final HRegion region = new HRegion(basedir, newWal, newFS, newConf, hri,
           null) {
+        @Override
         protected boolean internalFlushcache(HLog wal, long myseqid,
             MonitoredTask status)
         throws IOException {

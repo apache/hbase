@@ -19,6 +19,11 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -34,16 +39,15 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
+@RunWith(TagRunner.class)
 public class TestReplicationSink {
 
   private static final Log LOG =
@@ -171,6 +175,7 @@ public class TestReplicationSink {
    * Insert then do different types of deletes
    * @throws Exception
    */
+  @TestTag({ "unstable" })
   @Test
   public void testMixedDeletes() throws Exception {
     HLog.Entry[] entries = new HLog.Entry[3];

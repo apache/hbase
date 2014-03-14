@@ -31,13 +31,15 @@ import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -45,10 +47,12 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.log4j.Level;
+import org.junit.runner.RunWith;
 
 /**
  * Test log deletion as logs are rolled.
  */
+@RunWith(TagRunner.class)
 public class TestLogRolling extends HBaseClusterTestCase {
   private static final Log LOG = LogFactory.getLog(TestLogRolling.class);
   private HRegionServer server;
@@ -120,11 +124,11 @@ public class TestLogRolling extends HBaseClusterTestCase {
    /**** configuration for testLogRollOnDatanodeDeath ****/
    // make sure log.hflush() calls syncFs() to open a pipeline
    conf.setBoolean("dfs.support.append", true);
-   // lower the namenode & datanode heartbeat so the namenode 
+   // lower the namenode & datanode heartbeat so the namenode
    // quickly detects datanode failures
    conf.setInt("heartbeat.recheck.interval", 5000);
    conf.setInt("dfs.heartbeat.interval", 1);
-   // the namenode might still try to choose the recently-dead datanode 
+   // the namenode might still try to choose the recently-dead datanode
    // for a pipeline, so try to a new pipeline multiple times
    conf.setInt("dfs.client.block.write.retries", 30);
    conf.setBoolean(HConstants.HLOG_FORMAT_BACKWARD_COMPATIBILITY, false);
@@ -163,6 +167,8 @@ public class TestLogRolling extends HBaseClusterTestCase {
    *
    * @throws Exception
    */
+  // Marked as unstable and recored in #3896573
+  @TestTag({ "unstable" })
   public void testLogRolling() throws Exception {
     this.tableName = getName();
     try {
@@ -202,22 +208,24 @@ public class TestLogRolling extends HBaseClusterTestCase {
       // continue
     }
   }
-  
+
   /**
    * Tests that logs are rolled upon detecting datanode death
    * Requires an HDFS jar with HDFS-826 & syncFs() support (HDFS-200)
-   * 
+   *
    * @throws Exception
    */
+  // Marked as unstable and recored in #3344583
+  @TestTag({ "unstable" })
   public void testLogRollOnDatanodeDeath() throws Exception {
-    assertTrue("This test requires HLog file replication.", 
+    assertTrue("This test requires HLog file replication.",
         fs.getDefaultReplication() > 1);
-    
+
     // When the META table can be opened, the region servers are running
     new HTable(conf, HConstants.META_TABLE_NAME);
     this.server = cluster.getRegionServer(0);
     this.log = server.getLog(0);
-    
+
     assertTrue("Need HDFS-826 for this test", log.canGetCurReplicas());
     // don't run this test without append support (HDFS-200 & HDFS-142)
     assertTrue("Need append support for this test", FSUtils.isAppendSupported(conf));
@@ -225,7 +233,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
     // add up the datanode count, to ensure proper replication when we kill 1
     dfsCluster.startDataNodes(conf, 1, true, null, null);
     dfsCluster.waitActive();
-    assertTrue(dfsCluster.getDataNodes().size() >= 
+    assertTrue(dfsCluster.getDataNodes().size() >=
                fs.getDefaultReplication() + 1);
 
     // Create the test table and open it
@@ -239,12 +247,12 @@ public class TestLogRolling extends HBaseClusterTestCase {
 
     long curTime = System.currentTimeMillis();
     long oldFilenum = log.getFilenum();
-    assertTrue("Log should have a timestamp older than now", 
+    assertTrue("Log should have a timestamp older than now",
              curTime > oldFilenum && oldFilenum != -1);
 
     // normal write
     writeData(table, 1);
-    assertTrue("The log shouldn't have rolled yet", 
+    assertTrue("The log shouldn't have rolled yet",
               oldFilenum == log.getFilenum());
 
     // kill a datanode in the pipeline to force a log roll on the next sync()
@@ -257,7 +265,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
         break;
       }
     }
-    assertTrue("Need DFSOutputStream.getPipeline() for this test", 
+    assertTrue("Need DFSOutputStream.getPipeline() for this test",
                 getPipeline != null);
     Object repl = getPipeline.invoke(stm, new Object []{} /*NO_ARGS*/);
     DatanodeInfo[] pipeline = (DatanodeInfo[]) repl;
@@ -268,12 +276,12 @@ public class TestLogRolling extends HBaseClusterTestCase {
     // this write should succeed, but trigger a log roll
     writeData(table, 2);
     long newFilenum = log.getFilenum();
-    assertTrue("Missing datanode should've triggered a log roll", 
+    assertTrue("Missing datanode should've triggered a log roll",
               newFilenum > oldFilenum && newFilenum > curTime);
-    
+
     // write some more log data (this should use a new hdfs_out)
     writeData(table, 3);
-    assertTrue("The log should not roll again.", 
+    assertTrue("The log should not roll again.",
               log.getFilenum() == newFilenum);
     assertEquals(fs.getDefaultReplication(), log.getLogReplication());
   }
