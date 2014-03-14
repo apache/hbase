@@ -104,10 +104,13 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
@@ -736,15 +739,30 @@ public class HRegion implements HeapSize { // , Writable{
    * @param tableDescriptor HTableDescriptor of the table
    * @param regionEncodedName encoded name of the region
    * @return The HDFS blocks distribution for the given region.
- * @throws IOException
+   * @throws IOException
    */
   static public HDFSBlocksDistribution computeHDFSBlocksDistribution(
     Configuration conf, HTableDescriptor tableDescriptor,
     String regionEncodedName) throws IOException {
-    HDFSBlocksDistribution hdfsBlocksDistribution =
-      new HDFSBlocksDistribution();
     Path tablePath = FSUtils.getTablePath(FSUtils.getRootDir(conf),
       tableDescriptor.getName());
+    return computeHDFSBlocksDistribution(conf, tableDescriptor, regionEncodedName, tablePath);
+  }
+
+  /**
+   * This is a helper function to compute HDFS block distribution on demand
+   * @param conf configuration
+   * @param tableDescriptor HTableDescriptor of the table
+   * @param regionEncodedName encoded name of the region
+   * @param tablePath The table's directory
+   * @return The HDFS blocks distribution for the given region.
+   * @throws IOException
+   */
+  static public HDFSBlocksDistribution computeHDFSBlocksDistribution(
+    Configuration conf, HTableDescriptor tableDescriptor,
+    String regionEncodedName, Path tablePath) throws IOException {
+    HDFSBlocksDistribution hdfsBlocksDistribution =
+      new HDFSBlocksDistribution();
     FileSystem fs = tablePath.getFileSystem(conf);
 
     for (HColumnDescriptor family: tableDescriptor.getFamilies()) {
@@ -756,6 +774,17 @@ public class HRegion implements HeapSize { // , Writable{
       hfilesStatus = fs.listStatus(storeHomeDir);
 
       for (FileStatus hfileStatus : hfilesStatus) {
+        Path p = hfileStatus.getPath();
+        if (HFileLink.isHFileLink(p)) {
+          hfileStatus = new HFileLink(conf, p).getFileStatus(fs);
+        } else if (StoreFile.isReference(p)) {
+          p = StoreFile.getReferredToFile(p);
+          if (HFileLink.isHFileLink(p)) {
+            hfileStatus = new HFileLink(conf, p).getFileStatus(fs);
+          } else {
+            hfileStatus = fs.getFileStatus(p);
+          }
+        }
         HDFSBlocksDistribution storeFileBlocksDistribution =
           FSUtils.computeHDFSBlocksDistribution(fs, hfileStatus, 0,
           hfileStatus.getLen());
