@@ -1042,22 +1042,25 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     status.setStatus("Disabling compacts and flushes for region");
-    boolean wasFlushing = false;
     synchronized (writestate) {
       // Disable compacting and flushing by background threads for this
       // region.
       writestate.writesEnabled = false;
-      wasFlushing = writestate.flushing;
       LOG.debug("Closing " + this + ": disabling compactions & flushes");
       waitForFlushesAndCompactions();
     }
     // If we were not just flushing, is it worth doing a preflush...one
     // that will clear out of the bulk of the memstore before we put up
     // the close flag?
-    if (!abort && !wasFlushing && worthPreFlushing()) {
+    if (!abort && worthPreFlushing()) {
       status.setStatus("Pre-flushing region before close");
       LOG.info("Running close preflush of " + this.getRegionNameAsString());
-      internalFlushcache(status);
+      try {
+        internalFlushcache(status);
+      } catch (IOException ioe) {
+        // Failed to flush the region. Keep going.
+        status.setStatus("Failed pre-flush " + this + "; " + ioe.getMessage());
+      }
     }
 
     this.closing.set(true);
@@ -1073,7 +1076,30 @@ public class HRegion implements HeapSize { // , Writable{
       LOG.debug("Updates disabled for region " + this);
       // Don't flush the cache if we are aborting
       if (!abort) {
-        internalFlushcache(status);
+        int flushCount = 0;
+        while (this.getMemstoreSize().get() > 0) {
+          try {
+            if (flushCount++ > 0) {
+              int actualFlushes = flushCount - 1;
+              if (actualFlushes > 5) {
+                // If we tried 5 times and are unable to clear memory, abort
+                // so we do not lose data
+                throw new DroppedSnapshotException("Failed clearing memory after " +
+                  actualFlushes + " attempts on region: " + Bytes.toStringBinary(getRegionName()));
+              } 
+              LOG.info("Running extra flush, " + actualFlushes +
+                " (carrying snapshot?) " + this);
+            }
+            internalFlushcache(status);
+          } catch (IOException ioe) {
+            status.setStatus("Failed flush " + this + ", putting online again");
+            synchronized (writestate) {
+              writestate.writesEnabled = true;
+            }
+            // Have to throw to upper layers.  I can't abort server from here.
+            throw ioe;
+          }
+        }
       }
 
       List<StoreFile> result = new ArrayList<StoreFile>();
@@ -1088,6 +1114,7 @@ public class HRegion implements HeapSize { // , Writable{
 
         // close each store in parallel
         for (final Store store : stores.values()) {
+          assert abort? true: store.getFlushableSize() == 0;
           completionService
               .submit(new Callable<ImmutableList<StoreFile>>() {
                 public ImmutableList<StoreFile> call() throws IOException {
@@ -1111,7 +1138,7 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
       this.closed.set(true);
-
+      if (memstoreSize.get() != 0) LOG.error("Memstore size is " + memstoreSize.get());
       if (coprocessorHost != null) {
         status.setStatus("Running coprocessor post-close hooks");
         this.coprocessorHost.postClose(abort);
@@ -1629,7 +1656,7 @@ public class HRegion implements HeapSize { // , Writable{
     status.setStatus("Obtaining lock to block concurrent updates");
     // block waiting for the lock for internal flush
     this.updatesLock.writeLock().lock();
-    long flushsize = this.memstoreSize.get();
+    long totalFlushableSize = 0;
     status.setStatus("Preparing to flush by snapshotting stores");
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(stores.size());
     try {
@@ -1642,6 +1669,7 @@ public class HRegion implements HeapSize { // , Writable{
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
 
       for (Store s : stores.values()) {
+        totalFlushableSize += s.getFlushableSize();
         storeFlushers.add(s.getStoreFlusher(completeSequenceId));
       }
 
@@ -1653,7 +1681,7 @@ public class HRegion implements HeapSize { // , Writable{
       this.updatesLock.writeLock().unlock();
     }
     String s = "Finished snapshotting " + this +
-      ", commencing wait for mvcc, flushsize=" + flushsize;
+      ", syncing WAL and waiting on mvcc, flushsize=" + totalFlushableSize;
     status.setStatus(s);
     LOG.debug(s);
 
@@ -1699,7 +1727,7 @@ public class HRegion implements HeapSize { // , Writable{
       storeFlushers.clear();
 
       // Set down the memstore size by amount of flush.
-      this.addAndGetGlobalMemstoreSize(-flushsize);
+      this.addAndGetGlobalMemstoreSize(-totalFlushableSize);
     } catch (Throwable t) {
       // An exception here means that the snapshot was not persisted.
       // The hlog needs to be replayed so its content is restored to memstore.
@@ -1739,7 +1767,7 @@ public class HRegion implements HeapSize { // , Writable{
     long time = EnvironmentEdgeManager.currentTimeMillis() - startTime;
     long memstoresize = this.memstoreSize.get();
     String msg = "Finished memstore flush of ~" +
-      StringUtils.humanReadableInt(flushsize) + "/" + flushsize +
+      StringUtils.humanReadableInt(totalFlushableSize) + "/" + totalFlushableSize +
       ", currentsize=" +
       StringUtils.humanReadableInt(memstoresize) + "/" + memstoresize +
       " for region " + this + " in " + time + "ms, sequenceid=" + sequenceId +
@@ -1747,7 +1775,7 @@ public class HRegion implements HeapSize { // , Writable{
       ((wal == null)? "; wal=null": "");
     LOG.info(msg);
     status.setStatus(msg);
-    this.recentFlushes.add(new Pair<Long,Long>(time/1000, flushsize));
+    this.recentFlushes.add(new Pair<Long,Long>(time/1000, totalFlushableSize));
 
     return compactionRequested;
   }

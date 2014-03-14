@@ -363,6 +363,11 @@ public class Store extends SchemaConfigured implements HeapSize {
      return getStoreHomedir(tabledir, encodedName, Bytes.toString(family));
    }
 
+  public long getFlushableSize() {
+    return this.memstore.getFlushableSize();
+  }
+
+
   /**
    * @param tabledir
    * @param encodedName Encoded region name.
@@ -796,7 +801,7 @@ public class Store extends SchemaConfigured implements HeapSize {
           return pathName;
         } catch (Exception e) {
           LOG.warn("Failed validating store file " + pathName
-              + ", retring num=" + i, e);
+              + ", retrying num=" + i, e);
           if (e instanceof IOException) {
             lastException = (IOException) e;
           } else {
@@ -804,7 +809,7 @@ public class Store extends SchemaConfigured implements HeapSize {
           }
         }
       } catch (IOException e) {
-        LOG.warn("Failed flushing store file, retring num=" + i, e);
+        LOG.warn("Failed flushing store file, retrying num=" + i, e);
         lastException = e;
       }
       if (lastException != null && i < (flush_retries_number - 1)) {
