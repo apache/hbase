@@ -66,7 +66,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
-import org.cliffc.high_scale_lib.Counter;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -300,9 +299,6 @@ public class TableMapReduceUtil {
     TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir);
     initTableMapperJob(snapshotName, scan, mapper, outputKeyClass,
         outputValueClass, job, addDependencyJars, false, TableSnapshotInputFormat.class);
-
-    // We would need even more libraries that hbase-server depends on
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), Counter.class);
   }
 
   /**
