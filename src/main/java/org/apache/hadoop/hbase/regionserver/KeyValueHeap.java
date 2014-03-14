@@ -29,6 +29,8 @@ import java.util.PriorityQueue;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueContext;
+import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Implements a heap merge across any number of KeyValueScanners.
@@ -311,10 +313,10 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
    * @param useBloom whether to optimize seeks using Bloom filters
    */
   private boolean generalizedSeek(boolean isLazy, KeyValue seekKey,
-      boolean forward, boolean useBloom) throws IOException {
+                                           boolean forward, boolean useBloom) throws IOException {
     if (!isLazy && useBloom) {
       throw new IllegalArgumentException("Multi-column Bloom filter " +
-          "optimization requires a lazy seek");
+                                           "optimization requires a lazy seek");
     }
 
     if (current == null) {
@@ -343,7 +345,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
         seekResult = scanner.requestSeek(seekKey, forward, useBloom);
       } else {
         seekResult = NonLazyKeyValueScanner.doRealSeek(
-            scanner, seekKey, forward);
+          scanner, seekKey, forward);
       }
 
       if (!seekResult) {
@@ -353,6 +355,200 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
       }
     }
 
+    // Heap is returning empty, scanner is done
+    return false;
+  }
+
+
+  /**
+   * reseek exact KV or next column with deleteColumn bloomFilter check
+   */
+  public boolean reseekExactKVOrNextCol(Pair<KeyValue, KeyValue> seekKeyPair, ScanQueryMatcher.MatchCode qcode)
+      throws IOException {
+    switch (qcode) {
+      case SEEK_NEXT_COL:
+        return seekNextColWithCheck(
+          false,    // This is not a lazy seek
+          seekKeyPair,
+          true,     // forward (true because this is reseek)
+          false    // Not using Bloom filters
+        );
+      case SEEK_TO_EXACT_KV:
+        return seekExactKVWithCheck(
+          false,    // This is not a lazy seek
+          seekKeyPair.getFirst(),
+          true,     // forward (true because this is reseek)
+          false    // Not using Bloom filters
+        );
+      default:
+        throw new RuntimeException("UNEXPECTED");
+    }
+  }
+
+  /**
+   * requestSeek exact KV or next column with deleteColumn bloomFilter check
+   */
+  public boolean requestSeekExactKVOrNextCol(Pair<KeyValue, KeyValue> keyPair, boolean forward,
+      boolean useBloom, ScanQueryMatcher.MatchCode qcode) throws IOException {
+    switch (qcode) {
+      case SEEK_NEXT_COL:
+        return seekNextColWithCheck(true, keyPair, forward, useBloom);
+      case SEEK_TO_EXACT_KV:
+        return seekExactKVWithCheck(true, keyPair.getFirst(), forward, useBloom);
+      default:
+        throw new RuntimeException("UNEXPECTED");
+    }
+  }
+
+  /**
+   * seekNextCol with deleteColumn bloomFilter check :
+   * (i)    All scanners in the KVH, that do not contain a delete marker, seek past the second key
+   *        in the key pair, which is the kv of seeking timestamp or
+   *        the lastKeyOnRow of the current column if there is no next column;
+   * (ii)   scanners that contain a delete marker, move forward to the first key in the pair,
+   *        if the scanner is behind it.
+   *        The first key in the pair is either firstKeyOnRow of the next column,
+   *        or the lastKeyOnRow of the current column if there is no next column.
+   * (iii)  The "current" scanner at the end of the function call is
+   *        guaranteed to have done a real seek.
+   *
+   * @param isLazy whether we are trying to seek to exactly the given row/col.
+   *          Enables Bloom filter and most-recent-file-first optimizations for
+   *          multi-column get/scan queries.
+   * @param seekKeyPair key pair to seek to, if scanner has deleteBloomFilter, seek the first key
+   *                    otherwise, seek the second key in the pair.
+   * @param forward whether to seek forward (also known as reseek)
+   * @param useBloom whether to optimize seeks using Bloom filters
+   */
+  private boolean seekNextColWithCheck(boolean isLazy, Pair<KeyValue, KeyValue> seekKeyPair,
+      boolean forward, boolean useBloom) throws IOException {
+    if (!isLazy && useBloom) {
+      throw new IllegalArgumentException("Multi-column Bloom filter " +
+          "optimization requires a lazy seek");
+    }
+
+    if (current == null) {
+      return false;
+    }
+    heap.add(current);
+    current = null;
+
+    // if it has deleteColumn, use first Key
+    KeyValue firstKey = seekKeyPair.getFirst();
+    // if it doesn't have deleteColumn, use second Key
+    KeyValue seekKey = seekKeyPair.getSecond();
+
+    List<KeyValueScanner> allScanners = new ArrayList<KeyValueScanner>();
+    allScanners.addAll(this.heap);
+    boolean hasOptimized = false;
+    // clear the heap
+    this.heap.clear();
+
+    // process each scanner to go to either firstKey or seekKey
+    for (KeyValueScanner kvScanner : allScanners) {
+      KeyValue realSeekKey = seekKey;
+      KeyValue topKey = kvScanner.peek();
+      if (comparator.getComparator().compare(seekKey, topKey) <= 0) {
+        // already passed the seekKey
+        // add back to heap and continue
+        this.heap.add(kvScanner);
+        continue;
+      }
+
+      if (kvScanner.passesDeleteColumnCheck(seekKey)) {
+        // has deleteColumn, seek firstKey
+        realSeekKey = firstKey;
+      } else {
+        hasOptimized = true;
+      }
+
+      // seek realSeekKey
+      boolean seekResult;
+      if (isLazy) {
+        seekResult = kvScanner.requestSeek(realSeekKey, forward, useBloom);
+      } else {
+        seekResult = NonLazyKeyValueScanner.doRealSeek(
+          kvScanner, realSeekKey, forward);
+      }
+
+      if (!seekResult) {
+        kvScanner.close();
+      } else {
+        this.heap.add(kvScanner);
+      }
+    }
+    // update metric
+    if (hasOptimized) {
+      HRegionServer.numOptimizedSeeks.incrementAndGet();
+    }
+    // done
+    current = pollRealKV();
+    return current != null;
+  }
+
+
+  /**
+   * seekExactKV with deleteColumn bloomFilter check :
+   * If there is a deleteColumn record in the top scanner, do a next();
+   * else seek past seekKey.
+   *
+   * @param isLazy whether we are trying to seek to exactly the given row/col.
+   *          Enables Bloom filter and most-recent-file-first optimizations for
+   *          multi-column get/scan queries.
+   * @param seekKey key to seek to
+   * @param forward whether to seek forward (also known as reseek)
+   * @param useBloom whether to optimize seeks using Bloom filters
+   */
+  private boolean seekExactKVWithCheck(boolean isLazy, KeyValue seekKey,
+     boolean forward, boolean useBloom) throws IOException {
+    if (!isLazy && useBloom) {
+      throw new IllegalArgumentException("Multi-column Bloom filter " +
+        "optimization requires a lazy seek");
+    }
+
+    if (current == null) {
+      return false;
+    }
+    heap.add(current);
+    current = null;
+
+    KeyValueScanner scanner;
+    while ((scanner = heap.poll()) != null) {
+      KeyValue topKey = scanner.peek();
+      if (comparator.getComparator().compare(seekKey, topKey) <= 0) {
+        // Top KeyValue is at-or-after Seek KeyValue. We only know that all
+        // scanners are at or after seekKey (because fake keys of
+        // "lazily-seeked" scanners are not greater than their real next keys),
+        // but we still need to enforce our invariant that the top scanner has
+        // done a real seek. This way StoreScanner and RegionScanner do not
+        // have to worry about fake keys.
+
+        HRegionServer.numOptimizedSeeks.incrementAndGet();
+
+        heap.add(scanner);
+        current = pollRealKV();
+        return current != null;
+      }
+
+      if (scanner.passesDeleteColumnCheck(seekKey)) {
+        current = scanner;
+        return this.next() != null;
+      } else {
+        boolean seekResult;
+        if (isLazy) {
+          seekResult = scanner.requestSeek(seekKey, forward, useBloom);
+        } else {
+          seekResult = NonLazyKeyValueScanner.doRealSeek(
+            scanner, seekKey, forward);
+        }
+
+        if (!seekResult) {
+          scanner.close();
+        } else {
+          heap.add(scanner);
+        }
+      }
+    }
     // Heap is returning empty, scanner is done
     return false;
   }

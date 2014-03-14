@@ -148,6 +148,44 @@ public class TestBlocksRead extends HBaseTestCase {
     return kvs;
   }
 
+  private KeyValue[] getDataInRange(String family, String row, List<String> columns,
+                             long minTimestamp, long maxTimestamp, int expBlocks)
+      throws IOException {
+    return getDataInRange(family, row, columns, minTimestamp, maxTimestamp,
+                          expBlocks, expBlocks, expBlocks);
+  }
+
+  private KeyValue[] getDataInRange(String family, String row, List<String> columns,
+                             long minTimestamp, long maxTimestamp,
+                             int expBlocksRowCol, int expBlocksRow, int expBlocksNone)
+    throws IOException {
+    int[] expBlocks = new int[] { expBlocksRowCol, expBlocksRow, expBlocksNone };
+    KeyValue[] kvs = null;
+
+    for (int i = 0; i < BLOOM_TYPE.length; i++) {
+      BloomType bloomType = BLOOM_TYPE[i];
+      byte[] cf = Bytes.toBytes(family + "_" + bloomType);
+      long blocksStart = getBlkAccessCount(cf);
+      Get get = new Get(Bytes.toBytes(row));
+      get.setMaxVersions();
+
+      for (String column : columns) {
+        get.addColumn(cf, Bytes.toBytes(column));
+        get.setTimeRange(minTimestamp, maxTimestamp);
+      }
+
+      kvs = region.get(get, null).raw();
+      long blocksEnd = getBlkAccessCount(cf);
+      if (expBlocks[i] != -1) {
+        assertEquals("Blocks Read Check for Bloom: " + bloomType, expBlocks[i],
+                     blocksEnd - blocksStart);
+      }
+      LOG.info("Blocks Read for Bloom: " + bloomType + " = "
+                           + (blocksEnd - blocksStart) + "Expected = " + expBlocks[i]);
+    }
+    return kvs;
+  }
+
   private KeyValue[] getData(String family, String row, List<String> columns,
       int expBlocksRowCol, int expBlocksRow, int expBlocksNone)
       throws IOException {
@@ -202,7 +240,7 @@ public class TestBlocksRead extends HBaseTestCase {
       long version) throws IOException {
     Delete del = new Delete(Bytes.toBytes(row));
     for (int i=0; i<BLOOM_TYPE.length; i++) {
-      del.deleteColumn(Bytes.toBytes(family + BLOOM_TYPE[i]),
+      del.deleteColumn(Bytes.toBytes(family + "_" + BLOOM_TYPE[i]),
           Bytes.toBytes(qualifier), version);
     }
     region.delete(del, null, true);
@@ -214,6 +252,16 @@ public class TestBlocksRead extends HBaseTestCase {
     for (int i=0; i<BLOOM_TYPE.length; i++) {
       del.deleteColumns(Bytes.toBytes(family + "_" + BLOOM_TYPE[i]),
           Bytes.toBytes(qualifier));
+    }
+    region.delete(del, null, true);
+  }
+
+  public void deleteColumnsUntil(String family, String qualifier, String row, long version)
+    throws IOException {
+    Delete del = new Delete(Bytes.toBytes(row));
+    for (int i=0; i<BLOOM_TYPE.length; i++) {
+      del.deleteColumns(Bytes.toBytes(family + "_" + BLOOM_TYPE[i]),
+                        Bytes.toBytes(qualifier), version);
     }
     region.delete(del, null, true);
   }
@@ -564,6 +612,116 @@ public class TestBlocksRead extends HBaseTestCase {
     int numSeeks = HRegionServer.numOptimizedSeeks.get();
     assertEquals(6, numSeeks);
   }
+
+  @Test
+  public void testDeleteColBloomFilterWithDeletesWithMultipleFlushCache() throws IOException{
+    byte[] TABLE = Bytes.toBytes("testDeleteColBloomFilterWithDeletes");
+    String FAMILY = "cf1";
+    KeyValue kvs[];
+    HBaseConfiguration conf = getConf();
+    conf.setBoolean("io.storefile.delete.column.bloom.enabled", true);
+    initHRegion(TABLE, getName(), conf, FAMILY, true);
+    if (!conf.getBoolean(BloomFilterFactory.IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED, false)) {
+      System.out.println("ignoring this test since the delete bloom filter is not enabled...");
+      return;
+    }
+
+    // SF1: w/o deleteColumn, but with Delete
+    for (int i = 1; i < 8; i++) {
+      for (int j = 1; j < 6; j++) {
+        putData(FAMILY, "row", "col"+i, j);
+      }
+    }
+
+    deleteColumn(FAMILY, "col2", "row", 3);
+    deleteColumn(FAMILY, "col5", "row", 3);
+    deleteColumn(FAMILY, "col7", "row", 3);
+    region.flushcache();
+
+    // SF2: w/o deleteColumn
+    for (int i = 1; i < 8; i++) {
+      for (int j = 1; j < 6; j++) {
+        putData(FAMILY, "row", "col"+i, j);
+      }
+    }
+    region.flushcache();
+
+    // SF3: w/o deleteColumn
+    for (int i = 1; i < 8; i++) {
+      for (int j = 1; j < 6; j++) {
+        putData(FAMILY, "row", "col"+i, j);
+      }
+    }
+    region.flushcache();
+
+    // SF4: w deleteColumn
+    for (int i = 1; i < 8; i++) {
+      for (int j = 1; j < 6; j++) {
+        putData(FAMILY, "row", "col"+i, j);
+      }
+    }
+    deleteColumn(FAMILY, "col3", "row");
+    deleteColumnsUntil(FAMILY, "col6", "row", 4);
+    deleteColumn(FAMILY, "col8", "row");
+    region.flushcache();
+
+    // memStore: w/o deleteColumn
+    for (int i = 1; i < 8; i++) {
+      for (int j = 1; j < 6; j++) {
+        putData(FAMILY, "row", "col"+i, j);
+      }
+    }
+
+    /**
+     * only the seeks for the KVs for which we don't have any deletes should be
+     * optimized, and since we have 3 col families we will have number of seeks
+     *
+     **/
+    int numSeeks;
+
+    HRegionServer.numOptimizedSeeks.set(0);
+    // No deletes or deleteColumn
+    kvs = getData(FAMILY, "row",  Arrays.asList("col1"), 4, 8);
+    assertTrue(kvs.length == 1);
+    numSeeks = HRegionServer.numOptimizedSeeks.get();
+    assertEquals(3, numSeeks);
+
+    HRegionServer.numOptimizedSeeks.set(0);
+    // w delete and no deleteColumn
+    kvs = getData(FAMILY, "row",  Arrays.asList("col2"), 3, 12);
+    assertTrue(kvs.length == 0);
+    numSeeks = HRegionServer.numOptimizedSeeks.get();
+    assertEquals(3, numSeeks);
+
+    HRegionServer.numOptimizedSeeks.set(0);
+    // w deleteColumn of the whole column
+    kvs = getData(FAMILY, "row",  Arrays.asList("col3"), 4, 9);
+    assertTrue(kvs.length == 0);
+    numSeeks = HRegionServer.numOptimizedSeeks.get();
+    assertEquals(3, numSeeks);
+
+    HRegionServer.numOptimizedSeeks.set(0);
+    // w deleteColumn to the specified version
+    kvs = getData(FAMILY, "row",  Arrays.asList("col6"), 2, 10);
+    assertTrue(kvs.length == 0);
+    numSeeks = HRegionServer.numOptimizedSeeks.get();
+    assertEquals(3, numSeeks);
+
+    HRegionServer.numOptimizedSeeks.set(0);
+    // w/o deleteColumn within a time range.
+    kvs = getDataInRange(FAMILY, "row",  Arrays.asList("col1"), 1, 3, 24);
+    assertTrue(kvs.length == 2);
+    numSeeks = HRegionServer.numOptimizedSeeks.get();
+    assertEquals(6, numSeeks);
+
+    HRegionServer.numOptimizedSeeks.set(0);
+    // w deleteColumn within a time range.
+    kvs = getDataInRange(FAMILY, "row",  Arrays.asList("col6"), 1, 3, 10);
+    assertTrue(kvs.length == 0);
+    numSeeks = HRegionServer.numOptimizedSeeks.get();
+    assertEquals(3, numSeeks);
+  }
+
 
   /**
    * This test will make a number of puts, and then do flush, then do another

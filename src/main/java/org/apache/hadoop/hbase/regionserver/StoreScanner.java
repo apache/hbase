@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.regionserver.kvaggregator.KeyValueAggregator;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
-
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Scanner scans both the memstore and the HStore. Coalesce KeyValue stream
@@ -437,7 +437,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
           case SEEK_TO_EXACT_KV:
             KeyValue queriedKV = kv.createFirstOnRowColTS(Math.max(
                 matcher.tr.getMax() - 1, matcher.tr.getMin()));
-            reseek(queriedKV);
+            reseekExactKVOrNextCol(new Pair<KeyValue, KeyValue>(queriedKV, queriedKV),
+                                   MatchCode.SEEK_TO_EXACT_KV);
             break;
           case SEEK_TO_EFFECTIVE_TS:
             reseek(matcher.getKeyForEffectiveTSOnRow(kv));
@@ -486,12 +487,17 @@ public class StoreScanner extends NonLazyKeyValueScanner
               }
               reseek(matcher.getKeyForNextRow(kv));
             } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
-            // we check this since some tests have store = null
-              if (this.store == null) {
-                reseek(matcher.getKeyForNextColumn(kv, null, false));
+              if (isUsingDeleteColBloom) {
+                // we check this since some tests have store = null
+                if (this.store == null) {
+                  Pair<KeyValue, KeyValue> keyPair = matcher.getKeyPairForNextColumn(kv);
+                  keyPair.setSecond(keyPair.getFirst());
+                  reseekExactKVOrNextCol(keyPair, MatchCode.SEEK_NEXT_COL);
+                } else {
+                  reseekExactKVOrNextCol(matcher.getKeyPairForNextColumn(kv), MatchCode.SEEK_NEXT_COL);
+                }
               } else {
-                reseek(matcher.getKeyForNextColumn(kv,
-                    this.heap.getActiveScanners(), isUsingDeleteColBloom));
+                reseek(matcher.getKeyPairForNextColumn(kv).getFirst());
               }
             } else {
               this.heap.next();
@@ -529,11 +535,17 @@ public class StoreScanner extends NonLazyKeyValueScanner
             break;
 
           case SEEK_NEXT_COL:
-          // we check this since some tests have store = null
-            if (this.store == null) {
-              reseek(matcher.getKeyForNextColumn(kv, null, false));
+            if (isUsingDeleteColBloom) {
+              // we check this since some tests have store = null
+              if (this.store == null) {
+                Pair<KeyValue, KeyValue> keyPair = matcher.getKeyPairForNextColumn(kv);
+                keyPair.setSecond(keyPair.getFirst());
+                reseekExactKVOrNextCol(keyPair, MatchCode.SEEK_NEXT_COL);
+              } else {
+                reseekExactKVOrNextCol(matcher.getKeyPairForNextColumn(kv), MatchCode.SEEK_NEXT_COL);
+              }
             } else {
-              reseek(matcher.getKeyForNextColumn(kv, this.heap.getActiveScanners(),isUsingDeleteColBloom));
+              reseek(matcher.getKeyPairForNextColumn(kv).getFirst());
             }
             break;
 
@@ -699,6 +711,21 @@ public class StoreScanner extends NonLazyKeyValueScanner
       return heap.requestSeek(kv, true, useRowColBloom);
     } else {
       return heap.reseek(kv);
+    }
+  }
+
+  /**
+   * reseek exact KV or next column with deleteColumn bloomFilter check.
+   * It will be called when the matcher return either SEEK_EXACT_KV or SEEK_NEXT_COL
+   * The heap will check deleteColumn bloomFilter on each scanner and perform accordingly
+   */
+  public synchronized boolean reseekExactKVOrNextCol(Pair<KeyValue, KeyValue> kvPair, MatchCode qcode) throws IOException {
+    //Heap cannot be null, because this is only called from next() which
+    //guarantees that heap will never be null before this call.
+    if (explicitColumnQuery && lazySeekEnabledGlobally) {
+      return heap.requestSeekExactKVOrNextCol(kvPair, true, useRowColBloom, qcode);
+    } else {
+      return heap.reseekExactKVOrNextCol(kvPair, qcode);
     }
   }
 

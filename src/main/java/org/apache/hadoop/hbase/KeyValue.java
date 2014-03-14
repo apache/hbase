@@ -1679,7 +1679,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * @return Last possible KeyValue on passed <code>row</code>
    */
   public static KeyValue createLastOnRow(final byte[] row) {
-    return new KeyValue(row, null, null, HConstants.LATEST_TIMESTAMP, Type.Minimum);
+    return new KeyValue(row, null, null, HConstants.OLDEST_TIMESTAMP, Type.Minimum);
   }
 
   /**

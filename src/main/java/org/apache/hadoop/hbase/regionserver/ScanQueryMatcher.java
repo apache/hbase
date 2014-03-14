@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * A query matcher that is specifically designed for the scan case.
@@ -267,18 +268,7 @@ public class ScanQueryMatcher {
 
     int timestampComparison = tr.compare(timestamp);
     if (timestampComparison >= 1) {
-      // we have to have the delete column bloom enabled to be able to seek to
-      // the exact kv - (if we don't know if there are any deletes we are unable
-      // to do that
       if (isDeleteColumnUsageEnabled) {
-        KeyValue queriedKV = kv.createFirstOnRowColTS(Math.max(tr.getMax() - 1,
-            tr.getMin()));
-        for (KeyValueScanner kvScanner : allScanners) {
-          if (kvScanner.passesDeleteColumnCheck(queriedKV)) {
-            return MatchCode.SKIP;
-          }
-        }
-        HRegionServer.numOptimizedSeeks.incrementAndGet();
         return MatchCode.SEEK_TO_EXACT_KV;
       } else {
         return MatchCode.SKIP;
@@ -400,45 +390,31 @@ public class ScanQueryMatcher {
   }
 
   /**
-   * If there is no next column, we return a KV which is the last possible key
-   * for the current row. Otherwise, we proceed to the next kv (the first kv on
-   * the next column). if there is no delete column blooom filter enabled, we
-   * return the next kv on the column. If the delete column bloom filter is
-   * enabled, we first check whether the scanners contain delete information
-   * about the next kv. If there is no delete, we proceed to the searched kv
-   * with highest timestamp.
+   * If there is no next column, we return a pair of KV which are the last possible key
+   * for the current row.
+   * Otherwise, return a pair of key, first if the firstOnRow and
+   * the second is the exact key with seeking timestamp
    *
    * @param kv - current keyvalue
-   * @param allScanners - all scanners including the scanners from memstore and
-   * storefiles
-   * @param deleteColBloomFilterEnabled - is the delete column bloom filter
-   * ebnabled
-   * @return - kv in the next column
+   * @return - a pair of kvs to search for next column
    */
-  public KeyValue getKeyForNextColumn(KeyValue kv, List<KeyValueScanner> allScanners, boolean deleteColBloomFilterEnabled) {
+  public Pair<KeyValue, KeyValue> getKeyPairForNextColumn(KeyValue kv) {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
-      return KeyValue.createLastOnRow(
+      KeyValue key = KeyValue.createLastOnRow(
           kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
           kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
           kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength());
+      return new Pair<KeyValue, KeyValue>(key, key);
     } else {
-      KeyValue nextKV = KeyValue.createFirstOnRow(kv.getBuffer(),
-          kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
-          kv.getFamilyOffset(), kv.getFamilyLength(), nextColumn.getBuffer(),
-          nextColumn.getOffset(), nextColumn.getLength());
-      if (!deleteColBloomFilterEnabled) {
-        return nextKV;
-      }
-      for (KeyValueScanner kvScanner : allScanners) {
-        if (kvScanner.passesDeleteColumnCheck(nextKV))
-          return nextKV;
-      }
-      HRegionServer.numOptimizedSeeks.incrementAndGet();
-      return KeyValue.createFirstOnRow(nextKV.getBuffer(), nextKV.getRowOffset(), nextKV.getRowLength(),
-          nextKV.getBuffer(), nextKV.getFamilyOffset(), nextKV.getFamilyLength(),
-          nextColumn.getBuffer(), nextColumn.getOffset(), nextColumn.getLength(),
-          Math.max(tr.getMax() -1, tr.getMin()));
+      KeyValue firstKey = KeyValue.createFirstOnRow(kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
+                            kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
+                            nextColumn.getBuffer(), nextColumn.getOffset(), nextColumn.getLength());
+      KeyValue exactKey = KeyValue.createFirstOnRow(kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
+                            kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
+                            nextColumn.getBuffer(), nextColumn.getOffset(), nextColumn.getLength(),
+                            Math.max(tr.getMax() - 1, tr.getMin()));
+      return new Pair<KeyValue, KeyValue>(firstKey, exactKey);
     }
   }
 
