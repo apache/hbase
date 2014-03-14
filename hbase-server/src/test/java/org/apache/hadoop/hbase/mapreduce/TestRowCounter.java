@@ -192,7 +192,6 @@ public class TestRowCounter {
     schemaChangeThread.start();
 
     job.waitForCompletion(true);
-    String trackingURL = job.getHistoryUrl();
     String trackingURL2 = job.getTrackingURL();
     System.out.println("Tracking URL is: " + trackingURL2);
     schemaChangeThread.join();
