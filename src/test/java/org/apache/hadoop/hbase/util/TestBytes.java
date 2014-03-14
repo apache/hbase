@@ -28,6 +28,8 @@ import java.util.Arrays;
 
 import junit.framework.TestCase;
 
+import org.junit.Assert;
+
 public class TestBytes extends TestCase {
   public void testNullHashCode() {
     byte [] b = null;
@@ -170,7 +172,7 @@ public class TestBytes extends TestCase {
           Bytes.BYTES_RAWCOMPARATOR));
     }
   }
-  
+
   public void testStartsWith() {
     assertTrue(Bytes.startsWith(Bytes.toBytes("hello"), Bytes.toBytes("h")));
     assertTrue(Bytes.startsWith(Bytes.toBytes("hello"), Bytes.toBytes("")));
@@ -214,7 +216,7 @@ public class TestBytes extends TestCase {
 
     return (Bytes.toLong(testValue) + amount) == incrementResult;
   }
-  
+
   public void testFixedSizeString() throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
@@ -240,4 +242,51 @@ public class TestBytes extends TestCase {
     assertEquals("", Bytes.readStringFixedSize(dis, 9));
   }
 
+  public void testHead() throws Exception {
+    byte[] a = new byte[] { 1, 2, 3, 4 };
+    Assert.assertArrayEquals("head(a, 0)", Bytes.head(a, 0), new byte[] {});
+    Assert.assertArrayEquals("head(a, 2)", Bytes.head(a, 2),
+        new byte[] { 1, 2 });
+    Assert.assertArrayEquals("head(a, 4)", Bytes.head(a, 4), new byte[] { 1, 2,
+        3, 4 });
+    try {
+      Bytes.head(a, 5);
+      fail("Should throw exception for head(a, 5)");
+    } catch (ArrayIndexOutOfBoundsException e) {
+      // Correct
+    }
+  }
+
+  public void testTail() throws Exception {
+    byte[] a = new byte[] { 1, 2, 3, 4 };
+    Assert.assertArrayEquals("tail(a, 0)", Bytes.tail(a, 0), new byte[] {});
+    Assert.assertArrayEquals("tail(a, 2)", Bytes.tail(a, 2),
+        new byte[] { 3, 4 });
+    Assert.assertArrayEquals("tail(a, 4)", Bytes.tail(a, 4), new byte[] { 1, 2,
+        3, 4 });
+    try {
+      Bytes.tail(a, 5);
+      fail("Should throw exception for tail(a, 5)");
+    } catch (ArrayIndexOutOfBoundsException e) {
+      // Correct
+    }
+  }
+
+  public void testPadHead() throws Exception {
+    byte[] a = new byte[] { 1, 2 };
+    Assert.assertArrayEquals("padHead(a, 0)", Bytes.padHead(a, 0), new byte[] {
+        1, 2 });
+    Assert.assertArrayEquals("padHead(a, 2)", Bytes.padHead(a, 2), new byte[] {
+        0, 0, 1, 2 });
+  }
+
+  public void testAppendToTail() throws Exception {
+    byte[] a = new byte[] { 1, 2 };
+    Assert.assertArrayEquals("appendToTail(a, 0, 0)",
+        Bytes.appendToTail(a, 0, (byte) 0), new byte[] { 1, 2 });
+    Assert.assertArrayEquals("appendToTail(a, 2, 0)",
+        Bytes.appendToTail(a, 2, (byte) 0), new byte[] { 1, 2, 0, 0 });
+    Assert.assertArrayEquals("appendToTail(a, 0, 6)",
+        Bytes.appendToTail(a, 2, (byte) 6), new byte[] { 1, 2, 6, 6 });
+  }
 }

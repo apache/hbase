@@ -19,8 +19,16 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.facebook.nifty.header.protocol.TFacebookCompactProtocol;
-import com.facebook.swift.codec.ThriftCodec;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Iterator;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -33,15 +41,8 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Iterator;
+import com.facebook.nifty.header.protocol.TFacebookCompactProtocol;
+import com.facebook.swift.codec.ThriftCodec;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -1109,13 +1110,22 @@ public class Bytes {
   }
 
   /**
-   * @param a array
-   * @param length amount of bytes to grab
+   * Returns the first elements of an array.
+   *
+   * NOTE the method may return <code>a</code> if possible.
+   *
+   * @param a
+   *          a non-null array
+   * @param length
+   *          amount of bytes to grab
    * @return First <code>length</code> bytes from <code>a</code>
    */
-  public static byte [] head(final byte [] a, final int length) {
-    if (a.length < length) {
-      return null;
+  public static byte[] head(final byte[] a, final int length) {
+    if (length > a.length) {
+      throw new ArrayIndexOutOfBoundsException(length - 1);
+    }
+    if (length == a.length) {
+      return a;
     }
     byte [] result = new byte[length];
     System.arraycopy(a, 0, result, 0, length);
@@ -1123,13 +1133,22 @@ public class Bytes {
   }
 
   /**
-   * @param a array
-   * @param length amount of bytes to snarf
+   * Returns the last elements of an array.
+   *
+   * NOTE the method may return <code>a</code> if possible.
+   *
+   * @param a
+   *          a non-null array
+   * @param length
+   *          amount of bytes to snarf
    * @return Last <code>length</code> bytes from <code>a</code>
    */
-  public static byte [] tail(final byte [] a, final int length) {
-    if (a.length < length) {
-      return null;
+  public static byte[] tail(final byte[] a, final int length) {
+    if (length > a.length) {
+      throw new ArrayIndexOutOfBoundsException(a.length - length);
+    }
+    if (length == a.length) {
+      return a;
     }
     byte [] result = new byte[length];
     System.arraycopy(a, a.length - length, result, 0, length);
@@ -1137,21 +1156,35 @@ public class Bytes {
   }
 
   /**
-   * @param a array
-   * @param length new array size
-   * @return Value in <code>a</code> plus <code>length</code> prepended 0 bytes
+   * Pads zeros in front of an array.
+   *
+   * NOTE the method may return <code>a</code> if possible.
+   *
+   * @param a
+   *          a non-null array
+   * @param length
+   *          the number of zeros to be padded in
+   * @return Value in <code>a</code> plus <code>length</code> prepended 0 bytes.
+   *         could be the same instance of <code>a</code> if lenght == 0.
    */
-  public static byte [] padHead(final byte [] a, final int length) {
-    byte [] padding = new byte[length];
-    for (int i = 0; i < length; i++) {
-      padding[i] = 0;
+  public static byte[] padHead(final byte[] a, final int length) {
+    if (length == 0) {
+      return a;
     }
-    return add(padding,a);
+    byte[] res = new byte[a.length + length];
+    System.arraycopy(a, 0, res, length, a.length);
+    return res;
   }
 
   /**
-   * @param a array
-   * @param length new array size
+   * Appends zeros at the end of <code>a</code>.
+   *
+   * NOTE the method may return <code>a</code> if possible.
+   *
+   * @param a
+   *          array
+   * @param length
+   *          new array size
    * @return Value in <code>a</code> plus <code>length</code> appended 0 bytes
    */
   public static byte [] padTail(final byte [] a, final int length) {
@@ -1161,18 +1194,31 @@ public class Bytes {
   /**
    * Appends length bytes to the end of the array and returns the new array
    * Fills byte b in the newly allocated space in the byte[].
-   * @param a array
-   * @param length new array size
-   * @param b byte to write to the tail.
+   *
+   * NOTE the method may return <code>a</code> if possible.
+   *
+   * @param a
+   *          array
+   * @param length
+   *          new array size
+   * @param b
+   *          byte to write to the tail.
    * @return Value in <code>a</code> plus <code>length</code> appended 0 bytes
    */
-  public static byte [] appendToTail(final byte [] a, final int length, byte b)
-  {
-    byte [] padding = new byte[length];
-    for (int i = 0; i < length; i++) {
-      padding[i] = b;
+  public static byte[] appendToTail(final byte[] a, int length, byte b) {
+    if (length == 0) {
+      return a;
     }
-    return add(a,padding);
+    int total = a.length + length;
+    byte[] res = new byte[total];
+    System.arraycopy(a, 0, res, 0, a.length);
+
+    if (b != 0) {
+      for (int i = a.length; i < total; i++) {
+        res[i] = b;
+      }
+    }
+    return res;
   }
 
   /**
