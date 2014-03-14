@@ -1,4 +1,41 @@
 HBase Change Log
+Release 0.94.18 - 03/14/2014
+Bug
+
+    [HBASE-9708] - Improve Snapshot Name Error Message
+    [HBASE-9778] - Add hint to ExplicitColumnTracker to avoid seeking
+    [HBASE-10514] - Forward port HBASE-10466, possible data loss when failed flushes
+    [HBASE-10549] - When there is a hole, LoadIncrementalHFiles will hang in an infinite loop.
+    [HBASE-10575] - ReplicationSource thread can't be terminated if it runs into the loop to contact peer's zk ensemble and fails continuously
+    [HBASE-10583] - backport HBASE-8402 to 0.94 - ScanMetrics depends on number of rpc calls to the server.
+    [HBASE-10594] - Speed up TestRestoreSnapshotFromClient
+    [HBASE-10598] - Written data can not be read out because MemStore#timeRangeTracker might be updated concurrently
+    [HBASE-10614] - Master could not be stopped
+    [HBASE-10622] - Improve log and Exceptions in Export Snapshot
+    [HBASE-10624] - Fix 2 new findbugs warnings introduced by HBASE-10598
+    [HBASE-10627] - A logic mistake in HRegionServer isHealthy
+    [HBASE-10631] - Avoid extra seek on FileLink open
+    [HBASE-10642] - Add M/R over snapshots to 0.94
+    [HBASE-10669] - [hbck tool] Usage is wrong for hbck tool for -sidelineCorruptHfiles option
+    [HBASE-10682] - region_mover.rb throws "can't convert nil into String" for regions moved
+    [HBASE-10712] - Backport HBASE-8304 to 0.94 and 0.96
+    [HBASE-10716] - [Configuration]: hbase.regionserver.region.split.policy should be part of hbase-default.xml
+    [HBASE-10718] - TestHLogSplit fails when it sets a KV size to be negative
+    [HBASE-10722] - [0.94] HRegion.computeHDFSBlocksDistribution does not account for links and reference files.
+    [HBASE-10731] - Fix environment variables typos in scripts
+    [HBASE-10738] - AssignmentManager should shut down executors on stop
+    [HBASE-10745] - Access ShutdownHook#fsShutdownHooks should be synchronized
+    [HBASE-10751] - TestHRegion testWritesWhileScanning occasional fail since HBASE-10514 went in
+
+Improvement
+
+    [HBASE-8604] - improve reporting of incorrect peer address in replication
+
+Test
+
+    [HBASE-9914] - Port fix for HBASE-9836 'Intermittent TestRegionObserverScannerOpenHook#testRegionObserverCompactionTimeStacking failure' to 0.94
+
+
 Release 0.94.17 - 02/18/2014
 Bug
 
