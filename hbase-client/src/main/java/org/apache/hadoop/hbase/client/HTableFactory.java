@@ -27,10 +27,11 @@ import java.io.IOException;
 /**
  * Factory for creating HTable instances.
  *
- * @since 0.21.0
+ * @deprecated as of 0.98.1. See {@link HConnectionManager#createConnection(Configuration)}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
+@Deprecated
 public class HTableFactory implements HTableInterfaceFactory {
   @Override
   public HTableInterface createHTableInterface(Configuration config,

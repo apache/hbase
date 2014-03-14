@@ -62,9 +62,10 @@ import com.google.protobuf.ServiceException;
  * <p>
  * Pool will manage its own connections to the cluster. See
  * {@link HConnectionManager}.
- * @deprecated Use {@link HConnection#getTable(String)} instead.
+ * @deprecated as of 0.98.1. See {@link HConnection#getTable(String)}.
  */
 @InterfaceAudience.Private
+@Deprecated
 public class HTablePool implements Closeable {
   private final PoolMap<String, HTableInterface> tables;
   private final int maxSize;
