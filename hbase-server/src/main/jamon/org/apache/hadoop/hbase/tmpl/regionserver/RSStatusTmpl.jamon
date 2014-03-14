@@ -24,13 +24,12 @@ String format = "html";
 <%import>
 java.util.*;
 org.apache.hadoop.hbase.regionserver.HRegionServer;
-org.apache.hadoop.hbase.util.Bytes;
 org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
-org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
+org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 </%import>
 <%if format.equals("json") %>
   <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>
@@ -41,6 +40,9 @@ org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
   ServerName serverName = ProtobufUtil.toServerName(serverInfo.getServerName());
   List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(regionServer);
   int masterInfoPort = regionServer.getConfiguration().getInt("hbase.master.info.port", 60010);
+  MasterAddressTracker masterAddressTracker = regionServer.getMasterAddressTracker();
+  ServerName masterServerName = masterAddressTracker == null ? null
+    : masterAddressTracker.getMasterAddress();
 </%java>
 <!--[if IE]>
 <!DOCTYPE html>
@@ -146,9 +148,11 @@ org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
             <td>
                 <%if (masterInfoPort < 0) %>
                 No hbase.master.info.port found
+                <%elseif masterServerName == null %>
+                No master found
                 <%else>
                 <%java>
-                String host = regionServer.getMasterAddressManager().getMasterAddress().getHostname() + ":" + masterInfoPort;
+                String host = masterServerName.getHostname() + ":" + masterInfoPort;
                 String url = "//" + host + "/";
                 </%java>
                 <a href="<% url %>"><% host %></a>

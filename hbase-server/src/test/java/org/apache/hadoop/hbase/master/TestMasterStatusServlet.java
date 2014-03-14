@@ -98,7 +98,7 @@ public class TestMasterStatusServlet {
 
     // Fake MasterAddressTracker
     MasterAddressTracker tracker = Mockito.mock(MasterAddressTracker.class);
-    Mockito.doReturn(tracker).when(master).getMasterAddressManager();
+    Mockito.doReturn(tracker).when(master).getMasterAddressTracker();
     Mockito.doReturn(FAKE_HOST).when(tracker).getMasterAddress();
 
     // Mock admin
