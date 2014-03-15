@@ -628,7 +628,7 @@ public class ServerManager {
       return RegionOpeningState.FAILED_OPENING;
     }
     OpenRegionRequest request =
-      RequestConverter.buildOpenRegionRequest(region, versionOfOfflineNode, favoredNodes);
+      RequestConverter.buildOpenRegionRequest(server, region, versionOfOfflineNode, favoredNodes);
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
       return ResponseConverter.getRegionOpeningState(response);
@@ -690,7 +690,7 @@ public class ServerManager {
         region.getRegionNameAsString() +
         " failed because no RPC connection found to this server");
     }
-    return ProtobufUtil.closeRegion(admin, region.getRegionName(),
+    return ProtobufUtil.closeRegion(admin, server, region.getRegionName(),
       versionOfClosingNode, dest, transitionInZK);
   }
 
@@ -881,7 +881,7 @@ public class ServerManager {
   Map<ServerName, Boolean> getRequeuedDeadServers() {
     return Collections.unmodifiableMap(this.requeuedDeadServers);
   }
-  
+
   public boolean isServerOnline(ServerName serverName) {
     return serverName != null && onlineServers.containsKey(serverName);
   }
@@ -969,7 +969,7 @@ public class ServerManager {
       }
     }
   }
-  
+
   /**
    * To clear any dead server with same host name and port of any online server
    */
