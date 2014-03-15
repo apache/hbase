@@ -2137,7 +2137,7 @@ public class TestHBaseFsck {
     HConnection connection = HConnectionManager.getConnection(conf);
     HRegionLocation metaLocation = connection.locateRegion(TableName.META_TABLE_NAME,
         HConstants.EMPTY_START_ROW);
-    ServerName hsa = ServerName.valueOf(metaLocation.getHostnamePort(), 0L);
+    ServerName hsa = metaLocation.getServerName();
     HRegionInfo hri = metaLocation.getRegionInfo();
     if (unassign) {
       LOG.info("Undeploying meta region " + hri + " from server " + hsa);
