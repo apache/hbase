@@ -545,7 +545,7 @@ public class TestFromClientSide {
   throws IOException, InterruptedException {
     byte [] name = Bytes.toBytes("testFilterAcrossMutlipleRegions");
     HTable t = TEST_UTIL.createTable(name, FAMILY);
-    int rowCount = TEST_UTIL.loadTable(t, FAMILY);
+    int rowCount = TEST_UTIL.loadTable(t, FAMILY, false);
     assertRowCount(t, rowCount);
     // Split the table.  Should split on a reasonable key; 'lqj'
     Map<HRegionInfo, ServerName> regions  = splitTable(t);

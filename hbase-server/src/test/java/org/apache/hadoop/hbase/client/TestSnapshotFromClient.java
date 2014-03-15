@@ -178,7 +178,7 @@ public class TestSnapshotFromClient {
 
     // put some stuff in the table
     HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
-    UTIL.loadTable(table, TEST_FAM);
+    UTIL.loadTable(table, TEST_FAM, false);
 
     // get the name of all the regionservers hosting the snapshotted table
     Set<String> snapshotServers = new HashSet<String>();

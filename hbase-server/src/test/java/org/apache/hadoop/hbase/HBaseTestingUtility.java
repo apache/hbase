@@ -1630,6 +1630,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Load table with rows from 'aaa' to 'zzz'.
+   * @param t Table
+   * @param f Family
+   * @return Count of rows loaded.
+   * @throws IOException
+   */
+  public int loadTable(final HTable t, final byte[] f, boolean writeToWAL) throws IOException {
+    return loadTable(t, new byte[][] {f}, null, writeToWAL);
+  }
+
+  /**
    * Load table of multiple column families with rows from 'aaa' to 'zzz'.
    * @param t Table
    * @param f Array of Families to load
@@ -1649,10 +1660,23 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException
    */
   public int loadTable(final HTable t, final byte[][] f, byte[] value) throws IOException {
+    return loadTable(t, f, value, true);
+  }
+
+  /**
+   * Load table of multiple column families with rows from 'aaa' to 'zzz'.
+   * @param t Table
+   * @param f Array of Families to load
+   * @param value the values of the cells. If null is passed, the row key is used as value
+   * @return Count of rows loaded.
+   * @throws IOException
+   */
+  public int loadTable(final HTable t, final byte[][] f, byte[] value, boolean writeToWAL) throws IOException {
     t.setAutoFlush(false);
     int rowCount = 0;
     for (byte[] row : HBaseTestingUtility.ROWS) {
       Put put = new Put(row);
+      put.setDurability(writeToWAL ? Durability.USE_DEFAULT : Durability.SKIP_WAL);
       for (int i = 0; i < f.length; i++) {
         put.add(f[i], null, value != null ? value : row);
       }
@@ -1737,6 +1761,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           k[1] = b2;
           k[2] = b3;
           Put put = new Put(k);
+          put.setDurability(Durability.SKIP_WAL);
           put.add(f, null, k);
           if (r.getLog() == null) put.setDurability(Durability.SKIP_WAL);
 

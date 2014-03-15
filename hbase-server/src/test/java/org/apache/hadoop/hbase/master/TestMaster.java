@@ -68,7 +68,7 @@ public class TestMaster {
 
     HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
     assertTrue(m.assignmentManager.getZKTable().isEnabledTable(TABLENAME));
-    TEST_UTIL.loadTable(ht, FAMILYNAME);
+    TEST_UTIL.loadTable(ht, FAMILYNAME, false);
     ht.close();
 
     List<Pair<HRegionInfo, ServerName>> tableRegions =

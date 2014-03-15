@@ -31,7 +31,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestCase.HRegionIncommon;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -218,12 +217,10 @@ public abstract class HBaseTestCase extends TestCase {
    * @param r
    * @param columnFamily
    * @param column
-   * @param writeToWAL
    * @throws IOException
    * @return count of what we added.
    */
-  public static long addContent(final HRegion r, final byte [] columnFamily, final byte[] column,
-      boolean writeToWAL)
+  public static long addContent(final HRegion r, final byte [] columnFamily, final byte[] column)
   throws IOException {
     byte [] startKey = r.getRegionInfo().getStartKey();
     byte [] endKey = r.getRegionInfo().getEndKey();
@@ -232,32 +229,12 @@ public abstract class HBaseTestCase extends TestCase {
       startKeyBytes = START_KEY_BYTES;
     }
     return addContent(new HRegionIncommon(r), Bytes.toString(columnFamily), Bytes.toString(column),
-      startKeyBytes, endKey, -1, writeToWAL);
-  }
-
-  public static long addContent(final HRegion r, final byte [] columnFamily, final byte[] column)
-          throws IOException {
-    return addContent(r, columnFamily, column, true);
-  }
-
-  /**
-   * Add content to region <code>r</code> on the passed column
-   * <code>column</code>.
-   * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
-   * @param r
-   * @param columnFamily
-   * @param writeToWAL
-   * @throws IOException
-   * @return count of what we added.
-   */
-  public static long addContent(final HRegion r, final byte [] columnFamily, boolean writeToWAL)
-  throws IOException {
-    return addContent(r, columnFamily, null, writeToWAL);
+      startKeyBytes, endKey, -1);
   }
 
   public static long addContent(final HRegion r, final byte [] columnFamily)
   throws IOException {
-    return addContent(r, columnFamily, null, true);
+    return addContent(r, columnFamily, null);
   }
 
   /**
@@ -271,23 +248,13 @@ public abstract class HBaseTestCase extends TestCase {
    * @return count of what we added.
    */
   public static long addContent(final Incommon updater,
-      final String columnFamily, final boolean writeToWAL) throws IOException {
-    return addContent(updater, columnFamily, START_KEY_BYTES, null, writeToWAL);
-  }
-
-  public static long addContent(final Incommon updater,
       final String columnFamily) throws IOException {
-    return addContent(updater, columnFamily, START_KEY_BYTES, null, true);
-  }
-
-  public static long addContent(final Incommon updater, final String family,
-      final String column, final boolean writeToWAL) throws IOException {
-    return addContent(updater, family, column, START_KEY_BYTES, null, writeToWAL);
+    return addContent(updater, columnFamily, START_KEY_BYTES, null);
   }
 
   public static long addContent(final Incommon updater, final String family,
       final String column) throws IOException {
-    return addContent(updater, family, column, START_KEY_BYTES, null, true);
+    return addContent(updater, family, column, START_KEY_BYTES, null);
   }
 
   /**
@@ -303,21 +270,14 @@ public abstract class HBaseTestCase extends TestCase {
    * @throws IOException
    */
   public static long addContent(final Incommon updater, final String columnFamily,
-      final byte [] startKeyBytes, final byte [] endKey, final boolean writeToWAL)
+      final byte [] startKeyBytes, final byte [] endKey)
   throws IOException {
-    return addContent(updater, columnFamily, null, startKeyBytes, endKey, -1, writeToWAL);
-  }
-
-  public static long addContent(final Incommon updater, final String family,
-                                   final String column, final byte [] startKeyBytes,
-                                   final byte [] endKey, 
-                                   final boolean writeToWAL) throws IOException {
-    return addContent(updater, family, column, startKeyBytes, endKey, -1, writeToWAL);
+    return addContent(updater, columnFamily, null, startKeyBytes, endKey, -1);
   }
 
   public static long addContent(final Incommon updater, final String family, String column,
       final byte [] startKeyBytes, final byte [] endKey) throws IOException {
-    return addContent(updater, family, column, startKeyBytes, endKey, -1, true);
+    return addContent(updater, family, column, startKeyBytes, endKey, -1);
   }
 
   /**
@@ -336,8 +296,7 @@ public abstract class HBaseTestCase extends TestCase {
   public static long addContent(final Incommon updater,
                                    final String columnFamily, 
                                    final String column,
-      final byte [] startKeyBytes, final byte [] endKey, final long ts,
-      final boolean writeToWAL)
+      final byte [] startKeyBytes, final byte [] endKey, final long ts)
   throws IOException {
     long count = 0;
     // Add rows of three characters.  The first character starts with the
@@ -383,7 +342,7 @@ public abstract class HBaseTestCase extends TestCase {
               } else {
                 put.add(split[0], split[1], t);
               }
-              put.setDurability(writeToWAL ? Durability.USE_DEFAULT : Durability.SKIP_WAL);
+              put.setDurability(Durability.SKIP_WAL);
               updater.put(put);
               count++;
             } catch (RuntimeException ex) {
@@ -407,13 +366,6 @@ public abstract class HBaseTestCase extends TestCase {
       secondCharStart = FIRST_CHAR;
     }
     return count;
-  }
-
-  public static long addContent(final Incommon updater,
-      final String columnFamily, 
-      final String column,
-      final byte [] startKeyBytes, final byte [] endKey, final long ts) throws IOException {
-    return addContent(updater, columnFamily, column, startKeyBytes, endKey, ts, true);
   }
 
   /**
@@ -586,7 +538,6 @@ public abstract class HBaseTestCase extends TestCase {
       scanner.close();
     }
 
-    @SuppressWarnings("unchecked")
     public Iterator<Result> iterator() {
       return scanner.iterator();
     }

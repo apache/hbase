@@ -79,7 +79,7 @@ public abstract class TestTableInputFormatScanBase {
     // create and fill table
     table = TEST_UTIL.createTable(TABLE_NAME, INPUT_FAMILY);
     TEST_UTIL.createMultiRegions(table, INPUT_FAMILY);
-    TEST_UTIL.loadTable(table, INPUT_FAMILY);
+    TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
     // start MR cluster
     TEST_UTIL.startMiniMapReduceCluster();
   }

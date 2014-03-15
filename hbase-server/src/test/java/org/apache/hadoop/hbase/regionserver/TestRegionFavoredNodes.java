@@ -130,7 +130,7 @@ public class TestRegionFavoredNodes {
     // Write some data to each region and flush. Repeat some number of times to
     // get multiple files for each region.
     for (int i = 0; i < FLUSHES; i++) {
-      TEST_UTIL.loadTable(table, COLUMN_FAMILY);
+      TEST_UTIL.loadTable(table, COLUMN_FAMILY, false);
       TEST_UTIL.flush();
     }
 

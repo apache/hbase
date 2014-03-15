@@ -146,7 +146,7 @@ public class TestCompaction {
         for (int j = 0; j < jmax; j++) {
           p.add(COLUMN_FAMILY, Bytes.toBytes(j), pad);
         }
-        HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), false);
+        HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
         loader.put(p);
         loader.flushcache();
       }
@@ -223,7 +223,7 @@ public class TestCompaction {
 
   private void createStoreFile(final HRegion region, String family) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
-    HBaseTestCase.addContent(loader, family, false);
+    HBaseTestCase.addContent(loader, family);
     loader.flushcache();
   }
 

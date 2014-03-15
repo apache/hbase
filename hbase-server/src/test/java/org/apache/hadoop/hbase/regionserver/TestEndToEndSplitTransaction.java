@@ -92,7 +92,7 @@ public class TestEndToEndSplitTransaction {
         TableName.valueOf("TestSplit");
     byte[] familyName = Bytes.toBytes("fam");
     HTable ht = TEST_UTIL.createTable(tableName, familyName);
-    TEST_UTIL.loadTable(ht, familyName);
+    TEST_UTIL.loadTable(ht, familyName, false);
     ht.close();
     HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     byte []firstRow = Bytes.toBytes("aaa");
