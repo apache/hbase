@@ -490,6 +490,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * LQI's corresponding to the resultant hfiles.
    *
    * protected for testing
+   * @throws IOException
    */
   protected List<LoadQueueItem> groupOrSplit(Multimap<ByteBuffer, LoadQueueItem> regionGroups,
       final LoadQueueItem item, final HTable table,
@@ -530,6 +531,30 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       idx = -(idx + 1) - 1;
     }
     final int indexForCallable = idx;
+
+    /**
+     * we can consider there is a region hole in following conditions. 1) if idx < 0,then first
+     * region info is lost. 2) if the endkey of a region is not equal to the startkey of the next
+     * region. 3) if the endkey of the last region is not empty.
+     */
+    if (indexForCallable < 0) {
+      throw new IOException("The first region info for table "
+          + Bytes.toString(table.getTableName())
+          + " cann't be found in hbase:meta.Please use hbck tool to fix it first.");
+    } else if ((indexForCallable == startEndKeys.getFirst().length - 1)
+        && !Bytes.equals(startEndKeys.getSecond()[indexForCallable], HConstants.EMPTY_BYTE_ARRAY)) {
+      throw new IOException("The last region info for table "
+          + Bytes.toString(table.getTableName())
+          + " cann't be found in hbase:meta.Please use hbck tool to fix it first.");
+    } else if (indexForCallable + 1 < startEndKeys.getFirst().length
+        && !(Bytes.compareTo(startEndKeys.getSecond()[indexForCallable],
+          startEndKeys.getFirst()[indexForCallable + 1]) == 0)) {
+      throw new IOException("The endkey of one region for table "
+          + Bytes.toString(table.getTableName())
+          + " is not equal to the startkey of the next region in hbase:meta."
+          + "Please use hbck tool to fix it first.");
+    }
+
     boolean lastKeyInRange =
       Bytes.compareTo(last, startEndKeys.getSecond()[idx]) < 0 ||
       Bytes.equals(startEndKeys.getSecond()[idx], HConstants.EMPTY_BYTE_ARRAY);
