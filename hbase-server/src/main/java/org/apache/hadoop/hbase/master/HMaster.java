@@ -2919,6 +2919,14 @@ MasterServices, Server {
       throw new ServiceException(e);
     }
 
+    // ensure namespace exists
+    try {
+      TableName dstTable = TableName.valueOf(request.getSnapshot().getTable());
+      getNamespaceDescriptor(dstTable.getNamespaceAsString());
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+
     try {
       SnapshotDescription reqSnapshot = request.getSnapshot();
       snapshotManager.restoreSnapshot(reqSnapshot);
