@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -32,18 +31,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.TestAdmin;
 import org.apache.hadoop.hbase.mapreduce.RowCounter.RowCounterMapper;
-import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Counter;
@@ -65,9 +56,8 @@ public class TestRowCounter {
   private final static String COL_FAM = "col_fam";
   private final static String COL1 = "c1";
   private final static String COL2 = "c2";
-  private final static int NUM_ONLINE_CHANGES = 4;
-  private final static int TOTAL_ROWS = 100;
-  private final static int ROWS_WITH_ONE_COL = 20;
+  private final static int TOTAL_ROWS = 10;
+  private final static int ROWS_WITH_ONE_COL = 2;
 
   /**
    * @throws java.lang.Exception
@@ -101,43 +91,21 @@ public class TestRowCounter {
     String[] args = new String[] {
         TABLE_NAME
     };
-    runRowCount(args, TOTAL_ROWS);
+    runRowCount(args, 10);
   }
 
-  @Test
-  public void testRowCounterWithOnlineSchemaChange() throws Exception {
-
-    String[] args = new String[] { TABLE_NAME };
-    final TableName tableName = TableName.valueOf(TABLE_NAME);
-    HTableDescriptor htd = TEST_UTIL.getHBaseAdmin().getTableDescriptor(
-        tableName);
-    final int INITAL_MAX_VERSIONS = htd.getFamilies().iterator().next()
-        .getMaxVersions();
-    final int EXPECTED_NUM_REGIONS = TEST_UTIL.getHBaseAdmin()
-        .getTableRegions(tableName).size();
-
-    runRowCounterWithOnlineSchemaChange(args, TOTAL_ROWS);
-    final int FINAL_MAX_VERSIONS = TestAdmin.waitForColumnSchemasToSettle(
-        TEST_UTIL.getMiniHBaseCluster(), tableName, EXPECTED_NUM_REGIONS)
-        .getMaxVersions();
-    assertEquals(
-        "There was a mismatch in the number of online schema modifications that were created",
-        FINAL_MAX_VERSIONS, INITAL_MAX_VERSIONS + NUM_ONLINE_CHANGES);
-
-  }
-
-	/**
-	 * Test a case when the column specified in command line arguments is
-	 * exclusive for few rows.
-	 * 
-	 * @throws Exception
-	 */
+  /**
+   * Test a case when the column specified in command line arguments is
+   * exclusive for few rows.
+   * 
+   * @throws Exception
+   */
   @Test
   public void testRowCounterExclusiveColumn() throws Exception {
     String[] args = new String[] {
         TABLE_NAME, COL_FAM + ":" + COL1
     };
-    runRowCount(args, TOTAL_ROWS - ROWS_WITH_ONE_COL);
+    runRowCount(args, 8);
   }
 
   /**
@@ -151,7 +119,7 @@ public class TestRowCounter {
     String[] args = new String[] {
         TABLE_NAME, COL_FAM + ":" + COL2
     };
-    runRowCount(args, TOTAL_ROWS);
+    runRowCount(args, 10);
   }
 
   /**
@@ -174,42 +142,10 @@ public class TestRowCounter {
     assertEquals(expectedCount, counter.getValue());
   }
 
-  private void runRowCounterWithOnlineSchemaChange(String[] args,
-      int expectedCount) throws Exception {
-
-    GenericOptionsParser opts = new GenericOptionsParser(
-        TEST_UTIL.getConfiguration(), args);
-    Configuration conf = opts.getConfiguration();
-    args = opts.getRemainingArgs();
-    Job job = RowCounter.createSubmittableJob(conf, args);
-
-    // This is where we'd want to start a background operation to make change on
-    // the table
-
-    BackgroundSchemaChangeThread schemaChangeThread = new BackgroundSchemaChangeThread(
-        TEST_UTIL.getHBaseAdmin(), TableName.valueOf(TABLE_NAME),
-        NUM_ONLINE_CHANGES);
-    schemaChangeThread.start();
-
-    job.waitForCompletion(true);
-    String trackingURL2 = job.getTrackingURL();
-    System.out.println("Tracking URL is: " + trackingURL2);
-    schemaChangeThread.join();
-    // this is where we'd have the thread returning
-
-   //might be a timing issue - if it takes too long, then that service is just down. stupid.
-    //it might also be an issue of asking for the tracking url. that may kill the history server (nope. it's a time thing).
-
-    assertTrue(job.isSuccessful());
-    Counter counter = job.getCounters().findCounter(
-        RowCounterMapper.Counters.ROWS);
-    assertEquals(expectedCount, counter.getValue());
-  }
-
   /**
    * Writes TOTAL_ROWS number of distinct rows in to the table. Few rows have
    * two columns, Few have one.
-   *
+   * 
    * @param table
    * @throws IOException
    */
@@ -290,89 +226,4 @@ public class TestRowCounter {
 
   }
 
-  public class BackgroundSchemaChangeThread extends Thread {
-    private int numOnlineChanges;
-    HBaseAdmin admin;
-    TableName tableName;
-
-    public BackgroundSchemaChangeThread(HBaseAdmin admin, TableName tableName,
-        int numOnlineChanges) throws IOException {
-      this.admin = admin;
-      this.tableName = tableName;
-      this.numOnlineChanges = numOnlineChanges;
-
-      if (admin == null) {
-        throw new IllegalArgumentException(
-            "[Test Error]: Provided admin should not be null");
-      }
-    }
-
-    @Override
-    public void run() {
-      final long START_TIME = System.currentTimeMillis();
-      final int ONLINE_CHANGE_TIMEOUT = 200000;
-
-      HTableDescriptor htd = null;
-      try {
-        htd = admin.getTableDescriptor(tableName);
-      } catch (IOException ioe) {
-
-        ioe.printStackTrace();
-        fail("Fail: Issue pulling table descriptor");
-      }
-
-      HColumnDescriptor hcd = null;
-      assertTrue(htd != null);
-      final int countOfFamilies = htd.getFamilies().size();
-      assertTrue(countOfFamilies > 0);
-      boolean expectedException = false;
-
-      int numIterations = 0;
-
-
-      while (numIterations < numOnlineChanges) {
-
-        if (System.currentTimeMillis() - START_TIME > ONLINE_CHANGE_TIMEOUT) {
-          fail("Fail: Timed out reaching before required snapshot count. Only had "
-              + numIterations + " updates");
-        }
-
-        hcd = htd.getFamilies().iterator().next();
-        int maxversions = hcd.getMaxVersions();
-        int newMaxVersions = maxversions + 1;
-        System.out.println("Setting max versions on CF to " + newMaxVersions);
-
-        hcd.setMaxVersions(newMaxVersions);
-        final byte[] hcdName = hcd.getName();
-        expectedException = false;
-
-        try {
-          this.admin.modifyColumn(tableName, hcd);
-        } catch (TableNotDisabledException re) {
-          expectedException = true;
-        } catch (IOException e) {
-          e.printStackTrace();
-          fail("Fail: IO Issue while modifying column");
-        }
-        assertFalse(expectedException);
-
-        try {
-          int EXPECTED_NUM_REGIONS = TEST_UTIL.getHBaseAdmin().getTableRegions(tableName).size();
-          assertEquals("The max version count was not updated", newMaxVersions, TestAdmin.waitForColumnSchemasToSettle(TEST_UTIL.getMiniHBaseCluster(), tableName, EXPECTED_NUM_REGIONS).getMaxVersions());
-          Thread.sleep(2000);
-        } catch (TableNotFoundException e) {
-          e.printStackTrace();
-          fail("Fail: Table not found.");
-        } catch (IOException e) {
-          e.printStackTrace();
-          fail("Fail: IO Issue while modifying column");
-        } catch (InterruptedException e) {
-          LOG.warn("Sleep was interrupted. This is unusual, but not grounds for TF");
-          e.printStackTrace();
-        }
-
-        numIterations++;
-      }
-    }
-  }
 }
