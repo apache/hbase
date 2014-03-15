@@ -86,7 +86,7 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     if (c != 0) return c;
 
     //type
-    c = (0xff & a.getTypeByte()) - (0xff & b.getTypeByte());
+    c = (0xff & b.getTypeByte()) - (0xff & a.getTypeByte());
     if (c != 0) return c;
 
     //mvccVersion: later sorts first
