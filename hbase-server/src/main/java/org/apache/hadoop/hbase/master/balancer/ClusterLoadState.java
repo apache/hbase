@@ -75,11 +75,11 @@ public class ClusterLoadState {
     return (float) numRegions / numServers;
   }
 
-  int getMinLoad() {
+  int getMaxLoad() {
     return getServersByLoad().lastKey().getLoad();
   }
 
-  int getMaxLoad() {
+  int getMinLoad() {
     return getServersByLoad().firstKey().getLoad();
   }
 
