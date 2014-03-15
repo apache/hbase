@@ -262,33 +262,38 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
     final AtomicInteger attmptedCalls = new AtomicInteger();
     final AtomicInteger failedCalls = new AtomicInteger();
-    LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
-        util.getConfiguration()) {
+    util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
+    try {
+      LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration()) {
 
-      protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
-          TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis)
-      throws IOException {
-        int i = attmptedCalls.incrementAndGet();
-        if (i == 1) {
-          HConnection errConn = null;
-          try {
-            errConn = getMockedConnection(util.getConfiguration());
-          } catch (Exception e) {
-            LOG.fatal("mocking cruft, should never happen", e);
-            throw new RuntimeException("mocking cruft, should never happen");
+        protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
+            TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis)
+            throws IOException {
+          int i = attmptedCalls.incrementAndGet();
+          if (i == 1) {
+            HConnection errConn = null;
+            try {
+              errConn = getMockedConnection(util.getConfiguration());
+            } catch (Exception e) {
+              LOG.fatal("mocking cruft, should never happen", e);
+              throw new RuntimeException("mocking cruft, should never happen");
+            }
+            failedCalls.incrementAndGet();
+            return super.tryAtomicRegionLoad(errConn, tableName, first, lqis);
           }
-          failedCalls.incrementAndGet();
-          return super.tryAtomicRegionLoad(errConn, tableName, first, lqis);
+
+          return super.tryAtomicRegionLoad(conn, tableName, first, lqis);
         }
+      };
 
-        return super.tryAtomicRegionLoad(conn, tableName, first, lqis);
-      }
-    };
-
-    // create HFiles for different column families
-    Path dir = buildBulkFiles(table, 1);
-    HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
-    lih.doBulkLoad(dir, t);
+      // create HFiles for different column families
+      Path dir = buildBulkFiles(table, 1);
+      HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
+      lih.doBulkLoad(dir, t);
+    } finally {
+      util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    }
 
     fail("doBulkLoad should have thrown an exception");
   }
@@ -433,9 +438,9 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   public void testGroupOrSplitWhenRegionHoleExistsInMeta() throws Exception {
     String tableName = "testGroupOrSplitWhenRegionHoleExistsInMeta";
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000100") };
+    HTable table = new HTable(util.getConfiguration(), Bytes.toBytes(tableName));
 
     setupTableWithSplitkeys(tableName, 10, SPLIT_KEYS);
-    HTable table = new HTable(util.getConfiguration(), Bytes.toBytes(tableName));
     Path dir = buildBulkFiles(tableName, 2);
 
     final AtomicInteger countedLqis = new AtomicInteger();
