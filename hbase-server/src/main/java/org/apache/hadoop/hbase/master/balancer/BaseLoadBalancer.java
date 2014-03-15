@@ -397,7 +397,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     float average = cs.getLoadAverage(); // for logging
     int floor = (int) Math.floor(average * (1 - slop));
     int ceiling = (int) Math.ceil(average * (1 + slop));
-    if (!(cs.getMinLoad() > ceiling || cs.getMaxLoad() < floor)) {
+    if (!(cs.getMaxLoad() > ceiling || cs.getMinLoad() < floor)) {
       NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad = cs.getServersByLoad();
       if (LOG.isTraceEnabled()) {
         // If nothing to balance, then don't say anything unless trace-level logging.
