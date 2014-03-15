@@ -35,7 +35,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -45,9 +44,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -123,33 +119,11 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     try {
       LOG.info("Creating table " + table);
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-      for (int i = 0; i < cfs; i++) {
+      for (int i = 0; i < 10; i++) {
         htd.addFamily(new HColumnDescriptor(family(i)));
       }
 
       util.getHBaseAdmin().createTable(htd);
-    } catch (TableExistsException tee) {
-      LOG.info("Table " + table + " already exists");
-    }
-  }
-
-  /**
-   * Creates a table with given table name,specified number of column families<br>
-   * and splitkeys if the table does not already exist.
-   * @param table
-   * @param cfs
-   * @param SPLIT_KEYS
-   */
-  private void setupTableWithSplitkeys(String table, int cfs, byte[][] SPLIT_KEYS)
-      throws IOException {
-    try {
-      LOG.info("Creating table " + table);
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-      for (int i = 0; i < cfs; i++) {
-        htd.addFamily(new HColumnDescriptor(family(i)));
-      }
-
-      util.getHBaseAdmin().createTable(htd, SPLIT_KEYS);
     } catch (TableExistsException tee) {
       LOG.info("Table " + table + " already exists");
     }
@@ -429,62 +403,5 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     fail("doBulkLoad should have thrown an exception");
   }
 
-  @Test
-  public void testGroupOrSplitWhenRegionHoleExistsInMeta() throws Exception {
-    String tableName = "testGroupOrSplitWhenRegionHoleExistsInMeta";
-    HTable table = new HTable(util.getConfiguration(), Bytes.toBytes(tableName));
-    byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000100") };
-
-    setupTableWithSplitkeys(tableName, 10, SPLIT_KEYS);
-    Path dir = buildBulkFiles(tableName, 2);
-
-    final AtomicInteger countedLqis = new AtomicInteger();
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(
-      util.getConfiguration()) {
-      
-    protected List<LoadQueueItem> groupOrSplit(
-        Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-        final LoadQueueItem item, final HTable htable,
-        final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
-      List<LoadQueueItem> lqis = super.groupOrSplit(regionGroups, item, htable, startEndKeys);
-      if (lqis != null) {
-        countedLqis.addAndGet(lqis.size());
-      }
-      return lqis;
-    }
-  };
-
-    // do bulkload when there is no region hole in hbase:meta.
-    try {
-      loader.doBulkLoad(dir, table);
-    } catch (Exception e) {
-      LOG.error("exeception=", e);
-    }
-    // check if all the data are loaded into the table.
-    this.assertExpectedTable(tableName, ROWCOUNT, 2);
-
-    dir = buildBulkFiles(tableName, 3);
-
-    // Mess it up by leaving a hole in the hbase:meta
-    CatalogTracker ct = new CatalogTracker(util.getConfiguration());
-    List<HRegionInfo> regionInfos = MetaReader.getTableRegions(ct, TableName.valueOf(tableName));
-    for (HRegionInfo regionInfo : regionInfos) {
-      if (Bytes.equals(regionInfo.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
-        MetaEditor.deleteRegion(ct, regionInfo);
-        break;
-      }
-    }
-
-    try {
-      loader.doBulkLoad(dir, table);
-    } catch (Exception e) {
-      LOG.error("exeception=", e);
-      assertTrue("IOException expected", e instanceof IOException);
-    }
-
-    table.close();
-
-    this.assertExpectedTable(tableName, ROWCOUNT, 2);
-  }
 }
 
