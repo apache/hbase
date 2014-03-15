@@ -432,10 +432,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   @Test
   public void testGroupOrSplitWhenRegionHoleExistsInMeta() throws Exception {
     String tableName = "testGroupOrSplitWhenRegionHoleExistsInMeta";
-    HTable table = new HTable(util.getConfiguration(), Bytes.toBytes(tableName));
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000100") };
 
     setupTableWithSplitkeys(tableName, 10, SPLIT_KEYS);
+    HTable table = new HTable(util.getConfiguration(), Bytes.toBytes(tableName));
     Path dir = buildBulkFiles(tableName, 2);
 
     final AtomicInteger countedLqis = new AtomicInteger();
