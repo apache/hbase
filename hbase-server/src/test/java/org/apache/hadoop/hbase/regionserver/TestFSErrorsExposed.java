@@ -202,7 +202,7 @@ public class TestFSErrorsExposed {
       HTable table = new HTable(new Configuration(util.getConfiguration()), tableName);
 
       // Load some data
-      util.loadTable(table, fam);
+      util.loadTable(table, fam, false);
       table.flushCommits();
       util.flush();
       util.countRows(table);

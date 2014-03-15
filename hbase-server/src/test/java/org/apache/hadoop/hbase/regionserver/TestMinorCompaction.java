@@ -164,13 +164,13 @@ public class TestMinorCompaction {
     HRegionIncommon loader = new HRegionIncommon(r);
     for (int i = 0; i < compactionThreshold + 1; i++) {
       HBaseTestCase.addContent(loader, Bytes.toString(fam1), Bytes.toString(col1), firstRowBytes,
-        thirdRowBytes, i, false);
+        thirdRowBytes, i);
       HBaseTestCase.addContent(loader, Bytes.toString(fam1), Bytes.toString(col2), firstRowBytes,
-        thirdRowBytes, i, false);
+        thirdRowBytes, i);
       HBaseTestCase.addContent(loader, Bytes.toString(fam2), Bytes.toString(col1), firstRowBytes,
-        thirdRowBytes, i, false);
+        thirdRowBytes, i);
       HBaseTestCase.addContent(loader, Bytes.toString(fam2), Bytes.toString(col2), firstRowBytes,
-        thirdRowBytes, i, false);
+        thirdRowBytes, i);
       r.flushcache();
     }
 

@@ -389,7 +389,7 @@ public class TestSplitTransactionOnCluster {
     cluster.getMaster().setCatalogJanitorEnabled(false);
     try {
       // Add a bit of load up into the table so splittable.
-      TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
+      TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY, false);
       // Get region pre-split.
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
@@ -462,7 +462,7 @@ public class TestSplitTransactionOnCluster {
     cluster.getMaster().setCatalogJanitorEnabled(false);
     try {
       // Add a bit of load up into the table so splittable.
-      TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
+      TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY, false);
       // Get region pre-split.
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
@@ -691,7 +691,7 @@ public class TestSplitTransactionOnCluster {
       "testMasterRestartWhenSplittingIsPartial", new UselessTestAbortable());
     try {
       // Add a bit of load up into the table so splittable.
-      TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
+      TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY, false);
       // Get region pre-split.
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
@@ -781,7 +781,7 @@ public class TestSplitTransactionOnCluster {
       "testMasterRestartAtRegionSplitPendingCatalogJanitor", new UselessTestAbortable());
     try {
       // Add a bit of load up into the table so splittable.
-      TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
+      TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY, false);
       // Get region pre-split.
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");

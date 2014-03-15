@@ -199,7 +199,7 @@ public class TestMajorCompaction {
       createStoreFile(r);
     }
     // Add more content.
-    HBaseTestCase.addContent(new HRegionIncommon(r), Bytes.toString(COLUMN_FAMILY), false);
+    HBaseTestCase.addContent(new HRegionIncommon(r), Bytes.toString(COLUMN_FAMILY));
 
     // Now there are about 5 versions of each column.
     // Default is that there only 3 (MAXVERSIONS) versions allowed per column.
@@ -390,14 +390,14 @@ public class TestMajorCompaction {
 
   private void createStoreFile(final HRegion region, String family) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
-    HBaseTestCase.addContent(loader, family, false);
+    HBaseTestCase.addContent(loader, family);
     loader.flushcache();
   }
 
   private void createSmallerStoreFile(final HRegion region) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
     HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
-    		"bbb").getBytes(), null, false);
+    		"bbb").getBytes(), null);
     loader.flushcache();
   }
 
