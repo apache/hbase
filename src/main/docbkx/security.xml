@@ -241,6 +241,66 @@
     </para>
    </section>
 
+    <section><title>REST Gateway Impersonation Configuration</title>
+    <para>
+        By default, the REST gateway doesn't support impersonation. It accesses
+        the HBase on behalf of clients as the user configured as in the previous
+        section. To the HBase server, all requests are from the REST gateway user.
+        The actual users are unknown. You can turn on the impersonation support.
+        With impersonation, the REST gateway user is a proxy user. The HBase server
+        knows the acutal/real user of each request. So it can apply proper
+        authorizations.
+    </para>
+    <para>
+        To turn on REST gateway impersonation, we need to configure HBase servers
+        (masters and region servers) to allow proxy users; configure REST gateway
+        to enable impersonation.
+    </para>
+    <para>
+        To allow proxy users, add the following to the <code>hbase-site.xml</code>
+        file for every HBase server:
+    <programlisting><![CDATA[
+   <property>
+      <name>hadoop.security.authorization</name>
+      <value>true</value>
+   </property>
+   <property>
+      <name>hadoop.proxyuser.$USER.groups</name>
+      <value>$GROUPS</value>
+   </property>
+   <property>
+      <name>hadoop.proxyuser.$USER.hosts</name>
+      <value>$GROUPS</value>
+   </property>
+    ]]></programlisting>
+    </para>
+    <para>
+        Substitute the REST gateway proxy user for $USER, and the allowed
+        group list for $GROUPS.
+    </para>
+    <para>
+        To enable REST gateway impersonation, add the following to the
+        <code>hbase-site.xml</code> file for every REST gateway.
+    <programlisting><![CDATA[
+   <property>
+      <name>hbase.rest.authentication.type</name>
+      <value>kerberos</value>
+   </property>
+   <property>
+      <name>hbase.rest.authentication.kerberos.principal</name>
+      <value>HTTP/_HOST@HADOOP.LOCALDOMAIN</value>
+   </property>
+   <property>
+      <name>hbase.rest.authentication.kerberos.keytab</name>
+      <value>$KEYTAB</value>
+   </property>
+    ]]></programlisting>
+    </para>
+    <para>
+        Substitute the keytab for HTTP for $KEYTAB.
+    </para>
+   </section>
+
 </section>  <!-- Secure Client Access to HBase -->
 
 <section xml:id="hbase.secure.simpleconfiguration">
@@ -378,7 +438,68 @@
 
 </section>  <!-- Simple User Access to Apache HBase -->
 
-
+<section xml:id="hbase.tags">
+<title>Tags</title>
+<para>
+	Every cell can have metadata associated with it.  Adding metadata in the data part of every cell would make things difficult.
+</para>
+<para>
+	The 0.98 version of HBase solves this problem by providing Tags along with the cell format. 
+	Some of the usecases that uses the tags are Visibility labels, Cell level ACLs, etc.
+</para>
+<para>
+	HFile V3 version from 0.98 onwards supports tags and this feature can be turned on using the following configuration
+</para>
+<programlisting><![CDATA[
+      <property>
+	    <name>hfile.format.version</name>
+        <value>3</value>
+      </property>
+    ]]></programlisting>
+<para>
+	Every cell can have zero or more tags. Every tag has a type and the actual tag byte array.
+	The types <command>0-31</command> are reserved for System tags.  For example ‘1’ is reserved for ACL and ‘2’ is reserved for Visibility tags.
+</para>
+<para>
+	The way rowkeys, column families, qualifiers and values are encoded using different Encoding Algos, similarly the tags can also be encoded.  
+	Tag encoding can be turned on per CF.  Default is always turn ON.
+	To turn on the tag encoding on the HFiles use
+</para>
+<programlisting><![CDATA[
+    HColumnDescriptor#setCompressTags(boolean compressTags)
+    ]]></programlisting>
+<para>
+	Note that encoding of tags takes place only if the DataBlockEncoder is enabled for the CF.
+</para>
+<para>
+	As we compress the WAL entries using Dictionary the tags present in the WAL can also be compressed using Dictionary.  
+	Every tag is compressed individually using WAL Dictionary.  To turn ON tag compression in WAL dictionary enable the property
+</para>
+<programlisting><![CDATA[
+    <property>
+    	<name>hbase.regionserver.wal.tags.enablecompression</name>
+    	<value>true</value>
+	</property>
+    ]]></programlisting>
+<para>
+	To add tags to every cell during Puts, the following apis are provided
+</para>
+<programlisting><![CDATA[
+	Put#add(byte[] family, byte [] qualifier, byte [] value, Tag[] tag)
+	Put#add(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag)
+    ]]></programlisting>
+<para>
+	Some of the feature developed using tags are Cell level ACLs and Visibility labels.  
+	These are some features that use tags framework and allows users to gain better security features on cell level.
+</para>
+<para>
+	For details checkout 
+</para>
+<para>
+    <link linkend='hbase.accesscontrol.configuration'>Access Control</link>
+    <link linkend='hbase.visibility.labels'>Visibility labels</link>
+</para>
+</section>
 <section xml:id="hbase.accesscontrol.configuration">
     <title>Access Control</title>
     <para>
@@ -423,7 +544,7 @@
     </para>
     <orderedlist>
       <listitem>
-        <para>Row-level or per value (cell): This would require broader changes for storing the ACLs inline with rows. It is a future goal.</para>
+        <para>Row-level or per value (cell): Using Tags in HFile V3</para>
       </listitem>
       <listitem>
         <para>Push down of file ownership to HDFS: HBase is not designed for the case where files may have different permissions than the HBase system principal. Pushing file ownership down into HDFS would necessitate changes to core code. Also, while HDFS file ownership would make applying quotas easy, and possibly make bulk imports more straightforward, it is not clear that it would offer a more secure setup.</para>
@@ -609,6 +730,47 @@ Access control mechanisms are mature and fairly standardized in the relational d
     ]]></programlisting>
     </section>
 
+    <section>
+    <title>Cell level Access Control using Tags</title>
+    <para>
+    	Prior to HBase 0.98 access control was restricted to table and column family level.  Thanks to tags feature in 0.98 that allows Access control on a cell level.
+		The existing Access Controller coprocessor helps in achieving cell level access control also.
+		For details on configuring it refer to <link linkend='hbase.accesscontrol.configuration'>Access Control</link> section.
+    </para>
+    <para>
+    	The ACLs can be specified for every mutation using the APIs
+    </para>
+    <programlisting><![CDATA[
+    	Mutation.setACL(String user, Permission perms)
+	  	Mutation.setACL(Map<String, Permission> perms)
+    ]]></programlisting>
+    <para>
+    	For example, to provide read permission to an user ‘user1’ then
+    </para>
+    <programlisting><![CDATA[
+    	put.setACL(“user1”, new Permission(Permission.Action.READ))
+    ]]></programlisting>
+    <para>
+    	Generally the ACL applied on the table and CF takes precedence over Cell level ACL.  In order to make the cell level ACL to take precedence use the following API,
+    </para>
+    <programlisting><![CDATA[
+    	Mutation.setACLStrategy(boolean cellFirstStrategy)
+    ]]></programlisting>
+    <para>
+    	Please note that inorder to use this feature, HFile V3 version should be turned on.
+    </para>
+    <programlisting><![CDATA[
+   		<property>
+			<name>hfile.format.version</name>
+			<value>3</value>
+		</property>
+     ]]></programlisting>
+    <para>
+    	Note that deletes with ACLs do not have any effect.
+		To keep things simple the ACLs applied on the current Put does not change the ACL of any previous Put in the sense
+		that the ACL on the current put does not affect older versions of Put for the same row.
+    </para>
+    </section>
     <section><title>Shell Enhancements for Access Control</title>
     <para>
 The HBase shell has been extended to provide simple commands for editing and updating user permissions. The following commands have been added for access control list management:
@@ -616,8 +778,11 @@ The HBase shell has been extended to provide simple commands for editing and upd
     Grant
     <para>
     <programlisting>
-    grant &lt;user&gt; &lt;permissions&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
+    grant &lt;user|@group&gt; &lt;permissions&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
     </programlisting>
+    </para>
+    <para>
+    <code class="code">&lt;user|@group&gt;</code> is user or group  (start with character '@'), Groups are created and manipulated via the Hadoop group mapping service.
     </para>
     <para>
     <code>&lt;permissions&gt;</code> is zero or more letters from the set "RWCA": READ('R'), WRITE('W'), CREATE('C'), ADMIN('A').
@@ -630,7 +795,7 @@ The HBase shell has been extended to provide simple commands for editing and upd
     </para>
     <para>
     <programlisting>
-    revoke &lt;user&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
+    revoke &lt;user|@group&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
     </programlisting>
     </para>
     <para>
@@ -639,7 +804,7 @@ The HBase shell has been extended to provide simple commands for editing and upd
     <para>
     The <code>alter</code> command has been extended to allow ownership assignment:
     <programlisting>
-      alter 'tablename', {OWNER => 'username'}
+      alter 'tablename', {OWNER => 'username|@group'}
     </programlisting>
     </para>
     <para>
