@@ -499,9 +499,7 @@
   <body class="composite">
     <div id="banner">
       #banner( $decoration.bannerLeft "bannerLeft" )
-      <!-- Commented out since we do not use it.  St.Ack 20110906
-       -->
-      ##  #banner( $decoration.bannerRight "bannerRight" )
+      #banner( $decoration.bannerRight "bannerRight" )
       <div class="clear">
         <hr/>
       </div>
