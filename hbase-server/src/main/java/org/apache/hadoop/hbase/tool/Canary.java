@@ -730,14 +730,12 @@ public final class Canary implements Tool {
             }
             if (!regExpFound) {
               LOG.info("No RegionServerInfo found, regionServerPattern:" + rsName);
-              this.errorCode = INIT_ERROR_EXIT_CODE;
             }
           } else {
             if (fullRsAndRMap.containsKey(rsName)) {
               filteredRsAndRMap.put(rsName, fullRsAndRMap.get(rsName));
             } else {
               LOG.info("No RegionServerInfo found, regionServerName:" + rsName);
-              this.errorCode = INIT_ERROR_EXIT_CODE;
             }
           }
         }
