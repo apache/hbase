@@ -183,18 +183,29 @@ public class SnapshotFileCache implements Stoppable {
   }
 
   private synchronized void refreshCache() throws IOException {
-    // get the status of the snapshots directory
-    FileStatus status;
+    // get the status of the snapshots directory and <snapshot dir>/.tmp
+    FileStatus dirStatus, tempStatus;
     try {
-      status = fs.getFileStatus(snapshotDir);
+      dirStatus = fs.getFileStatus(snapshotDir);
     } catch (FileNotFoundException e) {
       if (this.cache.size() > 0) {
         LOG.error("Snapshot directory: " + snapshotDir + " doesn't exist");
       }
       return;
     }
+
+    try {
+      Path snapshotTmpDir = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME);
+      tempStatus = fs.getFileStatus(snapshotTmpDir);
+    } catch (FileNotFoundException e) {
+      tempStatus = dirStatus;
+    }
+
     // if the snapshot directory wasn't modified since we last check, we are done
-    if (status.getModificationTime() <= lastModifiedTime) return;
+    if (dirStatus.getModificationTime() <= lastModifiedTime &&
+        tempStatus.getModificationTime() <= lastModifiedTime) {
+      return;
+    }
 
     // directory was modified, so we need to reload our cache
     // there could be a slight race here where we miss the cache, check the directory modification
@@ -202,7 +213,8 @@ public class SnapshotFileCache implements Stoppable {
     // However, snapshot directories are only created once, so this isn't an issue.
 
     // 1. update the modified time
-    this.lastModifiedTime = status.getModificationTime();
+    this.lastModifiedTime = Math.min(dirStatus.getModificationTime(),
+                                     tempStatus.getModificationTime());
 
     // 2.clear the cache
     this.cache.clear();
