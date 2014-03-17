@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -145,6 +146,12 @@ public class TestCloneSnapshotFromClient {
     String snapshotName = "random-snapshot-" + System.currentTimeMillis();
     String tableName = "random-table-" + System.currentTimeMillis();
     admin.cloneSnapshot(snapshotName, tableName);
+  }
+
+  @Test(expected = NamespaceNotFoundException.class)
+  public void testCloneOnMissingNamespace() throws IOException, InterruptedException {
+    TableName clonedTableName = TableName.valueOf("unknownNS:clonetb");
+    admin.cloneSnapshot(snapshotName1, clonedTableName);
   }
 
   @Test
