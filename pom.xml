@@ -2029,6 +2029,7 @@
         <version>2.9.1</version>
         <configuration>
           <maxmemory>2048m</maxmemory>
+          <notimestamp>true</notimestamp>
         </configuration>
 	<reportSets>
 	  <reportSet>
