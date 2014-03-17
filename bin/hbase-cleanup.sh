@@ -31,7 +31,7 @@
 #   HBASE_SSH_OPTS Options passed to ssh when running remote commands.
 #
 
-usage="Usage: hbase-cleanup.sh (zk|hdfs|all)"
+usage="Usage: hbase-cleanup.sh (--cleanZk|--cleanHdfs|--cleanAll)"
 
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
