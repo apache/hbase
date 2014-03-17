@@ -29,7 +29,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -87,8 +86,8 @@ public class TestSnapshotFileCache {
     Path file2 = new Path(family, "file2");
 
     // create two hfiles under the snapshot
-    fs.create(file1);
-    fs.create(file2);
+    fs.createNewFile(file1);
+    fs.createNewFile(file2);
 
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
@@ -138,7 +137,7 @@ public class TestSnapshotFileCache {
     Path region = new Path(snapshot, "7e91021");
     Path family = new Path(region, "fam");
     Path file1 = new Path(family, "file1");
-    fs.create(file1);
+    fs.createNewFile(file1);
 
     // create an 'in progress' snapshot
     SnapshotDescription desc = SnapshotDescription.newBuilder().setName("working").build();
@@ -146,7 +145,7 @@ public class TestSnapshotFileCache {
     region = new Path(snapshot, "7e91021");
     family = new Path(region, "fam");
     Path file2 = new Path(family, "file2");
-    fs.create(file2);
+    fs.createNewFile(file2);
 
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
@@ -173,12 +172,12 @@ public class TestSnapshotFileCache {
     Path region = new Path(snapshot, "7e91021");
     Path family = new Path(region, "fam");
     Path file1 = new Path(family, "file1");
-    fs.create(file1);
+    fs.createNewFile(file1);
 
     // and another file in the logs directory
     Path logs = TakeSnapshotUtils.getSnapshotHLogsDir(snapshot, "server");
     Path log = new Path(logs, "me.hbase.com%2C58939%2C1350424310315.1350424315552");
-    fs.create(log);
+    fs.createNewFile(log);
 
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
@@ -203,8 +202,8 @@ public class TestSnapshotFileCache {
     Path file2 = new Path(family, "file2");
 
     // create two hfiles under the snapshot
-    fs.create(file1);
-    fs.create(file2);
+    fs.createNewFile(file1);
+    fs.createNewFile(file2);
 
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
@@ -213,10 +212,32 @@ public class TestSnapshotFileCache {
     // now delete the snapshot and add a file with a different name
     fs.delete(snapshot, true);
     Path file3 = new Path(family, "new_file");
-    fs.create(file3);
+    fs.createNewFile(file3);
 
     FSUtils.logFileSystemState(fs, rootDir, LOG);
     assertTrue("Cache didn't find new file:" + file3, cache.contains(file3.getName()));
+  }
+
+  @Test
+  public void testSnapshotTempDirReload() throws IOException {
+    long period = Long.MAX_VALUE;
+    // This doesn't refresh cache until we invoke it explicitly
+    Path snapshotDir = new Path(SnapshotDescriptionUtils.getSnapshotsDir(rootDir),
+        SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME);
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+
+    // Add a new snapshot
+    Path snapshot1 = new Path(snapshotDir, "snapshot1");
+    Path file1 = new Path(new Path(new Path(snapshot1, "7e91021"), "fam"), "file1");
+    fs.createNewFile(file1);
+    assertTrue(cache.contains(file1.getName()));
+
+    // Add another snapshot
+    Path snapshot2 = new Path(snapshotDir, "snapshot2");
+    Path file2 = new Path(new Path(new Path(snapshot2, "7e91021"), "fam2"), "file2");
+    fs.createNewFile(file2);
+    assertTrue(cache.contains(file2.getName()));
   }
 
   class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
