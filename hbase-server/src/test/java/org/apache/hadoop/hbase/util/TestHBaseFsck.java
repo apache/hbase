@@ -139,6 +139,7 @@ public class TestHBaseFsck {
     AssignmentManager assignmentManager =
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
     regionStates = assignmentManager.getRegionStates();
+    TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, true);
   }
 
   @AfterClass
