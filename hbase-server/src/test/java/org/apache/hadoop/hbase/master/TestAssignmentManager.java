@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -56,8 +57,8 @@ import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
-import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
+import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -611,6 +612,7 @@ public class TestAssignmentManager {
     Mockito.when(implementation.scan(
       (RpcController)Mockito.any(), (ScanRequest)Mockito.any())).
       thenAnswer(new Answer<ScanResponse>() {
+          @Override
           public ScanResponse answer(InvocationOnMock invocation) throws Throwable {
             PayloadCarryingRpcController controller = (PayloadCarryingRpcController) invocation
                 .getArguments()[0];
@@ -716,6 +718,7 @@ public class TestAssignmentManager {
       this.server, this.serverManager);
     Watcher zkw = new ZooKeeperWatcher(HBaseConfiguration.create(), "unittest",
         null) {
+      @Override
       public RecoverableZooKeeper getRecoverableZooKeeper() {
         return recoverableZk;
       }
@@ -1111,6 +1114,7 @@ public class TestAssignmentManager {
     final List<CellScannable> rows = new ArrayList<CellScannable>(1);
     rows.add(r);
     Answer<ScanResponse> ans = new Answer<ClientProtos.ScanResponse>() {
+      @Override
       public ScanResponse answer(InvocationOnMock invocation) throws Throwable {
         PayloadCarryingRpcController controller = (PayloadCarryingRpcController) invocation
             .getArguments()[0];
@@ -1239,6 +1243,7 @@ public class TestAssignmentManager {
     // Thats ok because we make a new zk watcher for each test.
     watcher.registerListenerFirst(am);
     Thread t = new Thread("RunAmJoinCluster") {
+      @Override
       public void run() {
         // Call the joinCluster function as though we were doing a master
         // failover at this point. It will stall just before we go to add
@@ -1360,5 +1365,36 @@ public class TestAssignmentManager {
     am.balance(plan);
     assertFalse("The region should not in transition",
       regionStates.isRegionInTransition(hri));
+  }
+
+  /**
+   * Tests an on-the-fly RPC that was scheduled for the earlier RS on the same port
+   * for openRegion. AM should assign this somewhere else. (HBASE-9721)
+   */
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testOpenCloseRegionRPCIntendedForPreviousServer() throws Exception {
+    Mockito.when(this.serverManager.sendRegionOpen(Mockito.eq(SERVERNAME_B), Mockito.eq(REGIONINFO),
+      Mockito.anyInt(), (List<ServerName>)Mockito.any()))
+      .thenThrow(new DoNotRetryIOException());
+    this.server.getConfiguration().setInt("hbase.assignment.maximum.attempts", 100);
+
+    HRegionInfo hri = REGIONINFO;
+    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(
+      server.getConfiguration());
+    // Create an AM.
+    AssignmentManager am = new AssignmentManager(this.server,
+      this.serverManager, ct, balancer, null, null, master.getTableLockManager());
+    RegionStates regionStates = am.getRegionStates();
+    try {
+      am.regionPlans.put(REGIONINFO.getEncodedName(),
+        new RegionPlan(REGIONINFO, null, SERVERNAME_B));
+
+      // Should fail once, but succeed on the second attempt for the SERVERNAME_A
+      am.assign(hri, true, false);
+    } finally {
+      assertEquals(SERVERNAME_A, regionStates.getRegionState(REGIONINFO).getServerName());
+    }
   }
 }
