@@ -353,7 +353,7 @@ applyPatch () {
 
 ###############################################################################
 ### Attempt to compile against the hadoop 1.1
-checkHadoop20Compile () {
+checkHadoop11Compile () {
   echo ""
   echo ""
   echo "======================================================================"
@@ -376,8 +376,7 @@ checkHadoop20Compile () {
     JIRA_COMMENT="$JIRA_COMMENT
 
     {color:red}-1 hadoop1.1{color}.  The patch failed to compile against the hadoop 1.1 profile."
-    submitJiraComment 1
-    cleanupAndExit 1
+	  return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
@@ -408,8 +407,8 @@ checkHadoop10Compile () {
     {color:red}-1 hadoop1.0{color}.  The patch failed to compile against the hadoop 1.0 profile.
     Here is snippet of errors:
     {code}$ERR{code}"
-    submitJiraComment 1
-    cleanupAndExit 1
+
+	  return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
@@ -908,7 +907,7 @@ checkAntiPatterns
 (( RESULT = RESULT + $? ))
 checkHadoop10Compile
 (( RESULT = RESULT + $? ))
-checkHadoop20Compile
+checkHadoop11Compile
 (( RESULT = RESULT + $? ))
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
