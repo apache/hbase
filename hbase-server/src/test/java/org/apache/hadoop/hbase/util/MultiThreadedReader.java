@@ -180,8 +180,8 @@ public class MultiThreadedReader extends MultiThreadedAction
       startTimeMs = System.currentTimeMillis();
       curKey = startKey;
       long [] keysForThisReader = new long[batchSize];
-      int readingRandomKeyStartIndex = -1;
       while (curKey < endKey && !aborted) {
+        int readingRandomKeyStartIndex = -1;
         int numKeys = 0;
         // if multiGet, loop until we have the number of keys equal to the batch size
         do {
@@ -204,7 +204,7 @@ public class MultiThreadedReader extends MultiThreadedAction
             readingRandomKeyStartIndex = numKeys;
           }
           numKeys++;
-        } while (numKeys < batchSize);
+        } while (numKeys < batchSize && curKey < endKey && !aborted);
 
         if (numKeys > 0) { //meaning there is some key to read
           readKey(keysForThisReader);
