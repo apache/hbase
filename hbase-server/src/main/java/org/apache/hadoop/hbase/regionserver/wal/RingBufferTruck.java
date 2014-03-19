@@ -26,7 +26,9 @@ import com.lmax.disruptor.EventFactory;
 /**
  * A 'truck' to carry a payload across the {@link FSHLog} ring buffer from Handler to WAL.
  * Has EITHER a {@link FSWALEntry} for making an append OR it has a {@link SyncFuture} to
- * represent a 'sync' invocation. Immutable but instances get recycled on the ringbuffer.
+ * represent a 'sync' invocation. Truck instances are reused by the disruptor when it gets
+ * around to it so their payload references must be discarded on consumption to release them
+ * to GC.
  */
 @InterfaceAudience.Private
 class RingBufferTruck {
@@ -42,28 +44,73 @@ class RingBufferTruck {
    */
   private Span span;
 
+  /**
+   * Load the truck with a {@link FSWALEntry} and associated {@link Span}.
+   */
   void loadPayload(final FSWALEntry entry, final Span span) {
     this.entry = entry;
     this.span = span;
     this.syncFuture = null;
   }
 
+  /**
+   * Load the truck with a {@link SyncFuture}.
+   */
   void loadPayload(final SyncFuture syncFuture) {
     this.syncFuture = syncFuture;
     this.entry = null;
     this.span = null;
   }
 
-  FSWALEntry getFSWALEntryPayload() {
-    return this.entry;
+  /**
+   * return {@code true} when this truck is carrying a {@link FSWALEntry},
+   * {@code false} otherwise.
+   */
+  boolean hasFSWALEntryPayload() {
+    return this.entry != null;
   }
 
-  SyncFuture getSyncFuturePayload() {
-    return this.syncFuture;
+  /**
+   * return {@code true} when this truck is carrying a {@link SyncFuture},
+   * {@code false} otherwise.
+   */
+  boolean hasSyncFuturePayload() {
+    return this.syncFuture != null;
   }
 
-  Span getSpanPayload() {
-    return this.span;
+  /**
+   * return {@code true} when this truck is carrying a {@link Span},
+   * {@code false} otherwise.
+   */
+  boolean hasSpanPayload() {
+    return this.span != null;
+  }
+
+  /**
+   * Unload the truck of its {@link FSWALEntry} payload. The internal refernce is released.
+   */
+  FSWALEntry unloadFSWALEntryPayload() {
+    FSWALEntry ret = this.entry;
+    this.entry = null;
+    return ret;
+  }
+
+  /**
+   * Unload the truck of its {@link SyncFuture} payload. The internal refernce is released.
+   */
+  SyncFuture unloadSyncFuturePayload() {
+    SyncFuture ret = this.syncFuture;
+    this.syncFuture = null;
+    return ret;
+  }
+
+  /**
+   * Unload the truck of its {@link Span} payload. The internal refernce is released.
+   */
+  Span unloadSpanPayload() {
+    Span ret = this.span;
+    this.span = null;
+    return ret;
   }
 
   /**
