@@ -410,6 +410,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
       case ConnectedReadOnly:
       case SaslAuthenticated:
+      case AuthFailed:
         break;
 
       default:
