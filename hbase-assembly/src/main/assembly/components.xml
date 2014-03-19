@@ -19,8 +19,7 @@
  */
 -->
 
-<!--Shared by hadoop-one-compat.xml and hadoop-two-compat.xml.
-     Does common copying-->
+<!--Shared.  Does common copying-->
 <component>
   <fileSets>
     <!--Copy over the site if built as docs dir -->

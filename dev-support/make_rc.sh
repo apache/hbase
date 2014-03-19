@@ -44,7 +44,7 @@ if [ "$MAVEN_OPTS" != "" ]; then
 fi
 
 # Make a dir to save tgzs in.
-d=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
+d=`date -u +"%Y%m%dT%H%M%SZ"`
 archivedir="${HBASE_HOME}/../`basename $0`.$d"
 echo "Archive dir ${archivedir}"
 mkdir -p "${archivedir}" 
@@ -54,10 +54,10 @@ function tgz_mover {
 }
 
 function deploy {
-  MAVEN_OPTS="${mvnopts}" ${mvn} -f pom.xml.$1 clean install -DskipTests -Prelease
-  MAVEN_OPTS="${mvnopts}" ${mvn} -f pom.xml.$1 install -DskipTests site assembly:single -Prelease 
+  MAVEN_OPTS="${mvnopts}" ${mvn} clean install -DskipTests -Prelease
+  MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests site assembly:single -Prelease 
   tgz_mover
-  MAVEN_OPTS="${mvnopts}" ${mvn} -f pom.xml.$1 deploy -DskipTests -Papache-release 
+  MAVEN_OPTS="${mvnopts}" ${mvn} deploy -DskipTests -Papache-release 
 }
 
 # Build src tarball
@@ -65,8 +65,7 @@ MAVEN_OPTS="${mvnopts}" ${mvn} clean install -DskipTests assembly:single -Dassem
 tgz_mover
 
 # Now do the two builds,  one for hadoop1, then hadoop2
-deploy "hadoop1"
-deploy "hadoop2"
+deploy
 
 echo "DONE"
 echo "Check the content of ${archivedir}.  If good, sign and push to people.apache.org"
