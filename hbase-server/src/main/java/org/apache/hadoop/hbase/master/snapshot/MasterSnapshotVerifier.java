@@ -156,23 +156,26 @@ public final class MasterSnapshotVerifier {
       throw new CorruptedSnapshotException(msg);
     }
 
+    String errorMsg = "";
     if (snapshotRegions.size() != regions.size()) {
-      String msg = "Regions moved during the snapshot '" + 
+      errorMsg = "Regions moved during the snapshot '" + 
                    ClientSnapshotDescriptionUtils.toString(snapshot) + "'. expected=" +
-                   regions.size() + " snapshotted=" + snapshotRegions.size();
-      LOG.error(msg);
-      throw new CorruptedSnapshotException(msg);
+                   regions.size() + " snapshotted=" + snapshotRegions.size() + ".";
+      LOG.error(errorMsg);
     }
 
     for (HRegionInfo region : regions) {
       if (!snapshotRegions.contains(region.getEncodedName())) {
         // could happen due to a move or split race.
-        String msg = "No region directory found for region:" + region;
-        LOG.error(msg);
-        throw new CorruptedSnapshotException(msg, snapshot);
+        String mesg = " No snapshot region directory found for region:" + region;
+        if (errorMsg.isEmpty()) errorMsg = mesg;
+        LOG.error(mesg);
       }
 
       verifyRegion(fs, snapshotDir, region);
+    }
+    if (!errorMsg.isEmpty()) {
+      throw new CorruptedSnapshotException(errorMsg);
     }
   }
 
