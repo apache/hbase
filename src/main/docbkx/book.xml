@@ -39,14 +39,14 @@
            </inlinemediaobject>
        </link>
     </subtitle>
-    <copyright><year>2013</year><holder>Apache Software Foundation.
+    <copyright><year>2014</year><holder>Apache Software Foundation.
         All Rights Reserved.  Apache Hadoop, Hadoop, MapReduce, HDFS, Zookeeper, HBase, and the HBase project logo are trademarks of the Apache Software Foundation.
         </holder>
     </copyright>
       <abstract>
     <para>This is the official reference guide of
     <link xlink:href="http://www.hbase.org">Apache HBase&#153;</link>,
-    a distributed, versioned, column-oriented database built on top of
+    a distributed, versioned, big data store built on top of
     <link xlink:href="http://hadoop.apache.org/">Apache Hadoop&#153;</link> and
     <link xlink:href="http://zookeeper.apache.org/">Apache ZooKeeper&#153;</link>.
       </para>
@@ -102,7 +102,8 @@
       By convention, a column name is made of its column family prefix and a
       <emphasis>qualifier</emphasis>. For example, the
       column
-      <emphasis>contents:html</emphasis> is of the column family <varname>contents</varname>
+      <emphasis>contents:html</emphasis> is made up of the column family <varname>contents</varname>
+      and <varname>html</varname> qualifier.
           The colon character (<literal
           moreinfo="none">:</literal>) delimits the column family from the
           column family <emphasis>qualifier</emphasis>.
@@ -215,8 +216,8 @@ create_namespace 'my_ns'
 #create my_table in my_ns namespace
 create 'my_ns:my_table', 'fam'
 
-#delete namespace
-delete_namespace 'my_ns'
+#drop namespace
+drop_namespace 'my_ns'
 
 #alter namespace
 alter_namespace 'my_ns', {METHOD => 'set', 'PROPERTY_NAME' => 'PROPERTY_VALUE'}
@@ -655,8 +656,71 @@ htable.put(put);
   <para>See <link xlink:href="http://hbase.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#package_description">
   HBase and MapReduce</link> up in javadocs.
   Start there.  Below is some additional help.</para>
-  <para>For more information about MapReduce (i.e., the framework in general), see the
-   <link xlink:href="http://hadoop.apache.org/common/docs/current/mapred_tutorial.html">Hadoop MapReduce Tutorial</link>.</para>
+  <para>For more information about MapReduce (i.e., the framework in general), see the Hadoop site (TODO: Need good links here --
+      we used to have some but they rotted against apache hadoop).</para>
+  <caution>
+    <title>Notice to Mapreduce users of HBase 0.96.1 and above</title>
+    <para>Some mapreduce jobs that use HBase fail to launch. The symptom is an
+    exception similar to the following:
+    <programlisting>
+Exception in thread "main" java.lang.IllegalAccessError: class
+    com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass
+    com.google.protobuf.LiteralByteString
+    at java.lang.ClassLoader.defineClass1(Native Method)
+    at java.lang.ClassLoader.defineClass(ClassLoader.java:792)
+    at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)
+    at java.net.URLClassLoader.defineClass(URLClassLoader.java:449)
+    at java.net.URLClassLoader.access$100(URLClassLoader.java:71)
+    at java.net.URLClassLoader$1.run(URLClassLoader.java:361)
+    at java.net.URLClassLoader$1.run(URLClassLoader.java:355)
+    at java.security.AccessController.doPrivileged(Native Method)
+    at java.net.URLClassLoader.findClass(URLClassLoader.java:354)
+    at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
+    at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
+    at
+    org.apache.hadoop.hbase.protobuf.ProtobufUtil.toScan(ProtobufUtil.java:818)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.convertScanToString(TableMapReduceUtil.java:433)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:186)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:147)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:270)
+    at
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:100)
+...
+</programlisting>
+    This is because of an optimization introduced in <link
+    xlink:href="https://issues.apache.org/jira/browse/HBASE-9867">HBASE-9867</link>
+    that inadvertently introduced a classloader dependency.
+    </para>
+    <para>This affects both jobs using the <code>-libjars</code> option and
+    "fat jar," those which package their runtime dependencies in a nested
+    <code>lib</code> folder.</para>
+    <para>In order to satisfy the new classloader requirements,
+    hbase-protocol.jar must be included in Hadoop's classpath. This can be
+    resolved system-wide by including a reference to the hbase-protocol.jar in
+    hadoop's lib directory, via a symlink or by copying the jar into the new
+    location.</para>
+    <para>This can also be achieved on a per-job launch basis by including it
+    in the <code>HADOOP_CLASSPATH</code> environment variable at job submission
+    time. When launching jobs that package their dependencies, all three of the
+    following job launching commands satisfy this requirement:</para>
+<programlisting>
+$ HADOOP_CLASSPATH=/path/to/hbase-protocol.jar:/path/to/hbase/conf hadoop jar MyJob.jar MyJobMainClass
+$ HADOOP_CLASSPATH=$(hbase mapredcp):/path/to/hbase/conf hadoop jar MyJob.jar MyJobMainClass
+$ HADOOP_CLASSPATH=$(hbase classpath) hadoop jar MyJob.jar MyJobMainClass
+</programlisting>
+  <para>For jars that do not package their dependencies, the following command
+  structure is necessary:</para>
+<programlisting>
+$ HADOOP_CLASSPATH=$(hbase mapredcp):/etc/hbase/conf hadoop jar MyApp.jar MyJobMainClass -libjars $(hbase mapredcp | tr ':' ',') ...
+</programlisting>
+  <para>See also <link
+  xlink:href="https://issues.apache.org/jira/browse/HBASE-10304">HBASE-10304</link>
+  for further discussion of this issue.</para>
+  </caution>
   <section xml:id="splitter">
     <title>Map-Task Splitting</title>
     <section xml:id="splitter.default">
@@ -1048,7 +1112,7 @@ if (!b) {
       <section xml:id="arch.overview.hbasehdfs">
         <title>What Is The Difference Between HBase and Hadoop/HDFS?</title>
           <para><link xlink:href="http://hadoop.apache.org/hdfs/">HDFS</link> is a distributed file system that is well suited for the storage of large files.
-          It's documentation states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files.
+          Its documentation states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files.
           HBase, on the other hand, is built on top of HDFS and provides fast record lookups (and updates) for large tables.
           This can sometimes be a point of conceptual confusion.  HBase internally puts your data in indexed "StoreFiles" that exist
           on HDFS for high-speed lookups.  See the <xref linkend="datamodel" /> and the rest of this chapter for more information on how HBase achieves its goals.
@@ -1187,7 +1251,7 @@ connection.close();</programlisting>
 	      </para>
 	      <para>Note: <code>htable.delete(Delete);</code> does not go in the writebuffer!  This only applies to Puts.
 	      </para>
-	      <para>For additional information on write durability, review the <link xlink:href="acid-semantics.html">ACID semantics</link> page.
+	      <para>For additional information on write durability, review the <link xlink:href="../acid-semantics.html">ACID semantics</link> page.
 	      </para>
        <para>For fine-grained control of batching of
            <classname>Put</classname>s or <classname>Delete</classname>s,
@@ -1777,9 +1841,12 @@ rs.close();
            <orderedlist>
              <listitem>First replica is written to local node
              </listitem>
-             <listitem>Second replica is written to another node in same rack
+             <listitem>Second replica is written to a random node on another rack
              </listitem>
-             <listitem>Third replica is written to a node in another rack (if sufficient nodes)
+             <listitem>Third replica is written on the same rack as the second, but on a different node chosen randomly
+             </listitem>
+             <listitem>Subsequent replicas are written on random nodes on the cluster
+<footnote><para>See <emphasis>Replica Placement: The First Baby Steps</emphasis> on this page: <link xlink:href="http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html">HDFS Architecture</link></para></footnote>
              </listitem>
            </orderedlist>
           Thus, HBase eventually achieves locality for a region after a flush or a compaction.
@@ -1788,13 +1855,18 @@ rs.close();
           in the region, or the table is compacted and StoreFiles are re-written, they will become "local"
           to the RegionServer.
         </para>
-        <para>For more information, see <link xlink:href="http://hadoop.apache.org/common/docs/r0.20.205.0/hdfs_design.html#Replica+Placement%3A+The+First+Baby+Steps">HDFS Design on Replica Placement</link>
+        <para>For more information, see <emphasis>Replica Placement: The First Baby Steps</emphasis> on this page: <link xlink:href="http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html">HDFS Architecture</link>
         and also Lars George's blog on <link xlink:href="http://www.larsgeorge.com/2010/05/hbase-file-locality-in-hdfs.html">HBase and HDFS locality</link>.
         </para>
       </section>
 
       <section xml:id="arch.region.splits">
         <title>Region Splits</title>
+        <para>Regions split when they reach a configured threshold.
+        Below we treat the topic in short.  For a longer exposition,
+        see <link xlink:href="http://hortonworks.com/blog/apache-hbase-region-splitting-and-merging/">Apache HBase Region Splitting and Merging</link>
+        by our Enis Soztutar.
+        </para>
 
         <para>Splits run unaided on the RegionServer; i.e. the Master does not
         participate. The RegionServer splits a region, offlines the split
@@ -2087,6 +2159,94 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           will be targeted for compaction and the resulting files may still be under the min-size and require further compaction, etc.
           </para>
         </section>
+<section xml:id="ops.stripe"><title>Experimental: stripe compactions</title>
+<para>
+Stripe compactions is an experimental feature added in HBase 0.98 which aims to improve compactions for large regions or non-uniformly distributed row keys. In order to achieve smaller and/or more granular compactions, the store files within a region are maintained separately for several row-key sub-ranges, or "stripes", of the region. The division is not visible to the higher levels of the system, so externally each region functions as before.
+</para><para>
+This feature is fully compatible with default compactions - it can be enabled for existing tables, and the table will continue to operate normally if it's disabled later.
+</para>
+</section><section xml:id="ops.stripe.when"><title>When to use</title>
+<para>You might want to consider using this feature if you have:
+<itemizedlist>
+<listitem>
+large regions (in that case, you can get the positive effect of much smaller regions without additional memstore and region management overhead); or
+</listitem><listitem>
+non-uniform row keys, e.g. time dimension in a key (in that case, only the stripes receiving the new keys will keep compacting - old data will not compact as much, or at all).
+</listitem>
+</itemizedlist>
+</para><para>
+According to perf testing performed, in these case the read performance can improve somewhat, and the read and write performance variability due to compactions is greatly reduced. There's overall perf improvement on large, non-uniform row key regions (hash-prefixed timestamp key) over long term. All of these performance gains are best realized when table is already large. In future, the perf improvement might also extend to region splits.
+</para>
+<section xml:id="ops.stripe.enable"><title>How to enable</title>
+<para>
+To use stripe compactions for a table or a column family, you should set its  <varname>hbase.hstore.engine.class</varname> to <varname>org.apache.hadoop.hbase.regionserver.StripeStoreEngine</varname>. Due to the nature of compactions, you also need to set the blocking file count to a high number (100 is a good default, which is 10 times the normal default of 10). If changing the existing table, you should do it when it is disabled. Examples:
+<programlisting>
+alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
+
+alter 'orders_table', {NAME => 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}}
+
+create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
+</programlisting>
+</para><para>
+Then, you can configure the other options if needed (see below) and enable the table.
+To switch back to default compactions, set <varname>hbase.hstore.engine.class</varname> to nil to unset it; or set it explicitly to "<varname>org.apache.hadoop.hbase.regionserver.DefaultStoreEngine</varname>" (this also needs to be done on a disabled table).
+</para><para>
+When you enable a large table after changing the store engine either way, a major compaction will likely be performed on most regions. This is not a problem with new tables.
+</para>
+</section><section xml:id="ops.stripe.config"><title>How to configure</title>
+<para>
+All of the settings described below are best set on table/cf level (with the table disabled first, for the settings to apply), similar to the above, e.g.
+<programlisting>
+alter 'orders_table', CONFIGURATION => {'key' => 'value', ..., 'key' => 'value'}}
+</programlisting>
+</para>
+<section xml:id="ops.stripe.config.sizing"><title>Region and stripe sizing</title>
+<para>
+Based on your region sizing, you might want to also change your stripe sizing. By default, your new regions will start with one stripe. When the stripe is too big (16 memstore flushes size), on next compaction it will be split into two stripes. Stripe splitting will continue in a similar manner as the region grows, until the region itself is big enough to split (region split will work the same as with default compactions).
+</para><para>
+You can improve this pattern for your data. You should generally aim at stripe size of at least 1Gb, and about 8-12 stripes for uniform row keys - so, for example if your regions are 30 Gb, 12x2.5Gb stripes might be a good idea.
+</para><para>
+The settings are as follows:
+<table frame='all'><tgroup cols='2' align='left' colsep='1' rowsep='1'><colspec colname='c1'/><colspec colname='c2'/>
+<thead><row><entry>Setting</entry><entry>Notes</entry></row></thead>
+<tbody>
+<row><entry>
+<varname>hbase.store.stripe.initialStripeCount</varname>
+</entry><entry>
+Initial stripe count to create. You can use it as follows:
+<itemizedlist>
+<listitem>
+for relatively uniform row keys, if you know the approximate target number of stripes from the above, you can avoid some splitting overhead by starting w/several stripes (2, 5, 10...). Note that if the early data is not representative of overall row key distribution, this will not be as efficient.
+</listitem><listitem>
+for existing tables with lots of data, you can use this to pre-split stripes.
+</listitem><listitem>
+for e.g. hash-prefixed sequential keys, with more than one hash prefix per region, you know that some pre-splitting makes sense.
+</listitem>
+</itemizedlist>
+</entry></row><row><entry>
+<varname>hbase.store.stripe.sizeToSplit</varname>
+</entry><entry>
+Maximum stripe size before it's split. You can use this in conjunction with the next setting to control target stripe size (sizeToSplit = splitPartsCount * target stripe size), according to the above sizing considerations.
+</entry></row><row><entry>
+<varname>hbase.store.stripe.splitPartCount</varname>
+</entry><entry>
+The number of new stripes to create when splitting one. The default is 2, and is good for most cases. For non-uniform row keys, you might experiment with increasing the number somewhat (3-4), to isolate the arriving updates into narrower slice of the region with just one split instead of several.
+</entry></row>
+</tbody>
+</tgroup></table>
+</para>
+</section><section xml:id="ops.stripe.config.memstore"><title>Memstore sizing</title>
+<para>
+By default, the flush creates several files from one memstore, according to existing stripe boundaries and row keys to flush. This approach minimizes write amplification, but can be undesirable if memstore is small and there are many stripes (the files will be too small).
+</para><para>
+In such cases, you can set <varname>hbase.store.stripe.compaction.flushToL0</varname> to true. This will cause  flush to create a single file instead; when at least <varname>hbase.store.stripe.compaction.minFilesL0</varname> such files (by default, 4) accumulate, they will be compacted into striped files.</para>
+</section><section xml:id="ops.stripe.config.compact"><title>Normal compaction configuration</title>
+<para>
+All the settings that apply to normal compactions (file size limits, etc.) apply to stripe compactions. The exception are min and max number of files, which are set to higher values by default because the files in stripes are smaller. To control these for stripe compactions, use <varname>hbase.store.stripe.compaction.minFiles</varname> and <varname>.maxFiles</varname>.
+</para>
+</section>
+</section>
+</section>
       </section>  <!--  compaction -->
 
      </section>  <!--  store -->
@@ -2107,6 +2267,11 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
         cluster. Using bulk load will use less CPU and network resources than
         simply using the HBase API.
       </para>
+    </section>
+    <section xml:id="arch.bulk.load.limitations"><title>Bulk Load Limitations</title>
+        <para>As bulk loading bypasses the write path, the WAL doesn’t get written to as part of the process.
+            Replication works by reading the WAL files so it won’t see the bulk loaded data – and the same goes for the edits that use Put.setWriteToWAL(true).
+            One way to handle that is to ship the raw files or the HFiles to the other cluster and do the other processing there.</para>
     </section>
     <section xml:id="arch.bulk.load.arch"><title>Bulk Load Architecture</title>
       <para>
@@ -2188,6 +2353,10 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
     </section>
     <section xml:id="arch.bulk.load.also"><title>See Also</title>
       <para>For more information about the referenced utilities, see <xref linkend="importtsv"/> and  <xref linkend="completebulkload"/>.
+      </para>
+      <para>
+          See <link xlink:ref="http://blog.cloudera.com/blog/2013/09/how-to-use-hbase-bulk-loading-and-why/">How-to: Use HBase Bulk Loading, and Why</link>
+          for a recent blog on current state of bulk loading.
       </para>
     </section>
     <section xml:id="arch.bulk.load.adv"><title>Advanced Usage</title>
@@ -2738,7 +2907,13 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
             <listitem>
                 <para>
                     Build and install <link xlink:href="http://code.google.com/p/snappy/">snappy</link> on all nodes
-                    of your cluster (see below)
+                    of your cluster (see below).  HBase nor Hadoop cannot include snappy because of licensing issues (The
+                    hadoop libhadoop.so under its native dir does not include snappy; of note, the shipped .so
+                    may be for 32-bit architectures -- this fact has tripped up folks in the past with them thinking
+                    it 64-bit).  The notes below are about installing snappy for HBase use.  You may want snappy
+                    available in your hadoop context also.  That is not covered here.
+                    HBase and Hadoop find the snappy .so in different locations currently: Hadoop picks those files in
+                    <filename>./lib</filename> while HBase finds the .so in <filename>./lib/[PLATFORM]</filename>.
                 </para>
             </listitem>
             <listitem>
@@ -2763,6 +2938,8 @@ hbase> describe 't1'</programlisting>
     <title>
     Installation
     </title>
+    <para>Snappy is used by hbase to compress HFiles on flush and when compacting.
+    </para>
     <para>
         You will find the snappy library file under the .libs directory from your Snappy build (For example
         /home/hbase/snappy-1.0.5/.libs/). The file is called libsnappy.so.1.x.x where 1.x.x is the version of the snappy
@@ -2808,7 +2985,9 @@ hbase> describe 't1'</programlisting>
   <appendix>
       <title xml:id="ycsb"><link xlink:href="https://github.com/brianfrankcooper/YCSB/">YCSB: The Yahoo! Cloud Serving Benchmark</link> and HBase</title>
       <para>TODO: Describe how YCSB is poor for putting up a decent cluster load.</para>
-      <para>TODO: Describe setup of YCSB for HBase</para>
+      <para>TODO: Describe setup of YCSB for HBase.  In particular, presplit your tables before you start
+          a run.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-4163">HBASE-4163 Create Split Strategy for YCSB Benchmark</link>
+          for why and a little shell command for how to do it.</para>
       <para>Ted Dunning redid YCSB so it's mavenized and added facility for verifying workloads.  See <link xlink:href="https://github.com/tdunning/YCSB">Ted Dunning's YCSB</link>.</para>
 
   </appendix>
@@ -3293,7 +3472,7 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
        <section xml:id="other.info.videos"><title>HBase Videos</title>
          <para>Introduction to HBase
             <itemizedlist>
-			  <listitem><link xlink:href="http://www.cloudera.com/videos/chicago_data_summit_apache_hbase_an_introduction_todd_lipcon">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
+              <listitem><link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/presentation/chicago_data_summit_apache_hbase_an_introduction_todd_lipcon.html">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
 			  </listitem>
 			  <listitem><link xlink:href="http://www.cloudera.com/videos/intorduction-hbase-todd-lipcon">Introduction to HBase</link> by Todd Lipcon (2010).
 			  </listitem>
@@ -3305,7 +3484,7 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
          </para>
        </section>
        <section xml:id="other.info.pres"><title>HBase Presentations (Slides)</title>
-         <para><link xlink:href="http://www.cloudera.com/resource/hadoop-world-2011-presentation-slides-advanced-hbase-schema-design">Advanced HBase Schema Design</link> by Lars George (Hadoop World 2011).
+         <para><link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/hadoopworld/hadoop-world-2011-presentation-video-advanced-hbase-schema-design.html">Advanced HBase Schema Design</link> by Lars George (Hadoop World 2011).
          </para>
          <para><link xlink:href="http://www.slideshare.net/cloudera/chicago-data-summit-apache-hbase-an-introduction">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
          </para>
@@ -3373,67 +3552,7 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
        </section>
   </appendix>
 
-  <appendix xml:id="tracing" ><title>Enabling Dapper-like Tracing in HBase</title>
-<para><link xlink:href="https://issues.apache.org/jira/browse/HBASE-6449">HBASE-6449</link> added support
-for tracing requests through HBase, using the open source tracing library,
-<link xlink:href="http://github.com/cloudera/htrace">HTrace</link>. Setting up tracing is quite simple,
-however it currently requires some very minor changes to your client code (it would not be very difficult to remove this requirement).
-</para>
-<section xml:id="tracing.spanreceivers"><title>SpanReceivers</title>
-<para>The tracing system works by collecting information in structs called ‘Spans’.
-It is up to you to choose how you want to receive this information by implementing the
-<classname>SpanReceiver</classname> interface, which defines one method:
-<programlisting>public void receiveSpan(Span span);</programlisting>
-This method serves as a callback whenever a span is completed. HTrace allows you to use
-as many SpanReceivers as you want so you can easily send trace information to multiple destinations.
-</para>
-
-<para>Configure what SpanReceivers you’d like to use by putting a comma separated list of the
-fully-qualified class name of classes implementing <classname>SpanReceiver</classname> in
-<filename>hbase-site.xml</filename> property: <varname>hbase.trace.spanreceiver.classes</varname>.
-</para>
-
-<para>HBase includes a <classname>HBaseLocalFileSpanReceiver</classname> that writes all span
-information to local files in a JSON-based format. The <classname>HBaseLocalFileSpanReceiver</classname>
-looks in <filename>hbase-site.xml</filename> for a <varname>hbase.trace.spanreceiver.localfilespanreceiver.filename</varname>
-property with a value describing the name of the file to which nodes should write their span information.
-</para>
-
-<para>If you do not want to use the included <classname>HBaseLocalFileSpanReceiver</classname>,
-you are encouraged to write your own receiver (take a look at <classname>HBaseLocalFileSpanReceiver</classname>
-for an example). If you think others would benefit from your receiver, file a JIRA or send a pull request to
-<link xlink:href="http://github.com/cloudera/htrace">HTrace</link>.
-</para>
-</section>
-<section xml:id="tracing.client.modifications">
-<title>Client Modifications</title>
-<para>Currently, you must turn on tracing in your client code. To do this, you simply turn on tracing for
-requests you think are interesting, and turn it off when the request is done.
-</para>
-
-<para>For example, if you wanted to trace all of your get operations, you change this:
-<programlisting>HTable table = new HTable(...);
-Get get = new Get(...);</programlisting>
-
-into:
-
-<programlisting>Span getSpan = Trace.startSpan(“doing get”, Sampler.ALWAYS);
-try {
-  HTable table = new HTable(...);
-  Get get = new Get(...);
-...
-} finally {
-  getSpan.stop();
-}</programlisting>
-
-If you wanted to trace half of your ‘get’ operations, you would pass in:
-<programlisting>new ProbabilitySampler(0.5)</programlisting> in lieu of <varname>Sampler.ALWAYS</varname> to <classname>Trace.startSpan()</classname>.
-See the HTrace <filename>README</filename> for more information on Samplers.
-</para>
-</section>
-
-  </appendix>
-
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="tracing.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="rpc.xml" />
 
   <index xml:id="book_index">

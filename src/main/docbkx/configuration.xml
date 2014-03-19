@@ -56,7 +56,8 @@ to ensure well-formedness of your document after an edit session.
     an edit to an HBase configuration, make sure you copy the
     content of the <filename>conf</filename> directory to
     all nodes of the cluster.  HBase will not do this for you.
-    Use <command>rsync</command>.</para>
+    Use <command>rsync</command>.  For most configuration, a restart is
+needed for servers to pick up changes (caveat dynamic config. to be described later below).</para>
 
     <section xml:id="basic.prerequisites">
     <title>Basic Prerequisites</title>
@@ -67,8 +68,7 @@ to ensure well-formedness of your document after an edit session.
         <title>Java</title>
         <para>Just like Hadoop, HBase requires at least Java 6 from
         <link xlink:href="http://www.java.com/download/">Oracle</link>.
-        Java 7 should work and can even be faster than Java 6, but almost all testing
-        has been done on the latter at this point.</para>
+        </para>
     </section>
 
     <section xml:id="os">
@@ -110,7 +110,7 @@ to ensure well-formedness of your document after an edit session.
       </section>
       <section xml:id="loopback.ip">
         <title>Loopback IP</title>
-        <para>HBase expects the loopback IP address to be 127.0.0.1.  See <xref linkend="loopback.ip"/></para>
+        <para>Previous to hbase-0.96.0, HBase expects the loopback IP address to be 127.0.0.1.  See <xref linkend="loopback.ip"/></para>
        </section>
 
       <section xml:id="ntp">
@@ -203,17 +203,18 @@ to ensure well-formedness of your document after an edit session.
       <section xml:id="windows">
         <title>Windows</title>
 
-        <para>Apache HBase has been little tested running on Windows. Running a
-        production install of HBase on top of Windows is not
-        recommended.</para>
+        <para>Previous to hbase-0.96.0, Apache HBase was little tested running on Windows. Running a
+        production install of HBase on top of Windows is not recommended.</para>
 
-        <para>If you are running HBase on Windows, you must install <link
+        <para>If you are running HBase on Windows pre-hbase-0.96.0, you must install <link
         xlink:href="http://cygwin.com/">Cygwin</link> to have a *nix-like
         environment for the shell scripts. The full details are explained in
         the <link xlink:href="http://hbase.apache.org/cygwin.html">Windows
         Installation</link> guide. Also
         <link xlink:href="http://search-hadoop.com/?q=hbase+windows&amp;fc_project=HBase&amp;fc_type=mail+_hash_+dev">search our user mailing list</link> to pick
         up latest fixes figured by Windows users.</para>
+    <para>Post-hbase-0.96.0, hbase runs natively on windows with supporting <command>*.cmd</command> scripts bundled.
+    </para>
       </section>
 
     </section>   <!--  OS -->
@@ -223,8 +224,7 @@ to ensure well-formedness of your document after an edit session.
         xlink:href="http://hadoop.apache.org">Hadoop</link><indexterm>
             <primary>Hadoop</primary>
           </indexterm></title>
-          <para>Selecting a Hadoop version is critical for your HBase deployment.
-              Below table shows some information about what versions of Hadoop are supported by various HBase versions.
+          <para>The below table shows some information about what versions of Hadoop are supported by various HBase versions.
               Based on the version of HBase, you should select the most appropriate version of Hadoop.
               We are not in the Hadoop distro selection business.
               You can use Hadoop distributions from Apache, or learn about vendor distributions of
@@ -240,17 +240,46 @@ to ensure well-formedness of your document after an edit session.
 		 <title>Hadoop version support matrix</title>
 		 <tgroup cols='4' align='left' colsep='1' rowsep='1'><colspec colname='c1' align='left'/><colspec colname='c2' align='center'/><colspec colname='c3' align='center'/><colspec colname='c4' align='center'/>
          <thead>
-	     <row><entry>               </entry><entry>HBase-0.92.x</entry><entry>HBase-0.94.x</entry><entry>HBase-0.96.0</entry></row>
+         <row><entry>               </entry><entry>HBase-0.92.x</entry><entry>HBase-0.94.x</entry><entry>HBase-0.96.0</entry><entry>HBase-0.98.0</entry></row>
 	     </thead><tbody>
-         <row><entry>Hadoop-0.20.205</entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry></row>
-         <row><entry>Hadoop-0.22.x  </entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry></row>
-         <row><entry>Hadoop-1.0.0-1.0.2<footnote><para>HBase requires hadoop 1.0.3 at a minimum; there is an issue where we cannot find KerberosUtil compiling against earlier versions of Hadoop.</para></footnote>   </entry><entry>S</entry>          <entry>S</entry>           <entry>X</entry></row>
-         <row><entry>Hadoop-1.0.3+</entry><entry>S</entry>          <entry>S</entry>           <entry>S</entry></row>
-         <row><entry>Hadoop-1.1.x   </entry><entry>NT</entry>         <entry>S</entry>           <entry>S</entry></row>
-         <row><entry>Hadoop-0.23.x  </entry><entry>X</entry>          <entry>S</entry>           <entry>NT</entry></row>
-         <row><entry>Hadoop-2.0.x-alpha     </entry><entry>X</entry>          <entry>NT</entry>           <entry>X</entry></row>
-         <row><entry>Hadoop-2.1.0-beta     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry></row>
-         <row><entry>Hadoop-2.x     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry></row>
+          <row><entry>Hadoop-0.20.205</entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry><entry>X</entry></row>
+          <row><entry>Hadoop-0.22.x  </entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry><entry>X</entry></row>
+          <row><entry>Hadoop-1.0.0-1.0.2<footnote><para>HBase requires hadoop 1.0.3 at a minimum; there is an issue where we cannot find KerberosUtil compiling against earlier versions of Hadoop.</para></footnote>   </entry><entry>S</entry>          <entry>S</entry>           <entry>X</entry><entry>X</entry></row>
+          <row><entry>Hadoop-1.0.3+</entry><entry>S</entry>          <entry>S</entry>           <entry>S</entry><entry>X</entry></row>
+          <row><entry>Hadoop-1.1.x   </entry><entry>NT</entry>         <entry>S</entry>           <entry>S</entry><entry>X</entry></row>
+          <row><entry>Hadoop-0.23.x  </entry><entry>X</entry>          <entry>S</entry>           <entry>NT</entry><entry>X</entry></row>
+          <row><entry>Hadoop-2.0.x-alpha     </entry><entry>X</entry>          <entry>NT</entry>           <entry>X</entry><entry>X</entry></row>
+          <row><entry>Hadoop-2.1.0-beta     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry><entry>X</entry></row>
+         <row><entry>Hadoop-2.2.0     </entry><entry>X</entry>          <entry>NT<footnote><para>To get 0.94.x to run on hadoop 2.2.0,
+                         you need to change the hadoop 2 and protobuf versions in the <filename>pom.xml</filename> and then
+                         build against the hadoop 2 profile by running something like the following command:
+                         <programlisting>$  mvn clean install assembly:single -Dhadoop.profile=2.0 -DskipTests</programlisting>
+                         Here is a diff with pom.xml changes:
+                         <programlisting><![CDATA[$ svn diff pom.xml
+Index: pom.xml
+===================================================================
+--- pom.xml     (revision 1545157)
++++ pom.xml     (working copy)
+@@ -1034,7 +1034,7 @@
+     <slf4j.version>1.4.3</slf4j.version>
+     <log4j.version>1.2.16</log4j.version>
+     <mockito-all.version>1.8.5</mockito-all.version>
+-    <protobuf.version>2.4.0a</protobuf.version>
++    <protobuf.version>2.5.0</protobuf.version>
+     <stax-api.version>1.0.1</stax-api.version>
+     <thrift.version>0.8.0</thrift.version>
+     <zookeeper.version>3.4.5</zookeeper.version>
+@@ -2241,7 +2241,7 @@
+         </property>
+       </activation>
+       <properties>
+-        <hadoop.version>2.0.0-alpha</hadoop.version>
++        <hadoop.version>2.2.0</hadoop.version>
+         <slf4j.version>1.6.1</slf4j.version>
+       </properties>
+       <dependencies>]]></programlisting>
+          </para></footnote></entry>           <entry>S</entry><entry>S</entry></row>
+          <row><entry>Hadoop-2.x     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry><entry>S</entry></row>
 		 </tbody></tgroup></table>
 
         Where
@@ -260,9 +289,11 @@ to ensure well-formedness of your document after an edit session.
 		<member>NT = it should run, but not tested enough.</member>
 		</simplelist>
         </para>
+        <note xml:id="replace.hadoop"><title>Replace the Hadoop Bundled With HBase!</title>
         <para>
 	Because HBase depends on Hadoop, it bundles an instance of the Hadoop jar under its <filename>lib</filename> directory. The bundled jar is ONLY for use in standalone mode. In distributed mode, it is <emphasis>critical</emphasis> that the version of Hadoop that is out on your cluster match what is under HBase. Replace the hadoop jar found in the HBase lib directory with the hadoop jar you are running on your cluster to avoid version mismatch issues. Make sure you replace the jar in HBase everywhere on your cluster. Hadoop version mismatch issues have various manifestations but often all looks like its hung up.
     </para>
+</note>
     <section xml:id="hadoop.hbase-0.94">
 	<title>Apache HBase 0.92 and 0.94</title>
 	<para>HBase 0.92 and 0.94 versions can work with Hadoop versions, 0.20.205, 0.22.x, 1.0.x, and 1.1.x. HBase-0.94 can additionally work with Hadoop-0.23.x and 2.x, but you may have to recompile the code using the specific maven profile (see top level pom.xml)</para>
@@ -270,8 +301,9 @@ to ensure well-formedness of your document after an edit session.
 
     <section xml:id="hadoop.hbase-0.96">
 	<title>Apache HBase 0.96</title>
-	<para>Apache HBase 0.96.0 requires Apache Hadoop 1.x at a minimum, and it can run equally well on hadoop-2.0.
-	As of Apache HBase 0.96.x, Apache Hadoop 1.0.x at least is required. We will no longer run properly on older Hadoops such as 0.20.205 or branch-0.20-append. Do not move to Apache HBase 0.96.x if you cannot upgrade your Hadoop<footnote><para>See <link xlink:href="http://search-hadoop.com/m/7vFVx4EsUb2">HBase, mail # dev - DISCUSS: Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?</link></para></footnote>.</para>
+	<para>
+    As of Apache HBase 0.96.x, Apache Hadoop 1.0.x at least is required.  Hadoop 2 is strongly encouraged (faster but also has fixes that help MTTR).
+    We will no longer run properly on older Hadoops such as 0.20.205 or branch-0.20-append. Do not move to Apache HBase 0.96.x if you cannot upgrade your Hadoop<footnote><para>See <link xlink:href="http://search-hadoop.com/m/7vFVx4EsUb2">HBase, mail # dev - DISCUSS: Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?</link></para></footnote>.</para>
    </section>
 
     <section xml:id="hadoop.older.versions">
@@ -410,8 +442,8 @@ to ensure well-formedness of your document after an edit session.
           evaluating HBase performance.</para>
 
       <para>First, if you want to run on HDFS rather than on the local filesystem,
-          setup your HDFS.  You can set up HDFS also in
-          <link xlink:href="http://hadoop.apache.org/docs/r1.0.3/single_node_setup.html">pseudo-distributed mode</link>.
+          setup your HDFS.  You can set up HDFS also in pseudo-distributed mode
+          (TODO: Add pointer to HOWTO doc; the hadoop site doesn't have any any more).
           Ensure you have a working HDFS before proceeding.
    	      </para>
 
@@ -483,13 +515,16 @@ homed on the node <varname>h-24-30.example.com</varname>.
                 </para>
             	<para>To start up an extra backup master(s) on the same server run...
                        <programlisting>% bin/local-master-backup.sh start 1</programlisting>
-                       ... the '1' means use ports 60001 &amp; 60011, and this backup master's logfile will be at <filename>logs/hbase-${USER}-1-master-${HOSTNAME}.log</filename>.
+                       ... the '1' means use ports 16001 &amp; 16011, and this backup master's
+		       logfile will be at 
+		       <filename>logs/hbase-${USER}-1-master-${HOSTNAME}.log</filename>.
                 </para>
                 <para>To startup multiple backup masters run... <programlisting>% bin/local-master-backup.sh start 2 3</programlisting> You can start up to 9 backup masters (10 total).
  				</para>
 				<para>To start up more regionservers...
      			  <programlisting>% bin/local-regionservers.sh start 1</programlisting>
-     			where '1' means use ports 60201 &amp; 60301 and its logfile will be at <filename>logs/hbase-${USER}-1-regionserver-${HOSTNAME}.log</filename>.
+			... where '1' means use ports 16201 &amp; 16301 and its logfile will be at 
+			`<filename>logs/hbase-${USER}-1-regionserver-${HOSTNAME}.log</filename>.
      			</para>
      			<para>To add 4 more regionservers in addition to the one you just started by running... <programlisting>% bin/local-regionservers.sh start 2 3 4 5</programlisting>
      			This supports up to 99 extra regionservers (100 total).
@@ -646,14 +681,18 @@ homed on the node <varname>h-24-30.example.com</varname>.
 
 
         <para>HBase also puts up a UI listing vital attributes. By default its
-        deployed on the Master host at port 60010 (HBase RegionServers listen
-        on port 60020 by default and put up an informational http server at
-        60030). If the Master were running on a host named
+        deployed on the Master host at port 16010 (HBase RegionServers listen
+        on port 16020 by default and put up an informational http server at
+        16030). If the Master were running on a host named
         <varname>master.example.org</varname> on the default port, to see the
         Master's homepage you'd point your browser at
-        <filename>http://master.example.org:60010</filename>.</para>
+        <filename>http://master.example.org:16010</filename>.</para>
 
-
+	<para>Prior to HBase 0.98, the default ports the master ui was deployed
+	on port 16010, and the HBase RegionServers would listen
+        on port 16020 by default and put up an informational http server at
+        16030.
+	</para>
 
     <para>Once HBase has started, see the <xref linkend="shell_exercises" /> for how to
         create tables, add data, scan your insertions, and finally disable and
@@ -1153,11 +1192,65 @@ of all regions.
     </section>
     <section xml:id="mttr">
       <title>Better Mean Time to Recover (MTTR)</title>
-      <para>See the Deveraj Das an Nicolas Liochon blog post
+      <para>This section is about configurations that will make servers come back faster after a fail.
+          See the Deveraj Das an Nicolas Liochon blog post
           <link xlink:href="http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/">Introduction to HBase Mean Time to Recover (MTTR)</link>
-          for a brief introduction.  The issue <link xlink:href="https://issues.apache.org/jira/browse/HBASE-8389">HBASE-8354 forces Namenode into loop with lease recovery requests</link>
+          for a brief introduction.</para>
+      <para>The issue <link xlink:href="https://issues.apache.org/jira/browse/HBASE-8389">HBASE-8354 forces Namenode into loop with lease recovery requests</link>
           is messy but has a bunch of good discussion toward the end on low timeouts and how to effect faster recovery including citation of fixes
-          added to HDFS.  Read the Varun Sharma comments.</para>
+          added to HDFS.  Read the Varun Sharma comments.  The below suggested configurations are Varun's suggestions distilled and tested.  Make sure you are
+          running on a late-version HDFS so you have the fixes he refers too and himself adds to HDFS that help HBase MTTR
+          (e.g. HDFS-3703, HDFS-3712, and HDFS-4791 -- hadoop 2 for sure has them and late hadoop 1 has some).
+          Set the following in the RegionServer.
+<![CDATA[<property>
+    <name>hbase.lease.recovery.dfs.timeout</name>
+    <value>23000</value>
+    <description>How much time we allow elapse between calls to recover lease.
+    Should be larger than the dfs timeout.</description>
+</property>
+<property>
+    <name>dfs.client.socket-timeout</name>
+    <value>10000</value>
+    <description>Down the DFS timeout from 60 to 10 seconds.</description>
+</property>]]>
+And on the namenode/datanode side, set the following to enable 'staleness' introduced in HDFS-3703, HDFS-3912.
+<![CDATA[<property>
+    <name>dfs.client.socket-timeout</name>
+    <value>10000</value>
+    <description>Down the DFS timeout from 60 to 10 seconds.</description>
+</property>
+<property>
+    <name>dfs.datanode.socket.write.timeout</name>
+    <value>10000</value>
+    <description>Down the DFS timeout from 8 * 60 to 10 seconds.</description>
+</property>
+<property>
+    <name>ipc.client.connect.timeout</name>
+    <value>3000</value>
+    <description>Down from 60 seconds to 3.</description>
+</property>
+<property>
+    <name>ipc.client.connect.max.retries.on.timeouts</name>
+    <value>2</value>
+    <description>Down from 45 seconds to 3 (2 == 3 retries).</description>
+</property>
+<property>
+    <name>dfs.namenode.avoid.read.stale.datanode</name>
+    <value>true</value>
+    <description>Enable stale state in hdfs</description>
+</property>
+<property>
+    <name>dfs.namenode.stale.datanode.interval</name>
+    <value>20000</value>
+    <description>Down from default 30 seconds</description>
+</property>
+<property>
+    <name>dfs.namenode.avoid.write.stale.datanode</name>
+    <value>true</value>
+    <description>Enable stale state in hdfs</description>
+</property>]]>
+
+      </para>
     </section>
 
       </section>

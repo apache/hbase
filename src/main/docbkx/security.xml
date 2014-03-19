@@ -241,9 +241,265 @@
     </para>
    </section>
 
+    <section><title>REST Gateway Impersonation Configuration</title>
+    <para>
+        By default, the REST gateway doesn't support impersonation. It accesses
+        the HBase on behalf of clients as the user configured as in the previous
+        section. To the HBase server, all requests are from the REST gateway user.
+        The actual users are unknown. You can turn on the impersonation support.
+        With impersonation, the REST gateway user is a proxy user. The HBase server
+        knows the acutal/real user of each request. So it can apply proper
+        authorizations.
+    </para>
+    <para>
+        To turn on REST gateway impersonation, we need to configure HBase servers
+        (masters and region servers) to allow proxy users; configure REST gateway
+        to enable impersonation.
+    </para>
+    <para>
+        To allow proxy users, add the following to the <code>hbase-site.xml</code>
+        file for every HBase server:
+    <programlisting><![CDATA[
+   <property>
+      <name>hadoop.security.authorization</name>
+      <value>true</value>
+   </property>
+   <property>
+      <name>hadoop.proxyuser.$USER.groups</name>
+      <value>$GROUPS</value>
+   </property>
+   <property>
+      <name>hadoop.proxyuser.$USER.hosts</name>
+      <value>$GROUPS</value>
+   </property>
+    ]]></programlisting>
+    </para>
+    <para>
+        Substitute the REST gateway proxy user for $USER, and the allowed
+        group list for $GROUPS.
+    </para>
+    <para>
+        To enable REST gateway impersonation, add the following to the
+        <code>hbase-site.xml</code> file for every REST gateway.
+    <programlisting><![CDATA[
+   <property>
+      <name>hbase.rest.authentication.type</name>
+      <value>kerberos</value>
+   </property>
+   <property>
+      <name>hbase.rest.authentication.kerberos.principal</name>
+      <value>HTTP/_HOST@HADOOP.LOCALDOMAIN</value>
+   </property>
+   <property>
+      <name>hbase.rest.authentication.kerberos.keytab</name>
+      <value>$KEYTAB</value>
+   </property>
+    ]]></programlisting>
+    </para>
+    <para>
+        Substitute the keytab for HTTP for $KEYTAB.
+    </para>
+   </section>
+
 </section>  <!-- Secure Client Access to HBase -->
 
+<section xml:id="hbase.secure.simpleconfiguration">
+    <title>Simple User Access to Apache HBase</title>
+    <para>Newer releases of Apache HBase (&gt;= 0.92) support optional SASL authentication of clients<footnote><para>See
+    also Matteo Bertozzi's article on <link xlink:href="http://www.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/">Understanding User Authentication and Authorization in Apache HBase</link>.</para></footnote>.</para>
+    <para>This describes how to set up Apache HBase and clients for simple user access to HBase resources.</para>
 
+    <section><title>Simple Versus Secure Access</title>
+    <para>
+        The following section shows how to set up simple user access. Simple user access is
+        not a secure method of operating HBase. This method is used to prevent users from making
+        mistakes. It can be used to mimic the Access Control using on a development system without having to
+        set up Kerberos.
+    </para>
+    <para>
+        This method is not used to prevent malicious or hacking attempts. To make HBase secure against these
+        types of attacks, you must configure HBase for secure operation. Refer to the section
+        <link linkend='hbase.accesscontrol.configuration'>Secure Client Access to HBase</link> and complete all of the steps described
+        there.
+    </para>
+
+    <section><title>Prerequisites</title>
+    <para>
+        None
+    </para>
+
+    <section><title>Server-side Configuration for Simple User Access Operation</title>
+    <para>
+        Add the following to the <code>hbase-site.xml</code> file on every server machine in the cluster:
+    </para>
+    <programlisting><![CDATA[
+      <property>
+        <name>hbase.security.authentication</name>
+        <value>simple</value>
+      </property>
+      <property>
+        <name>hbase.security.authorization</name>
+        <value>true</value>
+      </property>
+      <property>
+        <name>hbase.coprocessor.master.classes</name>
+        <value>org.apache.hadoop.hbase.security.access.AccessController</value>
+      </property>
+      <property>
+        <name>hbase.coprocessor.region.classes</name>
+        <value>org.apache.hadoop.hbase.security.access.AccessController</value>
+      </property>
+    ]]></programlisting>
+    <para>
+        For 0.94, add the following to the <code>hbase-site.xml</code> file on every server machine in the cluster:
+    </para>
+    <programlisting><![CDATA[
+      <property>
+        <name>hbase.rpc.engine</name>
+        <value>org.apache.hadoop.hbase.ipc.SecureRpcEngine</value>
+      </property>
+      <property>
+        <name>hbase.coprocessor.master.classes</name>
+        <value>org.apache.hadoop.hbase.security.access.AccessController</value>
+      </property>
+      <property>
+        <name>hbase.coprocessor.region.classes</name>
+        <value>org.apache.hadoop.hbase.security.access.AccessController</value>
+      </property> 
+    ]]></programlisting>
+    <para>
+       A full shutdown and restart of HBase service is required when deploying
+       these configuration changes.
+    </para>
+    </section>
+
+    <section><title>Client-side Configuration for Simple User Access Operation</title>
+    <para>
+        Add the following to the <code>hbase-site.xml</code> file on every client:
+    </para>
+    <programlisting><![CDATA[
+      <property>
+        <name>hbase.security.authentication</name>
+        <value>simple</value>
+      </property>
+    ]]></programlisting>
+    <para>
+        For 0.94, add the following to the <code>hbase-site.xml</code> file on every server machine in the cluster:
+    </para>
+    <programlisting><![CDATA[
+      <property>
+        <name>hbase.rpc.engine</name>
+        <value>org.apache.hadoop.hbase.ipc.SecureRpcEngine</value>
+      </property>
+    ]]></programlisting>
+    <para>
+        Be advised that if the <code>hbase.security.authentication</code>
+        in the client- and server-side site files do not match, the client will
+        not be able to communicate with the cluster.
+    </para>
+    </section>
+
+    <section><title>Client-side Configuration for Simple User Access Operation - Thrift Gateway</title>
+    <para>The Thrift gateway user will need access. For example, to give the Thrift API user, <code>thrift_server</code>, administrative access, a command such as this one will suffice:
+    <programlisting><![CDATA[
+    grant 'thrift_server', 'RWCA'
+    ]]></programlisting> For more information about ACLs, please see the <link linkend='hbase.accesscontrol.configuration'>Access Control</link> section
+    </para>
+
+    <para>
+        The Thrift gateway will authenticate with HBase using the supplied
+        credential. No authentication will be performed by the Thrift gateway
+        itself. All client access via the Thrift gateway will use the Thrift
+        gateway's credential and have its privilege.
+    </para>
+    </section>
+
+    <section><title>Client-side Configuration for Simple User Access Operation - REST Gateway</title>
+
+    <para>
+        The REST gateway will authenticate with HBase using the supplied
+        credential. No authentication will be performed by the REST gateway
+        itself. All client access via the REST gateway will use the REST
+        gateway's credential and have its privilege.
+    </para>
+    <para>The REST gateway user will need access. For example, to give the REST API user, <code>rest_server</code>, administrative access, a command such as this one will suffice:
+    <programlisting><![CDATA[
+    grant 'rest_server', 'RWCA'
+    ]]></programlisting> For more information about ACLs, please see the <link linkend='hbase.accesscontrol.configuration'>Access Control</link> section
+    </para>
+    <para>
+        It should be possible for clients to authenticate with the HBase
+        cluster through the REST gateway in a pass-through manner via SPEGNO
+        HTTP authentication. This is future work.
+    </para>
+   </section>
+   </section>
+   </section>
+
+</section>  <!-- Simple User Access to Apache HBase -->
+
+<section xml:id="hbase.tags">
+<title>Tags</title>
+<para>
+	Every cell can have metadata associated with it.  Adding metadata in the data part of every cell would make things difficult.
+</para>
+<para>
+	The 0.98 version of HBase solves this problem by providing Tags along with the cell format. 
+	Some of the usecases that uses the tags are Visibility labels, Cell level ACLs, etc.
+</para>
+<para>
+	HFile V3 version from 0.98 onwards supports tags and this feature can be turned on using the following configuration
+</para>
+<programlisting><![CDATA[
+      <property>
+	    <name>hfile.format.version</name>
+        <value>3</value>
+      </property>
+    ]]></programlisting>
+<para>
+	Every cell can have zero or more tags. Every tag has a type and the actual tag byte array.
+	The types <command>0-31</command> are reserved for System tags.  For example ‘1’ is reserved for ACL and ‘2’ is reserved for Visibility tags.
+</para>
+<para>
+	The way rowkeys, column families, qualifiers and values are encoded using different Encoding Algos, similarly the tags can also be encoded.  
+	Tag encoding can be turned on per CF.  Default is always turn ON.
+	To turn on the tag encoding on the HFiles use
+</para>
+<programlisting><![CDATA[
+    HColumnDescriptor#setCompressTags(boolean compressTags)
+    ]]></programlisting>
+<para>
+	Note that encoding of tags takes place only if the DataBlockEncoder is enabled for the CF.
+</para>
+<para>
+	As we compress the WAL entries using Dictionary the tags present in the WAL can also be compressed using Dictionary.  
+	Every tag is compressed individually using WAL Dictionary.  To turn ON tag compression in WAL dictionary enable the property
+</para>
+<programlisting><![CDATA[
+    <property>
+    	<name>hbase.regionserver.wal.tags.enablecompression</name>
+    	<value>true</value>
+	</property>
+    ]]></programlisting>
+<para>
+	To add tags to every cell during Puts, the following apis are provided
+</para>
+<programlisting><![CDATA[
+	Put#add(byte[] family, byte [] qualifier, byte [] value, Tag[] tag)
+	Put#add(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag)
+    ]]></programlisting>
+<para>
+	Some of the feature developed using tags are Cell level ACLs and Visibility labels.  
+	These are some features that use tags framework and allows users to gain better security features on cell level.
+</para>
+<para>
+	For details checkout 
+</para>
+<para>
+    <link linkend='hbase.accesscontrol.configuration'>Access Control</link>
+    <link linkend='hbase.visibility.labels'>Visibility labels</link>
+</para>
+</section>
 <section xml:id="hbase.accesscontrol.configuration">
     <title>Access Control</title>
     <para>
@@ -259,12 +515,14 @@
 
     <section><title>Prerequisites</title>
     <para>
-       You must configure HBase for secure operation. Refer to the section
-       "Secure Client Access to HBase" and complete all of the steps described
+       You must configure HBase for secure or simple user access operation. Refer to the
+       <link linkend='hbase.accesscontrol.configuration'>Secure Client Access to HBase</link> or
+       <link linkend='hbase.accesscontrol.simpleconfiguration'>Simple User Access to HBase</link>
+        sections and complete all of the steps described
        there.
     </para>
     <para>
-       You must also configure ZooKeeper for secure operation. Changes to ACLs
+       For secure access, you must also configure ZooKeeper for secure operation. Changes to ACLs
        are synchronized throughout the cluster using ZooKeeper. Secure
        authentication to ZooKeeper must be enabled or otherwise it will be
        possible to subvert HBase access control via direct client access to
@@ -286,7 +544,7 @@
     </para>
     <orderedlist>
       <listitem>
-        <para>Row-level or per value (cell): This would require broader changes for storing the ACLs inline with rows. It is a future goal.</para>
+        <para>Row-level or per value (cell): Using Tags in HFile V3</para>
       </listitem>
       <listitem>
         <para>Push down of file ownership to HDFS: HBase is not designed for the case where files may have different permissions than the HBase system principal. Pushing file ownership down into HDFS would necessitate changes to core code. Also, while HDFS file ownership would make applying quotas easy, and possibly make bulk imports more straightforward, it is not clear that it would offer a more secure setup.</para>
@@ -472,6 +730,47 @@ Access control mechanisms are mature and fairly standardized in the relational d
     ]]></programlisting>
     </section>
 
+    <section>
+    <title>Cell level Access Control using Tags</title>
+    <para>
+    	Prior to HBase 0.98 access control was restricted to table and column family level.  Thanks to tags feature in 0.98 that allows Access control on a cell level.
+		The existing Access Controller coprocessor helps in achieving cell level access control also.
+		For details on configuring it refer to <link linkend='hbase.accesscontrol.configuration'>Access Control</link> section.
+    </para>
+    <para>
+    	The ACLs can be specified for every mutation using the APIs
+    </para>
+    <programlisting><![CDATA[
+    	Mutation.setACL(String user, Permission perms)
+	  	Mutation.setACL(Map<String, Permission> perms)
+    ]]></programlisting>
+    <para>
+    	For example, to provide read permission to an user ‘user1’ then
+    </para>
+    <programlisting><![CDATA[
+    	put.setACL(“user1”, new Permission(Permission.Action.READ))
+    ]]></programlisting>
+    <para>
+    	Generally the ACL applied on the table and CF takes precedence over Cell level ACL.  In order to make the cell level ACL to take precedence use the following API,
+    </para>
+    <programlisting><![CDATA[
+    	Mutation.setACLStrategy(boolean cellFirstStrategy)
+    ]]></programlisting>
+    <para>
+    	Please note that inorder to use this feature, HFile V3 version should be turned on.
+    </para>
+    <programlisting><![CDATA[
+   		<property>
+			<name>hfile.format.version</name>
+			<value>3</value>
+		</property>
+     ]]></programlisting>
+    <para>
+    	Note that deletes with ACLs do not have any effect.
+		To keep things simple the ACLs applied on the current Put does not change the ACL of any previous Put in the sense
+		that the ACL on the current put does not affect older versions of Put for the same row.
+    </para>
+    </section>
     <section><title>Shell Enhancements for Access Control</title>
     <para>
 The HBase shell has been extended to provide simple commands for editing and updating user permissions. The following commands have been added for access control list management:
@@ -479,8 +778,11 @@ The HBase shell has been extended to provide simple commands for editing and upd
     Grant
     <para>
     <programlisting>
-    grant &lt;user&gt; &lt;permissions&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
+    grant &lt;user|@group&gt; &lt;permissions&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
     </programlisting>
+    </para>
+    <para>
+    <code class="code">&lt;user|@group&gt;</code> is user or group  (start with character '@'), Groups are created and manipulated via the Hadoop group mapping service.
     </para>
     <para>
     <code>&lt;permissions&gt;</code> is zero or more letters from the set "RWCA": READ('R'), WRITE('W'), CREATE('C'), ADMIN('A').
@@ -493,7 +795,7 @@ The HBase shell has been extended to provide simple commands for editing and upd
     </para>
     <para>
     <programlisting>
-    revoke &lt;user&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
+    revoke &lt;user|@group&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
     </programlisting>
     </para>
     <para>
@@ -502,7 +804,7 @@ The HBase shell has been extended to provide simple commands for editing and upd
     <para>
     The <code>alter</code> command has been extended to allow ownership assignment:
     <programlisting>
-      alter 'tablename', {OWNER => 'username'}
+      alter 'tablename', {OWNER => 'username|@group'}
     </programlisting>
     </para>
     <para>
@@ -550,5 +852,208 @@ The HBase shell has been extended to provide simple commands for editing and upd
         org.apache.hadoop.hbase.security.access.AccessController,org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint</value>
       </property>
     ]]></programlisting>
+</section> <!-- Secure Bulk Load -->
+
+<section xml:id="hbase.visibility.labels">
+    <title>Visibility Labels</title>
+	<para>
+	This feature provides cell level security with labeled visibility for the cells. Cells can be associated with a visibility expression. The visibility expression can contain labels joined with logical expressions &#39;&amp;&#39;, &#39;|&#39; and &#39;!&#39;. Also using &#39;(&#39;, &#39;)&#39; one can specify the precedence order. For example, consider the label set { confidential, secret, topsecret, probationary }, where the first three are sensitivity classifications and the last describes if an employee is probationary or not. If a cell is stored with this visibility expression:
+	( secret | topsecret ) &amp; !probationary
+	</para>
+	<para>
+	Then any user associated with the secret or topsecret label will be able to view the cell, as long as the user is not also associated with the probationary label. Furthermore, any user only associated with the confidential label, whether probationary or not, will not see the cell or even know of its existence.
+	</para>
+	<para>
+	Visibility expressions like the above can be added when storing or mutating a cell using the API,
+	</para>
+	<para><code>Mutation#setCellVisibility(new CellVisibility(String labelExpession));</code></para>
+	Where the labelExpression could be &#39;( secret | topsecret ) &amp; !probationary&#39;
+	
+	<para>
+	We build the user&#39;s label set in the RPC context when a request is first received by the HBase RegionServer. How users are associated with labels is pluggable. The default plugin passes through labels specified in Authorizations added to the Get or Scan and checks those against the calling user&#39;s authenticated labels list. When client passes some labels for which the user is not authenticated, this default algorithm will drop those. One can pass a subset of user authenticated labels via the Scan/Get authorizations.
+	</para>
+	<para><code>Get#setAuthorizations(new Authorizations(String,...));</code></para>
+	<para><code>Scan#setAuthorizations(new Authorizations(String,...));</code></para>
+
+	<section xml:id="hbase.visibility.label.administration">
+	    <title>Visibility Label Administration</title>
+		<para>
+		There are new client side Java APIs and shell commands for performing visibility labels administrative actions. Only the HBase super user is authorized to perform these operations.
+		</para>
+
+		<section xml:id="hbase.visibility.label.administration.add.label">
+		    <title>Adding Labels</title>
+			<para>A set of labels can be added to the system either by using the Java API</para>
+			<para><code>VisibilityClient#addLabels(Configuration conf, final String[] labels)</code></para>
+			<para>Or by using the shell command</para>
+			<para><code>add_labels [label1, label2]</code></para>
+			<para>
+			Valid label can include alphanumeric characters and characters &#39;-&#39;, &#39;_&#39;, &#39;:&#39;, &#39;.&#39; and &#39;/&#39;
+			</para>
+		</section>
+
+		<section xml:id="hbase.visibility.label.administration.add.label">
+		    <title>User Label Association</title>
+			<para>A set of labels can be associated with a user by using the API</para>
+			<para><code>VisibilityClient#setAuths(Configuration conf, final String[] auths, final String user)</code></para>
+			<para>Or by using the shell command</para>
+			<para><code>set_auths user,[label1, label2].</code></para>
+			<para>Labels can be disassociated from a user using API</para>
+			<para><code>VisibilityClient#clearAuths(Configuration conf, final String[] auths, final String user)</code></para>
+			<para>Or by using shell command</para>
+			<para><code>clear_auths user,[label1, label2]</code></para>
+			<para>
+			One can use the API <code>VisibilityClient#getAuths(Configuration conf, final String user)</code> or <code>get_auths</code> shell command to get the list of labels associated for a given user. The labels and user auths information will be stored in the system table &#34;labels&#34;.
+			</para>
+		</section>
+	</section>
+
+	<section xml:id="hbase.visibility.label.configuration">
+	    <title>Server  Side Configuration</title>
+		<para>
+		HBase stores cell level labels as cell tags. HFile version 3 adds the cell tags support. Be sure to use HFile version 3 by setting this property in every server site configuration file:
+		</para>
+		<programlisting><![CDATA[
+		  <property>
+		    <name>hfile.format.version</name>
+			<value>3</value>
+		  </property>
+		]]></programlisting>
+		<para>
+		You will also need to make sure the VisibilityController coprocessor is active on every table to protect by adding it to the list of system coprocessors in the server site configuration files:
+		</para>
+		<programlisting><![CDATA[
+		  <property>
+		    <name>hbase.coprocessor.master.classes</name>
+			<value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
+		  </property>
+		  <property>
+		    <name>hbase.coprocessor.region.classes</name>
+			<value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
+		  </property>
+		]]></programlisting>
+		<para>
+		As said above, finding out labels authenticated for a given get/scan request is a pluggable algorithm. A custom implementation can be plugged in using the property <code>hbase.regionserver.scan.visibility.label.generator.class</code>. The default implementation class is <code>org.apache.hadoop.hbase.security.visibility.DefaultScanLabelGenerator</code>
+		</para>
+	</section>
 </section>
+
+<section xml:id="hbase.encryption.server">
+    <title>Transparent Server Side Encryption</title>
+    <para>
+This feature provides transparent encryption for protecting HFile and WAL data at rest, using a two-tier key architecture for flexible and non-intrusive key rotation.
+    </para>
+    <para>
+First, the administrator provisions a cluster master key, stored into a key provider accessable to every trusted HBase process: the Master, the RegionServers, and clients (e.g. the shell) on administrative workstations. The default key provider integrates with the Java KeyStore API and any key management system with support for it. How HBase retrieves key material is configurable via the site file. The master key may be stored on the cluster servers, protected by a secure KeyStore file, or on an external keyserver, or in a hardware security module. This master key is resolved as needed by HBase processes through the configured key provider.
+    </para>
+    <para>
+Then, encryption keys can be specified in schema on a per column family basis, by creating or modifying a column descriptor to include two additional attributes: the name of the encryption algorithm to use (currently only "AES" is supported), and, optionally, a data key wrapped (encrypted) with the cluster master key. Per CF keys facilitates low impact incremental key rotation and reduces the scope of any external leak of key material. The wrapped data key is stored in the CF schema metadata, and in each HFile for the CF, encrypted with the cluster master key. Once the CF is configured for encryption, any new HFiles will be written encrypted. To insure encryption of all HFiles, trigger a major compaction after first enabling this feature. The key for decryption, encrypted with the cluster master key, is stored in the HFiles in a new meta block. At file open time the data key will be extracted from the HFile, decrypted with the cluster master key, and used for decryption of the remainder of the HFile. The HFile will be unreadable if the master key is not available. Should remote users somehow acquire access to the HFile data because of some lapse in HDFS permissions or from inappropriately discarded media, there will be no means to decrypt either the data key or the file data.
+    </para>
+    <para>
+Specifying a data key in the CF schema is optional. If one is not present, a random data key will be created for each HFile.
+    </para>
+    <para>
+A new configuration option for encrypting the WAL is also introduced. Even though WALs are transient, it is necessary to encrypt the WALEdits to avoid circumventing HFile protections for encrypted column families.
+    </para>
+    <section xml:id="hbase.encryption.server.configuration">
+        <title>Configuration</title>
+        <para>
+Create a secret key of appropriate length for AES.
+        </para>
+	<programlisting><![CDATA[
+        $ keytool -keystore /path/to/hbase/conf/hbase.jks \
+          -storetype jceks -storepass <password> \
+          -genseckey -keyalg AES -keysize 128 \
+          -alias <alias>
+	]]></programlisting>
+        <para>
+where &lt;password&gt; is the password for the KeyStore file and &lt;alias&gt;is the user name of the HBase service account, typically "hbase". Simply press RETURN to store the key with the same password as the store. The resulting file should be distributed to all nodes running HBase daemons, with file ownership and permissions set to be readable only by the HBase service account.
+        </para>
+        <para>
+Configure HBase daemons to use a key provider backed by the KeyStore files for retrieving the cluster master key as needed.
+        </para>
+	<programlisting><![CDATA[
+        <property>
+            <name>hbase.crypto.keyprovider</name>
+            <value>org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider</value>
+        </property>
+        <property>
+            <name>hbase.crypto.keyprovider.parameters</name>
+            <value>jceks:///path/to/hbase/conf/hbase.jks?password=<password></value>
+        </property>
+        ]]></programlisting>
+        <para>
+By default the HBase service account name will be used to resolve the cluster master key, but you can store it with any arbitrary alias and configure HBase appropriately:
+        </para>
+	<programlisting><![CDATA[
+        <property>
+            <name>hbase.crypto.master.key.name</name>
+            <value>hbase</value>
+        </property>
+        ]]></programlisting>
+        <para>
+Because the password to the key store is sensitive information, the HBase site XML file should also have its permissions set to be readable only by the HBase service account.
+        </para>
+        <para>
+Transparent encryption is a feature of HFile version 3. Be sure to use HFile version 3 by setting this property in every server site configuration file:
+        </para>
+        <programlisting><![CDATA[
+        <property>
+            <name>hfile.format.version</name>
+            <value>3</value>
+        </property>
+        ]]></programlisting>
+        <para>
+Finally, configure the secure WAL in every server site configuration file:
+        </para>
+        <programlisting><![CDATA[
+        <property>
+            <name>hbase.regionserver.hlog.reader.impl</name>
+            <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
+        </property>
+        <property>
+            <name>hbase.regionserver.hlog.writer.impl</name>
+            <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter</value>
+        </property>
+        <property>
+            <name>hbase.regionserver.wal.encryption</name>
+            <value>true</value>
+        </property>
+        ]]></programlisting>
+    </section>
+    <section xml:id="hbase.encryption.server.schema">
+        <title>Setting Encryption on a CF</title>
+        <para>
+To enable encryption on a CF, use <code>HBaseAdmin#modifyColumn</code> or the HBase shell to modify the column descriptor. The attribute 'ENCRYPTION' specifies the encryption algorithm to use. Currently only "AES" is supported. If creating a new table, simply set this attribute; no subsequent table modification will be necessary.
+        </para>
+        <para>
+If setting a specific data key, the attribute 'ENCRYPTION_KEY' should contain the data key wrapped by the cluster master key. The static methods <code>wrapKey</code> and <code>unwrapKey</code> in <code>org.apache.hadoop.hbase.security.EncryptionUtil</code> can be used in conjunction with <code>HColumnDescriptor#setEncryptionKey</code> for this purpose. Because this must be done programatically, setting a data key with the shell is not supported.
+        </para>
+        <para>
+To disable encryption on a CF, simply remove the 'ENCRYPTION' (and 'ENCRYPTION_KEY', if it was set) attributes from the column schema, using <code>HBaseAdmin#modifyColumn</code> or the HBase shell. All new HFiles for the CF will be written without encryption. Trigger a major compaction to rewrite all files.
+	</para>
+    </section>
+    <section xml:id="hbase.encryption.server.data_key_rotation">
+        <title>Data Key Rotation</title>
+        <para>
+Data key rotation is made simple by this design. First, change the CF key in the column descriptor. Then, trigger major compaction. Once compaction has completed, all files will be (re)encrypted with the new key material. While this process is ongoing, HFiles encrypted with old key material will still be readable. 
+        </para>
+    </section>
+    <section xml:id="hbase.encryption.server.master_key_rotation">
+        <title>Master Key Rotation</title>
+        <para>
+Master key rotation can be achieved by updating the KeyStore to contain a new master key, as described above, with also the old master key added to the KeyStore under a different alias. Then, configure fallback to the old master key in the HBase site file:
+        </para>
+	<programlisting><![CDATA[
+        <property>
+            <name>hbase.crypto.master.alternate.key.name</name>
+            <value>hbase.old</value>
+        </property>
+        ]]></programlisting>
+        <para>
+This will require a rolling restart of the HBase daemons to take effect. As with data key rotation, trigger a major compaction and wait for it to complete. Once compaction has completed, all files will be (re)encrypted with data keys wrapped by the new cluster master key. The old master key, and its associated site file configuration, can then be removed, and all trace of the old master key will be gone after the next rolling restart. A second rolling restart is not immediately necessary.
+        </para>
+    </section>
+</section>
+
 </chapter>

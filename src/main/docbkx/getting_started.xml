@@ -32,24 +32,36 @@
     <title>Introduction</title>
 
     <para><xref linkend="quickstart" /> will get you up and
-    running on a single-node instance of HBase using the local filesystem.
+    running on a single-node, standalone instance of HBase.
     </para>
   </section>
 
   <section xml:id="quickstart">
     <title>Quick Start</title>
 
-    <para>This guide describes setup of a standalone HBase instance that uses
-    the local filesystem. It leads you through creating a table, inserting
-    rows via the HBase <command>shell</command>, and then cleaning
-    up and shutting down your standalone HBase instance. The below exercise
+    <para>This guide describes setup of a standalone HBase instance. It will
+        run against the local filesystem.  In later sections we will take you through
+        how to run HBase on Apache Hadoop's HDFS, a distributed filesystem.  This section
+        shows you how to create a table in HBase, inserting
+    rows into your new HBase table via the HBase <command>shell</command>, and then cleaning
+    up and shutting down your standalone, local filesystem-based  HBase instance. The below exercise
     should take no more than ten minutes (not including download time).
     </para>
     <note xml:id="local.fs.durability"><title>Local Filesystem and Durability</title>
         <para>Using HBase with a LocalFileSystem does not currently guarantee durability.
-            See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3696"/> and its associated issues for more details.</para></note>
+        The HDFS local filesystem implementation will lose edits if files are not properly
+        closed -- which is very likely to happen when experimenting with a new download.
+            You need to run HBase on HDFS to ensure all writes are preserved.  Running
+            against the local filesystem though will get you off the ground quickly and get you
+            familiar with how the general system works so lets run with it for now. See
+            <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3696"/> and its associated issues for more details.</para></note>
     <note xml:id="loopback.ip.getting.started">
         <title>Loopback IP</title>
+        <note>
+        <para><emphasis>The below advice is for hbase-0.94.x and older versions only. We believe this fixed in hbase-0.96.0 and beyond
+(let us know if we have it wrong).</emphasis>  There should be no need of the below modification to <filename>/etc/hosts</filename> in
+later versions of HBase.</para>
+       </note>
         <para>HBase expects the loopback IP address to be 127.0.0.1.  Ubuntu and some other distributions,
             for example, will default to 127.0.1.1 and this will cause problems for you
             <footnote><para>See <link xlink:href="http://blog.devving.com/why-does-hbase-care-about-etchosts/">Why does HBase care about /etc/hosts?</link> for detail.</para></footnote>.
@@ -60,9 +72,6 @@
             127.0.0.1 ubuntu.ubuntu-domain ubuntu
 </programlisting>
         </para>
-        <tip><title>Fixed in 0.96.0+</title>
-        <para>As of hbase-0.96.0+, this should no longer be an issue; it should work w/o special modification of <filename>/etc/hosts</filename></para>
-        </tip>
        </note>
 
 
@@ -88,7 +97,7 @@ $ cd hbase-<?eval ${project.version}?>
       it, edit <filename>conf/hbase-site.xml</filename>, the file you write
       your site-specific configurations into. Set
       <varname>hbase.rootdir</varname>, the directory HBase writes data to,
-      and <varname>hbase.zookeeper.property.dataDir</varname>, the director
+      and <varname>hbase.zookeeper.property.dataDir</varname>, the directory
       ZooKeeper writes its data too:
 <programlisting>&lt;?xml version="1.0"?&gt;
 &lt;?xml-stylesheet type="text/xsl" href="configuration.xsl"?&gt;

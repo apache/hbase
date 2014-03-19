@@ -41,14 +41,14 @@
       be found at <filename>src/main/docbkx</filename> in a checkout of the hbase
       project.  This reference guide is marked up using
       <link xlink:href="http://www.docbook.com/">DocBook</link> from which the
-      the finished guide is generated as part of the 'site' build target:
-      i.e. run <programlisting>$mvn site</programlisting> to generate this documentation.
-      Feel free to add content by adding
-  a patch to an issue up in the HBase <link
+      the finished guide is generated as part of the 'site' build target.  Run
+      <programlisting>mvn site</programlisting> to generate this documentation.
+      Amendments and improvements to the documentation are welcomed.  Add a
+      patch to an issue up in the HBase <link
   xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>
 
   <note xml:id="headsup">
-      <title>Heads-up</title>
+      <title>Heads-up if this is your first foray into the world of distributed computing...</title>
       <para>
           If this is your first foray into the wonderful world of
           Distributed Computing, then you are in for
@@ -65,6 +65,7 @@
           computing has been bound to a single box.  Here is one good
           starting point:
           <link xlink:href="http://en.wikipedia.org/wiki/Fallacies_of_Distributed_Computing">Fallacies of Distributed Computing</link>.
+          That said, you are welcome.  Its a fun place to be.  Yours, the HBase Community.
       </para>
   </note>
 </preface>
