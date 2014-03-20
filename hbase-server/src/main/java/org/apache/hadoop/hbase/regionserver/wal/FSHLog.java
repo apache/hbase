@@ -1776,15 +1776,15 @@ class FSHLog implements HLog, Syncable {
 
       // TODO: Trace only working for appends, not for syncs.
       TraceScope scope =
-        truck.getSpanPayload() != null? Trace.continueSpan(truck.getSpanPayload()): null;
+        truck.hasSpanPayload() ? Trace.continueSpan(truck.unloadSpanPayload()) : null;
       try {
-        if (truck.getSyncFuturePayload() != null) {
-          this.syncFutures[this.syncFuturesCount++] = truck.getSyncFuturePayload();
+        if (truck.hasSyncFuturePayload()) {
+          this.syncFutures[this.syncFuturesCount++] = truck.unloadSyncFuturePayload();
           // Force flush of syncs if we are carrying a full complement of syncFutures.
           if (this.syncFuturesCount == this.syncFutures.length) endOfBatch = true;
-        } else if (truck.getFSWALEntryPayload() != null) {
+        } else if (truck.hasFSWALEntryPayload()) {
           try {
-            append(truck.getFSWALEntryPayload());
+            append(truck.unloadFSWALEntryPayload());
           } catch (Exception e) {
             // If append fails, presume any pending syncs will fail too; let all waiting handlers
             // know of the exception.
