@@ -69,6 +69,11 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   }
 
   @Override
+  public DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction) {
+    return DataBlockEncoding.NONE;
+  }
+  
+  @Override
   public String toString() {
     return getClass().getSimpleName();
   }

@@ -347,10 +347,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   /**
    * Cache the block with the specified name and buffer.
    * <p>
-   * It is assumed this will NEVER be called on an already cached block.  If
-   * that is done, it is assumed that you are reinserting the same exact
-   * block due to a race condition and will update the buffer but not modify
-   * the size of the cache.
    * @param cacheKey block's cache key
    * @param buf block buffer
    */
@@ -381,7 +377,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * @param repeat Whether this is a repeat lookup for the same block
    *        (used to avoid double counting cache misses when doing double-check locking)
    * @return buffer of specified cache key, or null if not in cache
-   * @see HFileReaderV2#readBlock(long, long, boolean, boolean, boolean, BlockType)
+   * @see HFileReaderV2#readBlock(long, long, boolean, boolean, boolean, BlockType, DataBlockEncoding)
    */
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat) {
@@ -917,8 +913,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   public Map<DataBlockEncoding, Integer> getEncodingCountsForTest() {
     Map<DataBlockEncoding, Integer> counts =
         new EnumMap<DataBlockEncoding, Integer>(DataBlockEncoding.class);
-    for (BlockCacheKey cacheKey : map.keySet()) {
-      DataBlockEncoding encoding = cacheKey.getDataBlockEncoding();
+    for (CachedBlock block : map.values()) {
+      DataBlockEncoding encoding =
+              ((HFileBlock) block.getBuffer()).getDataBlockEncoding();
       Integer count = counts.get(encoding);
       counts.put(encoding, (count == null ? 0 : count) + 1);
     }

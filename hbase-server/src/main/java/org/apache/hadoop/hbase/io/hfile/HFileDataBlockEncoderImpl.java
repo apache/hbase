@@ -75,6 +75,20 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
     return encoding;
   }
 
+  public boolean useEncodedScanner(boolean isCompaction) {
+    if (isCompaction && encoding == DataBlockEncoding.NONE) {
+      return false;
+    }
+    return encoding != DataBlockEncoding.NONE;
+  }
+
+  @Override
+  public DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction) {
+    if (!useEncodedScanner(isCompaction)) {
+      return DataBlockEncoding.NONE;
+    }
+    return encoding;
+  }
   /**
    * Precondition: a non-encoded buffer. Postcondition: on-disk encoding.
    *

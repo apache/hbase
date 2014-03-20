@@ -125,6 +125,15 @@ public class TestLruBlockCache {
       assertEquals(buf.heapSize(), block.heapSize());
     }
 
+    // Re-add same blocks and ensure nothing has changed
+    long expectedBlockCount = cache.getBlockCount();
+    for (CachedItem block : blocks) {
+      cache.cacheBlock(block.cacheKey, block);
+    }
+    assertEquals(
+            "Cache should ignore cache requests for blocks already in cache",
+            expectedBlockCount, cache.getBlockCount());
+    
     // Verify correctly calculated cache heap size
     assertEquals(expectedCacheSize, cache.heapSize());
 

@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexChunk;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -164,7 +165,7 @@ public class TestHFileBlockIndex {
     @Override
     public HFileBlock readBlock(long offset, long onDiskSize,
         boolean cacheBlock, boolean pread, boolean isCompaction,
-        BlockType expectedBlockType)
+        BlockType expectedBlockType, DataBlockEncoding expectedDataBlockEncoding)
         throws IOException {
       if (offset == prevOffset && onDiskSize == prevOnDiskSize &&
           pread == prevPread) {
@@ -214,7 +215,7 @@ public class TestHFileBlockIndex {
       assertTrue(key != null);
       assertTrue(indexReader != null);
       HFileBlock b = indexReader.seekToDataBlock(key, 0, key.length, null,
-          true, true, false);
+          true, true, false, null);
       if (Bytes.BYTES_RAWCOMPARATOR.compare(key, firstKeyInFile) < 0) {
         assertTrue(b == null);
         ++i;

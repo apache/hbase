@@ -98,7 +98,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
         // We cache the block and use a positional read.
         bloomBlock = reader.readBlock(index.getRootBlockOffset(block),
             index.getRootBlockDataSize(block), true, true, false,
-            BlockType.BLOOM_CHUNK);
+            BlockType.BLOOM_CHUNK, null);
       } catch (IOException ex) {
         // The Bloom filter is broken, turn it off.
         throw new IllegalArgumentException(

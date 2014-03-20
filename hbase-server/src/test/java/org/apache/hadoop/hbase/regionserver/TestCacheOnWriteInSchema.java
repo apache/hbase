@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -233,7 +234,7 @@ public class TestCacheOnWriteInSchema {
         // Flags: don't cache the block, use pread, this is not a compaction.
         // Also, pass null for expected block type to avoid checking it.
         HFileBlock block = reader.readBlock(offset, onDiskSize, false, true,
-          false, null);
+          false, null, DataBlockEncoding.NONE);
         BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
           offset);
         boolean isCached = cache.getBlock(blockCacheKey, true, false) != null;

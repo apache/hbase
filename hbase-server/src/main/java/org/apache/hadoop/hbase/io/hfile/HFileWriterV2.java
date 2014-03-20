@@ -196,8 +196,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   private void doCacheOnWrite(long offset) {
     HFileBlock cacheFormatBlock = fsBlockWriter.getBlockForCaching();
     cacheConf.getBlockCache().cacheBlock(
-        new BlockCacheKey(name, offset, blockEncoder.getDataBlockEncoding(),
-            cacheFormatBlock.getBlockType()), cacheFormatBlock);
+        new BlockCacheKey(name, offset), cacheFormatBlock);
   }
 
   /**

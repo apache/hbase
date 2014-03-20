@@ -67,6 +67,12 @@ public interface HFileDataBlockEncoder {
   DataBlockEncoding getDataBlockEncoding();
 
   /**
+   * @return the effective in-cache data block encoding, taking into account
+   *         whether we are doing a compaction.
+   */
+  public DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction);
+
+  /**
    * Create an encoder specific encoding context object for writing. And the
    * encoding context should also perform compression if compressionAlgorithm is
    * valid.

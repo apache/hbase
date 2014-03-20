@@ -209,6 +209,58 @@ public class HFileReaderV2 extends AbstractHFileReader {
     return new ScannerV2(this, cacheBlocks, pread, isCompaction);
   }
 
+   private HFileBlock getCachedBlock(BlockCacheKey cacheKey, boolean cacheBlock, boolean useLock,
+       boolean isCompaction, BlockType expectedBlockType,
+       DataBlockEncoding expectedDataBlockEncoding) throws IOException {
+     // Check cache for block. If found return.
+     if (cacheConf.isBlockCacheEnabled()) {
+       BlockCache cache = cacheConf.getBlockCache();
+       HFileBlock cachedBlock =
+               (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock);
+       if (cachedBlock != null) {
+         validateBlockType(cachedBlock, expectedBlockType);
+
+         if (expectedDataBlockEncoding == null) {
+           return cachedBlock;
+         }
+         DataBlockEncoding actualDataBlockEncoding =
+                 cachedBlock.getDataBlockEncoding();
+         // Block types other than data blocks always have
+         // DataBlockEncoding.NONE. To avoid false negative cache misses, only
+         // perform this check if cached block is a data block.
+         if (cachedBlock.getBlockType().isData() &&
+                 !actualDataBlockEncoding.equals(expectedDataBlockEncoding)) {
+           // This mismatch may happen if a ScannerV2, which is used for say a
+           // compaction, tries to read an encoded block from the block cache.
+           // The reverse might happen when an EncodedScannerV2 tries to read
+           // un-encoded blocks which were cached earlier.
+           //
+           // Because returning a data block with an implicit BlockType mismatch
+           // will cause the requesting scanner to throw a disk read should be
+           // forced here. This will potentially cause a significant number of
+           // cache misses, so update so we should keep track of this as it might
+           // justify the work on a CompoundScannerV2.
+           if (!expectedDataBlockEncoding.equals(DataBlockEncoding.NONE) &&
+                   !actualDataBlockEncoding.equals(DataBlockEncoding.NONE)) {
+             // If the block is encoded but the encoding does not match the
+             // expected encoding it is likely the encoding was changed but the
+             // block was not yet evicted. Evictions on file close happen async
+             // so blocks with the old encoding still linger in cache for some
+             // period of time. This event should be rare as it only happens on
+             // schema definition change.
+             LOG.info("Evicting cached block with key " + cacheKey +
+                     " because of a data block encoding mismatch" +
+                     "; expected: " + expectedDataBlockEncoding +
+                     ", actual: " + actualDataBlockEncoding);
+             cache.evictBlock(cacheKey);
+           }
+           return null;
+         }
+         return cachedBlock;
+       }
+     }
+     return null;
+   }
   /**
    * @param metaBlockName
    * @param cacheBlock Add block to cache, if found
@@ -239,13 +291,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
-      BlockCacheKey cacheKey = new BlockCacheKey(name, metaBlockOffset,
-          DataBlockEncoding.NONE, BlockType.META);
+      BlockCacheKey cacheKey = new BlockCacheKey(name, metaBlockOffset);
 
       cacheBlock &= cacheConf.shouldCacheDataOnRead();
       if (cacheConf.isBlockCacheEnabled()) {
-        HFileBlock cachedBlock =
-          (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey, cacheBlock, false);
+        HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, false, false,
+          BlockType.META, null);
         if (cachedBlock != null) {
           // Return a distinct 'shallow copy' of the block,
           // so pos does not get messed by the scanner
@@ -271,7 +322,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
   }
 
   /**
-   * Read in a file block.
+   * Read in a file block of the given {@link BlockType} and
+   * {@link DataBlockEncoding}.
    * @param dataBlockOffset offset to read.
    * @param onDiskBlockSize size of the block
    * @param cacheBlock
@@ -282,13 +334,19 @@ public class HFileReaderV2 extends AbstractHFileReader {
    *          read operation, or null to read whatever block type is available
    *          and avoid checking (that might reduce caching efficiency of
    *          encoded data blocks)
+   * @param expectedDataBlockEncoding the data block encoding the caller is
+   *          expecting data blocks to be in, or null to not perform this
+   *          check and return the block irrespective of the encoding. This
+   *          check only applies to data blocks and can be set to null when
+   *          the caller is expecting to read a non-data block and has set
+   *          expectedBlockType accordingly.
    * @return Block wrapped in a ByteBuffer.
    * @throws IOException
    */
   @Override
   public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize,
       final boolean cacheBlock, boolean pread, final boolean isCompaction,
-      BlockType expectedBlockType)
+      BlockType expectedBlockType, DataBlockEncoding expectedDataBlockEncoding)
       throws IOException {
     if (dataBlockIndexReader == null) {
       throw new IOException("Block index not loaded");
@@ -306,9 +364,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
     // from doing).
 
     BlockCacheKey cacheKey =
-        new BlockCacheKey(name, dataBlockOffset,
-            dataBlockEncoder.getDataBlockEncoding(),
-            expectedBlockType);
+        new BlockCacheKey(name, dataBlockOffset);
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
@@ -323,8 +379,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
         if (cacheConf.isBlockCacheEnabled()) {
           // Try and get the block from the block cache. If the useLock variable is true then this
           // is the second time through the loop and it should not be counted as a block cache miss.
-          HFileBlock cachedBlock = (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
-              cacheBlock, useLock);
+          HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, useLock, isCompaction,
+            expectedBlockType, expectedDataBlockEncoding);
           if (cachedBlock != null) {
             validateBlockType(cachedBlock, expectedBlockType);
             if (cachedBlock.getBlockType().isData()) {
@@ -398,8 +454,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       return;
     }
     BlockType actualBlockType = block.getBlockType();
-    if (actualBlockType == BlockType.ENCODED_DATA &&
-        expectedBlockType == BlockType.DATA) {
+    if (expectedBlockType.isData() && actualBlockType.isData()) {
       // We consider DATA to match ENCODED_DATA for the purpose of this
       // verification.
       return;
@@ -444,6 +499,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
     }
     fsBlockReader.closeStreams();
+  }
+
+  public DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction) {
+    return dataBlockEncoder.getEffectiveEncodingInCache(isCompaction);
   }
 
   /** For testing */
@@ -493,7 +552,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           reader.getDataBlockIndexReader();
       BlockWithScanInfo blockWithScanInfo =
         indexReader.loadDataBlockWithScanInfo(key, offset, length, block,
-            cacheBlocks, pread, isCompaction);
+            cacheBlocks, pread, isCompaction, getEffectiveDataBlockEncoding());
       if (blockWithScanInfo == null || blockWithScanInfo.getHFileBlock() == null) {
         // This happens if the key e.g. falls before the beginning of the file.
         return -1;
@@ -547,7 +606,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
         throws IOException {
       HFileBlock seekToBlock =
           reader.getDataBlockIndexReader().seekToDataBlock(key, offset, length,
-              block, cacheBlocks, pread, isCompaction);
+              block, cacheBlocks, pread, isCompaction,
+              ((HFileReaderV2)reader).getEffectiveEncodingInCache(isCompaction));
       if (seekToBlock == null) {
         return false;
       }
@@ -568,7 +628,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         // figure out the size.
         seekToBlock = reader.readBlock(previousBlockOffset,
             seekToBlock.getOffset() - previousBlockOffset, cacheBlocks,
-            pread, isCompaction, BlockType.DATA);
+            pread, isCompaction, BlockType.DATA, getEffectiveDataBlockEncoding());
         // TODO shortcut: seek forward in this block to the last key of the
         // block.
       }
@@ -605,10 +665,14 @@ public class HFileReaderV2 extends AbstractHFileReader {
         curBlock = reader.readBlock(curBlock.getOffset()
             + curBlock.getOnDiskSizeWithHeader(),
             curBlock.getNextBlockOnDiskSizeWithHeader(), cacheBlocks, pread,
-            isCompaction, null);
+            isCompaction, null, getEffectiveDataBlockEncoding());
       } while (!curBlock.getBlockType().isData());
 
       return curBlock;
+    }
+    
+    public DataBlockEncoding getEffectiveDataBlockEncoding() {
+      return ((HFileReaderV2)reader).getEffectiveEncodingInCache(isCompaction);
     }
     /**
      * Compare the given key against the current key
@@ -763,7 +827,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
 
       block = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks, pread,
-          isCompaction, BlockType.DATA);
+          isCompaction, BlockType.DATA, getEffectiveDataBlockEncoding());
       if (block.getOffset() < 0) {
         throw new IOException("Invalid block offset: " + block.getOffset());
       }
@@ -1050,7 +1114,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
 
       block = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks, pread,
-          isCompaction, BlockType.DATA);
+          isCompaction, BlockType.DATA, getEffectiveDataBlockEncoding());
       if (block.getOffset() < 0) {
         throw new IOException("Invalid block offset: " + block.getOffset());
       }

@@ -167,17 +167,22 @@ public class HFileBlockIndex {
      * @param key the key we are looking for
      * @param keyOffset the offset of the key in its byte array
      * @param keyLength the length of the key
-     * @param currentBlock the current block, to avoid re-reading the same
-     *          block
+     * @param currentBlock the current block, to avoid re-reading the same block
+     * @param cacheBlocks
+     * @param pread
+     * @param isCompaction
+     * @param expectedDataBlockEncoding the data block encoding the caller is
+     *          expecting the data block to be in, or null to not perform this
+     *          check and return the block irrespective of the encoding
      * @return reader a basic way to load blocks
      * @throws IOException
      */
     public HFileBlock seekToDataBlock(final byte[] key, int keyOffset,
         int keyLength, HFileBlock currentBlock, boolean cacheBlocks,
-        boolean pread, boolean isCompaction)
+        boolean pread, boolean isCompaction, DataBlockEncoding expectedDataBlockEncoding)
         throws IOException {
       BlockWithScanInfo blockWithScanInfo = loadDataBlockWithScanInfo(key, keyOffset, keyLength,
-          currentBlock, cacheBlocks, pread, isCompaction);
+          currentBlock, cacheBlocks, pread, isCompaction, expectedDataBlockEncoding);
       if (blockWithScanInfo == null) {
         return null;
       } else {
@@ -198,13 +203,16 @@ public class HFileBlockIndex {
      * @param cacheBlocks
      * @param pread
      * @param isCompaction
+     * @param expectedDataBlockEncoding the data block encoding the caller is
+     *          expecting the data block to be in, or null to not perform this
+     *          check and return the block irrespective of the encoding.
      * @return the BlockWithScanInfo which contains the DataBlock with other scan info
      *         such as nextIndexedKey.
      * @throws IOException
      */
     public BlockWithScanInfo loadDataBlockWithScanInfo(final byte[] key, int keyOffset,
         int keyLength, HFileBlock currentBlock, boolean cacheBlocks,
-        boolean pread, boolean isCompaction)
+        boolean pread, boolean isCompaction, DataBlockEncoding expectedDataBlockEncoding)
         throws IOException {
       int rootLevelIndex = rootBlockContainingKey(key, keyOffset, keyLength);
       if (rootLevelIndex < 0 || rootLevelIndex >= blockOffsets.length) {
@@ -252,7 +260,7 @@ public class HFileBlockIndex {
           }
           block = cachingBlockReader.readBlock(currentOffset,
               currentOnDiskSize, shouldCache, pread, isCompaction,
-              expectedBlockType);
+              expectedBlockType, expectedDataBlockEncoding);
         }
 
         if (block == null) {
@@ -328,7 +336,7 @@ public class HFileBlockIndex {
         // Caching, using pread, assuming this is not a compaction.
         HFileBlock midLeafBlock = cachingBlockReader.readBlock(
             midLeafBlockOffset, midLeafBlockOnDiskSize, true, true, false,
-            BlockType.LEAF_INDEX);
+            BlockType.LEAF_INDEX, null);
 
         ByteBuffer b = midLeafBlock.getBufferWithoutHeader();
         int numDataBlocks = b.getInt();
@@ -950,8 +958,7 @@ public class HFileBlockIndex {
       if (blockCache != null) {
         HFileBlock blockForCaching = blockWriter.getBlockForCaching();
         blockCache.cacheBlock(new BlockCacheKey(nameForCaching,
-            beginOffset, DataBlockEncoding.NONE, 
-            blockForCaching.getBlockType()), blockForCaching);
+          beginOffset), blockForCaching);
       }
 
       // Add intermediate index block size
