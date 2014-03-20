@@ -92,10 +92,12 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   private static User SUPERUSER;
   private static Configuration conf;
 
+  @Override
   public Configuration getConf() {
     return util.getConfiguration();
   }
 
+  @Override
   public void setConf(Configuration conf) {
     throw new IllegalArgumentException("setConf not supported");
   }
@@ -121,6 +123,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   private static void createLabels() throws IOException, InterruptedException {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE };
         try {
@@ -173,12 +176,12 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     doMROnTableTest(util, FAMILY, data, args, 1);
     util.deleteTable(tableName);
   }
-  
+
   @Test
   public void testBulkOutputWithTsvImporterTextMapper() throws Exception {
     String table = "test-" + UUID.randomUUID();
     String FAMILY = "FAM";
-    Path bulkOutputPath = new Path(util.getDataTestDir(table),"hfiles");
+    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table),"hfiles");
     // Prepare the arguments required for the test.
     String[] args =
         new String[] {
@@ -187,13 +190,13 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
             "-D" + ImportTsv.COLUMNS_CONF_KEY
                 + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
             "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
-            "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(), table 
+            "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(), table
             };
     String data = "KEY\u001bVALUE4\u001bVALUE8\u001bsecret&private\n";
     doMROnTableTest(util, FAMILY, data, args, 4);
     util.deleteTable(table);
   }
-  
+
   @Test
   public void testMRWithOutputFormat() throws Exception {
     String tableName = "test-" + UUID.randomUUID();
@@ -210,13 +213,13 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     doMROnTableTest(util, FAMILY, data, args, 1);
     util.deleteTable(tableName);
   }
-  
+
   /**
    * Run an ImportTsv job and perform basic validation on the results. Returns
    * the ImportTsv <code>Tool</code> instance so that other tests can inspect it
    * for further validation as necessary. This method is static to insure
    * non-reliance on instance's util/conf facilities.
-   * 
+   *
    * @param args
    *          Any arguments to pass BEFORE inputFile path is appended.
    * @return The Tool instance used to run the test.
