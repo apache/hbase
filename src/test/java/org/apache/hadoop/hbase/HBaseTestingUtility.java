@@ -1515,6 +1515,10 @@ public class HBaseTestingUtility {
     if (rmAdress != null) {
       conf.set("yarn.resourcemanager.address", rmAdress);
     }
+    String historyAddress = jobConf.get("mapreduce.jobhistory.address");
+    if (historyAddress != null) {
+      conf.set("mapreduce.jobhistory.address", historyAddress);
+    }
     String schedulerAdress =
       mrClusterJobConf.get("yarn.resourcemanager.scheduler.address");
     if (schedulerAdress != null) {
