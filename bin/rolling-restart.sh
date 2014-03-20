@@ -34,7 +34,11 @@
 #
 # Modelled after $HADOOP_HOME/bin/slaves.sh.
 
-usage="Usage: $0 [--config <hbase-confdir>] [--rs-only] [--master-only] [--graceful] [--maxthreads xx]"
+usage_str="Usage: `basename $0` [--config <hbase-confdir>] [--rs-only] [--master-only] [--graceful] [--maxthreads xx]"
+
+function usage() {
+  echo "${usage_str}"
+}
 
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
@@ -47,12 +51,6 @@ if [ $errCode -ne 0 ]
 then
   exit $errCode
 fi
-
-function usage() {
-  echo $usage
-  exit 1
-}
-
 
 RR_RS=1
 RR_MASTER=1
@@ -84,8 +82,12 @@ while [ $# -gt 0 ]; do
       RR_MAXTHREADS=$1
       shift
       ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
     *)
-      echo Bad argument: $x
+      echo Bad argument: $1
       usage
       exit 1
       ;;
