@@ -352,72 +352,6 @@ applyPatch () {
 }
 
 ###############################################################################
-### Attempt to compile against the hadoop 1.1
-checkHadoop11Compile () {
-  echo ""
-  echo ""
-  echo "======================================================================"
-  echo "======================================================================"
-  echo "    Checking against hadoop 1.1 build"
-  echo "======================================================================"
-  echo "======================================================================"
-  echo ""
-  echo ""
-
-  patchForHadoop2=`$GREP -c -i 'hadoop.profile=1.1' $PATCH_DIR/patch`
-  if [[ $patchForHadoop2 != 0 ]] ; then
-    return 0;
-  fi
-
-  export MAVEN_OPTS="${MAVEN_OPTS}"
-  # build core and tests
-  $MVN clean test help:active-profiles -X -DskipTests -Dhadoop.profile=1.1 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunk1.1JavacWarnings.txt 2>&1
-  if [[ $? != 0 ]] ; then
-    JIRA_COMMENT="$JIRA_COMMENT
-
-    {color:red}-1 hadoop1.1{color}.  The patch failed to compile against the hadoop 1.1 profile."
-	  return 1
-  fi
-  JIRA_COMMENT="$JIRA_COMMENT
-
-    {color:green}+1 hadoop1.1{color}.  The patch compiles against the hadoop 1.1 profile."
-  return 0
-}
-
-###############################################################################
-### Attempt to compile against the hadoop 1.0
-checkHadoop10Compile () {
-  echo ""
-  echo ""
-  echo "======================================================================"
-  echo "======================================================================"
-  echo "    Checking against hadoop 1.0 build"
-  echo "======================================================================"
-  echo "======================================================================"
-  echo ""
-  echo ""
-
-  export MAVEN_OPTS="${MAVEN_OPTS}"
-  # build core and tests
-  $MVN clean test help:active-profiles -X -DskipTests -Dhadoop.profile=1.0 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunk1.0JavacWarnings.txt 2>&1
-  if [[ $? != 0 ]] ; then
-    ERR=`$GREP -A 5 'Compilation failure' $PATCH_DIR/trunk1.0JavacWarnings.txt`
-    JIRA_COMMENT="$JIRA_COMMENT
-
-    {color:red}-1 hadoop1.0{color}.  The patch failed to compile against the hadoop 1.0 profile.
-    Here is snippet of errors:
-    {code}$ERR{code}"
-
-	  return 1
-  fi
-  JIRA_COMMENT="$JIRA_COMMENT
-
-    {color:green}+1 hadoop1.0{color}.  The patch compiles against the hadoop 1.0 profile."
-  return 0
-}
-
-
-###############################################################################
 ### Check against known anti-patterns
 checkAntiPatterns () {
   echo ""
@@ -904,10 +838,6 @@ if [[ $? != 0 ]] ; then
 fi
 
 checkAntiPatterns
-(( RESULT = RESULT + $? ))
-checkHadoop10Compile
-(( RESULT = RESULT + $? ))
-checkHadoop11Compile
 (( RESULT = RESULT + $? ))
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
