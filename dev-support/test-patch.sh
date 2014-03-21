@@ -21,9 +21,9 @@ bindir=$(dirname $0)
 
 # Defaults
 if [ -z "$MAVEN_HOME" ]; then
-  MVN="mvn -U"
+  MVN=mvn
 else
-  MVN="$MAVEN_HOME/bin/mvn -U"
+  MVN=$MAVEN_HOME/bin/mvn
 fi
 
 PROJECT_NAME=HBase
