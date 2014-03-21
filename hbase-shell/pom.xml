@@ -204,7 +204,7 @@
     </dependency>
     <!-- Test Dependencies -->
     <dependency>
-      <groupId>org.cloudera.htrace</groupId>
+      <groupId>org.htrace</groupId>
       <artifactId>htrace-core</artifactId>
    </dependency>
   </dependencies>

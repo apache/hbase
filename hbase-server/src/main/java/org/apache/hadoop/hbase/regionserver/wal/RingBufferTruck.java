@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.cloudera.htrace.Span;
+import org.htrace.Span;
 
 import com.lmax.disruptor.EventFactory;
 

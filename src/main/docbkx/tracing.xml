@@ -70,7 +70,7 @@
 <programlisting><![CDATA[
   <property>
     <name>hbase.trace.spanreceiver.classes</name>
-    <value>org.cloudera.htrace.impl.LocalFileSpanReceiver</value>
+    <value>org.htrace.impl.LocalFileSpanReceiver</value>
   </property>
   <property>
     <name>hbase.local-file-span-receiver.path</name>
@@ -95,7 +95,7 @@
 <programlisting><![CDATA[
   <property>
     <name>hbase.trace.spanreceiver.classes</name>
-    <value>org.cloudera.htrace.impl.ZipkinSpanReceiver</value>
+    <value>org.htrace.impl.ZipkinSpanReceiver</value>
   </property> 
   <property>
     <name>hbase.zipkin.collector-hostname</name>

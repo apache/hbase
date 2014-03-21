@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.cloudera.htrace.Trace;
+import org.htrace.Trace;
 
 import com.google.common.annotations.VisibleForTesting;
 

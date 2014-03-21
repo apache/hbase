@@ -27,8 +27,8 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
-import org.cloudera.htrace.Trace;
-import org.cloudera.htrace.TraceScope;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
 
 import com.google.protobuf.Message;
 

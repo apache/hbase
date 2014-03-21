@@ -25,9 +25,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Server;
-import org.cloudera.htrace.Span;
-import org.cloudera.htrace.Trace;
-import org.cloudera.htrace.TraceScope;
+import org.htrace.Span;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
 
 /**
  * Abstract base class for all HBase event handlers. Subclasses should

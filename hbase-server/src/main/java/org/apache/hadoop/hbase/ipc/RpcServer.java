@@ -110,7 +110,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
-import org.cloudera.htrace.TraceInfo;
+import org.htrace.TraceInfo;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;

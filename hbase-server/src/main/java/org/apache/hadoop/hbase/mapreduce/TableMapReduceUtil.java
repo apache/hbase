@@ -682,7 +682,7 @@ public class TableMapReduceUtil {
       org.jboss.netty.channel.ChannelFactory.class,
       com.google.protobuf.Message.class,
       com.google.common.collect.Lists.class,
-      org.cloudera.htrace.Trace.class);
+      org.htrace.Trace.class);
   }
 
   /**

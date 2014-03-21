@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
-import org.cloudera.htrace.Trace;
+import org.htrace.Trace;
 
 /**
  * Handler to run enable of a table.

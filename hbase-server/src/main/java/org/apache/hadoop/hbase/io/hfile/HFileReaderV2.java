@@ -41,8 +41,8 @@ import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.io.WritableUtils;
-import org.cloudera.htrace.Trace;
-import org.cloudera.htrace.TraceScope;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
 
 /**
  * {@link HFile} reader for version 2.

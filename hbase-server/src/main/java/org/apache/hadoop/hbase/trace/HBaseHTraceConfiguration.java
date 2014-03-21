@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.trace;
 
 import org.apache.hadoop.conf.Configuration;
-import org.cloudera.htrace.HTraceConfiguration;
+import org.htrace.HTraceConfiguration;
 
 public class HBaseHTraceConfiguration extends HTraceConfiguration {
 

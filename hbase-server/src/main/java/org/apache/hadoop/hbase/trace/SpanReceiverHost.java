@@ -25,8 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.cloudera.htrace.SpanReceiver;
-import org.cloudera.htrace.Trace;
+import org.htrace.SpanReceiver;
+import org.htrace.Trace;
 
 /**
  * This class provides functions for reading the names of SpanReceivers from

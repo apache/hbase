@@ -315,7 +315,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
       HBaseTestingUtility.class,                      // hbase-server-test
       HBaseCommonTestingUtility.class,                // hbase-common-test
       com.google.common.collect.ListMultimap.class,   // Guava
-      org.cloudera.htrace.Trace.class);               // HTrace
+      org.htrace.Trace.class);               // HTrace
   }
 
   /**

@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.zookeeper.KeeperException;
-import org.cloudera.htrace.Trace;
+import org.htrace.Trace;
 
 /**
  * Handler to run disable of a table.
