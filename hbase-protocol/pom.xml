@@ -158,6 +158,7 @@
                           <include>ClusterId.proto</include>
                           <include>ClusterStatus.proto</include>
                           <include>Comparator.proto</include>
+                          <include>Encryption.proto</include>
                           <include>ErrorHandling.proto</include>
                           <include>Filter.proto</include>
                           <include>FS.proto</include>
@@ -172,6 +173,7 @@
                           <include>RPC.proto</include>
                           <include>SecureBulkLoad.proto</include>
                           <include>Tracing.proto</include>
+                          <include>VisibilityLabels.proto</include>
                           <include>WAL.proto</include>
                           <include>ZooKeeper.proto</include>
                         </includes>
