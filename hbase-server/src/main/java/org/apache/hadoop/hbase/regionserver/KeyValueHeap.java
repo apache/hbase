@@ -112,8 +112,8 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
       this.current = pollRealKV();
     } else {
       KeyValueScanner topScanner = this.heap.peek();
-      if (topScanner == null ||
-          this.comparator.compare(kvNext, topScanner.peek()) >= 0) {
+      // no need to add current back to the heap if it is the only scanner left
+      if (topScanner != null && this.comparator.compare(kvNext, topScanner.peek()) >= 0) {
         this.heap.add(this.current);
         this.current = pollRealKV();
       }
