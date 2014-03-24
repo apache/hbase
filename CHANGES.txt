@@ -1,135 +1,136 @@
 HBase Change Log
 Release 0.96.2 - Not released 
-129+ issues closed/resolved. See http://goo.gl/bQk42q or below:
-HBASE-10161 [AccessController] Tolerate regions in recovery" Anoop Sam John
-HBASE-10384 Failed to increment serveral columns in one Increment" Jimmy Xiang
-HBASE-10313 Duplicate servlet-api jars in hbase 0.96.0" stack
-HBASE-10370 Compaction in out-of-date Store causes region split failure" Liu Shaohui
-HBASE-10366 0.94 filterRow() may be skipped in 0.96(or onwards) code" Jeffrey Zhong
-HBASE-10556 Possible data loss due to non-handled DroppedSnapshotException for user-triggered flush from client/shell" Honghua Feng
-HBASE-10582 0.94->0.96 Upgrade: ACL can't be repopulated when ACL table contains row for table '-ROOT' or '.META.'" Jeffrey Zhong
-HBASE-10581 ACL znode are left without PBed during upgrading hbase0.94* to hbase0.96+" Jeffrey Zhong
-HBASE-10575 ReplicationSource thread can't be terminated if it runs into the loop to contact peer's zk ensemble and fails continuously" Honghua Feng
-HBASE-10436 restore regionserver lists removed from hbase 0.96+ jmx" Jonathan Hsieh
-HBASE-10449 Wrong execution pool configuration in HConnectionManager" Nicolas Liochon
-HBASE-10442 prepareDelete() isn't called before doPreMutationHook for a row deletion case" Jeffrey Zhong
-HBASE-10598 Written data can not be read out because MemStore#timeRangeTracker might be updated concurrently" cuijianwei
-HBASE-10679 Both clients get wrong scan results if the first scanner expires and the second scanner is created with the same scannerId on the same region" Honghua Feng
-HBASE-10514 Forward port HBASE-10466, possible data loss when failed flushes" stack
-HBASE-10749 CellComparator.compareStatic() compares type wrongly" ramkrishna.s.vasudevan
-HBASE-9151 HBCK cannot fix when meta server znode deleted, this can happen if all region servers stopped and there are no logs to split." rajeshbabu
-HBASE-8803 region_mover.rb should move multiple regions at a time" Jean-Marc Spaggiari
-HBASE-10043 HBASE-10033 Fix Potential Resouce Leak in MultiTableInputFormatBase" Elliott Clark
-HBASE-10195 "mvn site" build failed with OutOfMemoryError" Jeffrey Zhong
-HBASE-10196 Enhance HBCK to understand the case after online region merge" chunhui shen
-HBASE-10137 GeneralBulkAssigner with retain assignment plan can be used in EnableTableHandler to bulk assign the regions" rajeshbabu
-HBASE-10157 Provide CP hook post log replay" Anoop Sam John
-HBASE-10155 HRegion isRecovering state is wrongly coming in postOpen hook" Anoop Sam John
-HBASE-10146 Bump HTrace version to 2.04" Elliott Clark
-HBASE-10124 HBASE-10033 Make Sub Classes Static When Possible" Elliott Clark
-HBASE-10084 [WINDOWS] bin\hbase.cmd should allow whitespaces in java.library.path and classpath" Enis Soztutar
-HBASE-10186 region_mover.rb broken because ServerName constructor is changed to private" Samir Ahmic
-HBASE-10098 [WINDOWS] pass in native library directory from hadoop for unit tests" Enis Soztutar
-HBASE-10110 HBASE-10033 Fix Potential Resource Leak in StoreFlusher" Elliott Clark
-HBASE-10264 [MapReduce]: CompactionTool in mapred mode is missing classes in its classpath" Himanshu Vashishtha
-HBASE-10260 Canary Doesn't pick up Configuration properly." Elliott Clark
-HBASE-10232 Remove native profile from hbase-shell" Elliott Clark
-HBASE-10221 Region from coprocessor invocations can be null on failure" Andrew Purtell
-HBASE-10220 Put all test service principals into the superusers list" Andrew Purtell
-HBASE-10219 HTTPS support for HBase in RegionServerListTmpl.jamon" Ted Yu
-HBASE-10218 Port HBASE-10142 'TestLogRolling#testLogRollOnDatanodeDeath test failure' to 0.96 branch" Ted Yu
-HBASE-10332 Missing .regioninfo file during daughter open processing" Matteo Bertozzi
-HBASE-10315 Canary shouldn't exit with 3 if there is no master running." Elliott Clark
-HBASE-10310 ZNodeCleaner session expired for /hbase/master" Samir Ahmic
-HBASE-10375 hbase-default.xml hbase.status.multicast.address.port does not match code" Nicolas Liochon
-HBASE-10349 Table became unusable when master balanced its region after table was dropped" Jimmy Xiang
-HBASE-10389 Add namespace help info in table related shell commands" Jerry He
-HBASE-10334 RegionServer links in table.jsp is broken" Enis Soztutar
-HBASE-10333 Assignments are not retained on a cluster start" Jimmy Xiang
-HBASE-10059 TestSplitLogWorker#testMultipleTasks fails occasionally" Jeffrey Zhong
-HBASE-10500 Some tools OOM when BucketCache is enabled" Nick Dimiduk
-HBASE-10511 Add latency percentiles on PerformanceEvaluation" Nicolas Liochon
-HBASE-10526 HBASE-9245 Using Cell instead of KeyValue in HFileOutputFormat" Jimmy Xiang
-HBASE-10518 DirectMemoryUtils.getDirectMemoryUsage spams when none is configured" Nick Dimiduk
-HBASE-10486 ProtobufUtil Append & Increment deserialization lost cell level timestamp" Jeffrey Zhong
-HBASE-10534 Rowkey in TsvImporterTextMapper initializing with wrong length" rajeshbabu
-HBASE-10644 TestSecureExportSnapshot#testExportFileSystemState fails on hadoop-1" Ted Yu
-HBASE-10565 FavoredNodesPlan accidentally uses an internal Netty type" Andrew Purtell
-HBASE-10563 Set name for FlushHandler thread" Himanshu Vashishtha
-HBASE-10586 hadoop2-compat IPC metric registred twice" Matteo Bertozzi
-HBASE-10580 IntegrationTestingUtility#restoreCluster leak resource when running in a mini cluster mode" Jeffrey Zhong
-HBASE-10614 Master could not be stopped" Jingcheng Du
-HBASE-10612 Remove unnecessary dependency on org.eclipse.jdt:core" Ted Yu
-HBASE-10608 Acquire the FS Delegation Token for Secure ExportSnapshot" Matteo Bertozzi
-HBASE-10431 Rename com.google.protobuf.ZeroCopyLiteralByteString" Nicolas Liochon
-HBASE-10422 ZeroCopyLiteralByteString.zeroCopyGetBytes has an unusable prototype and conflicts with AsyncHBase" Benoit Sigoure
-HBASE-10537 Let the ExportSnapshot mapper fail and retry on error" Matteo Bertozzi
-HBASE-10624 Fix 2 new findbugs warnings introduced by HBASE-10598" Ted Yu
-HBASE-10622 Improve log and Exceptions in Export Snapshot" Matteo Bertozzi
-HBASE-10677 boundaries check in hbck throwing IllegalArgumentException" rajeshbabu
-HBASE-10649 TestMasterMetrics fails occasionally" Jimmy Xiang
-HBASE-10682 region_mover.rb throws "can't convert nil into String" for regions moved" Matteo Bertozzi
-HBASE-10712 Backport HBASE-8304 to 0.94 and 0.96" haosdent
-HBASE-9778 Add hint to ExplicitColumnTracker to avoid seeking" Lars Hofhansl
-HBASE-10707 HBASE-8369 Backport parent issue to 0.96" stack
-HBASE-10632 Region lost in limbo after ArrayIndexOutOfBoundsException during assignment" Enis Soztutar
-HBASE-10718 TestHLogSplit fails when it sets a KV size to be negative" Esteban Gutierrez
-HBASE-10726 Fix java.lang.ArrayIndexOutOfBoundsException in StochasticLoadBalancer$LocalityBasedCandidateGenerator" Enis Soztutar
-HBASE-10737 HConnectionImplementation should stop RpcClient on close" Jimmy Xiang
-HBASE-10741 HBASE-9117 Deprecate HTablePool and HTableFactory" Nick Dimiduk
-HBASE-10751 TestHRegion testWritesWhileScanning occasional fail since HBASE-10514 went in" stack
-HBASE-10762 clone_snapshot doesn't check for missing namespace" Matteo Bertozzi
-HBASE-9721 RegionServer should not accept regionOpen RPC intended for another(previous) server" Enis Soztutar
-HBASE-10766 SnapshotCleaner allows to delete referenced files" bharath v
-HBASE-10549 When there is a hole, LoadIncrementalHFiles will hang in an infinite loop." yuanxinen
-HBASE-10476 HBase Master log grows very fast after stopped hadoop (due to connection exception)" Demai Ni
-HBASE-8203 master ui should display region servers with host, port plus startcode" rajeshbabu
-HBASE-9524 Multi row get does not return any results even if any one of the rows specified in the query is missing and improve exception handling" Vandana Ayyalasomayajula
-HBASE-10198 Add a note on how to Import 0.94 exported file to a 0.96 cluster or onwards" Jeffrey Zhong
-HBASE-10194 [Usability]: Instructions in CompactionTool no longer accurate because of namespaces" Aleksandr Shulman
-HBASE-10143 HBASE-10033 Clean up dead local stores in FSUtils" Elliott Clark
-HBASE-10116 SlabCache metrics improvements" Nick Dimiduk
-HBASE-10338 Region server fails to start with AccessController coprocessor if installed into RegionServerCoprocessorHost" Vandana Ayyalasomayajula
-HBASE-10056 region_status.rb not adopted to 0.96 api" Samir Ahmic
-HBASE-10495 upgrade script is printing usage two times with help option." rajeshbabu
-HBASE-10548 Correct commons-math dependency version" Nick Dimiduk
-HBASE-10527 TestTokenAuthentication fails with the IBM JDK" Gary Helmling
-HBASE-10570 Allow overrides of Surefire secondPartForkMode and testFailureIgnore" Andrew Purtell
-HBASE-10631 Avoid extra seek on FileLink open" Matteo Bertozzi
-HBASE-10627 A logic mistake in HRegionServer isHealthy" Liu Shaohui
-HBASE-10592 Refactor PerformanceEvaluation tool" Nick Dimiduk
-HBASE-10587 Master metrics clusterRequests is wrong" Jimmy Xiang
-HBASE-10604 Fix parseArgs javadoc" Jean-Marc Spaggiari
-HBASE-10579 [Documentation]: ExportSnapshot tool package incorrectly documented" Aleksandr Shulman
-HBASE-10435 Lower the log level of Canary region server match" Matteo Bertozzi
-HBASE-5356 region_mover.rb can hang if table region it belongs to is deleted." Jimmy Xiang
-HBASE-10567 Add overwrite manifest option to ExportSnapshot" Matteo Bertozzi
-HBASE-9708 Improve Snapshot Name Error Message" Matteo Bertozzi
-HBASE-10669 [hbck tool] Usage is wrong for hbck tool for -sidelineCorruptHfiles option" Deepak Sharma
-HBASE-10594 Speed up TestRestoreSnapshotFromClient" Lars Hofhansl
-HBASE-10678 Make verifyrep tool implement toolrunner" bharath v
-HBASE-10432 Rpc retries non-recoverable error" Nick Dimiduk
-HBASE-8076 add better doc for HBaseAdmin#offline API." rajeshbabu
-HBASE-10716 [Configuration]: hbase.regionserver.region.split.policy should be part of hbase-default.xml" Srikanth Srungarapu
-HBASE-10733 Shell incr command should allow last parameter (value) to be missing. As documented." Jean-Marc Spaggiari
-HBASE-9294 NPE in /rs-status during RS shutdown" Rekha Joshi
-HBASE-8604 improve reporting of incorrect peer address in replication" Rekha Joshi
-HBASE-10739 RS web UI NPE if master shuts down sooner" Jimmy Xiang
-HBASE-10738 AssignmentManager should shut down executors on stop" Jimmy Xiang
-HBASE-10744 AM#CloseRegion no need to retry on FailedServerException" Jimmy Xiang
-HBASE-10745 Access ShutdownHook#fsShutdownHooks should be synchronized" Jimmy Xiang
-HBASE-10656 high-scale-lib's Counter depends on Oracle (Sun) JRE, and also has some bug" Hiroshi Ikeda
-HBASE-10760 Wrong methods' names in ClusterLoadState class" Victor Xu
-HBASE-10163 Example Thrift DemoClient is flaky" Enis Soztutar
-HBASE-10159 Replaced deprecated interface Closeable" Jimmy Xiang
-HBASE-10182 Potential null object deference in AssignmentManager#handleRegion()" Jimmy Xiang
-HBASE-10547 TestFixedLengthWrapper#testReadWrite occasionally fails with the IBM JDK" Andrew Purtell
-HBASE-10589 Reduce unnecessary TestRowProcessorEndpoint resource usage" Andrew Purtell
-HBASE-10639 Unload script displays wrong counts (off by one) when unloading regions" Srikanth Srungarapu
-HBASE-10731 Fix environment variables typos in scripts" Albert Chu
-HBASE-10769 hbase/bin/hbase-cleanup.sh has wrong usage string" Vamsee Yarlagadda
-HBASE-10770 Don't exit from the Canary daemon mode if no regions are present" Matteo Bertozzi
-HBASE-10735 [WINDOWS] Set -XX:MaxPermSize for unit tests" Enis Soztutar
+130 issues closed/resolved. See http://goo.gl/bQk42q or below:
+HBASE-10161 "[AccessController] Tolerate regions in recovery" Anoop Sam John
+HBASE-10384 "Failed to increment serveral columns in one Increment" Jimmy Xiang
+HBASE-10313 "Duplicate servlet-api jars in hbase 0.96.0" stack
+HBASE-10370 "Compaction in out-of-date Store causes region split failure" Liu Shaohui
+HBASE-10366 "0.94 filterRow() may be skipped in 0.96(or onwards) code" Jeffrey Zhong
+HBASE-10556 "Possible data loss due to non-handled DroppedSnapshotException for user-triggered flush from client/shell" Honghua Feng
+HBASE-10582 "0.94->0.96 Upgrade: ACL can't be repopulated when ACL table contains row for table '-ROOT' or '.META.'" Jeffrey Zhong
+HBASE-10581 "ACL znode are left without PBed during upgrading hbase0.94* to hbase0.96+" Jeffrey Zhong
+HBASE-10575 "ReplicationSource thread can't be terminated if it runs into the loop to contact peer's zk ensemble and fails continuously" Honghua Feng
+HBASE-10436 "restore regionserver lists removed from hbase 0.96+ jmx" Jonathan Hsieh
+HBASE-10449 "Wrong execution pool configuration in HConnectionManager" Nicolas Liochon
+HBASE-10442 "prepareDelete() isn't called before doPreMutationHook for a row deletion case" Jeffrey Zhong
+HBASE-10598 "Written data can not be read out because MemStore#timeRangeTracker might be updated concurrently" cuijianwei
+HBASE-10679 "Both clients get wrong scan results if the first scanner expires and the second scanner is created with the same scannerId on the same region" Honghua Feng
+HBASE-10514 "Forward port HBASE-10466, possible data loss when failed flushes" stack
+HBASE-10749 "CellComparator.compareStatic() compares type wrongly" ramkrishna.s.vasudevan
+HBASE-9151 "HBCK cannot fix when meta server znode deleted, this can happen if all region servers stopped and there are no logs to split." rajeshbabu
+HBASE-8803 "region_mover.rb should move multiple regions at a time" Jean-Marc Spaggiari
+HBASE-10043 "HBASE-10033 Fix Potential Resouce Leak in MultiTableInputFormatBase" Elliott Clark
+HBASE-10195 ""mvn site" build failed with OutOfMemoryError" Jeffrey Zhong
+HBASE-10196 "Enhance HBCK to understand the case after online region merge" chunhui shen
+HBASE-10137 "GeneralBulkAssigner with retain assignment plan can be used in EnableTableHandler to bulk assign the regions" rajeshbabu
+HBASE-10157 "Provide CP hook post log replay" Anoop Sam John
+HBASE-10155 "HRegion isRecovering state is wrongly coming in postOpen hook" Anoop Sam John
+HBASE-10146 "Bump HTrace version to 2.04" Elliott Clark
+HBASE-10124 "HBASE-10033 Make Sub Classes Static When Possible" Elliott Clark
+HBASE-10084 "[WINDOWS] bin\hbase.cmd should allow whitespaces in java.library.path and classpath" Enis Soztutar
+HBASE-10186 "region_mover.rb broken because ServerName constructor is changed to private" Samir Ahmic
+HBASE-10098 "[WINDOWS] pass in native library directory from hadoop for unit tests" Enis Soztutar
+HBASE-10110 "HBASE-10033 Fix Potential Resource Leak in StoreFlusher" Elliott Clark
+HBASE-10264 "[MapReduce]: CompactionTool in mapred mode is missing classes in its classpath" Himanshu Vashishtha
+HBASE-10260 "Canary Doesn't pick up Configuration properly." Elliott Clark
+HBASE-10232 "Remove native profile from hbase-shell" Elliott Clark
+HBASE-10221 "Region from coprocessor invocations can be null on failure" Andrew Purtell
+HBASE-10220 "Put all test service principals into the superusers list" Andrew Purtell
+HBASE-10219 "HTTPS support for HBase in RegionServerListTmpl.jamon" Ted Yu
+HBASE-10218 "Port HBASE-10142 'TestLogRolling#testLogRollOnDatanodeDeath test failure' to 0.96 branch" Ted Yu
+HBASE-10332 "Missing .regioninfo file during daughter open processing" Matteo Bertozzi
+HBASE-10315 "Canary shouldn't exit with 3 if there is no master running." Elliott Clark
+HBASE-10310 "ZNodeCleaner session expired for /hbase/master" Samir Ahmic
+HBASE-10375 "hbase-default.xml hbase.status.multicast.address.port does not match code" Nicolas Liochon
+HBASE-10349 "Table became unusable when master balanced its region after table was dropped" Jimmy Xiang
+HBASE-10389 "Add namespace help info in table related shell commands" Jerry He
+HBASE-10334 "RegionServer links in table.jsp is broken" Enis Soztutar
+HBASE-10333 "Assignments are not retained on a cluster start" Jimmy Xiang
+HBASE-10059 "TestSplitLogWorker#testMultipleTasks fails occasionally" Jeffrey Zhong
+HBASE-10500 "Some tools OOM when BucketCache is enabled" Nick Dimiduk
+HBASE-10511 "Add latency percentiles on PerformanceEvaluation" Nicolas Liochon
+HBASE-10526 "HBASE-9245 Using Cell instead of KeyValue in HFileOutputFormat" Jimmy Xiang
+HBASE-10518 "DirectMemoryUtils.getDirectMemoryUsage spams when none is configured" Nick Dimiduk
+HBASE-10486 "ProtobufUtil Append & Increment deserialization lost cell level timestamp" Jeffrey Zhong
+HBASE-10534 "Rowkey in TsvImporterTextMapper initializing with wrong length" rajeshbabu
+HBASE-10644 "TestSecureExportSnapshot#testExportFileSystemState fails on hadoop-1" Ted Yu
+HBASE-10565 "FavoredNodesPlan accidentally uses an internal Netty type" Andrew Purtell
+HBASE-10563 "Set name for FlushHandler thread" Himanshu Vashishtha
+HBASE-10586 "hadoop2-compat IPC metric registred twice" Matteo Bertozzi
+HBASE-10580 "IntegrationTestingUtility#restoreCluster leak resource when running in a mini cluster mode" Jeffrey Zhong
+HBASE-10614 "Master could not be stopped" Jingcheng Du
+HBASE-10612 "Remove unnecessary dependency on org.eclipse.jdt:core" Ted Yu
+HBASE-10608 "Acquire the FS Delegation Token for Secure ExportSnapshot" Matteo Bertozzi
+HBASE-10431 "Rename com.google.protobuf.ZeroCopyLiteralByteString" Nicolas Liochon
+HBASE-10422 "ZeroCopyLiteralByteString.zeroCopyGetBytes has an unusable prototype and conflicts with AsyncHBase" Benoit Sigoure
+HBASE-10537 "Let the ExportSnapshot mapper fail and retry on error" Matteo Bertozzi
+HBASE-10624 "Fix 2 new findbugs warnings introduced by HBASE-10598" Ted Yu
+HBASE-10622 "Improve log and Exceptions in Export Snapshot" Matteo Bertozzi
+HBASE-10677 "boundaries check in hbck throwing IllegalArgumentException" rajeshbabu
+HBASE-10649 "TestMasterMetrics fails occasionally" Jimmy Xiang
+HBASE-10682 "region_mover.rb throws "can't convert nil into String" for regions moved" Matteo Bertozzi
+HBASE-10712 "Backport HBASE-8304 to 0.94 and 0.96" haosdent
+HBASE-9778 "Add hint to ExplicitColumnTracker to avoid seeking" Lars Hofhansl
+HBASE-10707 "HBASE-8369 Backport parent issue to 0.96" stack
+HBASE-10632 "Region lost in limbo after ArrayIndexOutOfBoundsException during assignment" Enis Soztutar
+HBASE-10718 "TestHLogSplit fails when it sets a KV size to be negative" Esteban Gutierrez
+HBASE-10726 "Fix java.lang.ArrayIndexOutOfBoundsException in StochasticLoadBalancer$LocalityBasedCandidateGenerator" Enis Soztutar
+HBASE-10737 "HConnectionImplementation should stop RpcClient on close" Jimmy Xiang
+HBASE-10741 "HBASE-9117 Deprecate HTablePool and HTableFactory" Nick Dimiduk
+HBASE-10751 "TestHRegion testWritesWhileScanning occasional fail since HBASE-10514 went in" stack
+HBASE-10762 "clone_snapshot doesn't check for missing namespace" Matteo Bertozzi
+HBASE-9721 "RegionServer should not accept regionOpen RPC intended for another(previous) server" Enis Soztutar
+HBASE-10766 "SnapshotCleaner allows to delete referenced files" bharath v
+HBASE-10549 "When there is a hole, LoadIncrementalHFiles will hang in an infinite loop." yuanxinen
+HBASE-10476 "HBase Master log grows very fast after stopped hadoop (due to connection exception)" Demai Ni
+HBASE-8203 "master ui should display region servers with host, port plus startcode" rajeshbabu
+HBASE-9524 "Multi row get does not return any results even if any one of the rows specified in the query is missing and improve exception handling" Vandana Ayyalasomayajula
+HBASE-10198 "Add a note on how to Import 0.94 exported file to a 0.96 cluster or onwards" Jeffrey Zhong
+HBASE-10194 "[Usability]: Instructions in CompactionTool no longer accurate because of namespaces" Aleksandr Shulman
+HBASE-10143 "HBASE-10033 Clean up dead local stores in FSUtils" Elliott Clark
+HBASE-10116 "SlabCache metrics improvements" Nick Dimiduk
+HBASE-10338 "Region server fails to start with AccessController coprocessor if installed into RegionServerCoprocessorHost" Vandana Ayyalasomayajula
+HBASE-10056 "region_status.rb not adopted to 0.96 api" Samir Ahmic
+HBASE-10495 "upgrade script is printing usage two times with help option." rajeshbabu
+HBASE-10548 "Correct commons-math dependency version" Nick Dimiduk
+HBASE-10527 "TestTokenAuthentication fails with the IBM JDK" Gary Helmling
+HBASE-10570 "Allow overrides of Surefire secondPartForkMode and testFailureIgnore" Andrew Purtell
+HBASE-10631 "Avoid extra seek on FileLink open" Matteo Bertozzi
+HBASE-10627 "A logic mistake in HRegionServer isHealthy" Liu Shaohui
+HBASE-10592 "Refactor PerformanceEvaluation tool" Nick Dimiduk
+HBASE-10587 "Master metrics clusterRequests is wrong" Jimmy Xiang
+HBASE-10604 "Fix parseArgs javadoc" Jean-Marc Spaggiari
+HBASE-10579 "[Documentation]: ExportSnapshot tool package incorrectly documented" Aleksandr Shulman
+HBASE-10435 "Lower the log level of Canary region server match" Matteo Bertozzi
+HBASE-5356 "region_mover.rb can hang if table region it belongs to is deleted." Jimmy Xiang
+HBASE-10567 "Add overwrite manifest option to ExportSnapshot" Matteo Bertozzi
+HBASE-9708 "Improve Snapshot Name Error Message" Matteo Bertozzi
+HBASE-10669 "[hbck tool] Usage is wrong for hbck tool for -sidelineCorruptHfiles option" Deepak Sharma
+HBASE-10594 "Speed up TestRestoreSnapshotFromClient" Lars Hofhansl
+HBASE-10678 "Make verifyrep tool implement toolrunner" bharath v
+HBASE-10432 "Rpc retries non-recoverable error" Nick Dimiduk
+HBASE-8076 "add better doc for HBaseAdmin#offline API." rajeshbabu
+HBASE-10716 "[Configuration]: hbase.regionserver.region.split.policy should be part of hbase-default.xml" Srikanth Srungarapu
+HBASE-10733 "Shell incr command should allow last parameter (value) to be missing. As documented." Jean-Marc Spaggiari
+HBASE-9294 "NPE in /rs-status during RS shutdown" Rekha Joshi
+HBASE-8604 "improve reporting of incorrect peer address in replication" Rekha Joshi
+HBASE-10739 "RS web UI NPE if master shuts down sooner" Jimmy Xiang
+HBASE-10738 "AssignmentManager should shut down executors on stop" Jimmy Xiang
+HBASE-10744 "AM#CloseRegion no need to retry on FailedServerException" Jimmy Xiang
+HBASE-10745 "Access ShutdownHook#fsShutdownHooks should be synchronized" Jimmy Xiang
+HBASE-10656 "high-scale-lib's Counter depends on Oracle (Sun) JRE, and also has some bug" Hiroshi Ikeda
+HBASE-10760 "Wrong methods' names in ClusterLoadState class" Victor Xu
+HBASE-10163 "Example Thrift DemoClient is flaky" Enis Soztutar
+HBASE-10159 "Replaced deprecated interface Closeable" Jimmy Xiang
+HBASE-10182 "Potential null object deference in AssignmentManager#handleRegion()" Jimmy Xiang
+HBASE-10547 "TestFixedLengthWrapper#testReadWrite occasionally fails with the IBM JDK" Andrew Purtell
+HBASE-10589 "Reduce unnecessary TestRowProcessorEndpoint resource usage" Andrew Purtell
+HBASE-10639 "Unload script displays wrong counts (off by one) when unloading regions" Srikanth Srungarapu
+HBASE-10731 "Fix environment variables typos in scripts" Albert Chu
+HBASE-10769 "hbase/bin/hbase-cleanup.sh has wrong usage string" Vamsee Yarlagadda
+HBASE-10770 "Don't exit from the Canary daemon mode if no regions are present" Matteo Bertozzi
+HBASE-10735 "[WINDOWS] Set -XX:MaxPermSize for unit tests" Enis Soztutar
+HBASE-10819 "(HBASE-10819) Backport HBASE-8063 (Filter HFiles based on first/last key) into 0.96" Stack
 
 
 Release 0.96.1.1 - Released December 18th, 2013
