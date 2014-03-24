@@ -383,9 +383,8 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns,
-      long oldestUnexpiredTS) {
-    return reader.passesTimerangeFilter(scan, oldestUnexpiredTS) &&
-        reader.passesBloomFilter(scan, columns);
+  public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns, long oldestUnexpiredTS) {
+    return reader.passesTimerangeFilter(scan, oldestUnexpiredTS)
+        && reader.passesKeyRangeFilter(scan) && reader.passesBloomFilter(scan, columns);
   }
 }
