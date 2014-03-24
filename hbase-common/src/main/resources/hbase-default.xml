@@ -1139,4 +1139,25 @@ possible configurations would overwhelm and obscure the important.
       section of the HBase online manual.
     </description>
   </property>
+  <property>
+    <name>hbase.procedure.regionserver.classes</name>
+    <value></value>
+    <description>A comma-separated list of 
+    org.apache.hadoop.hbase.procedure.RegionServerProcedureManager procedure managers that are 
+    loaded by default on the active HRegionServer process. The lifecycle methods (init/start/stop) 
+    will be called by the active HRegionServer process to perform the specific globally barriered 
+    procedure. After implementing your own RegionServerProcedureManager, just put it in 
+    HBase's classpath and add the fully qualified class name here.
+    </description>
+  </property>
+    <property>
+    <name>hbase.procedure.master.classes</name>
+    <value></value>
+    <description>A comma-separated list of
+    org.apache.hadoop.hbase.procedure.MasterProcedureManager procedure managers that are
+    loaded by default on the active HMaster process. A procedure is identified by its signature and
+    users can use the signature and an instant name to trigger an execution of a globally barriered
+    procedure. After implementing your own MasterProcedureManager, just put it in HBase's classpath
+    and add the fully qualified class name here.</description>
+  </property>
 </configuration>

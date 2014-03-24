@@ -24,8 +24,11 @@ import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
@@ -83,6 +86,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
@@ -127,6 +132,10 @@ import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -2995,6 +3004,103 @@ public class HBaseAdmin implements Abortable, Closeable {
     }
     internalRestoreSnapshot(snapshotName, tableName);
     waitUntilTableIsEnabled(tableName);
+  }
+
+  /**
+   * Execute a distributed procedure on a cluster.
+   *
+   * @param signature A distributed procedure is uniquely identified
+   * by its signature (default the root ZK node name of the procedure).
+   * @param instance The instance name of the procedure. For some procedures, this parameter is
+   * optional.
+   * @param props Property/Value pairs of properties passing to the procedure
+   */
+  public void execProcedure(String signature, String instance,
+      Map<String, String> props) throws IOException {
+    ProcedureDescription.Builder builder = ProcedureDescription.newBuilder();
+    builder.setSignature(signature).setInstance(instance);
+    for (String key : props.keySet()) {
+      NameStringPair pair = NameStringPair.newBuilder().setName(key)
+          .setValue(props.get(key)).build();
+      builder.addConfiguration(pair);
+    }
+
+    final ExecProcedureRequest request = ExecProcedureRequest.newBuilder()
+        .setProcedure(builder.build()).build();
+    // run the procedure on the master
+    ExecProcedureResponse response = executeCallable(new MasterCallable<ExecProcedureResponse>(
+        getConnection()) {
+      @Override
+      public ExecProcedureResponse call() throws ServiceException {
+        return master.execProcedure(null, request);
+      }
+    });
+
+    long start = EnvironmentEdgeManager.currentTimeMillis();
+    long max = response.getExpectedTimeout();
+    long maxPauseTime = max / this.numRetries;
+    int tries = 0;
+    LOG.debug("Waiting a max of " + max + " ms for procedure '" +
+        signature + " : " + instance + "'' to complete. (max " + maxPauseTime + " ms per retry)");
+    boolean done = false;
+    while (tries == 0
+        || ((EnvironmentEdgeManager.currentTimeMillis() - start) < max && !done)) {
+      try {
+        // sleep a backoff <= pauseTime amount
+        long sleep = getPauseTime(tries++);
+        sleep = sleep > maxPauseTime ? maxPauseTime : sleep;
+        LOG.debug("(#" + tries + ") Sleeping: " + sleep +
+          "ms while waiting for procedure completion.");
+        Thread.sleep(sleep);
+
+      } catch (InterruptedException e) {
+        LOG.debug("Interrupted while waiting for procedure " + signature + " to complete");
+        Thread.currentThread().interrupt();
+      }
+      LOG.debug("Getting current status of procedure from master...");
+      done = isProcedureFinished(signature, instance, props);
+    }
+    if (!done) {
+      throw new IOException("Procedure '" + signature + " : " + instance
+          + "' wasn't completed in expectedTime:" + max + " ms");
+    }
+  }
+
+  /**
+   * Check the current state of the specified procedure.
+   * <p>
+   * There are three possible states:
+   * <ol>
+   * <li>running - returns <tt>false</tt></li>
+   * <li>finished - returns <tt>true</tt></li>
+   * <li>finished with error - throws the exception that caused the procedure to fail</li>
+   * </ol>
+   * <p>
+   *
+   * @param signature The signature that uniquely identifies a procedure
+   * @param instance The instance name of the procedure
+   * @param props Property/Value pairs of properties passing to the procedure
+   * @return true if the specified procedure is finished successfully, false if it is still running
+   * @throws IOException if the specified procedure finished with error
+   */
+  public boolean isProcedureFinished(String signature, String instance, Map<String, String> props)
+      throws IOException {
+    final ProcedureDescription.Builder builder = ProcedureDescription.newBuilder();
+    builder.setSignature(signature).setInstance(instance);
+    for (String key : props.keySet()) {
+      NameStringPair pair = NameStringPair.newBuilder().setName(key)
+          .setValue(props.get(key)).build();
+      builder.addConfiguration(pair);
+    }
+    final ProcedureDescription desc = builder.build();
+    return executeCallable(
+        new MasterCallable<IsProcedureDoneResponse>(getConnection()) {
+          @Override
+          public IsProcedureDoneResponse call() throws ServiceException {
+            return master.isProcedureDone(null, IsProcedureDoneRequest
+                .newBuilder().setProcedure(desc).build());
+          }
+        }).getDone();
   }
 
   /**

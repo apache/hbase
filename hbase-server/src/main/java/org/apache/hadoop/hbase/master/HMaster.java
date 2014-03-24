@@ -106,6 +106,8 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
+import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -116,6 +118,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
@@ -193,6 +196,10 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
@@ -378,6 +385,8 @@ MasterServices, Server {
 
   // monitor for snapshot of hbase tables
   private SnapshotManager snapshotManager;
+  // monitor for distributed procedures
+  private MasterProcedureManagerHost mpmHost;
 
   /** The health check chore. */
   private HealthCheckChore healthCheckChore;
@@ -635,7 +644,7 @@ MasterServices, Server {
       if (this.serverManager != null) this.serverManager.stop();
       if (this.assignmentManager != null) this.assignmentManager.stop();
       if (this.fileSystemManager != null) this.fileSystemManager.stop();
-      if (this.snapshotManager != null) this.snapshotManager.stop("server shutting down.");
+      if (this.mpmHost != null) this.mpmHost.stop("server shutting down.");
       this.zooKeeper.close();
     }
     LOG.info("HMaster main thread exiting");
@@ -700,8 +709,12 @@ MasterServices, Server {
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()) +
         ", setting cluster-up flag (Was=" + wasUp + ")");
 
-    // create the snapshot manager
-    this.snapshotManager = new SnapshotManager(this, this.metricsMaster);
+    // create/initialize the snapshot manager and other procedure managers
+    this.snapshotManager = new SnapshotManager();
+    this.mpmHost = new MasterProcedureManagerHost();
+    this.mpmHost.register(this.snapshotManager);
+    this.mpmHost.loadProcedures(conf);
+    this.mpmHost.initialize(this, this.metricsMaster);
   }
 
   /**
@@ -2167,7 +2180,7 @@ MasterServices, Server {
     }
     return info.getInfoPort();
   }
-  
+
   /**
    * @return array of coprocessor SimpleNames.
    */
@@ -2953,6 +2966,68 @@ MasterServices, Server {
       SnapshotDescription snapshot = request.getSnapshot();
       IsRestoreSnapshotDoneResponse.Builder builder = IsRestoreSnapshotDoneResponse.newBuilder();
       boolean done = snapshotManager.isRestoreDone(snapshot);
+      builder.setDone(done);
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Triggers an asynchronous attempt to run a distributed procedure.
+   * {@inheritDoc}
+   */
+  @Override
+  public ExecProcedureResponse execProcedure(RpcController controller,
+      ExecProcedureRequest request) throws ServiceException {
+    ProcedureDescription desc = request.getProcedure();
+    MasterProcedureManager mpm = this.mpmHost.getProcedureManager(desc
+        .getSignature());
+    if (mpm == null) {
+      throw new ServiceException("The procedure is not registered: "
+          + desc.getSignature());
+    }
+
+    LOG.info(getClientIdAuditPrefix() + " procedure request for: "
+        + desc.getSignature());
+
+    try {
+      mpm.execProcedure(desc);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
+    // send back the max amount of time the client should wait for the procedure
+    // to complete
+    long waitTime = SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME;
+    return ExecProcedureResponse.newBuilder().setExpectedTimeout(waitTime)
+        .build();
+  }
+
+  /**
+   * Checks if the specified procedure is done.
+   * @return true if the procedure is done,
+   *   false if the procedure is in the process of completing
+   * @throws ServiceException if invalid procedure, or
+   *  a failed procedure with progress failure reason.
+   */
+  @Override
+  public IsProcedureDoneResponse isProcedureDone(RpcController controller,
+      IsProcedureDoneRequest request) throws ServiceException {
+    ProcedureDescription desc = request.getProcedure();
+    MasterProcedureManager mpm = this.mpmHost.getProcedureManager(desc
+        .getSignature());
+    if (mpm == null) {
+      throw new ServiceException("The procedure is not registered: "
+          + desc.getSignature());
+    }
+    LOG.debug("Checking to see if procedure from request:"
+        + desc.getSignature() + " is done");
+
+    try {
+      IsProcedureDoneResponse.Builder builder = IsProcedureDoneResponse
+          .newBuilder();
+      boolean done = mpm.isProcedureDone(desc);
       builder.setDone(done);
       return builder.build();
     } catch (IOException e) {

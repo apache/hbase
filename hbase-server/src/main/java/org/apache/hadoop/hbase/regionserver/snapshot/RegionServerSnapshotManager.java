@@ -42,10 +42,10 @@ import org.apache.hadoop.hbase.master.snapshot.MasterSnapshotVerifier;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
 import org.apache.hadoop.hbase.procedure.ProcedureMemberRpcs;
+import org.apache.hadoop.hbase.procedure.RegionServerProcedureManager;
 import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.procedure.SubprocedureFactory;
 import org.apache.hadoop.hbase.procedure.ZKProcedureMemberRpcs;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -71,7 +71,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class RegionServerSnapshotManager {
+public class RegionServerSnapshotManager extends RegionServerProcedureManager {
   private static final Log LOG = LogFactory.getLog(RegionServerSnapshotManager.class);
 
   /** Maximum number of snapshot region tasks that can run concurrently */
@@ -93,9 +93,9 @@ public class RegionServerSnapshotManager {
   /** Default amount of time to check for errors while regions finish snapshotting */
   private static final long SNAPSHOT_REQUEST_WAKE_MILLIS_DEFAULT = 500;
 
-  private final RegionServerServices rss;
-  private final ProcedureMemberRpcs memberRpcs;
-  private final ProcedureMember member;
+  private RegionServerServices rss;
+  private ProcedureMemberRpcs memberRpcs;
+  private ProcedureMember member;
 
   /**
    * Exposed for testing.
@@ -111,32 +111,12 @@ public class RegionServerSnapshotManager {
     this.member = procMember;
   }
 
-  /**
-   * Create a default snapshot handler - uses a zookeeper based member controller.
-   * @param rss region server running the handler
-   * @throws KeeperException if the zookeeper cluster cannot be reached
-   */
-  public RegionServerSnapshotManager(RegionServerServices rss)
-      throws KeeperException {
-    this.rss = rss;
-    ZooKeeperWatcher zkw = rss.getZooKeeper();
-    this.memberRpcs = new ZKProcedureMemberRpcs(zkw,
-        SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION);
-
-    // read in the snapshot request configuration properties
-    Configuration conf = rss.getConfiguration();
-    long keepAlive = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
-    int opThreads = conf.getInt(SNAPSHOT_REQUEST_THREADS_KEY, SNAPSHOT_REQUEST_THREADS_DEFAULT);
-
-    // create the actual snapshot procedure member
-    ThreadPoolExecutor pool = ProcedureMember.defaultPool(rss.getServerName().toString(),
-      opThreads, keepAlive);
-    this.member = new ProcedureMember(memberRpcs, pool, new SnapshotSubprocedureBuilder());
-  }
+  public RegionServerSnapshotManager() {}
 
   /**
    * Start accepting snapshot requests.
    */
+  @Override
   public void start() {
     LOG.debug("Start Snapshot Manager " + rss.getServerName().toString());
     this.memberRpcs.start(rss.getServerName().toString(), member);
@@ -147,6 +127,7 @@ public class RegionServerSnapshotManager {
    * @param force forcefully stop all running tasks
    * @throws IOException
    */
+  @Override
   public void stop(boolean force) throws IOException {
     String mode = force ? "abruptly" : "gracefully";
     LOG.info("Stopping RegionServerSnapshotManager " + mode + ".");
@@ -373,4 +354,33 @@ public class RegionServerSnapshotManager {
       this.executor.shutdownNow();
     }
   }
+
+  /**
+   * Create a default snapshot handler - uses a zookeeper based member controller.
+   * @param rss region server running the handler
+   * @throws KeeperException if the zookeeper cluster cannot be reached
+   */
+  @Override
+  public void initialize(RegionServerServices rss) throws KeeperException {
+    this.rss = rss;
+    ZooKeeperWatcher zkw = rss.getZooKeeper();
+    this.memberRpcs = new ZKProcedureMemberRpcs(zkw,
+        SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION);
+
+    // read in the snapshot request configuration properties
+    Configuration conf = rss.getConfiguration();
+    long keepAlive = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
+    int opThreads = conf.getInt(SNAPSHOT_REQUEST_THREADS_KEY, SNAPSHOT_REQUEST_THREADS_DEFAULT);
+
+    // create the actual snapshot procedure member
+    ThreadPoolExecutor pool = ProcedureMember.defaultPool(rss.getServerName().toString(),
+      opThreads, keepAlive);
+    this.member = new ProcedureMember(memberRpcs, pool, new SnapshotSubprocedureBuilder());
+  }
+
+  @Override
+  public String getProcedureSignature() {
+    return SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION;
+  }
+
 }

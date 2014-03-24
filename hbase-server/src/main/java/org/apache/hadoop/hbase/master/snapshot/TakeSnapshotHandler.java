@@ -192,6 +192,8 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       completeSnapshot(this.snapshotDir, this.workingDir, this.fs);
       status.markComplete("Snapshot " + snapshot.getName() + " of table " + snapshotTable
           + " completed");
+      LOG.info("Snapshot " + snapshot.getName() + " of table " + snapshotTable
+          + " completed");
       metricsSnapshot.addSnapshot(status.getCompletionTimestamp() - status.getStartTime());
     } catch (Exception e) {
       status.abort("Failed to complete snapshot " + snapshot.getName() + " on table " +

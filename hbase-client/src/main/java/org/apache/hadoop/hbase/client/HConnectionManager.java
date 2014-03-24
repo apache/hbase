@@ -2062,6 +2062,19 @@ public class HConnectionManager {
         }
 
         @Override
+        public ExecProcedureResponse execProcedure(
+            RpcController controller, ExecProcedureRequest request)
+            throws ServiceException {
+          return stub.execProcedure(controller, request);
+        }
+
+        @Override
+        public IsProcedureDoneResponse isProcedureDone(RpcController controller,
+            IsProcedureDoneRequest request) throws ServiceException {
+          return stub.isProcedureDone(controller, request);
+        }
+
+        @Override
         public IsMasterRunningResponse isMasterRunning(
             RpcController controller, IsMasterRunningRequest request)
             throws ServiceException {

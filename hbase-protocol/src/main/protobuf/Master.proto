@@ -332,6 +332,23 @@ message IsMasterRunningResponse {
   required bool is_master_running = 1;
 }
 
+message ExecProcedureRequest {
+        required ProcedureDescription procedure = 1;
+}
+
+message ExecProcedureResponse {
+        required int64 expected_timeout = 1;
+}
+
+message IsProcedureDoneRequest {
+        optional ProcedureDescription procedure = 1;
+}
+
+message IsProcedureDoneResponse {
+        optional bool done = 1 [default = false];
+        optional ProcedureDescription snapshot = 2;
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -489,6 +506,19 @@ service MasterService {
    * Determine if the snapshot restore is done yet.
    */
   rpc IsRestoreSnapshotDone(IsRestoreSnapshotDoneRequest) returns(IsRestoreSnapshotDoneResponse);
+
+  /**
+   * Execute a distributed procedure.
+   */
+  rpc ExecProcedure(ExecProcedureRequest) returns(ExecProcedureResponse);
+
+  /**
+   * Determine if the procedure is done yet.
+   */
+  rpc IsProcedureDone(IsProcedureDoneRequest) returns(IsProcedureDoneResponse);
+
+  /** return true if master is available */
+  /** rpc IsMasterRunning(IsMasterRunningRequest) returns(IsMasterRunningResponse); */
 
   /** Modify a namespace's metadata */
   rpc ModifyNamespace(ModifyNamespaceRequest)

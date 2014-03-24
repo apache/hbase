@@ -121,6 +121,7 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -492,8 +493,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
   private RegionServerCoprocessorHost rsHost;
 
-  /** Handle all the snapshot requests to this server */
-  RegionServerSnapshotManager snapshotManager;
+  private RegionServerProcedureManagerHost rspmHost;
 
   // configuration setting on if replay WAL edits directly to another RS
   private final boolean distributedLogReplay;
@@ -752,11 +752,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       this.abort("Failed to retrieve Cluster ID",e);
     }
 
-    // watch for snapshots
+    // watch for snapshots and other procedures
     try {
-      this.snapshotManager = new RegionServerSnapshotManager(this);
+      rspmHost = new RegionServerProcedureManagerHost();
+      rspmHost.loadProcedures(conf);
+      rspmHost.initialize(this);
     } catch (KeeperException e) {
-      this.abort("Failed to reach zk cluster when creating snapshot handler.");
+      this.abort("Failed to reach zk cluster when creating procedure handler.", e);
     }
     this.tableLockManager = TableLockManager.createTableLockManager(conf, zooKeeper,
         ServerName.valueOf(isa.getHostName(), isa.getPort(), startcode));
@@ -857,8 +859,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
 
       if (!this.stopped && isHealthy()){
-        // start the snapshot handler, since the server is ready to run
-        this.snapshotManager.start();
+        // start the snapshot handler and other procedure handlers,
+        // since the server is ready to run
+        rspmHost.start();
       }
 
       // We registered with the Master.  Go into run mode.
@@ -946,12 +949,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       this.nonceManagerChore.interrupt();
     }
 
-    // Stop the snapshot handler, forcefully killing all running tasks
-    try {
-      if (snapshotManager != null) snapshotManager.stop(this.abortRequested || this.killed);
-    } catch (IOException e) {
-      LOG.warn("Failed to close snapshot handler cleanly", e);
-    }
+    // Stop the snapshot and other procedure handlers, forcefully killing all running tasks
+    rspmHost.stop(this.abortRequested || this.killed);
 
     if (this.killed) {
       // Just skip out w/o closing regions.  Used when testing.

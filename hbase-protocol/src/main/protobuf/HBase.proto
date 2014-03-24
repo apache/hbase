@@ -164,6 +164,16 @@ message SnapshotDescription {
   optional int32 version = 5;
 }
 
+/**
+ * Description of the distributed procedure to take
+ */
+message ProcedureDescription {
+  required string signature = 1; // the unique signature of the procedure
+  optional string instance = 2; // the procedure instance name
+  optional int64 creation_time = 3 [default = 0];
+  repeated NameStringPair configuration = 4;
+}
+
 message EmptyMsg {
 }
 
