@@ -131,6 +131,7 @@ HBASE-10769 "hbase/bin/hbase-cleanup.sh has wrong usage string" Vamsee Yarlagadd
 HBASE-10770 "Don't exit from the Canary daemon mode if no regions are present" Matteo Bertozzi
 HBASE-10735 "[WINDOWS] Set -XX:MaxPermSize for unit tests" Enis Soztutar
 HBASE-10819 "(HBASE-10819) Backport HBASE-8063 (Filter HFiles based on first/last key) into 0.96" Stack
+HBASE-10802 "CellComparator.compareStaticIgnoreMvccVersion compares type wrongly" Ramkrishna S Vasudevan
 
 
 Release 0.96.1.1 - Released December 18th, 2013
