@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class Counter {
   private static final int MAX_CELLS_LENGTH = 1 << 20;
-  private static final int SUFFERABLE_SPIN_COUNT = 2;
 
   private static class Cell {
     // Pads are added around the value to avoid cache-line contention with
@@ -55,18 +54,6 @@ public class Counter {
 
     long get() {
       return value;
-    }
-
-    boolean addAndIsCongested(long delta) {
-      for(int i = 0; i < SUFFERABLE_SPIN_COUNT; i++) {
-        if(add(delta)) {
-          return false;
-        }
-      }
-
-      while(! add(delta)) {}
-
-      return true;
     }
 
     boolean add(long delta) {
@@ -109,16 +96,53 @@ public class Counter {
   }
 
   private static int hash() {
-    return (int) Thread.currentThread().getId();
+    // The logic is borrowed from high-scale-lib's ConcurrentAutoTable.
+
+    int h = System.identityHashCode(Thread.currentThread());
+    // You would think that System.identityHashCode on the current thread
+    // would be a good hash fcn, but actually on SunOS 5.8 it is pretty lousy
+    // in the low bits.
+
+    h ^= (h >>> 20) ^ (h >>> 12); // Bit spreader, borrowed from Doug Lea
+    h ^= (h >>>  7) ^ (h >>>  4);
+    return h;
   }
+
+  private static class IndexHolder {
+    int index = hash();
+  }
+
+  private final ThreadLocal<IndexHolder> indexHolderThreadLocal =
+      new ThreadLocal<IndexHolder>() {
+    @Override
+    protected IndexHolder initialValue() {
+      return new IndexHolder();
+    }
+  };
 
   public void add(long delta) {
     Container container = containerRef.get();
     Cell[] cells = container.cells;
-    int index = hash() & (cells.length - 1);
-    Cell cell = cells[index];
+    int mask = cells.length - 1;
 
-    if(cell.addAndIsCongested(delta) && cells.length < MAX_CELLS_LENGTH &&
+    IndexHolder indexHolder = indexHolderThreadLocal.get();
+    int baseIndex = indexHolder.index;
+    if(cells[baseIndex & mask].add(delta)) {
+      return;
+    }
+
+    int index = baseIndex + 1;
+    while(true) {
+      if(cells[index & mask].add(delta)) {
+        break;
+      }
+      index++;
+    }
+
+    indexHolder.index = index;
+
+    if(index - baseIndex >= cells.length &&
+        cells.length < MAX_CELLS_LENGTH &&
         container.demoted.compareAndSet(false, true)) {
 
       if(containerRef.get() == container) {
