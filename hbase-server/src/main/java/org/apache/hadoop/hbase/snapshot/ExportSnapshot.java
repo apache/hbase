@@ -549,10 +549,9 @@ public final class ExportSnapshot extends Configured implements Tool {
    * The number of input files created are based on the number of mappers provided as argument
    * and the number of the files to copy.
    */
-  private static Path[] createInputFiles(final Configuration conf,
+  private static Path[] createInputFiles(final Configuration conf, final Path inputFolderPath,
       final List<Pair<Path, Long>> snapshotFiles, int mappers)
       throws IOException, InterruptedException {
-    Path inputFolderPath = getInputFolderPath(conf);
     FileSystem fs = inputFolderPath.getFileSystem(conf);
     LOG.debug("Input folder location: " + inputFolderPath);
 
@@ -606,7 +605,10 @@ public final class ExportSnapshot extends Configured implements Tool {
     job.setOutputFormatClass(NullOutputFormat.class);
     job.setMapSpeculativeExecution(false);
     job.setNumReduceTasks(0);
-    for (Path path: createInputFiles(conf, snapshotFiles, mappers)) {
+
+    // Create MR Input
+    Path inputFolderPath = getInputFolderPath(conf);
+    for (Path path: createInputFiles(conf, inputFolderPath, snapshotFiles, mappers)) {
       LOG.debug("Add Input Path=" + path);
       SequenceFileInputFormat.addInputPath(job, path);
     }
@@ -628,7 +630,24 @@ public final class ExportSnapshot extends Configured implements Tool {
     } finally {
       inputFsToken.releaseDelegationToken();
       outputFsToken.releaseDelegationToken();
+
+      // Remove MR Input
+      try {
+        inputFolderPath.getFileSystem(conf).delete(inputFolderPath, true);
+      } catch (IOException e) {
+        LOG.warn("Unable to remove MR input folder: " + inputFolderPath, e);
+      }
     }
+  }
+
+  private void verifySnapshot(final Configuration baseConf,
+      final FileSystem fs, final Path rootDir, final Path snapshotDir) throws IOException {
+    // Update the conf with the current root dir, since may be a different cluster
+    Configuration conf = new Configuration(baseConf);
+    FSUtils.setRootDir(conf, rootDir);
+    FSUtils.setFsDefault(conf, snapshotDir);
+    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    SnapshotReferenceUtil.verifySnapshot(conf, fs, snapshotDir, snapshotDesc);
   }
 
   /**
@@ -721,12 +740,13 @@ public final class ExportSnapshot extends Configured implements Tool {
       } else {
         System.err.println("A snapshot with the same name '"+ snapshotName +"' may be in-progress");
         System.err.println("Please check " + snapshotTmpDir + ". If the snapshot has completed, ");
-        System.err.println("consider removing " + snapshotTmpDir + " before retrying export");
+        System.err.println("consider removing "+ snapshotTmpDir +" by using the -overwrite option");
         return 1;
       }
     }
 
     // Step 0 - Extract snapshot files to copy
+    LOG.info("Loading Snapshot hfile list");
     final List<Pair<Path, Long>> files = getSnapshotFiles(inputFs, snapshotDir);
     if (mappers == 0 && files.size() > 0) {
       mappers = 1 + (files.size() / conf.getInt(CONF_MAP_GROUP, 10));
@@ -737,10 +757,11 @@ public final class ExportSnapshot extends Configured implements Tool {
     // The snapshot references must be copied before the hfiles otherwise the cleaner
     // will remove them because they are unreferenced.
     try {
+      LOG.info("Copy Snapshot Manifest");
       FileUtil.copy(inputFs, snapshotDir, outputFs, snapshotTmpDir, false, false, conf);
     } catch (IOException e) {
       throw new ExportSnapshotException("Failed to copy the snapshot directory: from=" +
-        snapshotDir + " to=" + snapshotTmpDir);
+        snapshotDir + " to=" + snapshotTmpDir, e);
     }
 
     // Step 2 - Start MR Job to copy files
@@ -755,10 +776,17 @@ public final class ExportSnapshot extends Configured implements Tool {
       }
 
       // Step 3 - Rename fs2:/.snapshot/.tmp/<snapshot> fs2:/.snapshot/<snapshot>
+      LOG.info("Finalize the Snapshot Export");
       if (!outputFs.rename(snapshotTmpDir, outputSnapshotDir)) {
         throw new ExportSnapshotException("Unable to rename snapshot directory from=" +
           snapshotTmpDir + " to=" + outputSnapshotDir);
       }
+
+      // Step 4 - Verify snapshot validity
+      LOG.info("Verify snapshot validity");
+      verifySnapshot(conf, outputFs, outputRoot, outputSnapshotDir);
+
+      LOG.info("Export Completed: " + snapshotName);
       return 0;
     } catch (Exception e) {
       LOG.error("Snapshot export failed", e);
