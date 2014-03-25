@@ -242,6 +242,7 @@ public class TestRegionObserverInterface {
     TableName tableName =
         TableName.valueOf("testHBase3583");
     util.createTable(tableName, new byte[][] {A, B, C});
+    util.waitUntilAllRegionsAssigned(tableName);
 
     verifyMethodResult(SimpleRegionObserver.class,
         new String[] {"hadPreGet", "hadPostGet", "wasScannerNextCalled",
