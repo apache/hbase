@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.zookeeper.KeeperException;
 
 @InterfaceAudience.Private
@@ -122,6 +123,7 @@ public class HMasterCommandLine extends ServerCommandLine {
       LOG.debug("masters set to " + val);
     }
 
+    @SuppressWarnings("unchecked")
     List<String> remainingArgs = cmd.getArgList();
     if (remainingArgs.size() != 1) {
       usage(null);
@@ -148,6 +150,7 @@ public class HMasterCommandLine extends ServerCommandLine {
       // If 'local', defer to LocalHBaseCluster instance.  Starts master
       // and regionserver both in the one JVM.
       if (LocalHBaseCluster.isLocal(conf)) {
+        DefaultMetricsSystem.setMiniClusterMode(true);
         final MiniZooKeeperCluster zooKeeperCluster = new MiniZooKeeperCluster(conf);
         File zkDataPath = new File(conf.get(HConstants.ZOOKEEPER_DATA_DIR));
         int zkClientPort = conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 0);
