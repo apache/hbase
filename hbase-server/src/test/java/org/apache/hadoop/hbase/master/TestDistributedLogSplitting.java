@@ -25,7 +25,6 @@ import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_acquired;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_done;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_err;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_resigned;
-import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -40,7 +39,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -55,10 +53,9 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -68,10 +65,11 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.NonceGenerator;
@@ -113,6 +111,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
+@SuppressWarnings("deprecation")
 public class TestDistributedLogSplitting {
   private static final Log LOG = LogFactory.getLog(TestSplitLogManager.class);
   static {
@@ -148,6 +147,7 @@ public class TestDistributedLogSplitting {
   public static void tearDown() throws IOException {
     TEST_UTIL.shutdownMiniZKCluster();
     TEST_UTIL.shutdownMiniDFSCluster();
+    TEST_UTIL.shutdownMiniHBaseCluster();
   }
 
   private void startCluster(int num_rs) throws Exception {
@@ -159,6 +159,7 @@ public class TestDistributedLogSplitting {
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, (float) 100.0); // no load balancing
     conf.setInt("hbase.regionserver.wal.max.splitters", 3);
+    TEST_UTIL.shutdownMiniHBaseCluster();
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.setDFSCluster(dfsCluster);
     TEST_UTIL.setZkCluster(zkCluster);
@@ -219,7 +220,7 @@ public class TestDistributedLogSplitting {
     for (int i = 0; i < NUM_RS; i++) {
       boolean foundRs = false;
       hrs = rsts.get(i).getRegionServer();
-      regions = ProtobufUtil.getOnlineRegions(hrs);
+      regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
       for (HRegionInfo region : regions) {
         if (region.getTable().getNameAsString().equalsIgnoreCase("table")) {
           foundRs = true;
@@ -248,7 +249,6 @@ public class TestDistributedLogSplitting {
     for (HRegionInfo hri : regions) {
 
       Path tdir = FSUtils.getTableDir(rootdir, table);
-      @SuppressWarnings("deprecation")
       Path editsdir =
         HLogUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
       LOG.debug("checking edits dir " + editsdir);
@@ -279,7 +279,7 @@ public class TestDistributedLogSplitting {
     HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     HRegionServer hrs = findRSToKill(false, "table");
-    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
+    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
     makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
 
     // wait for abort completes
@@ -328,7 +328,7 @@ public class TestDistributedLogSplitting {
       List<Increment> reqs = new ArrayList<Increment>();
       for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
         HRegionServer hrs = rst.getRegionServer();
-        List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs);
+        List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
         for (HRegionInfo hri : hris) {
           if (TABLE_NAME.equalsIgnoreCase(hri.getTable().getNameAsString())) {
             byte[] key = hri.getStartKey();
@@ -377,7 +377,7 @@ public class TestDistributedLogSplitting {
     HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     HRegionServer hrs = findRSToKill(true, "table");
-    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
+    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
     makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
 
     this.abortRSAndVerifyRecovery(hrs, ht, zkw, NUM_REGIONS_TO_CREATE, NUM_LOG_LINES);
@@ -412,7 +412,8 @@ public class TestDistributedLogSplitting {
     TEST_UTIL.waitFor(180000, 200, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return (getAllOnlineRegions(tmpCluster).size() >= (numRegions + 1));
+        return (HBaseTestingUtility.getAllOnlineRegions(tmpCluster).size()
+            >= (numRegions + 1));
       }
     });
 
@@ -440,12 +441,11 @@ public class TestDistributedLogSplitting {
     // they will consume recovered.edits
     master.balanceSwitch(false);
 
-    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
     HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     HRegionServer hrs = findRSToKill(false, "table");
-    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
+    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
     makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
 
     // abort master
@@ -464,20 +464,20 @@ public class TestDistributedLogSplitting {
     });
 
     Thread.sleep(2000);
-    LOG.info("Current Open Regions:" + getAllOnlineRegions(cluster).size());
-    
-    startMasterAndWaitUntilLogSplit(cluster);
-    
+    LOG.info("Current Open Regions:"
+        + HBaseTestingUtility.getAllOnlineRegions(cluster).size());
+
     // wait for abort completes
     TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return (getAllOnlineRegions(cluster).size() >= (NUM_REGIONS_TO_CREATE + 1));
+        return (HBaseTestingUtility.getAllOnlineRegions(cluster).size()
+          >= (NUM_REGIONS_TO_CREATE + 1));
       }
     });
 
     LOG.info("Current Open Regions After Master Node Starts Up:"
-        + getAllOnlineRegions(cluster).size());
+        + HBaseTestingUtility.getAllOnlineRegions(cluster).size());
 
     assertEquals(NUM_LOG_LINES, TEST_UTIL.countRows(ht));
 
@@ -498,12 +498,11 @@ public class TestDistributedLogSplitting {
     // they will consume recovered.edits
     master.balanceSwitch(false);
 
-    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
     HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     HRegionServer hrs = findRSToKill(false, "table");
-    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
+    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
     makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
 
     // abort master
@@ -522,9 +521,8 @@ public class TestDistributedLogSplitting {
     });
 
     Thread.sleep(2000);
-    LOG.info("Current Open Regions:" + getAllOnlineRegions(cluster).size());
-
-    startMasterAndWaitUntilLogSplit(cluster);
+    LOG.info("Current Open Regions:"
+        + HBaseTestingUtility.getAllOnlineRegions(cluster).size());
 
     // wait for all regions are fully recovered
     TEST_UTIL.waitFor(180000, 200, new Waiter.Predicate<Exception>() {
@@ -537,7 +535,7 @@ public class TestDistributedLogSplitting {
     });
 
     LOG.info("Current Open Regions After Master Node Starts Up:"
-        + getAllOnlineRegions(cluster).size());
+        + HBaseTestingUtility.getAllOnlineRegions(cluster).size());
 
     assertEquals(NUM_LOG_LINES, TEST_UTIL.countRows(ht));
 
@@ -563,7 +561,7 @@ public class TestDistributedLogSplitting {
 
     List<HRegionInfo> regions = null;
     HRegionServer hrs1 = findRSToKill(false, "table");
-    regions = ProtobufUtil.getOnlineRegions(hrs1);
+    regions = ProtobufUtil.getOnlineRegions(hrs1.getRSRpcServices());
 
     makeHLog(hrs1.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
 
@@ -583,7 +581,8 @@ public class TestDistributedLogSplitting {
     TEST_UTIL.waitFor(180000, 200, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return (getAllOnlineRegions(cluster).size() >= (NUM_REGIONS_TO_CREATE + 1));
+        return (HBaseTestingUtility.getAllOnlineRegions(cluster).size()
+            >= (NUM_REGIONS_TO_CREATE + 1));
       }
     });
 
@@ -607,7 +606,8 @@ public class TestDistributedLogSplitting {
     TEST_UTIL.waitFor(180000, 200, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return (getAllOnlineRegions(cluster).size() >= (NUM_REGIONS_TO_CREATE + 1));
+        return (HBaseTestingUtility.getAllOnlineRegions(cluster).size()
+            >= (NUM_REGIONS_TO_CREATE + 1));
       }
     });
 
@@ -633,7 +633,7 @@ public class TestDistributedLogSplitting {
     startCluster(NUM_RS);
     master.balanceSwitch(false);
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
-    final ZooKeeperWatcher zkw = master.getZooKeeperWatcher();
+    final ZooKeeperWatcher zkw = master.getZooKeeper();
     HTable ht = installTable(zkw, "table", "family", 40);
     final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
 
@@ -644,7 +644,7 @@ public class TestDistributedLogSplitting {
     ServerName secondFailedServer = null;
     for (int i = 0; i < NUM_RS; i++) {
       hrs = rsts.get(i).getRegionServer();
-      List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
+      List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
       if (regions.isEmpty()) continue;
       region = regions.get(0);
       regionSet.add(region);
@@ -670,7 +670,6 @@ public class TestDistributedLogSplitting {
       }
     });
     ht.close();
-    zkw.close();
   }
 
   @Test(timeout = 300000)
@@ -692,7 +691,7 @@ public class TestDistributedLogSplitting {
     for (int i = 0; i < NUM_RS; i++) {
       boolean isCarryingMeta = false;
       hrs = rsts.get(i).getRegionServer();
-      regions = ProtobufUtil.getOnlineRegions(hrs);
+      regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
       for (HRegionInfo region : regions) {
         if (region.isMetaRegion()) {
           isCarryingMeta = true;
@@ -744,7 +743,7 @@ public class TestDistributedLogSplitting {
       hasRegionsForBothTables = false;
       boolean isCarryingSystem = false;
       hrs = rsts.get(i).getRegionServer();
-      regions = ProtobufUtil.getOnlineRegions(hrs);
+      regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
       for (HRegionInfo region : regions) {
         if (region.getTable().isSystemTable()) {
           isCarryingSystem = true;
@@ -800,7 +799,8 @@ public class TestDistributedLogSplitting {
     TEST_UTIL.waitFor(180000, 200, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return (getAllOnlineRegions(cluster).size() >= (NUM_REGIONS_TO_CREATE + 1));
+        return (HBaseTestingUtility.getAllOnlineRegions(cluster).size()
+            >= (NUM_REGIONS_TO_CREATE + 1));
       }
     });
 
@@ -821,7 +821,6 @@ public class TestDistributedLogSplitting {
     Path rootdir = FSUtils.getRootDir(conf);
     Path tdir = FSUtils.getTableDir(rootdir, TableName.valueOf("disableTable"));
     for (HRegionInfo hri : regions) {
-      @SuppressWarnings("deprecation")
       Path editsdir =
         HLogUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
       LOG.debug("checking edits dir " + editsdir);
@@ -843,7 +842,6 @@ public class TestDistributedLogSplitting {
     
     // clean up
     for (HRegionInfo hri : regions) {
-      @SuppressWarnings("deprecation")
       Path editsdir =
         HLogUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
       fs.delete(editsdir, true);
@@ -876,7 +874,7 @@ public class TestDistributedLogSplitting {
     HRegionServer dstRS = null;
     for (int i = 0; i < NUM_RS; i++) {
       hrs = rsts.get(i).getRegionServer();
-      List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
+      List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
       if (regions.isEmpty()) continue;
       region = regions.get(0);
       regionSet.add(region);
@@ -910,7 +908,6 @@ public class TestDistributedLogSplitting {
       Put put = new Put(key);
       put.add(Bytes.toBytes("family"), Bytes.toBytes("c1"), new byte[]{'b'});
       ht.put(put);
-      ht.close();
     } catch (IOException ioe) {
       Assert.assertTrue(ioe instanceof RetriesExhaustedWithDetailsException);
       RetriesExhaustedWithDetailsException re = (RetriesExhaustedWithDetailsException) ioe;
@@ -926,6 +923,7 @@ public class TestDistributedLogSplitting {
         foundRegionInRecoveryException);
     }
 
+    ht.close();
     zkw.close();
   }
 
@@ -955,8 +953,8 @@ public class TestDistributedLogSplitting {
     installTable(new ZooKeeperWatcher(conf, "table-creation", null),
         "table", "family", 40);
 
-    makeHLog(hrs.getWAL(), ProtobufUtil.getOnlineRegions(hrs), "table", "family", NUM_LOG_LINES,
-      100);
+    makeHLog(hrs.getWAL(), ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices()),
+      "table", "family", NUM_LOG_LINES, 100);
 
     new Thread() {
       public void run() {
@@ -1025,7 +1023,8 @@ public class TestDistributedLogSplitting {
     }
 
     start = EnvironmentEdgeManager.currentTimeMillis();
-    while (getAllOnlineRegions(cluster).size() < (NUM_REGIONS_TO_CREATE + 1)) {
+    while (HBaseTestingUtility.getAllOnlineRegions(cluster).size()
+        < (NUM_REGIONS_TO_CREATE + 1)) {
       if (EnvironmentEdgeManager.currentTimeMillis() - start > 60000) {
         assertTrue("Timedout", false);
       }
@@ -1124,11 +1123,10 @@ public class TestDistributedLogSplitting {
     // they will consume recovered.edits
     master.balanceSwitch(false);
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
 
     // only testing meta recovery in ZK operation
     HRegionServer hrs = findRSToKill(true, null);
-    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
+    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
 
     LOG.info("#regions = " + regions.size());
     Set<HRegionInfo> tmpRegions = new HashSet<HRegionInfo>();
@@ -1187,7 +1185,7 @@ public class TestDistributedLogSplitting {
     for (int i = 0; i < NUM_RS; i++) {
       boolean isCarryingMeta = false;
       hrs = rsts.get(i).getRegionServer();
-      regions = ProtobufUtil.getOnlineRegions(hrs);
+      regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
       for (HRegionInfo region : regions) {
         if (region.isMetaRegion()) {
           isCarryingMeta = true;
@@ -1279,7 +1277,7 @@ public class TestDistributedLogSplitting {
     for (int i = 0; i < NUM_RS; i++) {
       boolean isCarryingMeta = false;
       hrs = rsts.get(i).getRegionServer();
-      regions = ProtobufUtil.getOnlineRegions(hrs);
+      regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
       for (HRegionInfo region : regions) {
         if (region.isMetaRegion()) {
           isCarryingMeta = true;
@@ -1377,7 +1375,7 @@ public class TestDistributedLogSplitting {
     TEST_UTIL.getHBaseAdmin().disableTable(table);
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
-    NavigableSet<String> regions = getAllOnlineRegions(cluster);
+    NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     LOG.debug("Verifying only catalog and namespace regions are assigned\n");
     if (regions.size() != 2) {
       for (String oregion : regions)
@@ -1389,7 +1387,7 @@ public class TestDistributedLogSplitting {
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     LOG.debug("Verifying there are " + numRegions + " assigned on cluster\n");
-    regions = getAllOnlineRegions(cluster);
+    regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     assertEquals(numRegions + 2 + existingRegions, regions.size());
     return ht;
   }
@@ -1402,12 +1400,27 @@ public class TestDistributedLogSplitting {
 
     for (RegionServerThread rst : rsts) {
       HRegionServer hrs = rst.getRegionServer();
-      List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs);
+      List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
       for (HRegionInfo hri : hris) {
         if (hri.getTable().isSystemTable()) {
           continue;
         }
         LOG.debug("adding data to rs = " + rst.getName() +
+            " region = "+ hri.getRegionNameAsString());
+        HRegion region = hrs.getOnlineRegion(hri.getRegionName());
+        assertTrue(region != null);
+        putData(region, hri.getStartKey(), nrows, Bytes.toBytes("q"), family);
+      }
+    }
+
+    for (MasterThread mt : cluster.getLiveMasterThreads()) {
+      HRegionServer hrs = mt.getMaster();
+      List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
+      for (HRegionInfo hri : hris) {
+        if (hri.getTable().isSystemTable()) {
+          continue;
+        }
+        LOG.debug("adding data to rs = " + mt.getName() +
             " region = "+ hri.getRegionNameAsString());
         HRegion region = hrs.getOnlineRegion(hri.getRegionName());
         assertTrue(region != null);
@@ -1542,17 +1555,6 @@ public class TestDistributedLogSplitting {
     t.flushCommits();
   }
 
-  private NavigableSet<String> getAllOnlineRegions(MiniHBaseCluster cluster)
-      throws IOException {
-    NavigableSet<String> online = new TreeSet<String>();
-    for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
-      for (HRegionInfo region : ProtobufUtil.getOnlineRegions(rst.getRegionServer())) {
-        online.add(region.getRegionNameAsString());
-      }
-    }
-    return online;
-  }
-
   private void waitForCounter(AtomicLong ctr, long oldval, long newval,
       long timems) {
     long curt = System.currentTimeMillis();
@@ -1580,19 +1582,6 @@ public class TestDistributedLogSplitting {
     LOG.debug("Master is aborted");
   }
 
-  private void startMasterAndWaitUntilLogSplit(MiniHBaseCluster cluster)
-      throws IOException, InterruptedException {
-    cluster.startMaster();
-    HMaster master = cluster.getMaster();
-    while (!master.isInitialized()) {
-      Thread.sleep(100);
-    }
-    ServerManager serverManager = master.getServerManager();
-    while (serverManager.areDeadServersInProgress()) {
-      Thread.sleep(100);
-    }
-  }
-
   /**
    * Find a RS that has regions of a table.
    * @param hasMetaRegion when true, the returned RS has hbase:meta region as well
@@ -1610,7 +1599,7 @@ public class TestDistributedLogSplitting {
       boolean isCarryingMeta = false;
       boolean foundTableRegion = false;
       hrs = rsts.get(i).getRegionServer();
-      regions = ProtobufUtil.getOnlineRegions(hrs);
+      regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
       for (HRegionInfo region : regions) {
         if (region.isMetaRegion()) {
           isCarryingMeta = true;

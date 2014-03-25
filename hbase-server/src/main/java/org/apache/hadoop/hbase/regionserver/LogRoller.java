@@ -148,19 +148,6 @@ class LogRoller extends HasThread implements WALActionsListener {
     }
   }
 
-  /**
-   * Called by region server to wake up this thread if it sleeping.
-   * It is sleeping if rollLock is not held.
-   */
-  public void interruptIfNecessary() {
-    try {
-      rollLock.lock();
-      this.interrupt();
-    } finally {
-      rollLock.unlock();
-    }
-  }
-
   protected HLog getWAL() throws IOException {
     return this.services.getWAL(null);
   }

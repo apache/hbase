@@ -107,7 +107,7 @@ public class TestTableLockManager {
     conf.setInt(TableLockManager.TABLE_WRITE_LOCK_TIMEOUT_MS, 3000);
     prepareMiniCluster();
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    master.getCoprocessorHost().load(TestLockTimeoutExceptionMasterObserver.class,
+    master.getMasterCoprocessorHost().load(TestLockTimeoutExceptionMasterObserver.class,
         0, TEST_UTIL.getConfiguration());
 
     ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -159,7 +159,7 @@ public class TestTableLockManager {
     // thread, send a request to disable, and then delete a table.
 
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    master.getCoprocessorHost().load(TestAlterAndDisableMasterObserver.class,
+    master.getMasterCoprocessorHost().load(TestAlterAndDisableMasterObserver.class,
         0, TEST_UTIL.getConfiguration());
 
     ExecutorService executor = Executors.newFixedThreadPool(2);

@@ -525,7 +525,7 @@ public class TestClassLoading {
         "[" + masterCoprocessor.getSimpleName() + "]";
     String loadedMasterCoprocessors =
         java.util.Arrays.toString(
-            TEST_UTIL.getHBaseCluster().getMaster().getCoprocessors());
+            TEST_UTIL.getHBaseCluster().getMaster().getMasterCoprocessors());
     assertEquals(loadedMasterCoprocessorsVerify, loadedMasterCoprocessors);
   }
 

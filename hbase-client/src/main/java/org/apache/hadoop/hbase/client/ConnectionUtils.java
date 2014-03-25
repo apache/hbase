@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 
 /**
  * Utility used by client connections.
@@ -91,5 +95,32 @@ public class ConnectionUtils {
     int retries = hcRetries * serversideMultiplier;
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
     log.debug(sn + " HConnection server-to-server retries=" + retries);
+  }
+
+  /**
+   * Adapt a HConnection so that it can bypass the RPC layer (serialization,
+   * deserialization, networking, etc..) when it talks to a local server.
+   * @param conn the connection to adapt
+   * @param serverName the local server name
+   * @param admin the admin interface of the local server
+   * @param client the client interface of the local server
+   * @return an adapted/decorated HConnection
+   */
+  public static HConnection createShortCircuitHConnection(final HConnection conn,
+      final ServerName serverName, final AdminService.BlockingInterface admin,
+      final ClientService.BlockingInterface client) {
+    return new ConnectionAdapter(conn) {
+      @Override
+      public AdminService.BlockingInterface getAdmin(
+          ServerName sn, boolean getMaster) throws IOException {
+        return serverName.equals(sn) ? admin : super.getAdmin(sn, getMaster);
+      }
+
+      @Override
+      public ClientService.BlockingInterface getClient(
+          ServerName sn) throws IOException {
+        return serverName.equals(sn) ? client : super.getClient(sn);
+      }
+    };
   }
 }

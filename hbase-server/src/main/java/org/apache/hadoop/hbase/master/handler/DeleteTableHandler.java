@@ -61,7 +61,7 @@ public class DeleteTableHandler extends TableEventHandler {
   protected void handleTableOperation(List<HRegionInfo> regions)
   throws IOException, KeeperException {
     MasterCoprocessorHost cpHost = ((HMaster) this.server)
-        .getCoprocessorHost();
+        .getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preDeleteTableHandler(this.tableName);
     }

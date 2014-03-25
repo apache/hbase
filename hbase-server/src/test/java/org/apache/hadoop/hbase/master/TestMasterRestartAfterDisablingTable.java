@@ -21,21 +21,21 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -80,7 +80,7 @@ public class TestMasterRestartAfterDisablingTable {
     log("Disabling table\n");
     TEST_UTIL.getHBaseAdmin().disableTable(table);
 
-    NavigableSet<String> regions = getAllOnlineRegions(cluster);
+    NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     assertEquals(
         "The number of regions for the table tableRestart should be 0 and only"
             + "the catalog and namespace tables should be present.", 2, regions.size());
@@ -108,10 +108,10 @@ public class TestMasterRestartAfterDisablingTable {
     log("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     log("Verifying there are " + numRegions + " assigned on cluster\n");
-    regions = getAllOnlineRegions(cluster);
-    assertEquals(
-        "The assigned regions were not onlined after master switch except for the catalog and namespace tables.",
-        6, regions.size());
+    regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
+    assertEquals("The assigned regions were not onlined after master"
+        + " switch except for the catalog and namespace tables.",
+          6, regions.size());
     assertTrue("The table should be in enabled state", cluster.getMaster()
         .getAssignmentManager().getZKTable()
         .isEnabledTable(TableName.valueOf("tableRestart")));
@@ -128,17 +128,5 @@ public class TestMasterRestartAfterDisablingTable {
     ZKAssign.blockUntilNoRIT(zkw);
     master.assignmentManager.waitUntilNoRegionsInTransition(60000);
   }
-
-  private NavigableSet<String> getAllOnlineRegions(MiniHBaseCluster cluster)
-      throws IOException {
-    NavigableSet<String> online = new TreeSet<String>();
-    for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
-      for (HRegionInfo region : ProtobufUtil.getOnlineRegions(rst.getRegionServer())) {
-        online.add(region.getRegionNameAsString());
-      }
-    }
-    return online;
-  }
-
 }
 

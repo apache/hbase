@@ -164,7 +164,7 @@ public class BalancerTestBase {
   }
 
   protected BaseLoadBalancer.Cluster mockCluster(int[] mockCluster) {
-    return new BaseLoadBalancer.Cluster(mockClusterServers(mockCluster, -1), null, null);
+    return new BaseLoadBalancer.Cluster(null, mockClusterServers(mockCluster, -1), null, null);
   }
 
   protected Map<ServerName, List<HRegionInfo>> mockClusterServers(int[] mockCluster, int numTables) {

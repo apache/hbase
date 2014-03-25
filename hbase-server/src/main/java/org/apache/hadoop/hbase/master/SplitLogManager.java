@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
@@ -151,25 +150,7 @@ public class SplitLogManager extends ZooKeeperListener {
 
   /**
    * Wrapper around {@link #SplitLogManager(ZooKeeperWatcher zkw, Configuration conf,
-   *   Stoppable stopper, MasterServices master, ServerName serverName,
-   *   boolean masterRecovery, TaskFinisher tf)}
-   * with masterRecovery = false, and tf = null.  Used in unit tests.
-   *
-   * @param zkw the ZK watcher
-   * @param conf the HBase configuration
-   * @param stopper the stoppable in case anything is wrong
-   * @param master the master services
-   * @param serverName the master server name
-   */
-  public SplitLogManager(ZooKeeperWatcher zkw, final Configuration conf,
-      Stoppable stopper, MasterServices master, ServerName serverName) {
-    this(zkw, conf, stopper, master, serverName, false, null);
-  }
-
-  /**
-   * Wrapper around {@link #SplitLogManager(ZooKeeperWatcher zkw, Configuration conf,
-   *   Stoppable stopper, MasterServices master, ServerName serverName,
-   *   boolean masterRecovery, TaskFinisher tf)}
+   *   Stoppable stopper, MasterServices master, ServerName serverName, TaskFinisher tf)}
    * that provides a task finisher for copying recovered edits to their final destination.
    * The task finisher has to be robust because it can be arbitrarily restarted or called
    * multiple times.
@@ -179,11 +160,10 @@ public class SplitLogManager extends ZooKeeperListener {
    * @param stopper the stoppable in case anything is wrong
    * @param master the master services
    * @param serverName the master server name
-   * @param masterRecovery an indication if the master is in recovery
    */
   public SplitLogManager(ZooKeeperWatcher zkw, final Configuration conf,
-      Stoppable stopper, MasterServices master, ServerName serverName, boolean masterRecovery) {
-    this(zkw, conf, stopper, master, serverName, masterRecovery, new TaskFinisher() {
+      Stoppable stopper, MasterServices master, ServerName serverName) {
+    this(zkw, conf, stopper, master, serverName, new TaskFinisher() {
       @Override
       public Status finish(ServerName workerName, String logfile) {
         try {
@@ -207,12 +187,11 @@ public class SplitLogManager extends ZooKeeperListener {
    * @param stopper the stoppable in case anything is wrong
    * @param master the master services
    * @param serverName the master server name
-   * @param masterRecovery an indication if the master is in recovery
    * @param tf task finisher
    */
   public SplitLogManager(ZooKeeperWatcher zkw, Configuration conf,
         Stoppable stopper, MasterServices master,
-        ServerName serverName, boolean masterRecovery, TaskFinisher tf) {
+        ServerName serverName, TaskFinisher tf) {
     super(zkw);
     this.taskFinisher = tf;
     this.conf = conf;
@@ -233,10 +212,8 @@ public class SplitLogManager extends ZooKeeperListener {
 
     this.failedDeletions = Collections.synchronizedSet(new HashSet<String>());
 
-    if (!masterRecovery) {
-      Threads.setDaemonThreadRunning(timeoutMonitor.getThread(), serverName
-          + ".splitLogManagerTimeoutMonitor");
-    }
+    Threads.setDaemonThreadRunning(timeoutMonitor.getThread(), serverName
+      + ".splitLogManagerTimeoutMonitor");
     // Watcher can be null during tests with Mock'd servers.
     if (this.watcher != null) {
       this.watcher.registerListener(this);

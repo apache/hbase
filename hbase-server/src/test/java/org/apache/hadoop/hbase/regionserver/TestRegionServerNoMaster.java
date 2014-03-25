@@ -28,15 +28,19 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -79,6 +83,22 @@ public class TestRegionServerNoMaster {
 
     // No master
     HTU.getHBaseCluster().getMaster().stopMaster();
+
+    // Master is down, so is the meta. We need to assign it somewhere
+    // so that regions can be assigned during the mocking phase.
+    HRegionServer hrs = HTU.getHBaseCluster().getRegionServer(0);
+    ZooKeeperWatcher zkw = hrs.getZooKeeper();
+    ZKAssign.createNodeOffline(
+      zkw, HRegionInfo.FIRST_META_REGIONINFO, hrs.getServerName());
+    ProtobufUtil.openRegion(hrs.getRSRpcServices(),
+      hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
+    while (true) {
+      ServerName sn = MetaRegionTracker.getMetaRegionLocation(zkw);
+      if (sn != null && sn.equals(hrs.getServerName())) {
+        break;
+      }
+      Thread.sleep(100);
+    }
   }
 
   @AfterClass
@@ -108,8 +128,9 @@ public class TestRegionServerNoMaster {
     // We reopen. We need a ZK node here, as a open is always triggered by a master.
     ZKAssign.createNodeOffline(HTU.getZooKeeperWatcher(), hri, getRS().getServerName());
     // first version is '0'
-    AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, 0, null);
-    AdminProtos.OpenRegionResponse responseOpen = getRS().openRegion(null, orr);
+    AdminProtos.OpenRegionRequest orr =
+      RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, 0, null);
+    AdminProtos.OpenRegionResponse responseOpen = getRS().rpcServices.openRegion(null, orr);
     Assert.assertTrue(responseOpen.getOpeningStateCount() == 1);
     Assert.assertTrue(responseOpen.getOpeningState(0).
         equals(AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED));
@@ -155,7 +176,7 @@ public class TestRegionServerNoMaster {
     // no transition in ZK
     AdminProtos.CloseRegionRequest crr =
         RequestConverter.buildCloseRegionRequest(getRS().getServerName(), regionName, false);
-    AdminProtos.CloseRegionResponse responseClose = getRS().closeRegion(null, crr);
+    AdminProtos.CloseRegionResponse responseClose = getRS().rpcServices.closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
 
     // now waiting & checking. After a while, the transition should be done and the region closed
@@ -175,7 +196,7 @@ public class TestRegionServerNoMaster {
     // Transition in ZK on. This should fail, as there is no znode
     AdminProtos.CloseRegionRequest crr = RequestConverter.buildCloseRegionRequest(
       getRS().getServerName(), regionName, true);
-    AdminProtos.CloseRegionResponse responseClose = getRS().closeRegion(null, crr);
+    AdminProtos.CloseRegionResponse responseClose = getRS().rpcServices.closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
 
     // now waiting. After a while, the transition should be done
@@ -194,7 +215,7 @@ public class TestRegionServerNoMaster {
 
     AdminProtos.CloseRegionRequest crr = RequestConverter.buildCloseRegionRequest(
       getRS().getServerName(), regionName, true);
-    AdminProtos.CloseRegionResponse responseClose = getRS().closeRegion(null, crr);
+    AdminProtos.CloseRegionResponse responseClose = getRS().rpcServices.closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
 
     checkRegionIsClosed();
@@ -228,7 +249,7 @@ public class TestRegionServerNoMaster {
     // We're sending multiple requests in a row. The region server must handle this nicely.
     for (int i = 0; i < 10; i++) {
       AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, 0, null);
-      AdminProtos.OpenRegionResponse responseOpen = getRS().openRegion(null, orr);
+      AdminProtos.OpenRegionResponse responseOpen = getRS().rpcServices.openRegion(null, orr);
       Assert.assertTrue(responseOpen.getOpeningStateCount() == 1);
 
       AdminProtos.OpenRegionResponse.RegionOpeningState ors = responseOpen.getOpeningState(0);
@@ -246,10 +267,15 @@ public class TestRegionServerNoMaster {
     Assert.assertTrue(getRS().getRegion(regionName).isAvailable());
 
     try {
+      // we re-opened meta so some of its data is lost
+      ServerName sn = getRS().getServerName();
+      MetaEditor.updateRegionLocation(getRS().catalogTracker,
+        hri, sn, getRS().getRegion(regionName).getOpenSeqNum());
       // fake region to be closing now, need to clear state afterwards
       getRS().regionsInTransitionInRS.put(hri.getEncodedNameAsBytes(), Boolean.FALSE);
-      AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, 0, null);
-      getRS().openRegion(null, orr);
+      AdminProtos.OpenRegionRequest orr =
+        RequestConverter.buildOpenRegionRequest(sn, hri, 0, null);
+      getRS().rpcServices.openRegion(null, orr);
       Assert.fail("The closing region should not be opened");
     } catch (ServiceException se) {
       Assert.assertTrue("The region should be already in transition",
@@ -268,7 +294,7 @@ public class TestRegionServerNoMaster {
       AdminProtos.CloseRegionRequest crr =
           RequestConverter.buildCloseRegionRequest(getRS().getServerName(), regionName, 0, null, true);
       try {
-        AdminProtos.CloseRegionResponse responseClose = getRS().closeRegion(null, crr);
+        AdminProtos.CloseRegionResponse responseClose = getRS().rpcServices.closeRegion(null, crr);
         Assert.assertEquals("The first request should succeeds", 0, i);
         Assert.assertTrue("request " + i + " failed",
             responseClose.getClosed() || responseClose.hasClosed());
@@ -304,7 +330,7 @@ public class TestRegionServerNoMaster {
     AdminProtos.CloseRegionRequest crr =
         RequestConverter.buildCloseRegionRequest(getRS().getServerName(), regionName, false);
     try {
-      getRS().closeRegion(null, crr);
+      getRS().rpcServices.closeRegion(null, crr);
       Assert.assertTrue(false);
     } catch (ServiceException expected) {
     }
@@ -322,7 +348,7 @@ public class TestRegionServerNoMaster {
 
     // The open handler should have updated the value in ZK.
     Assert.assertTrue(ZKAssign.deleteNode(
-        getRS().getZooKeeperWatcher(), hri.getEncodedName(),
+        getRS().getZooKeeper(), hri.getEncodedName(),
         EventType.RS_ZK_REGION_FAILED_OPEN, 1)
     );
 
@@ -347,7 +373,7 @@ public class TestRegionServerNoMaster {
     AdminProtos.CloseRegionRequest crr =
         RequestConverter.buildCloseRegionRequest(getRS().getServerName(), regionName, false);
     try {
-      getRS().closeRegion(null, crr);
+      getRS().rpcServices.closeRegion(null, crr);
       Assert.assertTrue(false);
     } catch (ServiceException expected) {
       Assert.assertTrue(expected.getCause() instanceof NotServingRegionException);
@@ -355,7 +381,7 @@ public class TestRegionServerNoMaster {
 
     // The close should have left the ZK state as it is: it's the job the AM to delete it
     Assert.assertTrue(ZKAssign.deleteNode(
-        getRS().getZooKeeperWatcher(), hri.getEncodedName(),
+        getRS().getZooKeeper(), hri.getEncodedName(),
         EventType.M_ZK_REGION_CLOSING, 0)
     );
 
@@ -393,7 +419,7 @@ public class TestRegionServerNoMaster {
 
     try {
       CloseRegionRequest request = RequestConverter.buildCloseRegionRequest(earlierServerName, regionName, true);
-      getRS().closeRegion(null, request);
+      getRS().getRSRpcServices().closeRegion(null, request);
       Assert.fail("The closeRegion should have been rejected");
     } catch (ServiceException se) {
       Assert.assertTrue(se.getCause() instanceof IOException);
@@ -404,7 +430,7 @@ public class TestRegionServerNoMaster {
     closeNoZK();
     try {
       AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(earlierServerName, hri, 0, null);
-      getRS().openRegion(null, orr);
+      getRS().getRSRpcServices().openRegion(null, orr);
       Assert.fail("The openRegion should have been rejected");
     } catch (ServiceException se) {
       Assert.assertTrue(se.getCause() instanceof IOException);

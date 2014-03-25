@@ -23,8 +23,6 @@ import static org.junit.Assert.assertNotNull;
 
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,14 +46,10 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestClusterId {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestClusterId.class.getName());
-
   private final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
 
   private JVMClusterUtil.RegionServerThread rst;
-  private JVMClusterUtil.MasterThread mst;
 
   @Before
   public void setUp() throws Exception {
@@ -113,7 +107,7 @@ public class TestClusterId {
     }
     TEST_UTIL.startMiniHBaseCluster(1, 1);
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    assertEquals(1, master.getServerManager().getOnlineServersList().size());
+    assertEquals(2, master.getServerManager().getOnlineServersList().size());
   }
   
 }

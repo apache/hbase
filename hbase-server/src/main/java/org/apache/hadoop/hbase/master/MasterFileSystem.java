@@ -105,7 +105,7 @@ public class MasterFileSystem {
     }
   };
 
-  public MasterFileSystem(Server master, MasterServices services, boolean masterRecovery)
+  public MasterFileSystem(Server master, MasterServices services)
   throws IOException {
     this.conf = master.getConfiguration();
     this.master = master;
@@ -129,7 +129,7 @@ public class MasterFileSystem {
     HFileSystem.addLocationsOrderInterceptor(conf);
     this.splitLogManager = new SplitLogManager(master.getZooKeeper(),
       master.getConfiguration(), master, services,
-      master.getServerName(), masterRecovery);
+      master.getServerName());
   }
 
   /**

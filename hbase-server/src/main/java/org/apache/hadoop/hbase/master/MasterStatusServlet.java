@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,9 +33,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
+import org.apache.hadoop.hbase.util.FSUtils;
+
 import com.google.protobuf.ServiceException;
 
 /**
@@ -54,6 +54,14 @@ public class MasterStatusServlet extends HttpServlet {
   {
     HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
     assert master != null : "No Master in context!";
+
+    response.setContentType("text/html");
+
+    if (!master.isOnline()) {
+      response.getWriter().write("The Master is initializing!");
+      response.getWriter().close();
+      return;
+    }
 
     Configuration conf = master.getConfiguration();
     HBaseAdmin admin = new HBaseAdmin(conf);
@@ -73,8 +81,7 @@ public class MasterStatusServlet extends HttpServlet {
       servers = master.getServerManager().getOnlineServersList();
       deadServers = master.getServerManager().getDeadServers().copyServerNames();
     }
-    
-    response.setContentType("text/html");
+
     MasterStatusTmpl tmpl;
     try {
        tmpl = new MasterStatusTmpl()
@@ -82,8 +89,8 @@ public class MasterStatusServlet extends HttpServlet {
       .setMetaLocation(metaLocation)
       .setServers(servers)
       .setDeadServers(deadServers)
-      .setCatalogJanitorEnabled(master.isCatalogJanitorEnabled(null,
-          RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue());
+      .setCatalogJanitorEnabled(master.getMasterRpcServices().isCatalogJanitorEnabled(
+          null, RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue());
     } catch (ServiceException s) {
       admin.close();
       throw new IOException(s);

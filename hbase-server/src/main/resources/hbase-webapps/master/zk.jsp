@@ -23,7 +23,7 @@
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.master.HMaster"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
-  ZooKeeperWatcher watcher = master.getZooKeeperWatcher();
+  ZooKeeperWatcher watcher = master.getZooKeeper();
 %>
 <!--[if IE]>
 <!DOCTYPE html>

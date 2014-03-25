@@ -45,10 +45,6 @@ public class RSDumpServlet extends StateDumpServlet {
     HRegionServer hrs = (HRegionServer)getServletContext().getAttribute(
         HRegionServer.REGIONSERVER);
     assert hrs != null : "No RS in context!";
-    
-    Configuration hrsconf = (Configuration)getServletContext().getAttribute(
-        HRegionServer.REGIONSERVER_CONF);
-    assert hrsconf != null : "No RS conf in context";
 
     response.setContentType("text/plain");
  
@@ -61,7 +57,7 @@ public class RSDumpServlet extends StateDumpServlet {
     OutputStream os = response.getOutputStream();
     PrintWriter out = new PrintWriter(os);
     
-    out.println("Master status for " + hrs.getServerName()
+    out.println("RegionServer status for " + hrs.getServerName()
         + " as of " + new Date());
     
     out.println("\n\nVersion Info:");
@@ -94,18 +90,14 @@ public class RSDumpServlet extends StateDumpServlet {
     
     out.println("\n\nRS Queue:");
     out.println(LINE);
-    if(isShowQueueDump(hrsconf)) {
+    if(isShowQueueDump(conf)) {
       dumpQueue(hrs, out);
     } 
     
     out.flush();
   }
-  
-  private boolean isShowQueueDump(Configuration conf){
-    return conf.getBoolean("hbase.regionserver.servlet.show.queuedump", true);
-  }
-    
-  private void dumpQueue(HRegionServer hrs, PrintWriter out)
+
+  public static void dumpQueue(HRegionServer hrs, PrintWriter out)
       throws IOException {
     // 1. Print out Compaction/Split Queue
     out.println("Compaction/Split Queue summary: " 
@@ -117,5 +109,4 @@ public class RSDumpServlet extends StateDumpServlet {
         + hrs.cacheFlusher.toString());
     out.println(hrs.cacheFlusher.dumpQueue());
   }
-  
 }

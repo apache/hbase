@@ -129,7 +129,7 @@ public class TestHTableWrapper {
   @Test
   public void testHTableInterfaceMethods() throws Exception {
     Configuration conf = util.getConfiguration();
-    MasterCoprocessorHost cpHost = util.getMiniHBaseCluster().getMaster().getCoprocessorHost();
+    MasterCoprocessorHost cpHost = util.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
     Class<?> implClazz = DummyRegionObserver.class;
     cpHost.load(implClazz, Coprocessor.PRIORITY_HIGHEST, conf);
     CoprocessorEnvironment env = cpHost.findCoprocessorEnvironment(implClazz.getName());

@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -68,7 +67,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.ServiceException;
@@ -540,6 +544,11 @@ public class TestAdmin {
       }
       regs.add(entry.getKey());
     }
+    if (numRS >= 2) {
+      // Ignore the master region server,
+      // which contains less regions by intention.
+      numRS--;
+    }
     float average = (float) expectedRegions/numRS;
     int min = (int)Math.floor(average);
     int max = (int)Math.ceil(average);
@@ -834,7 +843,7 @@ public class TestAdmin {
    * @throws Exception
    * @throws IOException
    */
-  @Test (timeout=300000)
+  @Test (timeout=400000)
   public void testForceSplit() throws Exception {
     byte[][] familyNames = new byte[][] { Bytes.toBytes("cf") };
     int[] rowCounts = new int[] { 6000 };
@@ -886,7 +895,7 @@ public class TestAdmin {
    * @throws Exception
    * @throws IOException
    */
-  @Test (timeout=300000)
+  @Test (timeout=800000)
   public void testForceSplitMultiFamily() throws Exception {
     int numVersions = HColumnDescriptor.DEFAULT_VERSIONS;
 
@@ -973,7 +982,7 @@ public class TestAdmin {
     final AtomicInteger count = new AtomicInteger(0);
     Thread t = new Thread("CheckForSplit") {
       public void run() {
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 45; i++) {
           try {
             sleep(1000);
           } catch (InterruptedException e) {
@@ -1299,7 +1308,7 @@ public class TestAdmin {
 
     HRegionInfo info = null;
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
-    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs);
+    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (HRegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.getTable().isSystemTable()) {
         info = regionInfo;
@@ -1307,11 +1316,13 @@ public class TestAdmin {
             .getServerName().getServerName());
       }
     }
-    boolean isInList = ProtobufUtil.getOnlineRegions(rs).contains(info);
+    boolean isInList = ProtobufUtil.getOnlineRegions(
+      rs.getRSRpcServices()).contains(info);
     long timeout = System.currentTimeMillis() + 10000;
     while ((System.currentTimeMillis() < timeout) && (isInList)) {
       Thread.sleep(100);
-      isInList = ProtobufUtil.getOnlineRegions(rs).contains(info);
+      isInList = ProtobufUtil.getOnlineRegions(
+        rs.getRSRpcServices()).contains(info);
     }
 
     assertFalse("The region should not be present in online regions list.",
@@ -1325,7 +1336,7 @@ public class TestAdmin {
 
     HRegionInfo info = null;
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
-    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs);
+    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (HRegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.isMetaTable()) {
         if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion1")) {
@@ -1339,7 +1350,7 @@ public class TestAdmin {
         }
       }
     }
-    onlineRegions = ProtobufUtil.getOnlineRegions(rs);
+    onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     assertTrue("The region should be present in online regions list.",
         onlineRegions.contains(info));
   }
@@ -1352,7 +1363,7 @@ public class TestAdmin {
 
     HRegionInfo info = null;
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
-    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs);
+    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (HRegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.isMetaTable()) {
 
@@ -1364,11 +1375,13 @@ public class TestAdmin {
       }
     }
 
-    boolean isInList = ProtobufUtil.getOnlineRegions(rs).contains(info);
+    boolean isInList = ProtobufUtil.getOnlineRegions(
+      rs.getRSRpcServices()).contains(info);
     long timeout = System.currentTimeMillis() + 10000;
     while ((System.currentTimeMillis() < timeout) && (isInList)) {
       Thread.sleep(100);
-      isInList = ProtobufUtil.getOnlineRegions(rs).contains(info);
+      isInList = ProtobufUtil.getOnlineRegions(
+        rs.getRSRpcServices()).contains(info);
     }
 
     assertFalse("The region should not be present in online regions list.",
@@ -1383,7 +1396,7 @@ public class TestAdmin {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
 
     try {
-      List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs);
+      List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
       for (HRegionInfo regionInfo : onlineRegions) {
         if (!regionInfo.isMetaTable()) {
           if (regionInfo.getRegionNameAsString()
@@ -1407,7 +1420,7 @@ public class TestAdmin {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
 
     try {
-      List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs);
+      List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
       for (HRegionInfo regionInfo : onlineRegions) {
         if (!regionInfo.isMetaTable()) {
           if (regionInfo.getRegionNameAsString()
@@ -1430,7 +1443,7 @@ public class TestAdmin {
     HRegionInfo info = null;
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
 
-    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs);
+    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (HRegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.isMetaTable()) {
         if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion4")) {
@@ -1444,7 +1457,7 @@ public class TestAdmin {
         }
       }
     }
-    onlineRegions = ProtobufUtil.getOnlineRegions(rs);
+    onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     assertTrue("The region should be present in online regions list.",
         onlineRegions.contains(info));
   }
@@ -1683,7 +1696,7 @@ public class TestAdmin {
     TEST_UTIL.getHBaseAdmin().createTable(htd);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testIsEnabledOrDisabledOnUnknownTable() throws Exception {
     try {
       admin.isTableEnabled(Bytes.toBytes("unkownTable"));

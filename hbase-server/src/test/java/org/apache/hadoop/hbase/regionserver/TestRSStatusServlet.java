@@ -51,10 +51,11 @@ import com.google.protobuf.ServiceException;
 @Category(SmallTests.class)
 public class TestRSStatusServlet {
   private HRegionServer rs;
-  
+  private RSRpcServices rpcServices;
+
   static final int FAKE_IPC_PORT = 1585;
   static final int FAKE_WEB_PORT = 1586;
-  
+
   private final ServerName fakeServerName =
       ServerName.valueOf("localhost", FAKE_IPC_PORT, 11111);
   private final GetServerInfoResponse fakeResponse =
@@ -66,9 +67,11 @@ public class TestRSStatusServlet {
   @Before
   public void setupBasicMocks() throws IOException, ServiceException {
     rs = Mockito.mock(HRegionServer.class);
+    rpcServices = Mockito.mock(RSRpcServices.class);
     Mockito.doReturn(HBaseConfiguration.create())
       .when(rs).getConfiguration();
-    Mockito.doReturn(fakeResponse).when(rs).getServerInfo(
+    Mockito.doReturn(rpcServices).when(rs).getRSRpcServices();
+    Mockito.doReturn(fakeResponse).when(rpcServices).getServerInfo(
       (RpcController)Mockito.any(), (GetServerInfoRequest)Mockito.any());
     // Fake ZKW
     ZooKeeperWatcher zkw = Mockito.mock(ZooKeeperWatcher.class);
@@ -82,7 +85,7 @@ public class TestRSStatusServlet {
 
     MetricsRegionServer rms = Mockito.mock(MetricsRegionServer.class);
     Mockito.doReturn(new MetricsRegionServerWrapperStub()).when(rms).getRegionServerWrapper();
-    Mockito.doReturn(rms).when(rs).getMetrics();
+    Mockito.doReturn(rms).when(rs).getRegionServerMetrics();
   }
   
   @Test
@@ -98,7 +101,7 @@ public class TestRSStatusServlet {
         new HRegionInfo(htd.getTableName(), Bytes.toBytes("d"), Bytes.toBytes("z"))
         );
     Mockito.doReturn(ResponseConverter.buildGetOnlineRegionResponse(
-      regions)).when(rs).getOnlineRegion((RpcController)Mockito.any(),
+      regions)).when(rpcServices).getOnlineRegion((RpcController)Mockito.any(),
         (GetOnlineRegionRequest)Mockito.any());
     
     new RSStatusTmpl().render(new StringWriter(), rs);

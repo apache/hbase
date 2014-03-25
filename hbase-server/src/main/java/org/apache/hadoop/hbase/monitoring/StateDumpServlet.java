@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorStatus;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -43,6 +44,10 @@ public abstract class StateDumpServlet extends HttpServlet {
         org.apache.hadoop.util.VersionInfo.getRevision());
     out.println("Compiled by " + org.apache.hadoop.util.VersionInfo.getUser() +
         " on " + org.apache.hadoop.util.VersionInfo.getDate());
+  }
+
+  protected boolean isShowQueueDump(Configuration conf){
+    return conf.getBoolean("hbase.regionserver.servlet.show.queuedump", true);
   }
 
   protected long getTailKbParam(HttpServletRequest request) {

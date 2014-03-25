@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -39,11 +40,13 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
 
@@ -52,6 +55,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
   private static LoadBalancer loadBalancer;
   private static final Log LOG = LogFactory.getLog(TestStochasticLoadBalancer.class);
+  private static final ServerName master = ServerName.valueOf("fake-master", 0, 1L);
 
   int[][] regionsAndServersMocks = new int[][] {
       // { num regions, num servers }
@@ -65,6 +69,9 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     Configuration conf = HBaseConfiguration.create();
     loadBalancer = new MockBalancer();
     loadBalancer.setConf(conf);
+    MasterServices st = Mockito.mock(MasterServices.class);
+    Mockito.when(st.getServerName()).thenReturn(master);
+    loadBalancer.setMasterServices(st);
   }
 
   public static class MockBalancer extends BaseLoadBalancer {
@@ -85,6 +92,17 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    */
   @Test
   public void testImmediateAssignment() throws Exception {
+    List<ServerName> tmp = getListOfServerNames(randomServers(1, 0));
+    tmp.add(master);
+    ServerName sn = loadBalancer.randomAssignment(HRegionInfo.FIRST_META_REGIONINFO, tmp);
+    assertEquals(master, sn);
+    HRegionInfo hri = randomRegions(1, -1).get(0);
+    sn = loadBalancer.randomAssignment(hri, tmp);
+    assertNotEquals(master, sn);
+    tmp = new ArrayList<ServerName>();
+    tmp.add(master);
+    sn = loadBalancer.randomAssignment(hri, tmp);
+    assertEquals(master, sn);
     for (int[] mock : regionsAndServersMocks) {
       LOG.debug("testImmediateAssignment with " + mock[0] + " regions and " + mock[1] + " servers");
       List<HRegionInfo> regions = randomRegions(mock[0]);
@@ -120,6 +138,18 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    */
   @Test
   public void testBulkAssignment() throws Exception {
+    List<ServerName> tmp = getListOfServerNames(randomServers(5, 0));
+    List<HRegionInfo> hris = randomRegions(20);
+    hris.add(HRegionInfo.FIRST_META_REGIONINFO);
+    tmp.add(master);
+    Map<ServerName, List<HRegionInfo>> plans = loadBalancer.roundRobinAssignment(hris, tmp);
+    assertTrue(plans.get(master).contains(HRegionInfo.FIRST_META_REGIONINFO));
+    assertEquals(1, plans.get(master).size());
+    int totalRegion = 0;
+    for (List<HRegionInfo> regions: plans.values()) {
+      totalRegion += regions.size();
+    }
+    assertEquals(hris.size(), totalRegion);
     for (int[] mock : regionsAndServersMocks) {
       LOG.debug("testBulkAssignment with " + mock[0] + " regions and " + mock[1] + " servers");
       List<HRegionInfo> regions = randomRegions(mock[0]);
@@ -256,7 +286,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assignRegions(regions, oldServers, clusterState);
 
     // should not throw exception:
-    BaseLoadBalancer.Cluster cluster = new Cluster(clusterState, null, null);
+    BaseLoadBalancer.Cluster cluster = new Cluster(null, clusterState, null, null);
     assertEquals(101 + 9, cluster.numRegions);
     assertEquals(10, cluster.numServers); // only 10 servers because they share the same host + port
   }
@@ -298,7 +328,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     when(locationFinder.getTopBlockLocations(regions.get(43))).thenReturn(
       Lists.newArrayList(ServerName.valueOf("foo", 0, 0))); // this server does not exists in clusterStatus
 
-    BaseLoadBalancer.Cluster cluster = new Cluster(clusterState, null, locationFinder);
+    BaseLoadBalancer.Cluster cluster = new Cluster(null, clusterState, null, locationFinder);
 
     int r0 = ArrayUtils.indexOf(cluster.regions, regions.get(0)); // this is ok, it is just a test
     int r1 = ArrayUtils.indexOf(cluster.regions, regions.get(1));

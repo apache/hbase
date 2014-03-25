@@ -27,11 +27,11 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
+import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,11 +48,11 @@ public class TestMasterMetrics {
   private static HMaster master;
   private static HBaseTestingUtility TEST_UTIL;
 
-  private static class MyRegionServer extends MiniHBaseClusterRegionServer {
-    public MyRegionServer(Configuration conf) throws IOException,
-        InterruptedException {
+  public static class MyMaster extends HMaster {
+    public MyMaster(Configuration conf) throws IOException,
+        KeeperException, InterruptedException {
       super(conf);
-     }
+    }
 
     @Override
     protected void tryRegionServerReport(
@@ -65,7 +65,7 @@ public class TestMasterMetrics {
   public static void startCluster() throws Exception {
     LOG.info("Starting cluster");
     TEST_UTIL = new HBaseTestingUtility();
-    TEST_UTIL.startMiniCluster(1, 1, 1, null, HMaster.class, MyRegionServer.class);
+    TEST_UTIL.startMiniCluster(1, 0, 1, null, MyMaster.class, null);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
@@ -85,16 +85,16 @@ public class TestMasterMetrics {
     // sending fake request to master to see how metric value has changed
     RegionServerStatusProtos.RegionServerReportRequest.Builder request =
         RegionServerStatusProtos.RegionServerReportRequest.newBuilder();
-    ServerName serverName = cluster.getRegionServer(0).getServerName();
+    ServerName serverName = cluster.getMaster(0).getServerName();
     request.setServer(ProtobufUtil.toServerName(serverName));
 
-    MetricsMasterSource masterSource = master.getMetrics().getMetricsSource();
+    MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
                                            .setTotalNumberOfRequests(10000)
                                            .build();
     masterSource.init();
     request.setLoad(sl);
-    master.regionServerReport(null, request.build());
+    master.getMasterRpcServices().regionServerReport(null, request.build());
 
     metricsHelper.assertCounter("cluster_requests", 10000, masterSource);
 
@@ -102,11 +102,11 @@ public class TestMasterMetrics {
         .setTotalNumberOfRequests(15000)
         .build();
     request.setLoad(sl);
-    master.regionServerReport(null, request.build());
+    master.getMasterRpcServices().regionServerReport(null, request.build());
 
     metricsHelper.assertCounter("cluster_requests", 15000, masterSource);
 
-    master.regionServerReport(null, request.build());
+    master.getMasterRpcServices().regionServerReport(null, request.build());
 
     metricsHelper.assertCounter("cluster_requests", 15000, masterSource);
     master.stopMaster();
@@ -114,7 +114,7 @@ public class TestMasterMetrics {
 
   @Test
   public void testDefaultMasterMetrics() throws Exception {
-    MetricsMasterSource masterSource = master.getMetrics().getMetricsSource();
+    MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     metricsHelper.assertGauge( "numRegionServers", 1, masterSource);
     metricsHelper.assertGauge( "averageLoad", 2, masterSource);
     metricsHelper.assertGauge( "numDeadRegionServers", 0, masterSource);

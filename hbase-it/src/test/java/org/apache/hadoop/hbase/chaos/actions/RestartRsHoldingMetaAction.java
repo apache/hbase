@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ServerName;
 
 /**
@@ -35,6 +36,12 @@ public class RestartRsHoldingMetaAction extends RestartActionBaseAction {
       LOG.warn("No server is holding hbase:meta right now.");
       return;
     }
-    restartRs(server, sleepTime);
+    ClusterStatus clusterStatus = cluster.getClusterStatus();
+    if (server.equals(clusterStatus.getMaster())) {
+      // Master holds the meta, so restart the master.
+      restartMaster(server, sleepTime);
+    } else {
+      restartRs(server, sleepTime);
+    }
   }
 }

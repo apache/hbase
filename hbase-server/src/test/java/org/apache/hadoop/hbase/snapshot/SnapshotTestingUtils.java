@@ -23,19 +23,15 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -57,10 +53,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRes
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Assert;
@@ -270,7 +264,7 @@ public class SnapshotTestingUtils {
     IsSnapshotDoneResponse done = IsSnapshotDoneResponse.newBuilder()
         .buildPartial();
     while (!done.getDone()) {
-      done = master.isSnapshotDone(null, request);
+      done = master.getMasterRpcServices().isSnapshotDone(null, request);
       try {
         Thread.sleep(sleep);
       } catch (InterruptedException e) {
@@ -324,7 +318,7 @@ public class SnapshotTestingUtils {
       IsSnapshotDoneRequest snapshot,
       Class<? extends HBaseSnapshotException> clazz) {
     try {
-      master.isSnapshotDone(null, snapshot);
+      master.getMasterRpcServices().isSnapshotDone(null, snapshot);
       Assert.fail("didn't fail to lookup a snapshot");
     } catch (ServiceException se) {
       try {

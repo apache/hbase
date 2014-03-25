@@ -98,7 +98,9 @@ public class HConnectionTestingUtility {
       final ClientProtos.ClientService.BlockingInterface client,
       final ServerName sn, final HRegionInfo hri)
   throws IOException {
-    ClusterConnection c = HConnectionTestingUtility.getMockedConnection(conf);
+    HConnectionImplementation c = Mockito.mock(HConnectionImplementation.class);
+    Mockito.when(c.getConfiguration()).thenReturn(conf);
+    ConnectionManager.CONNECTION_INSTANCES.put(new HConnectionKey(conf), c);
     Mockito.doNothing().when(c).close();
     // Make it so we return a particular location when asked.
     final HRegionLocation loc = new HRegionLocation(hri, sn);

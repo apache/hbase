@@ -19,14 +19,15 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 
-/** Constructs a {@link SimpleRpcScheduler}. for the region server. */
+/** Constructs a {@link SimpleRpcScheduler}. */
 class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
 
   @Override
-  public RpcScheduler create(Configuration conf, RegionServerServices server) {
+  public RpcScheduler create(Configuration conf, PriorityFunction priority) {
     int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
         HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
     return new SimpleRpcScheduler(
@@ -36,7 +37,7 @@ class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
             HConstants.DEFAULT_REGION_SERVER_META_HANDLER_COUNT),
         conf.getInt(HConstants.REGION_SERVER_REPLICATION_HANDLER_COUNT,
             HConstants.DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT),
-        server,
+        priority,
         HConstants.QOS_THRESHOLD);
   }
 }

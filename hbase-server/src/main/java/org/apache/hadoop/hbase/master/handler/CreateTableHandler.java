@@ -148,7 +148,7 @@ public class CreateTableHandler extends EventHandler {
     LOG.info("Create table " + tableName);
 
     try {
-      MasterCoprocessorHost cpHost = ((HMaster) this.server).getCoprocessorHost();
+      MasterCoprocessorHost cpHost = ((HMaster) this.server).getMasterCoprocessorHost();
       if (cpHost != null) {
         cpHost.preCreateTableHandler(this.hTableDescriptor, this.newRegions);
       }

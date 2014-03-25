@@ -137,7 +137,6 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
   private boolean stopped;
   private MasterServices master;  // Needed by TableEventHandlers
-  private MetricsMaster metricsMaster;
   private ProcedureCoordinator coordinator;
 
   // Is snapshot feature enabled?
@@ -172,7 +171,6 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       ProcedureCoordinator coordinator, ExecutorService pool)
       throws IOException, UnsupportedOperationException {
     this.master = master;
-    this.metricsMaster = metricsMaster;
 
     this.rootDir = master.getMasterFileSystem().getRootDir();
     checkSnapshotSupport(master.getConfiguration(), master.getMasterFileSystem());
@@ -260,7 +258,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   public void deleteSnapshot(SnapshotDescription snapshot) throws SnapshotDoesNotExistException, IOException {
 
     // call coproc pre hook
-    MasterCoprocessorHost cpHost = master.getCoprocessorHost();
+    MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preDeleteSnapshot(snapshot);
     }
@@ -547,7 +545,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
         .build();
 
     // call pre coproc hook
-    MasterCoprocessorHost cpHost = master.getCoprocessorHost();
+    MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preSnapshot(snapshot, desc);
     }
@@ -668,7 +666,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   public void restoreSnapshot(SnapshotDescription reqSnapshot) throws IOException {
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(reqSnapshot, rootDir);
-    MasterCoprocessorHost cpHost = master.getCoprocessorHost();
+    MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
 
     // check if the snapshot exists
     if (!fs.exists(snapshotDir)) {
@@ -1005,7 +1003,6 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   public void initialize(MasterServices master, MetricsMaster metricsMaster) throws KeeperException,
       IOException, UnsupportedOperationException {
     this.master = master;
-    this.metricsMaster = metricsMaster;
 
     this.rootDir = master.getMasterFileSystem().getRootDir();
     checkSnapshotSupport(master.getConfiguration(), master.getMasterFileSystem());

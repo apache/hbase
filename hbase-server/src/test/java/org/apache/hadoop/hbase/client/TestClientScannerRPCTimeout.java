@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
@@ -89,7 +91,7 @@ public class TestClientScannerRPCTimeout {
     putToTable(ht, r2);
     putToTable(ht, r3);
     LOG.info("Wrote our three values");
-    RegionServerWithScanTimeout.seqNoToSleepOn = 1;
+    RSRpcServicesWithScanTimeout.seqNoToSleepOn = 1;
     Scan scan = new Scan();
     scan.setCaching(1);
     ResultScanner scanner = ht.getScanner(scan);
@@ -100,15 +102,15 @@ public class TestClientScannerRPCTimeout {
     result = scanner.next();
     assertTrue((System.currentTimeMillis() - t1) > rpcTimeout);
     assertTrue("Expected row: row-2", Bytes.equals(r2, result.getRow()));
-    RegionServerWithScanTimeout.seqNoToSleepOn = -1;// No need of sleep
+    RSRpcServicesWithScanTimeout.seqNoToSleepOn = -1;// No need of sleep
     result = scanner.next();
     assertTrue("Expected row: row-3", Bytes.equals(r3, result.getRow()));
     scanner.close();
 
     // test the case that RPC is always timesout
     scanner = ht.getScanner(scan);
-    RegionServerWithScanTimeout.sleepAlways = true;
-    RegionServerWithScanTimeout.tryNumber = 0;
+    RSRpcServicesWithScanTimeout.sleepAlways = true;
+    RSRpcServicesWithScanTimeout.tryNumber = 0;
     try {
       result = scanner.next();
     } catch (IOException ioe) {
@@ -116,8 +118,8 @@ public class TestClientScannerRPCTimeout {
       LOG.info("Failed after maximal attempts=" + CLIENT_RETRIES_NUMBER, ioe);
     }
     assertTrue("Expected maximal try number=" + CLIENT_RETRIES_NUMBER
-        + ", actual =" + RegionServerWithScanTimeout.tryNumber,
-        RegionServerWithScanTimeout.tryNumber <= CLIENT_RETRIES_NUMBER);
+        + ", actual =" + RSRpcServicesWithScanTimeout.tryNumber,
+        RSRpcServicesWithScanTimeout.tryNumber <= CLIENT_RETRIES_NUMBER);
   }
 
   private void putToTable(HTable ht, byte[] rowkey) throws IOException {
@@ -127,15 +129,26 @@ public class TestClientScannerRPCTimeout {
   }
 
   private static class RegionServerWithScanTimeout extends MiniHBaseClusterRegionServer {
+    public RegionServerWithScanTimeout(Configuration conf)
+        throws IOException, InterruptedException {
+      super(conf);
+    }
+
+    protected RSRpcServices createRpcServices() throws IOException {
+      return new RSRpcServicesWithScanTimeout(this);
+    }
+  }
+
+  private static class RSRpcServicesWithScanTimeout extends RSRpcServices {
     private long tableScannerId;
     private boolean slept;
     private static long seqNoToSleepOn = -1;
     private static boolean sleepAlways = false;
     private static int tryNumber = 0;
 
-    public RegionServerWithScanTimeout(Configuration conf)
-    throws IOException, InterruptedException {
-      super(conf);
+    public RSRpcServicesWithScanTimeout(HRegionServer rs)
+        throws IOException {
+      super(rs);
     }
 
     @Override

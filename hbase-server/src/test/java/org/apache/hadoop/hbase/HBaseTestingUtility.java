@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -75,12 +76,14 @@ import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.tool.Canary;
@@ -88,6 +91,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
@@ -124,6 +128,7 @@ import org.apache.zookeeper.ZooKeeper.States;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@SuppressWarnings("deprecation")
 public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    private MiniZooKeeperCluster zkCluster = null;
 
@@ -1928,7 +1933,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return createMultiRegions(c, table, family, regionStartKeys);
   }
 
-  @SuppressWarnings("deprecation")
   public int createMultiRegions(final Configuration c, final HTable table,
       final byte[] columnFamily, byte [][] startKeys)
   throws IOException {
@@ -2738,6 +2742,32 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     User user = User.createUserForTesting(c, username,
         new String[]{"supergroup"});
     return user;
+  }
+
+  public static NavigableSet<String> getAllOnlineRegions(MiniHBaseCluster cluster)
+      throws IOException {
+    NavigableSet<String> online = new TreeSet<String>();
+    for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
+      try {
+        for (HRegionInfo region :
+            ProtobufUtil.getOnlineRegions(rst.getRegionServer().getRSRpcServices())) {
+          online.add(region.getRegionNameAsString());
+        }
+      } catch (RegionServerStoppedException e) {
+        // That's fine.
+      }
+    }
+    for (MasterThread mt : cluster.getLiveMasterThreads()) {
+      try {
+        for (HRegionInfo region :
+            ProtobufUtil.getOnlineRegions(mt.getMaster().getRSRpcServices())) {
+          online.add(region.getRegionNameAsString());
+        }
+      } catch (RegionServerStoppedException e) {
+        // That's fine.
+      }
+    }
+    return online;
   }
 
   /**

@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -284,6 +285,20 @@ public class TestMasterFailover {
      * javadoc.
      */
 
+    // Master is down, so is the meta. We need to assign it somewhere
+    // so that regions can be assigned during the mocking phase.
+    ZKAssign.createNodeOffline(
+      zkw, HRegionInfo.FIRST_META_REGIONINFO, hrs.getServerName());
+    ProtobufUtil.openRegion(hrs.getRSRpcServices(),
+      hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
+    while (true) {
+      ServerName sn = MetaRegionTracker.getMetaRegionLocation(zkw);
+      if (sn != null && sn.equals(hrs.getServerName())) {
+        break;
+      }
+      Thread.sleep(100);
+    }
+
     List<HRegionInfo> regionsThatShouldBeOnline = new ArrayList<HRegionInfo>();
     List<HRegionInfo> regionsThatShouldBeOffline = new ArrayList<HRegionInfo>();
 
@@ -337,7 +352,7 @@ public class TestMasterFailover {
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     ZKAssign.createNodeOffline(zkw, region, serverName);
-    ProtobufUtil.openRegion(hrs, hrs.getServerName(), region);
+    ProtobufUtil.openRegion(hrs.getRSRpcServices(), hrs.getServerName(), region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -352,7 +367,7 @@ public class TestMasterFailover {
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     ZKAssign.createNodeOffline(zkw, region, serverName);
-    ProtobufUtil.openRegion(hrs, hrs.getServerName(), region);
+    ProtobufUtil.openRegion(hrs.getRSRpcServices(), hrs.getServerName(), region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -407,7 +422,8 @@ public class TestMasterFailover {
     Set<HRegionInfo> onlineRegions = new TreeSet<HRegionInfo>();
     for (JVMClusterUtil.RegionServerThread rst :
       cluster.getRegionServerThreads()) {
-      onlineRegions.addAll(ProtobufUtil.getOnlineRegions(rst.getRegionServer()));
+      onlineRegions.addAll(ProtobufUtil.getOnlineRegions(
+        rst.getRegionServer().getRSRpcServices()));
     }
 
     // Now, everything that should be online should be online
@@ -658,6 +674,20 @@ public class TestMasterFailover {
      * javadoc.
      */
 
+    // Master is down, so is the meta. We need to assign it somewhere
+    // so that regions can be assigned during the mocking phase.
+    ZKAssign.createNodeOffline(
+      zkw, HRegionInfo.FIRST_META_REGIONINFO, hrs.getServerName());
+    ProtobufUtil.openRegion(hrs.getRSRpcServices(),
+      hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
+    while (true) {
+      ServerName sn = MetaRegionTracker.getMetaRegionLocation(zkw);
+      if (sn != null && sn.equals(hrs.getServerName())) {
+        break;
+      }
+      Thread.sleep(100);
+    }
+
     List<HRegionInfo> regionsThatShouldBeOnline = new ArrayList<HRegionInfo>();
     List<HRegionInfo> regionsThatShouldBeOffline = new ArrayList<HRegionInfo>();
 
@@ -736,7 +766,8 @@ public class TestMasterFailover {
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
-    ProtobufUtil.openRegion(hrsDead, hrsDead.getServerName(), region);
+    ProtobufUtil.openRegion(hrsDead.getRSRpcServices(),
+      hrsDead.getServerName(), region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -752,7 +783,8 @@ public class TestMasterFailover {
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
-    ProtobufUtil.openRegion(hrsDead, hrsDead.getServerName(), region);
+    ProtobufUtil.openRegion(hrsDead.getRSRpcServices(),
+      hrsDead.getServerName(), region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -772,7 +804,8 @@ public class TestMasterFailover {
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
-    ProtobufUtil.openRegion(hrsDead, hrsDead.getServerName(), region);
+    ProtobufUtil.openRegion(hrsDead.getRSRpcServices(),
+      hrsDead.getServerName(), region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -790,7 +823,8 @@ public class TestMasterFailover {
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
-    ProtobufUtil.openRegion(hrsDead, hrsDead.getServerName(), region);
+    ProtobufUtil.openRegion(hrsDead.getRSRpcServices(),
+      hrsDead.getServerName(), region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -863,7 +897,7 @@ public class TestMasterFailover {
           }
           Thread.sleep(100);
         }
-        onlineRegions.addAll(ProtobufUtil.getOnlineRegions(rs));
+        onlineRegions.addAll(ProtobufUtil.getOnlineRegions(rs.getRSRpcServices()));
       } catch (RegionServerStoppedException e) {
         LOG.info("Got RegionServerStoppedException", e);
       }
@@ -891,7 +925,8 @@ public class TestMasterFailover {
    */
   private void verifyRegionLocation(HRegionServer hrs, List<HRegionInfo> regions)
       throws IOException {
-    List<HRegionInfo> tmpOnlineRegions = ProtobufUtil.getOnlineRegions(hrs);
+    List<HRegionInfo> tmpOnlineRegions =
+      ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
     Iterator<HRegionInfo> itr = regions.iterator();
     while (itr.hasNext()) {
       HRegionInfo tmp = itr.next();
@@ -937,18 +972,9 @@ public class TestMasterFailover {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
 
     // Find regionserver carrying meta.
-    List<RegionServerThread> regionServerThreads =
-      cluster.getRegionServerThreads();
-    int count = -1;
-    HRegion metaRegion = null;
-    for (RegionServerThread regionServerThread : regionServerThreads) {
-      HRegionServer regionServer = regionServerThread.getRegionServer();
-      metaRegion = regionServer.getOnlineRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
-      count++;
-      regionServer.abort("");
-      if (null != metaRegion) break;
-    }
-    HRegionServer regionServer = cluster.getRegionServer(count);
+    HRegionServer regionServer = cluster.getMaster();
+    HRegion metaRegion = regionServer.getOnlineRegion(
+      HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
 
     TEST_UTIL.shutdownMiniHBaseCluster();
 
@@ -1114,7 +1140,7 @@ public class TestMasterFailover {
     assertEquals(2, masterThreads.size());
     int rsCount = masterThreads.get(activeIndex).getMaster().getClusterStatus().getServersSize();
     LOG.info("Active master " + active.getServerName() + " managing " + rsCount +  " regions servers");
-    assertEquals(3, rsCount);
+    assertEquals(5, rsCount);
 
     // Check that ClusterStatus reports the correct active and backup masters
     assertNotNull(active);
@@ -1147,7 +1173,7 @@ public class TestMasterFailover {
     int rss = status.getServersSize();
     LOG.info("Active master " + mastername.getServerName() + " managing " +
       rss +  " region servers");
-    assertEquals(3, rss);
+    assertEquals(4, rss);
 
     // Stop the cluster
     TEST_UTIL.shutdownMiniCluster();

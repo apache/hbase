@@ -30,7 +30,6 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -79,7 +78,6 @@ public class TestSnapshotFromMaster {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final int NUM_RS = 2;
   private static Path rootDir;
-  private static Path snapshots;
   private static FileSystem fs;
   private static HMaster master;
 
@@ -101,7 +99,6 @@ public class TestSnapshotFromMaster {
     fs = UTIL.getDFSCluster().getFileSystem();
     master = UTIL.getMiniHBaseCluster().getMaster();
     rootDir = master.getMasterFileSystem().getRootDir();
-    snapshots = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
     archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
   }
 
@@ -194,7 +191,8 @@ public class TestSnapshotFromMaster {
 
     // then do the lookup for the snapshot that it is done
     builder.setSnapshot(desc);
-    IsSnapshotDoneResponse response = master.isSnapshotDone(null, builder.build());
+    IsSnapshotDoneResponse response =
+      master.getMasterRpcServices().isSnapshotDone(null, builder.build());
     assertTrue("Snapshot didn't complete when it should have.", response.getDone());
 
     // now try the case where we are looking for a snapshot we didn't take
@@ -209,7 +207,7 @@ public class TestSnapshotFromMaster {
     SnapshotDescriptionUtils.writeSnapshotInfo(desc, snapshotDir, fs);
 
     builder.setSnapshot(desc);
-    response = master.isSnapshotDone(null, builder.build());
+    response = master.getMasterRpcServices().isSnapshotDone(null, builder.build());
     assertTrue("Completed, on-disk snapshot not found", response.getDone());
   }
 
@@ -217,7 +215,8 @@ public class TestSnapshotFromMaster {
   public void testGetCompletedSnapshots() throws Exception {
     // first check when there are no snapshots
     GetCompletedSnapshotsRequest request = GetCompletedSnapshotsRequest.newBuilder().build();
-    GetCompletedSnapshotsResponse response = master.getCompletedSnapshots(null, request);
+    GetCompletedSnapshotsResponse response =
+      master.getMasterRpcServices().getCompletedSnapshots(null, request);
     assertEquals("Found unexpected number of snapshots", 0, response.getSnapshotsCount());
 
     // write one snapshot to the fs
@@ -227,7 +226,7 @@ public class TestSnapshotFromMaster {
     SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
 
     // check that we get one snapshot
-    response = master.getCompletedSnapshots(null, request);
+    response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
     assertEquals("Found unexpected number of snapshots", 1, response.getSnapshotsCount());
     List<SnapshotDescription> snapshots = response.getSnapshotsList();
     List<SnapshotDescription> expected = Lists.newArrayList(snapshot);
@@ -241,7 +240,7 @@ public class TestSnapshotFromMaster {
     expected.add(snapshot);
 
     // check that we get one snapshot
-    response = master.getCompletedSnapshots(null, request);
+    response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
     assertEquals("Found unexpected number of snapshots", 2, response.getSnapshotsCount());
     snapshots = response.getSnapshotsList();
     assertEquals("Returned snapshots don't match created snapshots", expected, snapshots);
@@ -256,7 +255,7 @@ public class TestSnapshotFromMaster {
     DeleteSnapshotRequest request = DeleteSnapshotRequest.newBuilder().setSnapshot(snapshot)
         .build();
     try {
-      master.deleteSnapshot(null, request);
+      master.getMasterRpcServices().deleteSnapshot(null, request);
       fail("Master didn't throw exception when attempting to delete snapshot that doesn't exist");
     } catch (ServiceException e) {
       LOG.debug("Correctly failed delete of non-existant snapshot:" + e.getMessage());
@@ -267,7 +266,7 @@ public class TestSnapshotFromMaster {
     SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
 
     // then delete the existing snapshot,which shouldn't cause an exception to be thrown
-    master.deleteSnapshot(null, request);
+    master.getMasterRpcServices().deleteSnapshot(null, request);
   }
 
   /**

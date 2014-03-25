@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
@@ -29,7 +29,12 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -86,7 +91,7 @@ public class  TestRollingRestart {
     TEST_UTIL.getHBaseAdmin().disableTable(table);
     log("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
-    NavigableSet<String> regions = getAllOnlineRegions(cluster);
+    NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     log("Verifying only catalog and namespace regions are assigned\n");
     if (regions.size() != 2) {
       for (String oregion : regions) log("Region still online: " + oregion);
@@ -97,7 +102,7 @@ public class  TestRollingRestart {
     log("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     log("Verifying there are " + numRegions + " assigned on cluster\n");
-    regions = getAllOnlineRegions(cluster);
+    regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     assertRegionsAssigned(cluster, regions);
     assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
 
@@ -184,102 +189,6 @@ public class  TestRollingRestart {
     Thread.sleep(1000);
     assertRegionsAssigned(cluster, regions);
 
-    // Bring the RS hosting hbase:meta down
-    RegionServerThread metaServer = getServerHostingMeta(cluster);
-    log("Stopping server hosting hbase:meta #1");
-    metaServer.getRegionServer().stop("Stopping hbase:meta server");
-    cluster.hbaseCluster.waitOnRegionServer(metaServer);
-    log("Meta server down #1");
-    expectedNumRS--;
-    log("Waiting for meta server #1 RS shutdown to be handled by master");
-    waitForRSShutdownToStartAndFinish(activeMaster,
-        metaServer.getRegionServer().getServerName());
-    log("Waiting for no more RIT");
-    long start = System.currentTimeMillis();
-    do {
-      blockUntilNoRIT(zkw, master);
-    } while (getNumberOfOnlineRegions(cluster) < numRegions 
-        && System.currentTimeMillis()-start < 60000);
-    log("Verifying there are " + numRegions + " assigned on cluster");
-    assertRegionsAssigned(cluster, regions);
-    assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
-
-    // Kill off the server hosting hbase:meta again
-    metaServer = getServerHostingMeta(cluster);
-    log("Stopping server hosting hbase:meta #2");
-    metaServer.getRegionServer().stop("Stopping hbase:meta server");
-    cluster.hbaseCluster.waitOnRegionServer(metaServer);
-    log("Meta server down");
-    expectedNumRS--;
-    log("Waiting for RS shutdown to be handled by master");
-    waitForRSShutdownToStartAndFinish(activeMaster,
-        metaServer.getRegionServer().getServerName());
-    log("RS shutdown done, waiting for no more RIT");
-    blockUntilNoRIT(zkw, master);
-    log("Verifying there are " + numRegions + " assigned on cluster");
-    assertRegionsAssigned(cluster, regions);
-    assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
-
-    // Start 3 RS again
-    cluster.startRegionServer().waitForServerOnline();
-    cluster.startRegionServer().waitForServerOnline();
-    cluster.startRegionServer().waitForServerOnline();
-    Thread.sleep(1000);
-    log("Waiting for no more RIT");
-    blockUntilNoRIT(zkw, master);
-    log("Verifying there are " + numRegions + " assigned on cluster");
-    assertRegionsAssigned(cluster, regions);
-    // Shutdown server hosting META
-    metaServer = getServerHostingMeta(cluster);
-    log("Stopping server hosting hbase:meta (1 of 3)");
-    metaServer.getRegionServer().stop("Stopping hbase:meta server");
-    cluster.hbaseCluster.waitOnRegionServer(metaServer);
-    log("Meta server down (1 of 3)");
-    log("Waiting for RS shutdown to be handled by master");
-    waitForRSShutdownToStartAndFinish(activeMaster,
-        metaServer.getRegionServer().getServerName());
-    log("RS shutdown done, waiting for no more RIT");
-    blockUntilNoRIT(zkw, master);
-    log("Verifying there are " + numRegions + " assigned on cluster");
-    assertRegionsAssigned(cluster, regions);
-
-    // Shutdown server hosting hbase:meta again
-    metaServer = getServerHostingMeta(cluster);
-    log("Stopping server hosting hbase:meta (2 of 3)");
-    metaServer.getRegionServer().stop("Stopping hbase:meta server");
-    cluster.hbaseCluster.waitOnRegionServer(metaServer);
-    log("Meta server down (2 of 3)");
-    log("Waiting for RS shutdown to be handled by master");
-    waitForRSShutdownToStartAndFinish(activeMaster,
-        metaServer.getRegionServer().getServerName());
-    log("RS shutdown done, waiting for no more RIT");
-    blockUntilNoRIT(zkw, master);
-    log("Verifying there are " + numRegions + " assigned on cluster");
-    assertRegionsAssigned(cluster, regions);
-
-    // Shutdown server hosting hbase:meta again
-    metaServer = getServerHostingMeta(cluster);
-    log("Stopping server hosting hbase:meta (3 of 3)");
-    metaServer.getRegionServer().stop("Stopping hbase:meta server");
-    cluster.hbaseCluster.waitOnRegionServer(metaServer);
-    log("Meta server down (3 of 3)");
-    log("Waiting for RS shutdown to be handled by master");
-    waitForRSShutdownToStartAndFinish(activeMaster,
-        metaServer.getRegionServer().getServerName());
-    log("RS shutdown done, waiting for no more RIT");
-    blockUntilNoRIT(zkw, master);
-    log("Verifying there are " + numRegions + " assigned on cluster");
-    assertRegionsAssigned(cluster, regions);
-
-    if (cluster.getRegionServerThreads().size() != 1) {
-      log("Online regionservers:");
-      for (RegionServerThread rst : cluster.getRegionServerThreads()) {
-        log("RS: " + rst.getRegionServer().getServerName());
-      }
-    }
-    assertEquals(2, cluster.getRegionServerThreads().size());
-
-
     // TODO: Bring random 3 of 4 RS down at the same time
 
     ht.close();
@@ -314,25 +223,13 @@ public class  TestRollingRestart {
     LOG.debug("\n\nTRR: " + msg + "\n");
   }
 
-  private RegionServerThread getServerHostingMeta(MiniHBaseCluster cluster)
-      throws IOException {
-    return getServerHosting(cluster, HRegionInfo.FIRST_META_REGIONINFO);
-  }
-
-  private RegionServerThread getServerHosting(MiniHBaseCluster cluster,
-      HRegionInfo region) throws IOException {
-    for (RegionServerThread rst : cluster.getRegionServerThreads()) {
-      if (ProtobufUtil.getOnlineRegions(rst.getRegionServer()).contains(region)) {
-        return rst;
-      }
-    }
-    return null;
-  }
-
   private int getNumberOfOnlineRegions(MiniHBaseCluster cluster) {
     int numFound = 0;
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       numFound += rst.getRegionServer().getNumberOfOnlineRegions();
+    }
+    for (MasterThread mt : cluster.getMasterThreads()) {
+      numFound += mt.getMaster().getNumberOfOnlineRegions();
     }
     return numFound;
   }
@@ -343,7 +240,8 @@ public class  TestRollingRestart {
     if (expectedRegions.size() > numFound) {
       log("Expected to find " + expectedRegions.size() + " but only found"
           + " " + numFound);
-      NavigableSet<String> foundRegions = getAllOnlineRegions(cluster);
+      NavigableSet<String> foundRegions =
+        HBaseTestingUtility.getAllOnlineRegions(cluster);
       for (String region : expectedRegions) {
         if (!foundRegions.contains(region)) {
           log("Missing region: " + region);
@@ -364,23 +262,13 @@ public class  TestRollingRestart {
     }
   }
 
-  private NavigableSet<String> getAllOnlineRegions(MiniHBaseCluster cluster)
-      throws IOException {
-    NavigableSet<String> online = new TreeSet<String>();
-    for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
-      for (HRegionInfo region : ProtobufUtil.getOnlineRegions(rst.getRegionServer())) {
-        online.add(region.getRegionNameAsString());
-      }
-    }
-    return online;
-  }
-
   private NavigableSet<String> getDoubleAssignedRegions(
       MiniHBaseCluster cluster) throws IOException {
     NavigableSet<String> online = new TreeSet<String>();
     NavigableSet<String> doubled = new TreeSet<String>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
-      for (HRegionInfo region : ProtobufUtil.getOnlineRegions(rst.getRegionServer())) {
+      for (HRegionInfo region : ProtobufUtil.getOnlineRegions(
+          rst.getRegionServer().getRSRpcServices())) {
         if(!online.add(region.getRegionNameAsString())) {
           doubled.add(region.getRegionNameAsString());
         }

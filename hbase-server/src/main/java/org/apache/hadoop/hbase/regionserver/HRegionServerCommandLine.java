@@ -59,9 +59,8 @@ public class HRegionServerCommandLine extends ServerCommandLine {
       } else {
         logProcessInfo(getConf());
         HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf);
-        Thread rsThread = HRegionServer.startRegionServer(hrs);
-
-        rsThread.join();
+        hrs.start();
+        hrs.join();
         if (hrs.isAborted()) {
           throw new RuntimeException("HRegionServer Aborted");
         }

@@ -183,10 +183,11 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       HRegionServer hrs = util.getRSForFirstRegionInTable(Bytes
           .toBytes(table));
 
-      for (HRegionInfo hri : ProtobufUtil.getOnlineRegions(hrs)) {
+      for (HRegionInfo hri :
+          ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices())) {
         if (Bytes.equals(hri.getTable().getName(), Bytes.toBytes(table))) {
           // splitRegion doesn't work if startkey/endkey are null
-          ProtobufUtil.split(hrs, hri, rowkey(ROWCOUNT / 2)); // hard code split
+          ProtobufUtil.split(hrs.getRSRpcServices(), hri, rowkey(ROWCOUNT / 2)); // hard code split
         }
       }
 
@@ -194,7 +195,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       int regions;
       do {
         regions = 0;
-        for (HRegionInfo hri : ProtobufUtil.getOnlineRegions(hrs)) {
+        for (HRegionInfo hri :
+            ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices())) {
           if (Bytes.equals(hri.getTable().getName(), Bytes.toBytes(table))) {
             regions++;
           }
@@ -298,6 +300,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     fail("doBulkLoad should have thrown an exception");
   }
 
+  @SuppressWarnings("deprecation")
   private HConnection getMockedConnection(final Configuration conf)
   throws IOException, ServiceException {
     HConnection c = Mockito.mock(HConnection.class);

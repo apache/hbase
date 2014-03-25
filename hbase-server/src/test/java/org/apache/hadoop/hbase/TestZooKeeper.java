@@ -106,12 +106,17 @@ public class TestZooKeeper {
    */
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.startMiniHBaseCluster(1, 2);
+    TEST_UTIL.startMiniHBaseCluster(2, 2);
   }
 
   @After
   public void after() throws Exception {
     try {
+      // Some regionserver could fail to delete its znode.
+      // So shutdown could hang. Let's kill them all instead.
+      TEST_UTIL.getHBaseCluster().killAll();
+
+      // Still need to clean things up
       TEST_UTIL.shutdownMiniHBaseCluster();
     } finally {
       TEST_UTIL.getTestFileSystem().delete(FSUtils.getRootDir(TEST_UTIL.getConfiguration()), true);
@@ -205,17 +210,14 @@ public class TestZooKeeper {
     connection.close();
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 120000)
   public void testRegionServerSessionExpired() throws Exception {
     LOG.info("Starting testRegionServerSessionExpired");
-    int metaIndex = TEST_UTIL.getMiniHBaseCluster().getServerWithMeta();
-    TEST_UTIL.expireRegionServerSession(metaIndex);
+    TEST_UTIL.expireRegionServerSession(0);
     testSanity("testRegionServerSessionExpired");
   }
 
-  // @Test Disabled because seems to make no sense expiring master session
-  // and then trying to create table (down in testSanity); on master side
-  // it will fail because the master's session has expired -- St.Ack 07/24/2012
+  @Test(timeout = 300000)
   public void testMasterSessionExpired() throws Exception {
     LOG.info("Starting testMasterSessionExpired");
     TEST_UTIL.expireMasterSession();
@@ -227,14 +229,14 @@ public class TestZooKeeper {
    *  test differs from {@link #testMasterSessionExpired} because here
    *  the master znode will exist in ZK.
    */
-  @Test(timeout = 60000)
+  @Test(timeout = 300000)
   public void testMasterZKSessionRecoveryFailure() throws Exception {
     LOG.info("Starting testMasterZKSessionRecoveryFailure");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
     m.abort("Test recovery from zk session expired",
       new KeeperException.SessionExpiredException());
-    assertFalse(m.isStopped());
+    assertTrue(m.isStopped()); // Master doesn't recover any more
     testSanity("testMasterZKSessionRecoveryFailure");
   }
 
@@ -480,13 +482,13 @@ public class TestZooKeeper {
    * session. Without the HBASE-6046 fix master always tries to assign all the user regions by
    * calling retainAssignment.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testRegionAssignmentAfterMasterRecoveryDueToZKExpiry() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     cluster.startRegionServer();
     cluster.waitForActiveAndReadyMaster(10000);
     HMaster m = cluster.getMaster();
-    ZooKeeperWatcher zkw = m.getZooKeeperWatcher();
+    ZooKeeperWatcher zkw = m.getZooKeeper();
     int expectedNumOfListeners = zkw.getNumberOfListeners();
     // now the cluster is up. So assign some regions.
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
@@ -500,17 +502,17 @@ public class TestZooKeeper {
       admin.createTable(htd, SPLIT_KEYS);
       ZooKeeperWatcher zooKeeperWatcher = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
       ZKAssign.blockUntilNoRIT(zooKeeperWatcher);
-      m.getZooKeeperWatcher().close();
+      m.getZooKeeper().close();
       MockLoadBalancer.retainAssignCalled = false;
       m.abort("Test recovery from zk session expired",
         new KeeperException.SessionExpiredException());
-      assertFalse(m.isStopped());
+      assertTrue(m.isStopped()); // Master doesn't recover any more
       // The recovered master should not call retainAssignment, as it is not a
       // clean startup.
       assertFalse("Retain assignment should not be called", MockLoadBalancer.retainAssignCalled);
       // number of listeners should be same as the value before master aborted
       // wait for new master is initialized
-      cluster.waitForActiveAndReadyMaster(10000);
+      cluster.waitForActiveAndReadyMaster(120000);
       assertEquals(expectedNumOfListeners, zkw.getNumberOfListeners());
     } finally {
       admin.close();
@@ -521,7 +523,7 @@ public class TestZooKeeper {
    * Tests whether the logs are split when master recovers from a expired zookeeper session and an
    * RS goes down.
    */
-  @Test(timeout = 240000)
+  @Test(timeout = 300000)
   public void testLogSplittingAfterMasterRecoveryDueToZKExpiry() throws IOException,
       KeeperException, InterruptedException {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
@@ -549,10 +551,10 @@ public class TestZooKeeper {
         p.add(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes("value" + numberOfPuts));
         table.put(p);
       }
-      m.getZooKeeperWatcher().close();
+      m.getZooKeeper().close();
       m.abort("Test recovery from zk session expired",
         new KeeperException.SessionExpiredException());
-      assertFalse(m.isStopped());
+      assertTrue(m.isStopped()); // Master doesn't recover any more
       cluster.getRegionServer(0).abort("Aborting");
       // Without patch for HBASE-6046 this test case will always timeout
       // with patch the test case should pass.

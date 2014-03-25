@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
@@ -38,7 +36,6 @@ import java.io.IOException;
 
 @Category(MediumTests.class)
 public class TestRegionServerMetrics {
-  private static final Log LOG = LogFactory.getLog(TestRegionServerMetrics.class);
   private static MetricsAssertHelper metricsHelper;
 
   static {
@@ -72,7 +69,7 @@ public class TestRegionServerMetrics {
     }
 
     rs = cluster.getRegionServer(0);
-    metricsRegionServer = rs.getMetrics();
+    metricsRegionServer = rs.getRegionServerMetrics();
     serverSource = metricsRegionServer.getMetricsSource();
   }
 
@@ -105,8 +102,6 @@ public class TestRegionServerMetrics {
     byte[] row = Bytes.toBytes("rk");
     byte[] qualifier = Bytes.toBytes("qual");
     byte[] initValue = Bytes.toBytes("Value");
-    byte[] nextValue = Bytes.toBytes("NEXT VAL");
-
 
     TEST_UTIL.createTable(tName, cfName);
 

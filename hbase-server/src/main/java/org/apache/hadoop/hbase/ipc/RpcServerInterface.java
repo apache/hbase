@@ -44,8 +44,6 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 public interface RpcServerInterface {
   void start();
-  void openServer();
-  void startThreads();
   boolean isStarted();
 
   void stop();

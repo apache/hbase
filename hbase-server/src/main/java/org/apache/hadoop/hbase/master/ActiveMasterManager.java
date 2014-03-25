@@ -24,10 +24,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ZNodeClearer;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ZNodeClearer;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -65,6 +65,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
    */
   ActiveMasterManager(ZooKeeperWatcher watcher, ServerName sn, Server master) {
     super(watcher);
+    watcher.registerListener(this);
     this.sn = sn;
     this.master = master;
   }
@@ -139,13 +140,15 @@ public class ActiveMasterManager extends ZooKeeperListener {
    *
    * This also makes sure that we are watching the master znode so will be
    * notified if another master dies.
-   * @param startupStatus
+   * @param checkInterval the interval to check if the master is stopped
+   * @param startupStatus the monitor status to track the progress
    * @return True if no issue becoming active master else false if another
    * master was running or if some other problem (zookeeper, stop flag has been
    * set on this Master)
    */
-  boolean blockUntilBecomingActiveMaster(MonitoredTask startupStatus) {
-    while (true) {
+  boolean blockUntilBecomingActiveMaster(
+      int checkInterval, MonitoredTask startupStatus) {
+    while (!(master.isAborted() || master.isStopped())) {
       startupStatus.setStatus("Trying to register in ZK as active master");
       // Try to become the active master, watch if there is another master.
       // Write out our ServerName as versioned bytes.
@@ -222,9 +225,9 @@ public class ActiveMasterManager extends ZooKeeperListener {
         return false;
       }
       synchronized (this.clusterHasActiveMaster) {
-        while (this.clusterHasActiveMaster.get() && !this.master.isStopped()) {
+        while (clusterHasActiveMaster.get() && !master.isStopped()) {
           try {
-            this.clusterHasActiveMaster.wait();
+            clusterHasActiveMaster.wait(checkInterval);
           } catch (InterruptedException e) {
             // We expect to be interrupted when a master dies,
             //  will fall out if so
@@ -235,18 +238,15 @@ public class ActiveMasterManager extends ZooKeeperListener {
           this.master.stop(
             "Cluster went down before this master became active");
         }
-        if (this.master.isStopped()) {
-          return false;
-        }
-        // there is no active master so we can try to become active master again
       }
     }
+    return false;
   }
 
   /**
    * @return True if cluster has an active master.
    */
-  public boolean isActiveMaster() {
+  boolean hasActiveMaster() {
     try {
       if (ZKUtil.checkExists(watcher, watcher.getMasterAddressZNode()) >= 0) {
         return true;
@@ -261,6 +261,11 @@ public class ActiveMasterManager extends ZooKeeperListener {
 
   public void stop() {
     try {
+      synchronized (clusterHasActiveMaster) {
+        // Master is already stopped, wake up the manager
+        // thread so that it can shutdown soon.
+        clusterHasActiveMaster.notifyAll();
+      }
       // If our address is in ZK, delete it on our way out
       ServerName activeMaster = null;
       try {

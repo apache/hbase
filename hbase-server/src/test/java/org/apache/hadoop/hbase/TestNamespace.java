@@ -37,13 +37,11 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import com.google.common.collect.Sets;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -52,10 +50,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.io.IOException;
-import java.util.Set;
-
-import static org.junit.Assert.*;
+import com.google.common.collect.Sets;
 
 @Category(MediumTests.class)
 public class TestNamespace {
@@ -78,7 +73,7 @@ public class TestNamespace {
     cluster = TEST_UTIL.getHBaseCluster();
     master = ((MiniHBaseCluster)cluster).getMaster();
     zkNamespaceManager =
-        new ZKNamespaceManager(master.getZooKeeperWatcher());
+        new ZKNamespaceManager(master.getZooKeeper());
     zkNamespaceManager.start();
     LOG.info("Done initializing cluster");
   }

@@ -671,6 +671,16 @@ public class RegionStates {
         numServers++;
       }
     }
+    if (numServers > 1) {
+      // The master region server holds only a couple regions.
+      // Don't consider this server in calculating the average load
+      // if there are other region servers to avoid possible confusion.
+      Set<HRegionInfo> hris = serverHoldings.get(server.getServerName());
+      if (hris != null) {
+        totalLoad -= hris.size();
+        numServers--;
+      }
+    }
     return numServers == 0 ? 0.0 :
       (double)totalLoad / (double)numServers;
   }

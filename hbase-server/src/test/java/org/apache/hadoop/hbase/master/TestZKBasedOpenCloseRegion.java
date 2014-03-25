@@ -111,7 +111,8 @@ public class TestZKBasedOpenCloseRegion {
     int rsIdx = 0;
     HRegionServer regionServer =
       TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
-    HRegionInfo hri = getNonMetaRegion(ProtobufUtil.getOnlineRegions(regionServer));
+    HRegionInfo hri = getNonMetaRegion(
+      ProtobufUtil.getOnlineRegions(regionServer.getRSRpcServices()));
     LOG.debug("Asking RS to close region " + hri.getRegionNameAsString());
 
     LOG.info("Unassign " + hri.getRegionNameAsString());
@@ -154,7 +155,7 @@ public class TestZKBasedOpenCloseRegion {
         cluster.getLiveRegionServerThreads().get(0).getRegionServer();
     HRegionServer hr1 =
         cluster.getLiveRegionServerThreads().get(1).getRegionServer();
-    HRegionInfo hri = getNonMetaRegion(ProtobufUtil.getOnlineRegions(hr0));
+    HRegionInfo hri = getNonMetaRegion(ProtobufUtil.getOnlineRegions(hr0.getRSRpcServices()));
 
     // fake that hr1 is processing the region
     hr1.getRegionsInTransitionInRS().putIfAbsent(hri.getEncodedNameAsBytes(), true);
@@ -170,7 +171,7 @@ public class TestZKBasedOpenCloseRegion {
     hr1.getRegionsInTransitionInRS().remove(hri.getEncodedNameAsBytes());
 
     // now try moving a region when there is no region in transition.
-    hri = getNonMetaRegion(ProtobufUtil.getOnlineRegions(hr1));
+    hri = getNonMetaRegion(ProtobufUtil.getOnlineRegions(hr1.getRSRpcServices()));
 
     TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
         Bytes.toBytes(hr0.getServerName().toString()));
@@ -192,7 +193,8 @@ public class TestZKBasedOpenCloseRegion {
 
     int rsIdx = 0;
     HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
-    HRegionInfo hri = getNonMetaRegion(ProtobufUtil.getOnlineRegions(regionServer));
+    HRegionInfo hri = getNonMetaRegion(
+      ProtobufUtil.getOnlineRegions(regionServer.getRSRpcServices()));
     LOG.debug("Asking RS to close region " + hri.getRegionNameAsString());
 
     cluster.getMaster().assignmentManager.unassign(hri);
@@ -230,7 +232,8 @@ public class TestZKBasedOpenCloseRegion {
     Whitebox.setInternalState(regionServer, "tableDescriptors", htd);
     Mockito.doThrow(new IOException()).when(htd).get((TableName) Mockito.any());
     try {
-      ProtobufUtil.openRegion(regionServer, regionServer.getServerName(), REGIONINFO);
+      ProtobufUtil.openRegion(regionServer.getRSRpcServices(),
+        regionServer.getServerName(), REGIONINFO);
       fail("It should throw IOException ");
     } catch (IOException e) {
     }

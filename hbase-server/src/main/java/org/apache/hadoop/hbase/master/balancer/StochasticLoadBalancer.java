@@ -150,6 +150,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     costFunctions = new CostFunction[]{
       new RegionCountSkewCostFunction(conf),
+      new RegionOnMasterCostFunction(conf),
       new MoveCostFunction(conf),
       localityCost,
       new TableSkewCostFunction(conf),
@@ -191,14 +192,18 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   @Override
   public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState) {
-    if (!needsBalance(new ClusterLoadState(clusterState))) {
+    List<RegionPlan> plans = balanceMasterRegions(clusterState);
+    if (plans != null) {
+      return plans;
+    }
+    if (!needsBalance(new ClusterLoadState(masterServerName, clusterState))) {
       return null;
     }
 
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
     // Keep track of servers to iterate through them.
-    Cluster cluster = new Cluster(clusterState, loads, regionFinder);
+    Cluster cluster = new Cluster(masterServerName, clusterState, loads, regionFinder);
     double currentCost = computeCost(cluster, Double.MAX_VALUE);
 
     double initCost = currentCost;
@@ -257,7 +262,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     metricsBalancer.balanceCluster(endTime - startTime);
 
     if (initCost > currentCost) {
-      List<RegionPlan> plans = createRegionPlans(cluster);
+      plans = createRegionPlans(cluster);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Finished computing new load balance plan.  Computation took "
             + (endTime - startTime) + "ms to try " + step
@@ -563,8 +568,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   public abstract static class CostFunction {
 
-    private float multiplier = 0;
-    private Configuration conf;
+    protected float multiplier = 0;
+    protected Configuration conf;
 
     CostFunction(Configuration c) {
       this.conf = c;
@@ -742,6 +747,29 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
+  /**
+   * Compute the cost of a potential cluster configuration based upon if putting
+   * user regions on the master regionserver.
+   */
+  public static class RegionOnMasterCostFunction extends CostFunction {
+
+    private static final String REGION_ON_MASTER_COST_KEY =
+        "hbase.master.balancer.stochastic.regionOnMasterCost";
+    private static final float DEFAULT_REGION_ON_MASTER__COST = 1000;
+
+    RegionOnMasterCostFunction(Configuration conf) {
+      super(conf);
+      this.setMultiplier(conf.getFloat(
+        REGION_ON_MASTER_COST_KEY, DEFAULT_REGION_ON_MASTER__COST));
+    }
+
+    @Override
+    double cost(Cluster cluster) {
+      double max = cluster.numRegions;
+      double value = cluster.numUserRegionsOnMaster;
+      return scale(0, max, value);
+    }
+  }
 
   /**
    * Compute a cost of a potential cluster configuration based upon where

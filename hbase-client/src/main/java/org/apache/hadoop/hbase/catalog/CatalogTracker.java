@@ -129,7 +129,7 @@ public class CatalogTracker {
    * @throws IOException
    */
   public CatalogTracker(final Configuration conf) throws IOException {
-    this(null, conf, null);
+    this(null, conf, HConnectionManager.getConnection(conf), null);
   }
 
   /**
@@ -145,18 +145,14 @@ public class CatalogTracker {
    * @throws IOException
    */
   public CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
-      Abortable abortable)
-  throws IOException {
-    this(zk, conf, HConnectionManager.getConnection(conf), abortable);
-  }
-
-  public CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
       HConnection connection, Abortable abortable)
   throws IOException {
     this.connection = connection;
     if (abortable == null) {
       // A connection is abortable.
       this.abortable = this.connection;
+    } else {
+      this.abortable = abortable;
     }
     Abortable throwableAborter = new Abortable() {
 
@@ -322,6 +318,7 @@ public class CatalogTracker {
    * invocation, or may be null.
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   private AdminService.BlockingInterface getCachedConnection(ServerName sn)
   throws IOException {
     if (sn == null) {

@@ -25,23 +25,20 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -54,22 +51,7 @@ import org.junit.experimental.categories.Category;
 public class TestMetaReaderEditor {
   private static final Log LOG = LogFactory.getLog(TestMetaReaderEditor.class);
   private static final  HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static ZooKeeperWatcher zkw;
   private static CatalogTracker CT;
-  private final static Abortable ABORTABLE = new Abortable() {
-    private final AtomicBoolean abort = new AtomicBoolean(false);
-
-    @Override
-    public void abort(String why, Throwable e) {
-      LOG.info(why, e);
-      abort.set(true);
-    }
-    
-    @Override
-    public boolean isAborted() {
-      return abort.get();
-    }
-  };
 
   @BeforeClass public static void beforeClass() throws Exception {
     UTIL.startMiniCluster(3);
@@ -79,13 +61,11 @@ public class TestMetaReaderEditor {
     // responsive.  1 second is default as is ten retries.
     c.setLong("hbase.client.pause", 1000);
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 10);
-    zkw = new ZooKeeperWatcher(c, "TestMetaReaderEditor", ABORTABLE);
-    CT = new CatalogTracker(zkw, c, ABORTABLE);
+    CT = new CatalogTracker(c);
     CT.start();
   }
 
   @AfterClass public static void afterClass() throws Exception {
-    ABORTABLE.abort("test ending", null);
     CT.stop();
     UTIL.shutdownMiniCluster();
   }

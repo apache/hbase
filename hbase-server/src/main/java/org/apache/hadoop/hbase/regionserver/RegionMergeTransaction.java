@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -240,7 +239,8 @@ public class RegionMergeTransaction {
   public HRegion execute(final Server server,
       final RegionServerServices services) throws IOException {
     if (rsCoprocessorHost == null) {
-      rsCoprocessorHost = server != null ? ((HRegionServer) server).getCoprocessorHost() : null;
+      rsCoprocessorHost = server != null ?
+        ((HRegionServer) server).getRegionServerCoprocessorHost() : null;
     }
     HRegion mergedRegion = createMergedRegion(server, services);
     if (rsCoprocessorHost != null) {

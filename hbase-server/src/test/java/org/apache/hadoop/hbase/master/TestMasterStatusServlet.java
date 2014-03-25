@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
+import org.apache.hadoop.hbase.regionserver.MetricsRegionServerWrapperStub;
 import org.apache.hadoop.hbase.tmpl.master.AssignmentManagerStatusTmpl;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
 import org.junit.Before;
@@ -94,12 +96,16 @@ public class TestMasterStatusServlet {
     // Fake ZKW
     ZooKeeperWatcher zkw = Mockito.mock(ZooKeeperWatcher.class);
     Mockito.doReturn("fakequorum").when(zkw).getQuorum();
-    Mockito.doReturn(zkw).when(master).getZooKeeperWatcher();
+    Mockito.doReturn(zkw).when(master).getZooKeeper();
 
     // Fake MasterAddressTracker
     MasterAddressTracker tracker = Mockito.mock(MasterAddressTracker.class);
     Mockito.doReturn(tracker).when(master).getMasterAddressTracker();
     Mockito.doReturn(FAKE_HOST).when(tracker).getMasterAddress();
+
+    MetricsRegionServer rms = Mockito.mock(MetricsRegionServer.class);
+    Mockito.doReturn(new MetricsRegionServerWrapperStub()).when(rms).getRegionServerWrapper();
+    Mockito.doReturn(rms).when(master).getRegionServerMetrics();
 
     // Mock admin
     admin = Mockito.mock(HBaseAdmin.class); 

@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -244,19 +243,18 @@ public class TestBlockReorder {
     byte[] sb = "sb".getBytes();
     htu.startMiniZKCluster();
 
-    MiniHBaseCluster hbm = htu.startMiniHBaseCluster(1, 1);
+    MiniHBaseCluster hbm = htu.startMiniHBaseCluster(1, 0);
     hbm.waitForActiveAndReadyMaster();
-    hbm.getRegionServer(0).waitForServerOnline();
+    HRegionServer targetRs = hbm.getMaster();
 
     // We want to have a datanode with the same name as the region server, so
     //  we're going to get the regionservername, and start a new datanode with this name.
-    String host4 = hbm.getRegionServer(0).getServerName().getHostname();
+    String host4 = targetRs.getServerName().getHostname();
     LOG.info("Starting a new datanode with the name=" + host4);
     cluster.startDataNodes(conf, 1, true, null, new String[]{"/r4"}, new String[]{host4}, null);
     cluster.waitClusterUp();
 
     final int repCount = 3;
-    HRegionServer targetRs = hbm.getRegionServer(0);
 
     // We use the regionserver file system & conf as we expect it to have the hook.
     conf = targetRs.getConfiguration();

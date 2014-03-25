@@ -18,27 +18,26 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.zookeeper.KeeperException;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Services provided by {@link HRegionServer}
  */
 @InterfaceAudience.Private
 public interface RegionServerServices
-    extends OnlineRegions, FavoredNodesForRegion, PriorityFunction {
+    extends OnlineRegions, FavoredNodesForRegion {
   /**
    * @return True if this regionserver is stopping.
    */

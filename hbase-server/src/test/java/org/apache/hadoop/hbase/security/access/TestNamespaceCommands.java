@@ -78,7 +78,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME.getName(), 30 * 1000);
 
     ACCESS_CONTROLLER = (AccessController) UTIL.getMiniHBaseCluster().getMaster()
-      .getCoprocessorHost()
+      .getRegionServerCoprocessorHost()
         .findCoprocessor(AccessController.class.getName());
 
     UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TestNamespace).build());

@@ -22,13 +22,13 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -68,7 +68,7 @@ public interface MasterServices extends Server {
   /**
    * @return Master's instance of {@link MasterCoprocessorHost}
    */
-  MasterCoprocessorHost getCoprocessorHost();
+  MasterCoprocessorHost getMasterCoprocessorHost();
 
   /**
    * Check table is modifiable; i.e. exists and is offline.

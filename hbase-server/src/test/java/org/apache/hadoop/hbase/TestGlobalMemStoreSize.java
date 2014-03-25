@@ -81,7 +81,8 @@ public class TestGlobalMemStoreSize {
 
     for (HRegionServer server : getOnlineRegionServers()) {
       long globalMemStoreSize = 0;
-      for (HRegionInfo regionInfo : ProtobufUtil.getOnlineRegions(server)) {
+      for (HRegionInfo regionInfo :
+          ProtobufUtil.getOnlineRegions(server.getRSRpcServices())) {
         globalMemStoreSize += 
           server.getFromOnlineRegions(regionInfo.getEncodedName()).
           getMemstoreSize().get();
@@ -96,7 +97,8 @@ public class TestGlobalMemStoreSize {
       LOG.info("Starting flushes on " + server.getServerName() +
         ", size=" + server.getRegionServerAccounting().getGlobalMemstoreSize());
 
-      for (HRegionInfo regionInfo : ProtobufUtil.getOnlineRegions(server)) {
+      for (HRegionInfo regionInfo :
+          ProtobufUtil.getOnlineRegions(server.getRSRpcServices())) {
         HRegion r = server.getFromOnlineRegions(regionInfo.getEncodedName());
         flush(r, server);
       }
@@ -111,7 +113,8 @@ public class TestGlobalMemStoreSize {
       if (size > 0) {
         // If size > 0, see if its because the meta region got edits while
         // our test was running....
-        for (HRegionInfo regionInfo : ProtobufUtil.getOnlineRegions(server)) {
+        for (HRegionInfo regionInfo :
+            ProtobufUtil.getOnlineRegions(server.getRSRpcServices())) {
           HRegion r = server.getFromOnlineRegions(regionInfo.getEncodedName());
           long l = r.getMemstoreSize().longValue();
           if (l > 0) {
@@ -144,15 +147,6 @@ public class TestGlobalMemStoreSize {
       server.getRegionServerAccounting().getGlobalMemstoreSize());
   }
 
-  /** figure out how many regions are currently being served. */
-  private int getRegionCount() throws IOException {
-    int total = 0;
-    for (HRegionServer server : getOnlineRegionServers()) {
-      total += ProtobufUtil.getOnlineRegions(server).size();
-    }
-    return total;
-  }
-  
   private List<HRegionServer> getOnlineRegionServers() {
     List<HRegionServer> list = new ArrayList<HRegionServer>();
     for (JVMClusterUtil.RegionServerThread rst : 
@@ -168,12 +162,14 @@ public class TestGlobalMemStoreSize {
    * Wait until all the regions are assigned.
    */
   private void waitForAllRegionsAssigned() throws IOException {
-    while (getRegionCount() < totalRegionNum) {
-      LOG.debug("Waiting for there to be "+totalRegionNum+" regions, but there are " + getRegionCount() + " right now.");
+    while (true) {
+      int regionCount = HBaseTestingUtility.getAllOnlineRegions(cluster).size();
+      if (regionCount >= totalRegionNum) break;
+      LOG.debug("Waiting for there to be "+ totalRegionNum
+        +" regions, but there are " + regionCount + " right now.");
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {}
     }
   }
-
 }

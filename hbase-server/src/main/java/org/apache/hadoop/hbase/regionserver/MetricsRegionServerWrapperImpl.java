@@ -118,7 +118,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public String getZookeeperQuorum() {
-    ZooKeeperWatcher zk = regionServer.getZooKeeperWatcher();
+    ZooKeeperWatcher zk = regionServer.getZooKeeper();
     if (zk == null) {
       return "";
     }
@@ -127,7 +127,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public String getCoprocessors() {
-    String[] coprocessors = regionServer.getCoprocessors();
+    String[] coprocessors = regionServer.getRegionServerCoprocessors();
     if (coprocessors == null || coprocessors.length == 0) {
       return "";
     }
@@ -154,7 +154,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getTotalRequestCount() {
-    return regionServer.requestCount.get();
+    return regionServer.rpcServices.requestCount.get();
   }
 
   @Override

@@ -24,7 +24,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -38,7 +37,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hadoop.hbase.regionserver.HRegionServer.QosPriority;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices.QosPriority;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
@@ -72,7 +71,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
   private final Map<String, Integer> annotatedQos;
   //We need to mock the regionserver instance for some unit tests (set via
   //setRegionServer method.
-  private HRegionServer hRegionServer;
+  private RSRpcServices rpcServices;
   @SuppressWarnings("unchecked")
   private final Class<? extends Message>[] knownArgumentClasses = new Class[]{
       GetRegionInfoRequest.class,
@@ -92,10 +91,9 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
   private final Map<String, Map<Class<? extends Message>, Method>> methodMap =
     new HashMap<String, Map<Class<? extends Message>, Method>>();
 
-  AnnotationReadingPriorityFunction(final HRegionServer hrs) {
-    this.hRegionServer = hrs;
+  AnnotationReadingPriorityFunction(final RSRpcServices rpcServices) {
     Map<String, Integer> qosMap = new HashMap<String, Integer>();
-    for (Method m : HRegionServer.class.getMethods()) {
+    for (Method m : RSRpcServices.class.getMethods()) {
       QosPriority p = m.getAnnotation(QosPriority.class);
       if (p != null) {
         // Since we protobuf'd, and then subsequently, when we went with pb style, method names
@@ -107,6 +105,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
         qosMap.put(capitalizedMethodName, p.priority());
       }
     }
+    this.rpcServices = rpcServices;
     this.annotatedQos = qosMap;
     if (methodMap.get("getRegion") == null) {
       methodMap.put("hasRegion", new HashMap<Class<? extends Message>, Method>());
@@ -127,16 +126,6 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
     StringBuilder strBuilder = new StringBuilder(s);
     strBuilder.setCharAt(0, Character.toUpperCase(strBuilder.charAt(0)));
     return strBuilder.toString();
-  }
-
-  public boolean isMetaRegion(byte[] regionName) {
-    HRegion region;
-    try {
-      region = hRegionServer.getRegion(regionName);
-    } catch (NotServingRegionException ignored) {
-      return false;
-    }
-    return region.getRegionInfo().isMetaTable();
   }
 
   @Override
@@ -167,7 +156,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
       if (hasRegion != null && (Boolean)hasRegion.invoke(param, (Object[])null)) {
         Method getRegion = methodMap.get("getRegion").get(rpcArgClass);
         regionSpecifier = (RegionSpecifier)getRegion.invoke(param, (Object[])null);
-        HRegion region = hRegionServer.getRegion(regionSpecifier);
+        HRegion region = rpcServices.getRegion(regionSpecifier);
         if (region.getRegionInfo().isMetaTable()) {
           if (LOG.isTraceEnabled()) {
             LOG.trace("High priority because region=" + region.getRegionNameAsString());
@@ -187,7 +176,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
       if (!request.hasScannerId()) {
         return HConstants.NORMAL_QOS;
       }
-      RegionScanner scanner = hRegionServer.getScanner(request.getScannerId());
+      RegionScanner scanner = rpcServices.getScanner(request.getScannerId());
       if (scanner != null && scanner.getRegionInfo().isMetaRegion()) {
         if (LOG.isTraceEnabled()) {
           // Scanner requests are small in size so TextFormat version should not overwhelm log.
@@ -201,6 +190,6 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
 
   @VisibleForTesting
   void setRegionServer(final HRegionServer hrs) {
-    this.hRegionServer = hrs;
+    this.rpcServices = hrs.getRSRpcServices();
   }
 }

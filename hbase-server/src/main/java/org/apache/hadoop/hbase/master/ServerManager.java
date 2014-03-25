@@ -58,9 +58,13 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ServiceException;
@@ -182,7 +186,6 @@ public class ServerManager {
     this(master, services, true);
   }
 
-  @SuppressWarnings("deprecation")
   ServerManager(final Server master, final MasterServices services,
       final boolean connect) throws IOException {
     this.master = master;
@@ -441,12 +444,21 @@ public class ServerManager {
 
   void letRegionServersShutdown() {
     long previousLogTime = 0;
+    ServerName sn = master.getServerName();
+    ZooKeeperWatcher zkw = master.getZooKeeper();
     while (!onlineServers.isEmpty()) {
 
       if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+        Set<ServerName> remainingServers = onlineServers.keySet();
+        synchronized (onlineServers) {
+          if (remainingServers.size() == 1 && remainingServers.contains(sn)) {
+            // Master will delete itself later.
+            return;
+          }
+        }
         StringBuilder sb = new StringBuilder();
         // It's ok here to not sync on onlineServers - merely logging
-        for (ServerName key : this.onlineServers.keySet()) {
+        for (ServerName key : remainingServers) {
           if (sb.length() > 0) {
             sb.append(", ");
           }
@@ -456,6 +468,19 @@ public class ServerManager {
         previousLogTime = System.currentTimeMillis();
       }
 
+      try {
+        List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.rsZNode);
+        if (servers == null || (servers.size() == 1
+            && servers.contains(sn.toString()))) {
+          LOG.info("ZK shows there is only the master self online, exiting now");
+          // Master could have lost some ZK events, no need to wait more.
+          break;
+        }
+      } catch (KeeperException ke) {
+        LOG.warn("Failed to list regionservers", ke);
+        // ZK is malfunctioning, don't hang here
+        break;
+      }
       synchronized (onlineServers) {
         try {
           onlineServers.wait(100);
@@ -471,6 +496,12 @@ public class ServerManager {
    * shutdown processing.
    */
   public synchronized void expireServer(final ServerName serverName) {
+    if (serverName.equals(master.getServerName())) {
+      if (!(master.isAborted() || master.isStopped())) {
+        master.stop("We lost our znode?");
+      }
+      return;
+    }
     if (!services.isServerShutdownHandlerEnabled()) {
       LOG.info("Master doesn't enable ServerShutdownHandler during initialization, "
           + "delay expiring server " + serverName);
@@ -758,12 +789,18 @@ public class ServerManager {
     * @throws IOException
     * @throws RetriesExhaustedException wrapping a ConnectException if failed
     */
+  @SuppressWarnings("deprecation")
   private AdminService.BlockingInterface getRsAdmin(final ServerName sn)
   throws IOException {
     AdminService.BlockingInterface admin = this.rsAdmins.get(sn);
     if (admin == null) {
       LOG.debug("New admin connection to " + sn.toString());
-      admin = this.connection.getAdmin(sn);
+      if (sn.equals(master.getServerName()) && master instanceof HRegionServer) {
+        // A master is also a region server now, see HBASE-10569 for details
+        admin = ((HRegionServer)master).getRSRpcServices();
+      } else {
+        admin = this.connection.getAdmin(sn);
+      }
       this.rsAdmins.put(sn, admin);
     }
     return admin;
@@ -813,12 +850,10 @@ public class ServerManager {
     long lastCountChange = startTime;
     int count = countOfRegionServers();
     int oldCount = 0;
-    while (
-      !this.master.isStopped() &&
-        count < maxToStart &&
-        (lastCountChange+interval > now || timeout > slept || count < minToStart)
-      ){
-
+    ServerName masterSn = master.getServerName();
+    boolean selfCheckedIn = isServerOnline(masterSn);
+    while (!this.master.isStopped() && !selfCheckedIn && count < maxToStart
+        && (lastCountChange+interval > now || timeout > slept || count < minToStart)) {
       // Log some info at every interval time or if there is a change
       if (oldCount != count || lastLogTime+interval < now){
         lastLogTime = now;
@@ -836,6 +871,8 @@ public class ServerManager {
       Thread.sleep(sleepTime);
       now =  System.currentTimeMillis();
       slept = now - startTime;
+
+      selfCheckedIn = isServerOnline(masterSn);
 
       oldCount = count;
       count = countOfRegionServers();
@@ -942,7 +979,6 @@ public class ServerManager {
 
     // Remove the deadNotExpired servers from the server list.
     removeDeadNotExpiredServers(destServers);
-
     return destServers;
   }
 

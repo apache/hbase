@@ -57,7 +57,7 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris) throws IOException {
     MasterCoprocessorHost cpHost = ((HMaster) this.server)
-        .getCoprocessorHost();
+        .getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preDeleteColumnHandler(this.tableName, this.familyName);
     }

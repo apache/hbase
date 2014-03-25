@@ -73,11 +73,10 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -302,6 +301,7 @@ public class TestSplitTransactionOnCluster {
     }
   }
   @Test
+  @SuppressWarnings("deprecation")
   public void testSplitFailedCompactionAndSplit() throws Exception {
     final byte[] tableName = Bytes.toBytes("testSplitFailedCompactionAndSplit");
     Configuration conf = TESTING_UTIL.getConfiguration();
@@ -393,7 +393,7 @@ public class TestSplitTransactionOnCluster {
       // Get region pre-split.
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
-      int regionCount = ProtobufUtil.getOnlineRegions(server).size();
+      int regionCount = ProtobufUtil.getOnlineRegions(server.getRSRpcServices()).size();
       // Now, before we split, set special flag in master, a flag that has
       // it FAIL the processing of split.
       AssignmentManager.TEST_SKIP_SPLIT_HANDLING = true;
@@ -466,7 +466,7 @@ public class TestSplitTransactionOnCluster {
       // Get region pre-split.
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
-      int regionCount = ProtobufUtil.getOnlineRegions(server).size();
+      int regionCount = ProtobufUtil.getOnlineRegions(server.getRSRpcServices()).size();
       // Insert into zk a blocking znode, a znode of same name as region
       // so it gets in way of our splitting.
       ServerName fakedServer = ServerName.valueOf("any.old.server", 1234, -1);
@@ -480,7 +480,8 @@ public class TestSplitTransactionOnCluster {
       // Wait around a while and assert count of regions remains constant.
       for (int i = 0; i < 10; i++) {
         Thread.sleep(100);
-        assertEquals(regionCount, ProtobufUtil.getOnlineRegions(server).size());
+        assertEquals(regionCount, ProtobufUtil.getOnlineRegions(
+          server.getRSRpcServices()).size());
       }
       // Now clear the zknode
       ZKAssign.deleteClosingNode(TESTING_UTIL.getZooKeeperWatcher(),
@@ -525,13 +526,13 @@ public class TestSplitTransactionOnCluster {
       // Get region pre-split.
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
-      int regionCount = ProtobufUtil.getOnlineRegions(server).size();
+      int regionCount = ProtobufUtil.getOnlineRegions(server.getRSRpcServices()).size();
       // Now split.
       split(hri, server, regionCount);
       // Get daughters
       List<HRegion> daughters = checkAndGetDaughters(tableName);
       // Now split one of the daughters.
-      regionCount = ProtobufUtil.getOnlineRegions(server).size();
+      regionCount = ProtobufUtil.getOnlineRegions(server.getRSRpcServices()).size();
       HRegionInfo daughter = daughters.get(0).getRegionInfo();
       LOG.info("Daughter we are going to split: " + daughter);
       // Compact first to ensure we have cleaned up references -- else the split
@@ -1169,13 +1170,14 @@ public class TestSplitTransactionOnCluster {
   private void split(final HRegionInfo hri, final HRegionServer server, final int regionCount)
       throws IOException, InterruptedException {
     this.admin.split(hri.getRegionNameAsString());
-    for (int i = 0; ProtobufUtil.getOnlineRegions(server).size() <= regionCount && i < 300; i++) {
+    for (int i = 0; ProtobufUtil.getOnlineRegions(
+        server.getRSRpcServices()).size() <= regionCount && i < 300; i++) {
       LOG.debug("Waiting on region to split");
       Thread.sleep(100);
     }
 
     assertFalse("Waited too long for split",
-        ProtobufUtil.getOnlineRegions(server).size() <= regionCount);
+      ProtobufUtil.getOnlineRegions(server.getRSRpcServices()).size() <= regionCount);
   }
 
   /**
@@ -1197,8 +1199,8 @@ public class TestSplitTransactionOnCluster {
     // hbase:meta  We don't want hbase:meta replay polluting our test when we later crash
     // the table region serving server.
     int metaServerIndex = cluster.getServerWithMeta();
-    assertTrue(metaServerIndex != -1);
-    HRegionServer metaRegionServer = cluster.getRegionServer(metaServerIndex);
+    assertTrue(metaServerIndex == -1); // meta is on master now
+    HRegionServer metaRegionServer = cluster.getMaster();
     int tableRegionIndex = cluster.getServerWith(hri.getRegionName());
     assertTrue(tableRegionIndex != -1);
     HRegionServer tableRegionServer = cluster.getRegionServer(tableRegionIndex);
@@ -1250,7 +1252,7 @@ public class TestSplitTransactionOnCluster {
 
   private void printOutRegions(final HRegionServer hrs, final String prefix)
       throws IOException {
-    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
+    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
     for (HRegionInfo region: regions) {
       LOG.info(prefix + region.getRegionNameAsString());
     }

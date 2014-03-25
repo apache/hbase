@@ -149,9 +149,9 @@ public class TestRegionRebalancing {
 
   /** figure out how many regions are currently being served. */
   private int getRegionCount() throws IOException {
-    int total = 0;
+    int total = 0; // Regions on master are ignored since not counted for balancing
     for (HRegionServer server : getOnlineRegionServers()) {
-      total += ProtobufUtil.getOnlineRegions(server).size();
+      total += ProtobufUtil.getOnlineRegions(server.getRSRpcServices()).size();
     }
     return total;
   }
@@ -183,11 +183,13 @@ public class TestRegionRebalancing {
         + ", up border: " + avgLoadPlusSlop + "; attempt: " + i);
 
       for (HRegionServer server : servers) {
-        int serverLoad = ProtobufUtil.getOnlineRegions(server).size();
+        int serverLoad =
+          ProtobufUtil.getOnlineRegions(server.getRSRpcServices()).size();
         LOG.debug(server.getServerName() + " Avg: " + avg + " actual: " + serverLoad);
         if (!(avg > 2.0 && serverLoad <= avgLoadPlusSlop
             && serverLoad >= avgLoadMinusSlop)) {
-          for (HRegionInfo hri : ProtobufUtil.getOnlineRegions(server)) {
+          for (HRegionInfo hri :
+              ProtobufUtil.getOnlineRegions(server.getRSRpcServices())) {
             if (hri.isMetaRegion()) serverLoad--;
             // LOG.debug(hri.getRegionNameAsString());
           }
@@ -234,7 +236,7 @@ public class TestRegionRebalancing {
    * Wait until all the regions are assigned.
    */
   private void waitForAllRegionsAssigned() throws IOException {
-    int totalRegions = HBaseTestingUtility.KEYS.length+1;
+    int totalRegions = HBaseTestingUtility.KEYS.length;
     while (getRegionCount() < totalRegions) {
     // while (!cluster.getMaster().allRegionsAssigned()) {
       LOG.debug("Waiting for there to be "+ totalRegions +" regions, but there are " + getRegionCount() + " right now.");

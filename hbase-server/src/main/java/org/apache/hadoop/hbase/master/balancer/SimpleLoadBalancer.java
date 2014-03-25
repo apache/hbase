@@ -180,10 +180,14 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
    */
   public List<RegionPlan> balanceCluster(
       Map<ServerName, List<HRegionInfo>> clusterMap) {
+    List<RegionPlan> regionsToReturn = balanceMasterRegions(clusterMap);
+    if (regionsToReturn != null) {
+      return regionsToReturn;
+    }
     boolean emptyRegionServerPresent = false;
     long startTime = System.currentTimeMillis();
 
-    ClusterLoadState cs = new ClusterLoadState(clusterMap);
+    ClusterLoadState cs = new ClusterLoadState(masterServerName, clusterMap);
 
     if (!this.needsBalance(cs)) return null;
     
@@ -204,7 +208,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     // TODO: Look at data block locality or a more complex load to do this
     MinMaxPriorityQueue<RegionPlan> regionsToMove =
       MinMaxPriorityQueue.orderedBy(rpComparator).create();
-    List<RegionPlan> regionsToReturn = new ArrayList<RegionPlan>();
+    regionsToReturn = new ArrayList<RegionPlan>();
 
     // Walk down most loaded, pruning each to the max
     int serversOverloaded = 0;
@@ -233,8 +237,9 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
           hri = regions.get(regions.size() - 1 - i);
         }
         i++;
-        // Don't rebalance meta regions.
-        if (hri.isMetaRegion()) continue;
+        // Don't rebalance special regions.
+        if (shouldBeOnMaster(hri)
+            && masterServerName.equals(sal.getServerName())) continue;
         regionsToMove.add(new RegionPlan(hri, sal.getServerName(), null));
         numTaken++;
         if (numTaken >= numToOffload) break;

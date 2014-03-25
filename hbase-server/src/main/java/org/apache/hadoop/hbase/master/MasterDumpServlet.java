@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.monitoring.LogMonitoring;
 import org.apache.hadoop.hbase.monitoring.StateDumpServlet;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.RSDumpServlet;
 import org.apache.hadoop.util.ReflectionUtils;
 
 @InterfaceAudience.Private
@@ -94,7 +95,12 @@ public class MasterDumpServlet extends StateDumpServlet {
     out.println(LINE);
     long tailKb = getTailKbParam(request);
     LogMonitoring.dumpTailOfLogs(out, tailKb);
-    
+
+    out.println("\n\nRS Queue:");
+    out.println(LINE);
+    if(isShowQueueDump(conf)) {
+      RSDumpServlet.dumpQueue(master, out);
+    }
     out.flush();
   }
   

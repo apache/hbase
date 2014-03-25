@@ -29,10 +29,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.ShutdownHook;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -195,9 +193,6 @@ public class JVMClusterUtil {
 
     if (regionservers != null) {
       for (JVMClusterUtil.RegionServerThread t: regionservers) {
-        HRegionServer hrs = t.getRegionServer();
-        ShutdownHook.install(hrs.getConfiguration(), FileSystem.get(hrs
-                .getConfiguration()), hrs, t);
         t.start();
       }
     }

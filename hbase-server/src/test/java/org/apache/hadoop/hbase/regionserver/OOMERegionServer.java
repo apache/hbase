@@ -50,7 +50,7 @@ public class OOMERegionServer extends HRegionServer {
     try {
       MutateRequest request =
         RequestConverter.buildMutateRequest(regionName, put);
-      super.mutate(null, request);
+      rpcServices.mutate(null, request);
       for (int i = 0; i < 30; i++) {
         // Add the batch update 30 times to bring on the OOME faster.
         this.retainer.add(put);

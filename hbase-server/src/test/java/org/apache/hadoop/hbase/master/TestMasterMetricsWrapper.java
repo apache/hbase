@@ -55,9 +55,9 @@ public class TestMasterMetricsWrapper {
     assertEquals(master.getClusterId(), info.getClusterId());
     assertEquals(master.getMasterActiveTime(), info.getActiveTime());
     assertEquals(master.getMasterStartTime(), info.getStartTime());
-    assertEquals(master.getCoprocessors().length, info.getCoprocessors().length);
+    assertEquals(master.getMasterCoprocessors().length, info.getCoprocessors().length);
     assertEquals(master.getServerManager().getOnlineServersList().size(), info.getNumRegionServers());
-    assertTrue(info.getNumRegionServers() == 4);
+    assertEquals(5, info.getNumRegionServers());
 
     String zkServers = info.getZookeeperQuorum();
     assertEquals(zkServers.split(",").length, TEST_UTIL.getZkCluster().getZooKeeperServerNum());
@@ -69,10 +69,10 @@ public class TestMasterMetricsWrapper {
     // We stopped the regionserver but could take a while for the master to notice it so hang here
     // until it does... then move forward to see if metrics wrapper notices.
     while (TEST_UTIL.getHBaseCluster().getMaster().getServerManager().getOnlineServers().size() !=
-        index) {
+        4) {
       Threads.sleep(10);
     }
-    assertTrue(info.getNumRegionServers() == 3);
-    assertTrue(info.getNumDeadRegionServers() == 1);
+    assertEquals(4, info.getNumRegionServers());
+    assertEquals(1, info.getNumDeadRegionServers());
   }
 }

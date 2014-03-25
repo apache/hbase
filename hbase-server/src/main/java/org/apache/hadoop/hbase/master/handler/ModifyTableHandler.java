@@ -60,7 +60,7 @@ public class ModifyTableHandler extends TableEventHandler {
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris)
   throws IOException {
-    MasterCoprocessorHost cpHost = ((HMaster) this.server).getCoprocessorHost();
+    MasterCoprocessorHost cpHost = ((HMaster) this.server).getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preModifyTableHandler(this.tableName, this.htd);
     }

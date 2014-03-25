@@ -197,7 +197,7 @@ public class TestCatalogJanitor {
     private final AssignmentManager asm;
 
     MockMasterServices(final Server server) throws IOException {
-      this.mfs = new MasterFileSystem(server, this, false);
+      this.mfs = new MasterFileSystem(server, this);
       this.asm = Mockito.mock(AssignmentManager.class);
     }
 
@@ -228,7 +228,7 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public MasterCoprocessorHost getCoprocessorHost() {
+    public MasterCoprocessorHost getMasterCoprocessorHost() {
       return null;
     }
 

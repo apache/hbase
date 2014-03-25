@@ -158,11 +158,12 @@ public class TestEndToEndSplitTransaction {
       // get and scan should now succeed without exception
       ClientProtos.GetRequest request =
           RequestConverter.buildGetRequest(regionName, new Get(row));
-      server.get(null, request);
+      server.getRSRpcServices().get(null, request);
       ScanRequest scanRequest = RequestConverter.buildScanRequest(
         regionName, new Scan(row), 1, true);
       try {
-        server.scan(new PayloadCarryingRpcController(), scanRequest);
+        server.getRSRpcServices().scan(
+          new PayloadCarryingRpcController(), scanRequest);
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
       }

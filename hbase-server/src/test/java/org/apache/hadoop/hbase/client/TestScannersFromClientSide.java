@@ -472,7 +472,8 @@ public class TestScannersFromClientSide {
     byte[] regionName = hri.getRegionName();
     int i = cluster.getServerWith(regionName);
     HRegionServer rs = cluster.getRegionServer(i);
-    ProtobufUtil.closeRegion(rs, rs.getServerName(), regionName, false);
+    ProtobufUtil.closeRegion(
+      rs.getRSRpcServices(), rs.getServerName(), regionName, false);
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
     long timeOut = 300000;
     while (true) {
@@ -492,7 +493,7 @@ public class TestScannersFromClientSide {
       states.regionOffline(hri);
       states.updateRegionState(hri, State.OPENING);
       ZKAssign.createNodeOffline(zkw, hri, loc.getServerName());
-      ProtobufUtil.openRegion(rs, rs.getServerName(), hri);
+      ProtobufUtil.openRegion(rs.getRSRpcServices(), rs.getServerName(), hri);
       startTime = EnvironmentEdgeManager.currentTimeMillis();
       while (true) {
         if (rs.getOnlineRegion(regionName) != null) {

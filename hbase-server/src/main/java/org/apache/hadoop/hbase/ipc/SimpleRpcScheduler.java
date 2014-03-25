@@ -30,8 +30,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 
 /**
- * A scheduler that maintains isolated handler pools for general, high-priority and replication
- * requests.
+ * A scheduler that maintains isolated handler pools for general,
+ * high-priority, and replication requests.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

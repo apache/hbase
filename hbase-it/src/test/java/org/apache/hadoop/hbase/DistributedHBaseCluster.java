@@ -136,7 +136,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
   }
 
   @Override
-  public MasterService.BlockingInterface getMaster()
+  public MasterService.BlockingInterface getMasterAdminService()
   throws IOException {
     HConnection conn = HConnectionManager.getConnection(conf);
     return conn.getMaster();
@@ -170,7 +170,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
     long start = System.currentTimeMillis();
     while (System.currentTimeMillis() - start < timeout) {
       try {
-        getMaster();
+        getMasterAdminService();
         return true;
       } catch (MasterNotRunningException m) {
         LOG.warn("Master not started yet " + m);

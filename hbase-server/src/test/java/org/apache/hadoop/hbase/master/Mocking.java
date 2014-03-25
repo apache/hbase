@@ -73,36 +73,6 @@ public class Mocking {
   }
 
   /**
-   * Fakes the regionserver-side zk transitions of a region open.
-   * @param w ZooKeeperWatcher to use.
-   * @param sn Name of the regionserver doing the 'opening'
-   * @param hri Region we're 'opening'.
-   * @throws KeeperException
-   * @throws DeserializationException
-   */
-  static void fakeRegionServerRegionOpenInZK(HMaster master,  final ZooKeeperWatcher w,
-      final ServerName sn, final HRegionInfo hri)
-    throws KeeperException, DeserializationException, InterruptedException {
-    // Wait till the we region is ready to be open in RIT.
-    waitForRegionPendingOpenInRIT(master.getAssignmentManager(), hri.getEncodedName());
-
-    // Get current versionid else will fail on transition from OFFLINE to OPENING below
-    int versionid = ZKAssign.getVersion(w, hri);
-    assertNotSame(-1, versionid);
-    // This uglyness below is what the openregionhandler on RS side does.  I
-    // looked at exposing the method over in openregionhandler but its just a
-    // one liner and its deep over in another package so just repeat it below.
-    versionid = ZKAssign.transitionNode(w, hri, sn,
-      EventType.M_ZK_REGION_OFFLINE, EventType.RS_ZK_REGION_OPENING, versionid);
-    assertNotSame(-1, versionid);
-    // Move znode from OPENING to OPENED as RS does on successful open.
-    versionid = ZKAssign.transitionNodeOpened(w, hri, sn, versionid);
-    assertNotSame(-1, versionid);
-    // We should be done now.  The master open handler will notice the
-    // transition and remove this regions znode.
-  }
-
-  /**
    * Verifies that the specified region is in the specified state in ZooKeeper.
    * <p>
    * Returns true if region is in transition and in the specified state in

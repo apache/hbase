@@ -25,18 +25,19 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.apache.hadoop.hbase.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
 public class TestMasterShutdown {
-  private static final Log LOG = LogFactory.getLog(TestMasterShutdown.class);
-
   /**
    * Simple test of shutdown.
    * <p>
@@ -100,6 +101,7 @@ public class TestMasterShutdown {
 
     // Create config to use for this cluster
     Configuration conf = HBaseConfiguration.create();
+    conf.setInt("hbase.ipc.client.failed.servers.expiry", 200);
 
     // Start the cluster
     final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);

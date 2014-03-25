@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -43,6 +42,7 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.HBaseZeroCopyByteString;
 
 /**
  * Tests that verify certain RPCs get a higher QoS.
@@ -55,13 +55,14 @@ public class TestPriorityRpc {
   @Before
   public void setup() {
     Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean("hbase.testing.nocluster", true); // No need to do ZK
     regionServer = HRegionServer.constructRegionServer(HRegionServer.class, conf);
-    priority = regionServer.getPriority();
+    priority = regionServer.rpcServices.getPriority();
   }
 
   @Test
   public void testQosFunctionForMeta() throws IOException {
-    priority = regionServer.getPriority();
+    priority = regionServer.rpcServices.getPriority();
     RequestHeader.Builder headerBuilder = RequestHeader.newBuilder();
     //create a rpc request that has references to hbase:meta region and also
     //uses one of the known argument classes (known argument classes are
@@ -82,8 +83,10 @@ public class TestPriorityRpc {
     RequestHeader header = headerBuilder.build();
     HRegion mockRegion = Mockito.mock(HRegion.class);
     HRegionServer mockRS = Mockito.mock(HRegionServer.class);
+    RSRpcServices mockRpc = Mockito.mock(RSRpcServices.class);
+    Mockito.when(mockRS.getRSRpcServices()).thenReturn(mockRpc);
     HRegionInfo mockRegionInfo = Mockito.mock(HRegionInfo.class);
-    Mockito.when(mockRS.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
+    Mockito.when(mockRpc.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
     Mockito.when(mockRegionInfo.isMetaTable()).thenReturn(true);
     // Presume type.
@@ -100,7 +103,7 @@ public class TestPriorityRpc {
     RequestHeader.Builder headerBuilder = RequestHeader.newBuilder();
     headerBuilder.setMethodName("foo");
     RequestHeader header = headerBuilder.build();
-    PriorityFunction qosFunc = regionServer.getPriority();
+    PriorityFunction qosFunc = regionServer.rpcServices.getPriority();
     assertEquals(HConstants.NORMAL_QOS, qosFunc.getPriority(header, null));
   }
 
@@ -115,8 +118,10 @@ public class TestPriorityRpc {
     ScanRequest scanRequest = scanBuilder.build();
     HRegion mockRegion = Mockito.mock(HRegion.class);
     HRegionServer mockRS = Mockito.mock(HRegionServer.class);
+    RSRpcServices mockRpc = Mockito.mock(RSRpcServices.class);
+    Mockito.when(mockRS.getRSRpcServices()).thenReturn(mockRpc);
     HRegionInfo mockRegionInfo = Mockito.mock(HRegionInfo.class);
-    Mockito.when(mockRS.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
+    Mockito.when(mockRpc.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
     Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(false);
     // Presume type.
@@ -130,9 +135,9 @@ public class TestPriorityRpc {
     scanRequest = scanBuilder.build();
     //mock out a high priority type handling and see the QoS returned
     RegionScanner mockRegionScanner = Mockito.mock(RegionScanner.class);
-    Mockito.when(mockRS.getScanner(12345)).thenReturn(mockRegionScanner);
+    Mockito.when(mockRpc.getScanner(12345)).thenReturn(mockRegionScanner);
     Mockito.when(mockRegionScanner.getRegionInfo()).thenReturn(mockRegionInfo);
-    Mockito.when(mockRS.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
+    Mockito.when(mockRpc.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
     Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(true);
 

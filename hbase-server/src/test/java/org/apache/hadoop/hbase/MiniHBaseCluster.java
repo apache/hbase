@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -379,8 +380,29 @@ public class MiniHBaseCluster extends HBaseCluster {
    * Returns the current active master, if available.
    * @return the active HMaster, null if none is active.
    */
+  public MasterService.BlockingInterface getMasterAdminService() {
+    return this.hbaseCluster.getActiveMaster().getMasterRpcServices();
+  }
+
+  /**
+   * Returns the current active master, if available.
+   * @return the active HMaster, null if none is active.
+   */
   public HMaster getMaster() {
     return this.hbaseCluster.getActiveMaster();
+  }
+
+  /**
+   * Returns the current active master thread, if available.
+   * @return the active MasterThread, null if none is active.
+   */
+  public MasterThread getMasterThread() {
+    for (MasterThread mt: hbaseCluster.getLiveMasters()) {
+      if (mt.getMaster().isActiveMaster()) {
+        return mt;
+      }
+    }
+    return null;
   }
 
   /**
@@ -490,6 +512,7 @@ public class MiniHBaseCluster extends HBaseCluster {
    * Shut down the mini HBase cluster
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   public void shutdown() throws IOException {
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
@@ -635,6 +658,15 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   @Override
   public ServerName getServerHoldingRegion(byte[] regionName) throws IOException {
+    // Assume there is only one master thread which is the active master.
+    // If there are multiple master threads, the backup master threads
+    // should hold some regions. Please refer to #countServedRegions
+    // to see how we find out all regions.
+    HMaster master = getMaster();
+    HRegion region = master.getOnlineRegion(regionName);
+    if (region != null) {
+      return master.getServerName();
+    }
     int index = getServerWith(regionName);
     if (index < 0) {
       return null;
@@ -652,6 +684,9 @@ public class MiniHBaseCluster extends HBaseCluster {
     long count = 0;
     for (JVMClusterUtil.RegionServerThread rst : getLiveRegionServerThreads()) {
       count += rst.getRegionServer().getNumberOfOnlineRegions();
+    }
+    for (JVMClusterUtil.MasterThread mt : getLiveMasterThreads()) {
+      count += mt.getMaster().getNumberOfOnlineRegions();
     }
     return count;
   }
@@ -711,12 +746,12 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   @Override
   public AdminService.BlockingInterface getAdminProtocol(ServerName serverName) throws IOException {
-    return getRegionServer(getRegionServerIndex(serverName));
+    return getRegionServer(getRegionServerIndex(serverName)).getRSRpcServices();
   }
 
   @Override
   public ClientService.BlockingInterface getClientProtocol(ServerName serverName)
   throws IOException {
-    return getRegionServer(getRegionServerIndex(serverName));
+    return getRegionServer(getRegionServerIndex(serverName)).getRSRpcServices();
   }
 }

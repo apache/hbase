@@ -63,7 +63,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 <%class>
   public String formatZKString() {
     StringBuilder quorums = new StringBuilder();
-    String zkQuorum = master.getZooKeeperWatcher().getQuorum();
+    String zkQuorum = master.getZooKeeper().getQuorum();
 
     if (null == zkQuorum) {
       return quorums.toString();
@@ -278,7 +278,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 	                </%if>
 	                <tr>
 	                    <td>Coprocessors</td>
-	                    <td><% java.util.Arrays.toString(master.getCoprocessors()) %></td>
+	                    <td><% java.util.Arrays.toString(master.getMasterCoprocessors()) %></td>
 	                    <td>Coprocessors currently loaded by the master</td>
 	                </tr>
                 </%if>

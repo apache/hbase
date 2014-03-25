@@ -134,9 +134,8 @@ public class TestDrainingServer {
         balancer, startupMasterExecutor("mockExecutorService"), null, null);
 
     Mockito.when(master.getAssignmentManager()).thenReturn(am);
-    Mockito.when(master.getZooKeeperWatcher()).thenReturn(zkWatcher);
     Mockito.when(master.getZooKeeper()).thenReturn(zkWatcher);
-    
+
     am.addPlan(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_A));
 
     zkWatcher.registerListenerFirst(am);

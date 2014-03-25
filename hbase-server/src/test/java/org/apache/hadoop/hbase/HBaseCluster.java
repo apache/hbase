@@ -97,7 +97,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   /**
    * Returns an {@link MasterAdminService.BlockingInterface} to the active master
    */
-  public abstract MasterService.BlockingInterface getMaster()
+  public abstract MasterService.BlockingInterface getMasterAdminService()
   throws IOException;
 
   /**

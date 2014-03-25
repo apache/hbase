@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -121,7 +121,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.Message.Builder;
 import com.google.protobuf.ServiceException;
 import com.google.protobuf.TextFormat;
-// Uses Writables doing sasl
 
 /**
  * An RPC server that hosts protobuf described Services.
@@ -254,7 +253,7 @@ public class RpcServer implements RpcServerInterface {
 
   private final int warnResponseTime;
   private final int warnResponseSize;
-  private final Object serverInstance;
+  private final Server server;
   private final List<BlockingServiceAndInterface> services;
 
   private final RpcScheduler scheduler;
@@ -318,6 +317,7 @@ public class RpcServer implements RpcServerInterface {
      * Short string representation without param info because param itself could be huge depends on
      * the payload of a command
      */
+    @SuppressWarnings("deprecation")
     String toShortString() {
       String serviceName = this.connection.service != null?
         this.connection.service.getDescriptorForType().getName() : "null";
@@ -1837,7 +1837,7 @@ public class RpcServer implements RpcServerInterface {
 
   /**
    * Constructs a server listening on the named port and address.
-   * @param serverInstance hosting instance of {@link Server}. We will do authentications if an
+   * @param server hosting instance of {@link Server}. We will do authentications if an
    * instance else pass null for no authentication check.
    * @param name Used keying this rpc servers' metrics and for naming the Listener thread.
    * @param services A list of services.
@@ -1845,12 +1845,12 @@ public class RpcServer implements RpcServerInterface {
    * @param conf
    * @throws IOException
    */
-  public RpcServer(final Server serverInstance, final String name,
+  public RpcServer(final Server server, final String name,
       final List<BlockingServiceAndInterface> services,
       final InetSocketAddress isa, Configuration conf,
       RpcScheduler scheduler)
   throws IOException {
-    this.serverInstance = serverInstance;
+    this.server = server;
     this.services = services;
     this.isa = isa;
     this.conf = conf;
@@ -1933,32 +1933,15 @@ public class RpcServer implements RpcServerInterface {
   @Override
   public void setSocketSendBufSize(int size) { this.socketSendBufferSize = size; }
 
-  /** Starts the service.  Must be called before any calls will be handled. */
-  @Override
-  public void start() {
-    startThreads();
-    openServer();
-  }
-
-  /**
-   * Open a previously started server.
-   */
-  @Override
-  public void openServer() {
-    this.started = true;
-  }
-
   @Override
   public boolean isStarted() {
     return this.started;
   }
 
-  /**
-   * Starts the service threads but does not allow requests to be responded yet.
-   * Client will get {@link ServerNotRunningYetException} instead.
-   */
+  /** Starts the service.  Must be called before any calls will be handled. */
   @Override
-  public synchronized void startThreads() {
+  public synchronized void start() {
+    if (started) return;
     AuthenticationTokenSecretManager mgr = createSecretManager();
     if (mgr != null) {
       setSecretManager(mgr);
@@ -1969,6 +1952,7 @@ public class RpcServer implements RpcServerInterface {
     responder.start();
     listener.start();
     scheduler.start();
+    started = true;
   }
 
   @Override
@@ -1980,9 +1964,7 @@ public class RpcServer implements RpcServerInterface {
 
   private AuthenticationTokenSecretManager createSecretManager() {
     if (!isSecurityEnabled) return null;
-    if (serverInstance == null) return null;
-    if (!(serverInstance instanceof org.apache.hadoop.hbase.Server)) return null;
-    org.apache.hadoop.hbase.Server server = (org.apache.hadoop.hbase.Server)serverInstance;
+    if (server == null) return null;
     Configuration conf = server.getConfiguration();
     long keyUpdateInterval =
         conf.getLong("hbase.auth.key.update.interval", 24*60*60*1000);
@@ -2084,9 +2066,9 @@ public class RpcServer implements RpcServerInterface {
     responseInfo.put("queuetimems", qTime);
     responseInfo.put("responsesize", responseSize);
     responseInfo.put("client", clientAddress);
-    responseInfo.put("class", serverInstance == null? "": serverInstance.getClass().getSimpleName());
+    responseInfo.put("class", server == null? "": server.getClass().getSimpleName());
     responseInfo.put("method", methodName);
-    if (params.length == 2 && serverInstance instanceof HRegionServer &&
+    if (params.length == 2 && server instanceof HRegionServer &&
         params[0] instanceof byte[] &&
         params[1] instanceof Operation) {
       // if the slow process is a query, we want to log its table as well
@@ -2099,7 +2081,7 @@ public class RpcServer implements RpcServerInterface {
       // report to the log file
       LOG.warn("(operation" + tag + "): " +
                MAPPER.writeValueAsString(responseInfo));
-    } else if (params.length == 1 && serverInstance instanceof HRegionServer &&
+    } else if (params.length == 1 && server instanceof HRegionServer &&
         params[0] instanceof Operation) {
       // annotate the response map with operation details
       responseInfo.putAll(((Operation) params[0]).toMap());
@@ -2181,7 +2163,6 @@ public class RpcServer implements RpcServerInterface {
    * @param addr InetAddress of incoming connection
    * @throws org.apache.hadoop.security.authorize.AuthorizationException when the client isn't authorized to talk the protocol
    */
-  @SuppressWarnings("static-access")
   public void authorize(UserGroupInformation user, ConnectionHeader connection, InetAddress addr)
   throws AuthorizationException {
     if (authorize) {

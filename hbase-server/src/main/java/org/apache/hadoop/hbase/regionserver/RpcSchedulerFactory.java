@@ -18,21 +18,16 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 
 /**
- * A factory class that constructs an {@link org.apache.hadoop.hbase.ipc.RpcScheduler} for
- * a region server.
+ * A factory class that constructs an {@link org.apache.hadoop.hbase.ipc.RpcScheduler}.
  */
 public interface RpcSchedulerFactory {
 
   /**
    * Constructs a {@link org.apache.hadoop.hbase.ipc.RpcScheduler}.
-   *
-   * Please note that this method is called in constructor of {@link HRegionServer}, so some
-   * fields may not be ready for access. The reason that {@code HRegionServer} is passed as
-   * parameter here is that an RPC scheduler may need to access data structure inside
-   * {@code HRegionServer} (see example in {@link SimpleRpcSchedulerFactory}).
    */
-  RpcScheduler create(Configuration conf, RegionServerServices server);
+  RpcScheduler create(Configuration conf, PriorityFunction priority);
 }

@@ -36,8 +36,9 @@ import com.google.protobuf.Message;
 public class TestQosFunction {
   @Test
   public void testPriority() {
-    HRegionServer hrs = Mockito.mock(HRegionServer.class);
-    AnnotationReadingPriorityFunction qosFunction = new AnnotationReadingPriorityFunction(hrs);
+    RSRpcServices rpcServices = Mockito.mock(RSRpcServices.class);
+    AnnotationReadingPriorityFunction qosFunction =
+      new AnnotationReadingPriorityFunction(rpcServices);
 
     // Set method name in pb style with the method name capitalized.
     checkMethod("ReplicateWALEntry", HConstants.REPLICATION_QOS, qosFunction);

@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
@@ -277,7 +276,7 @@ public class TestMultiParallel {
       // after writing successfully. It means the server we aborted is dead
       // and detected by matser
       while (liveRS.getRegionServer().getNumberOfOnlineRegions() != 0) {
-        Thread.sleep(10);
+        Thread.sleep(100);
       }
       // try putting more keys after the abort. same key/qual... just validating
       // no exceptions thrown
@@ -302,17 +301,14 @@ public class TestMultiParallel {
     LOG.info("Count=" + count);
     Assert.assertEquals("Server count=" + count + ", abort=" + doAbort,
         (doAbort ? (liveRScount - 1) : liveRScount), count);
-    for (JVMClusterUtil.RegionServerThread t: liveRSs) {
-      int regions = ProtobufUtil.getOnlineRegions(t.getRegionServer()).size();
-      // Assert.assertTrue("Count of regions=" + regions, regions > 10);
-    }
     if (doAbort) {
       UTIL.getMiniHBaseCluster().waitOnRegionServer(0);
       UTIL.waitFor(15 * 1000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
+          // Master is also a regionserver, so the count is liveRScount
           return UTIL.getMiniHBaseCluster().getMaster()
-              .getClusterStatus().getServersSize() == (liveRScount - 1);
+              .getClusterStatus().getServersSize() == liveRScount;
         }
       });
       UTIL.waitFor(15 * 1000, UTIL.predicateNoRegionsInTransition());

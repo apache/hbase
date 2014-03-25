@@ -34,7 +34,16 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -42,10 +51,10 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -968,7 +977,7 @@ public class TestMasterObserver {
 
     HMaster master = cluster.getMaster();
     assertTrue("Master should be active", master.isActiveMaster());
-    MasterCoprocessorHost host = master.getCoprocessorHost();
+    MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     assertNotNull("CoprocessorHost should not be null", host);
     CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
         CPMasterObserver.class.getName());
@@ -987,7 +996,7 @@ public class TestMasterObserver {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
-    MasterCoprocessorHost host = master.getCoprocessorHost();
+    MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
         CPMasterObserver.class.getName());
     cp.enableBypass(true);
@@ -1147,7 +1156,7 @@ public class TestMasterObserver {
   public void testSnapshotOperations() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
-    MasterCoprocessorHost host = master.getCoprocessorHost();
+    MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
         CPMasterObserver.class.getName());
     cp.resetStates();
@@ -1204,7 +1213,7 @@ public class TestMasterObserver {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
     String testNamespace = "observed_ns";
     HMaster master = cluster.getMaster();
-    MasterCoprocessorHost host = master.getCoprocessorHost();
+    MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
         CPMasterObserver.class.getName());
 
@@ -1269,7 +1278,7 @@ public class TestMasterObserver {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
-    MasterCoprocessorHost host = master.getCoprocessorHost();
+    MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
         CPMasterObserver.class.getName());
     cp.enableBypass(false);
@@ -1308,8 +1317,8 @@ public class TestMasterObserver {
       }
       assertTrue("Found server", found);
       LOG.info("Found " + destName);
-      master.moveRegion(null,RequestConverter.buildMoveRegionRequest(
-        firstGoodPair.getKey().getEncodedNameAsBytes(),Bytes.toBytes(destName)));
+      master.getMasterRpcServices().moveRegion(null, RequestConverter.buildMoveRegionRequest(
+          firstGoodPair.getKey().getEncodedNameAsBytes(),Bytes.toBytes(destName)));
       assertTrue("Coprocessor should have been called on region move",
         cp.wasMoveCalled());
   
@@ -1334,13 +1343,13 @@ public class TestMasterObserver {
       byte[] destRS = Bytes.toBytes(cluster.getRegionServer(1).getServerName().toString());
       //Make sure no regions are in transition now
       waitForRITtoBeZero(master);
-      List<HRegionInfo> openRegions = ProtobufUtil.getOnlineRegions(rs);
+      List<HRegionInfo> openRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
       int moveCnt = openRegions.size()/2;
       for (int i=0; i<moveCnt; i++) {
         HRegionInfo info = openRegions.get(i);
         if (!info.isMetaTable()) {
-          master.moveRegion(null,RequestConverter.buildMoveRegionRequest(
-            openRegions.get(i).getEncodedNameAsBytes(), destRS));
+          master.getMasterRpcServices().moveRegion(null, RequestConverter.buildMoveRegionRequest(
+              openRegions.get(i).getEncodedNameAsBytes(), destRS));
         }
       }
       //Make sure no regions are in transition now
@@ -1370,14 +1379,14 @@ public class TestMasterObserver {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
-    MasterCoprocessorHost host = master.getCoprocessorHost();
+    MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
         CPMasterObserver.class.getName());
     cp.resetStates();
 
     GetTableDescriptorsRequest req =
         RequestConverter.buildGetTableDescriptorsRequest((List<TableName>)null);
-    master.getTableDescriptors(null, req);
+    master.getMasterRpcServices().getTableDescriptors(null, req);
 
     assertTrue("Coprocessor should be called on table descriptors request",
       cp.wasGetTableDescriptorsCalled());

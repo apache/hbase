@@ -160,7 +160,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
-    MasterCoprocessorHost host = master.getCoprocessorHost();
+    MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     BuggyMasterObserver cp = (BuggyMasterObserver)host.findCoprocessor(
         BuggyMasterObserver.class.getName());
     assertFalse("No table created yet", cp.wasCreateTableCalled());

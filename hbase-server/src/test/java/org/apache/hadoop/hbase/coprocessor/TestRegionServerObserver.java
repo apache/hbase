@@ -31,17 +31,13 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionMergeTransaction;
@@ -82,7 +78,7 @@ public class TestRegionServerObserver {
     try {
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       HRegionServer regionServer = cluster.getRegionServer(0);
-      RegionServerCoprocessorHost cpHost = regionServer.getCoprocessorHost();
+      RegionServerCoprocessorHost cpHost = regionServer.getRegionServerCoprocessorHost();
       Coprocessor coprocessor = cpHost.findCoprocessor(CPRegionServerObserver.class.getName());
       CPRegionServerObserver regionServerObserver = (CPRegionServerObserver) coprocessor;
       HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(TABLENAME));
@@ -115,17 +111,12 @@ public class TestRegionServerObserver {
     private RegionMergeTransaction rmt = null;
     private HRegion mergedRegion = null;
 
-    private boolean bypass = false;
     private boolean preMergeCalled;
     private boolean preMergeBeforePONRCalled;
     private boolean preMergeAfterPONRCalled;
     private boolean preRollBackMergeCalled;
     private boolean postRollBackMergeCalled;
     private boolean postMergeCalled;
-
-    public void enableBypass(boolean bypass) {
-      this.bypass = bypass;
-    }
 
     public void resetStates() {
       preMergeCalled = false;

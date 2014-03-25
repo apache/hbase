@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,7 +47,6 @@ import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
-import org.htrace.Trace;
 
 /**
  * Handler to run enable of a table.
@@ -139,7 +137,7 @@ public class EnableTableHandler extends EventHandler {
     try {
       LOG.info("Attempting to enable the table " + this.tableName);
       MasterCoprocessorHost cpHost = ((HMaster) this.server)
-          .getCoprocessorHost();
+          .getMasterCoprocessorHost();
       if (cpHost != null) {
         cpHost.preEnableTableHandler(this.tableName);
       }

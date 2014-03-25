@@ -56,7 +56,7 @@ public class TableModifyFamilyHandler extends TableEventHandler {
   @Override
   protected void handleTableOperation(List<HRegionInfo> regions) throws IOException {
     MasterCoprocessorHost cpHost = ((HMaster) this.server)
-        .getCoprocessorHost();
+        .getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preModifyColumnHandler(this.tableName, this.familyDesc);
     }

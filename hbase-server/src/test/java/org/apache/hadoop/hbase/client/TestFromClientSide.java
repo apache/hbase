@@ -4158,7 +4158,7 @@ public class TestFromClientSide {
     // HBaseAdmin and can connect to the new master;
     HBaseAdmin newAdmin = new HBaseAdmin(conn);
     assertTrue(newAdmin.tableExists(tableName));
-    assert(newAdmin.getClusterStatus().getServersSize() == SLAVES);
+    assertTrue(newAdmin.getClusterStatus().getServersSize() == SLAVES + 1);
   }
 
   @Test

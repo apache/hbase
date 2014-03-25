@@ -61,7 +61,7 @@ public class TableAddFamilyHandler extends TableEventHandler {
   protected void handleTableOperation(List<HRegionInfo> hris)
   throws IOException {
     MasterCoprocessorHost cpHost = ((HMaster) this.server)
-        .getCoprocessorHost();
+        .getMasterCoprocessorHost();
     if(cpHost != null){
       cpHost.preAddColumnHandler(this.tableName, this.familyDesc);
     }

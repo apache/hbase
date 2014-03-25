@@ -64,7 +64,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
       final HRegionServer regionServer = cluster.getRegionServer(0);
       conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         FailedInitializationObserver.class.getName());
-      regionServer.getCoprocessorHost().loadSystemCoprocessors(conf,
+      regionServer.getRegionServerCoprocessorHost().loadSystemCoprocessors(conf,
         CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
       TEST_UTIL.waitFor(10000, 1000, new Predicate<Exception>() {
         @Override
@@ -98,20 +98,16 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
       // Note which regionServer will abort (after put is attempted).
       final HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
 
-      boolean threwIOE = false;
       try {
         final byte[] ROW = Bytes.toBytes("aaa");
         Put put = new Put(ROW);
         put.add(TEST_FAMILY, ROW, ROW);
         table.put(put);
         table.flushCommits();
-        // We may need two puts to reliably get an exception
-        table.put(put);
-        table.flushCommits();
       } catch (IOException e) {
-        threwIOE = true;
-      } finally {
-        assertTrue("The regionserver should have thrown an exception", threwIOE);
+        // The region server is going to be aborted.
+        // We may get an exception if we retry,
+        // which is not guaranteed.
       }
 
       // Wait 10 seconds for the regionserver to abort: expected result is that

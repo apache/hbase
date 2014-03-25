@@ -32,25 +32,12 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.ipc.RpcServerInterface;
-import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 
 /**
  * Connection to an HTable from within a Coprocessor. We can do some nice tricks since we know we
@@ -106,28 +93,7 @@ public class CoprocessorHConnection implements ClusterConnection {
     }
     // the client is attempting to write to the same regionserver, we can short-circuit to our
     // local regionserver
-    final BlockingService blocking = ClientService.newReflectiveBlockingService(this.server);
-    final RpcServerInterface rpc = this.server.getRpcServer();
-
-    final MonitoredRPCHandler status =
-        TaskMonitor.get().createRPCStatus(Thread.currentThread().getName());
-    status.pause("Setting up server-local call");
-
-    final long timestamp = EnvironmentEdgeManager.currentTimeMillis();
-    BlockingRpcChannel channel = new BlockingRpcChannel() {
-
-      @Override
-      public Message callBlockingMethod(MethodDescriptor method, RpcController controller,
-          Message request, Message responsePrototype) throws ServiceException {
-        try {
-          // we never need a cell-scanner - everything is already fully formed
-          return rpc.call(blocking, method, request, null, timestamp, status).getFirst();
-        } catch (IOException e) {
-          throw new ServiceException(e);
-        }
-      }
-    };
-    return ClientService.newBlockingStub(channel);
+    return server.getRSRpcServices();
   }
 
   public void abort(String why, Throwable e) {

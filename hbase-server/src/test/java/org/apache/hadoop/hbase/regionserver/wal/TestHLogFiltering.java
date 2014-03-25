@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
@@ -26,11 +26,9 @@ import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -51,8 +49,6 @@ import com.google.protobuf.ServiceException;
 
 @Category(MediumTests.class)
 public class TestHLogFiltering {
-  private static final Log LOG = LogFactory.getLog(TestHLogFiltering.class);
-
   private static final int NUM_MASTERS = 1;
   private static final int NUM_RS = 4;
 
@@ -124,7 +120,8 @@ public class TestHLogFiltering {
             RequestConverter.buildGetLastFlushedSequenceIdRequest(regionName);
 
           assertEquals((long)allFlushedSequenceIds.get(regionName),
-              master.getLastFlushedSequenceId(null, req).getLastFlushedSequenceId());
+            master.getMasterRpcServices().getLastFlushedSequenceId(
+              null, req).getLastFlushedSequenceId());
         }
       }
     }
@@ -149,7 +146,7 @@ public class TestHLogFiltering {
     for (byte[] regionName : getRegionsByServer(rsId)) {
       FlushRegionRequest request =
         RequestConverter.buildFlushRegionRequest(regionName);
-      hrs.flushRegion(null, request);
+      hrs.getRSRpcServices().flushRegion(null, request);
     }
   }
 

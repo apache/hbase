@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -58,11 +59,25 @@ public class Action {
 
   public void perform() throws Exception { }
 
-  /** Returns current region servers */
+  /** Returns current region servers - active master */
   protected ServerName[] getCurrentServers() throws IOException {
-    Collection<ServerName> regionServers = cluster.getClusterStatus().getServers();
-    if (regionServers == null || regionServers.size() <= 0) return new ServerName [] {};
-    return regionServers.toArray(new ServerName[regionServers.size()]);
+    ClusterStatus clusterStatus = cluster.getClusterStatus();
+    Collection<ServerName> regionServers = clusterStatus.getServers();
+    int count = regionServers == null ? 0 : regionServers.size();
+    if (count <= 0) {
+      return new ServerName [] {};
+    }
+    ServerName master = clusterStatus.getMaster();
+    if (master == null || !regionServers.contains(master)) {
+      return regionServers.toArray(new ServerName[count]);
+    }
+    if (count == 1) {
+      return new ServerName [] {};
+    }
+    ArrayList<ServerName> tmp = new ArrayList<ServerName>(count);
+    tmp.addAll(regionServers);
+    tmp.remove(master);
+    return tmp.toArray(new ServerName[count-1]);
   }
 
   protected void killMaster(ServerName server) throws IOException {

@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -47,8 +45,6 @@ import org.junit.experimental.categories.Category;
  */
 @Category(LargeTests.class)
 public class TestRSKilledWhenInitializing {
-  private static final Log LOG = LogFactory.getLog(TestRSKilledWhenInitializing.class);
-
   private static boolean masterActive = false;
   private static AtomicBoolean firstRS = new AtomicBoolean(true);
 
@@ -77,7 +73,7 @@ public class TestRSKilledWhenInitializing {
     master.start();
     try {
       long startTime = System.currentTimeMillis();
-      while (!master.getMaster().isActiveMaster()) {
+      while (!master.getMaster().isInitialized()) {
         try {
           Thread.sleep(100);
         } catch (InterruptedException ignored) {
@@ -92,11 +88,11 @@ public class TestRSKilledWhenInitializing {
       Thread.sleep(10000);
       List<ServerName> onlineServersList =
           master.getMaster().getServerManager().getOnlineServersList();
-      while (onlineServersList.size() != 1) {
+      while (onlineServersList.size() > 2) {
         Thread.sleep(100);
         onlineServersList = master.getMaster().getServerManager().getOnlineServersList();
       }
-      assertEquals(onlineServersList.size(), 1);
+      assertEquals(onlineServersList.size(), 2);
       cluster.shutdown();
     } finally {
       masterActive = false;

@@ -586,7 +586,7 @@ public class TestRegionObserverInterface {
         if (!t.isAlive() || t.getRegionServer().isAborted() || t.getRegionServer().isStopping()){
           continue;
         }
-        for (HRegionInfo r : ProtobufUtil.getOnlineRegions(t.getRegionServer())) {
+        for (HRegionInfo r : ProtobufUtil.getOnlineRegions(t.getRegionServer().getRSRpcServices())) {
           if (!r.getTable().equals(tableName)) {
             continue;
           }

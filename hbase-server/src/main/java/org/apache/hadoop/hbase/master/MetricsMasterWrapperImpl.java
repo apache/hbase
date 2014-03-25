@@ -46,7 +46,7 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public String getZookeeperQuorum() {
-    ZooKeeperWatcher zk = master.getZooKeeperWatcher();
+    ZooKeeperWatcher zk = master.getZooKeeper();
     if (zk == null) {
       return "";
     }
@@ -55,7 +55,7 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public String[] getCoprocessors() {
-    return master.getCoprocessors();
+    return master.getMasterCoprocessors();
   }
 
   @Override
