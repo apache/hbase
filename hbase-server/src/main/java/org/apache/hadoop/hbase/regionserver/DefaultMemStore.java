@@ -40,11 +40,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.MemStoreLAB.Allocation;
+import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * The MemStore holds in-memory modifications to the Store.  Modifications
@@ -65,10 +66,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.Private
 public class DefaultMemStore implements MemStore {
   private static final Log LOG = LogFactory.getLog(DefaultMemStore.class);
-
-  static final String USEMSLAB_KEY =
-    "hbase.hregion.memstore.mslab.enabled";
+  static final String USEMSLAB_KEY = "hbase.hregion.memstore.mslab.enabled";
   private static final boolean USEMSLAB_DEFAULT = true;
+  static final String MSLAB_CLASS_NAME = "hbase.regionserver.mslab.class";
 
   private Configuration conf;
 
@@ -94,7 +94,6 @@ public class DefaultMemStore implements MemStore {
   TimeRangeTracker timeRangeTracker;
   TimeRangeTracker snapshotTimeRangeTracker;
 
-  MemStoreChunkPool chunkPool;
   volatile MemStoreLAB allocator;
   volatile MemStoreLAB snapshotAllocator;
   volatile long snapshotId;
@@ -121,11 +120,11 @@ public class DefaultMemStore implements MemStore {
     this.size = new AtomicLong(DEEP_OVERHEAD);
     this.snapshotSize = 0;
     if (conf.getBoolean(USEMSLAB_KEY, USEMSLAB_DEFAULT)) {
-      this.chunkPool = MemStoreChunkPool.getPool(conf);
-      this.allocator = new MemStoreLAB(conf, chunkPool);
+      String className = conf.get(MSLAB_CLASS_NAME, HeapMemStoreLAB.class.getName());
+      this.allocator = ReflectionUtils.instantiateWithCustomCtor(className,
+          new Class[] { Configuration.class }, new Object[] { conf });
     } else {
       this.allocator = null;
-      this.chunkPool = null;
     }
   }
 
@@ -162,7 +161,9 @@ public class DefaultMemStore implements MemStore {
         this.snapshotAllocator = this.allocator;
         // Reset allocator so we get a fresh buffer for the new memstore
         if (allocator != null) {
-          this.allocator = new MemStoreLAB(conf, chunkPool);
+          String className = conf.get(MSLAB_CLASS_NAME, HeapMemStoreLAB.class.getName());
+          this.allocator = ReflectionUtils.instantiateWithCustomCtor(className,
+              new Class[] { Configuration.class }, new Object[] { conf });
         }
         timeOfOldestEdit = Long.MAX_VALUE;
       }
@@ -258,15 +259,15 @@ public class DefaultMemStore implements MemStore {
     }
 
     int len = kv.getLength();
-    Allocation alloc = allocator.allocateBytes(len);
+    ByteRange alloc = allocator.allocateBytes(len);
     if (alloc == null) {
       // The allocation was too large, allocator decided
       // not to do anything with it.
       return kv;
     }
-    assert alloc.getData() != null;
-    System.arraycopy(kv.getBuffer(), kv.getOffset(), alloc.getData(), alloc.getOffset(), len);
-    KeyValue newKv = new KeyValue(alloc.getData(), alloc.getOffset(), len);
+    assert alloc.getBytes() != null;
+    alloc.put(0, kv.getBuffer(), kv.getOffset(), len);
+    KeyValue newKv = new KeyValue(alloc.getBytes(), alloc.getOffset(), len);
     newKv.setMvccVersion(kv.getMvccVersion());
     return newKv;
   }
@@ -987,7 +988,7 @@ public class DefaultMemStore implements MemStore {
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (10 * ClassSize.REFERENCE) + (3 * Bytes.SIZEOF_LONG));
+      ClassSize.OBJECT + (9 * ClassSize.REFERENCE) + (3 * Bytes.SIZEOF_LONG));
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.ATOMIC_LONG + (2 * ClassSize.TIMERANGE_TRACKER) +

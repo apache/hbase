@@ -30,13 +30,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.regionserver.MemStoreLAB.Chunk;
+import org.apache.hadoop.hbase.regionserver.HeapMemStoreLAB.Chunk;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * A pool of {@link MemStoreLAB$Chunk} instances.
+ * A pool of {@link HeapMemStoreLAB$Chunk} instances.
  * 
  * MemStoreChunkPool caches a number of retired chunks for reusing, it could
  * decrease allocating bytes when writing, thereby optimizing the garbage
@@ -177,42 +177,39 @@ public class MemStoreChunkPool {
    * @param conf
    * @return the global MemStoreChunkPool instance
    */
-  static synchronized MemStoreChunkPool getPool(Configuration conf) {
+  static MemStoreChunkPool getPool(Configuration conf) {
     if (globalInstance != null) return globalInstance;
     if (chunkPoolDisabled) return null;
 
+    synchronized (MemStoreChunkPool.class) {
+      if (globalInstance != null) return globalInstance;
+      float poolSizePercentage = conf.getFloat(CHUNK_POOL_MAXSIZE_KEY, POOL_MAX_SIZE_DEFAULT);
+      if (poolSizePercentage <= 0) {
+        chunkPoolDisabled = true;
+        return null;
+      }
+      if (poolSizePercentage > 1.0) {
+        throw new IllegalArgumentException(CHUNK_POOL_MAXSIZE_KEY + " must be between 0.0 and 1.0");
+      }
+      long heapMax = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
+      long globalMemStoreLimit = (long) (heapMax * MemStoreFlusher.getGlobalMemStorePercent(conf));
+      int chunkSize = conf.getInt(HeapMemStoreLAB.CHUNK_SIZE_KEY,
+          HeapMemStoreLAB.CHUNK_SIZE_DEFAULT);
+      int maxCount = (int) (globalMemStoreLimit * poolSizePercentage / chunkSize);
 
-    float poolSizePercentage = conf.getFloat(CHUNK_POOL_MAXSIZE_KEY,
-        POOL_MAX_SIZE_DEFAULT);
-    if (poolSizePercentage <= 0) {
-      chunkPoolDisabled = true;
-      return null;
-    }
-    if (poolSizePercentage > 1.0) {
-      throw new IllegalArgumentException(CHUNK_POOL_MAXSIZE_KEY
-          + " must be between 0.0 and 1.0");
-    }
-    long heapMax = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
-        .getMax();
-    long globalMemStoreLimit = (long) (heapMax * MemStoreFlusher.getGlobalMemStorePercent(conf));
-    int chunkSize = conf.getInt(MemStoreLAB.CHUNK_SIZE_KEY,
-        MemStoreLAB.CHUNK_SIZE_DEFAULT);
-    int maxCount = (int) (globalMemStoreLimit * poolSizePercentage / chunkSize);
+      float initialCountPercentage = conf.getFloat(CHUNK_POOL_INITIALSIZE_KEY,
+          POOL_INITIAL_SIZE_DEFAULT);
+      if (initialCountPercentage > 1.0 || initialCountPercentage < 0) {
+        throw new IllegalArgumentException(CHUNK_POOL_INITIALSIZE_KEY
+            + " must be between 0.0 and 1.0");
+      }
 
-    float initialCountPercentage = conf.getFloat(CHUNK_POOL_INITIALSIZE_KEY,
-        POOL_INITIAL_SIZE_DEFAULT);
-    if (initialCountPercentage > 1.0 || initialCountPercentage < 0) {
-      throw new IllegalArgumentException(CHUNK_POOL_INITIALSIZE_KEY
-          + " must be between 0.0 and 1.0");
+      int initialCount = (int) (initialCountPercentage * maxCount);
+      LOG.info("Allocating MemStoreChunkPool with chunk size " + StringUtils.byteDesc(chunkSize)
+          + ", max count " + maxCount + ", initial count " + initialCount);
+      globalInstance = new MemStoreChunkPool(conf, chunkSize, maxCount, initialCount);
+      return globalInstance;
     }
-
-    int initialCount = (int) (initialCountPercentage * maxCount);
-    LOG.info("Allocating MemStoreChunkPool with chunk size "
-        + StringUtils.byteDesc(chunkSize) + ", max count " + maxCount
-        + ", initial count " + initialCount);
-    globalInstance = new MemStoreChunkPool(conf, chunkSize, maxCount,
-        initialCount);
-    return globalInstance;
   }
 
 }

@@ -28,7 +28,7 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.regionserver.MemStoreLAB.Allocation;
+import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -68,21 +68,21 @@ public class TestMemStoreChunkPool {
   @Test
   public void testReusingChunks() {
     Random rand = new Random();
-    MemStoreLAB mslab = new MemStoreLAB(conf, chunkPool);
+    MemStoreLAB mslab = new HeapMemStoreLAB(conf);
     int expectedOff = 0;
     byte[] lastBuffer = null;
     // Randomly allocate some bytes
     for (int i = 0; i < 100; i++) {
       int size = rand.nextInt(1000);
-      Allocation alloc = mslab.allocateBytes(size);
+      ByteRange alloc = mslab.allocateBytes(size);
 
-      if (alloc.getData() != lastBuffer) {
+      if (alloc.getBytes() != lastBuffer) {
         expectedOff = 0;
-        lastBuffer = alloc.getData();
+        lastBuffer = alloc.getBytes();
       }
       assertEquals(expectedOff, alloc.getOffset());
-      assertTrue("Allocation " + alloc + " overruns buffer", alloc.getOffset()
-          + size <= alloc.getData().length);
+      assertTrue("Allocation overruns buffer", alloc.getOffset()
+          + size <= alloc.getBytes().length);
       expectedOff += size;
     }
     // chunks will be put back to pool after close
@@ -90,7 +90,7 @@ public class TestMemStoreChunkPool {
     int chunkCount = chunkPool.getPoolSize();
     assertTrue(chunkCount > 0);
     // reconstruct mslab
-    mslab = new MemStoreLAB(conf, chunkPool);
+    mslab = new HeapMemStoreLAB(conf);
     // chunk should be got from the pool, so we can reuse it.
     mslab.allocateBytes(1000);
     assertEquals(chunkCount - 1, chunkPool.getPoolSize());

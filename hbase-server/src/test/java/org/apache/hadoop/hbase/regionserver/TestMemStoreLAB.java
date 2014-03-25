@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.regionserver.MemStoreLAB.Allocation;
+import org.apache.hadoop.hbase.util.ByteRange;
 import org.junit.Test;
 
 import com.google.common.collect.Iterables;
@@ -47,7 +47,7 @@ public class TestMemStoreLAB {
   @Test
   public void testLABRandomAllocation() {
     Random rand = new Random();
-    MemStoreLAB mslab = new MemStoreLAB();
+    MemStoreLAB mslab = new HeapMemStoreLAB();
     int expectedOff = 0;
     byte[] lastBuffer = null;
     // 100K iterations by 0-1K alloc -> 50MB expected
@@ -55,23 +55,23 @@ public class TestMemStoreLAB {
     // behavior
     for (int i = 0; i < 100000; i++) {
       int size = rand.nextInt(1000);
-      Allocation alloc = mslab.allocateBytes(size);
+      ByteRange alloc = mslab.allocateBytes(size);
       
-      if (alloc.getData() != lastBuffer) {
+      if (alloc.getBytes() != lastBuffer) {
         expectedOff = 0;
-        lastBuffer = alloc.getData();
+        lastBuffer = alloc.getBytes();
       }
       assertEquals(expectedOff, alloc.getOffset());
-      assertTrue("Allocation " + alloc + " overruns buffer",
-          alloc.getOffset() + size <= alloc.getData().length);
+      assertTrue("Allocation overruns buffer",
+          alloc.getOffset() + size <= alloc.getBytes().length);
       expectedOff += size;
     }
   }
 
   @Test
   public void testLABLargeAllocation() {
-    MemStoreLAB mslab = new MemStoreLAB();
-    Allocation alloc = mslab.allocateBytes(2*1024*1024);
+    MemStoreLAB mslab = new HeapMemStoreLAB();
+    ByteRange alloc = mslab.allocateBytes(2*1024*1024);
     assertNull("2MB allocation shouldn't be satisfied by LAB.",
       alloc);
   } 
@@ -88,7 +88,7 @@ public class TestMemStoreLAB {
     
     final AtomicInteger totalAllocated = new AtomicInteger();
     
-    final MemStoreLAB mslab = new MemStoreLAB();
+    final MemStoreLAB mslab = new HeapMemStoreLAB();
     List<List<AllocRecord>> allocations = Lists.newArrayList();
     
     for (int i = 0; i < 10; i++) {
@@ -100,7 +100,7 @@ public class TestMemStoreLAB {
         @Override
         public void doAnAction() throws Exception {
           int size = r.nextInt(1000);
-          Allocation alloc = mslab.allocateBytes(size);
+          ByteRange alloc = mslab.allocateBytes(size);
           totalAllocated.addAndGet(size);
           allocsByThisThread.add(new AllocRecord(alloc, size));
         }
@@ -125,10 +125,10 @@ public class TestMemStoreLAB {
       if (rec.size == 0) continue;
       
       Map<Integer, AllocRecord> mapForThisByteArray =
-        mapsByChunk.get(rec.alloc.getData());
+        mapsByChunk.get(rec.alloc.getBytes());
       if (mapForThisByteArray == null) {
         mapForThisByteArray = Maps.newTreeMap();
-        mapsByChunk.put(rec.alloc.getData(), mapForThisByteArray);
+        mapsByChunk.put(rec.alloc.getBytes(), mapForThisByteArray);
       }
       AllocRecord oldVal = mapForThisByteArray.put(rec.alloc.getOffset(), rec);
       assertNull("Already had an entry " + oldVal + " for allocation " + rec,
@@ -141,8 +141,8 @@ public class TestMemStoreLAB {
       int expectedOff = 0;
       for (AllocRecord alloc : allocsInChunk.values()) {
         assertEquals(expectedOff, alloc.alloc.getOffset());
-        assertTrue("Allocation " + alloc + " overruns buffer",
-            alloc.alloc.getOffset() + alloc.size <= alloc.alloc.getData().length);
+        assertTrue("Allocation overruns buffer",
+            alloc.alloc.getOffset() + alloc.size <= alloc.alloc.getBytes().length);
         expectedOff += alloc.size;
       }
     }
@@ -150,9 +150,9 @@ public class TestMemStoreLAB {
   }
   
   private static class AllocRecord implements Comparable<AllocRecord>{
-    private final Allocation alloc;
+    private final ByteRange alloc;
     private final int size;
-    public AllocRecord(Allocation alloc, int size) {
+    public AllocRecord(ByteRange alloc, int size) {
       super();
       this.alloc = alloc;
       this.size = size;
@@ -160,7 +160,7 @@ public class TestMemStoreLAB {
 
     @Override
     public int compareTo(AllocRecord e) {
-      if (alloc.getData() != e.alloc.getData()) {
+      if (alloc.getBytes() != e.alloc.getBytes()) {
         throw new RuntimeException("Can only compare within a particular array");
       }
       return Ints.compare(alloc.getOffset(), e.alloc.getOffset());
@@ -168,7 +168,7 @@ public class TestMemStoreLAB {
     
     @Override
     public String toString() {
-      return "AllocRecord(alloc=" + alloc + ", size=" + size + ")";
+      return "AllocRecord(offset=" + alloc.getOffset() + ", size=" + size + ")";
     }
     
   }
