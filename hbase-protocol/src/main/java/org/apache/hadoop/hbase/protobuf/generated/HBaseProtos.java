@@ -13401,6 +13401,448 @@ public final class HBaseProtos {
     // @@protoc_insertion_point(class_scope:LongMsg)
   }
 
+  public interface DoubleMsgOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required double double_msg = 1;
+    /**
+     * <code>required double double_msg = 1;</code>
+     */
+    boolean hasDoubleMsg();
+    /**
+     * <code>required double double_msg = 1;</code>
+     */
+    double getDoubleMsg();
+  }
+  /**
+   * Protobuf type {@code DoubleMsg}
+   */
+  public static final class DoubleMsg extends
+      com.google.protobuf.GeneratedMessage
+      implements DoubleMsgOrBuilder {
+    // Use DoubleMsg.newBuilder() to construct.
+    private DoubleMsg(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private DoubleMsg(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final DoubleMsg defaultInstance;
+    public static DoubleMsg getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public DoubleMsg getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private DoubleMsg(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 9: {
+              bitField0_ |= 0x00000001;
+              doubleMsg_ = input.readDouble();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_DoubleMsg_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_DoubleMsg_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<DoubleMsg> PARSER =
+        new com.google.protobuf.AbstractParser<DoubleMsg>() {
+      public DoubleMsg parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new DoubleMsg(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<DoubleMsg> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required double double_msg = 1;
+    public static final int DOUBLE_MSG_FIELD_NUMBER = 1;
+    private double doubleMsg_;
+    /**
+     * <code>required double double_msg = 1;</code>
+     */
+    public boolean hasDoubleMsg() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required double double_msg = 1;</code>
+     */
+    public double getDoubleMsg() {
+      return doubleMsg_;
+    }
+
+    private void initFields() {
+      doubleMsg_ = 0D;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasDoubleMsg()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeDouble(1, doubleMsg_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeDoubleSize(1, doubleMsg_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg other = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg) obj;
+
+      boolean result = true;
+      result = result && (hasDoubleMsg() == other.hasDoubleMsg());
+      if (hasDoubleMsg()) {
+        result = result && (Double.doubleToLongBits(getDoubleMsg())    == Double.doubleToLongBits(other.getDoubleMsg()));
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasDoubleMsg()) {
+        hash = (37 * hash) + DOUBLE_MSG_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(
+            Double.doubleToLongBits(getDoubleMsg()));
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code DoubleMsg}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsgOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_DoubleMsg_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_DoubleMsg_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        doubleMsg_ = 0D;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_DoubleMsg_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg build() {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg result = new org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.doubleMsg_ = doubleMsg_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg.getDefaultInstance()) return this;
+        if (other.hasDoubleMsg()) {
+          setDoubleMsg(other.getDoubleMsg());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasDoubleMsg()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required double double_msg = 1;
+      private double doubleMsg_ ;
+      /**
+       * <code>required double double_msg = 1;</code>
+       */
+      public boolean hasDoubleMsg() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required double double_msg = 1;</code>
+       */
+      public double getDoubleMsg() {
+        return doubleMsg_;
+      }
+      /**
+       * <code>required double double_msg = 1;</code>
+       */
+      public Builder setDoubleMsg(double value) {
+        bitField0_ |= 0x00000001;
+        doubleMsg_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required double double_msg = 1;</code>
+       */
+      public Builder clearDoubleMsg() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        doubleMsg_ = 0D;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:DoubleMsg)
+    }
+
+    static {
+      defaultInstance = new DoubleMsg(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:DoubleMsg)
+  }
+
   public interface BigDecimalMsgOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -15741,6 +16183,11 @@ public final class HBaseProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_LongMsg_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_DoubleMsg_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_DoubleMsg_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_BigDecimalMsg_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -15803,16 +16250,17 @@ public final class HBaseProtos {
       "\022\020\n\010instance\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(" +
       "\003:\0010\022&\n\rconfiguration\030\004 \003(\0132\017.NameString" +
       "Pair\"\n\n\010EmptyMsg\"\033\n\007LongMsg\022\020\n\010long_msg\030" +
-      "\001 \002(\003\"\'\n\rBigDecimalMsg\022\026\n\016bigdecimal_msg" +
-      "\030\001 \002(\014\"5\n\004UUID\022\026\n\016least_sig_bits\030\001 \002(\004\022\025" +
-      "\n\rmost_sig_bits\030\002 \002(\004\"K\n\023NamespaceDescri" +
-      "ptor\022\014\n\004name\030\001 \002(\014\022&\n\rconfiguration\030\002 \003(" +
-      "\0132\017.NameStringPair\"$\n\020RegionServerInfo\022\020" +
-      "\n\010infoPort\030\001 \001(\005*r\n\013CompareType\022\010\n\004LESS\020",
-      "\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_E" +
-      "QUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER\020" +
-      "\005\022\t\n\005NO_OP\020\006B>\n*org.apache.hadoop.hbase." +
-      "protobuf.generatedB\013HBaseProtosH\001\240\001\001"
+      "\001 \002(\003\"\037\n\tDoubleMsg\022\022\n\ndouble_msg\030\001 \002(\001\"\'" +
+      "\n\rBigDecimalMsg\022\026\n\016bigdecimal_msg\030\001 \002(\014\"" +
+      "5\n\004UUID\022\026\n\016least_sig_bits\030\001 \002(\004\022\025\n\rmost_" +
+      "sig_bits\030\002 \002(\004\"K\n\023NamespaceDescriptor\022\014\n" +
+      "\004name\030\001 \002(\014\022&\n\rconfiguration\030\002 \003(\0132\017.Nam" +
+      "eStringPair\"$\n\020RegionServerInfo\022\020\n\010infoP",
+      "ort\030\001 \001(\005*r\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLE" +
+      "SS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022" +
+      "\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO" +
+      "_OP\020\006B>\n*org.apache.hadoop.hbase.protobu" +
+      "f.generatedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -15921,26 +16369,32 @@ public final class HBaseProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_LongMsg_descriptor,
               new java.lang.String[] { "LongMsg", });
-          internal_static_BigDecimalMsg_descriptor =
+          internal_static_DoubleMsg_descriptor =
             getDescriptor().getMessageTypes().get(17);
+          internal_static_DoubleMsg_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_DoubleMsg_descriptor,
+              new java.lang.String[] { "DoubleMsg", });
+          internal_static_BigDecimalMsg_descriptor =
+            getDescriptor().getMessageTypes().get(18);
           internal_static_BigDecimalMsg_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_BigDecimalMsg_descriptor,
               new java.lang.String[] { "BigdecimalMsg", });
           internal_static_UUID_descriptor =
-            getDescriptor().getMessageTypes().get(18);
+            getDescriptor().getMessageTypes().get(19);
           internal_static_UUID_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_UUID_descriptor,
               new java.lang.String[] { "LeastSigBits", "MostSigBits", });
           internal_static_NamespaceDescriptor_descriptor =
-            getDescriptor().getMessageTypes().get(19);
+            getDescriptor().getMessageTypes().get(20);
           internal_static_NamespaceDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_NamespaceDescriptor_descriptor,
               new java.lang.String[] { "Name", "Configuration", });
           internal_static_RegionServerInfo_descriptor =
-            getDescriptor().getMessageTypes().get(20);
+            getDescriptor().getMessageTypes().get(21);
           internal_static_RegionServerInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionServerInfo_descriptor,
