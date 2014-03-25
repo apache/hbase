@@ -60,7 +60,6 @@ public abstract class ColumnInterpreter<T, S, P extends Message,
 Q extends Message, R extends Message> {
 
   /**
-   * TODO: when removing {@link #getValue(byte[], byte[], KeyValue)}, this method should be made abstract
    * 
    * @param colFamily
    * @param colQualifier
@@ -68,24 +67,8 @@ Q extends Message, R extends Message> {
    * @return value of type T
    * @throws IOException
    */
-  public T getValue(byte[] colFamily, byte[] colQualifier, Cell c)
-      throws IOException {
-    // call the deprecated method for compatiblity.
-    KeyValue kv = KeyValueUtil.ensureKeyValue(c);
-    return getValue(colFamily, colQualifier, kv);
-  }
-
-  /**
-   * This method used to be abstract, and is preserved for compatibility and easy of conversion
-   * from 0.94->0.96.
-   *
-   * Please override {@link #getValue(byte[], byte[], Cell)} instead.
-   */
-  @Deprecated
-  public T getValue(byte[] colFamily, byte[] colQualifier, KeyValue kv)
-      throws IOException {
-    return null;
-  }
+  public abstract T getValue(byte[] colFamily, byte[] colQualifier, Cell c)
+      throws IOException;
 
   /**
    * @param l1
