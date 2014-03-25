@@ -179,7 +179,10 @@ message EmptyMsg {
 
 message LongMsg {
   required int64 long_msg = 1;
+}
 
+message DoubleMsg {
+  required double double_msg = 1;
 }
 
 message BigDecimalMsg {
