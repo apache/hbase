@@ -3076,7 +3076,8 @@ public class HRegion implements HeapSize { // , Writable{
       }
 
       try {
-        seqid = replayRecoveredEdits(edits, maxSeqIdInStores, reporter);
+        // replay the edits. Replay can return -1 if everything is skipped, only update if seqId is greater
+        seqid = Math.max(seqid, replayRecoveredEdits(edits, maxSeqIdInStores, reporter));
       } catch (IOException e) {
         boolean skipErrors = conf.getBoolean(
             HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS,
@@ -3203,6 +3204,7 @@ public class HRegion implements HeapSize { // , Writable{
           if (firstSeqIdInLog == -1) {
             firstSeqIdInLog = key.getLogSeqNum();
           }
+          currentEditSeqId = key.getLogSeqNum();
           boolean flush = false;
           for (KeyValue kv: val.getKeyValues()) {
             // Check this edit is for me. Also, guard against writing the special
@@ -3237,7 +3239,6 @@ public class HRegion implements HeapSize { // , Writable{
               skippedEdits++;
               continue;
             }
-            currentEditSeqId = key.getLogSeqNum();
             // Once we are over the limit, restoreEdit will keep returning true to
             // flush -- but don't flush until we've played all the kvs that make up
             // the WALEdit.
