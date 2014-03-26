@@ -39,14 +39,14 @@
            </inlinemediaobject>
        </link>
     </subtitle>
-    <copyright><year>2013</year><holder>Apache Software Foundation.
+    <copyright><year>2014</year><holder>Apache Software Foundation.
         All Rights Reserved.  Apache Hadoop, Hadoop, MapReduce, HDFS, Zookeeper, HBase, and the HBase project logo are trademarks of the Apache Software Foundation.
         </holder>
     </copyright>
       <abstract>
     <para>This is the official reference guide of
     <link xlink:href="http://www.hbase.org">Apache HBase&#153;</link>,
-    a distributed, versioned, column-oriented database built on top of
+    a distributed, versioned, big data store built on top of
     <link xlink:href="http://hadoop.apache.org/">Apache Hadoop&#153;</link> and
     <link xlink:href="http://zookeeper.apache.org/">Apache ZooKeeper&#153;</link>.
       </para>
@@ -216,8 +216,8 @@ create_namespace 'my_ns'
 #create my_table in my_ns namespace
 create 'my_ns:my_table', 'fam'
 
-#delete namespace
-delete_namespace 'my_ns'
+#drop namespace
+drop_namespace 'my_ns'
 
 #alter namespace
 alter_namespace 'my_ns', {METHOD => 'set', 'PROPERTY_NAME' => 'PROPERTY_VALUE'}
@@ -1112,7 +1112,7 @@ if (!b) {
       <section xml:id="arch.overview.hbasehdfs">
         <title>What Is The Difference Between HBase and Hadoop/HDFS?</title>
           <para><link xlink:href="http://hadoop.apache.org/hdfs/">HDFS</link> is a distributed file system that is well suited for the storage of large files.
-          It's documentation states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files.
+          Its documentation states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files.
           HBase, on the other hand, is built on top of HDFS and provides fast record lookups (and updates) for large tables.
           This can sometimes be a point of conceptual confusion.  HBase internally puts your data in indexed "StoreFiles" that exist
           on HDFS for high-speed lookups.  See the <xref linkend="datamodel" /> and the rest of this chapter for more information on how HBase achieves its goals.
@@ -1251,7 +1251,7 @@ connection.close();</programlisting>
 	      </para>
 	      <para>Note: <code>htable.delete(Delete);</code> does not go in the writebuffer!  This only applies to Puts.
 	      </para>
-	      <para>For additional information on write durability, review the <link xlink:href="acid-semantics.html">ACID semantics</link> page.
+	      <para>For additional information on write durability, review the <link xlink:href="../acid-semantics.html">ACID semantics</link> page.
 	      </para>
        <para>For fine-grained control of batching of
            <classname>Put</classname>s or <classname>Delete</classname>s,
@@ -1739,41 +1739,49 @@ rs.close();
  </programlisting>
      For a description of what HBase files look like when written to HDFS, see <xref linkend="trouble.namenode.hbase.objects"/>.
             </para>
-
     <section xml:id="arch.regions.size">
-      <title>Region Size</title>
-
-      <para>Determining the "right" region size can be tricky, and there are a few factors
-      to consider:</para>
-
-      <itemizedlist>
-        <listitem>
-          <para>HBase scales by having regions across many servers. Thus if
-          you have 2 regions for 16GB data, on a 20 node machine your data
-          will be concentrated on just a few machines - nearly the entire
-          cluster will be idle.  This really cant be stressed enough, since a
-          common problem is loading 200MB data into HBase then wondering why
-          your awesome 10 node cluster isn't doing anything.</para>
-        </listitem>
-
-        <listitem>
-          <para>On the other hand, high region count has been known to make things slow.
-          This is getting better with each release of HBase, but it is probably better to have
-          700 regions than 3000 for the same amount of data.</para>
-        </listitem>
-
-        <listitem>
-          <para>There is not much memory footprint difference between 1 region
-          and 10 in terms of indexes, etc, held by the RegionServer.</para>
-        </listitem>
-      </itemizedlist>
-
-      <para>When starting off, it's probably best to stick to the default region-size, perhaps going
-      smaller for hot tables (or manually split hot regions to spread the load over
-      the cluster), or go with larger region sizes if your cell sizes tend to be
-      largish (100k and up).</para>
-      <para>See <xref linkend="bigger.regions"/> for more information on configuration.
+<para> In general, HBase is designed to run with a small (20-200) number of relatively large (5-20Gb) regions per server. The considerations for this are as follows:</para>
+<section xml:id="too_many_regions">
+          <title>Why cannot I have too many regions?</title>
+          <para>
+              Typically you want to keep your region count low on HBase for numerous reasons.
+              Usually right around 100 regions per RegionServer has yielded the best results.
+              Here are some of the reasons below for keeping region count low:
+              <orderedlist>
+                  <listitem><para>
+                          MSLAB requires 2mb per memstore (that's 2mb per family per region).
+                          1000 regions that have 2 families each is 3.9GB of heap used, and it's not even storing data yet. NB: the 2MB value is configurable.
+                  </para></listitem>
+                  <listitem><para>If you fill all the regions at somewhat the same rate, the global memory usage makes it that it forces tiny
+                          flushes when you have too many regions which in turn generates compactions.
+                          Rewriting the same data tens of times is the last thing you want.
+                          An example is filling 1000 regions (with one family) equally and let's consider a lower bound for global memstore
+                          usage of 5GB (the region server would have a big heap).
+                          Once it reaches 5GB it will force flush the biggest region,
+                          at that point they should almost all have about 5MB of data so
+                          it would flush that amount. 5MB inserted later, it would flush another
+                          region that will now have a bit over 5MB of data, and so on.
+                          This is currently the main limiting factor for the number of regions; see <xref linkend="ops.capacity.regions.count" />
+                          for detailed formula.
+                  </para></listitem>
+                  <listitem><para>The master as is is allergic to tons of regions, and will
+                          take a lot of time assigning them and moving them around in batches.
+                          The reason is that it's heavy on ZK usage, and it's not very async
+                          at the moment (could really be improved -- and has been imporoved a bunch
+                          in 0.96 hbase).
+                  </para></listitem>
+                  <listitem><para>
+                          In older versions of HBase (pre-v2 hfile, 0.90 and previous), tons of regions
+                          on a few RS can cause the store file index to rise, increasing heap usage and potentially
+                          creating memory pressure or OOME on the RSs
+                  </para></listitem>
+          </orderedlist>
       </para>
+      </section>
+      <para>Another issue is the effect of the number of regions on mapreduce jobs; it is typical to have one mapper per HBase region.
+          Thus, hosting only 5 regions per RS may not be enough to get sufficient number of tasks for a mapreduce job, while 1000 regions will generate far too many tasks.
+      </para>
+      <para>See <xref linkend="ops.capacity.regions" /> for configuration guidelines.</para>
     </section>
 
       <section xml:id="regions.arch.assignment">
@@ -1833,9 +1841,12 @@ rs.close();
            <orderedlist>
              <listitem>First replica is written to local node
              </listitem>
-             <listitem>Second replica is written to another node in same rack
+             <listitem>Second replica is written to a random node on another rack
              </listitem>
-             <listitem>Third replica is written to a node in another rack (if sufficient nodes)
+             <listitem>Third replica is written on the same rack as the second, but on a different node chosen randomly
+             </listitem>
+             <listitem>Subsequent replicas are written on random nodes on the cluster
+<footnote><para>See <emphasis>Replica Placement: The First Baby Steps</emphasis> on this page: <link xlink:href="http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html">HDFS Architecture</link></para></footnote>
              </listitem>
            </orderedlist>
           Thus, HBase eventually achieves locality for a region after a flush or a compaction.
@@ -1844,13 +1855,18 @@ rs.close();
           in the region, or the table is compacted and StoreFiles are re-written, they will become "local"
           to the RegionServer.
         </para>
-        <para>For more information, see <link xlink:href="http://hadoop.apache.org/common/docs/r0.20.205.0/hdfs_design.html#Replica+Placement%3A+The+First+Baby+Steps">HDFS Design on Replica Placement</link>
+        <para>For more information, see <emphasis>Replica Placement: The First Baby Steps</emphasis> on this page: <link xlink:href="http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html">HDFS Architecture</link>
         and also Lars George's blog on <link xlink:href="http://www.larsgeorge.com/2010/05/hbase-file-locality-in-hdfs.html">HBase and HDFS locality</link>.
         </para>
       </section>
 
-      <section>
+      <section xml:id="arch.region.splits">
         <title>Region Splits</title>
+        <para>Regions split when they reach a configured threshold.
+        Below we treat the topic in short.  For a longer exposition,
+        see <link xlink:href="http://hortonworks.com/blog/apache-hbase-region-splitting-and-merging/">Apache HBase Region Splitting and Merging</link>
+        by our Enis Soztutar.
+        </para>
 
         <para>Splits run unaided on the RegionServer; i.e. the Master does not
         participate. The RegionServer splits a region, offlines the split
@@ -2891,7 +2907,13 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
             <listitem>
                 <para>
                     Build and install <link xlink:href="http://code.google.com/p/snappy/">snappy</link> on all nodes
-                    of your cluster (see below)
+                    of your cluster (see below).  HBase nor Hadoop cannot include snappy because of licensing issues (The
+                    hadoop libhadoop.so under its native dir does not include snappy; of note, the shipped .so
+                    may be for 32-bit architectures -- this fact has tripped up folks in the past with them thinking
+                    it 64-bit).  The notes below are about installing snappy for HBase use.  You may want snappy
+                    available in your hadoop context also.  That is not covered here.
+                    HBase and Hadoop find the snappy .so in different locations currently: Hadoop picks those files in
+                    <filename>./lib</filename> while HBase finds the .so in <filename>./lib/[PLATFORM]</filename>.
                 </para>
             </listitem>
             <listitem>
@@ -2916,6 +2938,8 @@ hbase> describe 't1'</programlisting>
     <title>
     Installation
     </title>
+    <para>Snappy is used by hbase to compress HFiles on flush and when compacting.
+    </para>
     <para>
         You will find the snappy library file under the .libs directory from your Snappy build (For example
         /home/hbase/snappy-1.0.5/.libs/). The file is called libsnappy.so.1.x.x where 1.x.x is the version of the snappy
@@ -2961,7 +2985,9 @@ hbase> describe 't1'</programlisting>
   <appendix>
       <title xml:id="ycsb"><link xlink:href="https://github.com/brianfrankcooper/YCSB/">YCSB: The Yahoo! Cloud Serving Benchmark</link> and HBase</title>
       <para>TODO: Describe how YCSB is poor for putting up a decent cluster load.</para>
-      <para>TODO: Describe setup of YCSB for HBase</para>
+      <para>TODO: Describe setup of YCSB for HBase.  In particular, presplit your tables before you start
+          a run.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-4163">HBASE-4163 Create Split Strategy for YCSB Benchmark</link>
+          for why and a little shell command for how to do it.</para>
       <para>Ted Dunning redid YCSB so it's mavenized and added facility for verifying workloads.  See <link xlink:href="https://github.com/tdunning/YCSB">Ted Dunning's YCSB</link>.</para>
 
   </appendix>
@@ -3446,7 +3472,7 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
        <section xml:id="other.info.videos"><title>HBase Videos</title>
          <para>Introduction to HBase
             <itemizedlist>
-			  <listitem><link xlink:href="http://www.cloudera.com/videos/chicago_data_summit_apache_hbase_an_introduction_todd_lipcon">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
+              <listitem><link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/presentation/chicago_data_summit_apache_hbase_an_introduction_todd_lipcon.html">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
 			  </listitem>
 			  <listitem><link xlink:href="http://www.cloudera.com/videos/intorduction-hbase-todd-lipcon">Introduction to HBase</link> by Todd Lipcon (2010).
 			  </listitem>
@@ -3458,7 +3484,7 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
          </para>
        </section>
        <section xml:id="other.info.pres"><title>HBase Presentations (Slides)</title>
-         <para><link xlink:href="http://www.cloudera.com/resource/hadoop-world-2011-presentation-slides-advanced-hbase-schema-design">Advanced HBase Schema Design</link> by Lars George (Hadoop World 2011).
+         <para><link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/hadoopworld/hadoop-world-2011-presentation-video-advanced-hbase-schema-design.html">Advanced HBase Schema Design</link> by Lars George (Hadoop World 2011).
          </para>
          <para><link xlink:href="http://www.slideshare.net/cloudera/chicago-data-summit-apache-hbase-an-introduction">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
          </para>
@@ -3526,67 +3552,7 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
        </section>
   </appendix>
 
-  <appendix xml:id="tracing" ><title>Enabling Dapper-like Tracing in HBase</title>
-<para><link xlink:href="https://issues.apache.org/jira/browse/HBASE-6449">HBASE-6449</link> added support
-for tracing requests through HBase, using the open source tracing library,
-<link xlink:href="http://github.com/cloudera/htrace">HTrace</link>. Setting up tracing is quite simple,
-however it currently requires some very minor changes to your client code (it would not be very difficult to remove this requirement).
-</para>
-<section xml:id="tracing.spanreceivers"><title>SpanReceivers</title>
-<para>The tracing system works by collecting information in structs called ‘Spans’.
-It is up to you to choose how you want to receive this information by implementing the
-<classname>SpanReceiver</classname> interface, which defines one method:
-<programlisting>public void receiveSpan(Span span);</programlisting>
-This method serves as a callback whenever a span is completed. HTrace allows you to use
-as many SpanReceivers as you want so you can easily send trace information to multiple destinations.
-</para>
-
-<para>Configure what SpanReceivers you’d like to use by putting a comma separated list of the
-fully-qualified class name of classes implementing <classname>SpanReceiver</classname> in
-<filename>hbase-site.xml</filename> property: <varname>hbase.trace.spanreceiver.classes</varname>.
-</para>
-
-<para>HBase includes a <classname>HBaseLocalFileSpanReceiver</classname> that writes all span
-information to local files in a JSON-based format. The <classname>HBaseLocalFileSpanReceiver</classname>
-looks in <filename>hbase-site.xml</filename> for a <varname>hbase.trace.spanreceiver.localfilespanreceiver.filename</varname>
-property with a value describing the name of the file to which nodes should write their span information.
-</para>
-
-<para>If you do not want to use the included <classname>HBaseLocalFileSpanReceiver</classname>,
-you are encouraged to write your own receiver (take a look at <classname>HBaseLocalFileSpanReceiver</classname>
-for an example). If you think others would benefit from your receiver, file a JIRA or send a pull request to
-<link xlink:href="http://github.com/cloudera/htrace">HTrace</link>.
-</para>
-</section>
-<section xml:id="tracing.client.modifications">
-<title>Client Modifications</title>
-<para>Currently, you must turn on tracing in your client code. To do this, you simply turn on tracing for
-requests you think are interesting, and turn it off when the request is done.
-</para>
-
-<para>For example, if you wanted to trace all of your get operations, you change this:
-<programlisting>HTable table = new HTable(...);
-Get get = new Get(...);</programlisting>
-
-into:
-
-<programlisting>Span getSpan = Trace.startSpan(“doing get”, Sampler.ALWAYS);
-try {
-  HTable table = new HTable(...);
-  Get get = new Get(...);
-...
-} finally {
-  getSpan.stop();
-}</programlisting>
-
-If you wanted to trace half of your ‘get’ operations, you would pass in:
-<programlisting>new ProbabilitySampler(0.5)</programlisting> in lieu of <varname>Sampler.ALWAYS</varname> to <classname>Trace.startSpan()</classname>.
-See the HTrace <filename>README</filename> for more information on Samplers.
-</para>
-</section>
-
-  </appendix>
-
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="tracing.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="rpc.xml" />
 
   <index xml:id="book_index">

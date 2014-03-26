@@ -233,23 +233,30 @@ needed for servers to pick up changes (caveat dynamic config. to be described la
              <tip><title>Hadoop 2.x is better than Hadoop 1.x</title>
                  <para>Hadoop 2.x is faster, with more features such as short-circuit reads which will help improve your
                      HBase random read profile as well important bug fixes that will improve your overall HBase experience.
-                     You should run Hadoop 2. rather than Hadoop 1. if you can.
+                     You should run Hadoop 2 rather than Hadoop 1. HBase 0.98 deprecates use of Hadoop1.
+                     HBase 1.0 will not support Hadoop1.
              </para>
          </tip>
 	     <table>
 		 <title>Hadoop version support matrix</title>
-		 <tgroup cols='4' align='left' colsep='1' rowsep='1'><colspec colname='c1' align='left'/><colspec colname='c2' align='center'/><colspec colname='c3' align='center'/><colspec colname='c4' align='center'/>
+		 <tgroup cols='6' align='left' colsep='1' rowsep='1'>
+                   <colspec colname='c1' align='left'/>
+                   <colspec colname='c2' align='center'/>
+                   <colspec colname='c3' align='center'/>
+                   <colspec colname='c4' align='center'/>
+                   <colspec colname='c5' align='center'/>
+                   <colspec colname='c6' align='center'/>
          <thead>
-	     <row><entry>               </entry><entry>HBase-0.92.x</entry><entry>HBase-0.94.x</entry><entry>HBase-0.96.0</entry></row>
+         <row><entry>               </entry><entry>HBase-0.92.x</entry><entry>HBase-0.94.x</entry><entry>HBase-0.96.x</entry><entry>HBase-0.98.x<footnote><para>Support for Hadoop 1.x is deprecated.</para></footnote></entry><entry>HBase-1.0.x<footnote><para>Hadoop 1.x is NOT supported</para></footnote></entry></row>
 	     </thead><tbody>
-         <row><entry>Hadoop-0.20.205</entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry></row>
-         <row><entry>Hadoop-0.22.x  </entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry></row>
-         <row><entry>Hadoop-1.0.0-1.0.2<footnote><para>HBase requires hadoop 1.0.3 at a minimum; there is an issue where we cannot find KerberosUtil compiling against earlier versions of Hadoop.</para></footnote>   </entry><entry>S</entry>          <entry>S</entry>           <entry>X</entry></row>
-         <row><entry>Hadoop-1.0.3+</entry><entry>S</entry>          <entry>S</entry>           <entry>S</entry></row>
-         <row><entry>Hadoop-1.1.x   </entry><entry>NT</entry>         <entry>S</entry>           <entry>S</entry></row>
-         <row><entry>Hadoop-0.23.x  </entry><entry>X</entry>          <entry>S</entry>           <entry>NT</entry></row>
-         <row><entry>Hadoop-2.0.x-alpha     </entry><entry>X</entry>          <entry>NT</entry>           <entry>X</entry></row>
-         <row><entry>Hadoop-2.1.0-beta     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry></row>
+          <row><entry>Hadoop-0.20.205</entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry><entry>X</entry><entry>X</entry></row>
+          <row><entry>Hadoop-0.22.x  </entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry><entry>X</entry><entry>X</entry></row>
+          <row><entry>Hadoop-1.0.0-1.0.2<footnote><para>HBase requires hadoop 1.0.3 at a minimum; there is an issue where we cannot find KerberosUtil compiling against earlier versions of Hadoop.</para></footnote>   </entry><entry>X</entry>          <entry>X</entry>           <entry>X</entry><entry>X</entry><entry>X</entry></row>
+          <row><entry>Hadoop-1.0.3+</entry><entry>S</entry>          <entry>S</entry>           <entry>S</entry><entry>X</entry><entry>X</entry></row>
+          <row><entry>Hadoop-1.1.x   </entry><entry>NT</entry>         <entry>S</entry>           <entry>S</entry><entry>X</entry><entry>X</entry></row>
+          <row><entry>Hadoop-0.23.x  </entry><entry>X</entry>          <entry>S</entry>           <entry>NT</entry><entry>X</entry><entry>X</entry></row>
+          <row><entry>Hadoop-2.0.x-alpha     </entry><entry>X</entry>          <entry>NT</entry>           <entry>X</entry><entry>X</entry><entry>X</entry></row>
+          <row><entry>Hadoop-2.1.0-beta     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry><entry>X</entry><entry>X</entry></row>
          <row><entry>Hadoop-2.2.0     </entry><entry>X</entry>          <entry>NT<footnote><para>To get 0.94.x to run on hadoop 2.2.0,
                          you need to change the hadoop 2 and protobuf versions in the <filename>pom.xml</filename> and then
                          build against the hadoop 2 profile by running something like the following command:
@@ -278,8 +285,11 @@ Index: pom.xml
          <slf4j.version>1.6.1</slf4j.version>
        </properties>
        <dependencies>]]></programlisting>
-         </para></footnote></entry>           <entry>S</entry></row>
-         <row><entry>Hadoop-2.x     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry></row>
+          </para></footnote></entry>           <entry>S</entry><entry>S</entry><entry>NT</entry></row>
+          <row><entry>Hadoop-2.3.x</entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry><entry>S</entry><entry>NT</entry></row>
+          <row><entry>Hadoop-2.4.x</entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry><entry>S</entry><entry>S</entry></row>
+          <row><entry>Hadoop-2.5.x</entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry><entry>S</entry><entry>S</entry></row>
+
 		 </tbody></tgroup></table>
 
         Where
@@ -515,13 +525,16 @@ homed on the node <varname>h-24-30.example.com</varname>.
                 </para>
             	<para>To start up an extra backup master(s) on the same server run...
                        <programlisting>% bin/local-master-backup.sh start 1</programlisting>
-                       ... the '1' means use ports 60001 &amp; 60011, and this backup master's logfile will be at <filename>logs/hbase-${USER}-1-master-${HOSTNAME}.log</filename>.
+                       ... the '1' means use ports 16001 &amp; 16011, and this backup master's
+		       logfile will be at 
+		       <filename>logs/hbase-${USER}-1-master-${HOSTNAME}.log</filename>.
                 </para>
                 <para>To startup multiple backup masters run... <programlisting>% bin/local-master-backup.sh start 2 3</programlisting> You can start up to 9 backup masters (10 total).
  				</para>
 				<para>To start up more regionservers...
      			  <programlisting>% bin/local-regionservers.sh start 1</programlisting>
-     			where '1' means use ports 60201 &amp; 60301 and its logfile will be at <filename>logs/hbase-${USER}-1-regionserver-${HOSTNAME}.log</filename>.
+			... where '1' means use ports 16201 &amp; 16301 and its logfile will be at 
+			`<filename>logs/hbase-${USER}-1-regionserver-${HOSTNAME}.log</filename>.
      			</para>
      			<para>To add 4 more regionservers in addition to the one you just started by running... <programlisting>% bin/local-regionservers.sh start 2 3 4 5</programlisting>
      			This supports up to 99 extra regionservers (100 total).
@@ -678,14 +691,18 @@ homed on the node <varname>h-24-30.example.com</varname>.
 
 
         <para>HBase also puts up a UI listing vital attributes. By default its
-        deployed on the Master host at port 60010 (HBase RegionServers listen
-        on port 60020 by default and put up an informational http server at
-        60030). If the Master were running on a host named
+        deployed on the Master host at port 16010 (HBase RegionServers listen
+        on port 16020 by default and put up an informational http server at
+        16030). If the Master were running on a host named
         <varname>master.example.org</varname> on the default port, to see the
         Master's homepage you'd point your browser at
-        <filename>http://master.example.org:60010</filename>.</para>
+        <filename>http://master.example.org:16010</filename>.</para>
 
-
+	<para>Prior to HBase 0.98, the default ports the master ui was deployed
+	on port 16010, and the HBase RegionServers would listen
+        on port 16020 by default and put up an informational http server at
+        16030.
+	</para>
 
     <para>Once HBase has started, see the <xref linkend="shell_exercises" /> for how to
         create tables, add data, scan your insertions, and finally disable and
@@ -1081,74 +1098,11 @@ index e70ebc6..96f8c27 100644
       </para>
       <para>See <xref linkend="compression" /> for more information.</para>
       </section>
-      <section xml:id="bigger.regions">
-      <title>Bigger Regions</title>
-      <para>
-      Consider going to larger regions to cut down on the total number of regions
-      on your cluster. Generally less Regions to manage makes for a smoother running
-      cluster (You can always later manually split the big Regions should one prove
-      hot and you want to spread the request load over the cluster).  A lower number of regions is
-       preferred, generally in the range of 20 to low-hundreds
-       per RegionServer.  Adjust the regionsize as appropriate to achieve this number.
-       </para>
-       <para>For the 0.90.x codebase, the upper-bound of regionsize is about 4Gb, with a default of 256Mb.
-       For 0.92.x codebase, due to the HFile v2 change much larger regionsizes can be supported (e.g., 20Gb).
-       </para>
-       <para>You may need to experiment with this setting based on your hardware configuration and application needs.
-       </para>
-       <para>Adjust <code>hbase.hregion.max.filesize</code> in your <filename>hbase-site.xml</filename>.
-       RegionSize can also be set on a per-table basis via
-       <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html">HTableDescriptor</link>.
-      </para>
-      <section xml:id="too_many_regions">
-          <title>How many regions per RegionServer?</title>
-          <para>
-              Typically you want to keep your region count low on HBase for numerous reasons.
-              Usually right around 100 regions per RegionServer has yielded the best results.
-              Here are some of the reasons below for keeping region count low:
-              <orderedlist>
-                  <listitem><para>
-                          MSLAB requires 2mb per memstore (that's 2mb per family per region).
-                          1000 regions that have 2 families each is 3.9GB of heap used, and it's not even storing data yet. NB: the 2MB value is configurable.
-                  </para></listitem>
-                  <listitem><para>If you fill all the regions at somewhat the same rate, the global memory usage makes it that it forces tiny
-                          flushes when you have too many regions which in turn generates compactions.
-                          Rewriting the same data tens of times is the last thing you want.
-                          An example is filling 1000 regions (with one family) equally and let's consider a lower bound for global memstore
-                          usage of 5GB (the region server would have a big heap).
-                          Once it reaches 5GB it will force flush the biggest region,
-                          at that point they should almost all have about 5MB of data so
-                          it would flush that amount. 5MB inserted later, it would flush another
-                          region that will now have a bit over 5MB of data, and so on.
-                          A basic formula for the amount of regions to have per region server would
-                          look like this:
-                          Heap * upper global memstore limit = amount of heap devoted to memstore
-                          then the amount of heap devoted to memstore / (Number of regions per RS * CFs).
-                          This will give you the rough memstore size if everything is being written to.
-                          A more accurate formula is
-                          Heap * upper global memstore limit = amount of heap devoted to memstore then the
-                          amount of heap devoted to memstore / (Number of actively written regions per RS * CFs).
-                          This can allot you a higher region count from the write perspective if you know how many
-                          regions you will be writing to at one time.
-                  </para></listitem>
-                  <listitem><para>The master as is is allergic to tons of regions, and will
-                          take a lot of time assigning them and moving them around in batches.
-                          The reason is that it's heavy on ZK usage, and it's not very async
-                          at the moment (could really be improved -- and has been imporoved a bunch
-                          in 0.96 hbase).
-                  </para></listitem>
-                  <listitem><para>
-                          In older versions of HBase (pre-v2 hfile, 0.90 and previous), tons of regions
-                          on a few RS can cause the store file index to rise raising heap usage and can
-                          create memory pressure or OOME on the RSs
-                  </para></listitem>
-          </orderedlist>
-      </para>
-      <para>Another issue is the effect of the number of regions on mapreduce jobs.
-          Keeping 5 regions per RS would be too low for a job, whereas 1000 will generate too many maps.
-      </para>
-      </section>
-
+      <section xml:id="config.wals"><title>Configuring the size and number of WAL files</title>
+      <para>HBase uses <xref linkend="wal" /> to recover the memstore data that has not been flushed to disk in case of an RS failure. These WAL files should be configured to be slightly smaller than HDFS block (by default, HDFS block is 64Mb and WAL file is ~60Mb).</para>
+      <para>HBase also has a limit on number of WAL files, designed to ensure there's never too much data that needs to be replayed during recovery. This limit needs to be set according to memstore configuration, so that all the necessary data would fit. It is recommended to allocated enough WAL files to store at least that much data (when all memstores are close to full).
+      For example, with 16Gb RS heap, default memstore settings (0.4), and default WAL file size (~60Mb), 16Gb*0.4/60, the starting point for WAL file count is ~109.
+      However, as all memstores are not expected to be full all the time, less WAL files can be allocated.</para>
       </section>
       <section xml:id="disable.splitting">
       <title>Managed Splitting</title>
