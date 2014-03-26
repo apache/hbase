@@ -99,6 +99,15 @@ until the justification for the -1 is addressed.
               to the issue must happen in a new JIRA.
           </para>
       </section>
+      <section xml:id="no.permanent.state.in.zk">
+          <title>Only transient state in ZooKeeper!</title>
+          <para>
+You should be able to kill the data in zookeeper and hbase should ride over it recreating the zk content as it goes.
+This is an old adage around these parts.  We just made note of it now.  We also are currently in violation of this
+basic tenet -- replication at least keeps permanent state in zk -- but we are working to undo this breaking of a
+golden rule.
+          </para>
+      </section>
     </section>
     <section xml:id="community.roles">
       <title>Community Roles</title>
@@ -137,4 +146,12 @@ dev list and we'll sign you up. Owners do not need to be committers.
 </para>
       </section>
     </section>
+      <section xml:id="hbase.commit.msg.format">
+          <title>Commit Message format</title>
+          <para>We <link xlink:href="http://search-hadoop.com/m/Gwxwl10cFHa1">agreed</link>
+          to the following SVN commit message format:
+<programlisting>HBASE-xxxxx &lt;title>. (&lt;contributor>)</programlisting>
+If the person making the commit is the contributor, leave off the '(&lt;contributor>)' element.
+          </para>
+      </section>
     </chapter>
