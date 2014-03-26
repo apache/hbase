@@ -319,8 +319,10 @@ public class TestExportSnapshot {
     conf.setBoolean(ExportSnapshot.CONF_TEST_RETRY, retry);
 
     // Export Snapshot
+    Path sourceDir = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     int res = ExportSnapshot.innerMain(conf, new String[] {
       "-snapshot", Bytes.toString(snapshotName),
+      "-copy-from", sourceDir.toString(),
       "-copy-to", copyDir.toString()
     });
     return res;
