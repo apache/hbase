@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.snapshot;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -665,6 +666,8 @@ public final class ExportSnapshot extends Configured implements Tool {
     int filesMode = 0;
     int mappers = 0;
 
+    Configuration conf = getConf();
+
     // Process command line args
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
@@ -673,6 +676,11 @@ public final class ExportSnapshot extends Configured implements Tool {
           snapshotName = args[++i];
         } else if (cmd.equals("-copy-to")) {
           outputRoot = new Path(args[++i]);
+        } else if (cmd.equals("-copy-from")) {
+          Path sourceDir = new Path(args[++i]);
+          URI defaultFs = sourceDir.getFileSystem(conf).getUri();
+          FSUtils.setFsDefault(conf, new Path(defaultFs));
+          FSUtils.setRootDir(conf, sourceDir);
         } else if (cmd.equals("-no-checksum-verify")) {
           verifyChecksum = false;
         } else if (cmd.equals("-mappers")) {
@@ -707,10 +715,11 @@ public final class ExportSnapshot extends Configured implements Tool {
       printUsageAndExit();
     }
 
-    Configuration conf = getConf();
     Path inputRoot = FSUtils.getRootDir(conf);
-    FileSystem inputFs = FileSystem.get(conf);
+    FileSystem inputFs = FileSystem.get(inputRoot.toUri(), conf);
+    LOG.debug("inputFs=" + inputFs.getUri().toString() + " inputRoot=" + inputRoot);
     FileSystem outputFs = FileSystem.get(outputRoot.toUri(), conf);
+    LOG.debug("outputFs=" + outputFs.getUri().toString() + " outputRoot=" + outputRoot.toString());
 
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, inputRoot);
     Path snapshotTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshotName, outputRoot);
@@ -803,6 +812,7 @@ public final class ExportSnapshot extends Configured implements Tool {
     System.err.println("  -h|-help                Show this help and exit.");
     System.err.println("  -snapshot NAME          Snapshot to restore.");
     System.err.println("  -copy-to NAME           Remote destination hdfs://");
+    System.err.println("  -copy-from NAME         Input folder hdfs:// (default hbase.rootdir)");
     System.err.println("  -no-checksum-verify     Do not verify checksum.");
     System.err.println("  -overwrite              Rewrite the snapshot manifest if already exists");
     System.err.println("  -chuser USERNAME        Change the owner of the files to the specified one.");
@@ -814,6 +824,10 @@ public final class ExportSnapshot extends Configured implements Tool {
     System.err.println("  hbase " + getClass().getName() + " \\");
     System.err.println("    -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase \\");
     System.err.println("    -chuser MyUser -chgroup MyGroup -chmod 700 -mappers 16");
+    System.err.println();
+    System.err.println("  hbase " + getClass().getName() + " \\");
+    System.err.println("    -snapshot MySnapshot -copy-from hdfs://srv2:8082/hbase \\");
+    System.err.println("    -copy-to hdfs://srv1:50070/hbase \\");
     System.exit(1);
   }
 
