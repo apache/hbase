@@ -24,6 +24,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -220,7 +222,9 @@ public class TestAccessController extends SecureTestUtil {
     // Create the test table (owner added to the _acl_ table)
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
-    htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
+    hcd.setMaxVersions(100);
+    htd.addFamily(hcd);
     htd.setOwner(USER_OWNER);
     admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
     TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName().getName());
@@ -1203,6 +1207,113 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(deleteFamily, userOther);
     verifyDenied(deleteQ1, userOther);
     verifyAllowed(deleteQ1, USER_OWNER);
+  }
+
+  @Test
+  public void testCellPermissionsWithDeleteMutipleVersions() throws Exception {
+    // table/column/qualifier level permissions
+    final byte[] TEST_ROW1 = Bytes.toBytes("r1");
+    final byte[] TEST_ROW2 = Bytes.toBytes("r2");
+    final byte[] TEST_Q1 = Bytes.toBytes("q1");
+    final byte[] TEST_Q2 = Bytes.toBytes("q2");
+    final byte[] ZERO = Bytes.toBytes(0L);
+
+    // additional test user
+    final User user1 = User.createUserForTesting(conf, "user1", new String[0]);
+    final User user2 = User.createUserForTesting(conf, "user2", new String[0]);
+
+    verifyAllowed(new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          // with rw ACL for "user1"
+          Put p = new Put(TEST_ROW1);
+          p.add(TEST_FAMILY, TEST_Q1, ZERO);
+          p.add(TEST_FAMILY, TEST_Q2, ZERO);
+          p.setACL(user1.getShortName(), new Permission(Permission.Action.READ,
+              Permission.Action.WRITE));
+          t.put(p);
+          // with rw ACL for "user1"
+          p = new Put(TEST_ROW2);
+          p.add(TEST_FAMILY, TEST_Q1, ZERO);
+          p.add(TEST_FAMILY, TEST_Q2, ZERO);
+          p.setACL(user1.getShortName(), new Permission(Permission.Action.READ,
+              Permission.Action.WRITE));
+          t.put(p);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    }, USER_OWNER);
+
+    verifyAllowed(new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          // with rw ACL for "user1" and "user2"
+          Put p = new Put(TEST_ROW1);
+          p.add(TEST_FAMILY, TEST_Q1, ZERO);
+          p.add(TEST_FAMILY, TEST_Q2, ZERO);
+          Map<String, Permission> perms = new HashMap<String, Permission>();
+          perms.put(user1.getShortName(), new Permission(Permission.Action.READ,
+              Permission.Action.WRITE));
+          perms.put(user2.getShortName(), new Permission(Permission.Action.READ,
+              Permission.Action.WRITE));
+          p.setACL(perms);
+          t.put(p);
+          // with rw ACL for "user1" and "user2"
+          p = new Put(TEST_ROW2);
+          p.add(TEST_FAMILY, TEST_Q1, ZERO);
+          p.add(TEST_FAMILY, TEST_Q2, ZERO);
+          p.setACL(perms);
+          t.put(p);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    }, user1);
+
+    // user1 should be allowed to delete TEST_ROW1 as he is having write permission on both
+    // versions of the cells
+    user1.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Delete d = new Delete(TEST_ROW1);
+          d.deleteColumns(TEST_FAMILY, TEST_Q1);
+          d.deleteColumns(TEST_FAMILY, TEST_Q2);
+          t.delete(d);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    });
+    // user2 should not be allowed to delete TEST_ROW2 as he is having write permission only on one
+    // version of the cells.
+    user2.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Delete d = new Delete(TEST_ROW2);
+          d.deleteColumns(TEST_FAMILY, TEST_Q1);
+          d.deleteColumns(TEST_FAMILY, TEST_Q2);
+          t.delete(d);
+          fail("user2 should not be allowed to delete the row");
+        } catch (Exception e) {
+
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    });
   }
 
   @Test
