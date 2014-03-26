@@ -61,6 +61,8 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcClient.FailedServerException;
 import org.apache.hadoop.hbase.ipc.RpcClient.FailedServerException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState.State;
@@ -1844,12 +1846,14 @@ public class AssignmentManager extends ZooKeeperListener {
       final boolean setOfflineInZK, final boolean forceNewPlan) {
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
     try {
+      Configuration conf = server.getConfiguration();
       RegionState currentState = state;
       int versionOfOfflineNode = -1;
       RegionPlan plan = null;
       long maxWaitTime = -1;
       HRegionInfo region = state.getRegion();
       RegionOpeningState regionOpenState;
+      Throwable previousException = null;
       for (int i = 1; i <= maximumAttempts; i++) {
         if (server.isStopped() || server.isAborted()) {
           LOG.info("Skip assigning " + region.getRegionNameAsString()
@@ -1948,6 +1952,7 @@ public class AssignmentManager extends ZooKeeperListener {
           if (t instanceof RemoteException) {
             t = ((RemoteException) t).unwrapRemoteException();
           }
+          previousException = t;
 
           // Should we wait a little before retrying? If the server is starting it's yes.
           // If the region is already in transition, it's yes as well: we want to be sure that
@@ -2048,6 +2053,22 @@ public class AssignmentManager extends ZooKeeperListener {
             currentState = regionStates.updateRegionState(region, State.OFFLINE);
             versionOfOfflineNode = -1;
             plan = newPlan;
+          } else if(plan.getDestination().equals(newPlan.getDestination()) &&
+              previousException instanceof FailedServerException) {
+            try {
+              LOG.info("Trying to re-assign " + region.getRegionNameAsString() + 
+                " to the same failed server.");
+              Thread.sleep(1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY, 
+                RpcClient.FAILED_SERVER_EXPIRY_DEFAULT));
+            } catch (InterruptedException ie) {
+              LOG.warn("Failed to assign "
+                  + region.getRegionNameAsString() + " since interrupted", ie);
+              Thread.currentThread().interrupt();
+              if (!tomActivated) {
+                regionStates.updateRegionState(region, State.FAILED_OPEN);
+              }
+              return;
+            }
           }
         }
       }
