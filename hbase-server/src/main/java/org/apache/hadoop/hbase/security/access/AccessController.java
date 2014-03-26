@@ -503,7 +503,6 @@ public class AccessController extends BaseRegionObserver
     if (canPersistCellACLs) {
       Get get = new Get(row);
       if (timestamp != HConstants.LATEST_TIMESTAMP) get.setTimeStamp(timestamp);
-      get.setMaxResultsPerColumnFamily(1); // Hold down memory use on wide rows
       if (allVersions) {
         get.setMaxVersions();
       } else {
@@ -545,7 +544,8 @@ public class AccessController extends BaseRegionObserver
         boolean more = false;
         do {
           cells.clear();
-          more = scanner.next(cells);
+          // scan with limit as 1 to hold down memory use on wide rows
+          more = scanner.next(cells, 1);
           for (Cell cell: cells) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Found cell " + cell);
