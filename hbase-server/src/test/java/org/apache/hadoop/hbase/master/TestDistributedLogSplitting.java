@@ -857,7 +857,7 @@ public class TestDistributedLogSplitting {
   public void testDisallowWritesInRecovering() throws Exception {
     LOG.info("testDisallowWritesInRecovering");
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     conf.setBoolean(HConstants.DISALLOW_WRITES_IN_RECOVERING, true);
     startCluster(NUM_RS);
     final int NUM_REGIONS_TO_CREATE = 40;
