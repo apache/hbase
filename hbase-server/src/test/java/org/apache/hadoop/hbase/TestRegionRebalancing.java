@@ -33,10 +33,12 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -118,10 +120,10 @@ public class TestRegionRebalancing {
     UTIL.getHBaseCluster().getMaster().balance();
     assertRegionsAreBalanced();
 
-    // On a balanced cluster, calling balance() should return false
-    assert(UTIL.getHBaseCluster().getMaster().balance() == false);
+    // On a balanced cluster, calling balance() should return true
+    assert(UTIL.getHBaseCluster().getMaster().balance() == true);
 
-    // However if we add a server, then the balance() call should return true 
+    // if we add a server, then the balance() call should return true
     // add a region server - total of 3
     LOG.info("Started third server=" +
         UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
@@ -200,7 +202,7 @@ public class TestRegionRebalancing {
           if (!(serverLoad <= avgLoadPlusSlop && serverLoad >= avgLoadMinusSlop)) {
             LOG.debug(server.getServerName() + " Isn't balanced!!! Avg: " + avg +
                 " actual: " + serverLoad + " slop: " + slop);
-            success = false;            
+            success = false;
             break;
           }
         }
@@ -247,6 +249,10 @@ public class TestRegionRebalancing {
       try {
         Thread.sleep(200);
       } catch (InterruptedException e) {}
+    }
+    RegionStates regionStates = UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
+    while (!regionStates.getRegionsInTransition().isEmpty()) {
+      Threads.sleep(100);
     }
   }
 
