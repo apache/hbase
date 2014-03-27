@@ -404,8 +404,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         region.getCoprocessorHost().postAppend(append, r);
       }
     }
-    regionServer.metricsRegionServer.updateAppend(
-      EnvironmentEdgeManager.currentTimeMillis() - before);
+    if (regionServer.metricsRegionServer != null) {
+      regionServer.metricsRegionServer.updateAppend(
+        EnvironmentEdgeManager.currentTimeMillis() - before);
+    }
     return r;
   }
 
@@ -438,8 +440,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         r = region.getCoprocessorHost().postIncrement(increment, r);
       }
     }
-    regionServer.metricsRegionServer.updateIncrement(
-      EnvironmentEdgeManager.currentTimeMillis() - before);
+    if (regionServer.metricsRegionServer != null) {
+      regionServer.metricsRegionServer.updateIncrement(
+        EnvironmentEdgeManager.currentTimeMillis() - before);
+    }
     return r;
   }
 
@@ -609,12 +613,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         builder.addResultOrException(getResultOrException(ie, mutations.get(i).getIndex()));
       }
     }
-    long after = EnvironmentEdgeManager.currentTimeMillis();
-    if (batchContainsPuts) {
-      regionServer.metricsRegionServer.updatePut(after - before);
-    }
-    if (batchContainsDelete) {
-      regionServer.metricsRegionServer.updateDelete(after - before);
+    if (regionServer.metricsRegionServer != null) {
+      long after = EnvironmentEdgeManager.currentTimeMillis();
+      if (batchContainsPuts) {
+        regionServer.metricsRegionServer.updatePut(after - before);
+      }
+      if (batchContainsDelete) {
+        regionServer.metricsRegionServer.updateDelete(after - before);
+      }
     }
   }
 
@@ -649,12 +655,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       return region.batchReplay(mArray);
     } finally {
-      long after = EnvironmentEdgeManager.currentTimeMillis();
-      if (batchContainsPuts) {
-        regionServer.metricsRegionServer.updatePut(after - before);
-      }
-      if (batchContainsDelete) {
-        regionServer.metricsRegionServer.updateDelete(after - before);
+      if (regionServer.metricsRegionServer != null) {
+        long after = EnvironmentEdgeManager.currentTimeMillis();
+          if (batchContainsPuts) {
+          regionServer.metricsRegionServer.updatePut(after - before);
+        }
+        if (batchContainsDelete) {
+          regionServer.metricsRegionServer.updateDelete(after - before);
+        }
       }
     }
   }
@@ -1334,8 +1342,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException ie) {
       throw new ServiceException(ie);
     } finally {
-      regionServer.metricsRegionServer.updateReplay(
-        EnvironmentEdgeManager.currentTimeMillis() - before);
+      if (regionServer.metricsRegionServer != null) {
+        regionServer.metricsRegionServer.updateReplay(
+          EnvironmentEdgeManager.currentTimeMillis() - before);
+      }
     }
   }
 
@@ -1574,8 +1584,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException ie) {
       throw new ServiceException(ie);
     } finally {
-      regionServer.metricsRegionServer.updateGet(
-        EnvironmentEdgeManager.currentTimeMillis() - before);
+      if (regionServer.metricsRegionServer != null) {
+        regionServer.metricsRegionServer.updateGet(
+          EnvironmentEdgeManager.currentTimeMillis() - before);
+      }
     }
   }
 
