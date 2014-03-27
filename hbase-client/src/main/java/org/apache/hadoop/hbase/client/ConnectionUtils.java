@@ -94,7 +94,7 @@ public class ConnectionUtils {
     int serversideMultiplier = c.getInt("hbase.client.serverside.retries.multiplier", 10);
     int retries = hcRetries * serversideMultiplier;
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
-    log.debug(sn + " HConnection server-to-server retries=" + retries);
+    log.info(sn + " server-side HConnection retries=" + retries);
   }
 
   /**

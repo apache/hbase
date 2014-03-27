@@ -354,7 +354,7 @@ public class HLogSplitter {
       e = RemoteExceptionHandler.checkIOException(e);
       throw e;
     } finally {
-      LOG.info("Finishing writing output logs and closing down.");
+      LOG.debug("Finishing writing output logs and closing down.");
       if (outputSinkStarted) {
         progress_failed = outputSink.finishWritingAndClose() == null;
       }
@@ -450,7 +450,7 @@ public class HLogSplitter {
         if (!FSUtils.renameAndSetModifyTime(fs, p, newPath)) {
           LOG.warn("Unable to move  " + p + " to " + newPath);
         } else {
-          LOG.debug("Archived processed log " + p + " to " + newPath);
+          LOG.info("Archived processed log " + p + " to " + newPath);
         }
       }
     }
@@ -944,7 +944,7 @@ public class HLogSplitter {
      * @throws IOException
      */
     protected boolean finishWriting() throws IOException {
-      LOG.info("Waiting for split writer threads to finish");
+      LOG.debug("Waiting for split writer threads to finish");
       boolean progress_failed = false;
       for (WriterThread t : writerThreads) {
         t.finish();
@@ -1094,7 +1094,7 @@ public class HLogSplitter {
                 if (!fs.rename(wap.p, dst)) {
                   throw new IOException("Failed renaming " + wap.p + " to " + dst);
                 }
-                LOG.debug("Rename " + wap.p + " to " + dst);
+                LOG.info("Rename " + wap.p + " to " + dst);
               }
             } catch (IOException ioe) {
               LOG.error("Couldn't rename " + wap.p + " to " + dst, ioe);
@@ -1221,7 +1221,7 @@ public class HLogSplitter {
         }
       }
       Writer w = createWriter(fs, regionedits, conf);
-      LOG.debug("Creating writer path=" + regionedits + " region=" + Bytes.toStringBinary(region));
+      LOG.info("Creating writer path=" + regionedits + " region=" + Bytes.toStringBinary(region));
       return (new WriterAndPath(regionedits, w));
     }
 

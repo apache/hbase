@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.replication.ReplicationListener;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
-import org.apache.zookeeper.KeeperException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 

@@ -115,7 +115,7 @@ public class DeadServer {
   }
 
   public synchronized void finish(ServerName sn) {
-    LOG.debug("Finished processing " + sn);
+    LOG.info("Finished processing " + sn);
     this.numProcessing--;
   }
 

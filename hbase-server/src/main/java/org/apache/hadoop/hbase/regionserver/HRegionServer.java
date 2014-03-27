@@ -1084,7 +1084,7 @@ public class HRegionServer extends HasThread implements
         }
         String value = e.getValue();
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Config from master: " + key + "=" + value);
+          LOG.info("Config from master: " + key + "=" + value);
         }
         this.conf.set(key, value);
       }
@@ -1613,7 +1613,7 @@ public class HRegionServer extends HasThread implements
   public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
   throws KeeperException, IOException {
     rpcServices.checkOpen();
-    LOG.info("Post open deploy tasks for region=" + r.getRegionNameAsString());
+    LOG.info("Post open deploy tasks for " + r.getRegionNameAsString());
     // Do checks to see if we need to compact (references or too many files)
     for (Store s : r.getStores().values()) {
       if (s.hasReferences() || s.needsCompaction()) {
@@ -1637,7 +1637,7 @@ public class HRegionServer extends HasThread implements
       MetaEditor.updateRegionLocation(ct, r.getRegionInfo(),
         this.serverName, openSeqNum);
     }
-    LOG.info("Finished post open deploy task for " + r.getRegionNameAsString());
+    LOG.debug("Finished post open deploy task for " + r.getRegionNameAsString());
 
   }
 

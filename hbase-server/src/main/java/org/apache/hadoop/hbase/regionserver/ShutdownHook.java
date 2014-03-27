@@ -84,7 +84,7 @@ public class ShutdownHook {
     Runnable fsShutdownHook = suppressHdfsShutdownHook(fs);
     Thread t = new ShutdownHookThread(conf, stop, threadToJoin, fsShutdownHook);
     ShutdownHookManager.affixShutdownHook(t, 0);
-    LOG.info("Installed shutdown hook thread: " + t.getName());
+    LOG.debug("Installed shutdown hook thread: " + t.getName());
   }
 
   /*

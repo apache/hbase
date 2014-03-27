@@ -1460,7 +1460,7 @@ public class AssignmentManager extends ZooKeeperListener {
       if (regionCount == 0) {
         return true;
       }
-      LOG.debug("Assigning " + regionCount + " region(s) to " + destination.toString());
+      LOG.info("Assigning " + regionCount + " region(s) to " + destination.toString());
       Set<String> encodedNames = new HashSet<String>(regionCount);
       for (HRegionInfo region : regions) {
         encodedNames.add(region.getEncodedName());
@@ -1511,8 +1511,8 @@ public class AssignmentManager extends ZooKeeperListener {
         for (int oldCounter = 0; !server.isStopped();) {
           int count = counter.get();
           if (oldCounter != count) {
-            LOG.info(destination.toString() + " unassigned znodes=" + count +
-              " of total=" + total);
+            LOG.debug(destination.toString() + " unassigned znodes=" + count +
+              " of total=" + total + "; oldCounter=" + oldCounter);
             oldCounter = count;
           }
           if (count >= total) break;

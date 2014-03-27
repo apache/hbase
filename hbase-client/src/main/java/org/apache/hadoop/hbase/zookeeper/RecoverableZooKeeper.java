@@ -163,7 +163,7 @@ public class RecoverableZooKeeper {
                     "previous attempt succeeded.");
                 return;
               }
-              LOG.warn("Node " + path + " already deleted, retry=" + isRetry);
+              LOG.info("Node " + path + " already deleted, retry=" + isRetry);
               throw e;
 
             case CONNECTIONLOSS:
@@ -505,8 +505,7 @@ public class RecoverableZooKeeper {
                   Bytes.toStringBinary(data));
               throw e;
             }
-            LOG.info("Node " + path + " already exists and this is not a " +
-                "retry");
+            LOG.info("Node " + path + " already exists");
             throw e;
 
           case CONNECTIONLOSS:

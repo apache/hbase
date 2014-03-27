@@ -174,7 +174,7 @@ public class MasterRpcServices extends RSRpcServices
   private RegionServerStartupResponse.Builder createConfigurationSubset() {
     RegionServerStartupResponse.Builder resp = addConfig(
       RegionServerStartupResponse.newBuilder(), HConstants.HBASE_DIR);
-    return addConfig(resp, "fs.default.name");
+    return addConfig(resp, "fs.defaultFS");
   }
 
   private RegionServerStartupResponse.Builder addConfig(

@@ -35,7 +35,6 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
-  
   static final Log LOG = LogFactory.getLog(ZooKeeperNodeTracker.class);
   /** Path of node being tracked */
   protected final String node;
@@ -144,7 +143,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
 
         // It did not exists, and now it does.
         if (nodeExistsChecked){
-          LOG.info("Node "+node+" now exists, resetting a watcher");
+          LOG.debug("Node " + node + " now exists, resetting a watcher");
           try {
             // This does not create a watch if the node does not exists
             this.data = ZKUtil.getDataAndWatch(watcher, node);

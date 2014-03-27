@@ -1046,7 +1046,7 @@ public class RpcServer implements RpcServerInterface {
         }
       } finally {
         if (error && call != null) {
-          LOG.warn(getName() + call.toShortString() + ": output error");
+          LOG.warn(getName() + call.toShortString() + ": output error -- closing");
           done = true;               // error. no more data for this channel.
           closeConnection(call.connection);
         }
