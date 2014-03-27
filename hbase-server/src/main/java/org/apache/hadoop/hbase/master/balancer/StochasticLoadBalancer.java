@@ -568,11 +568,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   public abstract static class CostFunction {
 
-    protected float multiplier = 0;
-    protected Configuration conf;
+    private float multiplier = 0;
 
     CostFunction(Configuration c) {
-      this.conf = c;
+
     }
 
     float getMultiplier() {
