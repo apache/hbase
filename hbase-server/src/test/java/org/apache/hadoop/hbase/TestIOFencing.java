@@ -49,7 +49,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.log4j.Level;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -203,7 +202,6 @@ public class TestIOFencing {
    * a new regionserver altogether.  This fakes the double assignment case where region in one
    * location changes the files out from underneath a region being served elsewhere.
    */
-  @Ignore("See HBASE-10298")
   @Test
   public void testFencingAroundCompaction() throws Exception {
     doTest(BlockCompactionsInPrepRegion.class);
@@ -215,7 +213,6 @@ public class TestIOFencing {
    * a new regionserver altogether.  This fakes the double assignment case where region in one
    * location changes the files out from underneath a region being served elsewhere.
    */
-  @Ignore("See HBASE-10298")
   @Test
   public void testFencingAroundCompactionAfterWALSync() throws Exception {
     doTest(BlockCompactionsInCompletionRegion.class);
