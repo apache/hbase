@@ -97,6 +97,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -270,6 +271,18 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
     startActiveMasterManager();
+  }
+
+  /**
+   * For compatibility, if failed with regionserver credentials, try the master one
+   */
+  protected void login(UserProvider user, String host) throws IOException {
+    try {
+      super.login(user, host);
+    } catch (IOException ie) {
+      user.login("hbase.master.keytab.file",
+        "hbase.master.kerberos.principal", host);
+    }
   }
 
   @VisibleForTesting

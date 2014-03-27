@@ -437,10 +437,9 @@ public class HRegionServer extends HasThread implements
     // login the zookeeper client principal (if using security)
     ZKUtil.loginClient(this.conf, "hbase.zookeeper.client.keytab.file",
       "hbase.zookeeper.client.kerberos.principal", hostName);
-
     // login the server principal (if using secure Hadoop)
-    userProvider.login("hbase.regionserver.keytab.file",
-      "hbase.regionserver.kerberos.principal", hostName);
+    login(userProvider, hostName);
+
     regionServerAccounting = new RegionServerAccounting();
     cacheConfig = new CacheConfig(conf);
     uncaughtExceptionHandler = new UncaughtExceptionHandler() {
@@ -484,7 +483,13 @@ public class HRegionServer extends HasThread implements
       catalogTracker.start();
     }
 
+    rpcServices.start();
     putUpWebUI();
+  }
+
+  protected void login(UserProvider user, String host) throws IOException {
+    user.login("hbase.regionserver.keytab.file",
+      "hbase.regionserver.kerberos.principal", host);
   }
 
   protected String getProcessName() {

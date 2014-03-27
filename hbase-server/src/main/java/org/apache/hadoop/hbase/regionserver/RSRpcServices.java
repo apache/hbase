@@ -703,7 +703,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       initialIsa, // BindAddress is IP we got for this server.
       rs.conf,
       rpcSchedulerFactory.create(rs.conf, this));
-    rpcServer.start();
 
     scannerLeaseTimeoutPeriod = rs.conf.getInt(
       HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
@@ -757,6 +756,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   PriorityFunction getPriority() {
     return priority;
+  }
+
+  void start() {
+    rpcServer.start();
   }
 
   void stop() {
