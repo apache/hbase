@@ -51,7 +51,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation>
 implements Configurable {
 
-  private final Log LOG = LogFactory.getLog(TableOutputFormat.class);
+  private static final Log LOG = LogFactory.getLog(TableOutputFormat.class);
 
   /** Job parameter that specifies the output table. */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";

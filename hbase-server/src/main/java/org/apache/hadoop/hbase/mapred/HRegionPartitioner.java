@@ -45,7 +45,7 @@ import org.apache.hadoop.mapred.Partitioner;
 @InterfaceStability.Stable
 public class HRegionPartitioner<K2,V2>
 implements Partitioner<ImmutableBytesWritable, V2> {
-  private final Log LOG = LogFactory.getLog(TableInputFormat.class);
+  private static final Log LOG = LogFactory.getLog(HRegionPartitioner.class);
   private HTable table;
   private byte[][] startKeys;
 

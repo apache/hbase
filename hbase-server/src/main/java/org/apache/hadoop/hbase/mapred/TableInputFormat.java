@@ -41,7 +41,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceStability.Stable
 public class TableInputFormat extends TableInputFormatBase implements
     JobConfigurable {
-  private final Log LOG = LogFactory.getLog(TableInputFormat.class);
+  private static final Log LOG = LogFactory.getLog(TableInputFormat.class);
 
   /**
    * space delimited list of columns

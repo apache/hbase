@@ -70,7 +70,7 @@ import org.apache.hadoop.mapred.Reporter;
 @InterfaceStability.Stable
 public abstract class TableInputFormatBase
 implements InputFormat<ImmutableBytesWritable, Result> {
-  final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
+  private static final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
   private byte [][] inputColumns;
   private HTable table;
   private TableRecordReader tableRecordReader;

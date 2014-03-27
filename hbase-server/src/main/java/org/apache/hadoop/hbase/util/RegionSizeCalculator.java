@@ -48,7 +48,7 @@ import java.util.TreeSet;
 @InterfaceAudience.Private
 public class RegionSizeCalculator {
 
-  private final Log LOG = LogFactory.getLog(RegionSizeCalculator.class);
+  private static final Log LOG = LogFactory.getLog(RegionSizeCalculator.class);
 
   /**
    * Maps each region to its size in bytes.

@@ -48,7 +48,7 @@ FileOutputFormat<ImmutableBytesWritable, Put> {
 
   /** JobConf parameter that specifies the output table */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
-  private final Log LOG = LogFactory.getLog(TableOutputFormat.class);
+  private static final Log LOG = LogFactory.getLog(TableOutputFormat.class);
 
   /**
    * Convert Reduce output (key, value) to (HStoreKey, KeyedDataArrayWritable)

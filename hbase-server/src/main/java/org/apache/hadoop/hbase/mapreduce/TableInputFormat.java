@@ -40,7 +40,7 @@ import org.apache.hadoop.util.StringUtils;
 public class TableInputFormat extends TableInputFormatBase
 implements Configurable {
 
-  private final Log LOG = LogFactory.getLog(TableInputFormat.class);
+  private static final Log LOG = LogFactory.getLog(TableInputFormat.class);
 
   /** Job parameter that specifies the input table. */
   public static final String INPUT_TABLE = "hbase.mapreduce.inputtable";

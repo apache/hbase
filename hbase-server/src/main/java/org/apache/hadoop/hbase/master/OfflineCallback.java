@@ -37,7 +37,7 @@ import org.apache.zookeeper.data.Stat;
  */
 @InterfaceAudience.Private
 public class OfflineCallback implements StringCallback {
-  private final Log LOG = LogFactory.getLog(OfflineCallback.class);
+  private static final Log LOG = LogFactory.getLog(OfflineCallback.class);
   private final ExistCallback callBack;
   private final ZooKeeperWatcher zkw;
   private final ServerName destination;
@@ -79,7 +79,7 @@ public class OfflineCallback implements StringCallback {
    * Used during bulk assign on startup.
    */
   static class ExistCallback implements StatCallback {
-    private final Log LOG = LogFactory.getLog(ExistCallback.class);
+    private static final Log LOG = LogFactory.getLog(ExistCallback.class);
     private final Map<String, Integer> offlineNodesVersions;
     private final AtomicInteger counter;
     private ServerName destination;

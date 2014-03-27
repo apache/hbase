@@ -51,7 +51,7 @@ public class HRegionPartitioner<KEY, VALUE>
 extends Partitioner<ImmutableBytesWritable, VALUE>
 implements Configurable {
 
-  private final Log LOG = LogFactory.getLog(TableInputFormat.class);
+  private static final Log LOG = LogFactory.getLog(HRegionPartitioner.class);
   private Configuration conf = null;
   private HTable table;
   private byte[][] startKeys;
