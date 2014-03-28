@@ -711,7 +711,7 @@ public class MasterRpcServices extends RSRpcServices
 
   /**
    * Get list of TableDescriptors for requested tables.
-   * @param controller Unused (set to null).
+   * @param c Unused (set to null).
    * @param req GetTableDescriptorsRequest that contains:
    * - tableNames: requested tables, or if empty, all are requested
    * @return GetTableDescriptorsResponse

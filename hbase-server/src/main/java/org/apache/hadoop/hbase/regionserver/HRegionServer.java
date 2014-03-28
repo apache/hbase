@@ -332,8 +332,7 @@ public class HRegionServer extends HasThread implements
   /**
    * The server name the Master sees us as.  Its made from the hostname the
    * master passes us, port, and server startcode. Gets set after registration
-   * against  Master.  The hostname can differ from the hostname in {@link #isa}
-   * but usually doesn't if both servers resolve .
+   * against  Master.
    */
   protected ServerName serverName;
 
