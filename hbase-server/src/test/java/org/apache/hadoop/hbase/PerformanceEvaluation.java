@@ -38,6 +38,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.yammer.metrics.core.Histogram;
+import com.yammer.metrics.core.MetricsRegistry;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
@@ -328,10 +331,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
           threadOpts.startRow = index * threadOpts.perClientRunRows;
           long elapsedTime = runOneClient(cmd, getConf(), threadOpts, new Status() {
             public void setStatus(final String msg) throws IOException {
-              LOG.info("client-" + Thread.currentThread().getName() + " " + msg);
+              LOG.info(msg);
             }
           });
-          LOG.info("Finished " + Thread.currentThread().getName() + " in " + elapsedTime +
+          LOG.info("Finished in " + elapsedTime +
             "ms over " + threadOpts.perClientRunRows + " rows");
           return elapsedTime;
         }
@@ -394,8 +397,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
-      DescriptiveStatistics.class, // commons-math
-      ObjectMapper.class);         // jackson-mapper-asl
+      Histogram.class,     // yammer metrics   
+      ObjectMapper.class); // jackson-mapper-asl
 
     TableMapReduceUtil.initCredentials(job);
 
@@ -526,9 +529,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // Below is make it so when Tests are all running in the one
     // jvm, that they each have a differently seeded Random.
     private static final Random randomSeed = new Random(System.currentTimeMillis());
+    private static final MetricsRegistry metricsRegistry = new MetricsRegistry();
+
     private static long nextRandomSeed() {
       return randomSeed.nextLong();
     }
+    private final int everyN;
+
     protected final Random rand = new Random(nextRandomSeed());
     protected final Configuration conf;
     protected final TestOptions opts;
@@ -536,6 +543,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private final Status status;
     protected HConnection connection;
     protected HTableInterface table;
+
+    private String testName;
+    private Histogram latency;
 
     /**
      * Note that all subclasses of this class must provide a public contructor
@@ -545,6 +555,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.conf = conf;
       this.opts = options;
       this.status = status;
+      this.testName = this.getClass().getSimpleName();
+      everyN = (int) (opts.totalRows / (opts.totalRows * opts.sampleRate));
+      LOG.info("Sampling 1 every " + everyN + " out of " + opts.perClientRunRows + " total rows.");
     }
 
     private String generateStatus(final int sr, final int i, final int lr) {
@@ -560,9 +573,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.connection = HConnectionManager.createConnection(conf);
       this.table = connection.getTable(opts.tableName);
       this.table.setAutoFlush(false, true);
+      String metricName =
+          testName + "-Client-" + Thread.currentThread().getName() + "-testRowTime";
+      latency =
+          metricsRegistry.newHistogram(PerformanceEvaluation.class, metricName);
     }
 
     void testTakedown() throws IOException {
+      reportLatency();
       if (opts.flushCommits) {
         this.table.flushCommits();
       }
@@ -594,11 +612,29 @@ public class PerformanceEvaluation extends Configured implements Tool {
       int lastRow = opts.startRow + opts.perClientRunRows;
       // Report on completion of 1/10th of total.
       for (int i = opts.startRow; i < lastRow; i++) {
+        if (i % everyN != 0) continue;
+        long startTime = System.currentTimeMillis();
         testRow(i);
+        latency.update(System.currentTimeMillis() - startTime);
         if (status != null && i > 0 && (i % getReportingPeriod()) == 0) {
           status.setStatus(generateStatus(opts.startRow, i, lastRow));
         }
       }
+    }
+    /**
+     * report percentiles of latency
+     * @throws IOException
+     */
+    private void reportLatency() throws IOException {
+      status.setStatus(testName + " latency log (ms), on " + latency.count() + " measures");
+      status.setStatus(testName + " Min    = " + latency.min());
+      status.setStatus(testName + " Avg    = " + latency.mean());
+      status.setStatus(testName + " StdDev = " + latency.stdDev());
+      status.setStatus(testName + " 50th   = " + latency.getSnapshot().getMedian());
+      status.setStatus(testName + " 95th   = " + latency.getSnapshot().get95thPercentile());
+      status.setStatus(testName + " 99th   = " + latency.getSnapshot().get99thPercentile());
+      status.setStatus(testName + " 99.9th = " + latency.getSnapshot().get999thPercentile());
+      status.setStatus(testName + " Max    = " + latency.max());
     }
 
     /*
@@ -719,48 +755,29 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomReadTest extends Test {
-    private final int everyN;
-    private final double[] times;
     private ArrayList<Get> gets;
     int idx = 0;
 
     RandomReadTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
-      everyN = (int) (opts.totalRows / (opts.totalRows * opts.sampleRate));
-      LOG.info("Sampling 1 every " + everyN + " out of " + opts.perClientRunRows + " total rows.");
       if (opts.multiGet > 0) {
         LOG.info("MultiGet enabled. Sending GETs in batches of " + opts.multiGet + ".");
         this.gets = new ArrayList<Get>(opts.multiGet);
-      }
-      if (opts.reportLatency) {
-        this.times = new double[(int) Math.ceil(opts.perClientRunRows * opts.sampleRate / Math.max(1, opts.multiGet))];
-      } else {
-        this.times = null;
       }
     }
 
     @Override
     void testRow(final int i) throws IOException {
-      if (i % everyN == 0) {
-        Get get = new Get(getRandomRow(this.rand, opts.totalRows));
-        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-        if (opts.multiGet > 0) {
-          this.gets.add(get);
-          if (this.gets.size() == opts.multiGet) {
-            long start = System.nanoTime();
-            this.table.get(this.gets);
-            if (opts.reportLatency) {
-              times[idx++] = (System.nanoTime() - start) / 1e6;
-            }
-            this.gets.clear();
-          }
-        } else {
-          long start = System.nanoTime();
-          this.table.get(get);
-          if (opts.reportLatency) {
-            times[idx++] = (System.nanoTime() - start) / 1e6;
-          }
+      Get get = new Get(getRandomRow(this.rand, opts.totalRows));
+      get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (opts.multiGet > 0) {
+        this.gets.add(get);
+        if (this.gets.size() == opts.multiGet) {
+          this.table.get(this.gets);
+          this.gets.clear();
         }
+      } else {
+        this.table.get(get);
       }
     }
 
@@ -777,24 +794,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
         this.gets.clear();
       }
       super.testTakedown();
-      if (opts.reportLatency) {
-        Arrays.sort(times);
-        DescriptiveStatistics ds = new DescriptiveStatistics();
-        for (double t : times) {
-          ds.addValue(t);
-        }
-        LOG.info("randomRead latency log (ms), on " + times.length + " measures");
-        LOG.info("99.9999% = " + ds.getPercentile(99.9999d));
-        LOG.info(" 99.999% = " + ds.getPercentile(99.999d));
-        LOG.info("  99.99% = " + ds.getPercentile(99.99d));
-        LOG.info("   99.9% = " + ds.getPercentile(99.9d));
-        LOG.info("     99% = " + ds.getPercentile(99d));
-        LOG.info("     95% = " + ds.getPercentile(95d));
-        LOG.info("     90% = " + ds.getPercentile(90d));
-        LOG.info("     80% = " + ds.getPercentile(80d));
-        LOG.info("Standard Deviation = " + ds.getStandardDeviation());
-        LOG.info("Mean = " + ds.getMean());
-      }
     }
   }
 
