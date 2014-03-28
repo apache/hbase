@@ -2445,9 +2445,11 @@ public class HRegionServer extends HasThread implements
       String regionNameStr = regionName == null?
         encodedRegionName: Bytes.toStringBinary(regionName);
       if (isOpening != null && isOpening.booleanValue()) {
-        throw new RegionOpeningException("Region " + regionNameStr + " is opening");
+        throw new RegionOpeningException("Region " + regionNameStr + 
+          " is opening on " + this.serverName);
       }
-      throw new NotServingRegionException("Region " + regionNameStr + " is not online");
+      throw new NotServingRegionException("Region " + regionNameStr + 
+        " is not online on " + this.serverName);
     }
     return region;
   }
