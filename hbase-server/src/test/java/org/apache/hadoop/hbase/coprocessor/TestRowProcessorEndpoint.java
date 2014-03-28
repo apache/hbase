@@ -114,7 +114,7 @@ public class TestRowProcessorEndpoint {
     Configuration conf = util.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         RowProcessorEndpoint.class.getName());
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     conf.setLong("hbase.hregion.row.processor.timeout", 1000L);
     util.startMiniCluster();
   }

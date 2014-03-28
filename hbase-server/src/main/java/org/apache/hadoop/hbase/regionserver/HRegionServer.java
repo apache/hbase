@@ -2667,9 +2667,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       String regionNameStr = regionName == null?
         encodedRegionName: Bytes.toStringBinary(regionName);
       if (isOpening != null && isOpening.booleanValue()) {
-        throw new RegionOpeningException("Region " + regionNameStr + " is opening");
+        throw new RegionOpeningException("Region " + regionNameStr + 
+          " is opening on " + this.serverNameFromMasterPOV);
       }
-      throw new NotServingRegionException("Region " + regionNameStr + " is not online");
+      throw new NotServingRegionException("Region " + regionNameStr + 
+        " is not online on " + this.serverNameFromMasterPOV);
     }
     return region;
   }
