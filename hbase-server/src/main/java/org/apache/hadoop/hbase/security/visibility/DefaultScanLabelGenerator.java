@@ -58,7 +58,7 @@ public class DefaultScanLabelGenerator implements ScanLabelGenerator {
   public List<String> getLabels(User user, Authorizations authorizations) {
     if (authorizations != null) {
       List<String> labels = authorizations.getLabels();
-      String userName = user.getName();
+      String userName = user.getShortName();
       List<String> auths = this.labelsManager.getAuths(userName);
       return dropLabelsNotInUserAuths(labels, auths, userName);
     }
