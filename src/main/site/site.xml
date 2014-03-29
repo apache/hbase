@@ -28,7 +28,11 @@
     <src>images/hbase_logo.png</src>
     <href>http://hbase.apache.org/</href>
   </bannerLeft>
-  <bannerRight />
+  <bannerRight>
+    <name>HBaseCon2014</name>
+    <src>images/hbasecon2014_banner.jpg</src>
+    <href>http://hbasecon.com/</href>
+  </bannerRight>
   <version position="right" />
   <publishDate position="right" />
   <body>

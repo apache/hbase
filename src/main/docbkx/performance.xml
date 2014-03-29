@@ -156,15 +156,6 @@
 
     <para>See <xref linkend="recommended_configurations" />.</para>
 
-
-    <section xml:id="perf.number.of.regions">
-      <title>Number of Regions</title>
-
-      <para>The number of regions for an HBase table is driven by the <xref
-              linkend="bigger.regions" />. Also, see the architecture
-          section on <xref linkend="arch.regions.size" /></para>
-    </section>
-
     <section xml:id="perf.compactions.and.splits">
       <title>Managing Compactions</title>
 
@@ -184,15 +175,15 @@
         A memory setting for the RegionServer process.
         </para>
     </section>
-    <section xml:id="perf.rs.memstore.upperlimit">
-        <title><varname>hbase.regionserver.global.memstore.upperLimit</varname></title>
-        <para>See <xref linkend="hbase.regionserver.global.memstore.upperLimit"/>.
+    <section xml:id="perf.rs.memstore.size">
+        <title><varname>hbase.regionserver.global.memstore.size</varname></title>
+        <para>See <xref linkend="hbase.regionserver.global.memstore.size"/>.
         This memory setting is often adjusted for the RegionServer process depending on needs.
         </para>
     </section>
-    <section xml:id="perf.rs.memstore.lowerlimit">
-        <title><varname>hbase.regionserver.global.memstore.lowerLimit</varname></title>
-        <para>See <xref linkend="hbase.regionserver.global.memstore.lowerLimit"/>.
+    <section xml:id="perf.rs.memstore.size.lower.limit">
+        <title><varname>hbase.regionserver.global.memstore.size.lower.limit</varname></title>
+        <para>See <xref linkend="hbase.regionserver.global.memstore.size.lower.limit"/>.
         This memory setting is often adjusted for the RegionServer process depending on needs.
         </para>
     </section>
@@ -248,7 +239,7 @@
     <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html">HTableDescriptor</link> in the
     event where certain tables require different regionsizes than the configured default regionsize.
     </para>
-    <para>See <xref linkend="perf.number.of.regions"/> for more information.
+    <para>See <xref linkend="ops.capacity.regions"/> for more information.
     </para>
     </section>
     <section xml:id="schema.bloom">
@@ -259,7 +250,7 @@
         <varname>NONE</varname> for no bloom filters. If
         <varname>ROW</varname>, the hash of the row will be added to the bloom
         on each insert. If <varname>ROWCOL</varname>, the hash of the row +
-        column family + column family qualifier will be added to the bloom on
+        column family name + column family qualifier will be added to the bloom on
         each key insert.</para>
     <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> and
     <xref linkend="blooms"/> for more information or this answer up in quora,
@@ -442,7 +433,9 @@ Deferred log flush can be configured on tables via <link
 
   <section xml:id="perf.reading">
     <title>Reading from HBase</title>
-
+    <para>The mailing list can help if you are having performance issues.
+    For example, here is a good general thread on what to look at addressing
+    read-time issues: <link xlink:href="http://search-hadoop.com/m/qOo2yyHtCC1">HBase Random Read latency > 100ms</link></para>
     <section xml:id="perf.hbase.client.caching">
       <title>Scan Caching</title>
 
@@ -552,7 +545,7 @@ htable.close();</programlisting></para>
      <section xml:id="blooms">
      <title>Bloom Filters</title>
          <para>Enabling Bloom Filters can save your having to go to disk and
-         can help improve read latencys.</para>
+         can help improve read latencies.</para>
          <para><link xlink:href="http://en.wikipedia.org/wiki/Bloom_filter">Bloom filters</link> were developed over in <link
     xlink:href="https://issues.apache.org/jira/browse/HBASE-1200">HBase-1200
     Add bloomfilters</link>.<footnote>
