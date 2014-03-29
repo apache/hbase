@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -127,12 +126,12 @@ public class TestHalfStoreFileReader {
       curr = scanner.getKeyValue();
       KeyValue reseekKv =
           getLastOnCol(curr);
-      int ret = scanner.reseekTo(reseekKv.getKey());
+      int ret = scanner.reseekTo(reseekKv);
       assertTrue("reseek to returned: " + ret, ret > 0);
       //System.out.println(curr + ": " + ret);
     } while (scanner.next());
 
-    int ret = scanner.reseekTo(getLastOnCol(curr).getKey());
+    int ret = scanner.reseekTo(getLastOnCol(curr));
     //System.out.println("Last reseek: " + ret);
     assertTrue( ret > 0 );
 
@@ -221,7 +220,7 @@ public class TestHalfStoreFileReader {
               cacheConfig, bottom, TEST_UTIL.getConfiguration());
       halfreader.loadFileInfo();
       final HFileScanner scanner = halfreader.getScanner(false, false);
-      scanner.seekBefore(seekBefore.getKey());
+      scanner.seekBefore(seekBefore);
       return scanner.getKeyValue();
   }
 

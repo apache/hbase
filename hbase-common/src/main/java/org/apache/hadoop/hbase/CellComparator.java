@@ -45,54 +45,85 @@ public class CellComparator implements Comparator<Cell>, Serializable{
 
   @Override
   public int compare(Cell a, Cell b) {
-    return compareStatic(a, b);
+    return compareStatic(a, b, false);
   }
 
-
-  public static int compareStatic(Cell a, Cell b) {
-    //row
-    int c = Bytes.compareTo(
-        a.getRowArray(), a.getRowOffset(), a.getRowLength(),
-        b.getRowArray(), b.getRowOffset(), b.getRowLength());
+  public static int compareStatic(Cell a, Cell b, boolean onlyKey) {
+    // row
+    int c = compareRows(a, b);
     if (c != 0) return c;
 
-    // If the column is not specified, the "minimum" key type appears the
-    // latest in the sorted order, regardless of the timestamp. This is used
-    // for specifying the last key/value in a given row, because there is no
-    // "lexicographically last column" (it would be infinitely long). The
-    // "maximum" key type does not need this behavior.
-    if (a.getFamilyLength() == 0 && a.getTypeByte() == Type.Minimum.getCode()) {
-      // a is "bigger", i.e. it appears later in the sorted order
-      return 1;
+    c = compareWithoutRow(a, b);
+    if(c != 0) return c;
+
+    if (!onlyKey) {
+      // Negate following comparisons so later edits show up first
+
+      // compare log replay tag value if there is any
+      // when either keyvalue tagged with log replay sequence number, we need to compare them:
+      // 1) when both keyvalues have the tag, then use the tag values for comparison
+      // 2) when one has and the other doesn't have, the one without the log
+      // replay tag wins because
+      // it means the edit isn't from recovery but new one coming from clients during recovery
+      // 3) when both doesn't have, then skip to the next mvcc comparison
+      long leftChangeSeqNum = getReplaySeqNum(a);
+      long RightChangeSeqNum = getReplaySeqNum(b);
+      if (leftChangeSeqNum != Long.MAX_VALUE || RightChangeSeqNum != Long.MAX_VALUE) {
+        return Longs.compare(RightChangeSeqNum, leftChangeSeqNum);
+      }
+      // mvccVersion: later sorts first
+      return Longs.compare(b.getMvccVersion(), a.getMvccVersion());
+    } else {
+      return c;
     }
-    if (b.getFamilyLength() == 0 && b.getTypeByte() == Type.Minimum.getCode()) {
-      return -1;
-    }
-
-    //family
-    c = Bytes.compareTo(
-      a.getFamilyArray(), a.getFamilyOffset(), a.getFamilyLength(),
-      b.getFamilyArray(), b.getFamilyOffset(), b.getFamilyLength());
-    if (c != 0) return c;
-
-    //qualifier
-    c = Bytes.compareTo(
-        a.getQualifierArray(), a.getQualifierOffset(), a.getQualifierLength(),
-        b.getQualifierArray(), b.getQualifierOffset(), b.getQualifierLength());
-    if (c != 0) return c;
-
-    //timestamp: later sorts first
-    c = Longs.compare(b.getTimestamp(), a.getTimestamp());
-    if (c != 0) return c;
-
-    //type
-    c = (0xff & b.getTypeByte()) - (0xff & a.getTypeByte());
-    if (c != 0) return c;
-
-    //mvccVersion: later sorts first
-    return Longs.compare(b.getMvccVersion(), a.getMvccVersion());
   }
 
+  /**
+   * Return replay log sequence number for the cell
+   *
+   * @param c
+   * @return Long.MAX_VALUE if there is no LOG_REPLAY_TAG
+   */
+  private static long getReplaySeqNum(final Cell c) {
+    Tag tag = Tag.getTag(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength(),
+        TagType.LOG_REPLAY_TAG_TYPE);
+
+    if (tag != null) {
+      return Bytes.toLong(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength());
+    }
+    return Long.MAX_VALUE;
+  }
+
+  public static int findCommonPrefixInRowPart(Cell left, Cell right, int rowCommonPrefix) {
+    return findCommonPrefix(left.getRowArray(), right.getRowArray(), left.getRowLength()
+        - rowCommonPrefix, right.getRowLength() - rowCommonPrefix, left.getRowOffset()
+        + rowCommonPrefix, right.getRowOffset() + rowCommonPrefix);
+  }
+
+  private static int findCommonPrefix(byte[] left, byte[] right, int leftLength, int rightLength,
+      int leftOffset, int rightOffset) {
+    int length = Math.min(leftLength, rightLength);
+    int result = 0;
+
+    while (result < length && left[leftOffset + result] == right[rightOffset + result]) {
+      result++;
+    }
+    return result;
+  }
+
+  public static int findCommonPrefixInFamilyPart(Cell left, Cell right, int familyCommonPrefix) {
+    return findCommonPrefix(left.getFamilyArray(), right.getFamilyArray(), left.getFamilyLength()
+        - familyCommonPrefix, right.getFamilyLength() - familyCommonPrefix, left.getFamilyOffset()
+        + familyCommonPrefix, right.getFamilyOffset() + familyCommonPrefix);
+  }
+
+  public static int findCommonPrefixInQualifierPart(Cell left, Cell right,
+      int qualifierCommonPrefix) {
+    return findCommonPrefix(left.getQualifierArray(), right.getQualifierArray(),
+        left.getQualifierLength() - qualifierCommonPrefix, right.getQualifierLength()
+            - qualifierCommonPrefix, left.getQualifierOffset() + qualifierCommonPrefix,
+        right.getQualifierOffset() + qualifierCommonPrefix);
+  }
 
   /**************** equals ****************************/
 
@@ -130,6 +161,88 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     return a.getTypeByte() == b.getTypeByte();
   }
 
+  public static int compareColumns(final Cell left, final Cell right) {
+    int lfoffset = left.getFamilyOffset();
+    int rfoffset = right.getFamilyOffset();
+    int lclength = left.getQualifierLength();
+    int rclength = right.getQualifierLength();
+    int lfamilylength = left.getFamilyLength();
+    int rfamilylength = right.getFamilyLength();
+    int diff = compare(left.getFamilyArray(), lfoffset, lfamilylength, right.getFamilyArray(),
+        rfoffset, rfamilylength);
+    if (diff != 0) {
+      return diff;
+    } else {
+      return compare(left.getQualifierArray(), left.getQualifierOffset(), lclength,
+          right.getQualifierArray(), right.getQualifierOffset(), rclength);
+    }
+  }
+
+  public static int compareFamilies(Cell left, Cell right) {
+    return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
+        right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
+  }
+
+  public static int compareQualifiers(Cell left, Cell right) {
+    return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset(),
+        left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
+        right.getQualifierLength());
+  }
+
+  public int compareFlatKey(Cell left, Cell right) {
+    int compare = compareRows(left, right);
+    if (compare != 0) {
+      return compare;
+    }
+    return compareWithoutRow(left, right);
+  }
+
+  public static int compareRows(final Cell left, final Cell right) {
+    return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
+        right.getRowArray(), right.getRowOffset(), right.getRowLength());
+  }
+
+  public static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+      int rlength) {
+    return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
+  }
+
+  public static int compareWithoutRow(final Cell leftCell, final Cell rightCell) {
+    if (leftCell.getFamilyLength() + leftCell.getQualifierLength() == 0
+        && leftCell.getTypeByte() == Type.Minimum.getCode()) {
+      // left is "bigger", i.e. it appears later in the sorted order
+      return 1;
+    }
+    if (rightCell.getFamilyLength() + rightCell.getQualifierLength() == 0
+        && rightCell.getTypeByte() == Type.Minimum.getCode()) {
+      return -1;
+    }
+    boolean sameFamilySize = (leftCell.getFamilyLength() == rightCell.getFamilyLength());
+    if (!sameFamilySize) {
+      // comparing column family is enough.
+
+      return Bytes.compareTo(leftCell.getFamilyArray(), leftCell.getFamilyOffset(),
+          leftCell.getFamilyLength(), rightCell.getFamilyArray(), rightCell.getFamilyOffset(),
+          rightCell.getFamilyLength());
+    }
+    int diff = compareColumns(leftCell, rightCell);
+    if (diff != 0) return diff;
+
+    diff = compareTimestamps(leftCell, rightCell);
+    if (diff != 0) return diff;
+
+    // Compare types. Let the delete types sort ahead of puts; i.e. types
+    // of higher numbers sort before those of lesser numbers. Maximum (255)
+    // appears ahead of everything, and minimum (0) appears after
+    // everything.
+    return (0xff & rightCell.getTypeByte()) - (0xff & leftCell.getTypeByte());
+  }
+
+  public static int compareTimestamps(final Cell left, final Cell right) {
+    long ltimestamp = left.getTimestamp();
+    long rtimestamp = right.getTimestamp();
+    return compareTimestamps(ltimestamp, rtimestamp);
+  }
 
   /********************* hashCode ************************/
 
@@ -172,32 +285,54 @@ public class CellComparator implements Comparator<Cell>, Serializable{
   }
 
 
-  /***************** special cases ****************************/
+  /*********************common prefixes*************************/
 
+  private static int compare(byte[] left, int leftOffset, int leftLength, byte[] right,
+      int rightOffset, int rightLength) {
+    return Bytes.compareTo(left, leftOffset, leftLength, right, rightOffset, rightLength);
+  }
+
+  public static int compareCommonRowPrefix(Cell left, Cell right, int rowCommonPrefix) {
+    return compare(left.getRowArray(), left.getRowOffset() + rowCommonPrefix, left.getRowLength()
+        - rowCommonPrefix, right.getRowArray(), right.getRowOffset() + rowCommonPrefix,
+        right.getRowLength() - rowCommonPrefix);
+  }
+
+  public static int compareCommonFamilyPrefix(Cell left, Cell right,
+      int familyCommonPrefix) {
+    return compare(left.getFamilyArray(), left.getFamilyOffset() + familyCommonPrefix,
+        left.getFamilyLength() - familyCommonPrefix, right.getFamilyArray(),
+        right.getFamilyOffset() + familyCommonPrefix,
+        right.getFamilyLength() - familyCommonPrefix);
+  }
+
+  public static int compareCommonQualifierPrefix(Cell left, Cell right,
+      int qualCommonPrefix) {
+    return compare(left.getQualifierArray(), left.getQualifierOffset() + qualCommonPrefix,
+        left.getQualifierLength() - qualCommonPrefix, right.getQualifierArray(),
+        right.getQualifierOffset() + qualCommonPrefix, right.getQualifierLength()
+            - qualCommonPrefix);
+  }
+
+  /***************** special cases ****************************/
   /**
    * special case for KeyValue.equals
    */
+  public static boolean equalsIgnoreMvccVersion(Cell a, Cell b){
+    return 0 == compareStaticIgnoreMvccVersion(a, b);
+  }
+
   private static int compareStaticIgnoreMvccVersion(Cell a, Cell b) {
-    //row
-    int c = Bytes.compareTo(
-        a.getRowArray(), a.getRowOffset(), a.getRowLength(),
-        b.getRowArray(), b.getRowOffset(), b.getRowLength());
+    // row
+    int c = compareRows(a, b);
     if (c != 0) return c;
 
-    //family
-    c = Bytes.compareTo(
-      a.getFamilyArray(), a.getFamilyOffset(), a.getFamilyLength(),
-      b.getFamilyArray(), b.getFamilyOffset(), b.getFamilyLength());
+    // family
+    c = compareColumns(a, b);
     if (c != 0) return c;
 
-    //qualifier
-    c = Bytes.compareTo(
-        a.getQualifierArray(), a.getQualifierOffset(), a.getQualifierLength(),
-        b.getQualifierArray(), b.getQualifierOffset(), b.getQualifierLength());
-    if (c != 0) return c;
-
-    //timestamp: later sorts first
-    c = Longs.compare(b.getTimestamp(), a.getTimestamp());
+    // timestamp: later sorts first
+    c = compareTimestamps(a, b);
     if (c != 0) return c;
 
     //type
@@ -205,11 +340,17 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     return c;
   }
 
-  /**
-   * special case for KeyValue.equals
-   */
-  public static boolean equalsIgnoreMvccVersion(Cell a, Cell b){
-    return 0 == compareStaticIgnoreMvccVersion(a, b);
+  private static int compareTimestamps(final long ltimestamp, final long rtimestamp) {
+    // The below older timestamps sorting ahead of newer timestamps looks
+    // wrong but it is intentional. This way, newer timestamps are first
+    // found when we iterate over a memstore and newer versions are the
+    // first we trip over when reading from a store file.
+    if (ltimestamp < rtimestamp) {
+      return 1;
+    } else if (ltimestamp > rtimestamp) {
+      return -1;
+    }
+    return 0;
   }
 
 }

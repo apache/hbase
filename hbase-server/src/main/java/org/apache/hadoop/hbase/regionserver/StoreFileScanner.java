@@ -235,7 +235,7 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   public static boolean seekAtOrAfter(HFileScanner s, KeyValue k)
   throws IOException {
-    int result = s.seekTo(k.getBuffer(), k.getKeyOffset(), k.getKeyLength());
+    int result = s.seekTo(k);
     if(result < 0) {
       if (result == HConstants.INDEX_KEY_MAGIC) {
         // using faked key
@@ -255,7 +255,7 @@ public class StoreFileScanner implements KeyValueScanner {
   static boolean reseekAtOrAfter(HFileScanner s, KeyValue k)
   throws IOException {
     //This function is similar to seekAtOrAfter function
-    int result = s.reseekTo(k.getBuffer(), k.getKeyOffset(), k.getKeyLength());
+    int result = s.reseekTo(k);
     if (result <= 0) {
       if (result == HConstants.INDEX_KEY_MAGIC) {
         // using faked key

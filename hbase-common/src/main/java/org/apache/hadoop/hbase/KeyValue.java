@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
 
-import com.google.common.primitives.Longs;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * An HBase Key/Value. This is the fundamental HBase Type.  
@@ -1839,6 +1839,20 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
      * table.
      */
     @Override
+    public int compare(final Cell left, final Cell right) {
+      int c = compareRowKey(left, right);
+      if (c != 0) {
+        return c;
+      }
+      return CellComparator.compareWithoutRow(left, right);
+    }
+
+    @Override
+    public int compareOnlyKeyPortion(Cell left, Cell right) {
+      return compare(left, right);
+    }
+
+    @Override
     public int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       int leftDelimiter = getDelimiter(left, loffset, llength,
@@ -1952,9 +1966,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
      * @return 0 if equal, <0 if left smaller, >0 if right smaller
      */
     protected int compareRowKey(final Cell left, final Cell right) {
-      return Bytes.compareTo(
-          left.getRowArray(),  left.getRowOffset(),  left.getRowLength(),
-          right.getRowArray(), right.getRowOffset(), right.getRowLength());
+      return CellComparator.compareRows(left, right);
     }
 
     /**
@@ -1990,109 +2002,22 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       return compareFlatKey(left, 0, left.length, right, 0, right.length);
     }
 
+    public int compareOnlyKeyPortion(Cell left, Cell right) {
+      return CellComparator.compareStatic(left, right, true);
+    }
+
     /**
      * Compares the Key of a cell -- with fields being more significant in this order:
      * rowkey, colfam/qual, timestamp, type, mvcc
      */
+    @Override
     public int compare(final Cell left, final Cell right) {
-      // compare row
-      int compare = compareRowKey(left, right);
-      if (compare != 0) {
-        return compare;
-      }
-
-      // compare vs minimum
-      byte ltype = left.getTypeByte();
-      byte rtype = right.getTypeByte();
-      // If the column is not specified, the "minimum" key type appears the
-      // latest in the sorted order, regardless of the timestamp. This is used
-      // for specifying the last key/value in a given row, because there is no
-      // "lexicographically last column" (it would be infinitely long). The
-      // "maximum" key type does not need this behavior.
-      int lcfqLen = left.getFamilyLength() + left.getQualifierLength() ;
-      int rcfqLen = right.getFamilyLength() + right.getQualifierLength() ;
-      if (lcfqLen == 0 && ltype == Type.Minimum.getCode()) {
-        // left is "bigger", i.e. it appears later in the sorted order
-        return 1;
-      }
-      if (rcfqLen == 0 && rtype == Type.Minimum.getCode()) {
-        return -1;
-      }
-
-
-      // compare col family / col fam + qual
-      // If left family size is not equal to right family size, we need not
-      // compare the qualifiers.
-      compare = Bytes.compareTo(
-        left.getFamilyArray(),  left.getFamilyOffset(),  left.getFamilyLength(),
-        right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
-      if (compare != 0) {
-        return compare;
-      }
-
-      // Compare qualifier
-      compare = Bytes.compareTo(
-          left.getQualifierArray(), left.getQualifierOffset(), left.getQualifierLength(),
-          right.getQualifierArray(), right.getQualifierOffset(), right.getQualifierLength());
-      if (compare!= 0) {
-        return compare;
-      }
-
-      // compare timestamp
-      long ltimestamp = left.getTimestamp();
-      long rtimestamp = right.getTimestamp();
-      compare = compareTimestamps(ltimestamp, rtimestamp);
-      if (compare != 0) {
-        return compare;
-      }
-
-      // Compare types. Let the delete types sort ahead of puts; i.e. types
-      // of higher numbers sort before those of lesser numbers. Maximum (255)
-      // appears ahead of everything, and minimum (0) appears after
-      // everything.
-      compare = (0xff & rtype) - (0xff & ltype);
-      if (compare != 0) {
-        return compare;
-      }
-
-      // Negate following comparisons so later edits show up first
-
-      // compare log replay tag value if there is any
-      // when either keyvalue tagged with log replay sequence number, we need to compare them:
-      // 1) when both keyvalues have the tag, then use the tag values for comparison
-      // 2) when one has and the other doesn't have, the one without the log replay tag wins because
-      // it means the edit isn't from recovery but new one coming from clients during recovery
-      // 3) when both doesn't have, then skip to the next mvcc comparison
-      long leftChangeSeqNum = getReplaySeqNum(left);
-      long RightChangeSeqNum = getReplaySeqNum(right);
-      if (leftChangeSeqNum != Long.MAX_VALUE || RightChangeSeqNum != Long.MAX_VALUE) {
-        return Longs.compare(RightChangeSeqNum, leftChangeSeqNum);
-      }
-
-      // compare Mvcc Version
-      return Longs.compare(right.getMvccVersion(), left.getMvccVersion());
-    }
-    
-    /**
-     * Return replay log sequence number for the cell
-     * @param c
-     * @return Long.MAX_VALUE if there is no LOG_REPLAY_TAG
-     */
-    private long getReplaySeqNum(final Cell c) {
-      Tag tag = Tag.getTag(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength(), 
-        TagType.LOG_REPLAY_TAG_TYPE);
-
-      if(tag != null) {
-        return Bytes.toLong(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength());
-      }
-      return Long.MAX_VALUE;
+      int compare = CellComparator.compareStatic(left, right, false);
+      return compare;
     }
 
-    public int compareTimestamps(final KeyValue left, final KeyValue right) {
-      // Compare timestamps
-      long ltimestamp = left.getTimestamp(left.getKeyLength());
-      long rtimestamp = right.getTimestamp(right.getKeyLength());
-      return compareTimestamps(ltimestamp, rtimestamp);
+    public int compareTimestamps(final Cell left, final Cell right) {
+      return CellComparator.compareTimestamps(left, right);
     }
 
     /**
@@ -2100,7 +2025,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
      * @param right
      * @return Result comparing rows.
      */
-    public int compareRows(final KeyValue left, final KeyValue right) {
+    public int compareRows(final Cell left, final Cell right) {
       return compareRows(left.getRowArray(),left.getRowOffset(), left.getRowLength(),
       right.getRowArray(), right.getRowOffset(), right.getRowLength());
     }
@@ -2120,17 +2045,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
     }
 
-    int compareColumns(final KeyValue left, final short lrowlength,
-        final KeyValue right, final short rrowlength) {
-      int lfoffset = left.getFamilyOffset(lrowlength);
-      int rfoffset = right.getFamilyOffset(rrowlength);
-      int lclength = left.getTotalColumnLength(lrowlength,lfoffset);
-      int rclength = right.getTotalColumnLength(rrowlength, rfoffset);
-      int lfamilylength = left.getFamilyLength(lfoffset);
-      int rfamilylength = right.getFamilyLength(rfoffset);
-      return compareColumns(left.getBuffer(), lfoffset,
-          lclength, lfamilylength,
-        right.getBuffer(), rfoffset, rclength, rfamilylength);
+    int compareColumns(final Cell left, final short lrowlength, final Cell right,
+        final short rrowlength) {
+      return CellComparator.compareColumns(left, right);
     }
 
     protected int compareColumns(
@@ -2297,20 +2214,31 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       return (0xff & rtype) - (0xff & ltype);
     }
 
+    protected int compareFamilies(final byte[] left, final int loffset, final int lfamilylength,
+        final byte[] right, final int roffset, final int rfamilylength) {
+      int diff = Bytes.compareTo(left, loffset, lfamilylength, right, roffset, rfamilylength);
+      return diff;
+    }
+
+    protected int compareColumns(final byte[] left, final int loffset, final int lquallength,
+        final byte[] right, final int roffset, final int rquallength) {
+      int diff = Bytes.compareTo(left, loffset, lquallength, right, roffset, rquallength);
+      return diff;
+    }
     /**
      * Compares the row and column of two keyvalues for equality
      * @param left
      * @param right
      * @return True if same row and column.
      */
-    public boolean matchingRowColumn(final KeyValue left,
-        final KeyValue right) {
+    public boolean matchingRowColumn(final Cell left,
+        final Cell right) {
       short lrowlength = left.getRowLength();
       short rrowlength = right.getRowLength();
 
       // TsOffset = end of column data. just comparing Row+CF length of each
-      if ((left.getTimestampOffset() - left.getOffset()) !=
-          (right.getTimestampOffset() - right.getOffset())) {
+      if ((left.getRowLength() + left.getFamilyLength() + left.getQualifierLength()) != (right
+          .getRowLength() + right.getFamilyLength() + right.getQualifierLength())) {
         return false;
       }
 
@@ -2318,15 +2246,21 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
         return false;
       }
 
-      int lfoffset = left.getFamilyOffset(lrowlength);
-      int rfoffset = right.getFamilyOffset(rrowlength);
-      int lclength = left.getTotalColumnLength(lrowlength,lfoffset);
-      int rclength = right.getTotalColumnLength(rrowlength, rfoffset);
-      int lfamilylength = left.getFamilyLength(lfoffset);
-      int rfamilylength = right.getFamilyLength(rfoffset);
-      int ccRes = compareColumns(left.getBuffer(), lfoffset, lclength, lfamilylength,
-          right.getBuffer(), rfoffset, rclength, rfamilylength);
-      return ccRes == 0;
+      int lfoffset = left.getFamilyOffset();
+      int rfoffset = right.getFamilyOffset();
+      int lclength = left.getQualifierLength();
+      int rclength = right.getQualifierLength();
+      int lfamilylength = left.getFamilyLength();
+      int rfamilylength = right.getFamilyLength();
+      int diff = compareFamilies(left.getFamilyArray(), lfoffset, lfamilylength,
+          right.getFamilyArray(), rfoffset, rfamilylength);
+      if (diff != 0) {
+        return false;
+      } else {
+        diff = compareColumns(left.getQualifierArray(), left.getQualifierOffset(), lclength,
+            right.getQualifierArray(), right.getQualifierOffset(), rclength);
+        return diff == 0;
+      }
     }
 
     /**
@@ -2335,7 +2269,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
      * @param right
      * @return True if rows match.
      */
-    public boolean matchingRows(final KeyValue left, final KeyValue right) {
+    public boolean matchingRows(final Cell left, final Cell right) {
       short lrowlength = left.getRowLength();
       short rrowlength = right.getRowLength();
       return matchingRows(left, lrowlength, right, rrowlength);
@@ -2348,8 +2282,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
      * @param rrowlength
      * @return True if rows match.
      */
-    private boolean matchingRows(final KeyValue left, final short lrowlength,
-        final KeyValue right, final short rrowlength) {
+    private boolean matchingRows(final Cell left, final short lrowlength,
+        final Cell right, final short rrowlength) {
       return lrowlength == rrowlength &&
           matchingRows(left.getRowArray(), left.getRowOffset(), lrowlength,
               right.getRowArray(), right.getRowOffset(), rrowlength);
@@ -2929,6 +2863,37 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       return Bytes.BYTES_RAWCOMPARATOR.compare(left,  loffset, llength, right, roffset, rlength);
     }
 
+    @Override
+    public int compare(Cell left, Cell right) {
+      return compareOnlyKeyPortion(left, right);
+    }
+
+    @VisibleForTesting
+    public int compareOnlyKeyPortion(Cell left, Cell right) {
+      int c = Bytes.BYTES_RAWCOMPARATOR.compare(left.getRowArray(), left.getRowOffset(),
+          left.getRowLength(), right.getRowArray(), right.getRowOffset(), right.getRowLength());
+      if (c != 0) {
+        return c;
+      }
+      c = Bytes.BYTES_RAWCOMPARATOR.compare(left.getFamilyArray(), left.getFamilyOffset(),
+          left.getFamilyLength(), right.getFamilyArray(), right.getFamilyOffset(),
+          right.getFamilyLength());
+      if (c != 0) {
+        return c;
+      }
+      c = Bytes.BYTES_RAWCOMPARATOR.compare(left.getQualifierArray(), left.getQualifierOffset(),
+          left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
+          right.getQualifierLength());
+      if (c != 0) {
+        return c;
+      }
+      c = compareTimestamps(left.getTimestamp(), right.getTimestamp());
+      if (c != 0) {
+        return c;
+      }
+      return (0xff & left.getTypeByte()) - (0xff & right.getTypeByte());
+    }
+
     public byte[] calcIndexKey(byte[] lastKeyOfPreviousBlock, byte[] firstKeyInBlock) {
       return firstKeyInBlock;
     }
@@ -2951,5 +2916,172 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     sum += 2 * Bytes.SIZEOF_INT;// offset, length
     sum += Bytes.SIZEOF_LONG;// memstoreTS
     return ClassSize.align(sum);
+  }
+
+  /**
+   * A simple form of KeyValue that creates a keyvalue with only the key part of the byte[]
+   * Mainly used in places where we need to compare two cells.  Avoids copying of bytes
+   * In places like block index keys, we need to compare the key byte[] with a cell.
+   * Hence create a Keyvalue(aka Cell) that would help in comparing as two cells
+   */
+  public static class KeyOnlyKeyValue extends KeyValue {
+    private int length = 0;
+    private int offset = 0;
+    private byte[] b;
+
+    public KeyOnlyKeyValue() {
+
+    }
+
+    public KeyOnlyKeyValue(byte[] b, int offset, int length) {
+      this.b = b;
+      this.length = length;
+      this.offset = offset;
+    }
+
+    @Override
+    public int getKeyOffset() {
+      return this.offset;
+    }
+
+    /**
+     * A setter that helps to avoid object creation every time and whenever
+     * there is a need to create new KeyOnlyKeyValue.
+     * @param key
+     * @param offset
+     * @param length
+     */
+    public void setKey(byte[] key, int offset, int length) {
+      this.b = key;
+      this.offset = offset;
+      this.length = length;
+    }
+
+    @Override
+    public byte[] getKey() {
+      int keylength = getKeyLength();
+      byte[] key = new byte[keylength];
+      System.arraycopy(this.b, getKeyOffset(), key, 0, keylength);
+      return key;
+    }
+
+    @Override
+    public byte[] getRowArray() {
+      return b;
+    }
+
+    @Override
+    public int getRowOffset() {
+      return getKeyOffset() + Bytes.SIZEOF_SHORT;
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      return b;
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return this.b[getFamilyOffset() - 1];
+    }
+
+    @Override
+    public int getFamilyOffset() {
+      return this.offset + Bytes.SIZEOF_SHORT + getRowLength() + Bytes.SIZEOF_BYTE;
+    }
+
+    @Override
+    public byte[] getQualifierArray() {
+      return b;
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return getQualifierLength(getRowLength(), getFamilyLength());
+    }
+
+    @Override
+    public int getQualifierOffset() {
+      return getFamilyOffset() + getFamilyLength();
+    }
+
+    @Override
+    public int getKeyLength() {
+      return length;
+    }
+
+    @Override
+    public short getRowLength() {
+      return Bytes.toShort(this.b, getKeyOffset());
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return this.b[this.offset + getKeyLength() - 1];
+    }
+
+    private int getQualifierLength(int rlength, int flength) {
+      return getKeyLength() - (int) getKeyDataStructureSize(rlength, flength, 0);
+    }
+
+    @Override
+    public long getTimestamp() {
+      int tsOffset = getTimestampOffset();
+      return Bytes.toLong(this.b, tsOffset);
+    }
+
+    @Override
+    public int getTimestampOffset() {
+      return getKeyOffset() + getKeyLength() - TIMESTAMP_TYPE_SIZE;
+    }
+
+    @Override
+    public byte[] getTagsArray() {
+      return HConstants.EMPTY_BYTE_ARRAY;
+    }
+
+    @Override
+    public int getTagsOffset() {
+      return (short) 0;
+    }
+
+    @Override
+    public byte[] getValueArray() {
+      throw new IllegalArgumentException("KeyOnlyKeyValue does not work with values.");
+    }
+
+    @Override
+    public int getValueOffset() {
+      throw new IllegalArgumentException("KeyOnlyKeyValue does not work with values.");
+    }
+
+    @Override
+    public int getValueLength() {
+      throw new IllegalArgumentException("KeyOnlyKeyValue does not work with values.");
+    }
+
+    @Override
+    public short getTagsLength() {
+      return (short) 0;
+    }
+
+    @Override
+    public String toString() {
+      if (this.b == null || this.b.length == 0) {
+        return "empty";
+      }
+      return keyToString(this.b, this.offset + ROW_OFFSET, getKeyLength()) + "/vlen="
+          + getValueLength() + "/mvcc=" + 0;
+    }
+
+    @Override
+    public int hashCode() {
+      return super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      return super.equals(other);
+    }
   }
 }

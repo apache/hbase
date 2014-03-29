@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.codec.prefixtree.decode.row.RowNodeReader;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.timestamp.MvccVersionDecoder;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.timestamp.TimestampDecoder;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.other.ColumnNodeType;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Extends PtCell and manipulates its protected fields.  Could alternatively contain a PtCell and
@@ -420,7 +419,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
 
   protected int populateNonRowFieldsAndCompareTo(int cellNum, Cell key) {
     populateNonRowFields(cellNum);
-    return CellComparator.compareStatic(this, key);
+    return CellComparator.compareStatic(this, key, false);
   }
 
   protected void populateFirstNonRowFields() {

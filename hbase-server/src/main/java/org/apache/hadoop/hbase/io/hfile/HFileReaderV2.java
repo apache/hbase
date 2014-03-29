@@ -28,9 +28,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
@@ -278,8 +280,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
     }
 
     byte[] mbname = Bytes.toBytes(metaBlockName);
-    int block = metaBlockIndexReader.rootBlockContainingKey(mbname, 0,
-        mbname.length);
+    int block = metaBlockIndexReader.rootBlockContainingKey(mbname,
+        0, mbname.length);
     if (block == -1)
       return null;
     long blockSize = metaBlockIndexReader.getRootBlockDataSize(block);
@@ -530,13 +532,66 @@ public class HFileReaderV2 extends AbstractHFileReader {
       super(r, cacheBlocks, pread, isCompaction);
     }
 
+    protected abstract ByteBuffer getFirstKeyInBlock(HFileBlock curBlock);
+
+    protected abstract int loadBlockAndSeekToKey(HFileBlock seekToBlock, byte[] nextIndexedKey,
+        boolean rewind, Cell key, boolean seekBefore) throws IOException;
+
+    @Override
+    public int seekTo(byte[] key, int offset, int length) throws IOException {
+      // Always rewind to the first key of the block, because the given key
+      // might be before or after the current key.
+      return seekTo(new KeyValue.KeyOnlyKeyValue(key, offset, length));
+    }
+
+    @Override
+    public int reseekTo(byte[] key, int offset, int length) throws IOException {
+      return reseekTo(new KeyValue.KeyOnlyKeyValue(key, offset, length));
+    }
+
+    @Override
+    public int seekTo(Cell key) throws IOException {
+      return seekTo(key, true);
+    }
+
+    @Override
+    public int reseekTo(Cell key) throws IOException {
+      int compared;
+      if (isSeeked()) {
+        compared = compareKey(reader.getComparator(), key);
+        if (compared < 1) {
+          // If the required key is less than or equal to current key, then
+          // don't do anything.
+          return compared;
+        } else {
+          // The comparison with no_next_index_key has to be checked
+          if (this.nextIndexedKey != null &&
+              (this.nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY || reader
+              .getComparator()
+                  .compareOnlyKeyPortion(key,
+                      new KeyValue.KeyOnlyKeyValue(nextIndexedKey, 0, 
+                          nextIndexedKey.length)) < 0)) {
+            // The reader shall continue to scan the current data block instead
+            // of querying the
+            // block index as long as it knows the target key is strictly
+            // smaller than
+            // the next indexed key or the current data block is the last data
+            // block.
+            return loadBlockAndSeekToKey(this.block, nextIndexedKey, false, key, false);
+          }
+        }
+      }
+      // Don't rewind on a reseek operation, because reseek implies that we are
+      // always going forward in the file.
+      return seekTo(key, false);
+    }
+
+
     /**
      * An internal API function. Seek to the given key, optionally rewinding to
      * the first key of the block before doing the seek.
      *
-     * @param key key byte array
-     * @param offset key offset in the key byte array
-     * @param length key length
+     * @param key - a cell representing the key that we need to fetch
      * @param rewind whether to rewind to the first key of the block before
      *        doing the seek. If this is false, we are assuming we never go
      *        back, otherwise the result is undefined.
@@ -546,76 +601,37 @@ public class HFileReaderV2 extends AbstractHFileReader {
      *         using a faked index key
      * @throws IOException
      */
-    protected int seekTo(byte[] key, int offset, int length, boolean rewind)
-        throws IOException {
-      HFileBlockIndex.BlockIndexReader indexReader =
-          reader.getDataBlockIndexReader();
-      BlockWithScanInfo blockWithScanInfo =
-        indexReader.loadDataBlockWithScanInfo(key, offset, length, block,
-            cacheBlocks, pread, isCompaction, getEffectiveDataBlockEncoding());
+    public int seekTo(Cell key, boolean rewind) throws IOException {
+      HFileBlockIndex.BlockIndexReader indexReader = reader.getDataBlockIndexReader();
+      BlockWithScanInfo blockWithScanInfo = indexReader.loadDataBlockWithScanInfo(key, block,
+          cacheBlocks, pread, isCompaction, getEffectiveDataBlockEncoding());
       if (blockWithScanInfo == null || blockWithScanInfo.getHFileBlock() == null) {
         // This happens if the key e.g. falls before the beginning of the file.
         return -1;
       }
       return loadBlockAndSeekToKey(blockWithScanInfo.getHFileBlock(),
-          blockWithScanInfo.getNextIndexedKey(), rewind, key, offset, length, false);
-    }
-
-    protected abstract ByteBuffer getFirstKeyInBlock(HFileBlock curBlock);
-
-    protected abstract int loadBlockAndSeekToKey(HFileBlock seekToBlock, byte[] nextIndexedKey,
-        boolean rewind, byte[] key, int offset, int length, boolean seekBefore)
-        throws IOException;
-
-    @Override
-    public int seekTo(byte[] key, int offset, int length) throws IOException {
-      // Always rewind to the first key of the block, because the given key
-      // might be before or after the current key.
-      return seekTo(key, offset, length, true);
+          blockWithScanInfo.getNextIndexedKey(), rewind, key, false);
     }
 
     @Override
-    public int reseekTo(byte[] key, int offset, int length) throws IOException {
-      int compared;
-      if (isSeeked()) {
-        compared = compareKey(reader.getComparator(), key, offset, length);
-        if (compared < 1) {
-          // If the required key is less than or equal to current key, then
-          // don't do anything.
-          return compared;
-        } else {
-          if (this.nextIndexedKey != null &&
-              (this.nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY ||
-               reader.getComparator().compareFlatKey(key, offset, length,
-                   nextIndexedKey, 0, nextIndexedKey.length) < 0)) {
-            // The reader shall continue to scan the current data block instead of querying the
-            // block index as long as it knows the target key is strictly smaller than
-            // the next indexed key or the current data block is the last data block.
-            return loadBlockAndSeekToKey(this.block, this.nextIndexedKey,
-                false, key, offset, length, false);
-          }
-        }
-      }
-      // Don't rewind on a reseek operation, because reseek implies that we are
-      // always going forward in the file.
-      return seekTo(key, offset, length, false);
+    public boolean seekBefore(byte[] key, int offset, int length) throws IOException {
+      return seekBefore(new KeyValue.KeyOnlyKeyValue(key, offset, length));
     }
 
     @Override
-    public boolean seekBefore(byte[] key, int offset, int length)
-        throws IOException {
-      HFileBlock seekToBlock =
-          reader.getDataBlockIndexReader().seekToDataBlock(key, offset, length,
-              block, cacheBlocks, pread, isCompaction,
-              ((HFileReaderV2)reader).getEffectiveEncodingInCache(isCompaction));
+    public boolean seekBefore(Cell key) throws IOException {
+      HFileBlock seekToBlock = reader.getDataBlockIndexReader().seekToDataBlock(key, block,
+          cacheBlocks, pread, isCompaction,
+          ((HFileReaderV2) reader).getEffectiveEncodingInCache(isCompaction));
       if (seekToBlock == null) {
         return false;
       }
       ByteBuffer firstKey = getFirstKeyInBlock(seekToBlock);
 
-      if (reader.getComparator().compareFlatKey(firstKey.array(),
-          firstKey.arrayOffset(), firstKey.limit(), key, offset, length) >= 0)
-      {
+      if (reader.getComparator()
+          .compareOnlyKeyPortion(
+              new KeyValue.KeyOnlyKeyValue(firstKey.array(), firstKey.arrayOffset(),
+                  firstKey.limit()), key) >= 0) {
         long previousBlockOffset = seekToBlock.getPrevBlockOffset();
         // The key we are interested in
         if (previousBlockOffset == -1) {
@@ -633,10 +649,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
         // block.
       }
       byte[] firstKeyInCurrentBlock = Bytes.getBytes(firstKey);
-      loadBlockAndSeekToKey(seekToBlock, firstKeyInCurrentBlock, true, key, offset, length, true);
+      loadBlockAndSeekToKey(seekToBlock, firstKeyInCurrentBlock, true, key, true);
       return true;
     }
-
 
     /**
      * Scans blocks in the "scanned" section of the {@link HFile} until the next
@@ -684,6 +699,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
      */
     public abstract int compareKey(KVComparator comparator, byte[] key, int offset,
         int length);
+
+    public abstract int compareKey(KVComparator comparator, Cell kv);
   }
 
   /**
@@ -837,8 +854,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
     @Override
     protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, byte[] nextIndexedKey,
-        boolean rewind, byte[] key, int offset, int length, boolean seekBefore)
-        throws IOException {
+        boolean rewind, Cell key, boolean seekBefore) throws IOException {
       if (block == null || block.getOffset() != seekToBlock.getOffset()) {
         updateCurrBlock(seekToBlock);
       } else if (rewind) {
@@ -847,7 +863,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       // Update the nextIndexedKey
       this.nextIndexedKey = nextIndexedKey;
-      return blockSeek(key, offset, length, seekBefore);
+      return blockSeek(key, seekBefore);
     }
 
     /**
@@ -911,26 +927,28 @@ public class HFileReaderV2 extends AbstractHFileReader {
     }
 
     /**
-     * Within a loaded block, seek looking for the last key that is smaller
-     * than (or equal to?) the key we are interested in.
+     * Within a loaded block, seek looking for the last key that is smaller than
+     * (or equal to?) the key we are interested in.
      *
      * A note on the seekBefore: if you have seekBefore = true, AND the first
      * key in the block = key, then you'll get thrown exceptions. The caller has
      * to check for that case and load the previous block as appropriate.
      *
-     * @param key the key to find
-     * @param seekBefore find the key before the given key in case of exact
-     *          match.
+     * @param key
+     *          the key to find
+     * @param seekBefore
+     *          find the key before the given key in case of exact match.
      * @return 0 in case of an exact key match, 1 in case of an inexact match,
-     *         -2 in case of an inexact match and furthermore, the input key less
-     *         than the first key of current block(e.g. using a faked index key)
+     *         -2 in case of an inexact match and furthermore, the input key
+     *         less than the first key of current block(e.g. using a faked index
+     *         key)
      */
-    protected int blockSeek(byte[] key, int offset, int length,
-        boolean seekBefore) {
+    protected int blockSeek(Cell key, boolean seekBefore) {
       int klen, vlen;
       long memstoreTS = 0;
       int memstoreTSLen = 0;
       int lastKeyValueSize = -1;
+      KeyValue.KeyOnlyKeyValue keyOnlykv = new KeyValue.KeyOnlyKeyValue();
       do {
         blockBuffer.mark();
         klen = blockBuffer.getInt();
@@ -939,10 +957,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
         if (this.reader.shouldIncludeMemstoreTS()) {
           if (this.reader.decodeMemstoreTS) {
             try {
-              int memstoreTSOffset = blockBuffer.arrayOffset()
-                  + blockBuffer.position() + KEY_VALUE_LEN_SIZE + klen + vlen;
-              memstoreTS = Bytes.readVLong(blockBuffer.array(),
-                  memstoreTSOffset);
+              int memstoreTSOffset = blockBuffer.arrayOffset() + blockBuffer.position()
+                  + KEY_VALUE_LEN_SIZE + klen + vlen;
+              memstoreTS = Bytes.readVLong(blockBuffer.array(), memstoreTSOffset);
               memstoreTSLen = WritableUtils.getVIntSize(memstoreTS);
             } catch (Exception e) {
               throw new RuntimeException("Error reading memstore timestamp", e);
@@ -953,18 +970,18 @@ public class HFileReaderV2 extends AbstractHFileReader {
           }
         }
 
-        int keyOffset = blockBuffer.arrayOffset() + blockBuffer.position()
-            + KEY_VALUE_LEN_SIZE;
-        int comp = reader.getComparator().compareFlatKey(key, offset, length,
-            blockBuffer.array(), keyOffset, klen);
+        int keyOffset = blockBuffer.arrayOffset() + blockBuffer.position() + KEY_VALUE_LEN_SIZE;
+        keyOnlykv.setKey(blockBuffer.array(), keyOffset, klen);
+        int comp = reader.getComparator().compareOnlyKeyPortion(key, keyOnlykv);
 
         if (comp == 0) {
           if (seekBefore) {
             if (lastKeyValueSize < 0) {
+              KeyValue kv = KeyValueUtil.ensureKeyValue(key);
               throw new IllegalStateException("blockSeek with seekBefore "
                   + "at the first key of the block: key="
-                  + Bytes.toStringBinary(key) + ", blockOffset="
-                  + block.getOffset() + ", onDiskSize="
+                  + Bytes.toStringBinary(kv.getKey(), kv.getKeyOffset(), kv.getKeyLength())
+                  + ", blockOffset=" + block.getOffset() + ", onDiskSize="
                   + block.getOnDiskSizeWithHeader());
             }
             blockBuffer.position(blockBuffer.position() - lastKeyValueSize);
@@ -1027,6 +1044,14 @@ public class HFileReaderV2 extends AbstractHFileReader {
       return Bytes.toString(blockBuffer.array(), blockBuffer.arrayOffset()
           + blockBuffer.position() + KEY_VALUE_LEN_SIZE + currKeyLen,
           currValueLen);
+    }
+
+    @Override
+    public int compareKey(KVComparator comparator, Cell key) {
+      return comparator.compareOnlyKeyPortion(
+          key,
+          new KeyValue.KeyOnlyKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
+              + blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen));
     }
   }
 
@@ -1187,15 +1212,19 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
     @Override
     protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, byte[] nextIndexedKey,
-        boolean rewind, byte[] key, int offset, int length, boolean seekBefore)
-        throws IOException  {
+        boolean rewind, Cell key, boolean seekBefore) throws IOException {
       if (block == null || block.getOffset() != seekToBlock.getOffset()) {
         updateCurrentBlock(seekToBlock);
       } else if (rewind) {
         seeker.rewind();
       }
       this.nextIndexedKey = nextIndexedKey;
-      return seeker.seekToKeyInBlock(key, offset, length, seekBefore);
+      return seeker.seekToKeyInBlock(key, seekBefore);
+    }
+
+    @Override
+    public int compareKey(KVComparator comparator, Cell key) {
+      return seeker.compareKey(comparator, key);
     }
   }
 

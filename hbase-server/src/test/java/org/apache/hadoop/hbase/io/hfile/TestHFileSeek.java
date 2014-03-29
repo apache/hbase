@@ -193,7 +193,7 @@ public class TestHFileSeek extends TestCase {
       kSampler.next(key);
       byte [] k = new byte [key.getLength()];
       System.arraycopy(key.getBytes(), 0, k, 0, key.getLength());
-      if (scanner.seekTo(k) >= 0) {
+      if (scanner.seekTo(KeyValue.createKeyValueFromKey(k)) >= 0) {
         ByteBuffer bbkey = scanner.getKey();
         ByteBuffer bbval = scanner.getValue();
         totalBytes += bbkey.limit();

@@ -114,22 +114,25 @@ public class TestPrefixTreeEncoding {
 
     // Seek before the first keyvalue;
     KeyValue seekKey = KeyValue.createFirstDeleteFamilyOnRow(getRowKey(batchId, 0), CF_BYTES);
-    seeker.seekToKeyInBlock(seekKey.getBuffer(), seekKey.getKeyOffset(), seekKey.getKeyLength(),
-        true);
+    seeker.seekToKeyInBlock(
+        new KeyValue.KeyOnlyKeyValue(seekKey.getBuffer(), seekKey.getKeyOffset(), seekKey
+            .getKeyLength()), true);
     assertEquals(null, seeker.getKeyValue());
 
     // Seek before the middle keyvalue;
     seekKey = KeyValue.createFirstDeleteFamilyOnRow(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3),
         CF_BYTES);
-    seeker.seekToKeyInBlock(seekKey.getBuffer(), seekKey.getKeyOffset(), seekKey.getKeyLength(),
-        true);
+    seeker.seekToKeyInBlock(
+        new KeyValue.KeyOnlyKeyValue(seekKey.getBuffer(), seekKey.getKeyOffset(), seekKey
+            .getKeyLength()), true);
     assertNotNull(seeker.getKeyValue());
     assertArrayEquals(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3 - 1), seeker.getKeyValue().getRow());
 
     // Seek before the last keyvalue;
     seekKey = KeyValue.createFirstDeleteFamilyOnRow(Bytes.toBytes("zzzz"), CF_BYTES);
-    seeker.seekToKeyInBlock(seekKey.getBuffer(), seekKey.getKeyOffset(), seekKey.getKeyLength(),
-        true);
+    seeker.seekToKeyInBlock(
+        new KeyValue.KeyOnlyKeyValue(seekKey.getBuffer(), seekKey.getKeyOffset(), seekKey
+            .getKeyLength()), true);
     assertNotNull(seeker.getKeyValue());
     assertArrayEquals(getRowKey(batchId, NUM_ROWS_PER_BATCH - 1), seeker.getKeyValue().getRow());
   }
@@ -221,8 +224,9 @@ public class TestPrefixTreeEncoding {
       kvList.clear();
       encodeSeeker.setCurrentBuffer(encodedData);
       KeyValue firstOnRow = KeyValue.createFirstOnRow(getRowKey(batchId, i));
-      encodeSeeker.seekToKeyInBlock(firstOnRow.getBuffer(),
-          firstOnRow.getKeyOffset(), firstOnRow.getKeyLength(), false);
+      encodeSeeker.seekToKeyInBlock(
+          new KeyValue.KeyOnlyKeyValue(firstOnRow.getBuffer(), firstOnRow.getKeyOffset(),
+              firstOnRow.getKeyLength()), false);
       boolean hasMoreOfEncodeScanner = encodeSeeker.next();
       CollectionBackedScanner collectionScanner = new CollectionBackedScanner(
           this.kvset);

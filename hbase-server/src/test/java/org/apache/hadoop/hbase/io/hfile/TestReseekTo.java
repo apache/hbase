@@ -63,7 +63,7 @@ public class TestReseekTo {
             .withOutputStream(fout)
             .withFileContext(context)
             // NOTE: This test is dependent on this deprecated nonstandard comparator
-            .withComparator(new KeyValue.RawBytesComparator())
+            .withComparator(KeyValue.COMPARATOR)
             .create();
     int numberOfKeys = 1000;
 
@@ -74,19 +74,32 @@ public class TestReseekTo {
 
     for (int key = 0; key < numberOfKeys; key++) {
       String value = valueString + key;
+      KeyValue kv;
       keyList.add(key);
       valueList.add(value);
       if(tagUsage == TagUsage.NO_TAG){
-        writer.append(Bytes.toBytes(key), Bytes.toBytes(value));
+        kv = new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes.toBytes("qual"),
+            Bytes.toBytes(value));
+        writer.append(kv);
       } else if (tagUsage == TagUsage.ONLY_TAG) {
         Tag t = new Tag((byte) 1, "myTag1");
-        writer.append(Bytes.toBytes(key), Bytes.toBytes(value), t.getBuffer());
+        Tag[] tags = new Tag[1];
+        tags[0] = t;
+        kv = new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes.toBytes("qual"),
+            HConstants.LATEST_TIMESTAMP, Bytes.toBytes(value), tags);
+        writer.append(kv);
       } else {
         if (key % 4 == 0) {
           Tag t = new Tag((byte) 1, "myTag1");
-          writer.append(Bytes.toBytes(key), Bytes.toBytes(value), t.getBuffer());
+          Tag[] tags = new Tag[1];
+          tags[0] = t;
+          kv = new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes.toBytes("qual"),
+              HConstants.LATEST_TIMESTAMP, Bytes.toBytes(value), tags);
+          writer.append(kv);
         } else {
-          writer.append(Bytes.toBytes(key), Bytes.toBytes(value), HConstants.EMPTY_BYTE_ARRAY);
+          kv = new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes.toBytes("qual"),
+              HConstants.LATEST_TIMESTAMP, Bytes.toBytes(value));
+          writer.append(kv);
         }
       }
     }
@@ -103,7 +116,8 @@ public class TestReseekTo {
       Integer key = keyList.get(i);
       String value = valueList.get(i);
       long start = System.nanoTime();
-      scanner.seekTo(Bytes.toBytes(key));
+      scanner.seekTo(new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes
+          .toBytes("qual"), Bytes.toBytes(value)));
       assertEquals(value, scanner.getValueString());
     }
 
@@ -112,7 +126,8 @@ public class TestReseekTo {
       Integer key = keyList.get(i);
       String value = valueList.get(i);
       long start = System.nanoTime();
-      scanner.reseekTo(Bytes.toBytes(key));
+      scanner.reseekTo(new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes
+          .toBytes("qual"), Bytes.toBytes(value)));
       assertEquals("i is " + i, value, scanner.getValueString());
     }
 

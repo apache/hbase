@@ -34,7 +34,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -155,13 +157,20 @@ public class TestHFile extends HBaseTestCase {
   private int writeSomeRecords(Writer writer, int start, int n, boolean useTags)
       throws IOException {
     String value = "value";
+    KeyValue kv;
     for (int i = start; i < (start + n); i++) {
       String key = String.format(localFormatter, Integer.valueOf(i));
       if (useTags) {
         Tag t = new Tag((byte) 1, "myTag1");
-        writer.append(Bytes.toBytes(key), Bytes.toBytes(value + key), t.getBuffer());
+        Tag[] tags = new Tag[1];
+        tags[0] = t;
+        kv = new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes.toBytes("qual"),
+            HConstants.LATEST_TIMESTAMP, Bytes.toBytes(value + key), tags);
+        writer.append(kv);
       } else {
-        writer.append(Bytes.toBytes(key), Bytes.toBytes(value + key));
+        kv = new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes.toBytes("qual"),
+            Bytes.toBytes(value + key));
+        writer.append(kv);
       }
     }
     return (start + n);
@@ -181,10 +190,13 @@ public class TestHFile extends HBaseTestCase {
       ByteBuffer val = scanner.getValue();
       String keyStr = String.format(localFormatter, Integer.valueOf(i));
       String valStr = value + keyStr;
-      byte [] keyBytes = Bytes.toBytes(key);
+      KeyValue kv = new KeyValue(Bytes.toBytes(keyStr), Bytes.toBytes("family"),
+          Bytes.toBytes("qual"), Bytes.toBytes(valStr));
+      byte[] keyBytes = new KeyValue.KeyOnlyKeyValue(Bytes.toBytes(key), 0,
+          Bytes.toBytes(key).length).getKey();
       assertTrue("bytes for keys do not match " + keyStr + " " +
         Bytes.toString(Bytes.toBytes(key)),
-          Arrays.equals(Bytes.toBytes(keyStr), keyBytes));
+          Arrays.equals(kv.getKey(), keyBytes));
       byte [] valBytes = Bytes.toBytes(val);
       assertTrue("bytes for vals do not match " + valStr + " " +
         Bytes.toString(valBytes),
@@ -198,7 +210,9 @@ public class TestHFile extends HBaseTestCase {
   }
 
   private byte[] getSomeKey(int rowId) {
-    return String.format(localFormatter, Integer.valueOf(rowId)).getBytes();
+    KeyValue kv = new KeyValue(String.format(localFormatter, Integer.valueOf(rowId)).getBytes(),
+        Bytes.toBytes("family"), Bytes.toBytes("qual"), HConstants.LATEST_TIMESTAMP, Type.Put);
+    return kv.getKey();
   }
 
   private void writeRecords(Writer writer, boolean useTags) throws IOException {
@@ -230,8 +244,7 @@ public class TestHFile extends HBaseTestCase {
     Writer writer = HFile.getWriterFactory(conf, cacheConf)
         .withOutputStream(fout)
         .withFileContext(meta)
-        // NOTE: This test is dependent on this deprecated nonstandard comparator
-        .withComparator(new KeyValue.RawBytesComparator())
+        .withComparator(new KeyValue.KVComparator())
         .create();
     LOG.info(writer);
     writeRecords(writer, useTags);
@@ -247,16 +260,18 @@ public class TestHFile extends HBaseTestCase {
     // Align scanner at start of the file.
     scanner.seekTo();
     readAllRecords(scanner);
-    scanner.seekTo(getSomeKey(50));
-    assertTrue("location lookup failed", scanner.seekTo(getSomeKey(50)) == 0);
+    int seekTo = scanner.seekTo(KeyValue.createKeyValueFromKey(getSomeKey(50)));
+    System.out.println(seekTo);
+    assertTrue("location lookup failed",
+        scanner.seekTo(KeyValue.createKeyValueFromKey(getSomeKey(50))) == 0);
     // read the key and see if it matches
     ByteBuffer readKey = scanner.getKey();
     assertTrue("seeked key does not match", Arrays.equals(getSomeKey(50),
       Bytes.toBytes(readKey)));
 
-    scanner.seekTo(new byte[0]);
+    scanner.seekTo(KeyValue.createKeyValueFromKey(getSomeKey(0)));
     ByteBuffer val1 = scanner.getValue();
-    scanner.seekTo(new byte[0]);
+    scanner.seekTo(KeyValue.createKeyValueFromKey(getSomeKey(0)));
     ByteBuffer val2 = scanner.getValue();
     assertTrue(Arrays.equals(Bytes.toBytes(val1), Bytes.toBytes(val2)));
 

@@ -43,6 +43,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
@@ -1621,6 +1623,43 @@ public class Bytes {
       // has special logic when the 'left side' is a special key.
       int cmp = comparator.compare(key, offset, length,
           arr[mid], 0, arr[mid].length);
+      // key lives above the midpoint
+      if (cmp > 0)
+        low = mid + 1;
+      // key lives below the midpoint
+      else if (cmp < 0)
+        high = mid - 1;
+      // BAM. how often does this really happen?
+      else
+        return mid;
+    }
+    return - (low+1);
+  }
+
+  /**
+   * Binary search for keys in indexes.
+   *
+   * @param arr array of byte arrays to search for
+   * @param key the key you want to find
+   * @param comparator a comparator to compare.
+   * @return zero-based index of the key, if the key is present in the array.
+   *         Otherwise, a value -(i + 1) such that the key is between arr[i -
+   *         1] and arr[i] non-inclusively, where i is in [0, i], if we define
+   *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
+   *         means that this function can return 2N + 1 different values
+   *         ranging from -(N + 1) to N - 1.
+   * @return the index of the block
+   */
+  public static int binarySearch(byte[][] arr, Cell key, RawComparator<Cell> comparator) {
+    int low = 0;
+    int high = arr.length - 1;
+    KeyValue.KeyOnlyKeyValue r = new KeyValue.KeyOnlyKeyValue();
+    while (low <= high) {
+      int mid = (low+high) >>> 1;
+      // we have to compare in this order, because the comparator order
+      // has special logic when the 'left side' is a special key.
+      r.setKey(arr[mid], 0, arr[mid].length);
+      int cmp = comparator.compare(key, r);
       // key lives above the midpoint
       if (cmp > 0)
         low = mid + 1;

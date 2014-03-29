@@ -89,7 +89,8 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     // testing, but when an error happens, we log a message and return.
     boolean result;
 
-    int block = index.rootBlockContainingKey(key, keyOffset, keyLength);
+    int block = index.rootBlockContainingKey(key, keyOffset,
+        keyLength);
     if (block < 0) {
       result = false; // This key is not in the file.
     } else {

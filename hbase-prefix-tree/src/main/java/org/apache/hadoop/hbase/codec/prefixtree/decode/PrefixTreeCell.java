@@ -106,7 +106,7 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
 
   @Override
   public int compareTo(Cell other) {
-    return CellComparator.compareStatic(this, other);
+    return CellComparator.compareStatic(this, other, false);
   }
 
   @Override

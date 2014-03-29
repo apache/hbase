@@ -22,10 +22,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -194,6 +197,12 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
+    public int compareKey(KVComparator comparator, Cell key) {
+      return comparator.compareOnlyKeyPortion(key,
+          new KeyValue.KeyOnlyKeyValue(current.keyBuffer, 0, current.keyLength));
+    }
+
+    @Override
     public void setCurrentBuffer(ByteBuffer buffer) {
       if (this.tagCompressionContext != null) {
         this.tagCompressionContext.clear();
@@ -304,36 +313,89 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public int seekToKeyInBlock(byte[] key, int offset, int length,
-        boolean seekBefore) {
-      int commonPrefix = 0;
+    public int seekToKeyInBlock(byte[] key, int offset, int length, boolean seekBefore) {
+      return seekToKeyInBlock(new KeyValue.KeyOnlyKeyValue(key, offset, length), seekBefore);
+    }
+
+    @Override
+    public int seekToKeyInBlock(Cell seekCell, boolean seekBefore) {
+      int rowCommonPrefix = 0;
+      int familyCommonPrefix = 0;
+      int qualCommonPrefix = 0;
       previous.invalidate();
+      KeyValue.KeyOnlyKeyValue currentCell = new KeyValue.KeyOnlyKeyValue();
       do {
         int comp;
         if (samePrefixComparator != null) {
-          commonPrefix = Math.min(commonPrefix, current.lastCommonPrefix);
-
-          // extend commonPrefix
-          commonPrefix += ByteBufferUtils.findCommonPrefix(
-              key, offset + commonPrefix, length - commonPrefix,
-              current.keyBuffer, commonPrefix,
-              current.keyLength - commonPrefix);
-
-          comp = samePrefixComparator.compareIgnoringPrefix(commonPrefix, key,
-              offset, length, current.keyBuffer, 0, current.keyLength);
+          currentCell.setKey(current.keyBuffer, 0, current.keyLength);
+          if (current.lastCommonPrefix != 0) {
+            // The KV format has row key length also in the byte array. The
+            // common prefix
+            // includes it. So we need to subtract to find out the common prefix
+            // in the
+            // row part alone
+            rowCommonPrefix = Math.min(rowCommonPrefix, current.lastCommonPrefix - 2);
+          }
+          if (current.lastCommonPrefix <= 2) {
+            rowCommonPrefix = 0;
+          }
+          rowCommonPrefix += CellComparator.findCommonPrefixInRowPart(seekCell, currentCell,
+              rowCommonPrefix);
+          comp = CellComparator.compareCommonRowPrefix(seekCell, currentCell, rowCommonPrefix);
+          if (comp == 0) {
+            comp = compareTypeBytes(seekCell, currentCell);
+            if (comp == 0) {
+              // Subtract the fixed row key length and the family key fixed length
+              familyCommonPrefix = Math.max(
+                  0,
+                  Math.min(familyCommonPrefix,
+                      current.lastCommonPrefix - (3 + currentCell.getRowLength())));
+              familyCommonPrefix += CellComparator.findCommonPrefixInFamilyPart(seekCell,
+                  currentCell, familyCommonPrefix);
+              comp = CellComparator.compareCommonFamilyPrefix(seekCell, currentCell,
+                  familyCommonPrefix);
+              if (comp == 0) {
+                // subtract the rowkey fixed length and the family key fixed
+                // length
+                qualCommonPrefix = Math.max(
+                    0,
+                    Math.min(
+                        qualCommonPrefix,
+                        current.lastCommonPrefix
+                            - (3 + currentCell.getRowLength() + currentCell.getFamilyLength())));
+                qualCommonPrefix += CellComparator.findCommonPrefixInQualifierPart(seekCell,
+                    currentCell, qualCommonPrefix);
+                comp = CellComparator.compareCommonQualifierPrefix(seekCell, currentCell,
+                    qualCommonPrefix);
+                if (comp == 0) {
+                  comp = CellComparator.compareTimestamps(seekCell, currentCell);
+                  if (comp == 0) {
+                    // Compare types. Let the delete types sort ahead of puts;
+                    // i.e. types
+                    // of higher numbers sort before those of lesser numbers.
+                    // Maximum
+                    // (255)
+                    // appears ahead of everything, and minimum (0) appears
+                    // after
+                    // everything.
+                    comp = (0xff & currentCell.getTypeByte()) - (0xff & seekCell.getTypeByte());
+                  }
+                }
+              }
+            }
+          }
         } else {
-          comp = comparator.compareFlatKey(key, offset, length,
-              current.keyBuffer, 0, current.keyLength);
+          Cell r = new KeyValue.KeyOnlyKeyValue(current.keyBuffer, 0, current.keyLength);
+          comp = comparator.compareOnlyKeyPortion(seekCell, r);
         }
-
         if (comp == 0) { // exact match
           if (seekBefore) {
             if (!previous.isValid()) {
               // The caller (seekBefore) has to ensure that we are not at the
               // first key in the block.
-              throw new IllegalStateException("Cannot seekBefore if " +
-                  "positioned at the first key in the block: key=" +
-                  Bytes.toStringBinary(key, offset, length));
+              throw new IllegalStateException("Cannot seekBefore if "
+                  + "positioned at the first key in the block: key="
+                  + Bytes.toStringBinary(seekCell.getRowArray()));
             }
             moveToPrevious();
             return 1;
@@ -362,6 +424,20 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       // we hit the end of the block, not an exact match
       return 1;
     }
+
+    private int compareTypeBytes(Cell key, Cell right) {
+      if (key.getFamilyLength() + key.getQualifierLength() == 0
+          && key.getTypeByte() == Type.Minimum.getCode()) {
+        // left is "bigger", i.e. it appears later in the sorted order
+        return 1;
+      }
+      if (right.getFamilyLength() + right.getQualifierLength() == 0
+          && right.getTypeByte() == Type.Minimum.getCode()) {
+        return -1;
+      }
+      return 0;
+    }
+
 
     private void moveToPrevious() {
       if (!previous.isValid()) {

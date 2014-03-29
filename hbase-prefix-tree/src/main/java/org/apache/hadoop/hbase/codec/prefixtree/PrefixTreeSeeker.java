@@ -24,8 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.DecoderFactory;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition;
@@ -152,14 +152,12 @@ public class PrefixTreeSeeker implements EncodedSeeker {
       boolean forceBeforeOnExactMatch) {
     if (USE_POSITION_BEFORE) {
       return seekToOrBeforeUsingPositionAtOrBefore(keyOnlyBytes, offset, length,
-        forceBeforeOnExactMatch);
-    }else{
+          forceBeforeOnExactMatch);
+    } else {
       return seekToOrBeforeUsingPositionAtOrAfter(keyOnlyBytes, offset, length,
-        forceBeforeOnExactMatch);
+          forceBeforeOnExactMatch);
     }
   }
-
-
 
   /*
    * Support both of these options since the underlying PrefixTree supports both.  Possibly
@@ -169,11 +167,22 @@ public class PrefixTreeSeeker implements EncodedSeeker {
   protected int seekToOrBeforeUsingPositionAtOrBefore(byte[] keyOnlyBytes, int offset, int length,
       boolean seekBefore){
     // this does a deep copy of the key byte[] because the CellSearcher interface wants a Cell
-    KeyValue kv = KeyValue.createKeyValueFromKey(keyOnlyBytes, offset, length);
+    KeyValue kv = new KeyValue.KeyOnlyKeyValue(keyOnlyBytes, offset, length);
 
+    return seekToOrBeforeUsingPositionAtOrBefore(kv, seekBefore);
+  }
+
+  /*
+   * Support both of these options since the underlying PrefixTree supports
+   * both. Possibly expand the EncodedSeeker to utilize them both.
+   */
+
+  protected int seekToOrBeforeUsingPositionAtOrBefore(Cell kv, boolean seekBefore) {
+    // this does a deep copy of the key byte[] because the CellSearcher
+    // interface wants a Cell
     CellScannerPosition position = ptSearcher.seekForwardToOrBefore(kv);
 
-    if(CellScannerPosition.AT == position){
+    if (CellScannerPosition.AT == position) {
       if (seekBefore) {
         ptSearcher.previous();
         return 1;
@@ -184,16 +193,19 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     return 1;
   }
 
-
   protected int seekToOrBeforeUsingPositionAtOrAfter(byte[] keyOnlyBytes, int offset, int length,
-      boolean seekBefore){
-    // this does a deep copy of the key byte[] because the CellSearcher interface wants a Cell
-    KeyValue kv = KeyValue.createKeyValueFromKey(keyOnlyBytes, offset, length);
+      boolean seekBefore) {
+    // this does a deep copy of the key byte[] because the CellSearcher
+    // interface wants a Cell
+    KeyValue kv = new KeyValue.KeyOnlyKeyValue(keyOnlyBytes, offset, length);
+    return seekToOrBeforeUsingPositionAtOrAfter(kv, seekBefore);
+  }
 
-    //should probably switch this to use the seekForwardToOrBefore method
+  protected int seekToOrBeforeUsingPositionAtOrAfter(Cell kv, boolean seekBefore) {
+    // should probably switch this to use the seekForwardToOrBefore method
     CellScannerPosition position = ptSearcher.seekForwardToOrAfter(kv);
 
-    if(CellScannerPosition.AT == position){
+    if (CellScannerPosition.AT == position) {
       if (seekBefore) {
         ptSearcher.previous();
         return 1;
@@ -202,21 +214,21 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
     }
 
-    if(CellScannerPosition.AFTER == position){
-      if(!ptSearcher.isBeforeFirst()){
+    if (CellScannerPosition.AFTER == position) {
+      if (!ptSearcher.isBeforeFirst()) {
         ptSearcher.previous();
       }
       return 1;
     }
 
-    if(position == CellScannerPosition.AFTER_LAST){
+    if (position == CellScannerPosition.AFTER_LAST) {
       if (seekBefore) {
         ptSearcher.previous();
       }
       return 1;
     }
 
-    throw new RuntimeException("unexpected CellScannerPosition:"+position);
+    throw new RuntimeException("unexpected CellScannerPosition:" + position);
   }
 
   @Override
@@ -224,5 +236,21 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     // can't optimize this, make a copy of the key
     ByteBuffer bb = getKeyDeepCopy();
     return comparator.compareFlatKey(key, offset, length, bb.array(), bb.arrayOffset(), bb.limit());
+  }
+
+  @Override
+  public int seekToKeyInBlock(Cell key, boolean forceBeforeOnExactMatch) {
+    if (USE_POSITION_BEFORE) {
+      return seekToOrBeforeUsingPositionAtOrBefore(key, forceBeforeOnExactMatch);
+    }else{
+      return seekToOrBeforeUsingPositionAtOrAfter(key, forceBeforeOnExactMatch);
+    }
+  }
+
+  @Override
+  public int compareKey(KVComparator comparator, Cell key) {
+    ByteBuffer bb = getKeyDeepCopy();
+    return comparator.compare(key,
+        new KeyValue.KeyOnlyKeyValue(bb.array(), bb.arrayOffset(), bb.limit()));
   }
 }

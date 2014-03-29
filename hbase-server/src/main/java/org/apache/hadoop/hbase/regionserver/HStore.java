@@ -1643,8 +1643,7 @@ public class HStore implements Store {
     KeyValue kv = firstOnRow;
     // If firstOnRow < firstKV, set to firstKV
     if (this.comparator.compareRows(firstKV, firstOnRow) == 0) kv = firstKV;
-    int result = scanner.seekTo(kv.getBuffer(), kv.getKeyOffset(),
-      kv.getKeyLength());
+    int result = scanner.seekTo(kv);
     return result != -1;
   }
 

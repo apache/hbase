@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -44,7 +47,6 @@ import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
-
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -177,7 +179,7 @@ public class TestHFileEncryption {
       cryptoContext.getKeyBytes()));
   }
 
-  @Test(timeout=60000)
+  @Test(timeout=6000000)
   public void testHFileEncryption() throws Exception {
     // Create 1000 random test KVs
     RedundantKVGenerator generator = new RedundantKVGenerator();
@@ -233,7 +235,7 @@ public class TestHFileEncryption {
         assertTrue("Initial seekTo failed", scanner.seekTo());
         for (i = 0; i < 100; i++) {
           KeyValue kv = testKvs.get(RNG.nextInt(testKvs.size()));
-          assertEquals("Unable to find KV as expected: " + kv, scanner.seekTo(kv.getKey()), 0);
+          assertEquals("Unable to find KV as expected: " + kv, scanner.seekTo(kv), 0);
         }
         reader.close();
       }

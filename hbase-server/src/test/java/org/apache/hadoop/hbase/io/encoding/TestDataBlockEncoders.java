@@ -358,10 +358,10 @@ public class TestDataBlockEncoders {
     ByteBuffer expectedKeyValue = null;
     ByteBuffer expectedKey = null;
     ByteBuffer expectedValue = null;
-
     for (DataBlockEncoder.EncodedSeeker seeker : encodedSeekers) {
-      seeker.seekToKeyInBlock(keyValue.getBuffer(), keyValue.getKeyOffset(),
-          keyValue.getKeyLength(), seekBefore);
+      seeker.seekToKeyInBlock(
+          new KeyValue.KeyOnlyKeyValue(keyValue.getBuffer(), keyValue.getKeyOffset(), keyValue
+              .getKeyLength()), seekBefore);
       seeker.rewind();
 
       ByteBuffer actualKeyValue = seeker.getKeyValueBuffer();

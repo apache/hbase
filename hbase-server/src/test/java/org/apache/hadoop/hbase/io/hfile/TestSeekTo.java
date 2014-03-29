@@ -80,9 +80,7 @@ public class TestSeekTo extends HBaseTestCase {
         .withIncludesTags(true).build();
     HFile.Writer writer = HFile.getWriterFactoryNoCache(conf).withOutputStream(fout)
         .withFileContext(context)
-        // NOTE: This test is dependent on this deprecated nonstandard
-        // comparator
-        .withComparator(KeyValue.RAW_COMPARATOR).create();
+        .withComparator(KeyValue.COMPARATOR).create();
     // 4 bytes * 3 * 2 for each key/value +
     // 3 for keys, 15 for values = 42 (woot)
     writer.append(toKV("c", tagUsage));
@@ -107,31 +105,31 @@ public class TestSeekTo extends HBaseTestCase {
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
-    assertEquals(false, scanner.seekBefore(toKV("a", tagUsage).getKey()));
+    assertEquals(false, scanner.seekBefore(toKV("a", tagUsage)));
 
-    assertEquals(false, scanner.seekBefore(toKV("c", tagUsage).getKey()));
+    assertEquals(false, scanner.seekBefore(toKV("c", tagUsage)));
 
-    assertEquals(true, scanner.seekBefore(toKV("d", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("d", tagUsage)));
     assertEquals("c", toRowStr(scanner.getKeyValue()));
 
-    assertEquals(true, scanner.seekBefore(toKV("e", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("e", tagUsage)));
     assertEquals("c", toRowStr(scanner.getKeyValue()));
 
-    assertEquals(true, scanner.seekBefore(toKV("f", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("f", tagUsage)));
     assertEquals("e", toRowStr(scanner.getKeyValue()));
 
-    assertEquals(true, scanner.seekBefore(toKV("g", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("g", tagUsage)));
     assertEquals("e", toRowStr(scanner.getKeyValue()));
 
-    assertEquals(true, scanner.seekBefore(toKV("h", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("h", tagUsage)));
     assertEquals("g", toRowStr(scanner.getKeyValue()));
-    assertEquals(true, scanner.seekBefore(toKV("i", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("i", tagUsage)));
     assertEquals("g", toRowStr(scanner.getKeyValue()));
-    assertEquals(true, scanner.seekBefore(toKV("j", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("j", tagUsage)));
     assertEquals("i", toRowStr(scanner.getKeyValue()));
-    assertEquals(true, scanner.seekBefore(toKV("k", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("k", tagUsage)));
     assertEquals("i", toRowStr(scanner.getKeyValue()));
-    assertEquals(true, scanner.seekBefore(toKV("l", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("l", tagUsage)));
     assertEquals("k", toRowStr(scanner.getKeyValue()));
 
     reader.close();
@@ -148,81 +146,81 @@ public class TestSeekTo extends HBaseTestCase {
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
-    assertEquals(false, scanner.seekBefore(toKV("a", tagUsage).getKey()));
-    assertEquals(false, scanner.seekBefore(toKV("b", tagUsage).getKey()));
-    assertEquals(false, scanner.seekBefore(toKV("c", tagUsage).getKey()));
+    assertEquals(false, scanner.seekBefore(toKV("a", tagUsage)));
+    assertEquals(false, scanner.seekBefore(toKV("b", tagUsage)));
+    assertEquals(false, scanner.seekBefore(toKV("c", tagUsage)));
 
     // seekBefore d, so the scanner points to c
-    assertEquals(true, scanner.seekBefore(toKV("d", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("d", tagUsage)));
     assertEquals("c", toRowStr(scanner.getKeyValue()));
     // reseekTo e and g
-    assertEquals(0, scanner.reseekTo(toKV("c", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("c", tagUsage)));
     assertEquals("c", toRowStr(scanner.getKeyValue()));
-    assertEquals(0, scanner.reseekTo(toKV("g", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("g", tagUsage)));
     assertEquals("g", toRowStr(scanner.getKeyValue()));
 
     // seekBefore e, so the scanner points to c
-    assertEquals(true, scanner.seekBefore(toKV("e", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("e", tagUsage)));
     assertEquals("c", toRowStr(scanner.getKeyValue()));
     // reseekTo e and g
-    assertEquals(0, scanner.reseekTo(toKV("e", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("e", tagUsage)));
     assertEquals("e", toRowStr(scanner.getKeyValue()));
-    assertEquals(0, scanner.reseekTo(toKV("g", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("g", tagUsage)));
     assertEquals("g", toRowStr(scanner.getKeyValue()));
 
     // seekBefore f, so the scanner points to e
-    assertEquals(true, scanner.seekBefore(toKV("f", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("f", tagUsage)));
     assertEquals("e", toRowStr(scanner.getKeyValue()));
     // reseekTo e and g
-    assertEquals(0, scanner.reseekTo(toKV("e", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("e", tagUsage)));
     assertEquals("e", toRowStr(scanner.getKeyValue()));
-    assertEquals(0, scanner.reseekTo(toKV("g", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("g", tagUsage)));
     assertEquals("g", toRowStr(scanner.getKeyValue()));
 
     // seekBefore g, so the scanner points to e
-    assertEquals(true, scanner.seekBefore(toKV("g", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("g", tagUsage)));
     assertEquals("e", toRowStr(scanner.getKeyValue()));
     // reseekTo e and g again
-    assertEquals(0, scanner.reseekTo(toKV("e", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("e", tagUsage)));
     assertEquals("e", toRowStr(scanner.getKeyValue()));
-    assertEquals(0, scanner.reseekTo(toKV("g", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("g", tagUsage)));
     assertEquals("g", toRowStr(scanner.getKeyValue()));
 
     // seekBefore h, so the scanner points to g
-    assertEquals(true, scanner.seekBefore(toKV("h", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("h", tagUsage)));
     assertEquals("g", toRowStr(scanner.getKeyValue()));
     // reseekTo g
-    assertEquals(0, scanner.reseekTo(toKV("g", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("g", tagUsage)));
     assertEquals("g", toRowStr(scanner.getKeyValue()));
 
     // seekBefore i, so the scanner points to g
-    assertEquals(true, scanner.seekBefore(toKV("i", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("i", tagUsage)));
     assertEquals("g", toRowStr(scanner.getKeyValue()));
     // reseekTo g
-    assertEquals(0, scanner.reseekTo(toKV("g", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("g", tagUsage)));
     assertEquals("g", toRowStr(scanner.getKeyValue()));
 
     // seekBefore j, so the scanner points to i
-    assertEquals(true, scanner.seekBefore(toKV("j", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("j", tagUsage)));
     assertEquals("i", toRowStr(scanner.getKeyValue()));
     // reseekTo i
-    assertEquals(0, scanner.reseekTo(toKV("i", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("i", tagUsage)));
     assertEquals("i", toRowStr(scanner.getKeyValue()));
 
     // seekBefore k, so the scanner points to i
-    assertEquals(true, scanner.seekBefore(toKV("k", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("k", tagUsage)));
     assertEquals("i", toRowStr(scanner.getKeyValue()));
     // reseekTo i and k
-    assertEquals(0, scanner.reseekTo(toKV("i", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("i", tagUsage)));
     assertEquals("i", toRowStr(scanner.getKeyValue()));
-    assertEquals(0, scanner.reseekTo(toKV("k", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("k", tagUsage)));
     assertEquals("k", toRowStr(scanner.getKeyValue()));
 
     // seekBefore l, so the scanner points to k
-    assertEquals(true, scanner.seekBefore(toKV("l", tagUsage).getKey()));
+    assertEquals(true, scanner.seekBefore(toKV("l", tagUsage)));
     assertEquals("k", toRowStr(scanner.getKeyValue()));
     // reseekTo k
-    assertEquals(0, scanner.reseekTo(toKV("k", tagUsage).getKey()));
+    assertEquals(0, scanner.reseekTo(toKV("k", tagUsage)));
     assertEquals("k", toRowStr(scanner.getKeyValue()));
   }
 
@@ -239,16 +237,17 @@ public class TestSeekTo extends HBaseTestCase {
     assertEquals(2, reader.getDataBlockIndexReader().getRootBlockCount());
     HFileScanner scanner = reader.getScanner(false, true);
     // lies before the start of the file.
-    assertEquals(-1, scanner.seekTo(toKV("a", tagUsage).getKey()));
+    assertEquals(-1, scanner.seekTo(toKV("a", tagUsage)));
 
-    assertEquals(1, scanner.seekTo(toKV("d", tagUsage).getKey()));
+    assertEquals(1, scanner.seekTo(toKV("d", tagUsage)));
     assertEquals("c", toRowStr(scanner.getKeyValue()));
 
     // Across a block boundary now.
-    assertEquals(1, scanner.seekTo(toKV("h", tagUsage).getKey()));
-    assertEquals("g", toRowStr(scanner.getKeyValue()));
+    // h goes to the next block
+    assertEquals(-2, scanner.seekTo(toKV("h", tagUsage)));
+    assertEquals("i", toRowStr(scanner.getKeyValue()));
 
-    assertEquals(1, scanner.seekTo(toKV("l", tagUsage).getKey()));
+    assertEquals(1, scanner.seekTo(toKV("l", tagUsage)));
     assertEquals("k", toRowStr(scanner.getKeyValue()));
 
     reader.close();
@@ -269,26 +268,25 @@ public class TestSeekTo extends HBaseTestCase {
     int klen = toKV("a", tagUsage).getKey().length;
     // falls before the start of the file.
     assertEquals(-1, blockIndexReader.rootBlockContainingKey(
-        toKV("a", tagUsage).getKey(), 0, klen));
+        toKV("a", tagUsage)));
     assertEquals(0, blockIndexReader.rootBlockContainingKey(
-        toKV("c", tagUsage).getKey(), 0, klen));
+        toKV("c", tagUsage)));
     assertEquals(0, blockIndexReader.rootBlockContainingKey(
-        toKV("d", tagUsage).getKey(), 0, klen));
+        toKV("d", tagUsage)));
     assertEquals(0, blockIndexReader.rootBlockContainingKey(
-        toKV("e", tagUsage).getKey(), 0, klen));
+        toKV("e", tagUsage)));
     assertEquals(0, blockIndexReader.rootBlockContainingKey(
-        toKV("g", tagUsage).getKey(), 0, klen));
-    assertEquals(0, blockIndexReader.rootBlockContainingKey(
-        toKV("h", tagUsage).getKey(), 0, klen));
+        toKV("g", tagUsage)));
     assertEquals(1, blockIndexReader.rootBlockContainingKey(
-        toKV("i", tagUsage).getKey(), 0, klen));
+        toKV("h", tagUsage)));
     assertEquals(1, blockIndexReader.rootBlockContainingKey(
-        toKV("j", tagUsage).getKey(), 0, klen));
+        toKV("i", tagUsage)));
     assertEquals(1, blockIndexReader.rootBlockContainingKey(
-        toKV("k", tagUsage).getKey(), 0, klen));
+        toKV("j", tagUsage)));
     assertEquals(1, blockIndexReader.rootBlockContainingKey(
-        toKV("l", tagUsage).getKey(), 0, klen));
-
+        toKV("k", tagUsage)));
+    assertEquals(1, blockIndexReader.rootBlockContainingKey(
+        toKV("l", tagUsage)));
     reader.close();
   }
 

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 
 /**
@@ -54,8 +55,12 @@ public interface HFileScanner {
    * false when it is called.
    * @throws IOException
    */
+  @Deprecated
   int seekTo(byte[] key) throws IOException;
+  @Deprecated
   int seekTo(byte[] key, int offset, int length) throws IOException;
+
+  int seekTo(Cell kv) throws IOException;
   /**
    * Reseek to or just before the passed <code>key</code>. Similar to seekTo
    * except that this can be called even if the scanner is not at the beginning
@@ -76,8 +81,12 @@ public interface HFileScanner {
    * 1, such that k[i] < key, and scanner is left in position i.
    * @throws IOException
    */
+  @Deprecated
   int reseekTo(byte[] key) throws IOException;
+  @Deprecated
   int reseekTo(byte[] key, int offset, int length) throws IOException;
+
+  int reseekTo(Cell kv) throws IOException;
   /**
    * Consider the key stream of all the keys in the file,
    * <code>k[0] .. k[n]</code>, where there are n keys in the file.
@@ -88,8 +97,12 @@ public interface HFileScanner {
    * return false (EOF).
    * @throws IOException
    */
+  @Deprecated
   boolean seekBefore(byte[] key) throws IOException;
+  @Deprecated
   boolean seekBefore(byte[] key, int offset, int length) throws IOException;
+
+  boolean seekBefore(Cell kv) throws IOException;
   /**
    * Positions this scanner at the start of the file.
    * @return False if empty file; i.e. a call to next would return false and

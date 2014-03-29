@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
@@ -55,9 +56,11 @@ public class HalfStoreFileReader extends StoreFile.Reader {
   // This is the key we split around.  Its the first possible entry on a row:
   // i.e. empty column and a timestamp of LATEST_TIMESTAMP.
   protected final byte [] splitkey;
-  
+
+  protected final Cell splitCell;
+
   private byte[] firstKey = null;
-  
+
   private boolean firstKeySeeked = false;
 
   /**
@@ -79,6 +82,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
     // have an actual midkey themselves. No midkey is how we indicate file is
     // not splittable.
     this.splitkey = r.getSplitKey();
+    this.splitCell = new KeyValue.KeyOnlyKeyValue(this.splitkey, 0, this.splitkey.length);
     // Is it top or bottom half?
     this.top = Reference.isTopFileRegion(r.getFileRegion());
   }
@@ -104,6 +108,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
     // have an actual midkey themselves. No midkey is how we indicate file is
     // not splittable.
     this.splitkey = r.getSplitKey();
+    this.splitCell = new KeyValue.KeyOnlyKeyValue(this.splitkey, 0, this.splitkey.length);
     // Is it top or bottom half?
     this.top = Reference.isTopFileRegion(r.getFileRegion());
   }
@@ -168,33 +173,21 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         return true;
       }
 
+      @Override
       public boolean seekBefore(byte[] key) throws IOException {
         return seekBefore(key, 0, key.length);
       }
 
+      @Override
       public boolean seekBefore(byte [] key, int offset, int length)
       throws IOException {
-        if (top) {
-          byte[] fk = getFirstKey();
-          // This will be null when the file is empty in which we can not seekBefore to any key
-          if (fk == null) return false;
-          if (getComparator().compareFlatKey(key, offset, length, fk, 0,
-              fk.length) <= 0) {
-            return false;
-          }
-        } else {
-          // The equals sign isn't strictly necessary just here to be consistent with seekTo
-          if (getComparator().compareFlatKey(key, offset, length, splitkey, 0,
-              splitkey.length) >= 0) {
-            return this.delegate.seekBefore(splitkey, 0, splitkey.length);
-          }
-        }
-        return this.delegate.seekBefore(key, offset, length);
+        return seekBefore(new KeyValue.KeyOnlyKeyValue(key, offset, length));
       }
 
+      @Override
       public boolean seekTo() throws IOException {
         if (top) {
-          int r = this.delegate.seekTo(splitkey);
+          int r = this.delegate.seekTo(new KeyValue.KeyOnlyKeyValue(splitkey, 0, splitkey.length));
           if (r == HConstants.INDEX_KEY_MAGIC) {
             return true;
           }
@@ -219,29 +212,14 @@ public class HalfStoreFileReader extends StoreFile.Reader {
             splitkey, 0, splitkey.length) < 0;
       }
 
+      @Override
       public int seekTo(byte[] key) throws IOException {
         return seekTo(key, 0, key.length);
       }
 
+      @Override
       public int seekTo(byte[] key, int offset, int length) throws IOException {
-        if (top) {
-          if (getComparator().compareFlatKey(key, offset, length, splitkey, 0,
-              splitkey.length) < 0) {
-            return -1;
-          }
-        } else {
-          if (getComparator().compareFlatKey(key, offset, length, splitkey, 0,
-              splitkey.length) >= 0) {
-            // we would place the scanner in the second half.
-            // it might be an error to return false here ever...
-            boolean res = delegate.seekBefore(splitkey, 0, splitkey.length);
-            if (!res) {
-              throw new IOException("Seeking for a key in bottom of file, but key exists in top of file, failed on seekBefore(midkey)");
-            }
-            return 1;
-          }
-        }
-        return delegate.seekTo(key, offset, length);
+        return seekTo(new KeyValue.KeyOnlyKeyValue(key, offset, length));
       }
 
       @Override
@@ -254,29 +232,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       throws IOException {
         //This function is identical to the corresponding seekTo function except
         //that we call reseekTo (and not seekTo) on the delegate.
-        if (top) {
-          if (getComparator().compareFlatKey(key, offset, length, splitkey, 0,
-              splitkey.length) < 0) {
-            return -1;
-          }
-        } else {
-          if (getComparator().compareFlatKey(key, offset, length, splitkey, 0,
-              splitkey.length) >= 0) {
-            // we would place the scanner in the second half.
-            // it might be an error to return false here ever...
-            boolean res = delegate.seekBefore(splitkey, 0, splitkey.length);
-            if (!res) {
-              throw new IOException("Seeking for a key in bottom of file, but" +
-                  " key exists in top of file, failed on seekBefore(midkey)");
-            }
-            return 1;
-          }
-        }
-        if (atEnd) {
-          // skip the 'reseek' and just return 1.
-          return 1;
-        }
-        return delegate.reseekTo(key, offset, length);
+        return reseekTo(new KeyValue.KeyOnlyKeyValue(key, offset, length));
       }
 
       public org.apache.hadoop.hbase.io.hfile.HFile.Reader getReader() {
@@ -285,6 +241,77 @@ public class HalfStoreFileReader extends StoreFile.Reader {
 
       public boolean isSeeked() {
         return this.delegate.isSeeked();
+      }
+
+      @Override
+      public int seekTo(Cell key) throws IOException {
+        if (top) {
+          if (getComparator().compareOnlyKeyPortion(key, splitCell) < 0) {
+            return -1;
+          }
+        } else {
+          if (getComparator().compareOnlyKeyPortion(key, splitCell) >= 0) {
+            // we would place the scanner in the second half.
+            // it might be an error to return false here ever...
+            boolean res = delegate.seekBefore(splitCell);
+            if (!res) {
+              throw new IOException(
+                  "Seeking for a key in bottom of file, but key exists in top of file, " +
+                  "failed on seekBefore(midkey)");
+            }
+            return 1;
+          }
+        }
+        return delegate.seekTo(key);
+      }
+
+      @Override
+      public int reseekTo(Cell key) throws IOException {
+        // This function is identical to the corresponding seekTo function
+        // except
+        // that we call reseekTo (and not seekTo) on the delegate.
+        if (top) {
+          if (getComparator().compareOnlyKeyPortion(key, splitCell) < 0) {
+            return -1;
+          }
+        } else {
+          if (getComparator().compareOnlyKeyPortion(key, splitCell) >= 0) {
+            // we would place the scanner in the second half.
+            // it might be an error to return false here ever...
+            boolean res = delegate.seekBefore(splitCell);
+            if (!res) {
+              throw new IOException("Seeking for a key in bottom of file, but"
+                  + " key exists in top of file, failed on seekBefore(midkey)");
+            }
+            return 1;
+          }
+        }
+        if (atEnd) {
+          // skip the 'reseek' and just return 1.
+          return 1;
+        }
+        return delegate.reseekTo(key);
+      }
+
+      @Override
+      public boolean seekBefore(Cell key) throws IOException {
+        if (top) {
+          Cell fk = new KeyValue.KeyOnlyKeyValue(getFirstKey(), 0, getFirstKey().length);
+          // This will be null when the file is empty in which we can not
+          // seekBefore to any key
+          if (fk == null)
+            return false;
+          if (getComparator().compareOnlyKeyPortion(key, fk) <= 0) {
+            return false;
+          }
+        } else {
+          // The equals sign isn't strictly necessary just here to be consistent
+          // with seekTo
+          if (getComparator().compareOnlyKeyPortion(key, splitCell) >= 0) {
+            return this.delegate.seekBefore(splitCell);
+          }
+        }
+        return this.delegate.seekBefore(key);
       }
     };
   }
@@ -316,7 +343,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
     // Returns null to indicate file is not splitable.
     return null;
   }
-  
+
   @Override
   public byte[] getFirstKey() {
     if (!firstKeySeeked) {

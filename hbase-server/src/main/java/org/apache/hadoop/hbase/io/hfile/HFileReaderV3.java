@@ -26,7 +26,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
@@ -235,20 +238,18 @@ public class HFileReaderV3 extends HFileReaderV2 {
      *          the key to find
      * @param seekBefore
      *          find the key before the given key in case of exact match.
-     * @param offset
-     *          Offset to find the key in the given bytebuffer
-     * @param length
-     *          Length of the key to be found
      * @return 0 in case of an exact key match, 1 in case of an inexact match,
      *         -2 in case of an inexact match and furthermore, the input key
      *         less than the first key of current block(e.g. using a faked index
      *         key)
      */
-    protected int blockSeek(byte[] key, int offset, int length, boolean seekBefore) {
+    @Override
+    protected int blockSeek(Cell key, boolean seekBefore) {
       int klen, vlen, tlen = 0;
       long memstoreTS = 0;
       int memstoreTSLen = 0;
       int lastKeyValueSize = -1;
+      KeyValue.KeyOnlyKeyValue keyOnlyKv = new KeyValue.KeyOnlyKeyValue();
       do {
         blockBuffer.mark();
         klen = blockBuffer.getInt();
@@ -286,14 +287,16 @@ public class HFileReaderV3 extends HFileReaderV2 {
         }
         blockBuffer.reset();
         int keyOffset = blockBuffer.arrayOffset() + blockBuffer.position() + (Bytes.SIZEOF_INT * 2);
-        int comp = reader.getComparator().compare(key, offset, length, blockBuffer.array(),
-            keyOffset, klen);
+        keyOnlyKv.setKey(blockBuffer.array(), keyOffset, klen);
+        int comp = reader.getComparator().compareOnlyKeyPortion(key, keyOnlyKv);
 
         if (comp == 0) {
           if (seekBefore) {
             if (lastKeyValueSize < 0) {
+              KeyValue kv = KeyValueUtil.ensureKeyValue(key);
               throw new IllegalStateException("blockSeek with seekBefore "
-                  + "at the first key of the block: key=" + Bytes.toStringBinary(key)
+                  + "at the first key of the block: key="
+                  + Bytes.toStringBinary(kv.getKey(), kv.getKeyOffset(), kv.getKeyLength())
                   + ", blockOffset=" + block.getOffset() + ", onDiskSize="
                   + block.getOnDiskSizeWithHeader());
             }
@@ -335,7 +338,6 @@ public class HFileReaderV3 extends HFileReaderV2 {
       readKeyValueLen();
       return 1; // didn't exactly find it.
     }
-
   }
 
   /**
