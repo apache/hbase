@@ -559,8 +559,8 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.hregion.memstore.block.multiplier</name>
     <value>2</value>
     <description>
-    Block updates if memstore has hbase.hregion.block.memstore
-    time hbase.hregion.flush.size bytes.  Useful preventing
+    Block updates if memstore has hbase.hregion.memstore.block.multiplier
+    times hbase.hregion.memstore.flush.size bytes.  Useful preventing
     runaway memstore during spikes in update traffic.  Without an
     upper-bound, memstore fills such that when it flushes the
     resultant flush files take a long time to compact or split, or
