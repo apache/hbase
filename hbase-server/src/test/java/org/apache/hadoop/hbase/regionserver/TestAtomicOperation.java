@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -97,6 +98,13 @@ public class TestAtomicOperation {
     tableName = Bytes.toBytes(name.getMethodName());
   }
   
+  @After
+  public void teardown() throws IOException {
+    if (region != null) {
+      region.close();
+      region = null;
+    }
+  }
   //////////////////////////////////////////////////////////////////////////////
   // New tests that doesn't spin up a mini cluster but rather just test the
   // individual code pieces in the HRegion. 
