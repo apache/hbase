@@ -676,7 +676,7 @@ public final class ProtobufUtil {
           byte[] qualifier = qv.getQualifier().toByteArray();
           if (!qv.hasValue()) {
             throw new DoNotRetryIOException(
-              "Missing required field: qualifer value");
+              "Missing required field: qualifier value");
           }
           byte[] value = qv.getValue().toByteArray();
           byte[] tags = null;
@@ -754,7 +754,7 @@ public final class ProtobufUtil {
         for (QualifierValue qv: column.getQualifierValueList()) {
           byte[] qualifier = qv.getQualifier().toByteArray();
           if (!qv.hasValue()) {
-            throw new DoNotRetryIOException("Missing required field: qualifer value");
+            throw new DoNotRetryIOException("Missing required field: qualifier value");
           }
           byte[] value = qv.getValue().toByteArray();
           byte[] tags = null;

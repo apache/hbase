@@ -75,7 +75,7 @@ Example formatting cf:qualifier1 and cf:qualifier2 both as Integers:
   hbase> scan 't1', {COLUMNS => ['cf:qualifier1:toInt',
     'cf:qualifier2:c(org.apache.hadoop.hbase.util.Bytes).toInt'] } 
 
-Note that you can specify a FORMATTER by column only (cf:qualifer).  You cannot
+Note that you can specify a FORMATTER by column only (cf:qualifier).  You cannot
 specify a FORMATTER for all columns of a column family.
 
 Scan can also be used directly from a table, by first getting a reference to a

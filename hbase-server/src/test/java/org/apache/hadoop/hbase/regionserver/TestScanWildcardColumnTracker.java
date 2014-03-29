@@ -39,10 +39,10 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
     //Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<byte[]>();
-    qualifiers.add(Bytes.toBytes("qualifer1"));
-    qualifiers.add(Bytes.toBytes("qualifer2"));
-    qualifiers.add(Bytes.toBytes("qualifer3"));
-    qualifiers.add(Bytes.toBytes("qualifer4"));
+    qualifiers.add(Bytes.toBytes("qualifier1"));
+    qualifiers.add(Bytes.toBytes("qualifier2"));
+    qualifiers.add(Bytes.toBytes("qualifier3"));
+    qualifiers.add(Bytes.toBytes("qualifier4"));
 
     //Setting up expected result
     List<MatchCode> expected = new ArrayList<MatchCode>();
@@ -72,10 +72,10 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
     //Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<byte[]>();
-    qualifiers.add(Bytes.toBytes("qualifer1"));
-    qualifiers.add(Bytes.toBytes("qualifer1"));
-    qualifiers.add(Bytes.toBytes("qualifer1"));
-    qualifiers.add(Bytes.toBytes("qualifer2"));
+    qualifiers.add(Bytes.toBytes("qualifier1"));
+    qualifiers.add(Bytes.toBytes("qualifier1"));
+    qualifiers.add(Bytes.toBytes("qualifier1"));
+    qualifiers.add(Bytes.toBytes("qualifier2"));
 
     //Setting up expected result
     List<ScanQueryMatcher.MatchCode> expected = new ArrayList<MatchCode>();
@@ -106,8 +106,8 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
     //Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<byte[]>();
-    qualifiers.add(Bytes.toBytes("qualifer2"));
-    qualifiers.add(Bytes.toBytes("qualifer1"));
+    qualifiers.add(Bytes.toBytes("qualifier2"));
+    qualifiers.add(Bytes.toBytes("qualifier1"));
 
     boolean ok = false;
 

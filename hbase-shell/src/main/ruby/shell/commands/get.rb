@@ -51,7 +51,7 @@ Example formatting cf:qualifier1 and cf:qualifier2 both as Integers:
   hbase> get 't1', 'r1' {COLUMN => ['cf:qualifier1:toInt',
     'cf:qualifier2:c(org.apache.hadoop.hbase.util.Bytes).toInt'] } 
 
-Note that you can specify a FORMATTER by column only (cf:qualifer).  You cannot specify
+Note that you can specify a FORMATTER by column only (cf:qualifier).  You cannot specify
 a FORMATTER for all columns of a column family.
     
 The same commands also can be run on a reference to a table (obtained via get_table or

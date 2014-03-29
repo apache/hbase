@@ -170,7 +170,7 @@ public class Increment extends Mutation implements Comparable<Row> {
    * a map of families to a list of Longs.  Now, {@link #getFamilyCellMap()} returns
    * families by list of Cells.  This method has been added so you can have the
    * old behavior.
-   * @return Map of families to a Map of qualifers and their Long increments.
+   * @return Map of families to a Map of qualifiers and their Long increments.
    * @since 0.95.0
    */
   public Map<byte[], NavigableMap<byte [], Long>> getFamilyMapOfLongs() {
