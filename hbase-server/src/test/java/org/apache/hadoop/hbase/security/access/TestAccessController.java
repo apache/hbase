@@ -1314,6 +1314,21 @@ public class TestAccessController extends SecureTestUtil {
         return null;
       }
     });
+    // user1 should be allowed to delete the cf. (All data under cf for a row)
+    user1.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Delete d = new Delete(TEST_ROW2);
+          d.deleteFamily(TEST_FAMILY);
+          t.delete(d);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    });
   }
 
   @Test

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -526,8 +527,15 @@ public class AccessController extends BaseRegionObserver
           if (list == null || list.isEmpty()) {
             get.addFamily(col);
           } else {
-            for (Cell cell: list) {
-              get.addColumn(col, CellUtil.cloneQualifier(cell));
+            // In case of family delete, a Cell will be added into the list with Qualifier as null.
+            for (Cell cell : list) {
+              if (cell.getQualifierLength() == 0
+                  && (cell.getTypeByte() == Type.DeleteFamily.getCode() 
+                  || cell.getTypeByte() == Type.DeleteFamilyVersion.getCode())) {
+                get.addFamily(col);
+              } else {
+                get.addColumn(col, CellUtil.cloneQualifier(cell));
+              }
             }
           }
         } else {
