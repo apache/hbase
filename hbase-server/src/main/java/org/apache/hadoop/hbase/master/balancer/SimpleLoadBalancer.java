@@ -184,6 +184,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     if (regionsToReturn != null) {
       return regionsToReturn;
     }
+    filterExcludedServers(clusterMap);
     boolean emptyRegionServerPresent = false;
     long startTime = System.currentTimeMillis();
 

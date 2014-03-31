@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
@@ -406,6 +407,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(BaseLoadBalancer.class);
 
+  // a flag to indicate if assigning regions to backup masters
+  protected boolean usingBackupMasters = false;
+  protected final Set<ServerName> excludedServers =
+    Collections.synchronizedSet(new HashSet<ServerName>());
+
   protected final MetricsBalancer metricsBalancer = new MetricsBalancer();
   protected ServerName masterServerName;
   protected MasterServices services;
@@ -417,12 +423,29 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     else if (slop > 1) slop = 1;
 
     this.config = conf;
+    usingBackupMasters = conf.getBoolean("hbase.balancer.use-backupmaster", true);
   }
 
   protected void setSlop(Configuration conf) {
     this.slop = conf.getFloat("hbase.regions.slop", (float) 0.2);
   }
 
+  /**
+   * If there is any server excluded, filter it out from the cluster map so
+   * we won't assign any region to it, assuming none's already assigned there.
+   */
+  protected void filterExcludedServers(Map<ServerName, List<HRegionInfo>> clusterMap) {
+    if (excludedServers.isEmpty()) { // No server to filter out
+      return;
+    }
+    Iterator<Map.Entry<ServerName, List<HRegionInfo>>> it = clusterMap.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<ServerName, List<HRegionInfo>> en = it.next();
+      if (excludedServers.contains(en.getKey()) && en.getValue().isEmpty()) {
+        it.remove();
+      }
+    }
+  }
   /**
    * Balance the regions that should be on master regionserver.
    */
@@ -469,6 +492,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return plans;
   }
 
+  public void excludeServer(ServerName serverName) {
+    if (!usingBackupMasters) excludedServers.add(serverName);
+  }
+
   @Override
   public Configuration getConf() {
     return this.config;
@@ -476,12 +503,19 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   @Override
   public void setClusterStatus(ClusterStatus st) {
-    // Not used except for the StocasticBalancer
+    if (st == null || usingBackupMasters) return;
+
+    // Not assign any region to backup masters.
+    // Put them on the excluded server list.
+    // Assume there won't be too much backup masters
+    // re/starting, so this won't leak much memory.
+    excludedServers.addAll(st.getBackupMasters());
   }
 
   @Override
   public void setMasterServices(MasterServices masterServices) {
     masterServerName = masterServices.getServerName();
+    excludedServers.remove(masterServerName);
     this.services = masterServices;
   }
 
@@ -535,6 +569,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       List<ServerName> servers) {
     metricsBalancer.incrMiscInvocations();
 
+    if (!excludedServers.isEmpty() && servers != null) {
+      servers.removeAll(excludedServers);
+    }
     if (regions.isEmpty() || servers.isEmpty()) {
       return null;
     }
@@ -619,6 +656,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   public ServerName randomAssignment(HRegionInfo regionInfo, List<ServerName> servers) {
     metricsBalancer.incrMiscInvocations();
 
+    if (!excludedServers.isEmpty() && servers != null) {
+      servers.removeAll(excludedServers);
+    }
     if (servers == null || servers.isEmpty()) {
       LOG.warn("Wanted to do random assignment but no servers to assign to");
       return null;
@@ -660,6 +700,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     // Update metrics
     metricsBalancer.incrMiscInvocations();
 
+    if (!excludedServers.isEmpty() && servers != null) {
+      servers.removeAll(excludedServers);
+    }
     if (regions.isEmpty() || servers.isEmpty()) {
       return null;
     }

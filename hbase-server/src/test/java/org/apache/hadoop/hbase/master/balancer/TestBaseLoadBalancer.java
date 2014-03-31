@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -35,7 +36,9 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
@@ -365,4 +368,48 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertEquals(-1, cluster.regionLocations[r43][0]);
   }
 
+  @Test
+  public void testBackupMastersExcluded() throws HBaseIOException {
+    ClusterStatus st = Mockito.mock(ClusterStatus.class);
+    ArrayList<ServerName> backupMasters = new ArrayList<ServerName>();
+    ServerName backupMaster = ServerName.valueOf("fake-backupmaster", 0, 1L);
+    backupMasters.add(backupMaster);
+    BaseLoadBalancer balancer = (BaseLoadBalancer)loadBalancer;
+    balancer.usingBackupMasters = false;
+    Mockito.when(st.getBackupMasters()).thenReturn(backupMasters);
+    loadBalancer.setClusterStatus(st);
+    assertEquals(1, balancer.excludedServers.size());
+    assertTrue(balancer.excludedServers.contains(backupMaster));
+
+    // Round robin assignment
+    List<HRegionInfo> regions = randomRegions(1);
+    HRegionInfo region = regions.get(0);
+    assertNull(loadBalancer.randomAssignment(region, backupMasters));
+    assertNull(loadBalancer.roundRobinAssignment(regions, backupMasters));
+    HashMap<HRegionInfo, ServerName> assignments = new HashMap<HRegionInfo, ServerName>();
+    assignments.put(region, backupMaster);
+    assertNull(loadBalancer.retainAssignment(assignments, backupMasters));
+    ArrayList<ServerName> servers = new ArrayList<ServerName>(backupMasters);
+    ServerName sn = ServerName.valueOf("fake-rs", 0, 1L);
+    servers.add(sn);
+    assertEquals(sn, loadBalancer.randomAssignment(region, servers));
+    Map<ServerName, List<HRegionInfo>> plans =
+      loadBalancer.roundRobinAssignment(regions, servers);
+    assertEquals(1, plans.size());
+    assertTrue(plans.get(sn).contains(region));
+
+    // Retain assignment
+    plans = loadBalancer.retainAssignment(assignments, servers);
+    assertEquals(1, plans.size());
+    assertTrue(plans.get(sn).contains(region));
+
+    // Filter backup masters for balance cluster
+    Map<ServerName, List<HRegionInfo>> clusterMap =
+      new HashMap<ServerName, List<HRegionInfo>>();
+    clusterMap.put(backupMaster, new ArrayList<HRegionInfo>());
+    clusterMap.put(sn, new ArrayList<HRegionInfo>());
+    balancer.filterExcludedServers(clusterMap);
+    assertTrue(clusterMap.containsKey(sn));
+    assertEquals(1, clusterMap.size());
+  }
 }

@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -139,6 +140,8 @@ public class ServerManager {
 
   private final long maxSkew;
   private final long warningSkew;
+  private final boolean checkingBackupMaster;
+  private BaseLoadBalancer balancer;
 
   /**
    * Set of region servers which are dead but not processed immediately. If one
@@ -194,6 +197,14 @@ public class ServerManager {
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
     this.connection = connect ? HConnectionManager.getConnection(c) : null;
+
+    // Put this in constructor so we don't cast it every time
+    checkingBackupMaster = (master instanceof HMaster)
+      && !c.getBoolean("hbase.balancer.use-backupmaster", true)
+      && ((HMaster)master).balancer instanceof BaseLoadBalancer;
+    if (checkingBackupMaster) {
+      balancer = (BaseLoadBalancer)((HMaster)master).balancer;
+    }
   }
 
   /**
@@ -375,6 +386,18 @@ public class ServerManager {
   @VisibleForTesting
   void recordNewServerWithLock(final ServerName serverName, final ServerLoad sl) {
     LOG.info("Registering server=" + serverName);
+    if (checkingBackupMaster) {
+      ZooKeeperWatcher zooKeeper = master.getZooKeeper();
+      String backupZNode = ZKUtil.joinZNode(
+        zooKeeper.backupMasterAddressesZNode, serverName.toString());
+      try {
+        if (ZKUtil.checkExists(zooKeeper, backupZNode) != -1) {
+          balancer.excludeServer(serverName);
+        }
+      } catch (KeeperException e) {
+        master.abort("Failed to check if a new server a backup master", e);
+      }
+    }
     this.onlineServers.put(serverName, sl);
     this.rsAdmins.remove(serverName);
   }

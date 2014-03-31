@@ -196,6 +196,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if (plans != null) {
       return plans;
     }
+    filterExcludedServers(clusterState);
     if (!needsBalance(new ClusterLoadState(masterServerName, clusterState))) {
       return null;
     }

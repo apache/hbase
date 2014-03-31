@@ -178,7 +178,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         // Need to have the zk cluster shutdown when master is shutdown.
         // Run a subclass that does the zk cluster shutdown on its way out.
         LocalHBaseCluster cluster = new LocalHBaseCluster(conf, conf.getInt("hbase.masters", 1),
-          conf.getInt("hbase.regionservers", 1), LocalHMaster.class, HRegionServer.class);
+          conf.getInt("hbase.regionservers", 0), LocalHMaster.class, HRegionServer.class);
         ((LocalHMaster)cluster.getMaster(0)).setZKCluster(zooKeeperCluster);
         cluster.startup();
         waitOnMasterThreads(cluster);

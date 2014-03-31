@@ -34,7 +34,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -107,12 +110,16 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
+import org.mortbay.jetty.Connector;
+import org.mortbay.jetty.nio.SelectChannelConnector;
+import org.mortbay.jetty.servlet.Context;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -214,6 +221,23 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
 
+  /** jetty server for master to redirect requests to regionserver infoServer */
+  private org.mortbay.jetty.Server masterJettyServer;
+
+  public static class RedirectServlet extends HttpServlet {
+    private static final long serialVersionUID = 2894774810058302472L;
+    private static int regionServerInfoPort;
+
+    @Override
+    public void doGet(HttpServletRequest request,
+        HttpServletResponse response) throws ServletException, IOException {
+      String redirectUrl = request.getScheme() + "://"
+        + request.getServerName() + ":" + regionServerInfoPort
+        + request.getRequestURI();
+      response.sendRedirect(redirectUrl);
+    }
+  }
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -271,6 +295,34 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
     startActiveMasterManager();
+    putUpJettyServer();
+  }
+
+  private void putUpJettyServer() throws IOException {
+    if (!conf.getBoolean("hbase.master.infoserver.redirect", true)) {
+      return;
+    }
+    int infoPort = conf.getInt("hbase.master.info.port.orig",
+      HConstants.DEFAULT_MASTER_INFOPORT);
+    // -1 is for disabling info server, so no redirecting
+    if (infoPort < 0 || infoServer == null) {
+      return;
+    }
+
+    RedirectServlet.regionServerInfoPort = infoServer.getPort();
+    masterJettyServer = new org.mortbay.jetty.Server();
+    Connector connector = new SelectChannelConnector();
+    connector.setHost(conf.get("hbase.master.info.bindAddress", "0.0.0.0"));
+    connector.setPort(infoPort);
+    masterJettyServer.addConnector(connector);
+    masterJettyServer.setStopAtShutdown(true);
+    Context context = new Context(masterJettyServer, "/", Context.NO_SESSIONS);
+    context.addServlet(RedirectServlet.class, "/*");
+    try {
+      masterJettyServer.start();
+    } catch (Exception e) {
+      throw new IOException("Failed to start redirecting jetty server", e);
+    }
   }
 
   /**
@@ -479,17 +531,17 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     this.initializationBeforeMetaAssignment = true;
 
-    //initialize load balancer
-    this.balancer.setClusterStatus(getClusterStatus());
-    this.balancer.setMasterServices(this);
-    this.balancer.initialize();
-
     // Wait for regionserver to finish initialization.
     while (!isOnline()) {
       synchronized (online) {
         online.wait(100);
       }
     }
+
+    //initialize load balancer
+    this.balancer.setClusterStatus(getClusterStatus());
+    this.balancer.setMasterServices(this);
+    this.balancer.initialize();
 
     // Make sure meta assigned before proceeding.
     status.setStatus("Assigning Meta Region");
@@ -785,6 +837,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   protected void stopServiceThreads() {
+    if (masterJettyServer != null) {
+      LOG.info("Stopping master jetty server");
+      try {
+        masterJettyServer.stop();
+      } catch (Exception e) {
+        LOG.error("Failed to stop master jetty server", e);
+      }
+    }
     super.stopServiceThreads();
     stopChores();
     // Wait for all the remaining region servers to report in IFF we were
@@ -1136,7 +1196,22 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
-  private void startActiveMasterManager() {
+  private void startActiveMasterManager() throws KeeperException {
+    String backupZNode = ZKUtil.joinZNode(
+      zooKeeper.backupMasterAddressesZNode, serverName.toString());
+    /*
+    * Add a ZNode for ourselves in the backup master directory since we
+    * may not become the active master. If so, we want the actual active
+    * master to know we are backup masters, so that it won't assign
+    * regions to us if so configured.
+    *
+    * If we become the active master later, ActiveMasterManager will delete
+    * this node explicitly.  If we crash before then, ZooKeeper will delete
+    * this node for us since it is ephemeral.
+    */
+    LOG.info("Adding ZNode for " + backupZNode + " in backup master directory");
+    MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, serverName);
+
     activeMasterManager = new ActiveMasterManager(zooKeeper, serverName, this);
     // Start a thread to try to become the active master, so we won't block here
     Threads.setDaemonThreadRunning(new Thread(new Runnable() {

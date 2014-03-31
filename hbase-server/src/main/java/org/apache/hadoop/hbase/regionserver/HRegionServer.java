@@ -777,7 +777,7 @@ public class HRegionServer extends HasThread implements
       try {
         this.infoServer.stop();
       } catch (Exception e) {
-        e.printStackTrace();
+        LOG.error("Failed to stop infoServer", e);
       }
     }
     // Send cache a shutdown.
@@ -1534,6 +1534,9 @@ public class HRegionServer extends HasThread implements
     }
     port = this.infoServer.getPort();
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, port);
+    int masterInfoPort = conf.getInt(HConstants.MASTER_INFO_PORT,
+      HConstants.DEFAULT_MASTER_INFOPORT);
+    conf.setInt("hbase.master.info.port.orig", masterInfoPort);
     conf.setInt(HConstants.MASTER_INFO_PORT, port);
     return port;
   }

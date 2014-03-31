@@ -148,13 +148,13 @@ public class ActiveMasterManager extends ZooKeeperListener {
    */
   boolean blockUntilBecomingActiveMaster(
       int checkInterval, MonitoredTask startupStatus) {
+    String backupZNode = ZKUtil.joinZNode(
+      this.watcher.backupMasterAddressesZNode, this.sn.toString());
     while (!(master.isAborted() || master.isStopped())) {
       startupStatus.setStatus("Trying to register in ZK as active master");
       // Try to become the active master, watch if there is another master.
       // Write out our ServerName as versioned bytes.
       try {
-        String backupZNode =
-            ZKUtil.joinZNode(this.watcher.backupMasterAddressesZNode, this.sn.toString());
         if (MasterAddressTracker.setMasterAddress(this.watcher,
             this.watcher.getMasterAddressZNode(), this.sn)) {
 
@@ -177,17 +177,6 @@ public class ActiveMasterManager extends ZooKeeperListener {
         // There is another active master running elsewhere or this is a restart
         // and the master ephemeral node has not expired yet.
         this.clusterHasActiveMaster.set(true);
-
-        /*
-        * Add a ZNode for ourselves in the backup master directory since we are
-        * not the active master.
-        *
-        * If we become the active master later, ActiveMasterManager will delete
-        * this node explicitly.  If we crash before then, ZooKeeper will delete
-        * this node for us since it is ephemeral.
-        */
-        LOG.info("Adding ZNode for " + backupZNode + " in backup master directory");
-        MasterAddressTracker.setMasterAddress(this.watcher, backupZNode, this.sn);
 
         String msg;
         byte[] bytes =
