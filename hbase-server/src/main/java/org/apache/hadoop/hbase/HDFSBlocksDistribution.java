@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 
 
 /**
- * Data structure to describe the distribution of HDFS blocks amount hosts.
+ * Data structure to describe the distribution of HDFS blocks among hosts.
  *
  * Adding erroneous data will be ignored silently.
  */

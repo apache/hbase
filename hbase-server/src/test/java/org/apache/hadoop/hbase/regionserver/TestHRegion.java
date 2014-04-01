@@ -3663,8 +3663,13 @@ public class TestHRegion {
   @Test
   public void testgetHDFSBlocksDistribution() throws Exception {
     HBaseTestingUtility htu = new HBaseTestingUtility();
-    final int DEFAULT_BLOCK_SIZE = 1024;
-    htu.getConfiguration().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    // Why do we set the block size in this test?  If we set it smaller than the kvs, then we'll
+    // break up the file in to more pieces that can be distributed across the three nodes and we
+    // won't be able to have the condition this test asserts; that at least one node has
+    // a copy of all replicas -- if small block size, then blocks are spread evenly across the
+    // the three nodes.  hfilev3 with tags seems to put us over the block size.  St.Ack.
+    // final int DEFAULT_BLOCK_SIZE = 1024;
+    // htu.getConfiguration().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     htu.getConfiguration().setInt("dfs.replication", 2);
 
     // set up a cluster with 3 nodes
@@ -3691,15 +3696,25 @@ public class TestHRegion {
       firstRegion.flushcache();
       HDFSBlocksDistribution blocksDistribution1 = firstRegion.getHDFSBlocksDistribution();
 
-      // given the default replication factor is 2 and we have 2 HFiles,
+      // Given the default replication factor is 2 and we have 2 HFiles,
       // we will have total of 4 replica of blocks on 3 datanodes; thus there
       // must be at least one host that have replica for 2 HFiles. That host's
       // weight will be equal to the unique block weight.
       long uniqueBlocksWeight1 = blocksDistribution1.getUniqueBlocksTotalWeight();
+      StringBuilder sb = new StringBuilder();
+      for (String host: blocksDistribution1.getTopHosts()) {
+        if (sb.length() > 0) sb.append(", ");
+        sb.append(host);
+        sb.append("=");
+        sb.append(blocksDistribution1.getWeight(host));
+      }
 
       String topHost = blocksDistribution1.getTopHosts().get(0);
       long topHostWeight = blocksDistribution1.getWeight(topHost);
-      assertTrue(uniqueBlocksWeight1 == topHostWeight);
+      String msg = "uniqueBlocksWeight=" + uniqueBlocksWeight1 + ", topHostWeight=" +
+        topHostWeight + ", topHost=" + topHost + "; " + sb.toString();
+      LOG.info(msg);
+      assertTrue(msg, uniqueBlocksWeight1 == topHostWeight);
 
       // use the static method to compute the value, it should be the same.
       // static method is used by load balancer or other components

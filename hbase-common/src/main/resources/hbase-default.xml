@@ -666,10 +666,11 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
       <name>hfile.format.version</name>
-      <value>2</value>
-      <description>The HFile format version to use for new files. Set this to 1 to test
-          backwards-compatibility. The default value of this option should be
-          consistent with FixedFileTrailer.MAX_VERSION.</description>
+      <value>3</value>
+      <description>The HFile format version to use for new files.
+      Version 3 adds support for tags in hfiles (See http://hbase.apache.org/book.html#hbase.tags).
+      Distributed Log Replay requires that tags are enabled.
+      </description>
   </property>
   <property>
       <name>hfile.block.bloom.cacheonwrite</name>
