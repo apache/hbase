@@ -123,11 +123,18 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
       util = new IntegrationTestingUtility();
     }
     util.initializeCluster(1);
+    if (!util.isDistributedCluster()) {
+      // also need MR when running without a real cluster
+      util.startMiniMapReduceCluster();
+    }
   }
 
   @AfterClass
   public static void releaseCluster() throws Exception {
     util.restoreCluster();
+    if (!util.isDistributedCluster()) {
+      util.shutdownMiniMapReduceCluster();
+    }
     util = null;
   }
 
