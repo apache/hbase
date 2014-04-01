@@ -2201,6 +2201,34 @@ public final class ProtobufUtil {
   }
 
   /**
+   * A utility used to get permissions for selected namespace.
+   * <p>
+   * It's also called by the shell, in case you want to find references.
+   *
+   * @param protocol the AccessControlService protocol proxy
+   * @param namespace name of the namespace
+   * @throws ServiceException
+   */
+  public static List<UserPermission> getUserPermissions(
+      AccessControlService.BlockingInterface protocol,
+      byte[] namespace) throws ServiceException {
+    AccessControlProtos.GetUserPermissionsRequest.Builder builder =
+      AccessControlProtos.GetUserPermissionsRequest.newBuilder();
+    if (namespace != null) {
+      builder.setNamespaceName(HBaseZeroCopyByteString.wrap(namespace));
+    }
+    builder.setType(AccessControlProtos.Permission.Type.Namespace);
+    AccessControlProtos.GetUserPermissionsRequest request = builder.build();
+    AccessControlProtos.GetUserPermissionsResponse response =
+      protocol.getUserPermissions(null, request);
+    List<UserPermission> perms = new ArrayList<UserPermission>();
+    for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
+      perms.add(ProtobufUtil.toUserPermission(perm));
+    }
+    return perms;
+  }
+
+  /**
    * Convert a protobuf UserTablePermissions to a
    * ListMultimap<String, TablePermission> where key is username.
    *
