@@ -168,7 +168,7 @@ module Hbase
             raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless namespace_exists?(namespace_name)
             # invoke cp endpoint to perform access controls
             perms = org.apache.hadoop.hbase.protobuf.ProtobufUtil.getUserPermissions(
-              protocol, table_name.to_java_bytes)
+              protocol, namespace_name.to_java_bytes)
           else
              raise(ArgumentError, "Can't find table: #{table_name}") unless exists?(table_name)
              perms = org.apache.hadoop.hbase.protobuf.ProtobufUtil.getUserPermissions(
