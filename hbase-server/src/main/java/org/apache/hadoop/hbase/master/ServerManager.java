@@ -436,10 +436,19 @@ public class ServerManager {
     return averageLoad;
   }
 
-  /** @return the count of active regionservers */
-  int countOfRegionServers() {
+  /**
+   * Get the count of active regionservers that are not backup
+   * masters. This count may not be accurate depending on timing.
+   * @return the count of active regionservers
+   */
+  private int countOfRegionServers() {
     // Presumes onlineServers is a concurrent map
-    return this.onlineServers.size();
+    int count = this.onlineServers.size();
+    if (balancer != null) {
+      count -= balancer.getExcludedServers().size();
+      if (count < 0) count = 0;
+    }
+    return count;
   }
 
   /**
@@ -849,7 +858,7 @@ public class ServerManager {
     final long timeout = this.master.getConfiguration().
       getLong(WAIT_ON_REGIONSERVERS_TIMEOUT, 4500);
     int minToStart = this.master.getConfiguration().
-      getInt(WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+      getInt(WAIT_ON_REGIONSERVERS_MINTOSTART, 2);
     if (minToStart < 1) {
       LOG.warn(String.format(
         "The value of '%s' (%d) can not be less than 1, ignoring.",

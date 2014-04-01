@@ -532,7 +532,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.initializationBeforeMetaAssignment = true;
 
     // Wait for regionserver to finish initialization.
-    while (!isOnline()) {
+    while (!isStopped() && !isOnline()) {
       synchronized (online) {
         online.wait(100);
       }
@@ -542,6 +542,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.balancer.setClusterStatus(getClusterStatus());
     this.balancer.setMasterServices(this);
     this.balancer.initialize();
+
+    // Check if master is shutting down because of some issue
+    // in initializing the regionserver or the balancer.
+    if(isStopped()) return;
 
     // Make sure meta assigned before proceeding.
     status.setStatus("Assigning Meta Region");

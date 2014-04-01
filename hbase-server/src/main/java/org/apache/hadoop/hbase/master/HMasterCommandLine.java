@@ -151,6 +151,7 @@ public class HMasterCommandLine extends ServerCommandLine {
       // and regionserver both in the one JVM.
       if (LocalHBaseCluster.isLocal(conf)) {
         DefaultMetricsSystem.setMiniClusterMode(true);
+        conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
         final MiniZooKeeperCluster zooKeeperCluster = new MiniZooKeeperCluster(conf);
         File zkDataPath = new File(conf.get(HConstants.ZOOKEEPER_DATA_DIR));
         int zkClientPort = conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 0);

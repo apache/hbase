@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClient.FailedServerException;
-import org.apache.hadoop.hbase.ipc.RpcClient.FailedServerException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
@@ -2211,11 +2210,9 @@ public class AssignmentManager extends ZooKeeperListener {
       }
       LOG.debug("No previous transition plan found (or ignoring " +
         "an existing plan) for " + region.getRegionNameAsString() +
-        "; generated random plan=" + randomPlan + "; " +
-        serverManager.countOfRegionServers() +
-               " (online=" + serverManager.getOnlineServers().size() +
-               ", available=" + destServers.size() + ") available servers" +
-               ", forceNewPlan=" + forceNewPlan);
+        "; generated random plan=" + randomPlan + "; " + destServers.size() +
+        " (online=" + serverManager.getOnlineServers().size() +
+        ") available servers, forceNewPlan=" + forceNewPlan);
         return randomPlan;
       }
     LOG.debug("Using pre-existing plan for " +

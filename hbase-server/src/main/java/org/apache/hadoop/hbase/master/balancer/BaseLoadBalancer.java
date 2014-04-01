@@ -496,6 +496,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     if (!usingBackupMasters) excludedServers.add(serverName);
   }
 
+  public Set<ServerName> getExcludedServers() {
+    return excludedServers;
+  }
+
   @Override
   public Configuration getConf() {
     return this.config;
