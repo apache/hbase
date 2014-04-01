@@ -299,7 +299,7 @@ public class TestRegionPlacement {
     boolean isNamespaceServer = false;
     do {
       // kill a random non-meta server carrying at least one region
-      killIndex = random.nextInt(servers.length);
+      killIndex = random.nextInt(SLAVES);
       serverToKill = TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getServerName();
       Collection<HRegion> regs =
           TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getOnlineRegionsLocalContext();
