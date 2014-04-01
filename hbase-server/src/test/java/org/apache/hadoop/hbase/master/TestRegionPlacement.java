@@ -289,8 +289,6 @@ public class TestRegionPlacement {
 
   private void killRandomServerAndVerifyAssignment() 
       throws IOException, InterruptedException, KeeperException {
-    ClusterStatus oldStatus = TEST_UTIL.getHBaseCluster().getClusterStatus();
-    ServerName servers[] = oldStatus.getServers().toArray(new ServerName[10]);
     ServerName serverToKill = null;
     int killIndex = 0;
     Random random = new Random(System.currentTimeMillis());
