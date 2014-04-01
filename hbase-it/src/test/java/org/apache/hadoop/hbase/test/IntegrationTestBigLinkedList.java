@@ -1024,8 +1024,20 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   @Override
   public void setUpCluster() throws Exception {
     util = getTestingUtil(getConf());
-    util.initializeCluster(util.isDistributedCluster() ? 1 : this.NUM_SLAVES_BASE);
+    boolean isDistributed = util.isDistributedCluster();
+    util.initializeCluster(isDistributed ? 1 : this.NUM_SLAVES_BASE);
+    if (!isDistributed) {
+      util.startMiniMapReduceCluster();
+    }
     this.setConf(util.getConfiguration());
+  }
+
+  @Override
+  public void cleanUpCluster() throws Exception {
+    super.cleanUpCluster();
+    if (util.isDistributedCluster()) {
+      util.shutdownMiniMapReduceCluster();
+    }
   }
 
   @Test
