@@ -127,8 +127,17 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
       getConf().setLong(NUM_TO_WRITE_KEY, NUM_TO_WRITE_DEFAULT / 100);
       getConf().setInt(NUM_MAP_TASKS_KEY, NUM_MAP_TASKS_DEFAULT / 100);
       getConf().setInt(NUM_REDUCE_TASKS_KEY, NUM_REDUCE_TASKS_DEFAULT / 10);
+      util.startMiniMapReduceCluster();
     }
   }
+
+@Override
+public void cleanUpCluster() throws Exception {
+  super.cleanUpCluster();
+  if (!util.isDistributedCluster()) {
+    util.shutdownMiniMapReduceCluster();
+  }
+}
 
   /**
    * Converts a "long" value between endian systems.
