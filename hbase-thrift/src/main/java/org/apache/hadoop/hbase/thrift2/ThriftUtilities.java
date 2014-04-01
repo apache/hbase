@@ -417,8 +417,8 @@ public class ThriftUtilities {
       addAttributes(out,in.getAttributes());
     }
     
-		if (in.isSetAuthorizations()) {
-		  out.setAuthorizations(new Authorizations(in.getAuthorizations().getLabels()));
+    if (in.isSetAuthorizations()) {
+      out.setAuthorizations(new Authorizations(in.getAuthorizations().getLabels()));
     }
 
     return out;
