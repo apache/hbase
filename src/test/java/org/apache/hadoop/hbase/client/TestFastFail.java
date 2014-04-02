@@ -19,11 +19,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -32,15 +31,9 @@ import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.client.HConnectionManager.TableServers;
-import org.apache.hadoop.hbase.client.HConnectionManager.TableServers.FailureInfo;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.client.TableServers.FailureInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DelayInducingInjectionHandler;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -54,7 +47,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Run tests that use the HBase clients; {@link HTable} and {@link HTablePool}.
@@ -103,6 +95,7 @@ public class TestFastFail {
     for (int i = 0; i < NUM_READER_THREADS; i++) {
       LOG.info("Launching client reader thread " + i);
       Thread readerThread = new Thread("client-reader-" + i) {
+        @Override
         public void run() {
           LOG.info("Starting reads : " + getName());
           HTable table;

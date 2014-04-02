@@ -127,12 +127,12 @@ public abstract class ServerCallable<T> implements Callable<T> {
   }
 
   public void updateFailureInfoForServer(boolean didTry, boolean couldNotCommunicate) {
-    ((HConnectionManager.TableServers)connection).updateFailureInfoForServer(
+    ((TableServers)connection).updateFailureInfoForServer(
         getServerAddress(), didTry, couldNotCommunicate);
   }
 
   public void handleThrowable(Throwable t, MutableBoolean couldNotCommunicateWithServer) throws Exception {
-    ((HConnectionManager.TableServers)connection).handleThrowable(t, this, couldNotCommunicateWithServer);
+    ((TableServers)connection).handleThrowable(t, this, couldNotCommunicateWithServer);
   }
 
   public void readHeader() {
