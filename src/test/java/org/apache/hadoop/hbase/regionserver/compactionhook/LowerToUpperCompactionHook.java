@@ -30,9 +30,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class LowerToUpperCompactionHook implements CompactionHook {
 
   @Override
-  public RestrictedKeyValue transform (RestrictedKeyValue kv) {
-    RestrictedKeyValue kvModified = new RestrictedKeyValue(kv);
-    String currentValue = Bytes.toString(kv.getValue());
+  public RestrictedKeyValue transform (RestrictedKeyValue kvModified) {
+    String currentValue = Bytes.toString(kvModified.getValue());
     if (currentValue.equals("abc")) {
       return null;
     }

@@ -133,6 +133,28 @@ public class RestrictedKeyValue {
     return true;
   }
 
+  /**
+   * Compares RestrictedKeyValue with the passed {@link KeyValue}
+   * @param kv
+   * @return
+   */
+  public boolean equals(KeyValue kv) {
+    if (keyValue == null) {
+      return kv == null;
+    } else if (kv == null) {
+      return false;
+    } else if (!keyValue.equals(kv)) {
+      //this compares just the key part
+      return false;
+    } else if (Bytes.BYTES_RAWCOMPARATOR.compare(keyValue.getBuffer(),
+        keyValue.getValueOffset(), keyValue.getValueLength(),
+        kv.getBuffer(), kv.getValueOffset(),
+        kv.getValueLength()) != 0) {
+      return false;
+    }
+    return true;
+  }
+
   @Override
   public String toString() {
     return "RestrictedKeyValue [keyValue=" + keyValue + "/value=" + Bytes.toString(keyValue.getValue()) + "]";

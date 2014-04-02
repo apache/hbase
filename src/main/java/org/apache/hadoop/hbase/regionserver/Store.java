@@ -1427,27 +1427,19 @@ public class Store extends SchemaConfigured implements HeapSize,
               }
               if (compactHook != null && kv.isPut()) {
                 try {
-                  RestrictedKeyValue restrictedKv = new RestrictedKeyValue(kv);
                   RestrictedKeyValue modifiedKv = compactHook
-                      .transform(restrictedKv);
+                      .transform(new RestrictedKeyValue(kv));
                   if (modifiedKv != null) {
                     writer.append(modifiedKv.getKeyValue(), kvContext);
                     bytesSaved += modifiedKv.differenceInBytes(kv);
+                    if (!modifiedKv.equals(kv)) {
+                      kvsConverted++;
+                    }
                   } else {
                     if (kv != null) {
-                      // TODO: adela check if we are too spamy with this logging
-                      LOG.info("Skipping keyvalue during compaction, due to compaction hook decision: "
-                          + kv);
                       bytesSaved += kv.getLength();
+                      kvsConverted++;
                     }
-                  }
-                  if (!restrictedKv.equals(modifiedKv)) {
-                    kvsConverted++;
-                  } else {
-                    // TODO: adela check if we are too spamy with this logging
-                    LOG.info("Keyvalue is not modified by compaction hook!"
-                        + " modified: " + modifiedKv + "original: "
-                        + restrictedKv);
                   }
                 } catch (Exception e) {
                   // if exception happened just write unmodified keyvalue
