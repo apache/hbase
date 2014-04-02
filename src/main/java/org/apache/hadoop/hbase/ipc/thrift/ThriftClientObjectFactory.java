@@ -73,10 +73,11 @@ public class ThriftClientObjectFactory extends
     String socksProxyString =
         conf.get(HConstants.SWIFT_CLIENT_SOCKS_PROXY_HOST_AND_PORT);
     HostAndPort socksProxy = null;
+    if (socksProxyString == null) return;
     try {
       socksProxy = HostAndPort.fromString(socksProxyString);
-    } catch (IllegalArgumentException e) {
-      LOG.error("Socks proxy host and port invalid.");
+    } catch (Exception e) {
+      LOG.error("Socks proxy host and port invalid : " + socksProxyString, e);
       socksProxy = null;
     }
     if (socksProxy != null && socksProxy.hasPort()) {
