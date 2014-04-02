@@ -60,12 +60,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TagRunner;
 import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hbase.util.Writables;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import com.google.gson.Gson;
 
 @RunWith(TagRunner.class)
 public class TestRegionPlacement {
@@ -409,7 +408,7 @@ public class TestRegionPlacement {
   /**
    * Verify the number of user regions is assigned to the primary
    * region server based on the plan is expected
-   * @param expectedNum.
+   * @param expectedNum
    * @throws IOException
    */
   private void verifyRegionOnPrimaryRS(int expectedNum)
@@ -422,7 +421,7 @@ public class TestRegionPlacement {
 
   /**
    * Verify the meta has updated to the latest assignment plan
-   * @param plan
+   * @param expectedPlan
    * @throws IOException
    */
   private void verifyMETAUpdated(AssignmentPlan expectedPlan)
@@ -634,7 +633,7 @@ public class TestRegionPlacement {
       RegionPlacement.printAssignmentPlan(currentPlan);
       AssignmentPlanData data = AssignmentPlanData.constructFromAssignmentPlan(currentPlan);
 
-      String jsonStr = new Gson().toJson(data);
+      String jsonStr = new ObjectMapper().defaultPrettyPrintingWriter().writeValueAsString(data);
       LOG.info("Json version of current assignment plan: " + jsonStr);
       AssignmentPlan loadedPlan = rp.loadPlansFromJson(jsonStr);
       RegionPlacement.printAssignmentPlan(loadedPlan);

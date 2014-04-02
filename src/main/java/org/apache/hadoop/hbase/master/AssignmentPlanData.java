@@ -23,6 +23,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +45,8 @@ public class AssignmentPlanData {
 
   private List<Assignment> assignments;
 
-  public AssignmentPlanData(List<Assignment> assignments) {
+  @JsonCreator
+  public AssignmentPlanData(@JsonProperty("assignments") List<Assignment> assignments) {
     this.assignments = assignments;
   }
 
@@ -56,9 +59,12 @@ public class AssignmentPlanData {
    */
   public static class Assignment {
     private String regionname;
+
     private List<String> favored;
 
-    public Assignment(String regionname, List<String> favored) {
+    @JsonCreator
+    public Assignment(@JsonProperty("regionname") String regionname,
+                      @JsonProperty("favored") List<String> favored) {
       this.regionname = regionname;
       this.favored = favored;
     }

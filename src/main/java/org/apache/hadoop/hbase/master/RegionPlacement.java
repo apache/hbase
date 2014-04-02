@@ -63,9 +63,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonSyntaxException;
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.ObjectMapper;
 
 public class RegionPlacement implements RegionPlacementPolicy{
   private static final Log LOG = LogFactory.getLog(RegionPlacement.class
@@ -1564,10 +1563,10 @@ public class RegionPlacement implements RegionPlacementPolicy{
             rp.updateAssignmentPlan(newPlan);
           }
           s.close();
+        } catch (JsonParseException je) {
+          LOG.error("Unable to parse json file", je);
         } catch (IOException e) {
-          LOG.error("Unable to load plan file: " + e);
-        } catch (JsonSyntaxException je) {
-          LOG.error("Unable to parse json file: " + je);
+          LOG.error("Unable to load plan file" , e);
         }
       } else if (cmd.hasOption("download")) {
         String path = cmd.getOptionValue("download");
@@ -1575,9 +1574,9 @@ public class RegionPlacement implements RegionPlacementPolicy{
           RegionAssignmentSnapshot snapshot = rp.getRegionAssignmentSnapshot();
           AssignmentPlan plan = snapshot.getExistingAssignmentPlan();
           AssignmentPlanData data = AssignmentPlanData.constructFromAssignmentPlan(plan);
-          Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
-          String jsonOutput = prettyGson.toJson(data);
-          FileUtils.write(new File(path), jsonOutput);
+
+          ObjectMapper jsonMapper = new ObjectMapper();
+          jsonMapper.defaultPrettyPrintingWriter().writeValue(new File(path), data);
         } catch (Exception e) {
           LOG.error("Unable to download current assignment plan" + e);
           e.printStackTrace();
@@ -1915,12 +1914,11 @@ public class RegionPlacement implements RegionPlacementPolicy{
    * Convert json string to assignment plan
    * @param jsonStr
    * @return assignment plan converted from json string
-   * @throws JsonSyntaxException
    * @throws IOException
    */
   public AssignmentPlan loadPlansFromJson(String jsonStr)
-      throws JsonSyntaxException, IOException {
-    AssignmentPlanData data = new Gson().fromJson(jsonStr, AssignmentPlanData.class);
+      throws IOException {
+    AssignmentPlanData data = new ObjectMapper().readValue(jsonStr, AssignmentPlanData.class);
     AssignmentPlan newPlan = new AssignmentPlan();
     RegionAssignmentSnapshot snapshot = this.getRegionAssignmentSnapshot();
     Map<String, HRegionInfo> map = snapshot.getRegionNameToRegionInfoMap();
