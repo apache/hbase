@@ -21,17 +21,22 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
 
 public class AssignmentDomain {
   protected static final Log LOG =
@@ -48,6 +53,27 @@ public class AssignmentDomain {
     uniqueRackList = new ArrayList<String>();
     rackManager = new RackManager(conf);
     random = new Random();
+  }
+
+  public AssignmentDomain(Configuration conf, HTableDescriptor htd,
+      Collection<HServerAddress> liveServers) {
+    this(conf);
+
+    List<HServerAddress> servers = null;
+    // If the table is pinned to servers then respect that.
+    if (htd.getServers() != null) {
+      Set<HServerAddress> hServerAddresses = new HashSet<>(htd.getServers());
+      hServerAddresses.retainAll(liveServers);
+      servers = Lists.newArrayList(hServerAddresses);
+    } else {
+      // Otherwise use all of the live servers
+      servers = Lists.newArrayList(liveServers);
+    }
+
+    // Shuffle the server list based on the tableName
+    Random random = new Random(htd.getNameAsString().hashCode());
+    Collections.shuffle(servers, random);
+    this.addServers(servers);
   }
   
   /**

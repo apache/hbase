@@ -1581,24 +1581,7 @@ public class HMaster extends HasThread implements HMasterInterface,
    * @return the assignment domain for the table.
    */
   private AssignmentDomain getAssignmentDomain(HTableDescriptor htd) {
-    // Get all the online region servers
-    List<HServerAddress> servers = null;
-
-    if (htd.getServers() == null) {
-      servers = this.serverManager.getOnlineRegionServerList();
-    } else {
-      Set<HServerAddress> hServerAddresses = new HashSet<>(htd.getServers());
-      hServerAddresses.retainAll(this.serverManager.getOnlineRegionServerList());
-      servers = Lists.newArrayList(hServerAddresses);
-    }
-
-    // Shuffle the server list based on the tableName
-    Random random = new Random(htd.getNameAsString().hashCode());
-    Collections.shuffle(servers, random);
-    // Add the shuffled server list into the assignment domain
-    AssignmentDomain domain = new AssignmentDomain(this.conf);
-    domain.addServers(servers);
-    return domain;
+    return new AssignmentDomain(this.conf, htd, this.serverManager.getOnlineRegionServerList());
   }
 
   @Override

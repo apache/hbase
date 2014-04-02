@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
@@ -795,6 +796,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
       // Get the all the regions for the current table
       List<HRegionInfo> regions =
         assignmentSnapshot.getTableToRegionMap().get(tableName);
+
+      HTableDescriptor tableDescriptor = regions.get(0).getTableDesc();
       int numRegions = regions.size();
 
       // Get the current assignment map
@@ -802,7 +805,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
         assignmentSnapshot.getRegionToRegionServerMap();
 
       // Get the assignment domain
-      AssignmentDomain domain = assignmentSnapshot.getGlobalAssignmentDomain();
+      AssignmentDomain domain = new AssignmentDomain(conf, tableDescriptor,
+          assignmentSnapshot.getGlobalAssignmentDomain().getAllServers());
 
       // Get the all the region servers
       List<HServerAddress> servers = new ArrayList<HServerAddress>();
