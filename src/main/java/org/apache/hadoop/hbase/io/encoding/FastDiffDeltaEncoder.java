@@ -334,7 +334,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
         // length first as an optimization.
         if (valueLength == this.prevState.valueLength) {
           if (valueLength == getCommonPrefixLength(value, valueOffset, valueLength,
-              this.prevState.value, this.prevState.valueLength,
+              this.prevState.value, this.prevState.valueOffset,
               this.prevState.valueLength)) {
             // if common prefix consists of whole value length
             flag |= FLAG_SAME_VALUE;
