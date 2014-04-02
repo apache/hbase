@@ -1084,6 +1084,8 @@ public final class HConstants {
   public static final String REGIONSERVER_LEASE_THREAD_WAKE_FREQUENCY =
       "hbase.regionserver.thread.wakefrequency";
 
+  public static final String SWIFT_CLIENT_SOCKS_PROXY_HOST_AND_PORT =
+      "hbase.client.swift.socks.proxy.hostAndPort";
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

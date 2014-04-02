@@ -27,6 +27,8 @@ import com.facebook.nifty.header.protocol.TFacebookCompactProtocol;
 import com.facebook.swift.service.ThriftClient;
 import com.facebook.swift.service.ThriftClientConfig;
 import com.facebook.swift.service.ThriftClientManager;
+import com.google.common.net.HostAndPort;
+
 import io.airlift.units.Duration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,7 +42,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ThriftClientObjectFactory extends
     BasePoolableObjectFactory<ThriftClientInterface> {
-  private final Log LOG = LogFactory.getLog(ThriftClientObjectFactory.class);
+  private static final Log LOG = LogFactory.getLog(ThriftClientObjectFactory.class);
   private final InetSocketAddress address;
   private final Class<? extends ThriftClientInterface> clazz;
   private final ThriftClientManager clientManager;
@@ -63,6 +65,23 @@ public class ThriftClientObjectFactory extends
       .setConnectTimeout(
         new Duration(conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_TIMEOUT), TimeUnit.MILLISECONDS));
+    setSocksProxy(this.thriftClientConfig, this.conf);
+  }
+
+  public static void setSocksProxy(ThriftClientConfig thriftClientConfig,
+      Configuration conf) {
+    String socksProxyString =
+        conf.get(HConstants.SWIFT_CLIENT_SOCKS_PROXY_HOST_AND_PORT);
+    HostAndPort socksProxy = null;
+    try {
+      socksProxy = HostAndPort.fromString(socksProxyString);
+    } catch (IllegalArgumentException e) {
+      LOG.error("Socks proxy host and port invalid.");
+      socksProxy = null;
+    }
+    if (socksProxy != null && socksProxy.hasPort()) {
+      thriftClientConfig.setSocksProxy(socksProxy);
+    }
   }
 
   /**
