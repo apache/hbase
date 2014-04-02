@@ -73,7 +73,13 @@ LOG = LogFactory.getLog(NAME)
 # get the admin interface
 admin = HBaseAdmin.new(c)
 
-port = c.getInt("hbase.regionserver.port", 0)
+if c.getBoolean(HConstants::REGIONSERVER_USE_THRIFT, HConstants::DEFAULT_REGIONSERVER_USE_THRIFT)
+  puts "Swift server seems to be enabled. Trying to connect on the thrift port."
+  port = c.getInt(HConstants::REGIONSERVER_SWIFT_PORT, HConstants::DEFAULT_REGIONSERVER_SWIFT_PORT)
+else
+  puts "Swift server seems to be disabled. Trying to connect on the Hadoop RPC port."
+  port = c.getInt(HConstants::REGIONSERVER_PORT, HConstants::DEFAULT_REGIONSERVER_PORT)
+end
 
 if reloadAll
   # get the cluster servers
