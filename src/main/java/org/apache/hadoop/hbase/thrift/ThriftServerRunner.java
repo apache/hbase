@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -113,6 +114,8 @@ public class ThriftServerRunner implements Runnable {
   private final int listenPort;
 
   volatile TServer tserver;
+
+  AtomicBoolean shutdownRequested = new AtomicBoolean(false);
 
   private static ImplType DEFAULT_SERVER_TYPE = ImplType.THREADED_SELECTOR;
 
@@ -254,16 +257,19 @@ public class ThriftServerRunner implements Runnable {
    */
   @Override
   public void run() {
-    try {
-      setupServer();
-      tserver.serve();
-    } catch (Exception e) {
-      LOG.fatal("Cannot run ThriftServer", e);
-      throw new RuntimeException(e);
+    while (!shutdownRequested.get()) {
+      try {
+        setupServer();
+        tserver.serve();
+      } catch (Exception e) {
+        LOG.error("Cannot run ThriftServer", e);
+        metrics.incNumRestarted();
+      }
     }
   }
 
   public void shutdown() {
+    shutdownRequested.set(true);
     if (tserver != null) {
       tserver.stop();
       tserver = null;

@@ -68,6 +68,8 @@ public class ThriftMetrics implements Updater {
       new MetricsTimeVaryingRate("thriftCall", registry);
   private MetricsTimeVaryingRate slowThriftCall =
       new MetricsTimeVaryingRate("slowThriftCall", registry);
+  private final MetricsIntValue numRestarted =
+    new MetricsIntValue("num_restarts", registry);
 
   /**
    * Number of calls that go through HTable. Only updated in the embedded Thrift server. This only
@@ -140,6 +142,10 @@ public class ThriftMetrics implements Updater {
 
   public final void incDirectCalls() {
     this.directCalls.inc();
+  }
+
+  public void incNumRestarted() {
+    numRestarted.set(numRestarted.get() + 1);
   }
 
   public void incMethodTime(String name, long time) {
