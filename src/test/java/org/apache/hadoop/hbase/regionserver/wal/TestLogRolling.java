@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.log4j.Level;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
@@ -169,6 +170,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
    */
   // Marked as unstable and recored in #3896573
   @TestTag({ "unstable" })
+  @Test
   public void testLogRolling() throws Exception {
     this.tableName = getName();
     try {
@@ -217,6 +219,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
    */
   // Marked as unstable and recored in #3344583
   @TestTag({ "unstable" })
+  @Test
   public void testLogRollOnDatanodeDeath() throws Exception {
     assertTrue("This test requires HLog file replication.",
         fs.getDefaultReplication() > 1);

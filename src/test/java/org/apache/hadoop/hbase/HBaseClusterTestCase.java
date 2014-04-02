@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.File;
+import java.io.PrintWriter;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -29,14 +32,12 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.After;
 import org.junit.Before;
 
-import java.io.File;
-import java.io.PrintWriter;
-
 /**
  * Abstract base class for HBase cluster junit tests.  Spins up an hbase
  * cluster in setup and tears it down again in tearDown.
  * @deprecated Use junit4 and {@link HBaseTestingUtility}
  */
+@Deprecated
 public abstract class HBaseClusterTestCase extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(HBaseClusterTestCase.class);
   public MiniHBaseCluster cluster;
@@ -120,8 +121,15 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     // continue
   }
 
-  @Override
+  /**
+   * To be compatible with JUnit4
+   */
   @Before
+  public void setUp4() throws Exception {
+    this.setUp();
+  }
+
+  @Override
   protected void setUp() throws Exception {
     try {
       if (this.startDfs) {
@@ -164,8 +172,15 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     }
   }
 
-  @Override
+  /**
+   * To be compatible with JUnit4
+   */
   @After
+  public void tearDown4() throws Exception {
+    tearDown();
+  }
+
+  @Override
   protected void tearDown() throws Exception {
     try {
       if (!openMetaTable) {
