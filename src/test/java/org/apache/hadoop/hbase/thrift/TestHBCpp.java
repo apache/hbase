@@ -58,6 +58,9 @@ public class TestHBCpp {
     TEST_UTIL.getConfiguration().setBoolean(
         HConstants.REGION_SERVER_WRITE_THRIFT_INFO_TO_META, true);
 
+    TEST_UTIL.getConfiguration().set(HBaseTestingUtility.FS_TYPE_KEY,
+        HBaseTestingUtility.FS_TYPE_LFS);
+
     TEST_UTIL.startMiniCluster();
     // create the table as SimpleClient assumes.
     byte[] tableName = Bytes.toBytes("t1");
@@ -70,7 +73,7 @@ public class TestHBCpp {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test(timeout = 120000L)
   /**
    * Spawn the current version of client unit tests from fbcode.
    */

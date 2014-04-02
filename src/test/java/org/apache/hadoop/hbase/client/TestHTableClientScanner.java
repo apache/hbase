@@ -45,6 +45,9 @@ public class TestHTableClientScanner {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().set(
+        HBaseTestingUtility.FS_TYPE_KEY,
+        HBaseTestingUtility.FS_TYPE_LFS);
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 

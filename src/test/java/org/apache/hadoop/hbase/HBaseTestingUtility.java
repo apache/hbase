@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2014 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,8 +19,35 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.base.Preconditions;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+
 import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Jdk14Logger;
@@ -74,30 +101,7 @@ import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.ZooKeeper;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.junit.Assert.*;
+import com.google.common.base.Preconditions;
 
 /**
  * Facility for testing HBase. Added as tool to abet junit4 testing.  Replaces
@@ -369,6 +373,11 @@ public class HBaseTestingUtility {
     return startMiniCluster(numMasters, numSlaves, MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
   }
 
+  public static final String FS_TYPE_KEY = "mini.cluster.fs.type";
+  public static final String FS_TYPE_DFS = "dfs";
+  public static final String FS_TYPE_LFS = "lfs";
+  public static final String MINICLUSTER_FS_TYPE_DEFAULT = FS_TYPE_DFS;
+
   /**
    * Start up a minicluster of hbase, optionally dfs, and zookeeper.
    * Modifies Configuration.  Homes the cluster data directory under a random
@@ -398,16 +407,41 @@ public class HBaseTestingUtility {
     // minidfs reads home from system property.
     setupClusterTestBuildDir();
     System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestBuildDir.getPath());
-    // Bring up mini dfs cluster. This spews a bunch of warnings about missing
-    // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
-    startMiniDFSCluster(numSlaves);
 
-    // Mangle conf so fs parameter points to minidfs we just started up
-    FileSystem fs = this.dfsCluster.getFileSystem();
-    this.conf.set("fs.defaultFS", fs.getUri().toString());
-    // Do old style too just to be safe.
-    this.conf.set("fs.default.name", fs.getUri().toString());
-    this.dfsCluster.waitClusterUp();
+    // Initialize the file-system.
+    FileSystem fs = null;
+    Path hbaseRootdir = null;
+
+    String fsType = this.conf.get(FS_TYPE_KEY,
+        MINICLUSTER_FS_TYPE_DEFAULT);
+    switch (fsType) {
+      case FS_TYPE_DFS:
+        // Bring up mini dfs cluster. This spawns a bunch of warnings about
+        // missing scheme. Complaints are 'Scheme is undefined for
+        // build/test/data/dfs/name1'.
+        startMiniDFSCluster(numSlaves);
+        // Mangle conf so fs parameter points to minidfs we just started up
+        fs = this.dfsCluster.getFileSystem();
+        this.conf.set("fs.defaultFS", fs.getUri().toString());
+        // Do old style too just to be safe.
+        this.conf.set("fs.default.name", fs.getUri().toString());
+        this.dfsCluster.waitClusterUp();
+        hbaseRootdir = fs.getHomeDirectory();
+        break;
+
+      case FS_TYPE_LFS:
+        this.conf.set("fs.defaultFS", "file:///");
+        // Do old style too just to be safe.
+        this.conf.set("fs.default.name", "file:///");
+        fs = FileSystem.get(this.conf);
+        hbaseRootdir = new Path("file", "",
+            new File(this.clusterTestBuildDir, "fs").getAbsolutePath());
+        break;
+
+      default:
+        throw new IllegalArgumentException("conf[" + FS_TYPE_KEY + "] = "
+            + fsType);
+    }
 
     // Start up a zk cluster.
     if (this.zkCluster == null) {
@@ -415,7 +449,6 @@ public class HBaseTestingUtility {
     }
 
     // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
-    Path hbaseRootdir = fs.makeQualified(fs.getHomeDirectory());
     this.conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
