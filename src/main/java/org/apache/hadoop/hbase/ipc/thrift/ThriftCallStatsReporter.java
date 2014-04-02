@@ -459,13 +459,12 @@ public class ThriftCallStatsReporter extends ThriftEventHandler {
       String dataString = headerTransport.getReadHeaders().get(
           HConstants.THRIFT_HEADER_FROM_CLIENT);
       if (dataString != null) {
-        byte[] dataBytes = Bytes.hexToBytes(dataString);
+        byte[] dataBytes = Bytes.string64ToBytes(dataString);
         try {
           Call call = Bytes.readThriftBytes(dataBytes, Call.class);
           return call;
         } catch (Exception e) {
-          e.printStackTrace();
-          LOG.error("Deserialization of the call header didn't succeed.");
+          LOG.error("Deserialization of the call header didn't succeed.", e);
         }
       }
     } else {

@@ -520,6 +520,15 @@ public class Bytes {
     return data;
   }
 
+  public static byte[] string64ToBytes(String s) {
+    return Base64.decode(s);
+  }
+
+  public static String bytesToString64(byte[] bytes, int offset, int length) {
+    return Base64.encodeBytes(bytes, offset, length);
+  }
+
+
   /**
    * Convert a boolean to a byte array. True becomes -1
    * and false becomes 0.
@@ -1868,8 +1877,7 @@ public class Bytes {
   public static <T> String writeThriftBytesAndGetString(T t, Class<T> clazz)
     throws Exception {
     TMemoryBuffer buffer = writeThriftBytesAndGetBuffer(t, clazz);
-    return Bytes.bytesToHex(buffer.getArray(), 0, buffer.length());
-
+    return bytesToString64(buffer.getArray(), 0, buffer.length());
   }
 
   /**

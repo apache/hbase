@@ -213,7 +213,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       headerTransport.clearHeaders();
       String dataString = headerTransport.getReadHeaders().get(HConstants.THRIFT_HEADER_FROM_SERVER);
       if (dataString != null) {
-        byte[] dataBytes = Bytes.hexToBytes(dataString);
+        byte[] dataBytes = Bytes.string64ToBytes(dataString);
         try {
           Call call = Bytes.readThriftBytes(dataBytes, Call.class);
           this.options.profilingResult = call.getProfilingData();
