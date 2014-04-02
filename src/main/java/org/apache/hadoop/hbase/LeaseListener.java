@@ -28,7 +28,40 @@ package org.apache.hadoop.hbase;
  * lease.  Users of the Leases class can use a LeaseListener subclass to, for
  * example, clean up resources after a lease has expired.
  */
-public interface LeaseListener {
+public abstract class LeaseListener {
+
+  private String leaseName;
+  private long leaseStartTS;
+
+  public LeaseListener(String leaseName, long leaseStartTS) {
+    this.leaseName = leaseName;
+    this.leaseStartTS = leaseStartTS;
+  }
+
+  /**
+   * Adds current system milli seconds as lease start time.
+   * @param leaseName2
+   */
+  public LeaseListener(String leaseName) {
+    this(leaseName, System.currentTimeMillis());
+  }
+
+  public String getLeaseName() {
+    return leaseName;
+  }
+
+  public void setLeaseName(String leaseName) {
+    this.leaseName = leaseName;
+  }
+
+  public long getLeaseStartTS() {
+    return leaseStartTS;
+  }
+
+  public void setLeaseStartTS(long leaseStartTS) {
+    this.leaseStartTS = leaseStartTS;
+  }
+
   /** When a lease expires, this method is called. */
-  public void leaseExpired();
+  public abstract void leaseExpired();
 }

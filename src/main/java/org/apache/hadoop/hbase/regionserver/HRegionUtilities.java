@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -115,9 +116,43 @@ public class HRegionUtilities {
   }
 
   /**
-   * Adjusting the startRow of startBucket to region's startRow
-   * and endRow of endBucket to region's endRow.
-   * Modifies the current list
+   * In some cases the end region can have empty end row. Special casing this
+   * in the isValid check.
+   * @param regionEndKey
+   * @return
+   */
+  public static boolean isRegionWithEmptyEndKey(byte[] regionEndKey) {
+    return regionEndKey.length == 0;
+  }
+
+  /**
+   * A bucket is not valid if
+   *  * bucket falls before the region boundaries.
+   *  * bucket falls after the region boundaries.
+   *  * bucket has same start row and end row.
+   * @param b
+   * @param regionStartKey
+   * @param regionEndKey
+   * @return
+   */
+  public static boolean isValidBucket(Bucket b, byte[] regionStartKey,
+      byte[] regionEndKey) {
+    if (Bytes.compareTo(regionStartKey, b.getEndRow()) >= 0) {
+      return false;
+    }
+    if (!isRegionWithEmptyEndKey(regionEndKey)
+        && Bytes.compareTo(regionEndKey, b.getStartRow()) <= 0) {
+      return false;
+    }
+    if (Bytes.compareTo(b.getStartRow(), b.getEndRow()) == 0) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Picking the buckets within the valid range of the [startKey, endKey)
+   * and adjust the start and end rows of the start and end buckets of the
    * @param buckets
    * @return
    */
@@ -125,12 +160,20 @@ public class HRegionUtilities {
       List<Bucket> buckets, byte[] startKey, byte[] endKey) {
     int size = buckets.size();
     Preconditions.checkArgument(size > 1);
-    Bucket startBucket = buckets.get(0);
-    Bucket endBucket = buckets.get(size - 1);
-    buckets.set(0, new HFileHistogram.Bucket.Builder(startBucket)
+    List<Bucket> retbuckets = new ArrayList<Bucket> (size);
+    for (Bucket b : buckets) {
+      if (isValidBucket(b, startKey, endKey)) {
+        retbuckets.add(b);
+      }
+    }
+    size = retbuckets.size();
+    if (size == 0) return null;
+    Bucket startBucket = retbuckets.get(0);
+    Bucket endBucket = retbuckets.get(size - 1);
+    retbuckets.set(0, new HFileHistogram.Bucket.Builder(startBucket)
       .setStartRow(startKey).create());
-    buckets.set(size - 1, new HFileHistogram.Bucket.Builder(endBucket)
+    retbuckets.set(size - 1, new HFileHistogram.Bucket.Builder(endBucket)
       .setEndRow(endKey).create());
-    return buckets;
+    return retbuckets;
   }
 }

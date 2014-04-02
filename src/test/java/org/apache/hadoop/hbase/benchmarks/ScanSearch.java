@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class ScanSearch extends Benchmark {
   public static final Log LOG = LogFactory.getLog(ScanSearch.class);
-  private static final long PRINT_INTERVAL_KVS = 1000000;
+  private static long PRINT_INTERVAL_KVS = 1000000;
   public static byte[] tableName = null;
   public static int cachingSize = 10000;
   public static boolean prefetch = true;
@@ -42,6 +42,7 @@ public class ScanSearch extends Benchmark {
   public static int nonBlockingPreloadingCount = 0;
   public static boolean clientSideScan = false;
   public static int max_regions = Integer.MAX_VALUE;
+  public static boolean doProfiling = false;
 
   public void runBenchmark() throws Throwable {
     ArrayList<HRegionInfo> regions = this.getRegions();
@@ -143,12 +144,14 @@ public class ScanSearch extends Benchmark {
 
       long numKVs = 0;
       long numBytes = 0;
-      Result kv;
       long printAfterNumKVs = PRINT_INTERVAL_KVS;
       long startTime = System.currentTimeMillis();
 
       // read all the KV's
       ResultScanner scanner = null;
+      if (doProfiling) {
+        htable.setProfiling(true);
+      }
       try {
         if (!clientSideScan) {
           scanner = htable.getScanner(scan);
@@ -162,7 +165,7 @@ public class ScanSearch extends Benchmark {
         return;
       }
       try {
-        while ((kv = scanner.next()) != null) {
+        for (Result kv : scanner) {
           numKVs += kv.size();
           if (kv.raw() != null) {
             for (KeyValue k : kv.raw())
@@ -170,6 +173,9 @@ public class ScanSearch extends Benchmark {
           }
 
           if (numKVs > printAfterNumKVs) {
+            if (doProfiling) {
+              System.out.println(htable.getProfilingData().toPrettyString());
+            }
             printAfterNumKVs += PRINT_INTERVAL_KVS;
             if (printStats) {
               printStats(region.getRegionNameAsString(), numKVs, numBytes,
@@ -177,7 +183,9 @@ public class ScanSearch extends Benchmark {
             }
           }
         }
-      } catch (IOException e) {
+      } catch (Exception e) {
+        LOG.debug("Caught exception", e);
+      } finally {
         scanner.close();
       }
 
@@ -185,7 +193,6 @@ public class ScanSearch extends Benchmark {
         printStats(region.getRegionNameAsString(), numKVs, numBytes, startTime,
           caching, prefetch, preloadBlocks);
       }
-      scanner.close();
     }
   }
 
@@ -219,6 +226,11 @@ public class ScanSearch extends Benchmark {
         .withDescription("Number of scanners preloading").create("x"));
     opt.addOption(OptionBuilder.withArgName("maxregions").hasArg()
         .withDescription("Max number of regions to scan").create("n"));
+    opt.addOption(OptionBuilder.withArgName("print-interval").hasArg()
+        .withDescription("Number of key values after which we " +
+            "can print the stats.").create("pi"));
+    opt.addOption(OptionBuilder.withArgName("useProfiling").hasArg()
+        .withDescription("Set per request profiling data and get it").create("prof"));
 
     CommandLine cmd = new GnuParser().parse(opt, args);
     ScanSearch.tableName = Bytes.toBytes(cmd.getOptionValue("t"));
@@ -240,6 +252,12 @@ public class ScanSearch extends Benchmark {
     }
     if (cmd.hasOption("n")) {
       ScanSearch.max_regions = Integer.parseInt(cmd.getOptionValue("n"));
+    }
+    if (cmd.hasOption("pi")) {
+      ScanSearch.PRINT_INTERVAL_KVS = Integer.parseInt(cmd.getOptionValue("pi"));
+    }
+    if (cmd.hasOption("prof")) {
+      ScanSearch.doProfiling = Boolean.parseBoolean(cmd.getOptionValue("prof"));
     }
     String className = Thread.currentThread().getStackTrace()[1].getClassName();
     System.out.println("Running benchmark " + className);

@@ -676,7 +676,8 @@ public class HRegionServer implements HRegionInterface,
     this.leases = new Leases(
         (int) conf.getLong(HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
             HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD),
-        this.threadWakeFrequency);
+        conf.getLong(HConstants.REGIONSERVER_LEASE_THREAD_WAKE_FREQUENCY,
+            HConstants.DEFAULT_REGIONSERVER_LEASE_THREAD_WAKE_FREQUENCY));
   }
 
   /**
@@ -3035,17 +3036,16 @@ public class HRegionServer implements HRegionInterface,
    * Instantiated as a scanner lease.
    * If the lease times out, the scanner is closed
    */
-  private class ScannerListener implements LeaseListener {
-    private final String scannerName;
+  private class ScannerListener extends LeaseListener {
 
     ScannerListener(final String n) {
-      this.scannerName = n;
+      super(n);
     }
 
     @Override
     public void leaseExpired() {
-      LOG.info("Scanner " + this.scannerName + " lease expired");
-      InternalScanner s = scanners.remove(this.scannerName);
+      LOG.info("Scanner " + this.getLeaseName() + " lease expired");
+      InternalScanner s = scanners.remove(this.getLeaseName());
       if (s != null) {
         try {
           s.close();
@@ -3238,19 +3238,18 @@ public class HRegionServer implements HRegionInterface,
    * Instantiated as a row lock lease.
    * If the lease times out, the row lock is released
    */
-  private class RowLockListener implements LeaseListener {
-    private final String lockName;
+  private class RowLockListener extends LeaseListener {
     private final HRegion region;
 
     RowLockListener(final String lockName, final HRegion region) {
-      this.lockName = lockName;
+      super(lockName);
       this.region = region;
     }
 
     @Override
     public void leaseExpired() {
-      LOG.info("Row Lock " + this.lockName + " lease expired");
-      Integer r = rowlocks.remove(this.lockName);
+      LOG.info("Row Lock " + this.getLeaseName() + " lease expired");
+      Integer r = rowlocks.remove(this.getLeaseName());
       if(r != null) {
         region.releaseRowLock(r);
       }

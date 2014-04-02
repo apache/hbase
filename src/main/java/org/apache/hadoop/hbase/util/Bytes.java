@@ -1905,4 +1905,12 @@ public class Bytes {
     TProtocol protocol = new TFacebookCompactProtocol(buffer);
     return codec.read(protocol);
   }
+
+  public static int longestCommonPrefix(byte[] arr1, byte[] arr2) {
+    int len = Math.min(arr1.length, arr2.length);
+    for (int i = 0; i < len; i++) {
+      if (arr1[i] != arr2[i]) return i;
+    }
+    return len;
+  }
 }

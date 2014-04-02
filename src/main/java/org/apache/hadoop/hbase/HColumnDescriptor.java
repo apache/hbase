@@ -105,7 +105,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String BLOOMFILTER_ERRORRATE = "BLOOMFILTER_ERRORRATE";
   public static final String FOREVER = "FOREVER";
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
-  public static final String ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER = "ROWKEY_PREFIX_LENGTH";
+  public static final String ROWKEY_PREFIX_LENGTH = "ROWKEY_PREFIX_LENGTH";
   public static final String HFILEHISTOGRAM_BUCKET_COUNT =
       "HFILEHISTOGRAM_BUCKET_COUNT";
 
@@ -206,7 +206,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
           String.valueOf(DEFAULT_ENCODE_ON_DISK));
       DEFAULT_VALUES.put(DATA_BLOCK_ENCODING,
           String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
-      DEFAULT_VALUES.put(ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER,
+      DEFAULT_VALUES.put(ROWKEY_PREFIX_LENGTH,
           String.valueOf(DEFAULT_ROWKEY_PREFIX_LENGTH_FOR_BLOOM));
       DEFAULT_VALUES.put(HFILEHISTOGRAM_BUCKET_COUNT,
           String.valueOf(HFileHistogram.DEFAULT_HFILEHISTOGRAM_BINCOUNT));
@@ -762,14 +762,14 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public int getRowPrefixLengthForBloom() {
     return getIntValueFromString(
-        ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER,
+        ROWKEY_PREFIX_LENGTH,
         DEFAULT_ROWKEY_PREFIX_LENGTH_FOR_BLOOM,
         "Cannot parse row key prefix length");
   }
 
   public void setRowKeyPrefixLengthForBloom(int prefixLength) {
     if (prefixLength > 0) {
-      setValue(ROWKEY_PREFIX_LENGTH_FOR_BLOOMFILTER, String.valueOf(prefixLength));
+      setValue(ROWKEY_PREFIX_LENGTH, String.valueOf(prefixLength));
     }
   }
 

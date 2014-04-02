@@ -42,8 +42,11 @@ public class TestUniformSplitHistogram {
     List<Bucket> lst = hist.getUniformBuckets();
     assertTrue(lst.size() > 0);
     Bucket prevBucket = null;
+    int bucketIndex = 0;
     for (Bucket b : lst) {
+      bucketIndex++;
       if (prevBucket != null) {
+        System.out.println(bucketIndex);
         assertTrue(Bytes.toStringBinary(b.getStartRow())
             + " not greater than "
             + Bytes.toStringBinary(prevBucket.getStartRow()),

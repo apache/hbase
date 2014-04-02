@@ -118,7 +118,9 @@ public abstract class Benchmark {
    */
   public void printBenchmarkResults() {
     System.out.println("Benchmark results");
-    benchmarkResults.prettyPrint();
+    if (benchmarkResults != null) {
+      benchmarkResults.prettyPrint();
+    }
   }
 
 

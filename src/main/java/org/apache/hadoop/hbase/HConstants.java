@@ -1066,6 +1066,11 @@ public final class HConstants {
       "hbase.regionserver.use.guava.bytes.comparision";
   public static boolean DEFAULT_USE_GUAVA_BYTES_COMPARISION = false;
 
+  public static final long DEFAULT_REGIONSERVER_LEASE_THREAD_WAKE_FREQUENCY =
+      15000;
+  public static final String REGIONSERVER_LEASE_THREAD_WAKE_FREQUENCY =
+      "hbase.regionserver.thread.wakefrequency";
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

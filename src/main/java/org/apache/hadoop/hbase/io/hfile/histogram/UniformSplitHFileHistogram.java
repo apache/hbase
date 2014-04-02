@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
@@ -47,8 +48,24 @@ import com.google.common.collect.Lists;
  */
 public class UniformSplitHFileHistogram implements HFileHistogram {
   protected NumericHistogram underlyingHistogram;
-  // TODO manukranthk : make this configurable.
-  int padding = 8;
+  public static final int PADDING = 8;
+  private static final byte[] INFINITY;
+  // Infinity but padded with a zero at the start to avoid messing with 2's complement.
+  private static final byte[] INFINITY_PADDED;
+  private static final double INFINITY_DOUBLE;
+  static {
+    /**
+     * Returns {0xff, 0xff ....  0xff}
+     *          <----  padding  ---->
+     */
+    INFINITY = new byte[PADDING];
+    INFINITY_PADDED = new byte[PADDING + 1];
+    for (int i = 0; i < PADDING; i++) {
+      INFINITY[i] = (byte)0xFF;
+      INFINITY_PADDED[i + 1] = (byte)0xFF;
+    }
+    INFINITY_DOUBLE = (new BigInteger(getPaddedInfinityArr())).doubleValue();
+  }
 
   public UniformSplitHFileHistogram(int binCount) {
     this.underlyingHistogram = new HiveBasedNumericHistogram(
@@ -66,27 +83,35 @@ public class UniformSplitHFileHistogram implements HFileHistogram {
 
   @Override
   public void add(KeyValue kv) {
-    double val = convertBytesToDouble(kv.getRow());
+    double val = convertBytesToDouble(kv.getBuffer(),
+        kv.getRowOffset(), kv.getRowLength());
     underlyingHistogram.add(val);
   }
 
-  private double getInfinity() {
-    return new BigInteger(getInfinityArr()).doubleValue();
+  protected static double getInfinity() {
+    return INFINITY_DOUBLE;
   }
 
   /**
    * This returns the maximum number that we can represent using padding bytes.
-   * Returns {0x00, 0xff, 0xff .... 0xff }
-   *                <----  padding  ---->
+   * Returns {0xff, 0xff ....  0xff}
+   *          <----  padding  ---->
    * @return
    */
-  private byte[] getInfinityArr() {
-    byte[] row = new byte[1];
-    row[0] = (byte) 0;
-    return Bytes.appendToTail(row, padding, (byte)0xFF);
+  protected static byte[] getInfinityArr() {
+    return Arrays.copyOf(INFINITY, PADDING);
   }
 
-  private double getMinusInfinity() {
+  /**
+   * To use while converting to a BigInteger.
+   * Contains a 0 in the 0'th index and 0xFF in the rest,
+   * containing a total of PADDING + 1 bytes.
+   */
+  protected static byte[] getPaddedInfinityArr() {
+    return Arrays.copyOf(INFINITY_PADDED, PADDING + 1);
+  }
+
+  protected static double getMinusInfinity() {
     return 0.0;
   }
 
@@ -104,12 +129,20 @@ public class UniformSplitHFileHistogram implements HFileHistogram {
    * @param row
    * @return
    */
-  protected double convertBytesToDouble(byte[] row) {
-    byte[] tmpRow = Bytes.head(row, Math.min(row.length, padding));
-    byte[] newRow = Bytes.padTail(tmpRow, padding - tmpRow.length);
+  protected static double convertBytesToDouble(byte[] row) {
+    return convertBytesToDouble(row, 0, row.length);
+  }
+
+  protected static double convertBytesToDouble(byte[] rowbuffer, int offset,
+      int length) {
+    byte[] paddedRow = new byte[PADDING + 1];
+
     // To avoid messing with 2's complement.
-    newRow = Bytes.padHead(newRow, 1);
-    return new BigInteger(newRow).doubleValue();
+    paddedRow[0] = 0;
+    int minlength = Math.min(length, PADDING);
+    System.arraycopy(rowbuffer, offset, paddedRow, 1, minlength);
+
+    return new BigInteger(paddedRow).doubleValue();
   }
 
   /**
@@ -118,7 +151,7 @@ public class UniformSplitHFileHistogram implements HFileHistogram {
    * @param d
    * @return
    */
-  protected byte[] convertDoubleToBytes(double d) {
+  protected static byte[] convertDoubleToBytes(double d) {
     BigDecimal tmpDecimal = new BigDecimal(d);
     BigInteger tmp = tmpDecimal.toBigInteger();
     byte[] arr = tmp.toByteArray();
@@ -128,14 +161,12 @@ public class UniformSplitHFileHistogram implements HFileHistogram {
       Preconditions.checkArgument(arr.length == 1 || arr[1] != 0);
       arr = Bytes.tail(arr, arr.length - 1);
     }
-    if (arr.length > padding) {
-      // Can happen due to loose precision guarentee in double.
-      // while doing the conversion,
+    if (arr.length > PADDING) {
       // {0x00, 0xff, ... , 0xff, 0xff}=>double=>{0x01, 0x00, ... , 0x00, 0x00}
       // might happen.
-      arr = Bytes.tail(getInfinityArr(), padding);
+      arr = getInfinityArr();
     }
-    return Bytes.padHead(arr, padding - arr.length);
+    return Bytes.padHead(arr, PADDING - arr.length);
   }
 
   @Override
@@ -166,8 +197,8 @@ public class UniformSplitHFileHistogram implements HFileHistogram {
   private HFileHistogram.Bucket getFromNumericHistogramBucket(
       NumericHistogram.Bucket bucket) {
     Bucket b = (new Bucket.Builder())
-        .setStartRow(this.convertDoubleToBytes(bucket.getStart()))
-        .setEndRow(this.convertDoubleToBytes(bucket.getEnd()))
+        .setStartRow(convertDoubleToBytes(bucket.getStart()))
+        .setEndRow(convertDoubleToBytes(bucket.getEnd()))
         .setNumRows(bucket.getCount()).create();
     return b;
   }

@@ -57,6 +57,7 @@ public class TestHFileHistogramE2E {
     assertTrue(hist != null);
     boolean first = true;
     List<Bucket> buckets = hist.getUniformBuckets();
+    int idx = 0;
     assertTrue(buckets != null);
     assertTrue(buckets.size() > 0);
     Bucket prevBucket = buckets.get(0);
@@ -64,10 +65,15 @@ public class TestHFileHistogramE2E {
       if (first) {
         first = false;
         prevBucket = b;
+        idx++;
         continue;
       }
       assertTrue(Bytes.compareTo(b.getStartRow(), prevBucket.getEndRow()) >= 0);
-      assertTrue(Bytes.compareTo(b.getEndRow(), prevBucket.getStartRow()) > 0);
+      assertTrue(Bytes.toStringBinary(b.getEndRow()) + " : " +
+          Bytes.toStringBinary(prevBucket.getStartRow()),
+          ++idx >= buckets.size() || // The last bucket
+          Bytes.compareTo(b.getEndRow(), prevBucket.getStartRow()) > 0);
+      prevBucket = b;
     }
   }
 
