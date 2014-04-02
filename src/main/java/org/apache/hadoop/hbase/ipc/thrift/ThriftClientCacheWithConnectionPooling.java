@@ -55,7 +55,7 @@ public class ThriftClientCacheWithConnectionPooling implements
   public static final String MIN_IDLE = "hbase.client.cachepool.minIdle";
 
   private final ThriftClientManager clientManager;
-  private final Map<Pair<InetSocketAddress,
+  private final ConcurrentHashMap<Pair<InetSocketAddress,
     Class<? extends ThriftClientInterface>>,
       GenericObjectPool<ThriftClientInterface>>
     clientPools;
@@ -75,12 +75,10 @@ public class ThriftClientCacheWithConnectionPooling implements
         address, clazz);
     GenericObjectPool<ThriftClientInterface> clientPool = clientPools.get(key);
     if (clientPool == null) {
-      synchronized (clientPools) {
-        clientPool = clientPools.get(key);
-        if (clientPool == null) {
-          clientPool = createGenericObjectPool(address, clazz);
-          clientPools.put(key, clientPool);
-        }
+      clientPool = createGenericObjectPool(address, clazz);
+      GenericObjectPool<ThriftClientInterface> existing = clientPools.putIfAbsent(key, clientPool);
+      if (existing != null) {
+        clientPool = existing;
       }
     }
     return clientPool.borrowObject();
@@ -100,10 +98,10 @@ public class ThriftClientCacheWithConnectionPooling implements
     ThriftClientObjectFactory factory = new ThriftClientObjectFactory(address,
         clazz, this.clientManager, this.conf);
     GenericObjectPool.Config config = new GenericObjectPool.Config();
-    long DEFAULT_TIME_BETWEEN_EVICTION_RUNS_MILLIS = 1000;
+    long DEFAULT_TIME_BETWEEN_EVICTION_RUNS_MILLIS = 5000;
     long DEFAULT_MIN_EVICTABLE_IDLE_TIME_MILLIS = 30000;
     long DEFAULT_WHEN_EXHAUSTED_MAX_WAITTIME = 1000;
-    int DEFAULT_MAX_ACTIVE = 2000;
+    int DEFAULT_MAX_ACTIVE = 1000;
 
     // Keep some idle connections to prevent asynchronous client from contention on
     //   a single connection to each region server.

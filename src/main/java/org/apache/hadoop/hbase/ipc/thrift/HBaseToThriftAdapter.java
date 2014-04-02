@@ -203,10 +203,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
    * Read data that the server has sent to the client
    * TODO: test how it works with async calls
    */
-  public void readHeader() {
-    if (clientManager == null) {
-      return;
-    }
+  private void readHeader() {
     TTransport inputTransport = clientManager.getInputProtocol(connection)
         .getTransport();
     TTransport outputTransport = clientManager.getOutputProtocol(connection)
@@ -229,25 +226,19 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     }
   }
 
-  private void postProcess() {
-    try {
-      if (this.useHeaderProtocol) {
-        readHeader();
+  public void postProcess() {
+    if (this.clientManager != null && this.connection != null) {
+      try {
+        if (this.useHeaderProtocol) {
+          readHeader();
+        }
+        HBaseThriftRPC.putBackClient(this.connection, this.addr, this.conf, this.clazz);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
       }
-      HBaseThriftRPC.putBackClient(this.connection, this.addr, this.conf, this.clazz);
-      this.connection = null;
-      this.clientManager = null;
-    } catch (Exception e) {
-      throw new RuntimeException(e);
     }
-  }
-
-  private void putBackClient() {
-    try {
-      HBaseThriftRPC.putBackClient(this.connection, this.addr, this.conf, this.clazz);
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    this.connection = null;
+    this.clientManager = null;
   }
 
   private void handleIOException(Exception e) throws IOException {
@@ -357,11 +348,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   public ListenableFuture<Result> getClosestRowBeforeAsync(byte[] regionName, byte[] row, byte[] family) {
     preProcess();
-    try {
-      return connection.getClosestRowBeforeAsync(regionName, row, family);
-    } finally {
-      putBackClient();
-    }
+    return connection.getClosestRowBeforeAsync(regionName, row, family);
   }
 
   // TODO: we will decide whether to remove it from HRegionInterface in the future
@@ -582,11 +569,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   public ListenableFuture<Result> getAsync(byte[] regionName, Get get) {
     preProcess();
-    try {
-      return connection.getAsync(regionName, get);
-    } finally {
-      putBackClient();
-    }
+    return connection.getAsync(regionName, get);
   }
 
   @Override
@@ -657,11 +640,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   public ListenableFuture<Void> deleteAsync(final byte[] regionName, final Delete delete) {
     preProcess();
-    try {
-      return connection.deleteAsync(regionName, delete);
-    } finally {
-      putBackClient();
-    }
+    return connection.deleteAsync(regionName, delete);
   }
 
   @Override
@@ -782,8 +761,6 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       return connection.mutateRowAsync(regionName, TRowMutations.Builder.createFromRowMutations(arm));
     } catch (IOException e) {
       return Futures.immediateFailedFuture(e);
-    } finally {
-      putBackClient();
     }
   }
 
@@ -903,11 +880,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   public ListenableFuture<RowLock> lockRowAsync(byte[] regionName, byte[] row) {
     preProcess();
-    try {
-      return connection.lockRowAsync(regionName, row);
-    } finally {
-      putBackClient();
-    }
+    return connection.lockRowAsync(regionName, row);
   }
 
   @Override
@@ -929,11 +902,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   public ListenableFuture<Void> unlockRowAsync(byte[] regionName, long lockId) {
     preProcess();
-    try {
-      return connection.unlockRowAsync(regionName, lockId);
-    } finally {
-      putBackClient();
-    }
+    return connection.unlockRowAsync(regionName, lockId);
   }
 
   @Override

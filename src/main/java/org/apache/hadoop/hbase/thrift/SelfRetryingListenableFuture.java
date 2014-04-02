@@ -161,7 +161,7 @@ public class SelfRetryingListenableFuture<V> extends AbstractFuture<V> {
    * @param v Result from server
    */
   private void setSuccess(V v) {
-    callable.readHeader();
+    postProcess();
     downstream.set(v);
   }
 
@@ -171,7 +171,12 @@ public class SelfRetryingListenableFuture<V> extends AbstractFuture<V> {
    * @param t The exception for client
    */
   private void setFailure(Throwable t) {
+    postProcess();
     downstream.setException(t);
+  }
+
+  private void postProcess() {
+    callable.postProcess();
   }
 
   /**

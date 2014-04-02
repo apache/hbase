@@ -492,8 +492,7 @@ public class HBaseRPCBenchmarkTool extends AbstractHBaseTool {
             setProfilingData(false);
           }
         } catch (Exception e) {
-          LOG.debug("Encountered exception while performing get");
-          e.printStackTrace();
+          LOG.debug("Encountered exception while performing get", e);
           break;
         }
         long delta = System.nanoTime() - opStartNs;
@@ -546,7 +545,7 @@ public class HBaseRPCBenchmarkTool extends AbstractHBaseTool {
   }
 
   public double getAverageLatency() {
-    return this.sumLatency.get() / (double)this.totalOps.get();
+    return this.sumLatency.get() * (double)this.multigetBatch / (double)this.totalOps.get();
   }
 
   public double getP95Latency() {
@@ -561,9 +560,10 @@ public class HBaseRPCBenchmarkTool extends AbstractHBaseTool {
     HBaseRPCBenchmarkTool tool = new HBaseRPCBenchmarkTool();
     int ret = tool.doStaticMain(args);
     System.out.println("Total throughput : " + tool.getThroughput());
-    System.out.println("Avg Latency : " + tool.getAverageLatency());
-    System.out.println("P99 latency : " + tool.getP99Latency());
-    System.out.println("P95 latency : " + tool.getP95Latency());
+    System.out.println("Latencies in ms --");
+    System.out.println("  Avg Latency : " + tool.getAverageLatency() / 1000000.0);
+    System.out.println("  P99 latency : " + tool.getP99Latency() / 1000000.0);
+    System.out.println("  P95 latency : " + tool.getP95Latency() / 1000000.0);
     System.exit(ret);
   }
 }

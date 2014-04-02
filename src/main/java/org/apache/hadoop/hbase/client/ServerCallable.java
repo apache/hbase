@@ -135,9 +135,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
     ((TableServers)connection).handleThrowable(t, this, couldNotCommunicateWithServer);
   }
 
-  public void readHeader() {
-    if (server instanceof HBaseToThriftAdapter) {
-      ((HBaseToThriftAdapter)server).readHeader();
-    }
+  public void postProcess() {
+    ((HBaseToThriftAdapter)server).postProcess();
   }
 }
