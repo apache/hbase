@@ -72,7 +72,7 @@ public class MasterStatusServlet extends HttpServlet {
     Set<ServerName> deadServers = null;
     
     if(master.isActiveMaster()) {
-      if (master.getServerManager() == null) {
+      if (!master.isInitialized()) {
         response.sendError(503, "Master not ready");
         return;
       }
