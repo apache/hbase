@@ -19,16 +19,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.thrift.HBaseThriftRPC;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * A non-instantiable class that manages connections to multiple tables in
@@ -169,7 +169,7 @@ public class HConnectionManager {
    */
   static int getCachedRegionCount(Configuration conf, byte[] tableName) {
     TableServers connection = (TableServers) getConnection(conf);
-    return connection.getNumberOfCachedRegionLocations(tableName);
+    return connection.metaCache.getNumber(tableName);
   }
 
   /**
@@ -178,8 +178,9 @@ public class HConnectionManager {
    *
    * @return true if the region where the table and row reside is cached.
    */
-  static boolean isRegionCached(Configuration conf, byte[] tableName, byte[] row) {
+  static boolean isRegionCached(Configuration conf, byte[] tableName,
+      byte[] row) {
     TableServers connection = (TableServers) getConnection(conf);
-    return connection.isRegionCached(tableName, row);
+    return connection.metaCache.getForRow(tableName, row) != null;
   }
 }

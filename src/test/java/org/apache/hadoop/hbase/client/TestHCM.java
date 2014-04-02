@@ -19,10 +19,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,27 +33,19 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.master.ServerManager;
-
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * This class is for testing HCM features
@@ -134,9 +128,9 @@ public class TestHCM {
     table.put(put);
     TableServers conn =
         (TableServers) table.getConnectionAndResetOperationContext();
-    assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
+    assertNotNull(conn.metaCache.getForRow(TABLE_NAME, ROW));
     conn.deleteCachedLocation(TABLE_NAME, ROW, null);
-    HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
+    HRegionLocation rl = conn.metaCache.getForRow(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
   }
 

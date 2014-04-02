@@ -264,7 +264,7 @@ public class TestFastFail {
         repeatedFailuresMap.put(serverAddr, fInfo);
 
         // clear out the cache
-        hcm.clearCachedLocationForServer(serverAddr.toString());
+        hcm.metaCache.clearForServer(serverAddr.toString());
       }
     }
 

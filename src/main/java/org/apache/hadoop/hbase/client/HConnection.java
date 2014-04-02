@@ -19,6 +19,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -29,14 +37,6 @@ import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Cluster connection.
@@ -262,7 +262,7 @@ public interface HConnection extends Closeable {
    * @return Count of committed Deletes. On fault, < list.size().
    * @throws IOException if a remote or network exception occurs
    */
-  public int processBatchOfDeletes(List<Delete> list, byte[] tableName, 
+  public int processBatchOfDeletes(List<Delete> list, byte[] tableName,
       final HBaseRPCOptions options)
   throws IOException;
 
@@ -311,9 +311,9 @@ public interface HConnection extends Closeable {
 
   /**
    * Process the MultiPut request by submitting it to the multiPutThreadPool in HTable.
-   * The request will be sent to its destination region server by one thread in 
+   * The request will be sent to its destination region server by one thread in
    * the HTable's multiPutThreadPool.
-   * 
+   *
    * Also it will return the list of failed put among the MultiPut request or return null if all
    * puts are sent to the HRegionServer successfully.
    * @param mputs The list of MultiPut requests
@@ -326,7 +326,7 @@ public interface HConnection extends Closeable {
   public List<Put> processListOfMultiPut(List<MultiPut> mputs,
       final byte[] tableName, HBaseRPCOptions options,
       Map<String, HRegionFailureInfo> failureInfo) throws IOException;
-  
+
   /**
    * Delete the cached location
    * @param tableName
@@ -335,7 +335,7 @@ public interface HConnection extends Closeable {
    */
   public void deleteCachedLocation(final byte [] tableName, final byte [] row,
       HServerAddress oldLoc);
-  
+
   /**
    * Enable or disable region cache prefetch for the table. It will be
    * applied for the given table's all HTable instances within this
@@ -348,15 +348,16 @@ public interface HConnection extends Closeable {
 
   /**
    * Check whether region cache prefetch is enabled or not.
+   *
    * @param tableName name of table to check
-   * @return true if table's region cache prefecth is enabled. Otherwise
-   * it is disabled.
+   * @return true if table's region cache prefetch is enabled. Otherwise
+   *         it is disabled.
    */
   public boolean getRegionCachePrefetch(final byte[] tableName);
 
   /**
    * Load the region map and warm up the global region cache for the table.
-   * @param tableName name of the table to perform region cache prewarm.
+   * @param tableName name of the table to perform region cache warm-up.
    * @param regions a region map.
    */
   public void prewarmRegionCache(final byte[] tableName,
