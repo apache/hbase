@@ -197,16 +197,16 @@ abstract class BaseScanner extends Chore {
             this.master.getRegionManager().getAssignmentManager();
           if (favoredNodes != null) {
             // compare the update TS
-            long updateTimeStamp = 
+            long updateTimeStamp =
               values.getLastestTimeStamp(HConstants.CATALOG_FAMILY,
                 HConstants.FAVOREDNODES_QUALIFIER);
-            long lastUpdate = 
+            long lastUpdate =
               assignmentManager.getAssignmentPlanUpdateTimeStamp(region);
             if (lastUpdate < updateTimeStamp) {
               // need to update the persistent assignment
               List<HServerAddress> servers =
                 RegionPlacement.getFavoredNodesList(favoredNodes);
-              assignmentManager.updateAssignmentPlan(region, 
+              assignmentManager.updateAssignmentPlan(region,
                   servers, updateTimeStamp);
             }
           } else {
@@ -257,8 +257,9 @@ abstract class BaseScanner extends Chore {
 
     // First clean up any meta region rows which had null HRegionInfos
     if (emptyRows.size() > 0) {
-      LOG.warn("Found " + emptyRows.size() + " rows with empty HRegionInfo " +
-        "while scanning meta region " + Bytes.toString(metaRegion.getRegionName()));
+      LOG.warn("Found " + emptyRows.size() + " rows with empty HRegionInfo "
+          + "while scanning meta region "
+          + Bytes.toStringBinary(metaRegion.getRegionName()));
       this.master.deleteEmptyMetaRows(regionServer, metaRegion.getRegionName(),
           emptyRows);
     }
@@ -539,6 +540,7 @@ abstract class BaseScanner extends Chore {
       // instance of PathFilter.
       FileStatus [] ps =
         this.master.getFileSystem().listStatus(p, new PathFilter () {
+            @Override
             public boolean accept(Path path) {
               return StoreFile.isReference(path);
             }

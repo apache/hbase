@@ -1329,11 +1329,11 @@ public class HMaster extends HasThread implements HMasterInterface,
       if (existingValue != null) {
         if (entry.getValue() < existingValue) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("RegionServer " + serverInfo +
-                " indicates a last flushed sequence id (" + entry.getValue() +
-                ") that is less than the previous last flushed sequence id (" +
-                existingValue + ") for region " +
-                Bytes.toString(entry.getKey()) + " Ignoring.");
+            LOG.debug("RegionServer " + serverInfo
+                + " indicates a last flushed sequence id (" + entry.getValue()
+                + ") that is less than the previous last flushed sequence id ("
+                + existingValue + ") for region "
+                + Bytes.toStringBinary(entry.getKey()) + " Ignoring.");
           }
           continue; // Don't let smaller sequence ids override greater
                     // sequence ids.
@@ -1660,7 +1660,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     } finally {
       unlockTable(tableName);
     }
-    LOG.info("deleted table: " + Bytes.toString(tableName));
+    LOG.info("deleted table: " + Bytes.toStringBinary(tableName));
   }
 
   @Override
@@ -1672,8 +1672,9 @@ public class HMaster extends HasThread implements HMasterInterface,
                          int maxConcurrentRegionsClosed) throws IOException {
     //This lock will be released when the ThrottledRegionReopener is done.
     if (!tryLockTable(tableName, "alter", schemaChangeTryLockTimeoutMs)) {
-      throw new TableLockTimeoutException("Timed out acquiring " +
-          "lock for " + Bytes.toString(tableName) + " after " + schemaChangeTryLockTimeoutMs + " ms.");
+      throw new TableLockTimeoutException("Timed out acquiring lock for "
+          + Bytes.toStringBinary(tableName) + " after "
+          + schemaChangeTryLockTimeoutMs + " ms.");
     }
 
     InjectionHandler.processEvent(InjectionEvent.HMASTER_ALTER_TABLE);
@@ -1946,7 +1947,8 @@ public class HMaster extends HasThread implements HMasterInterface,
           byte [] rowKey = ((ImmutableBytesWritable)args[0]).get();
           pair = getTableRegionForRow(tableName, rowKey);
         }
-        LOG.info("About to " + op.toString() + " on " + Bytes.toString(tableName) + " and pair is " + pair);
+          LOG.info("About to " + op.toString() + " on "
+              + Bytes.toStringBinary(tableName) + " and pair is " + pair);
         if (pair != null && pair.getSecond() != null) {
           // If the column family name is specified, we need to perform a
           // column family specific action instead of an action on the whole
@@ -2000,10 +2002,10 @@ public class HMaster extends HasThread implements HMasterInterface,
       }
       HRegionInfo r = pair.getFirst();
       r.setSplitPoint(splitPoint);
-      LOG.info("About to " + op.toString() + " on " +
-               Bytes.toString(pair.getFirst().getTableDesc().getName()) +
-               " at " + Bytes.toString(splitPoint) +
-               " and pair is " + pair);
+        LOG.info("About to " + op.toString() + " on "
+            + Bytes.toStringBinary(pair.getFirst().getTableDesc().getName())
+            + " at " + Bytes.toStringBinary(splitPoint) + " and pair is "
+            + pair);
       if (pair.getSecond() != null) {
         this.regionManager.startAction(pair.getFirst().getRegionName(),
           pair.getFirst(), pair.getSecond(), Modify.TABLE_SPLIT);
@@ -2150,12 +2152,12 @@ public class HMaster extends HasThread implements HMasterInterface,
     for (byte [] regionName: emptyRows) {
       try {
         HRegion.removeRegionFromMETA(s, metaRegionName, regionName);
-        LOG.warn("Removed region: " + Bytes.toString(regionName) +
-          " from meta region: " +
-          Bytes.toString(metaRegionName) + " because HRegionInfo was empty");
+        LOG.warn("Removed region: " + Bytes.toStringBinary(regionName)
+            + " from meta region: " + Bytes.toStringBinary(metaRegionName)
+            + " because HRegionInfo was empty");
       } catch (IOException e) {
-        LOG.error("deleting region: " + Bytes.toString(regionName) +
-            " from meta region: " + Bytes.toString(metaRegionName), e);
+        LOG.error("deleting region: " + Bytes.toStringBinary(regionName)
+            + " from meta region: " + Bytes.toStringBinary(metaRegionName), e);
       }
     }
   }

@@ -153,7 +153,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     byte [] regionName)
   throws IOException {
     long scannerId = server.openScanner(regionName, scan);
-    
+
     int rows = scan.getCaching();
     // The default caching if not set for scans is -1. Handle it
     if (rows < 1) rows = 1;
@@ -196,8 +196,8 @@ class ProcessServerShutdown extends RegionServerOperation {
           }
 
           if (LOG.isDebugEnabled() && row != null) {
-            LOG.debug("Shutdown scanner for " + serverName + " processing " +
-              Bytes.toString(row));
+            LOG.debug("Shutdown scanner for " + serverName + " processing "
+                + Bytes.toStringBinary(row));
           }
 
           HRegionInfo info = master.getHRegionInfo(row, value);
@@ -226,9 +226,9 @@ class ProcessServerShutdown extends RegionServerOperation {
     // Scan complete. Remove any rows which had empty HRegionInfos
 
     if (emptyRows.size() > 0) {
-      LOG.warn("Found " + emptyRows.size() +
-        " rows with empty HRegionInfo while scanning meta region " +
-        Bytes.toString(regionName) + " for " + this);
+      LOG.warn("Found " + emptyRows.size()
+          + " rows with empty HRegionInfo while scanning meta region "
+          + Bytes.toStringBinary(regionName) + " for " + this);
       master.deleteEmptyMetaRows(server, regionName, emptyRows);
     }
 
@@ -240,12 +240,13 @@ class ProcessServerShutdown extends RegionServerOperation {
         if (e.info.isMetaTable() && !this.metaRegionsUnassigned.contains(
               new MetaRegion(this.deadServerAddress, e.info))) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("removing meta region " +
-                Bytes.toString(e.info.getRegionName()) +
-            " from online meta regions");
+            LOG.debug("removing meta region "
+                + Bytes.toStringBinary(e.info.getRegionName())
+                + " from online meta regions");
           }
-          LOG.debug(this.toString() + " setting RegionManager.offlineMetaReginWithStartKey : "
-              + Bytes.toString(e.info.getStartKey()));
+          LOG.debug(this
+              + " setting RegionManager.offlineMetaReginWithStartKey : "
+              + Bytes.toStringBinary(e.info.getStartKey()));
           master.getRegionManager().offlineMetaRegionWithStartKey(e.info.getStartKey());
         }
 
@@ -266,7 +267,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     }
     t2 = System.currentTimeMillis();
     if (LOG.isDebugEnabled())
-      LOG.debug("Took " + this.toString() + " " + (t2 - t0) 
+      LOG.debug("Took " + this.toString() + " " + (t2 - t0)
           + " ms. to update RegionManager. And,"
         + (t1 - t0) + " ms. to get the lock.");
 
@@ -290,7 +291,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
         LOG.debug(this.toString() +
             (skip? "skipping set " : "setting ") + " unassigned: " + info.toString());
-        if (skip) 
+        if (skip)
           continue;
 
         this.setRegionUnassigned(info, false);
@@ -302,10 +303,10 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
     }
     t2 = System.currentTimeMillis();
-    
+
     if (LOG.isDebugEnabled())
-      LOG.debug("Took " + this.toString() + " " 
-          + (t1 - t0 ) + " ms. to mark regions offlineInMeta" 
+      LOG.debug("Took " + this.toString() + " "
+          + (t1 - t0 ) + " ms. to mark regions offlineInMeta"
           + (t2 - t1) + " ms. to set " + regions.size() + " regions unassigned");
     return true;
   }
@@ -315,6 +316,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       super(m, master);
     }
 
+    @Override
     public Boolean call() throws IOException {
       if (LOG.isDebugEnabled()) {
         HServerAddress addr = master.getRegionManager().getRootRegionLocation();
@@ -355,10 +357,11 @@ class ProcessServerShutdown extends RegionServerOperation {
       super(m, master);
     }
 
+    @Override
     public Boolean call() throws IOException {
       if (LOG.isDebugEnabled()) {
-        LOG.debug(ProcessServerShutdown.this.toString() + " scanning " +
-          Bytes.toString(m.getRegionName()) + " on " + m.getServer());
+        LOG.debug(ProcessServerShutdown.this.toString() + " scanning "
+            + Bytes.toStringBinary(m.getRegionName()) + " on " + m.getServer());
       }
       Scan scan = new Scan();
       scan.addFamily(HConstants.CATALOG_FAMILY);
@@ -483,20 +486,20 @@ class ProcessServerShutdown extends RegionServerOperation {
       if (successfulMetaScans.contains(Bytes.toString(r.getRegionName()))) continue;
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug(this.toString() + ". Begin scan meta region " +
-          Bytes.toString(r.getRegionName()) + " on " + r.getServer());
+        LOG.debug(this.toString() + ". Begin scan meta region "
+            + Bytes.toStringBinary(r.getRegionName()) + " on " + r.getServer());
       }
       Boolean result = new ScanMetaRegions(r, this.master).doWithRetries();
       if (result == null || result.booleanValue() == false) {
-        LOG.debug("Meta scan failed " +
-          Bytes.toString(r.getRegionName()) + " on " + r.getServer());
+        LOG.debug("Meta scan failed " + Bytes.toStringBinary(r.getRegionName())
+            + " on " + r.getServer());
         return RegionServerOperationResult.OPERATION_DELAYED;
       }
 
       successfulMetaScans.add(Bytes.toString(r.getRegionName()));
       if (LOG.isDebugEnabled()) {
-        LOG.debug(this.toString() + ".  finished scanning " +
-          Bytes.toString(r.getRegionName()) + " on " + r.getServer());
+        LOG.debug(this.toString() + ".  finished scanning "
+            + Bytes.toStringBinary(r.getRegionName()) + " on " + r.getServer());
       }
     }
 

@@ -19,6 +19,12 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Random;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,12 +43,6 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Random;
 
 /**
  * A non-instantiable class that has a static method capable of compacting
@@ -164,16 +164,18 @@ class HMerge {
         if ((currentSize + nextSize) <= (maxFilesize / 2)) {
           // We merge two adjacent regions if their total size is less than
           // one half of the desired maximum size
-          LOG.info("merging regions " + Bytes.toString(currentRegion.getRegionName())
-              + " and " + Bytes.toString(nextRegion.getRegionName()));
+          LOG.info("merging regions "
+              + Bytes.toStringBinary(currentRegion.getRegionName()) + " and "
+              + Bytes.toStringBinary(nextRegion.getRegionName()));
           HRegion mergedRegion =
             HRegion.mergeAdjacent(currentRegion, nextRegion);
           updateMeta(currentRegion.getRegionName(), nextRegion.getRegionName(),
               mergedRegion);
           break;
         }
-        LOG.info("not merging regions " + Bytes.toString(currentRegion.getRegionName())
-            + " and " + Bytes.toString(nextRegion.getRegionName()));
+        LOG.info("not merging regions "
+            + Bytes.toStringBinary(currentRegion.getRegionName()) + " and "
+            + Bytes.toStringBinary(nextRegion.getRegionName()));
         currentRegion.close();
         currentRegion = nextRegion;
         currentSize = nextSize;
@@ -219,9 +221,9 @@ class HMerge {
         byte[] regionInfoValue = results.getValue(HConstants.CATALOG_FAMILY,
             HConstants.REGIONINFO_QUALIFIER);
         if (regionInfoValue == null || regionInfoValue.length == 0) {
-          throw new NoSuchElementException("meta region entry missing " +
-              Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
-              Bytes.toString(HConstants.REGIONINFO_QUALIFIER));
+          throw new NoSuchElementException("meta region entry missing "
+              + Bytes.toStringBinary(HConstants.CATALOG_FAMILY) + ":"
+              + Bytes.toStringBinary(HConstants.REGIONINFO_QUALIFIER));
         }
         HRegionInfo region = Writables.getHRegionInfo(regionInfoValue);
         if (!Bytes.equals(region.getTableDesc().getName(), this.tableName)) {
@@ -254,7 +256,7 @@ class HMerge {
       Result currentRow = metaScanner.next();
       boolean foundResult = false;
       while (currentRow != null) {
-        LOG.info("Row: <" + Bytes.toString(currentRow.getRow()) + ">");
+        LOG.info("Row: <" + Bytes.toStringBinary(currentRow.getRow()) + ">");
         byte[] regionInfoValue = currentRow.getValue(HConstants.CATALOG_FAMILY,
             HConstants.REGIONINFO_QUALIFIER);
         if (regionInfoValue == null || regionInfoValue.length == 0) {
@@ -296,7 +298,8 @@ class HMerge {
         Delete delete = new Delete(regionsToDelete[r]);
         table.delete(delete);
         if(LOG.isDebugEnabled()) {
-          LOG.debug("updated columns in row: " + Bytes.toString(regionsToDelete[r]));
+          LOG.debug("updated columns in row: "
+              + Bytes.toStringBinary(regionsToDelete[r]));
         }
       }
       newRegion.getRegionInfo().setOffline(true);
@@ -308,7 +311,7 @@ class HMerge {
 
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: "
-            + Bytes.toString(newRegion.getRegionName()));
+            + Bytes.toStringBinary(newRegion.getRegionName()));
       }
     }
   }
@@ -389,7 +392,8 @@ class HMerge {
         root.delete(delete, null, true);
 
         if(LOG.isDebugEnabled()) {
-          LOG.debug("updated columns in row: " + Bytes.toString(regionsToDelete[r]));
+          LOG.debug("updated columns in row: "
+              + Bytes.toStringBinary(regionsToDelete[r]));
         }
       }
       HRegionInfo newInfo = newRegion.getRegionInfo();
@@ -399,7 +403,8 @@ class HMerge {
           Writables.getBytes(newInfo));
       root.put(put);
       if(LOG.isDebugEnabled()) {
-        LOG.debug("updated columns in row: " + Bytes.toString(newRegion.getRegionName()));
+        LOG.debug("updated columns in row: "
+            + Bytes.toStringBinary(newRegion.getRegionName()));
       }
     }
   }

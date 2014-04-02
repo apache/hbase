@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -109,11 +108,12 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
         Bytes.toBytes(serverInfo.getStartCode()));
     server.put(region.getRegionName(), p);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() + " in region "
-        + Bytes.toString(region.getRegionName()) + " with startcode=" + serverInfo.getStartCode()
+        + Bytes.toStringBinary(region.getRegionName())
+        + " with startcode=" + serverInfo.getStartCode()
         + ", server=" + serverInfo.getHostnamePort());
     this.master.getServerManager().getRegionChecker().becameOpened(regionInfo);
   }
-  
+
   @Override
   protected int getPriority() {
     return 0; // highest priority

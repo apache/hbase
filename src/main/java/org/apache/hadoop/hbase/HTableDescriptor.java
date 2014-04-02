@@ -56,7 +56,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   // Version 4 adds indexes
   // Version 5 removed transactional pollution -- e.g. indexes
   public static final byte TABLE_DESCRIPTOR_VERSION = 5;
-  
+
   private byte [] name = HConstants.EMPTY_BYTE_ARRAY;
   private String nameAsString = "";
 
@@ -328,7 +328,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     if (b[0] == '.' || b[0] == '-') {
       throw new IllegalArgumentException("Illegal first character <" + b[0] +
           "> at 0. User-space table names can only start with 'word " +
-          "characters': i.e. [a-zA-Z_0-9]: " + Bytes.toString(b));
+          "characters': i.e. [a-zA-Z_0-9]: " + Bytes.toStringBinary(b));
     }
     for (int i = 0; i < b.length; i++) {
       if (Character.isLetterOrDigit(b[i]) || b[i] == '_' || b[i] == '-' ||
@@ -337,7 +337,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       }
       throw new IllegalArgumentException("Illegal character <" + b[i] +
         "> at " + i + ". User-space table names can only contain " +
-        "'word characters': i.e. [a-zA-Z_0-9-.]: " + Bytes.toString(b));
+        "'word characters': i.e. [a-zA-Z_0-9-.]: " + Bytes.toStringBinary(b));
     }
     return b;
   }
@@ -469,8 +469,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /** @return max hregion size for table */
   public long getMaxFileSize() {
     byte [] value = getValue(MAX_FILESIZE_KEY);
-    if (value != null)
-      return Long.valueOf(Bytes.toString(value)).longValue();
+    if (value != null) {
+      return Long.parseLong(Bytes.toString(value));
+    }
     return HConstants.DEFAULT_MAX_FILE_SIZE;
   }
 
@@ -492,8 +493,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public long getMemStoreFlushSize() {
     byte [] value = getValue(MEMSTORE_FLUSHSIZE_KEY);
-    if (value != null)
-      return Long.valueOf(Bytes.toString(value)).longValue();
+    if (value != null) {
+      return Long.parseLong(Bytes.toString(value));
+    }
     return DEFAULT_MEMSTORE_FLUSH_SIZE;
   }
 
@@ -507,7 +509,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * Adds a column family.
-   * @param family HColumnDescriptor of familyto add.
+   *
+   * @param family HColumnDescriptor of family to add.
    */
   public void addFamily(final HColumnDescriptor family) {
     if (family.getName() == null || family.getName().length <= 0) {
@@ -653,6 +656,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   // Writable
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     int version = in.readInt();
     if (version < 3)
@@ -683,6 +687,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     }
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(TABLE_DESCRIPTOR_VERSION);
     Bytes.writeByteArray(out, name);
@@ -704,6 +709,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   // Comparable
 
+  @Override
   public int compareTo(final HTableDescriptor other) {
     int result = Bytes.compareTo(this.name, other.name);
     if (result == 0) {

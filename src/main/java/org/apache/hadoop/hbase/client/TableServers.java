@@ -485,7 +485,7 @@ public class TableServers implements ServerConnection {
   private boolean testTableOnlineState(byte[] tableName, boolean online)
       throws IOException {
     if (!tableExists(tableName)) {
-      throw new TableNotFoundException(Bytes.toString(tableName));
+      throw new TableNotFoundException(Bytes.toStringBinary(tableName));
     }
     if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
       // The root region is always enabled
@@ -580,7 +580,7 @@ public class TableServers implements ServerConnection {
     MetaScanner.metaScan(conf, finder, tableName);
     HTableDescriptor result = finder.getResult();
     if (result == null) {
-      throw new TableNotFoundException(Bytes.toString(tableName));
+      throw new TableNotFoundException(Bytes.toStringBinary(tableName));
     }
     return result;
   }
@@ -857,20 +857,20 @@ public class TableServers implements ServerConnection {
 private HRegionLocation getLocationFromRow(Result regionInfoRow,
                                            byte[] tableName, byte[] parentTable, byte[] row) throws IOException {
   if (regionInfoRow == null) {
-    throw new TableNotFoundException(Bytes.toString(tableName));
+    throw new TableNotFoundException(Bytes.toStringBinary(tableName));
   }
   byte[] value = regionInfoRow.getValue(HConstants.CATALOG_FAMILY,
     HConstants.REGIONINFO_QUALIFIER);
   if (value == null || value.length == 0) {
     throw new IOException("HRegionInfo was null or empty in "
-      + Bytes.toString(parentTable) + ", row=" + regionInfoRow);
+      + Bytes.toStringBinary(parentTable) + ", row=" + regionInfoRow);
   }
   // convert the row result into the HRegionLocation we need!
   HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(value,
     new HRegionInfo());
   // possible we got a region of a different table...
   if (!Bytes.equals(regionInfo.getTableDesc().getName(), tableName)) {
-    throw new TableNotFoundException("Table '" + Bytes.toString(tableName)
+    throw new TableNotFoundException("Table '" + Bytes.toStringBinary(tableName)
       + "' was not found.");
   }
   if (regionInfo.isOffline()) {
@@ -886,7 +886,7 @@ private HRegionLocation getLocationFromRow(Result regionInfoRow,
   }
   if (serverAddress.equals("")) {
     throw new NoServerForRegionException("No server address listed "
-      + "in " + Bytes.toString(parentTable) + " for region "
+      + "in " + Bytes.toStringBinary(parentTable) + " for region "
       + regionInfo.getRegionNameAsString() + " containing row "
       + Bytes.toStringBinary(row));
   }
@@ -1127,7 +1127,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
     if (rl != null) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Cache hit for row <" + Bytes.toStringBinary(row)
-            + "> in tableName " + Bytes.toString(tableName)
+            + "> in tableName " + Bytes.toStringBinary(tableName)
             + ": location server " + rl.getServerAddress()
             + ", location region name "
             + rl.getRegionInfo().getRegionNameAsString());
@@ -1184,7 +1184,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
           tableLocations.remove(rl.getRegionInfo().getStartKey());
           if (LOG.isDebugEnabled()) {
             LOG.debug("Removed " + rl.getRegionInfo().getRegionNameAsString()
-                + " for tableName=" + Bytes.toString(tableName)
+                + " for tableName=" + Bytes.toStringBinary(tableName)
                 + " from cache " + "because of " + Bytes.toStringBinary(row));
           }
         }
@@ -2014,7 +2014,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
     if (location == null) {
       throw new RetriesExhaustedException(
           " -- nothing found, no 'location' returned," + " tableName="
-              + Bytes.toString(tableName) + ", reload=" + reload + " --",
+              + Bytes.toStringBinary(tableName) + ", reload=" + reload + " --",
           HConstants.EMPTY_BYTE_ARRAY, rowKey, tries, exceptions);
     }
     return location;

@@ -26,7 +26,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -88,35 +87,41 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       final HFileScanner delegate = s;
       public boolean atEnd = false;
 
+      @Override
       public ByteBuffer getKey() {
         if (atEnd) return null;
         return delegate.getKey();
       }
 
+      @Override
       public String getKeyString() {
         if (atEnd) return null;
 
         return delegate.getKeyString();
       }
 
+      @Override
       public ByteBuffer getValue() {
         if (atEnd) return null;
 
         return delegate.getValue();
       }
 
+      @Override
       public String getValueString() {
         if (atEnd) return null;
 
         return delegate.getValueString();
       }
 
+      @Override
       public KeyValue getKeyValue() {
         if (atEnd) return null;
 
         return delegate.getKeyValue();
       }
 
+      @Override
       public boolean next() throws IOException {
         if (atEnd) return false;
 
@@ -136,10 +141,12 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         return true;
       }
 
+      @Override
       public boolean seekBefore(byte[] key) throws IOException {
         return seekBefore(key, 0, key.length);
       }
 
+      @Override
       public boolean seekBefore(byte [] key, int offset, int length)
       throws IOException {
         if (top) {
@@ -156,6 +163,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         return this.delegate.seekBefore(key, offset, length);
       }
 
+      @Override
       public boolean seekTo() throws IOException {
         if (top) {
           int r = this.delegate.seekTo(splitkey);
@@ -180,10 +188,12 @@ public class HalfStoreFileReader extends StoreFile.Reader {
             splitkey, 0, splitkey.length) < 0;
       }
 
+      @Override
       public int seekTo(byte[] key) throws IOException {
         return seekTo(key, 0, key.length);
       }
 
+      @Override
       public int seekTo(byte[] key, int offset, int length) throws IOException {
         if (top) {
           if (getComparator().compare(key, offset, length, splitkey, 0,
@@ -240,10 +250,12 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         return delegate.reseekTo(key, offset, length);
       }
 
+      @Override
       public org.apache.hadoop.hbase.io.hfile.HFile.Reader getReader() {
         return this.delegate.getReader();
       }
 
+      @Override
       public boolean isSeeked() {
         return this.delegate.isSeeked();
       }
@@ -272,7 +284,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         return Bytes.toBytes(scanner.getKey());
       }
     } catch (IOException e) {
-      LOG.warn("Failed seekBefore " + Bytes.toString(this.splitkey), e);
+      LOG.warn("Failed seekBefore " + Bytes.toStringBinary(this.splitkey), e);
     }
     return null;
   }

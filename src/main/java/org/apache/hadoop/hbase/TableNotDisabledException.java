@@ -45,6 +45,6 @@ public class TableNotDisabledException extends IOException {
    * @param tableName Name of table that is not disabled
    */
   public TableNotDisabledException(byte[] tableName) {
-    this(Bytes.toString(tableName));
+    this(Bytes.toStringBinary(tableName));
   }
 }

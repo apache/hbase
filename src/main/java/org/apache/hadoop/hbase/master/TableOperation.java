@@ -19,11 +19,15 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ExecutionException;
+
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -32,13 +36,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Abstract base class for operations that need to examine all HRegionInfo
@@ -52,7 +49,7 @@ abstract class TableOperation {
   protected final Set<HRegionInfo> unservedRegions = new TreeSet<HRegionInfo>();
   protected final Set<HRegionInfo> regionsToProcess = new TreeSet<HRegionInfo>();
   protected HMaster master;
-  
+
   protected TableOperation(final HMaster master, final byte [] tableName)
   throws IOException {
     this.master = master;
@@ -82,12 +79,12 @@ abstract class TableOperation {
       tableOp = operation;
     }
 
+    @Override
     public Boolean call() throws IOException, InterruptedException, ExecutionException {
       boolean tableExists = false;
 
       // Open a scanner on the meta region
-      byte [] tableNameMetaStart =
-        Bytes.toBytes(Bytes.toString(tableName) + ",,");
+      byte[] tableNameMetaStart = Bytes.add(tableName, Bytes.toBytes(",,"));
       final Scan scan = new Scan(tableNameMetaStart)
         .addFamily(HConstants.CATALOG_FAMILY);
       long scannerId = this.server.openScanner(m.getRegionName(), scan);
@@ -106,8 +103,8 @@ abstract class TableOperation {
               this.master.getHRegionInfo(values.getRow(), values);
           if (info == null) {
             emptyRows.add(values.getRow());
-            LOG.error(Bytes.toString(HConstants.CATALOG_FAMILY) + ":"
-                + Bytes.toString(HConstants.REGIONINFO_QUALIFIER)
+            LOG.error(Bytes.toStringBinary(HConstants.CATALOG_FAMILY) + ":"
+                + Bytes.toStringBinary(HConstants.REGIONINFO_QUALIFIER)
                 + " not found on "
                 + Bytes.toStringBinary(values.getRow()));
             continue;
@@ -124,7 +121,7 @@ abstract class TableOperation {
 
           tableExists = true;
           if(tableOp instanceof AddColumn || tableOp instanceof ModifyColumn ||
-              tableOp instanceof DeleteColumn || 
+              tableOp instanceof DeleteColumn ||
               tableOp instanceof MultiColumnOperation) {
             regionsToProcess.add(info);
           }
@@ -148,16 +145,16 @@ abstract class TableOperation {
       // Get rid of any rows that have a null HRegionInfo
 
       if (emptyRows.size() > 0) {
-        LOG.warn("Found " + emptyRows.size() +
-            " rows with empty HRegionInfo while scanning meta region " +
-            Bytes.toString(m.getRegionName()));
+        LOG.warn("Found " + emptyRows.size()
+            + " rows with empty HRegionInfo while scanning meta region "
+            + Bytes.toStringBinary(m.getRegionName()));
         master.deleteEmptyMetaRows(server, m.getRegionName(), emptyRows);
       }
 
       if (!tableExists) {
-        throw new TableNotFoundException(Bytes.toString(tableName));
+        throw new TableNotFoundException(Bytes.toStringBinary(tableName));
       }
-      
+
       postProcessMeta(m, server);
       unservedRegions.clear();
       return Boolean.TRUE;

@@ -54,11 +54,11 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.RegionManager.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo,
@@ -89,10 +89,10 @@ public class ServerManager implements ConfigurationObserver {
 
   /*
    * Set of messages that we want to send to a server.
-   * 
-   * Most of the messages that we wish to send to a server is generated and 
-   * sent during processMsgs. The only exception is when we process a region 
-   * open. processRegionOpen gets called from handleRegionOpenedEvent in 
+   *
+   * Most of the messages that we wish to send to a server is generated and
+   * sent during processMsgs. The only exception is when we process a region
+   * open. processRegionOpen gets called from handleRegionOpenedEvent in
    * response to the ZK event. It stores the intended message (for example:
    *  MSG_REGION_CLOSE_WITHOUT_REPORT, in the case of duplicate assignment)
    *  to be piggybacked upon the next processMsgs;
@@ -228,7 +228,7 @@ public class ServerManager implements ConfigurationObserver {
     rackManager = new RackManager(c);
     Threads.setDaemonThreadRunning(new ServerTimeoutMonitor(c),
         n + "ServerManager-Timeout-Monitor");
-    
+
     this.pendingMsgsToSvrsMap = new ConcurrentHashMap<HServerInfo, ArrayList<HMsg>>();
 
     this.regionChecker = new RegionChecker(master);
@@ -353,7 +353,7 @@ public class ServerManager implements ConfigurationObserver {
       // Could not set a watch, undo the above changes and re-throw.
       serversToLoad.updateServerLoad(serverName, oldServerLoad);
       undoMapUpdate(serversToServerInfo, serverName, oldServerInfo);
-      LOG.error("Could not set watch on regionserver znode for " + serverName); 
+      LOG.error("Could not set watch on regionserver znode for " + serverName);
       throw ex;
     }
   }
@@ -396,7 +396,7 @@ public class ServerManager implements ConfigurationObserver {
         } else {
           LOG.info("Server " + serverInfo.getServerName() +
               " sent preparing to shutdown, " +
-              "but that server probably already exited"); 
+              "but that server probably already exited");
         }
         return HMsg.EMPTY_HMSG_ARRAY;
       } else if (msgs[0].isType(HMsg.Type.MSG_REPORT_EXITING)) {
@@ -693,30 +693,30 @@ public class ServerManager implements ConfigurationObserver {
 
       // Send any pending table actions.
       this.master.getRegionManager().applyActions(serverInfo, returnMsgs);
-      // add any pending messages that we may be holding for the server     
+      // add any pending messages that we may be holding for the server
       piggyBackPendingMessages(serverInfo, returnMsgs);
     }
     return returnMsgs.toArray(new HMsg[returnMsgs.size()]);
   }
-  
+
   /*
    * Holds a set of messages that we want to send to a server.
-   * 
+   *
    * Most of the messages that we wish to send to a server is generated and sent
    * during processMsgs. The only exception is when we process a region open.
-   * In this case, processRegionOpen gets called from handleRegionOpenedEvent in 
-   * response to the ZK event. 
-   * 
-   * This method stores the intended message (for example: 
+   * In this case, processRegionOpen gets called from handleRegionOpenedEvent in
+   * response to the ZK event.
+   *
+   * This method stores the intended message (for example:
    * MSG_REGION_CLOSE_WITHOUT_REPORT, in the case of duplicate assignment ) to be
    * piggybacked upon the next processMsgs;
-   * 
+   *
    * @param serverInfo  The server for whom the messages are intended
    * @param msgsToSend  Messages to send
    */
   public void holdMessages(HServerInfo serverInfo, ArrayList<HMsg> msgsToSend) {
     ArrayList<HMsg> msgsForServer = pendingMsgsToSvrsMap.get(serverInfo);
-    
+
     if (msgsForServer == null) {
       msgsForServer = new ArrayList<HMsg>();
       ArrayList<HMsg> newMsgsForServer =
@@ -726,22 +726,22 @@ public class ServerManager implements ConfigurationObserver {
         msgsForServer = newMsgsForServer;
       }
     }
-    
+
     synchronized(msgsForServer) {
       msgsForServer.addAll(msgsToSend);
     }
   }
-  
+
   /*
    * Get the set of messages that we want to send to a server.
-   * 
+   *
    * @param serverInfo  The server whose messages we want to get
    * @param returnMsgs  List to which pending messages are added.
    */
   public void piggyBackPendingMessages(HServerInfo serverInfo,
       List<HMsg> returnMsgs) {
     ArrayList<HMsg> msgsForServer = pendingMsgsToSvrsMap.get(serverInfo);
-    
+
     if (msgsForServer != null) {
       synchronized(msgsForServer) {
         returnMsgs.addAll(msgsForServer);
@@ -865,8 +865,9 @@ public class ServerManager implements ConfigurationObserver {
       }
 
       if (duplicateAssignment) {
-        LOG.warn("region server " + serverInfo.getServerAddress().toString() +
-          " should not have opened region " + Bytes.toString(region.getRegionName()));
+        LOG.warn("region server " + serverInfo.getServerAddress().toString()
+            + " should not have opened region "
+            + Bytes.toStringBinary(region.getRegionName()));
 
         // This Region should not have been opened.
         // Ask the server to shut it down, but don't report it as closed.
@@ -937,7 +938,7 @@ public class ServerManager implements ConfigurationObserver {
       // setClosed works for both CLOSING, and PENDING_CLOSE
       this.master.getRegionManager().setClosed(region.getRegionNameAsString());
       RegionServerOperation op =
-        new ProcessRegionClose(master, serverInfo.getServerName(), 
+        new ProcessRegionClose(master, serverInfo.getServerName(),
             region, offlineRegion, reassignRegion);
       this.master.getRegionServerOperationQueue().put(op);
 
@@ -955,19 +956,19 @@ public class ServerManager implements ConfigurationObserver {
   private void processServerInfoOnShutdown(HServerInfo info) {
     String serverName = info.getServerName();
     this.master.getRegionManager().offlineMetaServer(info.getServerAddress());
-    
+
     //HBASE-1928: Check whether this server has been transitioning the ROOT table
     if (this.master.getRegionManager().isRootInTransitionOnThisServer(serverName)) {
       this.master.getRegionManager().unsetRootRegion();
       this.master.getRegionManager().reassignRootRegion();
     }
-    
+
     //HBASE-1928: Check whether this server has been transitioning the META table
     HRegionInfo metaServerRegionInfo = this.master.getRegionManager().getMetaServerRegionInfo (serverName);
     if (metaServerRegionInfo != null) {
       this.master.getRegionManager().setUnassigned(metaServerRegionInfo, true);
     }
-    
+
     return;
   }
 
@@ -1253,7 +1254,7 @@ public class ServerManager implements ConfigurationObserver {
     public void run() {
       try {
         while (true) {
-          boolean waitingForMoreServersInRackToTimeOut = 
+          boolean waitingForMoreServersInRackToTimeOut =
               expireTimedOutServers(timeout, maxServersToExpirePerRack);
           if (waitingForMoreServersInRackToTimeOut) {
             sleep(shortTimeout/2);

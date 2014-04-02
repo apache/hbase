@@ -120,7 +120,7 @@ public class ThriftServerRunner implements Runnable {
   private static ImplType DEFAULT_SERVER_TYPE = ImplType.THREADED_SELECTOR;
 
   private static String NOT_SUPPORTED_BY_PROXY_MSG = "Not supported by Thrift proxy";
-  
+
   /** An enum of server implementation selections */
   enum ImplType {
     HS_HA("hsha", true, THsHaServer.class, false),
@@ -178,7 +178,7 @@ public class ThriftServerRunner implements Runnable {
       if (confType == null) {
         return DEFAULT_SERVER_TYPE;
       }
-      
+
       for (ImplType t : values()) {
         if (confType.equals(t.option)) {
           return t;
@@ -488,7 +488,7 @@ public class ThriftServerRunner implements Runnable {
      * hash-map.
      *
      * @param scanner
-     * @return integer scanner id 
+     * @return integer scanner id
      */
     protected synchronized int addScanner(ResultScanner scanner) {
       int id = nextScannerId++;
@@ -812,7 +812,7 @@ public class ThriftServerRunner implements Runnable {
         if (metrics != null) {
           metrics.incNumBatchGetRowKeys(rows.size());
         }
-        
+
         // For now, don't support ragged gets, with different columns per row
         // Probably pretty sensible indefinitely anyways.
         for (ByteBuffer row : rows) {
@@ -921,11 +921,11 @@ public class ThriftServerRunner implements Runnable {
       boolean writeToWAL = false;
       for (Mutation m : mutations) {
         byte[][] famAndQf = KeyValue.parseColumn(getBytes(m.column));
-        
+
         // If this mutation has timestamp set, it takes precedence, otherwise we use the
         // timestamp provided in the argument.
         long effectiveTimestamp = getMutationTimestamp(m, timestamp);
-        
+
         if (m.isDelete) {
           if (delete == null) {
             delete = new Delete(rowBytes);
@@ -949,7 +949,7 @@ public class ThriftServerRunner implements Runnable {
           }
         }
       }
-      
+
       if (delete != null) {
         delete.setWriteToWAL(writeToWAL);
         if (deletes != null) {
@@ -958,7 +958,7 @@ public class ThriftServerRunner implements Runnable {
           processDelete(tableName, regionName, delete);
         }
       }
-      
+
       if (put != null) {
         put.setWriteToWAL(writeToWAL);
         if (puts != null) {
@@ -1390,7 +1390,7 @@ public class ThriftServerRunner implements Runnable {
 
         if (startRowResult == null) {
           throw new IOException("Cannot find row in .META., row="
-              + Bytes.toString(searchRowBytes));
+              + Bytes.toStringBinary(searchRowBytes));
         }
 
         // find region start and end keys
@@ -1398,7 +1398,8 @@ public class ThriftServerRunner implements Runnable {
             HConstants.REGIONINFO_QUALIFIER);
         if (value == null || value.length == 0) {
           throw new IOException("HRegionInfo REGIONINFO was null or "
-              + " empty in Meta for row=" + Bytes.toString(searchRowBytes));
+              + " empty in Meta for row="
+              + Bytes.toStringBinary(searchRowBytes));
         }
         HRegionInfo regionInfo = Writables.getHRegionInfo(value);
         TRegionInfo region = new TRegionInfo();
@@ -1516,7 +1517,7 @@ public class ThriftServerRunner implements Runnable {
     public void flushRegion(ByteBuffer regionName, long ifOlderThanTS) throws TException, IOError {
       throw new TException(NOT_SUPPORTED_BY_PROXY_MSG);
     }
-    
+
   }
 
   public static void registerFilters(Configuration conf) {
@@ -1550,16 +1551,16 @@ public class ThriftServerRunner implements Runnable {
 
   /**
    * Update the given delete object.
-   * 
+   *
    * @param delete the delete object to update
    * @param famAndQf family and qualifier. null or empty family means "delete from all CFs".
    * @param timestamp Delete at this timestamp and older.
    */
-  private static void updateDelete(Delete delete, byte[][] famAndQf, long timestamp) { 
+  private static void updateDelete(Delete delete, byte[][] famAndQf, long timestamp) {
     if (famAndQf.length == 1) {
       // Column qualifier not specified.
       if (famAndQf[0].length == 0) {
-        // Delete from all column families in the row. 
+        // Delete from all column families in the row.
         delete.deleteRow(timestamp);
       } else {
         // Delete from all columns in the given column family

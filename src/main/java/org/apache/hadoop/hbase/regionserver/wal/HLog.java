@@ -19,7 +19,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.apache.hadoop.hbase.util.FSUtils.*;
+import static org.apache.hadoop.hbase.util.FSUtils.recoverFileLease;
+import static org.apache.hadoop.hbase.util.FSUtils.tryRecoverFileLease;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -755,7 +756,7 @@ public class HLog implements Syncable {
         LOG.debug(hlogName + "Found " + logsToRemove + " hlogs to remove" +
           " out of total " + this.outputfiles.size() + ";" +
           " oldest outstanding sequenceid is " + oldestOutstandingSeqNum +
-          " from region " + Bytes.toString(oldestRegion));
+          " from region " + Bytes.toStringBinary(oldestRegion));
       }
       for (Long seq : sequenceNumbers) {
         archiveLogFile(this.outputfiles.get(seq), seq);
@@ -1236,6 +1237,7 @@ public class HLog implements Syncable {
     }
   }
 
+  @Override
   public void sync() throws IOException {
     sync(false);
   }
@@ -1429,9 +1431,10 @@ public class HLog implements Syncable {
     this.closeLock.readLock().lock();
     synchronized (oldestSeqNumsLock) {
       if (this.firstSeqWrittenInSnapshotMemstore.containsKey(regionName)) {
-        LOG.warn("Requested a startCacheFlush while firstSeqWrittenInSnapshotMemstore still"
-          + " contains " + Bytes.toString(regionName) + " . Did the previous flush fail?"
-          + " Will try to complete it");
+        LOG.warn("Requested a startCacheFlush while "
+            + "firstSeqWrittenInSnapshotMemstore still contains "
+            + Bytes.toStringBinary(regionName) + " . Did the previous flush "
+            + "fail? Will try to complete it");
       } else {
 
         // If we are flushing the entire memstore, remove the entry from the
@@ -1498,8 +1501,8 @@ public class HLog implements Syncable {
    * by the failure gets restored to the memstore.
    */
   public void abortCacheFlush(byte[] regionName) {
-    LOG.debug(hlogName + "Aborting cache flush of region " +
-    Bytes.toString(regionName));
+    LOG.debug(hlogName + "Aborting cache flush of region "
+        + Bytes.toStringBinary(regionName));
     this.closeLock.readLock().unlock();
   }
 
@@ -1945,10 +1948,10 @@ public class HLog implements Syncable {
       } catch (ExecutionException e) {
         throw (new IOException(e.getCause()));
       } catch (InterruptedException e1) {
-        String errorMsgr = "Writer for region " +
-               Bytes.toString(entry.getKey()) +
-               " was interrupted, however the write process should have " +
-               "finished. Throwing up ";
+        String errorMsgr =
+            "Writer for region " + Bytes.toStringBinary(entry.getKey())
+                + " was interrupted, however the write process should have "
+                + "finished. Throwing up ";
         LOG.info(errorMsgr, e1);
         throw (InterruptedIOException)new InterruptedIOException(
             errorMsgr).initCause(e1);

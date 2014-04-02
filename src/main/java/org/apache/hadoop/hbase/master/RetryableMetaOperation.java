@@ -20,6 +20,11 @@
 
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -29,11 +34,6 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.ipc.RemoteException;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
 
 /**
  * Uses Callable pattern so that operations against meta regions do not need
@@ -77,9 +77,9 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
         if (tries == this.master.getNumRetries() - 1) {
           if (LOG.isDebugEnabled()) {
             StringBuilder message = new StringBuilder(
-                "Trying to contact region server for regionName '" +
-                Bytes.toString(m.getRegionName()) + "', but failed after " +
-                (tries + 1) + " attempts.\n");
+                    "Trying to contact region server for regionName '"
+                        + Bytes.toStringBinary(m.getRegionName())
+                        + "', but failed after " + (tries + 1) + " attempts.\n");
             int i = 1;
             for (IOException e2 : exceptions) {
               message.append("Exception " + i + ":\n" + e2);

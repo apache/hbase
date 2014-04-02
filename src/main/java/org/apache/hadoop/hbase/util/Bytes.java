@@ -310,7 +310,7 @@ public class Bytes {
    * @param b Presumed UTF-8 encoded byte array.
    * @return String made from <code>b</code>
    */
-  public static String toString(final byte [] b) {
+  public static String toString(final byte[] b) {
     if (b == null) {
       return null;
     }

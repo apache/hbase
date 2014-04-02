@@ -2618,13 +2618,15 @@ public class HRegionServer implements HRegionInterface,
       @Override
       public Object call() throws IOException {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("closing region " + Bytes.toString(region.getRegionName()));
+          LOG.debug("closing region "
+              + Bytes.toStringBinary(region.getRegionName()));
         }
         try {
           region.close(abortRequested);
           removeFromOnlineRegions(region.getRegionInfo());
         } catch (IOException e) {
-          cleanup(e, "Error closing " + Bytes.toString(region.getRegionName()));
+          cleanup(e,
+              "Error closing " + Bytes.toStringBinary(region.getRegionName()));
           throw e;
         }
         return null;

@@ -19,10 +19,14 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.facebook.swift.codec.ThriftConstructor;
-import com.facebook.swift.codec.ThriftField;
-import com.facebook.swift.codec.ThriftStruct;
-import com.google.common.primitives.Longs;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
@@ -33,13 +37,10 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+import com.google.common.primitives.Longs;
 
 /**
  * An HBase Key/Value.
@@ -554,6 +555,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * Needed doing 'contains' on List. Only compares the key portion, not the
    * value.
    */
+  @Override
   public boolean equals(Object other) {
     if (!(other instanceof KeyValue)) {
       return false;
@@ -567,6 +569,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
     return result;
   }
 
+  @Override
   public int hashCode() {
     byte[] b = getBuffer();
     int start = getOffset(), end = getOffset() + getLength();
@@ -587,6 +590,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * Clones a KeyValue.  This creates a copy, re-allocating the buffer.
    * @return Fully copied clone of this KeyValue
    */
+  @Override
   public KeyValue clone() {
     byte [] b = new byte[this.length];
     System.arraycopy(this.bytes, this.offset, b, 0, this.length);
@@ -615,6 +619,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
   //
   //---------------------------------------------------------------------------
 
+  @Override
   public String toString() {
     if (this.bytes == null || this.bytes.length == 0) {
       return "empty";
@@ -1361,7 +1366,8 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
     int index = getDelimiter(b, offset, length, delimiter);
     if (index < 0) {
       throw new IllegalArgumentException("No '" + (char)delimiter + "' in <" +
-        Bytes.toString(b) + ">" + ", length=" + length + ", offset=" + offset);
+        Bytes.toStringBinary(b) + ">" + ", length=" + length + ", offset="
+          + offset);
     }
     return index;
   }
@@ -1374,8 +1380,9 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
       final int offset, final int length, final int delimiter) {
     int index = getDelimiterInReverse(b, offset, length, delimiter);
     if (index < 0) {
-      throw new IllegalArgumentException("No '" + ((char) delimiter) + "' in <" +
-        Bytes.toString(b) + ">" + ", length=" + length + ", offset=" + offset);
+      throw new IllegalArgumentException("No '" + ((char) delimiter) + "' in <"
+          + Bytes.toStringBinary(b) + ">" + ", length=" + length + ", offset="
+          + offset);
     }
     return index;
   }
@@ -1429,6 +1436,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
   public static class RootComparator extends MetaComparator {
     private final KeyComparator rawcomparator = new RootKeyComparator();
 
+    @Override
     public KeyComparator getRawComparator() {
       return this.rawcomparator;
     }
@@ -1446,6 +1454,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
   public static class MetaComparator extends KVComparator {
     private final KeyComparator rawcomparator = new MetaKeyComparator();
 
+    @Override
     public KeyComparator getRawComparator() {
       return this.rawcomparator;
     }
@@ -1473,6 +1482,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
       return this.rawcomparator;
     }
 
+    @Override
     public int compare(final KeyValue left, final KeyValue right) {
       int ret = getRawComparator().compare(left.getBuffer(),
           left.getOffset() + ROW_OFFSET, left.getKeyLength(),
@@ -1714,6 +1724,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * @return First possible key on passed <code>row</code>, column and timestamp
    * @deprecated
    */
+  @Deprecated
   public static KeyValue createFirstOnRow(final byte [] row, final byte [] c,
       final long ts) {
     byte [][] split = parseColumn(c);
@@ -1917,6 +1928,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * table.
    */
   public static class RootKeyComparator extends MetaKeyComparator {
+    @Override
     public int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       // Rows look like this: .META.,ROW_FROM_META,RID
@@ -1966,6 +1978,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
       this.comparator = c;
     }
 
+    @Override
     public int compare(KeyValue left, KeyValue right) {
       return comparator.compareRows(left, right);
     }
@@ -1976,6 +1989,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * table.
    */
   public static class MetaKeyComparator extends KeyComparator {
+    @Override
     public int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       //        LOG.info("META " + Bytes.toString(left, loffset, llength) +
@@ -2050,6 +2064,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
     volatile boolean ignoreTimestamp = false;
     volatile boolean ignoreType = false;
 
+    @Override
     public int compare(byte[] left, int loffset, int llength, byte[] right,
         int roffset, int rlength) {
       // Compare row
@@ -2195,6 +2210,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
       return 0;
     }
 
+    @Override
     public int compare(byte[] left, byte[] right) {
       return compare(left, 0, left.length, right, 0, right.length);
     }
@@ -2226,6 +2242,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
   }
 
   // HeapSize
+  @Override
   public long heapSize() {
     return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE +
         ClassSize.align(ClassSize.ARRAY + length) +
@@ -2245,11 +2262,13 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
   }
 
   // Writable
+  @Override
   public void readFields(final DataInput in) throws IOException {
     int length = in.readInt();
     readFields(length, in);
   }
 
+  @Override
   public void write(final DataOutput out) throws IOException {
     this.verify();
     out.writeInt(this.length);

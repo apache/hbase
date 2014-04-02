@@ -453,6 +453,7 @@ public class RegionSplitter {
         // sort the RS by the number of regions they have
         List<String> serversLeft = Lists.newArrayList(daughterRegions .keySet());
         Collections.sort(serversLeft, new Comparator<String>() {
+          @Override
           public int compare(String o1, String o2) {
             return rsSizes.get(o1).compareTo(rsSizes.get(o2));
           }
@@ -725,7 +726,7 @@ public class RegionSplitter {
           end = splitAlgo.lastRow();
         rows.add(Pair.newPair(start, end));
       }
-      LOG.debug("Table " + Bytes.toString(table.getTableName()) + " has "
+      LOG.debug("Table " + Bytes.toStringBinary(table.getTableName()) + " has "
           + rows.size() + " regions that will be split.");
 
       // prepare the split file
@@ -807,6 +808,7 @@ public class RegionSplitter {
     BigInteger lastRowInt = new BigInteger(lastRow, 16);
     int rowComparisonLength = lastRow.length();
 
+    @Override
     public byte[] split(byte[] start, byte[] end) {
       BigInteger s = convertToBigInteger(start);
       BigInteger e = convertToBigInteger(end);
@@ -814,6 +816,7 @@ public class RegionSplitter {
       return convertToByte(split2(s, e));
     }
 
+    @Override
     public byte[][] split(int n) {
       Preconditions.checkArgument(lastRowInt.compareTo(firstRowInt) > 0,
           "last row (%s) is configured less than first row (%s)", lastRow,
@@ -834,19 +837,23 @@ public class RegionSplitter {
       return convertToBytes(splits);
     }
 
+    @Override
     public byte[] firstRow() {
       return convertToByte(firstRowInt);
     }
 
+    @Override
     public byte[] lastRow() {
       return convertToByte(lastRowInt);
     }
 
+    @Override
     public void setFirstRow(String userInput) {
       firstRow = userInput;
       firstRowInt = new BigInteger(firstRow, 16);
     }
 
+    @Override
     public void setLastRow(String userInput) {
       lastRow = userInput;
       lastRowInt = new BigInteger(lastRow, 16);
@@ -854,14 +861,17 @@ public class RegionSplitter {
       rowComparisonLength = lastRow.length();
     }
 
+    @Override
     public byte[] strToRow(String in) {
       return convertToByte(new BigInteger(in, 16));
     }
 
+    @Override
     public String rowToStr(byte[] row) {
       return Bytes.toStringBinary(row);
     }
 
+    @Override
     public String separator() {
       return " ";
     }
@@ -945,6 +955,7 @@ public class RegionSplitter {
     byte[] firstRowBytes = ArrayUtils.EMPTY_BYTE_ARRAY;
     byte[] lastRowBytes =
         new byte[] {xFF, xFF, xFF, xFF, xFF, xFF, xFF, xFF};
+    @Override
     public byte[] split(byte[] start, byte[] end) {
       return Bytes.split(start, end, 1)[1];
     }

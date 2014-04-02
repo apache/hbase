@@ -61,7 +61,7 @@ public abstract class ResultScannerImpl implements ResultScanner {
     }
     if (CLIENT_LOG.isDebugEnabled()) {
       CLIENT_LOG.debug("Creating scanner over "
-          + Bytes.toString(htable.getTableName())
+          + Bytes.toStringBinary(htable.getTableName())
           + " starting at key '" + Bytes.toStringBinary(scan.getStartRow()) + "'");
     }
   }

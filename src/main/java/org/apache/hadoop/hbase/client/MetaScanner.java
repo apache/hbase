@@ -20,21 +20,21 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
-
-import java.io.IOException;
 
 /**
  * Scanner class that contains the <code>.META.</code> table scanning logic
  * and uses a Retryable scanner. Provided visitors will be called
  * for each row.
- * 
+ *
  * Although public visibility, this is not a public-facing API and may evolve in
  * minor releases.
  */
@@ -126,13 +126,15 @@ public class MetaScanner {
           HConstants.CATALOG_FAMILY);
       if (startRowResult == null) {
         throw new TableNotFoundException("Cannot find row in .META. for table: "
-            + Bytes.toString(tableName) + ", row=" + Bytes.toString(searchRow));
+                + Bytes.toStringBinary(tableName) + ", row="
+                + Bytes.toStringBinary(searchRow));
       }
       byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
           HConstants.REGIONINFO_QUALIFIER);
       if (value == null || value.length == 0) {
-        throw new IOException("HRegionInfo was null or empty in Meta for " +
-          Bytes.toString(tableName) + ", row=" + Bytes.toString(searchRow));
+        throw new IOException("HRegionInfo was null or empty in Meta for "
+            + Bytes.toStringBinary(tableName) + ", row="
+            + Bytes.toStringBinary(searchRow));
       }
       HRegionInfo regionInfo = Writables.getHRegionInfo(value);
 

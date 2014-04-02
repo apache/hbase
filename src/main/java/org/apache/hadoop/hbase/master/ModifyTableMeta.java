@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -29,9 +31,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-
-import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 
 /** Instantiated to modify table descriptor metadata */
 class ModifyTableMeta extends TableOperation {
@@ -45,8 +44,7 @@ class ModifyTableMeta extends TableOperation {
   throws IOException {
     super(master, tableName);
     this.desc = desc;
-    LOG.debug("modifying " + Bytes.toString(tableName) + ": " +
-        desc.toString());
+    LOG.debug("modifying " + Bytes.toStringBinary(tableName) + ": " + desc);
   }
 
   protected void updateRegionInfo(HRegionInterface server, byte [] regionName,
@@ -63,7 +61,7 @@ class ModifyTableMeta extends TableOperation {
   protected void processScanItem(String serverName,
       final HRegionInfo info) throws IOException {
     if (isEnabled(info)) {
-      throw new TableNotDisabledException(Bytes.toString(tableName));
+      throw new TableNotDisabledException(Bytes.toStringBinary(tableName));
     }
   }
 

@@ -48,6 +48,6 @@ public class NotServingRegionException extends IOException {
    * @param s message
    */
   public NotServingRegionException(final byte [] s) {
-    super(Bytes.toString(s));
+    super(Bytes.toStringBinary(s));
   }
 }

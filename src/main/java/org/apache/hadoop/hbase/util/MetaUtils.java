@@ -20,6 +20,13 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -28,6 +35,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -38,15 +47,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * Contains utility methods for manipulating HBase meta tables.
@@ -224,9 +224,9 @@ public class MetaUtils {
         for (KeyValue kv: results) {
           info = Writables.getHRegionInfoOrNull(kv.getValue());
           if (info == null) {
-            LOG.warn("Region info is null for row " +
-              Bytes.toString(kv.getRow()) + " in table " +
-              r.getTableDesc().getNameAsString());
+            LOG.warn("Region info is null for row "
+                + Bytes.toStringBinary(kv.getRow()) + " in table "
+                + r.getTableDesc().getNameAsString());
           }
           continue;
         }
@@ -301,11 +301,13 @@ public class MetaUtils {
     Result res = t.get(get);
     KeyValue [] kvs = res.raw();
     if(kvs.length <= 0) {
-      throw new IOException("no information for row " + Bytes.toString(row));
+      throw new IOException("no information for row "
+          + Bytes.toStringBinary(row));
     }
     byte [] value = kvs[0].getValue();
     if (value == null) {
-      throw new IOException("no information for row " + Bytes.toString(row));
+      throw new IOException("no information for row "
+          + Bytes.toStringBinary(row));
     }
     HRegionInfo info = Writables.getHRegionInfo(value);
     Put put = new Put(row);
@@ -338,10 +340,11 @@ public class MetaUtils {
       scanMetaRegion(m, new ScannerListener() {
         private boolean inTable = true;
 
+        @Override
         @SuppressWarnings("synthetic-access")
         public boolean processRow(HRegionInfo info) throws IOException {
-          LOG.debug("Testing " + Bytes.toString(tableName) + " against " +
-            Bytes.toString(info.getTableDesc().getName()));
+          LOG.debug("Testing " + Bytes.toStringBinary(tableName) + " against "
+              + Bytes.toStringBinary(info.getTableDesc().getName()));
           if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
             this.inTable = false;
             info.getTableDesc().addFamily(hcd);
@@ -371,6 +374,7 @@ public class MetaUtils {
       scanMetaRegion(m, new ScannerListener() {
         private boolean inTable = true;
 
+        @Override
         @SuppressWarnings("synthetic-access")
         public boolean processRow(HRegionInfo info) throws IOException {
           if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
@@ -417,8 +421,9 @@ public class MetaUtils {
       }
       HRegionInfo h = Writables.getHRegionInfoOrNull(value);
 
-      LOG.debug("Old " + Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
-          Bytes.toString(HConstants.REGIONINFO_QUALIFIER) + " for " +
+      LOG.debug("Old " + Bytes.toStringBinary(HConstants.CATALOG_FAMILY) + ":"
+          + Bytes.toStringBinary(HConstants.REGIONINFO_QUALIFIER) + " for "
+          +
           hri.toString() + " in " + r.toString() + " is: " + h.toString());
     }
 
@@ -440,9 +445,9 @@ public class MetaUtils {
         return;
       }
       HRegionInfo h = Writables.getHRegionInfoOrNull(value);
-        LOG.debug("New " + Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
-            Bytes.toString(HConstants.REGIONINFO_QUALIFIER) + " for " +
-            hri.toString() + " in " + r.toString() + " is: " +  h.toString());
+      LOG.debug("New " + Bytes.toStringBinary(HConstants.CATALOG_FAMILY) + ":"
+          + Bytes.toStringBinary(HConstants.REGIONINFO_QUALIFIER) + " for "
+          + hri.toString() + " in " + r.toString() + " is: " + h.toString());
     }
   }
 
@@ -465,6 +470,7 @@ public class MetaUtils {
     scanRootRegion(new ScannerListener() {
       private final Log SL_LOG = LogFactory.getLog(this.getClass());
 
+      @Override
       public boolean processRow(HRegionInfo info) throws IOException {
         SL_LOG.debug("Testing " + info);
         if (Bytes.equals(info.getTableDesc().getName(),

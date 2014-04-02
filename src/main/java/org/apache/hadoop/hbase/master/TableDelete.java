@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
@@ -28,8 +30,6 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
 
 /**
  * Instantiated to delete a table. Table must be offline.
@@ -66,7 +66,8 @@ class TableDelete extends TableOperation {
           this.master.getRootDir(), i);
 
       } catch (IOException e) {
-        LOG.error("failed to delete region " + Bytes.toString(i.getRegionName()),
+        LOG.error("failed to delete region "
+                + Bytes.toStringBinary(i.getRegionName()),
           RemoteExceptionHandler.checkIOException(e));
       }
     }
