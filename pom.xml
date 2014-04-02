@@ -287,7 +287,6 @@
                     <configuration>
                         <skip>${hbase.skip-jacoco}</skip>
                         <excludes>
-                        <exclude>org/apache/hadoop/hbase/avro/**/*.class</exclude>
                         <exclude>**/generated/**/*.class</exclude>
                         <exclude>org/apache/hadoop/hbase/rest/**/*.class</exclude>
                         </excludes>
@@ -304,7 +303,6 @@
                         <excludes>
                             <exclude>**/mapred/*.java</exclude>
                             <exclude>**/replication/*.java</exclude>
-                            <exclude>**/avro/*.java</exclude>
                             <exclude>**/rest/*.java</exclude>
                             <exclude>**/rest/*/*.java</exclude>
                             <exclude>**/*$*</exclude>
