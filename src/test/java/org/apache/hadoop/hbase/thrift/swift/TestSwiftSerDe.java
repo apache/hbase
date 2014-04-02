@@ -206,6 +206,9 @@ public class TestSwiftSerDe {
     Map<byte[], byte[]> values = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     Set<HServerAddress> servers = new HashSet<>(1);
     servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),0));
+    servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),1));
+    servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),2));
+    servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),3));
 
     columns.add(new HColumnDescriptor(Bytes.toBytes("d")));
 
