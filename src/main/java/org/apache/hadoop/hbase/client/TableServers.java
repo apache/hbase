@@ -988,30 +988,36 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
       }
       didTry = true;
       HBaseThriftRPC.isMeta.get().push(true);
-      Result regionInfoRow = null;
-      // This block guards against two threads trying to load the meta
-      // region at the same time. The first will load the meta region and
-      // the second will use the value that the first one found.
-      synchronized (metaRegionLock) {
-        if (useCache) {
-          location = getCachedLocation(tableName, row);
-          if (location != null) {
-            return location;
+      try {
+        Result regionInfoRow = null;
+        // This block guards against two threads trying to load the meta
+        // region at the same time. The first will load the meta region and
+        // the second will use the value that the first one found.
+        synchronized (metaRegionLock) {
+          if (useCache) {
+            location = getCachedLocation(tableName, row);
+            if (location != null) {
+              return location;
+            }
+          } else {
+            LOG.debug("Deleting the client location cache.");
+            deleteCachedLocation(tableName, row, null);
           }
-        } else {
-          LOG.debug("Deleting the client location cache.");
-          deleteCachedLocation(tableName, row, null);
-        }
-        HRegionInterface serverInterface = getHRegionConnection(metaLocation
-          .getServerAddress());
+          HRegionInterface serverInterface = getHRegionConnection(metaLocation
+            .getServerAddress());
 
-        // Query the root for the location of the meta region
-        regionInfoRow = serverInterface.getClosestRowBefore(metaLocation
-          .getRegionInfo().getRegionName(), metaKey,
-          HConstants.CATALOG_FAMILY);
-        location = getLocationFromRow(regionInfoRow, tableName,
-          parentTable, row);
-        cacheLocation(tableName, location);
+          // Query the root for the location of the meta region
+          regionInfoRow = serverInterface.getClosestRowBefore(metaLocation
+            .getRegionInfo().getRegionName(), metaKey,
+            HConstants.CATALOG_FAMILY);
+          location = getLocationFromRow(regionInfoRow, tableName,
+            parentTable, row);
+          cacheLocation(tableName, location);
+        }
+      } catch (Throwable t) {
+        throw t;
+      } finally {
+        HBaseThriftRPC.isMeta.get().pop();
       }
       return location;
     } catch (TableNotFoundException e) {
@@ -1049,7 +1055,6 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
         throw e;
       }
     } finally {
-      HBaseThriftRPC.isMeta.get().pop();
       updateFailureInfoForServer(server, fInfo, didTry,
         couldNotCommunicateWithServer, retryDespiteFastFailMode);
     }
