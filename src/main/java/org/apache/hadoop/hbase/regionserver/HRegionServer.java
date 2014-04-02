@@ -66,6 +66,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.mutable.MutableDouble;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -531,6 +532,7 @@ public class HRegionServer implements HRegionInterface,
    * regionserver object would be unpublished at that point.
    * @throws IOException
    */
+  @SuppressWarnings("unchecked")
   public void initialize() throws IOException {
     this.restartRequested = false;
     this.abortRequested = false;
@@ -3500,7 +3502,7 @@ public class HRegionServer implements HRegionInterface,
    * @return {@link HRegion} for <code>regionName</code>
    * @throws NotServingRegionException
    */
-  protected HRegion getRegion(final byte [] regionName)
+  public HRegion getRegion(final byte[] regionName)
   throws NotServingRegionException {
     HRegion region = null;
     this.lock.readLock().lock();
@@ -4076,6 +4078,12 @@ public class HRegionServer implements HRegionInterface,
 
   @Override
   public void close() throws Exception {
-    // TODO Auto-generated method stub
+  }
+
+  @Override
+  public byte[] callEndpoint(String epName, String methodName,
+      final byte[] regionName, final byte[] startRow, final byte[] stopRow)
+      throws IOException {
+    throw new NotImplementedException("HRegionserver.callEndpoint");
   }
 }

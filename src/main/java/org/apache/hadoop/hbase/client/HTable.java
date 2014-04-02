@@ -46,12 +46,14 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.coprocessor.HTableEndpointClient;
+import org.apache.hadoop.hbase.coprocessor.IEndpoint;
+import org.apache.hadoop.hbase.coprocessor.IEndpointClient;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.PreloadThreadPool;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
-import org.apache.hadoop.hbase.ipc.thrift.HBaseThriftRPC;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.Pair;
@@ -69,7 +71,7 @@ import com.google.common.base.Preconditions;
  *
  * See {@link HBaseAdmin} to create, drop, list, enable and disable tables.
  */
-public class HTable implements HTableInterface {
+public class HTable implements HTableInterface, IEndpointClient {
   private final HConnection connection;
   private final byte [] tableName;
   protected final int scannerTimeout;
@@ -87,6 +89,8 @@ public class HTable implements HTableInterface {
   private long maxScannerResultSize;
   private HTableAsync hta;
   private boolean doAsync;
+
+  private IEndpointClient endpointClient;
 
   // Share this multiaction thread pool across all the HTable instance;
   // The total number of threads will be bounded #HTable * #RegionServer.
@@ -192,6 +196,8 @@ public class HTable implements HTableInterface {
         HConstants.HTABLE_ASYNC_CALLS_DEFAULT)
         && configuration.getBoolean(HConstants.CLIENT_TO_RS_USE_THRIFT,
             HConstants.CLIENT_TO_RS_USE_THRIFT_DEFAULT);
+
+    this.endpointClient = new HTableEndpointClient(this);
   }
 
   /**
@@ -1445,4 +1451,13 @@ public class HTable implements HTableInterface {
   public HBaseRPCOptions getOptions() {
     return options;
   }
+
+  @Override
+  public <T extends IEndpoint> Map<byte[], byte[]> coprocessorEndpoint(
+      Class<T> clazz, byte[] startRow, byte[] stopRow, Caller<T> caller)
+      throws IOException {
+    return this.endpointClient.coprocessorEndpoint(clazz, startRow, stopRow,
+        caller);
+  }
+
 }

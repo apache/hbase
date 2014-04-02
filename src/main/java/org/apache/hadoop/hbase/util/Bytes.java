@@ -566,7 +566,7 @@ public class Bytes {
    * @return the long value
    */
   public static long toLong(byte[] bytes) {
-    return toLong(bytes, 0, SIZEOF_LONG);
+    return toLong(bytes, 0);
   }
 
   /**
@@ -578,7 +578,15 @@ public class Bytes {
    * @return the long value
    */
   public static long toLong(byte[] bytes, int offset) {
-    return toLong(bytes, offset, SIZEOF_LONG);
+    if (offset + SIZEOF_LONG > bytes.length) {
+      throw explainWrongLengthOrOffset(bytes, offset, SIZEOF_LONG, SIZEOF_LONG);
+    }
+    long l = 0;
+    for (int i = offset; i < offset + SIZEOF_LONG; i++) {
+      l <<= 8;
+      l ^= bytes[i] & 0xFF;
+    }
+    return l;
   }
 
   /**
@@ -592,15 +600,10 @@ public class Bytes {
    * if there's not enough room in the array at the offset indicated.
    */
   public static long toLong(byte[] bytes, int offset, final int length) {
-    if (length != SIZEOF_LONG || offset + length > bytes.length) {
+    if (length != SIZEOF_LONG) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_LONG);
     }
-    long l = 0;
-    for(int i = offset; i < offset + length; i++) {
-      l <<= 8;
-      l ^= bytes[i] & 0xFF;
-    }
-    return l;
+    return toLong(bytes, offset);
   }
 
   private static IllegalArgumentException
@@ -656,7 +659,7 @@ public class Bytes {
    * @return Float made from passed byte array.
    */
   public static float toFloat(byte [] bytes, int offset) {
-    return Float.intBitsToFloat(toInt(bytes, offset, SIZEOF_INT));
+    return Float.intBitsToFloat(toInt(bytes, offset, SIZEOF_FLOAT));
   }
 
   /**
@@ -692,7 +695,7 @@ public class Bytes {
    * @return Return double made from passed bytes.
    */
   public static double toDouble(final byte [] bytes, final int offset) {
-    return Double.longBitsToDouble(toLong(bytes, offset, SIZEOF_LONG));
+    return Double.longBitsToDouble(toLong(bytes, offset, SIZEOF_DOUBLE));
   }
 
   /**

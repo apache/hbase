@@ -192,6 +192,7 @@ struct Bucket {
 service ThriftHRegionInterface {
   void bulkLoadHFile(1: string hfilePath, 2: binary regionName, 3: binary familyName) throws (1: ThriftHBaseException ex1);
   void bulkLoadHFileSeqNum(1: string hfilePath, 2: binary regionName, 3: binary familyName, 4: bool assignSeqNum) throws (1: ThriftHBaseException ex1);
+  binary callEndpoint(1: string epName, 2: string methodName, 3: binary regionName, 4: binary startRow, 5: binary stopRow) throws (1: ThriftHBaseException ex1);
   bool checkAndDelete(1: binary regionName, 2: binary row, 3: binary family, 4: binary qualifier, 5: binary value, 6: Delete deleteArg) throws (1: ThriftHBaseException ex1);
   bool checkAndPut(1: binary regionName, 2: binary row, 3: binary family, 4: binary qualifier, 5: binary value, 6: Put put) throws (1: ThriftHBaseException ex1);
   void close(1: i64 scannerId) throws (1: ThriftHBaseException ex1);

@@ -50,6 +50,22 @@ import org.apache.hadoop.io.MapWritable;
  */
 public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable,
     Stoppable, ThriftClientInterface {
+
+  /**
+   * Calls an endpoint on an region server.
+   *
+   * TODO make regionName a list.
+   *
+   * @param epName      the endpoint name.
+   * @param methodName  the method name.
+   * @param regionName  the name of the region
+   * @param startRow    the start row, inclusive
+   * @param stopRow     the stop row, exclusive
+   * @return  the computed value.
+   */
+  public byte[] callEndpoint(String epName, String methodName,
+      byte[] regionName, byte[] startRow, byte[] stopRow) throws IOException;
+
   /**
    * Get metainfo about an HRegion
    *
@@ -415,9 +431,11 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable,
    * Stop this service.
    * @param why Why we're stopping.
    */
+  @Override
   public void stop(String why);
 
   /** @return why we are stopping */
+  @Override
   public String getStopReason();
 
   /**

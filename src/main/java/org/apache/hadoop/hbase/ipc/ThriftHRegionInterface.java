@@ -56,6 +56,28 @@ import com.google.common.util.concurrent.ListenableFuture;
  */
 @ThriftService
 public interface ThriftHRegionInterface extends ThriftClientInterface {
+
+  /**
+   * Calls an endpoint on an region server.
+   *
+   * TODO make regionName/startRow/stopRow a list.
+   *
+   * @param epName  the endpoint name.
+   * @param methodName  the method name.
+   * @param regionName  the name of the region
+   * @param startRow  the start row, inclusive
+   * @param stopRow  the stop row, exclusive
+   * @return  the computed value.
+   */
+  @ThriftMethod(value = "callEndpoint", exception = {
+      @ThriftException(type = ThriftHBaseException.class, id = 1) })
+  public byte[] callEndpoint(@ThriftField(name = "epName") String epName,
+      @ThriftField(name = "methodName") String methodName,
+      @ThriftField(name = "regionName") byte[] regionName,
+      @ThriftField(name = "startRow") byte[] startRow,
+      @ThriftField(name = "stopRow") byte[] stopRow)
+      throws ThriftHBaseException;
+
   /**
    * Get metainfo about an HRegion
    *
@@ -71,7 +93,7 @@ public interface ThriftHRegionInterface extends ThriftClientInterface {
 
   /**
    * Return all the data for the row that matches <i>row</i> exactly,
-   * or the one that immediately preceeds it.
+   * or the one that immediately proceeds it.
    *
    * @param regionName region name
    * @param row row key

@@ -1172,4 +1172,25 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       postProcess();
     }
   }
+
+  @Override
+  public byte[] callEndpoint(String epName, String methodName,
+      byte[] regionName, byte[] startRow, byte[] stopRow) throws IOException {
+    preProcess();
+    try {
+      return connection.callEndpoint(epName, methodName, regionName, startRow,
+          stopRow);
+    } catch (ThriftHBaseException te) {
+      Exception e = te.getServerJavaException();
+      handleIOException(e);
+      LOG.warn("Unexpected Exception: " + e);
+      throw new RuntimeException(e);
+    } catch (Exception e) {
+      refreshConnectionAndThrowIOException(e);
+      return null;
+    } finally {
+      postProcess();
+    }
+  }
+
 }

@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TMultiResponse;
 import org.apache.hadoop.hbase.client.TRowMutations;
+import org.apache.hadoop.hbase.coprocessor.EndpointServer;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
@@ -65,13 +66,15 @@ import com.google.common.util.concurrent.ListenableFuture;
  * This is just a wrapper around {@link HRegionServer}
  *
  */
-public class ThriftHRegionServer implements ThriftHRegionInterface{
+public class ThriftHRegionServer implements ThriftHRegionInterface {
   public static Log LOG = LogFactory.getLog(ThriftHRegionServer.class);
 
   private HRegionServer server;
+  private EndpointServer endpointServer;
 
   public ThriftHRegionServer(HRegionServer server) {
     this.server = server;
+    this.endpointServer = new EndpointServer(this.server);
   }
 
   @Override
@@ -629,5 +632,13 @@ public class ThriftHRegionServer implements ThriftHRegionInterface{
     } catch (IOException e) {
       throw new ThriftHBaseException(e);
     }
+  }
+
+  @Override
+  public byte[] callEndpoint(String epName, String methodName,
+      final byte[] regionName, final byte[] startRow, final byte[] stopRow)
+      throws ThriftHBaseException {
+    return endpointServer.callEndpoint(epName, methodName, regionName,
+        startRow, stopRow);
   }
 }
