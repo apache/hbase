@@ -1062,6 +1062,10 @@ public final class HConstants {
       "hbase.client.use.conf.from.server";
   public static final boolean DEFAULT_USE_CONF_FROM_SERVER = true;
 
+  public static final String USE_GUAVA_BYTES_COMPARISION =
+      "hbase.regionserver.use.guava.bytes.comparision";
+  public static boolean DEFAULT_USE_GUAVA_BYTES_COMPARISION = false;
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

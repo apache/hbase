@@ -517,6 +517,11 @@ public class HRegionServer implements HRegionInterface,
     int maxPreloadThreads =
         conf.getInt(HConstants.MAX_PRELOAD_THREAD_COUNT, HConstants.DEFAULT_MAX_PRELOAD_THREAD_COUNT);
     PreloadThreadPool.constructPreloaderThreadPool(corePreloadThreads, maxPreloadThreads);
+
+    // Configure use of Guava bytes comparator.
+    Bytes.useGuavaBytesComparision = conf.getBoolean(
+        HConstants.USE_GUAVA_BYTES_COMPARISION,
+        HConstants.DEFAULT_USE_GUAVA_BYTES_COMPARISION);
   }
 
   /**

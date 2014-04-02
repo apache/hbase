@@ -24,7 +24,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
 import junit.framework.TestCase;
 
@@ -288,5 +291,81 @@ public class TestBytes extends TestCase {
         Bytes.appendToTail(a, 2, (byte) 0), new byte[] { 1, 2, 0, 0 });
     Assert.assertArrayEquals("appendToTail(a, 0, 6)",
         Bytes.appendToTail(a, 2, (byte) 6), new byte[] { 1, 2, 6, 6 });
+  }
+
+  /**
+   * The rows in a given region follow the following pattern:
+   * [PREFIX BYTES][ID BYTES]
+   *
+   * @param numRows : number of rows to return in the list.
+   * @param prefixLength : length of common prefix.
+   * @param length : length of the rest of the row.
+   * @return : List of rows generated
+   */
+  private List<byte[]> getRowsRandom(int numRows, int prefixLength, int length) {
+    Random r = new Random();
+    byte[] prefixBytes = new byte[prefixLength];
+    r.nextBytes(prefixBytes);
+    List<byte[]> list = new ArrayList<byte[]>();
+    for (int i=0; i<numRows; i++) {
+      byte[] b = new byte[length];
+      r.nextBytes(b);
+      byte[] finalBytes = new byte[prefixLength + length];
+      Bytes.putBytes(finalBytes, 0, prefixBytes, 0, prefixLength);
+      Bytes.putBytes(finalBytes, prefixLength, b, 0, b.length);
+      list.add(finalBytes);
+    }
+    return list;
+  }
+
+  public void testComparatorPerfRandom() {
+    // The rows in a given region follow the following pattern:
+    // [PREFIX BYTES][ID BYTES]
+    // With long prefixes, the comparison using guava is faster.
+    // With fewer common bytes, the guava comparison is slower.
+    for (int PREFIX = 50; PREFIX >= 0; PREFIX -= 5) {
+      int ID = 100;
+      int numRows = 10000;
+      List<byte[]> list = getRowsRandom(numRows, PREFIX, ID);
+
+      // Correctness
+      for (int i=0; i<numRows; i++) {
+        for (int j=0; j<numRows; j++) {
+          Bytes.useGuavaBytesComparision = true;
+          int bg = Bytes.compareTo(list.get(i), list.get(j));
+          Bytes.useGuavaBytesComparision = false;
+          int bs = Bytes.compareTo(list.get(i), list.get(j));
+          assertTrue(bg == bs);
+        }
+      }
+
+      // Comparing the Bytes
+      boolean[] bools = new boolean[]{true, false};
+      long[] timeNs = new long[2];
+
+      for (int idx = 0; idx < 2; idx++) {
+        Bytes.useGuavaBytesComparision = bools[idx];
+        long st = System.nanoTime();
+        for (int i=0; i<numRows; i++) {
+          for (int j=0; j<numRows; j++) {
+            Bytes.compareTo(list.get(i), list.get(j));
+          }
+        }
+        long en = System.nanoTime();
+        timeNs[idx] += (en - st);
+      }
+      double gain = (timeNs[1] - timeNs[0]) / ((double)timeNs[1]);
+      System.out.println("Prefix : " + PREFIX + ", gain : " + gain * 100 + " ");
+      if (PREFIX > 20) {
+        assertTrue(gain > 0.1);
+        assertTrue(timeNs[1] > timeNs[0]);
+      } else if (PREFIX < 10) {
+        assertTrue(gain < -0.1);
+        if (PREFIX == 0) {
+          assertTrue(gain < -0.5);
+        }
+        assertTrue(timeNs[1] < timeNs[0]);
+      }
+    }
   }
 }
