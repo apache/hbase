@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.hbase.util.Writables;
 
 import com.google.common.base.Preconditions;
@@ -73,7 +74,7 @@ import com.google.common.base.Preconditions;
  */
 public class HTable implements HTableInterface, IEndpointClient {
   private final HConnection connection;
-  private final byte [] tableName;
+  protected final StringBytes tableName;
   protected final int scannerTimeout;
   private volatile Configuration configuration;
   private final ArrayList<Put> writeBuffer = new ArrayList<Put>();
@@ -136,6 +137,10 @@ public class HTable implements HTableInterface, IEndpointClient {
     this(HBaseConfiguration.create(), tableName);
   }
 
+  public HTable(Configuration conf, byte[] tableName) throws IOException {
+    this(conf, new StringBytes(tableName));
+  }
+
   /**
    * Creates an object to access a HBase table.
    *
@@ -145,7 +150,7 @@ public class HTable implements HTableInterface, IEndpointClient {
    */
   public HTable(Configuration conf, final String tableName)
   throws IOException {
-    this(conf, Bytes.toBytes(tableName));
+    this(conf, new StringBytes(tableName));
   }
 
 
@@ -156,7 +161,7 @@ public class HTable implements HTableInterface, IEndpointClient {
    * @param tableName Name of the table.
    * @throws IOException if a remote or network exception occurs
    */
-  public HTable(Configuration conf, final byte [] tableName)
+  public HTable(Configuration conf, StringBytes tableName)
   throws IOException {
     this.tableName = tableName;
     if (conf == null) {
@@ -170,7 +175,8 @@ public class HTable implements HTableInterface, IEndpointClient {
         HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
     this.configuration = conf;
 
-    this.getConnectionAndResetOperationContext().locateRegion(tableName, HConstants.EMPTY_START_ROW);
+    this.getConnectionAndResetOperationContext().locateRegion(this.tableName,
+        HConstants.EMPTY_START_ROW);
     this.writeBufferSize = conf.getLong("hbase.client.write.buffer", 2097152);
     this.clearBufferOnFail = true;
     this.autoFlush = true;
@@ -288,7 +294,8 @@ public class HTable implements HTableInterface, IEndpointClient {
    */
   public static boolean isTableEnabled(Configuration conf, byte[] tableName)
   throws IOException {
-    return HConnectionManager.getConnection(conf).isTableEnabled(tableName);
+    return HConnectionManager.getConnection(conf).isTableEnabled(
+        new StringBytes(tableName));
   }
 
   /**
@@ -327,7 +334,11 @@ public class HTable implements HTableInterface, IEndpointClient {
   }
 
   @Override
-  public byte [] getTableName() {
+  public byte[] getTableName() {
+    return this.tableName.getBytes();
+  }
+
+  public StringBytes getTableNameStringBytes() {
     return this.tableName;
   }
 
@@ -585,7 +596,8 @@ public class HTable implements HTableInterface, IEndpointClient {
    * to region cache.
    */
   public void prewarmRegionCache(Map<HRegionInfo, HServerAddress> regionMap) {
-    this.connection.prewarmRegionCache(this.getTableName(), regionMap);
+    this.connection.prewarmRegionCache(this.getTableNameStringBytes(),
+        regionMap);
   }
 
   /**
@@ -1239,7 +1251,7 @@ public class HTable implements HTableInterface, IEndpointClient {
   public static void setRegionCachePrefetch(final byte[] tableName,
       boolean enable) {
     HConnectionManager.getConnection(HBaseConfiguration.create()).
-    setRegionCachePrefetch(tableName, enable);
+setRegionCachePrefetch(new StringBytes(tableName), enable);
   }
 
   /**
@@ -1254,20 +1266,20 @@ public class HTable implements HTableInterface, IEndpointClient {
   public static void setRegionCachePrefetch(final Configuration conf,
       final byte[] tableName, boolean enable) {
     HConnectionManager.getConnection(conf).setRegionCachePrefetch(
-        tableName, enable);
+        new StringBytes(tableName), enable);
   }
 
   /**
    * Check whether region cache prefetch is enabled or not for the table.
    * @param conf The Configuration object to use.
    * @param tableName name of table to check
-   * @return true if table's region cache prefecth is enabled. Otherwise
+   * @return true if table's region cache prefetch is enabled. Otherwise
    * it is disabled.
    */
   public static boolean getRegionCachePrefetch(final Configuration conf,
       final byte[] tableName) {
     return HConnectionManager.getConnection(conf).getRegionCachePrefetch(
-        tableName);
+        new StringBytes(tableName));
   }
 
   /**
@@ -1278,7 +1290,7 @@ public class HTable implements HTableInterface, IEndpointClient {
    */
   public static boolean getRegionCachePrefetch(final byte[] tableName) {
     return HConnectionManager.getConnection(HBaseConfiguration.create()).
-    getRegionCachePrefetch(tableName);
+getRegionCachePrefetch(new StringBytes(tableName));
   }
 
   /**

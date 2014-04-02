@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RegionSplitter;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
@@ -561,6 +562,21 @@ public class HBaseTestingUtility {
     return createTable(tableName, new byte[][]{family});
   }
 
+  /**
+   * Create a table.
+   *
+   * @param tableName
+   * @param family
+   * @return An HTableAsync instance for the created table, which is a sub-class
+   *         of the HTable class, and HTableAsyncInterface. So you can use both
+   *         the sync API of HTableInterface, and async API in
+   *         HTableAsyncInterface.
+   * @throws IOException
+   */
+  public HTableAsync createTable(StringBytes tableName, byte[] family)
+      throws IOException {
+    return createTable(tableName.getBytes(), new byte[][] { family });
+  }
 
   public HTable createTable(byte[] tableName, byte[][] families,
       int numVersions, byte[] startKey, byte[] endKey, int numRegions)

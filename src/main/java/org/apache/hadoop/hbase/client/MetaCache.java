@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 
 /**
  * Cache for meta information (HRegionLocation)
@@ -41,7 +42,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class MetaCache {
   static final Log LOG = LogFactory.getLog(MetaCache.class);
 
-  public final Map<Integer, ConcurrentSkipListMap<byte[], HRegionLocation>>
+  public final Map<StringBytes, ConcurrentSkipListMap<byte[], HRegionLocation>>
     tableToCache = new ConcurrentHashMap<>();
 
   // The presence of a server in the map implies it's likely that there is an
@@ -60,19 +61,17 @@ public class MetaCache {
    * @return Map of cached locations for passed <code>tableName</code>. A new
    *         map is created if not found.
    */
-  public NavigableMap<byte[], HRegionLocation> getForTable(
-      final byte[] tableName) {
+  public NavigableMap<byte[], HRegionLocation> getForTable(StringBytes tableName) {
     // find the map of cached locations for this table
-    Integer key = Bytes.mapKey(tableName);
     ConcurrentSkipListMap<byte[], HRegionLocation> result =
-        this.tableToCache.get(key);
+        this.tableToCache.get(tableName);
     if (result == null) {
       synchronized (this.tableToCache) {
-        result = this.tableToCache.get(key);
+        result = this.tableToCache.get(tableName);
         if (result == null) {
           // if tableLocations for this table isn't built yet, make one
           result = new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
-          this.tableToCache.put(key, result);
+          this.tableToCache.put(tableName, result);
         }
       }
     }
@@ -90,7 +89,7 @@ public class MetaCache {
    * @param row  a non-null byte array
    * @return Null or region location found in cache.
    */
-  HRegionLocation getForRow(final byte[] tableName, final byte[] row) {
+  HRegionLocation getForRow(StringBytes tableName, final byte[] row) {
     NavigableMap<byte[], HRegionLocation> tableMeta = getForTable(tableName);
 
     // start to examine the cache. we can only do cache actions
@@ -103,7 +102,7 @@ public class MetaCache {
     if (rl != null) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Cache hit for row <" + Bytes.toStringBinary(row)
-            + "> in tableName " + Bytes.toStringBinary(tableName)
+            + "> in tableName " + tableName
             + ": location server " + rl.getServerAddress()
             + ", location region name "
             + rl.getRegionInfo().getRegionNameAsString());
@@ -140,7 +139,7 @@ public class MetaCache {
    * Deletes a cached meta for the specified table name and row if it is
    * located on the (optionally) specified old location.
    */
-  public void deleteForRow(final byte[] tableName, final byte[] row,
+  public void deleteForRow(StringBytes tableName, final byte[] row,
       HServerAddress oldServer) {
     synchronized (this.tableToCache) {
       Map<byte[], HRegionLocation> tableLocations = getForTable(tableName);
@@ -158,7 +157,7 @@ public class MetaCache {
           tableLocations.remove(rl.getRegionInfo().getStartKey());
           if (LOG.isDebugEnabled()) {
             LOG.debug("Removed " + rl.getRegionInfo().getRegionNameAsString()
-                + " for tableName=" + Bytes.toStringBinary(tableName)
+                + " for tableName=" + tableName
                 + " from cache " + "because of " + Bytes.toStringBinary(row));
           }
         }
@@ -197,7 +196,7 @@ public class MetaCache {
    *
    * FIXME the first parameter seems not necessary.
    */
-  public void add(final byte[] tableName, final HRegionLocation location) {
+  public void add(StringBytes tableName, final HRegionLocation location) {
     byte[] startKey = location.getRegionInfo().getStartKey();
     HRegionLocation oldLocation;
     synchronized (this.tableToCache) {
@@ -230,10 +229,9 @@ public class MetaCache {
    * Returns the number of cached regions for a table. It will only be called
    * from a unit test.
    */
-  int getNumber(final byte[] tableName) {
-    Integer key = Bytes.mapKey(tableName);
+  int getNumber(StringBytes tableName) {
     synchronized (this.tableToCache) {
-      Map<byte[], HRegionLocation> tableLocs = this.tableToCache.get(key);
+      Map<byte[], HRegionLocation> tableLocs = this.tableToCache.get(tableName);
 
       if (tableLocs == null) {
         return 0;

@@ -233,7 +233,8 @@ public class HTableClientScanner implements ResultScanner, Runnable {
   private ScannerCallable getScannerCallable(byte[] startKey) {
     scan.setStartRow(startKey);
     ScannerCallable s = new ScannerCallable(
-        table.getConnectionAndResetOperationContext(), table.getTableName(),
+        table.getConnectionAndResetOperationContext(),
+        table.getTableNameStringBytes(),
         scan, table.getOptions());
     s.setCaching(caching);
     return s;

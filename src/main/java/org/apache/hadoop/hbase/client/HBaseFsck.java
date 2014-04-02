@@ -339,7 +339,7 @@ public class HBaseFsck {
    */
   boolean recordRootRegion() throws IOException {
     HRegionLocation rootLocation = connection.locateRegion(
-      HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_START_ROW);
+      HConstants.ROOT_TABLE_NAME_STRINGBYTES, HConstants.EMPTY_START_ROW);
 
     // Check if Root region is valid and existing
     if (rootLocation == null || rootLocation.getRegionInfo() == null ||
@@ -910,9 +910,8 @@ public class HBaseFsck {
     };
 
     // Scan -ROOT- to pick up META regions
-    MetaScanner.metaScan(conf, visitor,
-      HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_START_ROW, null,
-      Integer.MAX_VALUE);
+    MetaScanner.metaScan(conf, visitor, HConstants.ROOT_TABLE_NAME_STRINGBYTES,
+        HConstants.EMPTY_STRING_BYTES, null, Integer.MAX_VALUE);
 
     List<HbckInfo> metaRegions = getMetaRegions();
     // If there is no region holding .META., no way to fix

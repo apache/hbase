@@ -51,14 +51,17 @@ public class TestBatchedUpload {
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static int SLAVES = 5;
-  
+
   private enum RegionServerAction {
     KILL_REGIONSERVER,
     MOVE_REGION
   }
-  
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().set(HBaseTestingUtility.FS_TYPE_KEY,
+        HBaseTestingUtility.FS_TYPE_LFS);
+
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
@@ -67,13 +70,13 @@ public class TestBatchedUpload {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=100000)
+  @Test(timeout = 200000)
   public void testBatchedUpload() throws Exception {
     byte [] TABLE = Bytes.toBytes("testBatchedUpload");
     int NUM_REGIONS = 10;
     HTable ht = TEST_UTIL.createTable(TABLE, new byte[][]{FAMILY},
         3, Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
-   
+
     int NUM_ROWS = 1000;
 
     // start batch processing
@@ -87,7 +90,7 @@ public class TestBatchedUpload {
     ht.close();
   }
 
-  @Test(timeout=100000)
+  @Test(timeout = 200000)
   /*
    * Test to make sure that if a region moves benignly, and both
    * the source and dest region servers are alive, then the batch
@@ -104,7 +107,7 @@ public class TestBatchedUpload {
     // do a bunch of puts
     // finish batch. Check for Exceptions.
     HMaster m = TEST_UTIL.getHBaseCluster().getMaster();
-    
+
     // Disable the load balancer as the movement of the region might cause the
     // load balancer to kick in and move the regions causing the end of batched
     // upload to fail.
@@ -125,7 +128,7 @@ public class TestBatchedUpload {
    * @param action -- enum RegionServerAction which defines the type of action.
    * @return number of attempts to complete the batch.
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public int writeData(HTable table, long numRows, RegionServerAction action) throws IOException, InterruptedException {
     int attempts = 0;
@@ -151,24 +154,24 @@ public class TestBatchedUpload {
           byte[] value = rowKey; // value is the same as the row key
           put.add(FAMILY, QUALIFIER, value);
           put.setWriteToWAL(false);
-          
+
           prob = rand.nextDouble();
           if (kills < 2 && prob < killProb) { // kill up to 2 rs
             kills++;
             // Find the region server for the next put
             HRegionLocation regLoc = table.getRegionLocation(put.row);
             int srcRSIdx = cluster.getServerWith(regLoc.getRegionInfo().getRegionName());
- 
+
             LOG.debug("Try " + attempts + " written Puts : " + i);
             if (action == RegionServerAction.KILL_REGIONSERVER) {
               // abort the region server
               LOG.info("Killing region server " + srcRSIdx
-                  + " before the next put. Got probability " + 
+                  + " before the next put. Got probability " +
                   prob + " < " + killProb);
               cluster.abortRegionServer(srcRSIdx);
-              
+
             } else if (action == RegionServerAction.MOVE_REGION) {
-              
+
               // move the region to some other Region Server
               HRegionServer dstRS = cluster.getRegionServer(
                   (srcRSIdx + 1) % cluster.getLiveRegionServerThreads().size());
@@ -206,7 +209,7 @@ public class TestBatchedUpload {
       get.addColumn(FAMILY, QUALIFIER);
       get.setMaxVersions(1);
       Result result = table.get(get.create());
-      
+
       assertTrue(Arrays.equals(rowKey, result.getValue(FAMILY, QUALIFIER)));
     }
   }

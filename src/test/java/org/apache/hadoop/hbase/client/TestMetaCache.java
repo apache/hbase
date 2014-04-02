@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.Test;
 
 /**
@@ -36,15 +37,16 @@ public class TestMetaCache {
 
   @Test
   public void testBasic() {
-    final byte[] TABLE = Bytes.toBytes(this.getClass().getSimpleName());
-    final byte[] TABLE2 = Bytes.toBytes(this.getClass().getSimpleName() + "2");
+    final StringBytes TABLE = new StringBytes(this.getClass().getSimpleName());
+    final StringBytes TABLE2 =
+        new StringBytes(this.getClass().getSimpleName() + "2");
     final byte[] START_KEY = Bytes.toBytes("aaa");
     final byte[] END_KEY = Bytes.toBytes("ggg");
     final byte[] SMALL_ROW = Bytes.toBytes("a");
     final byte[] ROW = Bytes.toBytes("ddd");
 
     final HRegionLocation LOCATION = new HRegionLocation(new HRegionInfo(
-        new HTableDescriptor(TABLE), START_KEY, END_KEY),
+        new HTableDescriptor(TABLE.getBytes()), START_KEY, END_KEY),
         new HServerAddress("10.0.0.11:1234"));
 
     MetaCache metaCache = new MetaCache();
@@ -71,8 +73,8 @@ public class TestMetaCache {
 
     // Add another location of the same table at the same server
     metaCache.add(TABLE, new HRegionLocation(new HRegionInfo(
-        new HTableDescriptor(TABLE), HConstants.EMPTY_START_ROW, START_KEY),
-        new HServerAddress("10.0.0.11:1234")));
+        new HTableDescriptor(TABLE.getBytes()), HConstants.EMPTY_START_ROW,
+        START_KEY), new HServerAddress("10.0.0.11:1234")));
 
     Assert.assertEquals("should found", LOCATION, metaCache.getForRow(TABLE, ROW));
     Assert.assertNotNull("should found", metaCache.getForRow(TABLE, SMALL_ROW));
@@ -84,8 +86,8 @@ public class TestMetaCache {
 
     // Add another location of the different table at the different server
     metaCache.add(TABLE2, new HRegionLocation(new HRegionInfo(
-        new HTableDescriptor(TABLE2), END_KEY, HConstants.EMPTY_START_ROW),
-        new HServerAddress("10.0.0.12:1234")));
+        new HTableDescriptor(TABLE2.getBytes()), END_KEY,
+        HConstants.EMPTY_START_ROW), new HServerAddress("10.0.0.12:1234")));
 
     Assert.assertEquals("getNumber", 2, metaCache.getNumber(TABLE));
     Assert.assertEquals("get(table).size", 2, metaCache.getForTable(TABLE).size());

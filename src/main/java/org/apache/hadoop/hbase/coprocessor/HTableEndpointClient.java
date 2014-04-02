@@ -67,8 +67,8 @@ public class HTableEndpointClient implements IEndpointClient {
           throws Throwable {
         HConnection conn = table.getConnectionAndResetOperationContext();
         return conn.getRegionServerWithRetries(new ServerCallable<byte[]>(
-            table.getConnection(), table.getTableName(), region.getStartKey(),
-            table.getOptions()) {
+            table.getConnection(), table.getTableNameStringBytes(),
+            region.getStartKey(), table.getOptions()) {
           @Override
           public byte[] call() throws IOException {
             // TODO support arguments

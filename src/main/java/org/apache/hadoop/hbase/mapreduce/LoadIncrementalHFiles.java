@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -56,6 +55,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -75,13 +75,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   public static String EXIT_ON_FIRST_FAILURE = "hbase.mapreduce.bulkload.failure.exitOnFirst";
   private boolean exitOnFirstFailure;
 
-  private Configuration conf;
-
   public LoadIncrementalHFiles(Configuration conf) {
     super(conf);
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
     exitOnFirstFailure = conf.getBoolean(EXIT_ON_FIRST_FAILURE, true);
-    this.conf = conf;
   }
 
   public LoadIncrementalHFiles() {
@@ -163,7 +160,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   {
     HConnection conn = table.getConnectionAndResetOperationContext();
 
-    if (!conn.isTableAvailable(table.getTableName())) {
+    if (!conn.isTableAvailable(table.getTableNameStringBytes())) {
       throw new TableNotFoundException("Table " +
           Bytes.toStringBinary(table.getTableName()) +
           "is not currently available.");
@@ -245,7 +242,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     final Path tmpDir = new Path(item.hfilePath.getParent(), "_tmp");
 
     conn.getRegionServerWithRetries(
-      new ServerCallable<Void>(conn, table, first) {
+      new ServerCallable<Void>(conn, new StringBytes(table), first) {
         @Override
         public Void call() throws Exception {
           LOG.debug("Going to connect to server " + location +

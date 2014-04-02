@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
 /**
@@ -65,8 +66,8 @@ public interface HConnection extends Closeable {
    * @return True if table exists already.
    * @throws MasterNotRunningException if the master is not running
    */
-  public boolean tableExists(final byte [] tableName)
-  throws MasterNotRunningException;
+  public boolean tableExists(StringBytes tableName)
+      throws MasterNotRunningException;
 
   /**
    * A table that isTableEnabled == false and isTableDisabled == false
@@ -76,21 +77,21 @@ public interface HConnection extends Closeable {
    * @return true if the table is enabled, false otherwise
    * @throws IOException if a remote or network exception occurs
    */
-  public boolean isTableEnabled(byte[] tableName) throws IOException;
+  public boolean isTableEnabled(StringBytes tableName) throws IOException;
 
   /**
    * @param tableName table name
    * @return true if the table is disabled, false otherwise
    * @throws IOException if a remote or network exception occurs
    */
-  public boolean isTableDisabled(byte[] tableName) throws IOException;
+  public boolean isTableDisabled(StringBytes tableName) throws IOException;
 
   /**
    * @param tableName table name
    * @return true if all regions of the table are available, false otherwise
    * @throws IOException if a remote or network exception occurs
    */
-  public boolean isTableAvailable(byte[] tableName) throws IOException;
+  public boolean isTableAvailable(StringBytes tableName) throws IOException;
 
   /**
    * List all the userspace tables.  In other words, scan the META table.
@@ -109,7 +110,7 @@ public interface HConnection extends Closeable {
    * @return table metadata
    * @throws IOException if a remote or network exception occurs
    */
-  public HTableDescriptor getHTableDescriptor(byte[] tableName)
+  public HTableDescriptor getHTableDescriptor(StringBytes tableName)
   throws IOException;
 
   /**
@@ -121,8 +122,7 @@ public interface HConnection extends Closeable {
    * question
    * @throws IOException if a remote or network exception occurs
    */
-  public HRegionLocation locateRegion(final byte [] tableName,
-      final byte [] row)
+  public HRegionLocation locateRegion(StringBytes tableName, byte[] row)
   throws IOException;
 
   /**
@@ -139,8 +139,7 @@ public interface HConnection extends Closeable {
    * question
    * @throws IOException if a remote or network exception occurs
    */
-  public HRegionLocation relocateRegion(final byte [] tableName,
-      final byte [] row)
+  public HRegionLocation relocateRegion(StringBytes tableName, byte[] row)
   throws IOException;
 
   /**
@@ -193,7 +192,7 @@ public interface HConnection extends Closeable {
    * @return Location of row.
    * @throws IOException if a remote or network exception occurs
    */
-  HRegionLocation getRegionLocation(byte [] tableName, byte [] row,
+  HRegionLocation getRegionLocation(StringBytes tableName, byte[] row,
     boolean reload)
   throws IOException;
 
@@ -239,9 +238,8 @@ public interface HConnection extends Closeable {
    * @throws IOException
    *           if a remote or network exception occurs
    */
-  public Result[] processBatchOfGets(List<Get> actions,
-      final byte[] tableName, final HBaseRPCOptions options)
- throws IOException;
+  public Result[] processBatchOfGets(List<Get> actions, StringBytes tableName,
+      final HBaseRPCOptions options) throws IOException;
 
   /**
    * Process a batch of Puts. Does the retries.
@@ -251,8 +249,8 @@ public interface HConnection extends Closeable {
    * @return Count of committed Puts.  On fault, < list.size().
    * @throws IOException if a remote or network exception occurs
    */
-  public int processBatchOfRows(ArrayList<Put> list, byte[] tableName, HBaseRPCOptions options)
-  throws IOException;
+  public int processBatchOfRows(ArrayList<Put> list, StringBytes tableName,
+      HBaseRPCOptions options) throws IOException;
 
   /**
    * Process a batch of Deletes. Does the retries.
@@ -262,15 +260,15 @@ public interface HConnection extends Closeable {
    * @return Count of committed Deletes. On fault, < list.size().
    * @throws IOException if a remote or network exception occurs
    */
-  public int processBatchOfDeletes(List<Delete> list, byte[] tableName,
-      final HBaseRPCOptions options)
-  throws IOException;
+  public int processBatchOfDeletes(List<Delete> list, StringBytes tableName,
+      final HBaseRPCOptions options) throws IOException;
 
-  public void processBatchOfPuts(List<Put> list, final byte[] tableName, HBaseRPCOptions options)
+  public void processBatchOfPuts(List<Put> list, StringBytes tableName,
+      HBaseRPCOptions options)
   throws IOException;
 
   public int processBatchOfRowMutations(final List<RowMutations> list,
-      final byte[] tableName, final HBaseRPCOptions options) throws IOException;
+      StringBytes tableName, final HBaseRPCOptions options) throws IOException;
 
   /**
    * Process a mixed batch of Get actions. All actions for a
@@ -287,7 +285,7 @@ public interface HConnection extends Closeable {
    * @throws IOException,InterruptedException if there are problems talking to META.
    *  Or, operations were not successfully completed.
    */
-  public void processBatchedGets(List<Get> actions, final byte[] tableName,
+  public void processBatchedGets(List<Get> actions, StringBytes tableName,
       ExecutorService pool, Result[] results, HBaseRPCOptions options)
       throws IOException, InterruptedException;
 
@@ -304,9 +302,9 @@ public interface HConnection extends Closeable {
    * @throws IOException,InterruptedException if there are problems talking to
    * META. Or, operations were not successfully completed.
    */
-  public void processBatchedMutations(List<Mutation> actions, final byte[] tableName,
-      ExecutorService pool, List<Mutation> failures, HBaseRPCOptions options)
-      throws IOException, InterruptedException;
+  public void processBatchedMutations(List<Mutation> actions,
+      StringBytes tableName, ExecutorService pool, List<Mutation> failures,
+      HBaseRPCOptions options) throws IOException, InterruptedException;
 
 
   /**
@@ -324,7 +322,7 @@ public interface HConnection extends Closeable {
    * @throws IOException
    */
   public List<Put> processListOfMultiPut(List<MultiPut> mputs,
-      final byte[] tableName, HBaseRPCOptions options,
+      StringBytes tableName, HBaseRPCOptions options,
       Map<String, HRegionFailureInfo> failureInfo) throws IOException;
 
   /**
@@ -333,7 +331,7 @@ public interface HConnection extends Closeable {
    * @param row
    * @param oldLoc
    */
-  public void deleteCachedLocation(final byte [] tableName, final byte [] row,
+  public void deleteCachedLocation(StringBytes tableName, final byte[] row,
       HServerAddress oldLoc);
 
   /**
@@ -343,8 +341,7 @@ public interface HConnection extends Closeable {
    * @param tableName name of table to configure.
    * @param enable Set to true to enable region cache prefetch.
    */
-  public void setRegionCachePrefetch(final byte[] tableName,
-      final boolean enable);
+  public void setRegionCachePrefetch(StringBytes tableName, boolean enable);
 
   /**
    * Check whether region cache prefetch is enabled or not.
@@ -353,14 +350,14 @@ public interface HConnection extends Closeable {
    * @return true if table's region cache prefetch is enabled. Otherwise
    *         it is disabled.
    */
-  public boolean getRegionCachePrefetch(final byte[] tableName);
+  public boolean getRegionCachePrefetch(StringBytes tableName);
 
   /**
    * Load the region map and warm up the global region cache for the table.
    * @param tableName name of the table to perform region cache warm-up.
    * @param regions a region map.
    */
-  public void prewarmRegionCache(final byte[] tableName,
+  public void prewarmRegionCache(StringBytes tableName,
       final Map<HRegionInfo, HServerAddress> regions);
 
   /**
@@ -369,7 +366,7 @@ public interface HConnection extends Closeable {
    * disk at the end of the job.
    * @param tableName -- the table for which we should start tracking
    */
-  public void startBatchedLoad(byte[] tableName);
+  public void startBatchedLoad(StringBytes tableName);
 
   /**
    * Ensure that all the updates made to the table, since
@@ -381,7 +378,8 @@ public interface HConnection extends Closeable {
    * @param tableName -- tableName to flush all puts/deletes for.
    * @param options -- hbase rpc options to use when talking to regionservers
    */
-  public void endBatchedLoad(byte[] tableName, HBaseRPCOptions options) throws IOException;
+  public void endBatchedLoad(StringBytes tableName, HBaseRPCOptions options)
+      throws IOException;
 
   /**
    * Get the context of the last operation. This call will return a copy
@@ -435,6 +433,6 @@ public interface HConnection extends Closeable {
    * @param forceRefresh Whether to force to refresh the HRegionLocations from META.
    * @return cachedHRegionLocations
    */
-  public Collection<HRegionLocation> getCachedHRegionLocations(final byte [] tableName,
-                                                               boolean forceRefresh);
+  public Collection<HRegionLocation> getCachedHRegionLocations(
+      StringBytes tableName, boolean forceRefresh);
 }

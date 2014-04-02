@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.CompactionManager;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.io.nativeio.NativeIO;
 
 /**
@@ -499,9 +500,15 @@ public final class HConstants {
 
   /** The root table's name.*/
   public static final byte [] ROOT_TABLE_NAME = Bytes.toBytes("-ROOT-");
+  /** The StringBytes instance for ROOT_TABLE_NAME */
+  public static final StringBytes ROOT_TABLE_NAME_STRINGBYTES =
+      new StringBytes(ROOT_TABLE_NAME);
 
   /** The META table's name. */
   public static final byte [] META_TABLE_NAME = Bytes.toBytes(".META.");
+  /** The StringBytes instance for META_TABLE_NAME */
+  public static final StringBytes META_TABLE_NAME_STRINGBYTES =
+      new StringBytes(META_TABLE_NAME);
 
   /** delimiter used between portions of a region name */
   public static final int META_ROW_DELIMITER = ',';
@@ -549,6 +556,12 @@ public final class HConstants {
    * Used by scanners, etc when they want to start at the beginning of a region
    */
   public static final byte [] EMPTY_START_ROW = EMPTY_BYTE_ARRAY;
+
+  /**
+   * An empty StringBytes.
+   */
+  public static final StringBytes EMPTY_STRING_BYTES = new StringBytes(
+      EMPTY_BYTE_ARRAY);
 
   public static final ByteBuffer EMPTY_START_ROW_BUF = ByteBuffer.wrap(EMPTY_START_ROW);
 

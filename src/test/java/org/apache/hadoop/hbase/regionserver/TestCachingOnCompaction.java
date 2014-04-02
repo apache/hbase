@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -193,7 +195,8 @@ public class TestCachingOnCompaction {
     col.setBlockCacheEnabled(true);
     col.setDataBlockEncoding(type);
 
-    ht.getConnectionAndResetOperationContext().getHTableDescriptor(TABLE).addFamily(col);
+    ht.getConnectionAndResetOperationContext()
+        .getHTableDescriptor(new StringBytes(TABLE)).addFamily(col);
 
     region = TEST_UTIL.createTestRegion(tableName, col);
 

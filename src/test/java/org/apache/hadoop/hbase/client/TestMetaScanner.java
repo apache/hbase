@@ -19,17 +19,23 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.mockito.Matchers.anyObject;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.mockito.Mockito.*;
 
 public class TestMetaScanner {
   final Log LOG = LogFactory.getLog(getClass());
@@ -51,7 +57,7 @@ public class TestMetaScanner {
   @Test
   public void testMetaScanner() throws Exception {
     LOG.info("Starting testMetaScanner");
-    final byte[] TABLENAME = Bytes.toBytes("testMetaScanner");
+    final StringBytes TABLENAME = new StringBytes("testMetaScanner");
     final byte[] FAMILY = Bytes.toBytes("family");
     TEST_UTIL.createTable(TABLENAME, FAMILY);
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -63,34 +69,34 @@ public class TestMetaScanner {
           Bytes.toBytes("region_b")});
     // Make sure all the regions are deployed
     TEST_UTIL.countRows(table);
-    
-    MetaScanner.MetaScannerVisitor visitor = 
+
+    MetaScanner.MetaScannerVisitor visitor =
       mock(MetaScanner.MetaScannerVisitor.class);
     doReturn(true).when(visitor).processRow((Result)anyObject());
 
     // Scanning the entire table should give us three rows
     MetaScanner.metaScan(conf, visitor, TABLENAME);
     verify(visitor, times(3)).processRow((Result)anyObject());
-    
+
     // Scanning the table with a specified empty start row should also
     // give us three META rows
     reset(visitor);
     doReturn(true).when(visitor).processRow((Result)anyObject());
     MetaScanner.metaScan(conf, visitor, TABLENAME, HConstants.EMPTY_BYTE_ARRAY, 1000);
     verify(visitor, times(3)).processRow((Result)anyObject());
-    
+
     // Scanning the table starting in the middle should give us two rows:
     // region_a and region_b
     reset(visitor);
     doReturn(true).when(visitor).processRow((Result)anyObject());
     MetaScanner.metaScan(conf, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1000);
     verify(visitor, times(2)).processRow((Result)anyObject());
-    
+
     // Scanning with a limit of 1 should only give us one row
     reset(visitor);
     doReturn(true).when(visitor).processRow((Result)anyObject());
     MetaScanner.metaScan(conf, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1);
     verify(visitor, times(1)).processRow((Result)anyObject());
-        
+
   }
 }

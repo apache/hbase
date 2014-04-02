@@ -116,6 +116,7 @@ import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.Writables;
@@ -1746,7 +1747,7 @@ public class HMaster extends HasThread implements HMasterInterface,
           }
       };
 
-      MetaScanner.metaScan(conf, visitor, tableName);
+      MetaScanner.metaScan(conf, visitor, new StringBytes(tableName));
     }
     else {
       List<MetaRegion> metaRegions = regionManager.getListOfOnlineMetaRegions();
@@ -1806,7 +1807,7 @@ public class HMaster extends HasThread implements HMasterInterface,
         }
     };
 
-    MetaScanner.metaScan(conf, visitor, tableName, rowKey, 1);
+    MetaScanner.metaScan(conf, visitor, new StringBytes(tableName), rowKey, 1);
     return result.get();
   }
 
@@ -1866,7 +1867,7 @@ public class HMaster extends HasThread implements HMasterInterface,
    */
   public HTableDescriptor getTableDescriptor(final byte [] tableName)
   throws IOException {
-    return this.connection.getHTableDescriptor(tableName);
+    return this.connection.getHTableDescriptor(new StringBytes(tableName));
   }
 
   @Override

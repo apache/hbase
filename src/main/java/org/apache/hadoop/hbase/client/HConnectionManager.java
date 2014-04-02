@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.thrift.HBaseThriftRPC;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
 /**
@@ -167,7 +168,7 @@ public class HConnectionManager {
    *
    * @return Number of cached regions for the table.
    */
-  static int getCachedRegionCount(Configuration conf, byte[] tableName) {
+  static int getCachedRegionCount(Configuration conf, StringBytes tableName) {
     TableServers connection = (TableServers) getConnection(conf);
     return connection.metaCache.getNumber(tableName);
   }
@@ -178,7 +179,7 @@ public class HConnectionManager {
    *
    * @return true if the region where the table and row reside is cached.
    */
-  static boolean isRegionCached(Configuration conf, byte[] tableName,
+  static boolean isRegionCached(Configuration conf, StringBytes tableName,
       byte[] row) {
     TableServers connection = (TableServers) getConnection(conf);
     return connection.metaCache.getForRow(tableName, row) != null;

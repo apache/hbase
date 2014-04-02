@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.hbase.util.Writables;
 
 /**
@@ -51,7 +52,7 @@ public class MetaScanner {
   public static void metaScan(Configuration configuration,
       MetaScannerVisitor visitor)
   throws IOException {
-    metaScan(configuration, visitor, HConstants.EMPTY_START_ROW);
+    metaScan(configuration, visitor, HConstants.EMPTY_STRING_BYTES);
   }
 
   /**
@@ -64,7 +65,7 @@ public class MetaScanner {
    * @throws IOException e
    */
   public static void metaScan(Configuration configuration,
-      MetaScannerVisitor visitor, byte[] tableName)
+      MetaScannerVisitor visitor, StringBytes tableName)
   throws IOException {
     metaScan(configuration, visitor, tableName, null, Integer.MAX_VALUE);
   }
@@ -84,10 +85,11 @@ public class MetaScanner {
    * @throws IOException e
    */
   public static void metaScan(Configuration configuration,
-      MetaScannerVisitor visitor, byte[] tableName, byte[] row,
+      MetaScannerVisitor visitor, StringBytes tableName, byte[] row,
       int rowLimit)
   throws IOException {
-    metaScan(configuration, visitor, HConstants.META_TABLE_NAME, tableName, row, rowLimit);
+    metaScan(configuration, visitor, HConstants.META_TABLE_NAME_STRINGBYTES,
+        tableName, row, rowLimit);
   }
 
   /**
@@ -106,7 +108,7 @@ public class MetaScanner {
    * @throws IOException e
    */
   public static void metaScan(Configuration configuration, MetaScannerVisitor visitor,
-    byte[] metaTableName, byte[] tableName, byte[] row,
+      StringBytes metaTableName, StringBytes tableName, byte[] row,
       int rowLimit)
   throws IOException {
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
@@ -119,35 +121,37 @@ public class MetaScanner {
       // Scan starting at a particular row in a particular table
       assert tableName != null;
       byte[] searchRow =
-        HRegionInfo.createRegionName(tableName, row, HConstants.NINES,
+          HRegionInfo.createRegionName(tableName.getBytes(), row,
+              HConstants.NINES,
           false);
-      HTable metaTable = new HTable(configuration , metaTableName);
+      HTable metaTable = new HTable(configuration, metaTableName.getString());
       Result startRowResult = metaTable.getRowOrBefore(searchRow,
           HConstants.CATALOG_FAMILY);
       if (startRowResult == null) {
         throw new TableNotFoundException("Cannot find row in .META. for table: "
-                + Bytes.toStringBinary(tableName) + ", row="
+ + tableName + ", row="
                 + Bytes.toStringBinary(searchRow));
       }
       byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
           HConstants.REGIONINFO_QUALIFIER);
       if (value == null || value.length == 0) {
         throw new IOException("HRegionInfo was null or empty in Meta for "
-            + Bytes.toStringBinary(tableName) + ", row="
+            + tableName + ", row="
             + Bytes.toStringBinary(searchRow));
       }
       HRegionInfo regionInfo = Writables.getHRegionInfo(value);
 
       byte[] rowBefore = regionInfo.getStartKey();
-      startRow = HRegionInfo.createRegionName(tableName, rowBefore,
+      startRow =
+          HRegionInfo.createRegionName(tableName.getBytes(), rowBefore,
           HConstants.ZEROES, false);
-    } else if (tableName == null || tableName.length == 0) {
+    } else if (tableName == null || tableName.isEmpty()) {
       // Full META scan
       startRow = HConstants.EMPTY_START_ROW;
     } else {
       // Scan META for an entire table
-      startRow = HRegionInfo.createRegionName(
-          tableName, HConstants.EMPTY_START_ROW, HConstants.ZEROES, false);
+      startRow = HRegionInfo.createRegionName(tableName.getBytes(),
+          HConstants.EMPTY_START_ROW, HConstants.ZEROES, false);
     }
 
     // Scan over each meta region

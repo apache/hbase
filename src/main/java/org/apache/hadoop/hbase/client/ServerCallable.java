@@ -20,15 +20,16 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.concurrent.Callable;
+
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.thrift.HBaseToThriftAdapter;
-
-import java.io.IOException;
-import java.util.concurrent.Callable;
+import org.apache.hadoop.hbase.util.StringBytes;
 
 /**
  * Abstract class that implements Callable, used by retryable actions.
@@ -36,7 +37,7 @@ import java.util.concurrent.Callable;
  */
 public abstract class ServerCallable<T> implements Callable<T> {
   protected final HConnection connection;
-  protected final byte [] tableName;
+  protected final StringBytes tableName;
   protected final byte [] row;
   protected HRegionLocation location;
   protected HRegionInterface server;
@@ -47,7 +48,8 @@ public abstract class ServerCallable<T> implements Callable<T> {
    * @param tableName table name callable is on
    * @param row row we are querying
    */
-  public ServerCallable(HConnection connection, byte [] tableName, byte [] row) {
+  public ServerCallable(HConnection connection, StringBytes tableName,
+      byte[] row) {
     this (connection, tableName, row, HBaseRPCOptions.DEFAULT);
   }
 
@@ -58,8 +60,8 @@ public abstract class ServerCallable<T> implements Callable<T> {
    * @param row row we are querying
    * @param options client options for ipc layer
    */
-  public ServerCallable(HConnection connection, byte [] tableName, byte [] row, 
-      HBaseRPCOptions options) {
+  public ServerCallable(HConnection connection, StringBytes tableName,
+      byte[] row, HBaseRPCOptions options) {
     this.connection = connection;
     this.tableName = tableName;
     this.row = row;
@@ -76,7 +78,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
   }
 
   /**
-   * Must be called after a successful call to instantiateRegionLocation() 
+   * Must be called after a successful call to instantiateRegionLocation()
    * @throws IOException e
    */
   public void instantiateServer() throws IOException {
@@ -116,7 +118,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
     return location;
   }
 
-  public byte[] getTableName() {
+  public StringBytes getTableName() {
     return tableName;
   }
 

@@ -43,7 +43,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -81,6 +80,7 @@ import org.apache.hadoop.hbase.regionserver.RegionOverloadedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MetaUtils;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
@@ -226,13 +226,14 @@ public class TableServers implements ServerConnection {
     new CopyOnWriteArraySet<Integer>();
   // keep track of servers that have been updated for batchedLoad
   // tablename -> Map
-  Map<String, ConcurrentMap<HRegionInfo, HRegionLocation>> batchedUploadUpdatesMap;
+  final Map<StringBytes, ConcurrentMap<HRegionInfo, HRegionLocation>>
+    batchedUploadUpdatesMap = new ConcurrentHashMap<>();
   private int batchedUploadSoftFlushRetries;
   private long batchedUploadSoftFlushTimeoutMillis;
   private final boolean useThrift;
 
-  private ConcurrentSkipListSet<byte[]> initializedTableSet =
-    new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
+  private Map<StringBytes, StringBytes> initializedTableSet =
+      new ConcurrentHashMap<>();
   /**
    * constructor
    * @param conf Configuration object
@@ -280,8 +281,6 @@ public class TableServers implements ServerConnection {
         conf.getInt("hbase.client.batched-upload.softflush.retries", 10);
     this.batchedUploadSoftFlushTimeoutMillis =
         conf.getLong("hbase.client.batched-upload.softflush.timeout.ms", 60000L); // 1 min
-    batchedUploadUpdatesMap  = new ConcurrentHashMap<String,
-        ConcurrentMap<HRegionInfo, HRegionLocation>>();
 
     this.recordClientContext = conf.getBoolean("hbase.client.record.context", false);
 
@@ -380,7 +379,7 @@ public class TableServers implements ServerConnection {
   }
 
   @Override
-  public boolean tableExists(final byte[] tableName)
+  public boolean tableExists(StringBytes tableName)
       throws MasterNotRunningException {
     getMaster();
     if (tableName == null) {
@@ -393,7 +392,7 @@ public class TableServers implements ServerConnection {
     try {
       HTableDescriptor[] tables = listTables();
       for (HTableDescriptor table : tables) {
-        if (Bytes.equals(table.getName(), tableName)) {
+        if (tableName.equalBytes(table.getName())) {
           exists = true;
         }
       }
@@ -409,14 +408,15 @@ public class TableServers implements ServerConnection {
    * @return Truen if passed tablename <code>n</code> is equal to the name of
    * a catalog table.
    */
-  private static boolean isMetaTableName(final byte[] n) {
-    return MetaUtils.isMetaTableName(n);
+  private static boolean isMetaTableName(StringBytes n) {
+    return MetaUtils.isMetaTableName(n.getBytes());
   }
 
   @Override
-  public HRegionLocation getRegionLocation(final byte[] name,
+  public HRegionLocation getRegionLocation(StringBytes tableName,
       final byte[] row, boolean reload) throws IOException {
-    return reload ? relocateRegion(name, row) : locateRegion(name, row);
+    return reload ? relocateRegion(tableName, row) :
+      locateRegion(tableName, row);
   }
 
   @Override
@@ -450,17 +450,18 @@ public class TableServers implements ServerConnection {
   }
 
   @Override
-  public boolean isTableEnabled(byte[] tableName) throws IOException {
+  public boolean isTableEnabled(StringBytes tableName) throws IOException {
     return testTableOnlineState(tableName, true);
   }
 
   @Override
-  public boolean isTableDisabled(byte[] tableName) throws IOException {
+  public boolean isTableDisabled(StringBytes tableName) throws IOException {
     return testTableOnlineState(tableName, false);
   }
 
   @Override
-  public boolean isTableAvailable(final byte[] tableName) throws IOException {
+  public boolean isTableAvailable(final StringBytes tableName)
+      throws IOException {
     final AtomicBoolean available = new AtomicBoolean(true);
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
       @Override
@@ -469,7 +470,7 @@ public class TableServers implements ServerConnection {
             HConstants.REGIONINFO_QUALIFIER);
         HRegionInfo info = Writables.getHRegionInfoOrNull(value);
         if (info != null) {
-          if (Bytes.equals(tableName, info.getTableDesc().getName())) {
+          if (tableName.equalBytes(info.getTableDesc().getName())) {
             value = row.getValue(HConstants.CATALOG_FAMILY,
                 HConstants.SERVER_QUALIFIER);
             if (value == null) {
@@ -490,18 +491,19 @@ public class TableServers implements ServerConnection {
    * any other case If online == false Returns true if all regions are offline
    * Returns false in any other case
    */
-  private boolean testTableOnlineState(byte[] tableName, boolean online)
+  private boolean testTableOnlineState(StringBytes tableName, boolean online)
       throws IOException {
     if (!tableExists(tableName)) {
-      throw new TableNotFoundException(Bytes.toStringBinary(tableName));
+      throw new TableNotFoundException(tableName.toString());
     }
-    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+    if (tableName.equals(HConstants.ROOT_TABLE_NAME_STRINGBYTES)) {
       // The root region is always enabled
       return true;
     }
     int rowsScanned = 0;
     int rowsOffline = 0;
-    byte[] startKey = HRegionInfo.createRegionName(tableName, null,
+    byte[] startKey =
+        HRegionInfo.createRegionName(tableName.getBytes(), null,
         HConstants.ZEROES, false);
     byte[] endKey;
     HRegionInfo currentRegion;
@@ -509,9 +511,12 @@ public class TableServers implements ServerConnection {
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     int rows = this.conf.getInt("hbase.meta.scanner.caching", 100);
     scan.setCaching(rows);
-    ScannerCallable s = new ScannerCallable(this, (Bytes.equals(tableName,
-        HConstants.META_TABLE_NAME) ? HConstants.ROOT_TABLE_NAME
-        : HConstants.META_TABLE_NAME), scan, HBaseRPCOptions.DEFAULT);
+    StringBytes parentTable =
+        tableName.equals(HConstants.META_TABLE_NAME_STRINGBYTES)
+        ? HConstants.ROOT_TABLE_NAME_STRINGBYTES
+        : HConstants.META_TABLE_NAME_STRINGBYTES;
+    ScannerCallable s = new ScannerCallable(this, parentTable, scan,
+        HBaseRPCOptions.DEFAULT);
     try {
       // Open scanner
       getRegionServerWithRetries(s);
@@ -527,7 +532,7 @@ public class TableServers implements ServerConnection {
           if (value != null) {
             HRegionInfo info = Writables.getHRegionInfoOrNull(value);
             if (info != null) {
-              if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
+              if (tableName.equalBytes(info.getTableDesc().getName())) {
                 rowsScanned += 1;
                 rowsOffline += info.isOffline() ? 1 : 0;
               }
@@ -576,44 +581,45 @@ public class TableServers implements ServerConnection {
   }
 
   @Override
-  public HTableDescriptor getHTableDescriptor(final byte[] tableName)
+  public HTableDescriptor getHTableDescriptor(StringBytes tableName)
       throws IOException {
-    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+    if (tableName.equals(HConstants.ROOT_TABLE_NAME_STRINGBYTES)) {
       return new UnmodifyableHTableDescriptor(HTableDescriptor.ROOT_TABLEDESC);
     }
-    if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
+    if (tableName.equals(HConstants.META_TABLE_NAME_STRINGBYTES)) {
       return HTableDescriptor.META_TABLEDESC;
     }
-    TableServers.HTableDescriptorFinder finder = new HTableDescriptorFinder(tableName);
+    TableServers.HTableDescriptorFinder finder =
+        new HTableDescriptorFinder(tableName.getBytes());
     MetaScanner.metaScan(conf, finder, tableName);
     HTableDescriptor result = finder.getResult();
     if (result == null) {
-      throw new TableNotFoundException(Bytes.toStringBinary(tableName));
+      throw new TableNotFoundException(tableName.toString());
     }
     return result;
   }
 
   @Override
-  public HRegionLocation locateRegion(final byte[] tableName, final byte[] row)
+  public HRegionLocation locateRegion(StringBytes tableName, final byte[] row)
       throws IOException {
     return locateRegion(tableName, row, true);
   }
 
   @Override
-  public HRegionLocation relocateRegion(final byte[] tableName,
-      final byte[] row) throws IOException {
+  public HRegionLocation relocateRegion(StringBytes tableName, byte[] row)
+      throws IOException {
     return locateRegion(tableName, row, false);
   }
 
-  private HRegionLocation locateRegion(final byte[] tableName,
+  private HRegionLocation locateRegion(StringBytes tableName,
       final byte[] row, boolean useCache) throws IOException {
-    if (tableName == null || tableName.length == 0) {
+    if (tableName.isEmpty()) {
       throw new IllegalArgumentException(
           "table name cannot be null or zero length");
     }
-    if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
+    if (tableName.equals(HConstants.META_TABLE_NAME_STRINGBYTES)) {
       return locateMetaInRoot(row, useCache, metaRegionLock);
-    } else if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+    } else if (tableName.equals(HConstants.ROOT_TABLE_NAME_STRINGBYTES)) {
       synchronized (rootRegionLock) {
         // This block guards against two threads trying to find the root
         // region at the same time. One will go do the find while the
@@ -628,12 +634,12 @@ public class TableServers implements ServerConnection {
       }
     } else {
       // Region not in the cache - have to go to the meta RS
-      return locateRegionInMeta(HConstants.META_TABLE_NAME, tableName, row,
-          useCache, userRegionLock);
+      return locateRegionInMeta(HConstants.META_TABLE_NAME_STRINGBYTES,
+          tableName, row, useCache, userRegionLock);
     }
   }
 
-  private HRegionLocation prefetchRegionCache(final byte[] tableName,
+  private HRegionLocation prefetchRegionCache(final StringBytes tableName,
       final byte[] row) {
     return prefetchRegionCache(tableName, row, this.prefetchRegionLimit);
   }
@@ -646,7 +652,7 @@ public class TableServers implements ServerConnection {
    * @param the row in the .META. table. If it is null, all cache will be
    *        prefetched and null is returned.
    */
-  public HRegionLocation prefetchRegionCache(final byte[] tableName,
+  public HRegionLocation prefetchRegionCache(final StringBytes tableName,
       final byte[] row, int prefetchRegionLimit) {
     // Implement a new visitor for MetaScanner, and use it to walk through
     // the .META.
@@ -663,7 +669,7 @@ public class TableServers implements ServerConnection {
             regionInfo = Writables.getHRegionInfo(value);
 
             // possible we got a region of a different table...
-            if (!Bytes.equals(regionInfo.getTableDesc().getName(), tableName)) {
+            if (!tableName.equalBytes(regionInfo.getTableDesc().getName())) {
               return false; // stop scanning
             }
             if (regionInfo.isOffline()) {
@@ -713,8 +719,8 @@ public class TableServers implements ServerConnection {
     * Search the meta table (.META.) for the HRegionLocation info that
     * contains the table and row we're seeking.
     */
-  private HRegionLocation locateRegionInMeta(final byte [] parentTable,
-    final byte [] tableName, final byte [] row, boolean useCache,
+  private HRegionLocation locateRegionInMeta(StringBytes parentTable,
+      final StringBytes tableName, final byte[] row, boolean useCache,
     Object regionLockObject)
   throws IOException {
     HRegionLocation location;
@@ -731,7 +737,7 @@ public class TableServers implements ServerConnection {
     // build the key of the meta region we should be looking for.
     // the extra 9's on the end are necessary to allow "exact" matches
     // without knowing the precise region names.
-    byte [] metaKey = HRegionInfo.createRegionName(tableName, row,
+    byte[] metaKey = HRegionInfo.createRegionName(tableName.getBytes(), row,
       HConstants.NINES, false);
     for (int tries = 0; true; tries++) {
       if (tries >= params.getNumRetries()) {
@@ -790,8 +796,8 @@ public class TableServers implements ServerConnection {
 
             // If the parent table is META, we may want to pre-fetch some
             // region info into the global region cache for this table.
-            if (Bytes.equals(parentTable, HConstants.META_TABLE_NAME) &&
-              (getRegionCachePrefetch(tableName)) )  {
+            if (parentTable.equals(HConstants.META_TABLE_NAME_STRINGBYTES)
+                && getRegionCachePrefetch(tableName)) {
               LOG.debug("Prefetching the client location cache.");
               location = prefetchRegionCache(tableName, row);
               if (location != null) {
@@ -869,22 +875,23 @@ public class TableServers implements ServerConnection {
 }
 
 private HRegionLocation getLocationFromRow(Result regionInfoRow,
-                                           byte[] tableName, byte[] parentTable, byte[] row) throws IOException {
+      StringBytes tableName, StringBytes parentTable, byte[] row)
+      throws IOException {
   if (regionInfoRow == null) {
-    throw new TableNotFoundException(Bytes.toStringBinary(tableName));
+      throw new TableNotFoundException(tableName.toString());
   }
   byte[] value = regionInfoRow.getValue(HConstants.CATALOG_FAMILY,
     HConstants.REGIONINFO_QUALIFIER);
   if (value == null || value.length == 0) {
-    throw new IOException("HRegionInfo was null or empty in "
-      + Bytes.toStringBinary(parentTable) + ", row=" + regionInfoRow);
+      throw new IOException("HRegionInfo was null or empty in " + parentTable
+          + ", row=" + regionInfoRow);
   }
   // convert the row result into the HRegionLocation we need!
   HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(value,
     new HRegionInfo());
   // possible we got a region of a different table...
-  if (!Bytes.equals(regionInfo.getTableDesc().getName(), tableName)) {
-    throw new TableNotFoundException("Table '" + Bytes.toStringBinary(tableName)
+    if (!tableName.equalBytes(regionInfo.getTableDesc().getName())) {
+      throw new TableNotFoundException("Table '" + tableName
       + "' was not found.");
   }
   if (regionInfo.isOffline()) {
@@ -899,10 +906,9 @@ private HRegionLocation getLocationFromRow(Result regionInfoRow,
     serverAddress = Bytes.toString(value);
   }
   if (serverAddress.equals("")) {
-    throw new NoServerForRegionException("No server address listed "
-      + "in " + Bytes.toStringBinary(parentTable) + " for region "
-      + regionInfo.getRegionNameAsString() + " containing row "
-      + Bytes.toStringBinary(row));
+      throw new NoServerForRegionException("No server address listed in "
+          + parentTable + " for region " + regionInfo.getRegionNameAsString()
+          + " containing row " + Bytes.toStringBinary(row));
   }
 
   value = regionInfoRow.getValue(HConstants.CATALOG_FAMILY,
@@ -926,8 +932,8 @@ private HRegionLocation getLocationFromRow(Result regionInfoRow,
 private HRegionLocation locateMetaInRoot(final byte[] row,
                                          boolean useCache, Object regionLockObject) throws IOException {
   HRegionLocation location;
-  final byte[] parentTable = HConstants.ROOT_TABLE_NAME;
-  final byte[] tableName = HConstants.META_TABLE_NAME;
+  final StringBytes parentTable = HConstants.ROOT_TABLE_NAME_STRINGBYTES;
+  final StringBytes tableName = HConstants.META_TABLE_NAME_STRINGBYTES;
   if (useCache) {
       location = metaCache.getForRow(tableName, row);
     if (location != null) {
@@ -940,7 +946,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
   // build the key of the meta region we should be looking for.
   // the extra 9's on the end are necessary to allow "exact" matches
   // without knowing the precise region names.
-  byte[] metaKey = HRegionInfo.createRegionName(tableName, row,
+  byte[] metaKey = HRegionInfo.createRegionName(tableName.getBytes(), row,
     HConstants.NINES, false);
   for (int tries = 0; true; tries++) {
     if (tries >= params.getNumRetries()) {
@@ -1104,17 +1110,17 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
   @Override
   public Collection<HRegionLocation> getCachedHRegionLocations(
-      final byte[] tableName, boolean forceRefresh) {
-    if (forceRefresh || !initializedTableSet.contains(tableName)) {
+      StringBytes tableName, boolean forceRefresh) {
+    if (forceRefresh || !initializedTableSet.containsKey(tableName)) {
       prefetchRegionCache(tableName, null, Integer.MAX_VALUE);
-      initializedTableSet.add(tableName);
+      initializedTableSet.put(tableName, tableName);
     }
 
     return metaCache.getForTable(tableName).values();
   }
 
   @Override
-  public void deleteCachedLocation(final byte[] tableName, final byte[] row,
+  public void deleteCachedLocation(StringBytes tableName, final byte[] row,
       HServerAddress oldServer) {
     metaCache.deleteForRow(tableName, row, oldServer);
   }
@@ -1841,7 +1847,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
   }
 
   private HRegionLocation getRegionLocationForRowWithRetries(
-      byte[] tableName, byte[] rowKey, boolean reload) throws IOException {
+      StringBytes tableName, byte[] rowKey, boolean reload) throws IOException {
     boolean reloadFlag = reload;
     List<Throwable> exceptions = new ArrayList<Throwable>();
     HRegionLocation location = null;
@@ -1866,14 +1872,14 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
     if (location == null) {
       throw new RetriesExhaustedException(
           " -- nothing found, no 'location' returned," + " tableName="
-              + Bytes.toStringBinary(tableName) + ", reload=" + reload + " --",
+              + tableName + ", reload=" + reload + " --",
           HConstants.EMPTY_BYTE_ARRAY, rowKey, tries, exceptions);
     }
     return location;
   }
 
   private <R extends Row> Map<HServerAddress, MultiAction> splitRequestsByRegionServer(
-      List<R> workingList, final byte[] tableName, boolean isGets)
+      List<R> workingList, StringBytes tableName, boolean isGets)
       throws IOException {
     Map<HServerAddress, MultiAction> actionsByServer = new HashMap<HServerAddress, MultiAction>();
     for (int i = 0; i < workingList.size(); i++) {
@@ -1927,7 +1933,8 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
    * Collects responses from each of the RegionServers. If there are failures,
    * a list of failed operations is returned.
    */
-  private List<Mutation> collectResponsesForMutateFromAllRS(byte[] tableName,
+  private List<Mutation> collectResponsesForMutateFromAllRS(
+      StringBytes tableName,
       Map<HServerAddress, MultiAction> actionsByServer,
       Map<HServerAddress, Future<MultiResponse>> futures,
       Map<String, HRegionFailureInfo> failureInfo)
@@ -1974,7 +1981,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
    * result array. If there are failures, a list of failed operations is
    * returned.
    */
-  private List<Get> collectResponsesForGetFromAllRS(byte[] tableName,
+  private List<Get> collectResponsesForGetFromAllRS(StringBytes tableName,
       Map<HServerAddress, MultiAction> actionsByServer,
       Map<HServerAddress, Future<MultiResponse>> futures,
       List<Get> orig_list, Result[] results,
@@ -2015,7 +2022,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
   }
 
   private <R extends Mutation> List<Mutation> processMutationResponseFromOneRegionServer(
-      byte[] tableName, HServerAddress address, MultiResponse resp,
+      StringBytes tableName, HServerAddress address, MultiResponse resp,
       Map<byte[], List<R>> map, List<Mutation> newWorkingList,
       boolean isDelete, Map<String, HRegionFailureInfo> failureInfo)
       throws IOException {
@@ -2064,7 +2071,8 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
     return newWorkingList;
   }
 
-  private List<Get> processGetResponseFromOneRegionServer(byte[] tableName,
+  private List<Get> processGetResponseFromOneRegionServer(
+      StringBytes tableName,
       HServerAddress address, MultiAction request, MultiResponse resp,
       List<Get> orig_list, List<Get> newWorkingList, Result[] results,
       Map<String, HRegionFailureInfo> failureInfo) throws IOException {
@@ -2114,7 +2122,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
   @Override
   public void processBatchedMutations(List<Mutation> orig_list,
-      final byte[] tableName, ExecutorService pool, List<Mutation> failures,
+      StringBytes tableName, ExecutorService pool, List<Mutation> failures,
       HBaseRPCOptions options) throws IOException, InterruptedException {
 
     // Keep track of the most recent servers for any given item for better
@@ -2145,7 +2153,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
       // step 2: make the requests
       Map<HServerAddress, Future<MultiResponse>> futures = makeServerRequests(
-          actionsByServer, tableName, pool, options);
+          actionsByServer, tableName.getBytes(), pool, options);
 
       // step 3: collect the failures and successes and prepare for retry
       workingList = collectResponsesForMutateFromAllRS(tableName,
@@ -2162,7 +2170,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
   }
 
   @Override
-  public void processBatchedGets(List<Get> orig_list, final byte[] tableName,
+  public void processBatchedGets(List<Get> orig_list, StringBytes tableName,
       ExecutorService pool, Result[] results, HBaseRPCOptions options)
       throws IOException, InterruptedException {
 
@@ -2196,7 +2204,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
       // step 2: make the requests
       Map<HServerAddress, Future<MultiResponse>> futures = makeServerRequests(
-          actionsByServer, tableName, pool, options);
+          actionsByServer, tableName.getBytes(), pool, options);
 
       // step 3: collect the failures and successes and prepare for retry
       workingList = collectResponsesForGetFromAllRS(tableName,
@@ -2237,7 +2245,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
      *           other undefined exception
      */
     abstract int doCall(final List<? extends Row> currentList,
-        final byte[] row, final byte[] tableName, T ret) throws IOException,
+        final byte[] row, StringBytes tableName, T ret) throws IOException,
         RuntimeException;
 
     /**
@@ -2251,7 +2259,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
      * @throws IOException
      *           if a remote or network exception occurs
      */
-    int process(final List<? extends Row> list, final byte[] tableName, T ret)
+    int process(final List<? extends Row> list, StringBytes tableName, T ret)
         throws IOException {
       boolean isLastRow;
       boolean retryOnlyOne = false;
@@ -2316,7 +2324,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
      *
      * @throws IOException
      */
-    private byte[] getRegionName(final byte[] t, final byte[] r,
+    private byte[] getRegionName(StringBytes t, final byte[] r,
         final boolean re) throws IOException {
       HRegionLocation location = getRegionLocationForRowWithRetries(t, r, re);
       return location.getRegionInfo().getRegionName();
@@ -2352,15 +2360,14 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
   @Override
   public int processBatchOfRows(final ArrayList<Put> list,
-      final byte[] tableName, final HBaseRPCOptions options)
-      throws IOException {
+      StringBytes tableName, final HBaseRPCOptions options) throws IOException {
     if (list.isEmpty())
       return 0;
     Batch<Object> b = new Batch<Object>(this) {
       @SuppressWarnings("unchecked")
       @Override
       int doCall(final List<? extends Row> currentList, final byte[] row,
-          final byte[] tableName, Object whatevs) throws IOException,
+          StringBytes tableName, Object whatevs) throws IOException,
           RuntimeException {
         final List<Put> puts = (List<Put>) currentList;
         return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
@@ -2378,7 +2385,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
   @Override
   public Result[] processBatchOfGets(final List<Get> list,
-      final byte[] tableName, final HBaseRPCOptions options)
+      StringBytes tableName, final HBaseRPCOptions options)
       throws IOException {
     if (list.isEmpty()) {
       return null;
@@ -2389,7 +2396,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
       @SuppressWarnings("unchecked")
       @Override
       int doCall(final List<? extends Row> currentList, final byte[] row,
-          final byte[] tableName, Result[] res) throws IOException,
+          StringBytes tableName, Result[] res) throws IOException,
           RuntimeException {
         final List<Get> gets = (List<Get>) currentList;
         Result[] tmp = getRegionServerWithRetries(new ServerCallable<Result[]>(
@@ -2412,8 +2419,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
   @Override
   public int processBatchOfRowMutations(final List<RowMutations> list,
-      final byte[] tableName, final HBaseRPCOptions options)
-      throws IOException {
+      StringBytes tableName, final HBaseRPCOptions options) throws IOException {
     if (list.isEmpty()) {
       return 0;
     }
@@ -2421,7 +2427,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
       @SuppressWarnings("unchecked")
       @Override
       int doCall(final List<? extends Row> currentList, final byte[] row,
-          final byte[] tableName, Object whatevs) throws IOException,
+          StringBytes tableName, Object whatevs) throws IOException,
           RuntimeException {
         final List<RowMutations> mutations = (List<RowMutations>) currentList;
         getRegionServerWithRetries(new ServerCallable<Void>(this.c,
@@ -2442,8 +2448,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
   @Override
   public int processBatchOfDeletes(final List<Delete> list,
-      final byte[] tableName, final HBaseRPCOptions options)
-      throws IOException {
+      StringBytes tableName, final HBaseRPCOptions options) throws IOException {
     if (list.isEmpty()) {
       return 0;
     }
@@ -2451,7 +2456,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
       @SuppressWarnings("unchecked")
       @Override
       int doCall(final List<? extends Row> currentList, final byte[] row,
-          final byte[] tableName, Object whatevs) throws IOException,
+          StringBytes tableName, Object whatevs) throws IOException,
           RuntimeException {
         final List<Delete> deletes = (List<Delete>) currentList;
         return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
@@ -2493,7 +2498,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
    * @throws IOException
    */
   private List<MultiPut> splitPutsIntoMultiPuts(List<Put> list,
-      final byte[] tableName, HBaseRPCOptions options) throws IOException {
+      StringBytes tableName, HBaseRPCOptions options) throws IOException {
     Map<HServerAddress, MultiPut> regionPuts = new HashMap<HServerAddress, MultiPut>();
 
     for (Put put : list) {
@@ -2517,7 +2522,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
   @Override
   public List<Put> processListOfMultiPut(List<MultiPut> multiPuts,
-      final byte[] givenTableName, HBaseRPCOptions options,
+      StringBytes givenTableName, HBaseRPCOptions options,
       Map<String, HRegionFailureInfo> failedRegionsInfo) throws IOException {
     List<Put> failed = null;
 
@@ -2629,8 +2634,9 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
           // HTableMultiplexer does not specify the tableName, as it is
           // shared across different tables. In that case, let us try
           // and derive the tableName from the regionName.
-          byte[] tableName = (givenTableName != null) ? givenTableName
-              : HRegionInfo.parseRegionName(region)[0];
+          StringBytes tableName =
+              (givenTableName != null) ? givenTableName
+              : new StringBytes(HRegionInfo.parseRegionName(region)[0]);
           deleteCachedLocation(tableName, lst.get(0).getRow(),
               request.address);
 
@@ -2676,7 +2682,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
    *          succeed.
    */
   @Override
-  public void processBatchOfPuts(List<Put> list, final byte[] tableName,
+  public void processBatchOfPuts(List<Put> list, StringBytes tableName,
       HBaseRPCOptions options) throws IOException {
     RegionOverloadedException roe = null;
     long callStartTime;
@@ -2822,23 +2828,24 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
   }
 
   @Override
-  public void setRegionCachePrefetch(final byte[] tableName,
+  public void setRegionCachePrefetch(StringBytes tableName,
       final boolean enable) {
     if (!enable) {
-      regionCachePrefetchDisabledTables.add(Bytes.mapKey(tableName));
+      regionCachePrefetchDisabledTables.add(Bytes.mapKey(tableName.getBytes()));
     } else {
-      regionCachePrefetchDisabledTables.remove(Bytes.mapKey(tableName));
+      regionCachePrefetchDisabledTables.remove(Bytes.mapKey(tableName
+          .getBytes()));
     }
   }
 
   @Override
-  public boolean getRegionCachePrefetch(final byte[] tableName) {
-    return !regionCachePrefetchDisabledTables.contains(Bytes
-        .mapKey(tableName));
+  public boolean getRegionCachePrefetch(StringBytes tableName) {
+    return !regionCachePrefetchDisabledTables.contains(
+        Bytes.mapKey(tableName.getBytes()));
   }
 
   @Override
-  public void prewarmRegionCache(final byte[] tableName,
+  public void prewarmRegionCache(StringBytes tableName,
       final Map<HRegionInfo, HServerAddress> regions) {
     for (Map.Entry<HRegionInfo, HServerAddress> e : regions.entrySet()) {
       metaCache.add(tableName, new HRegionLocation(e.getKey(), e.getValue()));
@@ -2846,13 +2853,13 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
   }
 
   @Override
-  public void startBatchedLoad(byte[] tableName) {
-    batchedUploadUpdatesMap.put(Bytes.toString(tableName),
+  public void startBatchedLoad(StringBytes tableName) {
+    batchedUploadUpdatesMap.put(tableName,
         new ConcurrentHashMap<HRegionInfo, HRegionLocation>());
   }
 
   @Override
-  public void endBatchedLoad(byte[] tableName, HBaseRPCOptions options)
+  public void endBatchedLoad(StringBytes tableName, HBaseRPCOptions options)
       throws IOException {
     Map<HRegionInfo, HRegionLocation> regionsUpdated = getRegionsUpdated(tableName);
     try {
@@ -3028,14 +3035,14 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
     return server.getConfProperty(prop);
   }
 
-  private void trackMutationsToTable(byte[] tableNameBytes,
+  private void trackMutationsToTable(StringBytes tableName,
       HRegionLocation location) throws IOException {
-    String tableName = Bytes.toString(tableNameBytes);
     HRegionInfo regionInfo = location.getRegionInfo();
     HServerAddress serverAddress = location.getServerAddress();
-    HRegionLocation oldLocation = !batchedUploadUpdatesMap
-        .containsKey(tableName) ? null : batchedUploadUpdatesMap.get(
-        tableName).putIfAbsent(regionInfo, location);
+    HRegionLocation oldLocation =
+        !batchedUploadUpdatesMap.containsKey(tableName) ? null
+            : batchedUploadUpdatesMap.get(tableName).putIfAbsent(regionInfo,
+                location);
     if (oldLocation != null && !oldLocation.equals(location)) {
       // check if the old server is alive and update the map with the new
       // location
@@ -3059,8 +3066,9 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
    * @param tableName
    * @return Map containing regionInfo, and the servers they were on.
    */
-  private Map<HRegionInfo, HRegionLocation> getRegionsUpdated(byte[] tableName) {
-    return batchedUploadUpdatesMap.get(Bytes.toString(tableName));
+  private Map<HRegionInfo, HRegionLocation> getRegionsUpdated(
+      StringBytes tableName) {
+    return batchedUploadUpdatesMap.get(tableName);
   }
 
   /**
@@ -3069,8 +3077,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
    *
    * @param tableName
    */
-  private void clearMutationsToTable(byte[] tableNameBytes) {
-    String tableName = Bytes.toString(tableNameBytes);
+  private void clearMutationsToTable(StringBytes tableName) {
     if (batchedUploadUpdatesMap.containsKey(tableName)) {
       batchedUploadUpdatesMap.get(tableName).clear();
     }

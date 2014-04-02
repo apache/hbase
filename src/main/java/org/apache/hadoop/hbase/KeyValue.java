@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
@@ -126,11 +127,13 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * @param tableName  The table name.
    * @return The comparator.
    */
-  public static KeyComparator getRowComparator(byte [] tableName) {
-    if(Bytes.equals(HTableDescriptor.ROOT_TABLEDESC.getName(),tableName)) {
+  public static KeyComparator getRowComparator(StringBytes tableName) {
+    if (Bytes.equals(HTableDescriptor.ROOT_TABLEDESC.getName(),
+        tableName.getBytes())) {
       return ROOT_COMPARATOR.getRawComparator();
     }
-    if(Bytes.equals(HTableDescriptor.META_TABLEDESC.getName(), tableName)) {
+    if (Bytes.equals(HTableDescriptor.META_TABLEDESC.getName(),
+        tableName.getBytes())) {
       return META_COMPARATOR.getRawComparator();
     }
     return COMPARATOR.getRawComparator();

@@ -19,6 +19,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -186,7 +187,7 @@ public class TestHTable {
     // Let's search for a non-existing table, and get a TableNotFoundException.
     HConnection connection =
       HConnectionManager.getConnection(TEST_UTIL.getConfiguration());
-    connection.getRegionLocation(Bytes.toBytes("foo"),
+    connection.getRegionLocation(new StringBytes("foo"),
                                  Bytes.toBytes("r1"), false);
   }
 }

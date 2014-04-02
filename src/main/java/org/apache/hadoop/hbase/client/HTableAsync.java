@@ -28,10 +28,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.HConnectionParams;
@@ -39,6 +35,11 @@ import org.apache.hadoop.hbase.ipc.thrift.HBaseToThriftAdapter;
 import org.apache.hadoop.hbase.thrift.SelfRetryingListenableFuture;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
+
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * Used to communicate with a single HBase table.
@@ -97,8 +98,9 @@ public class HTableAsync extends HTable implements HTableAsyncInterface {
    */
   @Override
   public ListenableFuture<Result> getAsync(final Get get) {
-    ServerCallable<ListenableFuture<Result>> callable = new ServerCallable<ListenableFuture<Result>>(
-        getConnection(), getTableName(), get.getRow(), getOptions()) {
+    ServerCallable<ListenableFuture<Result>> callable =
+        new ServerCallable<ListenableFuture<Result>>(getConnection(),
+            tableName, get.getRow(), getOptions()) {
       @Override
       public ListenableFuture<Result> call() throws Exception {
         return ((HBaseToThriftAdapter)server).getAsync(location.getRegionInfo().getRegionName(), get);
@@ -117,6 +119,7 @@ public class HTableAsync extends HTable implements HTableAsyncInterface {
   @Override
   public ListenableFuture<Result[]> batchGetAsync(final List<Get> list) {
     return executorService.submit(new Callable<Result[]>() {
+      @Override
       public Result[] call() throws IOException {
         return batchGet(list);
       }
@@ -143,7 +146,7 @@ public class HTableAsync extends HTable implements HTableAsyncInterface {
   @Override
   public ListenableFuture<Result> getRowOrBeforeAsync(final byte[] row, final byte[] family) {
     ServerCallable<ListenableFuture<Result>> callable = new ServerCallable<ListenableFuture<Result>>(
-        getConnection(), getTableName(), row, getOptions()) {
+        getConnection(), tableName, row, getOptions()) {
       @Override
       public ListenableFuture<Result> call() throws Exception {
         return ((HBaseToThriftAdapter)server).getClosestRowBeforeAsync(
@@ -163,7 +166,7 @@ public class HTableAsync extends HTable implements HTableAsyncInterface {
   @Override
   public ListenableFuture<Void> deleteAsync(final Delete delete) {
     ServerCallable<ListenableFuture<Void>> callable = new ServerCallable<ListenableFuture<Void>>(
-        getConnection(), getTableName(), delete.getRow(), getOptions()) {
+        getConnection(), tableName, delete.getRow(), getOptions()) {
       @Override
       public ListenableFuture<Void> call() throws Exception {
         return ((HBaseToThriftAdapter)server).deleteAsync(location.getRegionInfo().getRegionName(), delete);
@@ -182,7 +185,7 @@ public class HTableAsync extends HTable implements HTableAsyncInterface {
   @Override
   public ListenableFuture<Void> mutateRowAsync(final RowMutations arm) {
     ServerCallable<ListenableFuture<Void>> callable = new ServerCallable<ListenableFuture<Void>>(
-        getConnection(), getTableName(), arm.getRow(), getOptions()) {
+        getConnection(), tableName, arm.getRow(), getOptions()) {
       @Override
       public ListenableFuture<Void> call() throws Exception {
         return ((HBaseToThriftAdapter)server).mutateRowAsync(location.getRegionInfo().getRegionName(), arm);
@@ -201,6 +204,7 @@ public class HTableAsync extends HTable implements HTableAsyncInterface {
   @Override
   public ListenableFuture<Void> batchMutateAsync(final List<Mutation> mutations) {
     return executorService.submit(new Callable<Void>() {
+      @Override
       public Void call() throws IOException {
         batchMutate(mutations);
         return null;
@@ -214,6 +218,7 @@ public class HTableAsync extends HTable implements HTableAsyncInterface {
   @Override
   public ListenableFuture<Void> flushCommitsAsync() {
     return executorService.submit(new Callable<Void>() {
+      @Override
       public Void call() throws IOException {
         flushCommits();
         return null;
@@ -226,8 +231,9 @@ public class HTableAsync extends HTable implements HTableAsyncInterface {
    */
   @Override
   public ListenableFuture<RowLock> lockRowAsync(final byte[] row) {
-    ServerCallable<ListenableFuture<RowLock>> callable = new ServerCallable<ListenableFuture<RowLock>>(
-        getConnection(), getTableName(), row, getOptions()) {
+    ServerCallable<ListenableFuture<RowLock>> callable =
+        new ServerCallable<ListenableFuture<RowLock>>(getConnection(),
+            tableName, row, getOptions()) {
       @Override
       public ListenableFuture<RowLock> call() throws Exception {
         return ((HBaseToThriftAdapter)server).lockRowAsync(location.getRegionInfo().getRegionName(), row);
@@ -245,8 +251,9 @@ public class HTableAsync extends HTable implements HTableAsyncInterface {
    */
   @Override
   public ListenableFuture<Void> unlockRowAsync(final RowLock rl) {
-    ServerCallable<ListenableFuture<Void>> callable = new ServerCallable<ListenableFuture<Void>>(
-        getConnection(), getTableName(), rl.getRow(), getOptions()) {
+    ServerCallable<ListenableFuture<Void>> callable =
+        new ServerCallable<ListenableFuture<Void>>(getConnection(), tableName,
+            rl.getRow(), getOptions()) {
       @Override
       public ListenableFuture<Void> call() throws Exception {
         return ((HBaseToThriftAdapter)server).unlockRowAsync(

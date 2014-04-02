@@ -117,7 +117,7 @@ public class TestZooKeeper {
         EmptyWatcher.instance, sessionID, password);
     zk.close();
     Thread.sleep(sessionTimeout * 3L);
-    connection.relocateRegion(HConstants.ROOT_TABLE_NAME,
+    connection.relocateRegion(HConstants.ROOT_TABLE_NAME_STRINGBYTES,
         HConstants.EMPTY_BYTE_ARRAY);
 
     // The zk session for connectionZK should NOT time out since the client will

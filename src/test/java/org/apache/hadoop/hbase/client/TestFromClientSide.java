@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.hbase.util.TagRunner;
 import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.After;
@@ -1117,7 +1118,7 @@ public class TestFromClientSide {
 
     // Null table name (should NOT work)
     try {
-      TEST_UTIL.createTable(null, FAMILY);
+      TEST_UTIL.createTable((StringBytes) null, FAMILY);
       fail("Creating a table with null name passed, should have failed");
     } catch(Exception e) {}
 
@@ -3984,7 +3985,7 @@ public class TestFromClientSide {
    public void testRegionCacheDeSerialization() throws Exception {
      // 1. test serialization.
      LOG.info("Starting testRegionCacheDeSerialization");
-     final byte[] TABLENAME = Bytes.toBytes("testCachePrewarm2");
+    final StringBytes TABLENAME = new StringBytes("testCachePrewarm2");
      final byte[] FAMILY = Bytes.toBytes("family");
      Configuration conf = TEST_UTIL.getConfiguration();
      TEST_UTIL.createTable(TABLENAME, FAMILY);
@@ -4023,8 +4024,8 @@ public class TestFromClientSide {
      // set the deserialized regions to the global cache.
      table.getConnectionAndResetOperationContext().clearRegionCache();
 
-     table.getConnectionAndResetOperationContext().prewarmRegionCache(table.getTableName(),
-         deserRegions);
+    table.getConnectionAndResetOperationContext().prewarmRegionCache(
+        table.getTableNameStringBytes(), deserRegions);
 
      // verify whether the 2 maps are identical or not.
      assertEquals("Number of cached region is incorrect",
@@ -4035,7 +4036,7 @@ public class TestFromClientSide {
      for (Map.Entry<HRegionInfo, HServerAddress> e: loadedRegions.entrySet()) {
        HRegionInfo hri = e.getKey();
        assertTrue(HConnectionManager.isRegionCached(conf,
-           hri.getTableDesc().getName(), hri.getStartKey()));
+           new StringBytes(hri.getTableDesc().getName()), hri.getStartKey()));
      }
 
      // delete the temp file
@@ -4050,7 +4051,7 @@ public class TestFromClientSide {
   @Test
   public void testRegionCachePreWarm() throws Exception {
     LOG.info("Starting testRegionCachePreWarm");
-    final byte [] TABLENAME = Bytes.toBytes("testCachePrewarm");
+    final StringBytes TABLENAME = new StringBytes("testCachePrewarm");
     Configuration conf = TEST_UTIL.getConfiguration();
 
     // Set up test table:
@@ -4058,9 +4059,9 @@ public class TestFromClientSide {
     TEST_UTIL.createTable(TABLENAME, FAMILY);
 
     // disable region cache for the table.
-    HTable.setRegionCachePrefetch(conf, TABLENAME, false);
+    HTable.setRegionCachePrefetch(conf, TABLENAME.getBytes(), false);
     assertFalse("The table is disabled for region cache prefetch",
-        HTable.getRegionCachePrefetch(conf, TABLENAME));
+        HTable.getRegionCachePrefetch(conf, TABLENAME.getBytes()));
 
     HTable table = new HTable(conf, TABLENAME);
 
@@ -4082,17 +4083,17 @@ public class TestFromClientSide {
         HConnectionManager.getCachedRegionCount(conf, TABLENAME));
 
     // now we enable cached prefetch.
-    HTable.setRegionCachePrefetch(conf, TABLENAME, true);
+    HTable.setRegionCachePrefetch(conf, TABLENAME.getBytes(), true);
     assertTrue("The table is enabled for region cache prefetch",
-        HTable.getRegionCachePrefetch(conf, TABLENAME));
+        HTable.getRegionCachePrefetch(conf, TABLENAME.getBytes()));
 
-    HTable.setRegionCachePrefetch(conf, TABLENAME, false);
+    HTable.setRegionCachePrefetch(conf, TABLENAME.getBytes(), false);
     assertFalse("The table is disabled for region cache prefetch",
-        HTable.getRegionCachePrefetch(conf, TABLENAME));
+        HTable.getRegionCachePrefetch(conf, TABLENAME.getBytes()));
 
-    HTable.setRegionCachePrefetch(conf, TABLENAME, true);
+    HTable.setRegionCachePrefetch(conf, TABLENAME.getBytes(), true);
     assertTrue("The table is enabled for region cache prefetch",
-        HTable.getRegionCachePrefetch(conf, TABLENAME));
+        HTable.getRegionCachePrefetch(conf, TABLENAME.getBytes()));
 
     table.getConnectionAndResetOperationContext().clearRegionCache();
 
@@ -4105,10 +4106,10 @@ public class TestFromClientSide {
 
     // Get the configured number of cache read-ahead regions.  For various
     // reasons, the meta may not yet have all regions in place (e.g. hbase-2757).
-    // That the prefetch gets at least half shows prefetch is bascially working.
+    // That the prefetch gets at least half shows prefetch is basically working.
     int prefetchRegionNumber = conf.getInt("hbase.client.prefetch.limit", 10) / 2;
 
-    // the total number of cached regions == region('aaa") + prefeched regions.
+    // the total number of cached regions == region("aaa") + prefetched regions.
     LOG.info("Testing how many regions cached");
     assertTrue(prefetchRegionNumber < HConnectionManager.getCachedRegionCount(conf, TABLENAME));
 

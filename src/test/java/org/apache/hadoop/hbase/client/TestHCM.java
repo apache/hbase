@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -54,7 +55,7 @@ public class TestHCM {
   private static final Log LOG = LogFactory.getLog(TestHCM.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final byte[] TABLE_NAME = Bytes.toBytes("test");
+  private static final StringBytes TABLE_NAME = new StringBytes("test");
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbd");
 

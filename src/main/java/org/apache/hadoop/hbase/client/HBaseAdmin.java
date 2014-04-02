@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.Writable;
@@ -151,7 +152,7 @@ public class HBaseAdmin {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    return connection.tableExists(tableName);
+    return connection.tableExists(new StringBytes(tableName));
   }
 
   /**
@@ -177,7 +178,7 @@ public class HBaseAdmin {
    */
   public HTableDescriptor getTableDescriptor(final byte [] tableName)
   throws IOException {
-    return this.connection.getHTableDescriptor(tableName);
+    return this.connection.getHTableDescriptor(new StringBytes(tableName));
   }
 
   private long getPauseTime(int tries) {
@@ -299,7 +300,7 @@ public class HBaseAdmin {
           return true;
         }
       };
-      MetaScanner.metaScan(conf, visitor, desc.getName());
+      MetaScanner.metaScan(conf, visitor, new StringBytes(desc.getName()));
       if (actualRegCount.get() != numRegs) {
         if (tries == numRetries - 1) {
           throw new RegionOfflineException("Only " + actualRegCount.get() +
@@ -589,7 +590,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableEnabled(byte[] tableName) throws IOException {
-    return connection.isTableEnabled(tableName);
+    return connection.isTableEnabled(new StringBytes(tableName));
   }
 
   /**
@@ -598,7 +599,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableDisabled(byte[] tableName) throws IOException {
-    return connection.isTableDisabled(tableName);
+    return connection.isTableDisabled(new StringBytes(tableName));
   }
 
   /**
@@ -607,7 +608,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableAvailable(byte[] tableName) throws IOException {
-    return connection.isTableAvailable(tableName);
+    return connection.isTableAvailable(new StringBytes(tableName));
   }
 
   /**
@@ -616,7 +617,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableAvailable(String tableName) throws IOException {
-    return connection.isTableAvailable(Bytes.toBytes(tableName));
+    return connection.isTableAvailable(new StringBytes(tableName));
   }
 
   /**
@@ -1000,13 +1001,13 @@ public class HBaseAdmin {
   private void compactCF(final byte[] tableName, final byte[] columnFamily, HConstants.Modify op)
     throws IOException {
     // Validate table name and column family.
-    if (!this.connection.tableExists(tableName)) {
-      throw new IllegalArgumentException("HTable " + new String(tableName) +
-          " does not exist");
+    if (!this.connection.tableExists(new StringBytes(tableName))) {
+      throw new IllegalArgumentException("HTable " + new StringBytes(tableName)
+          + " does not exist");
     } else if (!getTableDescriptor(tableName).hasFamily(columnFamily)) {
-      throw new IllegalArgumentException("Column Family " +
-          new String(columnFamily) + " does not exist in " +
-          new String(tableName));
+      throw new IllegalArgumentException("Column Family "
+          + new String(columnFamily) + " does not exist in "
+          + new StringBytes(tableName));
     }
 
     // Get all regions for this table.
@@ -1401,7 +1402,7 @@ public class HBaseAdmin {
 
   private HRegionLocation getFirstMetaServerForTable(final byte [] tableName)
   throws IOException {
-    return connection.locateRegion(HConstants.META_TABLE_NAME,
+    return connection.locateRegion(HConstants.META_TABLE_NAME_STRINGBYTES,
       HRegionInfo.createRegionName(tableName, null, HConstants.NINES, false));
   }
 
