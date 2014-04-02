@@ -754,4 +754,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
     return null;
   }
 
+  @Override
+  public HFileScanner getScanner(boolean cacheBlocks, boolean isCompaction) {
+    return getScanner(cacheBlocks, isCompaction, false);
+  }
+
 }

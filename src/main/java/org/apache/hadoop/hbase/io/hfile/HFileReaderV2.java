@@ -1605,4 +1605,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
       cacheConf.getBlockCache().evictBlock(cacheKey);
     }
   }
+
+  @Override
+  public HFileScanner getScanner(boolean cacheBlocks, boolean isCompaction) {
+    return getScanner(cacheBlocks, isCompaction, false);
+  }
 }

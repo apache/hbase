@@ -468,6 +468,8 @@ public class HFile {
 
     RawComparator<byte []> getComparator();
 
+    HFileScanner getScanner(boolean cacheBlocks, final boolean isCompaction);
+
     HFileScanner getScanner(boolean cacheBlocks, final boolean isCompaction,
         boolean preloadBlocks);
 
