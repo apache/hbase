@@ -642,6 +642,9 @@ public class TableServers implements ServerConnection {
    * Search .META. for the HRegionLocation info that contains the table and
    * row we're seeking. It will prefetch certain number of regions info and
    * save them to the global region cache.
+   *
+   * @param the row in the .META. table. If it is null, all cache will be
+   *        prefetched and null is returned.
    */
   public HRegionLocation prefetchRegionCache(final byte[] tableName,
       final byte[] row, int prefetchRegionLimit) {
@@ -694,8 +697,11 @@ public class TableServers implements ServerConnection {
       }
     };
     try {
-      // pre-fetch certain number of regions info at region cache.
+      // prefetch certain number of regions info at region cache.
       MetaScanner.metaScan(conf, visitor, tableName, row, prefetchRegionLimit);
+      if (row == null) {
+        return null;
+      }
       return metaCache.getForRow(tableName, row);
     } catch (IOException e) {
       LOG.warn("Encounted problems when prefetch META table: ", e);

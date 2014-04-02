@@ -61,6 +61,8 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableAsync;
+import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
 import org.apache.hadoop.hbase.client.PreemptiveFastFailException;
 import org.apache.hadoop.hbase.client.Put;
@@ -945,6 +947,7 @@ public class HBaseTestingUtility {
    * It first searches for the meta rows that contain the region of the
    * specified table, then gets the index of that RS, and finally retrieves
    * the RS's reference.
+   *
    * @param tableName user table to lookup in .META.
    * @return region server that holds it, null if the row doesn't exist
    * @throws IOException
@@ -955,9 +958,9 @@ public class HBaseTestingUtility {
     if (metaRows == null || metaRows.isEmpty()) {
       return null;
     }
-    LOG.debug("Found " + metaRows.size() + " rows for table " +
-      Bytes.toString(tableName));
-    byte [] firstrow = metaRows.get(0);
+    LOG.debug("Found " + metaRows.size() + " rows for table "
+        + Bytes.toString(tableName));
+    byte[] firstrow = metaRows.get(0);
     LOG.debug("FirstRow=" + Bytes.toString(firstrow));
     int index = hbaseCluster.getServerWith(firstrow);
     if (index < 0) {
@@ -1329,22 +1332,113 @@ public class HBaseTestingUtility {
   public void waitForOnlineRegionsToBeAssigned(int expectedUserRegions) {
     int actualRegions;
 
-    do {
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {} // Ignore
-
+    while (true) {
       actualRegions = 0;
 
-      for (HRegionServer server : getOnlineRegionServers()) {
+      List<HRegionServer> onlineServers = getOnlineRegionServers();
+      LOG.info("Online servers: " + onlineServers);
+      for (HRegionServer server : onlineServers) {
         for (HRegion region : server.getOnlineRegions()) {
-          if (!region.getRegionInfo().isMetaRegion() && !region.getRegionInfo().isRootRegion()) {
-            actualRegions += 1;
+          // Ignore META or ROOT regions.
+          if (region.getRegionInfo().isMetaRegion()
+              || region.getRegionInfo().isRootRegion()) {
+            continue;
           }
+
+          LOG.info("Region " + region + " at " + server);
+          actualRegions++;
         }
       }
-    } while (actualRegions != expectedUserRegions);
+      if (actualRegions == expectedUserRegions) {
+        break;
+      }
 
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        // Ignore
+        Thread.currentThread().interrupt();
+      }
+    }
+
+    LOG.info(expectedUserRegions + " regions asssigned");
+  }
+
+  /**
+   * Waits until the META table has same contents as the region servers.
+   */
+  public void waitForTableConsistent() throws IOException {
+    while (true) {
+      // Location info from META table
+      final Map<String, Map<String, HServerAddress>> fromMeta = new HashMap<>();
+      MetaScannerVisitor visitor = new MetaScannerVisitor() {
+        @Override
+        public boolean processRow(Result rowResult) throws IOException {
+          HRegionInfo info =
+              Writables.getHRegionInfo(rowResult.getValue(
+                  HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
+
+          String tableName = info.getTableDesc().getNameAsString();
+
+          HServerAddress server = new HServerAddress();
+          byte[] value =
+              rowResult.getValue(HConstants.CATALOG_FAMILY,
+                  HConstants.SERVER_QUALIFIER);
+          if (value != null && value.length > 0) {
+            String address = Bytes.toString(value);
+            server = new HServerAddress(address);
+          }
+
+          if (!(info.isOffline() || info.isSplit())) {
+            Map<String, HServerAddress> regionToAddr =
+                fromMeta.get(tableName);
+            if (regionToAddr == null) {
+              regionToAddr = new HashMap<>();
+              fromMeta.put(tableName, regionToAddr);
+            }
+            regionToAddr.put(info.getRegionNameAsString(), server);
+          }
+          return true;
+        }
+
+      };
+      MetaScanner.metaScan(conf, visitor, null);
+
+      // Location info from region servers
+      final Map<String, Map<String, HServerAddress>> fromRS = new HashMap<>();
+      List<HRegionServer> onlineServers = getOnlineRegionServers();
+      for (HRegionServer rs : onlineServers) {
+        for (HRegion region : rs.getOnlineRegions()) {
+          // Ignore META or ROOT regions.
+          if (region.getRegionInfo().isMetaRegion()
+              || region.getRegionInfo().isRootRegion()) {
+            continue;
+          }
+
+          HRegionInfo info = region.getRegionInfo();
+          String tableName = info.getTableDesc().getNameAsString();
+          Map<String, HServerAddress> regionToAddr = fromRS.get(tableName);
+          if (regionToAddr == null) {
+            regionToAddr = new HashMap<>();
+            fromRS.put(tableName, regionToAddr);
+          }
+          regionToAddr.put(info.getRegionNameAsString(), rs.getServerInfo()
+              .getServerAddress());
+        }
+      }
+
+      if (fromMeta.equals(fromRS)) {
+        // Consistent now, quit
+        break;
+      }
+
+      // Sleep for a while before next check
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
   }
 
   public List<HRegionServer> getOnlineRegionServers() {

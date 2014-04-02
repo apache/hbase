@@ -87,7 +87,7 @@ public class MetaCache {
    * into the Soft Reference SortedMap.  Improve.
    *
    * @param tableName
-   * @param row
+   * @param row  a non-null byte array
    * @return Null or region location found in cache.
    */
   HRegionLocation getForRow(final byte[] tableName, final byte[] row) {
@@ -199,15 +199,20 @@ public class MetaCache {
    */
   public void add(final byte[] tableName, final HRegionLocation location) {
     byte[] startKey = location.getRegionInfo().getStartKey();
-    boolean hasNewCache;
+    HRegionLocation oldLocation;
     synchronized (this.tableToCache) {
       servers.add(location.getServerAddress().toString());
-      hasNewCache = (getForTable(tableName).put(startKey, location) == null);
+      oldLocation = getForTable(tableName).put(startKey, location);
     }
-    if (hasNewCache) {
+    if (oldLocation == null) {
       LOG.debug("Cached location for "
           + location.getRegionInfo().getRegionNameAsString() + " is "
           + location.getServerAddress().toString());
+    } else if (!oldLocation.equals(location)) {
+      LOG.debug("Cached location for "
+          + location.getRegionInfo().getRegionNameAsString() + " is changed"
+          + " from " + oldLocation.getServerAddress()
+          + " to " + location.getServerAddress());
     }
   }
 

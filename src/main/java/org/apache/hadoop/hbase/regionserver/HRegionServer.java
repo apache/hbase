@@ -821,7 +821,7 @@ public class HRegionServer implements HRegionInterface,
         long now = System.currentTimeMillis();
         // Drop into the send loop if msgInterval has elapsed or if something
         // to send.  If we fail talking to the master, then we'll sleep below
-        // on poll of the outboundMsgs blockingqueue.
+        // on poll of the outboundMsgs blocking queue.
         if ((now - lastMsg) >= msgInterval || !outboundMessages.isEmpty()) {
           try {
             MemoryUsage memory =
