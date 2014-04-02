@@ -35,11 +35,22 @@ public interface BenchmarkClient {
 
   public Put createPut(byte[] row, byte[] family, byte[] qual, byte[] value);
 
+  public Put createRandomPut(int rowLength, byte[] family, int qualLength,
+      int valueLength);
+
   public Result executeGet(Get get);
+
+  public Result[] executeMultiGet(List<Get> gets);
+
+  public void executeMultiPut(List<Put> puts);
 
   public void executePut(Put put);
 
   public List<Result> executeScan(Scan scan);
 
   public Scan createScan(byte[] row, byte[] family, int nbRows);
+
+  public void printProfilingData();
+
+  public void setProfilingData(boolean flag);
 }

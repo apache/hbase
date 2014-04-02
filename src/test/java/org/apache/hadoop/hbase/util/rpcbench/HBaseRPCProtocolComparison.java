@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.util.rpcbench;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -57,25 +58,27 @@ public class HBaseRPCProtocolComparison extends AbstractHBaseTool {
   private static final int DEFAULT_NUM_OPS = 10000;
   private static final int DEFAULT_NUM_ROUNDS = 100;
   private static final int DEFAULT_NUM_THREADS = 10;
-  private static final String DEFAULT_ROW = "rowkey";
+  private static final int DEFAULT_ROW_LENGTH = 20;
   private static final String DEFAULT_CF = "cf";
-  private static final String DEFAULT_QUAL ="q";
-  private static final String DEFAULT_VALUE = "v";
+  private static final int DEFAULT_QUAL_LENGTH =10;
+  private static final int DEFAULT_VALUE_LENGTH = 100;
   private static final String DEFAULT_TABLENAME = "RPCBenchmarkingTable";
   private static final int DEFAULT_ZK_PORT = 2181;
-  private static final boolean DEFAULT_DO_PUT = true;
+  private static final int DEFAULT_GET_BATCH_SIZE = 100;
+  private static final int DEFAULT_PUT_BATCH_SIZE = 100;
 
   private static final String OPT_CF= "cf";
-  private static final String OPT_QUAL = "q";
-  private static final String OPT_ROW = "r";
+  private static final String OPT_QUAL_LENGTH = "q";
+  private static final String OPT_ROW_LENGTH = "r";
   private static final String OPT_TBL_NAME = "t";
-  private static final String OPT_VALUE_LENGTH = "vlen";
+  private static final String OPT_VALUE_LENGTH = "v";
   private static final String OPT_CLASSES = "c";
   private static final String OPT_NUM_OPS = "ops";
+  private static final String OPT_GET_BATCH_SIZE = "gbatch";
+  private static final String OPT_PUT_BATCH_SIZE = "pbatch";
   private static final String OPT_NUM_ROUNDS = "rounds";
   private static final String OPT_NUM_THREADS = "threads";
   private static final String OPT_REPORT_INTERVAL = "interval";
-  private static final String OPT_NO_PUT = "no_put";
   private static final String OPT_ZK_QUORUM = "zk";
   private static final String OPT_ZK_PORT = "zkPort";
 
@@ -84,31 +87,31 @@ public class HBaseRPCProtocolComparison extends AbstractHBaseTool {
   private byte[] tblName;
   private String zkQuorum;
   private int zkPort;
-  private byte[] row;
+  private int rowLength;
   private byte[] family;
-  private byte[] qual;
-  private byte[] value;
+  private int qualLength;
   private int valueLength;
   private int numOps;
+  private int multigetbatch;
+  private int multiputbatch;
   private int numRounds;
   private int numThreads;
   private long reportInterval;
-  private boolean doPut;
 
   @Override
   protected void addOptions() {
     addOptWithArg(OPT_CLASSES, "Benchmark factory classes");
     addOptWithArg(OPT_NUM_THREADS, "Number of threads");
     addOptWithArg(OPT_NUM_OPS, "Number of operations to execute per thread");
+    addOptWithArg(OPT_GET_BATCH_SIZE, "multiget size to execute per thread");
+    addOptWithArg(OPT_PUT_BATCH_SIZE, "multiput size to execute");
     addOptWithArg(OPT_TBL_NAME, "Table name");
-    addOptWithArg(OPT_ZK_QUORUM, "Table name");
+    addOptWithArg(OPT_ZK_QUORUM, "Zookeeper Quorum");
     addOptWithArg(OPT_ZK_PORT, "Zookeeper Port");
     addOptWithArg(OPT_REPORT_INTERVAL, "Reporting interval in milliseconds");
-    addOptWithArg(OPT_ROW, "Row key");
-    addOptWithArg(OPT_NO_PUT,
-        "DO NOT perform a single put (writing the value) before the benchmark");
+    addOptWithArg(OPT_ROW_LENGTH, "Row key length");
     addOptWithArg(OPT_CF, "Column family to use");
-    addOptWithArg(OPT_QUAL, "Column qualifier to use");
+    addOptWithArg(OPT_QUAL_LENGTH, "Column qualifier length to use");
     addOptWithArg(OPT_VALUE_LENGTH, "Value length to use");
     addOptWithArg(OPT_NUM_ROUNDS, "Number of rounds to perform the tests");
   }
@@ -160,22 +163,23 @@ public class HBaseRPCProtocolComparison extends AbstractHBaseTool {
       HBaseUtils.createTableIfNotExists(conf,
           tblName, familyProperties, 1);
     }
-    row = Bytes.toBytes(cmd.getOptionValue(OPT_ROW, DEFAULT_ROW));
+    rowLength = Integer.parseInt(cmd.getOptionValue(OPT_ROW_LENGTH,
+        String.valueOf(DEFAULT_ROW_LENGTH)));
     family = Bytes.toBytes(cmd.getOptionValue(OPT_CF, DEFAULT_CF));
-    qual = Bytes.toBytes(cmd.getOptionValue(OPT_QUAL, DEFAULT_QUAL));
-    valueLength = parseInt(cmd.getOptionValue(OPT_VALUE_LENGTH, DEFAULT_VALUE),
-        0, Integer.MAX_VALUE);
-    Random r = new Random();
-    value = new byte[valueLength];
-    r.nextBytes(value);
+    qualLength = Integer.parseInt(cmd.getOptionValue(OPT_QUAL_LENGTH,
+        String.valueOf(DEFAULT_QUAL_LENGTH)));
+    valueLength = parseInt(cmd.getOptionValue(OPT_VALUE_LENGTH,
+        String.valueOf(DEFAULT_VALUE_LENGTH)), 0, Integer.MAX_VALUE);
     numOps = parseInt(cmd.getOptionValue(OPT_NUM_OPS,
         String.valueOf(DEFAULT_NUM_OPS)), 1, Integer.MAX_VALUE);
+    multigetbatch = parseInt(cmd.getOptionValue(OPT_GET_BATCH_SIZE,
+        String.valueOf(DEFAULT_GET_BATCH_SIZE)), 1, Integer.MAX_VALUE);
+    multiputbatch = parseInt(cmd.getOptionValue(OPT_PUT_BATCH_SIZE,
+        String.valueOf(DEFAULT_PUT_BATCH_SIZE)), 1, Integer.MAX_VALUE);
     numRounds = parseInt(cmd.getOptionValue(OPT_NUM_ROUNDS,
         String.valueOf(DEFAULT_NUM_ROUNDS)), 1, Integer.MAX_VALUE);
     numThreads = parseInt(cmd.getOptionValue(OPT_NUM_THREADS,
         String.valueOf(DEFAULT_NUM_THREADS)), 1, Integer.MAX_VALUE);
-    doPut = DEFAULT_DO_PUT;
-    doPut = !cmd.hasOption(OPT_NO_PUT);
   }
 
   /**
@@ -216,9 +220,11 @@ public class HBaseRPCProtocolComparison extends AbstractHBaseTool {
               long startTime = System.currentTimeMillis();
               HBaseRPCBenchmarkTool tool = new HBaseRPCBenchmarkTool
                 .Builder(factoryCls).withColumnFamily(family).withNumOps(numOps)
-                .withRow(row).withNumThreads(numThreads).withConf(conf)
-                .withQualifier(qual).withTableName(tblName).withValue(value)
-                .withDoPut(doPut).create();
+                .withRowLength(rowLength).withNumThreads(numThreads)
+                .withConf(conf).withQualifierLength(qualLength)
+                .withMultiPutBatch(multiputbatch)
+                .withMultiGetBatch(multigetbatch)
+                .withTableName(tblName).withValue(valueLength).create();
               tool.doWork();
               hist.addValue(tool.getP95Latency());
               runTime.addAndGet(System.currentTimeMillis() - startTime);
@@ -229,6 +235,8 @@ public class HBaseRPCProtocolComparison extends AbstractHBaseTool {
               LOG.debug("Cannot run the tool for factory : "
                  + factoryCls.getName());
               e.printStackTrace();
+            } catch (IOException e) {
+              LOG.error("Caught unknown IOException", e);
             }
           }
         });
