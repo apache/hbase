@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestHelper;
@@ -4495,6 +4496,30 @@ public class TestFromClientSide {
     t.mutateRow(Arrays.asList((RowMutations)arm));
     r = t.get(g);
     assertTrue(r.isEmpty());
+  }
+
+  @Test
+  public void testGetWithFilter() throws IOException {
+    final byte [] TABLENAME = Bytes.toBytes("testGetWithFilter");
+    HTable t = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    byte[][] QUALIFIERS = new byte[][] {Bytes.toBytes("a"),
+        Bytes.toBytes("b")
+    };
+    byte[] row = Bytes.toBytes("row");
+    for (int j = 0; j < 2; j++) {
+      Put p = new Put(row);
+      p.add(FAMILY, QUALIFIERS[j], row);
+      t.put(p);
+      t.flushCommits();
+    }
+    Filter f = new QualifierFilter(CompareFilter.CompareOp.EQUAL,
+        new BinaryComparator(QUALIFIERS[0]));
+    Get g = new Get(row);
+    g.setFilter(f);
+    Result result = t.get(g);
+    assertTrue(result.getKvs().size() == 1);
+    assertTrue(Bytes.equals(result.getKvs().iterator().next().getQualifier(),
+        QUALIFIERS[0]));
   }
 }
 

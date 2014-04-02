@@ -299,14 +299,17 @@ public class Get extends OperationWithAttributes
    * @return this for invocation chaining
    */
   public Get setFilter(Filter filter) {
+    if (filter == null) return this;
     try {
       this.tFilter = TFilter.getTFilter(filter);
-    } catch (IOException e) {
-      LOG.error("Caught IOException in serializing filter." +
-          " Cannot continue.");
+    } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    this.filter = tFilter;
+    try {
+      this.filter = this.tFilter.getFilter();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     return this;
   }
 
@@ -561,6 +564,7 @@ public class Get extends OperationWithAttributes
       this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
       this.filter.readFields(in);
     }
+    setFilter(filter);
     this.tr = new TimeRange();
     tr.readFields(in);
     int numFamilies = in.readInt();

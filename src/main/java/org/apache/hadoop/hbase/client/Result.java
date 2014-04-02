@@ -733,5 +733,13 @@ public class Result implements Writable, WritableWithSize {
     return true;
   }
 
+  public int getBytesSize() {
+    int ret = 0;
+    for (KeyValue kv : this.kvs) {
+      ret += kv.getLength();
+    }
+    return ret;
+  }
+
 
 }
