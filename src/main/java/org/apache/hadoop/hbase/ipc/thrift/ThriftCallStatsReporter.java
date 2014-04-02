@@ -167,7 +167,7 @@ public class ThriftCallStatsReporter extends ThriftEventHandler {
     }
 
     public String getClientAddress() {
-      return this.requestContext.getRemoteAddress().toString();
+      return requestContext.getConnectionContext().getRemoteAddress().toString();
     }
 
     public void setSuccess(boolean success) {

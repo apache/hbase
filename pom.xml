@@ -168,13 +168,197 @@
         <jdk>/usr/local/jdk-7u6-64</jdk>
       </properties>
     </profile>
+     <profile>
+         <id>usingJDK7</id>
+         <activation>
+             <jdk>1.7</jdk>
+         </activation>
+         <build>
+             <plugins>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <!-- <version>0.6.4-SNAPSHOT</version> -->
+                    <version>${jacoco.version}</version>
+                    <executions>
+                        <execution>
+                            <id>prepare-agent</id>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>report</id>
+                            <phase>prepare-package</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <skip>${hbase.skip-jacoco}</skip>
+                        <excludes>
+                        <exclude>**/generated/**/*.class</exclude>
+                        <exclude>org/apache/hadoop/hbase/rest/**/*.class</exclude>
+                        </excludes>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <configuration>
+                        <forkMode>always</forkMode>
+                        <includes>
+                            <include>**/Test*.java</include>
+                        </includes>
+                        <excludes>
+                            <exclude>**/mapred/*.java</exclude>
+                            <exclude>**/replication/*.java</exclude>
+                            <exclude>**/rest/*.java</exclude>
+                            <exclude>**/rest/*/*.java</exclude>
+                            <exclude>**/*$*</exclude>
+                        </excludes>
+                        <argLine>${surefire.argLine}</argLine>
+                        <parallel>classes</parallel>
+                        <systemPropertyVariables>
+                            <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
+                        </systemPropertyVariables>
+                    </configuration>
+                </plugin>
+             </plugins>
+         </build>
+     </profile>
+     <profile>
+         <id>usingJDK8</id>
+         <activation>
+             <jdk>1.8</jdk>
+         </activation>
+         <build>
+             <plugins>
+                 <plugin>
+                     <groupId>org.apache.maven.plugins</groupId>
+                     <artifactId>maven-surefire-plugin</artifactId>
+                     <configuration>
+                         <forkMode>always</forkMode>
+                         <includes>
+                             <include>**/Test*.java</include>
+                         </includes>
+                         <excludes>
+                             <exclude>**/mapred/*.java</exclude>
+                             <exclude>**/replication/*.java</exclude>
+                             <exclude>**/rest/*.java</exclude>
+                             <exclude>**/rest/*/*.java</exclude>
+                             <exclude>**/*$*</exclude>
+                         </excludes>
+                         <argLine>${surefire.argLine}</argLine>
+                         <parallel>classes</parallel>
+                     </configuration>
+                 </plugin>
+             </plugins>
+         </build>
+     </profile>
+     <profile>
+         <id>usingJDK7</id>
+         <activation>
+             <jdk>1.7</jdk>
+         </activation>
+         <build>
+             <plugins>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <!-- <version>0.6.4-SNAPSHOT</version> -->
+                    <version>${jacoco.version}</version>
+                    <executions>
+                        <execution>
+                            <id>prepare-agent</id>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>report</id>
+                            <phase>prepare-package</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <skip>${hbase.skip-jacoco}</skip>
+                        <excludes>
+                        <exclude>org/apache/hadoop/hbase/avro/**/*.class</exclude>
+                        <exclude>**/generated/**/*.class</exclude>
+                        <exclude>org/apache/hadoop/hbase/rest/**/*.class</exclude>
+                        </excludes>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <configuration>
+                        <forkMode>always</forkMode>
+                        <includes>
+                            <include>**/Test*.java</include>
+                        </includes>
+                        <excludes>
+                            <exclude>**/mapred/*.java</exclude>
+                            <exclude>**/replication/*.java</exclude>
+                            <exclude>**/avro/*.java</exclude>
+                            <exclude>**/rest/*.java</exclude>
+                            <exclude>**/rest/*/*.java</exclude>
+                            <exclude>**/*$*</exclude>
+                        </excludes>
+                        <argLine>${surefire.argLine}</argLine>
+                        <parallel>classes</parallel>
+                        <systemPropertyVariables>
+                            <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
+                        </systemPropertyVariables>
+                    </configuration>
+                </plugin>
+             </plugins>
+         </build>
+     </profile>
+     <profile>
+         <id>usingJDK8</id>
+         <activation>
+             <jdk>1.8</jdk>
+         </activation>
+         <build>
+             <plugins>
+                 <plugin>
+                     <groupId>org.apache.maven.plugins</groupId>
+                     <artifactId>maven-surefire-plugin</artifactId>
+                     <configuration>
+                         <forkMode>always</forkMode>
+                         <includes>
+                             <include>**/Test*.java</include>
+                         </includes>
+                         <excludes>
+                             <exclude>**/mapred/*.java</exclude>
+                             <exclude>**/replication/*.java</exclude>
+                             <exclude>**/avro/*.java</exclude>
+                             <exclude>**/rest/*.java</exclude>
+                             <exclude>**/rest/*/*.java</exclude>
+                             <exclude>**/*$*</exclude>
+                         </excludes>
+                         <argLine>${surefire.argLine}</argLine>
+                         <parallel>classes</parallel>
+                     </configuration>
+                 </plugin>
+             </plugins>
+         </build>
+     </profile>
   </profiles>
   
   <repositories>
     <repository>
-      <id>nicolas fb releases</id>
-      <name>Nicolas Spiegelberg FB binary repo</name>
-      <url>http://people.apache.org/~nspiegelberg/mvn/</url>
+      <id>mirror.facebook.net</id>
+      <name>facebook mirror</name>
+      <url>http://mirror.facebook.net/maven/repository/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
       <releases>
         <enabled>true</enabled>
       </releases>
@@ -213,6 +397,17 @@
       </releases>
     </repository>
     <repository>
+      <id>temp-hadoop</id>
+      <name>Hadoop 0.20.1/2 packaging, thrift, zk</name>
+      <url>http://people.apache.org/~rawson/repo/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+    <repository>
       <id>ibiblio.org</id>
       <name>ibiblio mirror</name>
       <url>http://mirrors.ibiblio.org/pub/mirrors/maven2/</url>
@@ -225,6 +420,10 @@
     </repository>
   </repositories>
 
+  <!-- We need pluginRepositories here so that the map-reduce JUnit test
+       runner can find where to insert the local repository. -->
+  <pluginRepositories>
+  </pluginRepositories>
 
   <build>
     <!-- Some plugins (javadoc for example) can be used in the normal build- and the site phase.
@@ -240,35 +439,6 @@
             <findbugsXmlOutput>true</findbugsXmlOutput>
             <xmlOutput>true</xmlOutput>
             <excludeFilterFile>findbugs-exclude.xml</excludeFilterFile>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.jacoco</groupId>
-          <artifactId>jacoco-maven-plugin</artifactId>
-          <!-- <version>0.6.4-SNAPSHOT</version> -->
-          <version>0.6.2.201302030002</version>
-          <executions>
-            <execution>
-              <id>prepare-agent</id>
-              <goals>
-                <goal>prepare-agent</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>report</id>
-              <phase>prepare-package</phase>
-              <goals>
-                <goal>report</goal>
-              </goals>
-            </execution>
-          </executions>
-          <configuration>
-            <skip>${hbase.skip-jacoco}</skip>
-            <excludes>
-              <exclude>org/apache/hadoop/hbase/avro/**/*.class</exclude>
-              <exclude>**/generated/**/*.class</exclude>
-              <exclude>org/apache/hadoop/hbase/rest/**/*.class</exclude>
-            </excludes>
           </configuration>
         </plugin>
         <plugin>
@@ -295,14 +465,19 @@
         </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.8</version>
+          <version>${surefire.version}</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.maven.surefire</groupId>
+              <artifactId>surefire-junit47</artifactId>
+              <version>${surefire.version}</version>
+            </dependency>
+          </dependencies>
           <configuration>
             <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
-            <argLine>-enableassertions -Xmx1024m</argLine>
+            <argLine>${surefire.argLine}</argLine>
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
-            <systemPropertyVariables>
-              <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
-            </systemPropertyVariables>
+            <parallel>classes</parallel>
           </configuration>
         </plugin>
         <plugin>
@@ -345,21 +520,7 @@
     </resources>
     <plugins>
       <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
-        <!-- THIS might not be doable
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-        -->
         <configuration>
           <tarLongFileMode>gnu</tarLongFileMode>
           <descriptors>
@@ -408,57 +569,8 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <forkMode>always</forkMode>
-          <excludes>
-            <exclude>**/SoftValueSortedMapTest.java</exclude>
-            <exclude>**/*$*</exclude>
-          </excludes>
-          <argLine>${argLine}</argLine>
-        </configuration>
-      </plugin>
-      <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.6</version>
         <executions>
-          <execution>
-            <id>arc-setup</id>
-            <phase>initialize</phase>
-            <configuration>
-              <tasks if="arc">
-                <get dest="${project.build.directory}/arc-jira.tar.gz"
-                     src="https://github.com/facebook/arc-jira/tarball/master"/>
-                <untar src="${project.build.directory}/arc-jira.tar.gz" compression="gzip"
-                 dest="${project.build.directory}">
-                  <patternset>
-                    <include name="facebook-arc-jira-*/arc_jira_lib/**"/>
-            <exclude>**/mapred/*.java</exclude>
-            <exclude>**/replication/*.java</exclude>
-            <exclude>**/avro/*.java</exclude>
-            <exclude>**/rest/*.java</exclude>
-            <exclude>**/rest/*/*.java</exclude>
-                  </patternset>
-                </untar>
-                <move todir="${basedir}">
-                  <fileset dir="${project.build.directory}">
-                    <include name="facebook-arc-jira-*/arc_jira_lib/**"/>
-                   </fileset>
-                  <mapper type="regexp" from="^facebook-arc-jira-([^/])*/(.*)" to="\.\2"/>
-                </move>
-                <delete includeemptydirs="true">
-                  <fileset dir="${project.build.directory}">
-                    <include name="facebook-arc-jira-*"/>
-                    <include name="arc-jira.tar.gz"/>
-                  </fileset>
-                </delete>
-              </tasks>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
           <execution>
             <id>generate</id>
             <phase>generate-sources</phase>
@@ -544,33 +656,41 @@
         </executions>
       </plugin>
       <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-enforcer-plugin</artifactId>
-            <version>1.3.1</version>
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>enforce</goal>
-                    </goals>
-                    <configuration>
-                        <rules>
-                            <requireUpperBoundDeps>
-                                <uniqueVersions>true</uniqueVersions>
-                            </requireUpperBoundDeps>
-                        </rules>
-                    </configuration>
-                </execution>
-            </executions>
-        </plugin>
+      	<groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>1.3.1</version>
+        <executions>
+        	<execution>
+            	<goals>
+                	<goal>enforce</goal>
+                </goals>
+                <configuration>
+                	<rules>
+                    	<requireUpperBoundDeps>
+                        	<uniqueVersions>true</uniqueVersions>
+                        </requireUpperBoundDeps>
+                    </rules>
+                </configuration>
+            </execution>
+        </executions>
+      </plugin>
+      <plugin>
+      	<artifactId>maven-eclipse-plugin</artifactId>
+       	<version>2.9</version>
+        <configuration>
+        	<downloadSources>true</downloadSources>
+          	<downloadJavadocs>true</downloadJavadocs>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
-    <hbase.skip-jacoco>false</hbase.skip-jacoco>
   <properties>
-    <compileSource>1.6</compileSource>
+    <compileSource>1.7</compileSource>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hbase.version>0.21.0-SNAPSHOT</hbase.version>
-    <hadoop.version>0.20-fb</hadoop.version>
+    <hadoop.version>0.20</hadoop.version>
+    <swift.version>0.12.0</swift.version>
 
     <commons-cli.version>1.2</commons-cli.version>
     <commons-io.version>2.1</commons-io.version>
@@ -580,7 +700,7 @@
     <netty.version>3.7.0.Final</netty.version>
     <junit.version>4.8.1</junit.version>
     <mockito-all.version>1.9.5</mockito-all.version>
-    <log4j.version>1.2.16</log4j.version>
+    <log4j.version>1.2.17</log4j.version>
     <zookeeper.version>3.4.3</zookeeper.version>
 
     <commons-httpclient.version>3.1</commons-httpclient.version>
@@ -592,10 +712,19 @@
     <jruby.version>1.4.0</jruby.version>
     <jsr311.version>1.1.1</jsr311.version>
     <protobuf.version>2.3.0</protobuf.version>
-    <slf4j.version>1.5.11</slf4j.version>
+    <slf4j.version>1.7.5</slf4j.version>
     <stax-api>1.0.1</stax-api>
     <thrift.version>0.9.1</thrift.version>
-    <guava.version>r09</guava.version>
+    <guava.version>16.0.1</guava.version>
+    <jackson.version>1.8.3</jackson.version>
+    <hbase.skip-jacoco>false</hbase.skip-jacoco>
+
+    <surefire.version>2.15</surefire.version>
+    <jacoco.version>0.6.2.201302030002</jacoco.version>
+    <surefire.argLine>-enableassertions -Xmx2g -Djava.security.egd=file:/dev/./urandom
+      -Djava.awt.headless=true -Djava.library.path=${basedir}/lib/native/Linux-amd64-64/
+    </surefire.argLine>
+
   </properties>
 
   <dependencyManagement>
@@ -610,7 +739,6 @@
         <artifactId>commons-logging</artifactId>
         <version>${commons-logging.version}</version>
       </dependency>
-
       <dependency>
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
@@ -626,6 +754,7 @@
           </exclusion>
           <exclusion>
             <groupId>com.sun.jmx</groupId>
+    <swift.version>0.12.0</swift.version>
             <artifactId>jmxri</artifactId>
           </exclusion>
           <exclusion>
@@ -678,6 +807,11 @@
         <version>${jetty.jspapi.version}</version>
       </dependency>
 
+      <dependency>
+        <groupId>com.facebook.swift</groupId>
+        <artifactId>swift-root</artifactId>
+        <version>${swift.version}</version>
+      </dependency>
       <!-- Test dependencies -->
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -711,6 +845,11 @@
   </dependencyManagement>
   <dependencies>
     <dependency>
+      <groupId>com.facebook.titan.prometheus</groupId>
+      <artifactId>compactionhook</artifactId>
+      <version>2014-02-26T19.17.36-bac5a85</version>
+    </dependency>
+    <dependency>
       <groupId>commons-cli</groupId>
       <artifactId>commons-cli</artifactId>
     </dependency>
@@ -732,6 +871,11 @@
     <dependency>
       <groupId>commons-logging</groupId>
       <artifactId>commons-logging</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-pool</groupId>
+      <artifactId>commons-pool</artifactId>
+      <version>1.6</version>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
@@ -789,6 +933,12 @@
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jboss.netty</groupId>
+          <artifactId>netty</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -843,12 +993,6 @@
       <version>${jruby.version}</version>
     </dependency>
 
-    <dependency>
-      <groupId>com.google.code.gson</groupId>
-      <artifactId>gson</artifactId>
-      <version>2.2.4</version>
-    </dependency>
-
     <!-- REST dependencies -->
     <dependency>
       <groupId>com.google.protobuf</groupId>
@@ -869,6 +1013,12 @@
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-server</artifactId>
       <version>${jersey.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>asm</groupId>
+          <artifactId>asm</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>javax.xml.bind</groupId>
@@ -886,31 +1036,26 @@
       <version>1.0.1</version>
     </dependency>
 
-    <!-- Avro dependencies -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
       <version>1.6.1</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>avro</artifactId>
-      <version>1.3.2</version>
-    </dependency>
-    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.6.1</version>
+      <version>${slf4j.version}</version>
     </dependency>
+
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-core-asl</artifactId>
-      <version>1.8.3</version>
+      <version>${jackson.version}</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-mapper-asl</artifactId>
-      <version>1.8.3</version>
+      <version>${jackson.version}</version>
     </dependency>
 
     <!-- Test dependencies -->
@@ -937,6 +1082,21 @@
        <artifactId>guava</artifactId>
        <version>${guava.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.facebook.swift</groupId>
+      <artifactId>swift-codec</artifactId>
+      <version>0.12.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.facebook.swift</groupId>
+      <artifactId>swift-service</artifactId>
+      <version>${swift.version}</version>
+    </dependency>
+    <dependency>
+       <groupId>com.facebook.nifty</groupId>
+       <artifactId>nifty-header-protocol</artifactId>
+       <version>${swift.version}</version>
+     </dependency>
   </dependencies>
 
   <!--
@@ -961,7 +1121,7 @@
 
   $ mvn deploy
 (or)
-  $ mvn -s /my/path/settings.xml deploy 
+  $ mvn -s /my/path/settings.xml deploy
 
   -->
   <distributionManagement>
@@ -981,7 +1141,6 @@
       <url>scp://people.apache.org/home/psmith/public_html/hbase/sandbox/hbase/</url>
     </site>
   </distributionManagement>
-
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
   <reporting>
     <plugins>
@@ -1001,7 +1160,6 @@
             </reports>
           </reportSet>
         </reportSets>
-
       </plugin>
       
       <plugin>
@@ -1045,59 +1203,15 @@
           <maxmemory>1024m</maxmemory>
         -->
       </plugin>
-      <!--Disabled for now.
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>cobertura-maven-plugin</artifactId>
-        <version>2.3</version>
-      </plugin>
-      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
         <version>2.1</version>
       </plugin>
-      <!-- Disabled for now
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>jdepend-maven-plugin</artifactId>
-        <version>2.0-beta-2</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-changes-plugin</artifactId>
-        <version>2.3</version>
-        <configuration>
-          <issueLinkTemplate>%URL%/browse/%ISSUE%</issueLinkTemplate>
-        </configuration>
-        <reportSets>
-          <reportSet>
-            <reports>
-              <report>changes-report</report>
-            </reports>
-          </reportSet>
-        </reportSets>
-      </plugin>
-      <plugin>
-        <groupId>com.atlassian.maven.plugins</groupId>
-        <artifactId>maven-clover2-plugin</artifactId>
-        <version>2.6.3</version>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>taglist-maven-plugin</artifactId>
-        <version>2.4</version>
-      </plugin>
-      -->
       <plugin>
         <artifactId>maven-surefire-report-plugin</artifactId>
-        <version>2.8</version>
+        <version>${surefire.version}</version>
       </plugin>
-      <!--
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.1</version>
-      </plugin>
-      -->
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
