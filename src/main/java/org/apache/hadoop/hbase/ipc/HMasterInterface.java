@@ -59,17 +59,6 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion, ThriftClientI
   throws IOException;
 
   /**
-   * Same like {@link #createTable(HTableDescriptor, byte[][])} above, but we
-   * specify the set of machines where we want the regions to be assigned
-   *
-   * @param desc
-   * @param splitKeys
-   * @throws IOException
-   */
-  public void createTableAndAssignOnServers(HTableDescriptor desc,
-      byte[][] splitKeys, List<HServerAddress> servers) throws IOException;
-
-  /**
    * Deletes a table
    * @param tableName table to delete
    * @throws IOException e

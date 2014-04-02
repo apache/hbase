@@ -25,7 +25,11 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -194,6 +198,28 @@ public class TestSwiftSerDe {
     AssignmentPlan planCopy = Bytes.readThriftBytes(data, AssignmentPlan.class);
 
     assertEquals(originalPlan, planCopy);
+  }
+
+  @Test
+  public void testHTDSerDe() throws Exception {
+    List<HColumnDescriptor> columns = new ArrayList<>(1);
+    Map<byte[], byte[]> values = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    Set<HServerAddress> servers = new HashSet<>(1);
+    servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),0));
+
+    columns.add(new HColumnDescriptor(Bytes.toBytes("d")));
+
+    HTableDescriptor origionalHTD = new HTableDescriptor(
+        Bytes.toBytes("testSerdeName"),
+        columns,
+        values
+    );
+    origionalHTD.setServers(servers);
+
+    byte[] data = Bytes.writeThriftBytes(origionalHTD, HTableDescriptor.class);
+    HTableDescriptor htdCopy = Bytes.readThriftBytes(data, HTableDescriptor.class);
+    assertEquals(origionalHTD, htdCopy);
+    assertEquals(servers, htdCopy.getServers());
   }
 
   @Test

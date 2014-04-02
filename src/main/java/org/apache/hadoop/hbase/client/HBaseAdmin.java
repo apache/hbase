@@ -270,20 +270,6 @@ public class HBaseAdmin {
     checkTableOnline(desc, splitKeys);
   }
 
-  /**
-   * Same like {@link #createTable(HTableDescriptor, byte[][])} but creates
-   * table on specific regionservers
-   *
-   * @throws IOException
-   */
-  public void createTable(final HTableDescriptor desc, byte[][] splitKeys,
-      List<HServerAddress> servers) throws IOException {
-    HTableDescriptor.isLegalTableName(desc.getName());
-    checkSplitKeys(splitKeys);
-    createTableAsyncAndPlaceOnServers(desc, splitKeys, servers);
-    checkTableOnline(desc, splitKeys);
-  }
-
   private void checkTableOnline(final HTableDescriptor desc, byte[][] splitKeys)
       throws IOException, RegionOfflineException, InterruptedIOException {
     int numRegs = splitKeys == null ? 1 : splitKeys.length + 1;
@@ -376,30 +362,6 @@ public class HBaseAdmin {
     HTableDescriptor.isLegalTableName(desc.getName());
     try {
       this.master.createTable(desc, splitKeys);
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    } catch (SocketTimeoutException ste) {
-      LOG.warn("Creating " + desc.getNameAsString() + " took too long", ste);
-    }
-  }
-
-  /**
-   * SAme as {@link #createTableAsync(HTableDescriptor, byte[][])} but using a
-   * specific set of servers to assign the regions
-   *
-   * @param desc
-   * @param splitKeys
-   * @param servers
-   * @throws IOException
-   */
-  public void createTableAsyncAndPlaceOnServers(HTableDescriptor desc,
-      byte[][] splitKeys, List<HServerAddress> servers) throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
-    HTableDescriptor.isLegalTableName(desc.getName());
-    try {
-      this.master.createTableAndAssignOnServers(desc, splitKeys, servers);
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     } catch (SocketTimeoutException ste) {

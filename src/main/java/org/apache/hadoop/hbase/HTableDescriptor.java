@@ -35,6 +35,9 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.google.common.collect.ImmutableSet;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -50,6 +53,7 @@ import com.facebook.swift.codec.ThriftStruct;
  */
 @ThriftStruct
 public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
+  public static final Log LOG = LogFactory.getLog(HTableDescriptor.class);
 
   // Changes prior to version 3 were not recorded here.
   // Version 3 adds metadata as a map where keys and values are byte[].
@@ -91,6 +95,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final String DISABLE_WAL = "DISABLE_WAL";
   public static final ImmutableBytesWritable DISABLE_WAL_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(DISABLE_WAL));
+
+  public static final String SERVER_SET = "SERVER_SET";
+  public static final ImmutableBytesWritable SERVER_SET_KEY =
+      new ImmutableBytesWritable( Bytes.toBytes(SERVER_SET));
 
 
   // The below are ugly but better than creating them each time till we
@@ -137,6 +145,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   // Key is hash of the family name.
   public final Map<byte [], HColumnDescriptor> families =
     new TreeMap<byte [], HColumnDescriptor>(Bytes.BYTES_RAWCOMPARATOR);
+
+  // Used to store what servers this can be assigned to.
+  private ServerSet serverSet = null;
 
   /**
    * Private constructor used internally creating table descriptors for
@@ -821,11 +832,75 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * @param readOnly True if all of the columns in the table should be read
+   * @param disable should the wal be disabled for this table.
    * only.
    */
   public void setWALDisabled(final boolean disable) {
     setValue(DISABLE_WAL_KEY, disable? TRUE: FALSE);
   }
 
+  /**
+   * This is the class serialized into SERVER_SET_KEY to hold the list of servers.
+   */
+  @ThriftStruct
+  public static class ServerSet {
+
+    private Set<HServerAddress> servers = null;
+
+    @ThriftConstructor
+    public ServerSet(Set<HServerAddress> servers) {
+      this.servers = servers;
+    }
+
+    @ThriftField(1)
+    public Set<HServerAddress> getServers() {
+      return servers;
+    }
+
+    public void setServers(Set<HServerAddress> servers) {
+      this.servers = servers;
+    }
+  }
+
+  public synchronized void setServers(Collection<HServerAddress> servers) {
+    if (this.serverSet == null) {
+      this.serverSet = new ServerSet(null);
+    }
+
+    if ( servers == null) {
+      this.serverSet.servers = null;
+      return;
+    }
+
+    if (servers.size() < 3 ) {
+      throw new IllegalArgumentException("Must provide at least three servers.");
+    }
+
+    this.serverSet.setServers(ImmutableSet.copyOf(servers));
+    try {
+      // Hex encode everything so that the HTD can still be printed everywhere.
+      String encodedStringSet = Bytes.writeThriftBytesAndGetString(serverSet, ServerSet.class);
+      this.setValue(SERVER_SET_KEY, Bytes.toBytes(encodedStringSet));
+    } catch (Exception e) {
+      LOG.error("Error serializing server set from HTableDescriptor", e);
+    }
+  }
+
+  public synchronized Set<HServerAddress> getServers() {
+    if (serverSet == null) {
+      byte[] serverSetBytes = getValue(SERVER_SET_KEY);
+      if (serverSetBytes != null) {
+        try {
+          byte[] decodedBytes = Bytes.hexToBytes(Bytes.toString(serverSetBytes));
+          serverSet = Bytes.readThriftBytes(decodedBytes, ServerSet.class);
+        } catch (Exception e) {
+          LOG.error("Error de-serializing server set into HTableDescriptor", e);
+        }
+      }
+      if (serverSet == null) {
+        serverSet = new ServerSet(null);
+      }
+    }
+    return this.serverSet.getServers();
+  }
 }
