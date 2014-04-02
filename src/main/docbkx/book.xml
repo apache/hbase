@@ -1579,6 +1579,12 @@ rs.close();
 
      <section xml:id="block.cache">
        <title>Block Cache</title>
+       <para>Below we describe the default block cache implementation, the LRUBlockCache.
+       Read for an understanding of how it works and an overview of the facility it provides.
+       Other, off-heap options have since been added.  After reading the below,
+       be sure to visit the blog series <link xlink:href="http://www.n10k.com/blog/blockcache-101/">BlockCache 101</link> by Nick Dimiduk
+       where other Block Cache implementations are described.
+       </para>
        <section xml:id="block.cache.design">
         <title>Design</title>
         <para>The Block Cache is an LRU cache that contains three levels of block priority to allow for scan-resistance and in-memory ColumnFamilies:
