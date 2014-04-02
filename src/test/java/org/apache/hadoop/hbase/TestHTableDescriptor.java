@@ -54,6 +54,9 @@ public class TestHTableDescriptor {
     Set<HServerAddress> servers = new HashSet<>();
 
     servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),0));
+    servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),1));
+    servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),2));
+    servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),3));
     htd.setServers(servers);
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -102,6 +105,9 @@ public class TestHTableDescriptor {
     Set<HServerAddress> servers = new HashSet<>();
 
     servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),0));
+    servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),1));
+    servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),2));
+    servers.add(new HServerAddress(java.net.InetAddress.getLocalHost().getHostName(),3));
     htd.setServers(servers);
 
     assertEquals(servers, htd.getServers());
