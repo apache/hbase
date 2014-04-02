@@ -30,6 +30,12 @@ import org.apache.commons.logging.LogFactory;
  */
 public class TestHRegionDoubleClose extends TestHRegionClose {
   private static final Log LOG = LogFactory.getLog(TestHRegionDoubleClose.class);
+
+  @Override
+  public void testMemstoreCleanup() throws Exception {
+    // inherit to skip this redundant case
+  }
+
   @Override
   public void mainTest() throws Exception {
     tryCloseRegion();

@@ -46,6 +46,9 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -59,9 +62,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.apache.hadoop.hbase.util.HasThread;
+import org.junit.runner.RunWith;
 
 /** JUnit test case for HLog */
+@RunWith(TagRunner.class)
 public class TestHLog  {
   private static final Log LOG = LogFactory.getLog(TestHLog.class);
   {
@@ -183,6 +187,8 @@ public class TestHLog  {
    * Test new HDFS-265 sync.
    * @throws Exception
    */
+  // Marked as unstable and recorded in 3297526
+  @TestTag({ "unstable" })
   @Test
   public void testSync() throws Exception {
     byte [] bytes = Bytes.toBytes(getName());
@@ -396,6 +402,7 @@ public class TestHLog  {
 
     class RecoverLogThread extends HasThread {
       public Exception exception = null;
+      @Override
       public void run() {
           try {
             FSUtils.recoverFileLease(recoveredFs, walPath, rlConf);
@@ -548,7 +555,7 @@ public class TestHLog  {
       }
     }
   }
-  
+
   @Test
   public void testLogCleaning() throws Exception {
     LOG.info("testLogCleaning");

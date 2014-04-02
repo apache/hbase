@@ -19,22 +19,43 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.*;
-import static org.junit.Assert.*;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.resetCounters;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_get_data_nonode;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_heartbeat;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_log_split_batch_success;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_node_create_queued;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_node_create_result;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_orphan_task_acquired;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_rescan;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_rescan_deleted;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_resubmit;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_resubmit_dead_server_task;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_resubmit_failed;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_resubmit_threshold_reached;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_resubmit_unassigned;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_task_deleted;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog.TaskState;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
@@ -51,11 +72,9 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import java.util.UUID;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.junit.runner.RunWith;
 
-
+@RunWith(TagRunner.class)
 public class TestSplitLogManager {
   private static final Log LOG = LogFactory.getLog(TestSplitLogManager.class);
   static {
@@ -135,6 +154,7 @@ public class TestSplitLogManager {
   private void waitForCounter(final AtomicLong ctr, long oldval, long newval,
       long timems) {
     Expr e = new Expr() {
+      @Override
       public long eval() {
         return ctr.get();
       }
@@ -200,6 +220,8 @@ public class TestSplitLogManager {
     assertTrue(TaskState.TASK_UNASSIGNED.equals(data, "dummy-master"));
   }
 
+  // Marked as unstable and recorded in #3376834
+  @TestTag({ "unstable" })
   @Test
   public void testOrphanTaskAcquisition() throws Exception {
     LOG.info("TestOrphanTaskAcquisition");
@@ -321,7 +343,7 @@ public class TestSplitLogManager {
       byte[] taskstate = zkw.getData("", tasknode);
       assertTrue(Arrays.equals(TaskState.TASK_UNASSIGNED.get("dummy-master"),
           taskstate));
-      
+
       waitForCounter(tot_mgr_rescan_deleted, 0, 1, 1000);
     } else {
       LOG.warn("Could not run test. Lost ZK connection?");
@@ -430,7 +452,7 @@ public class TestSplitLogManager {
     // now all the nodes are unassigned. manager should post another rescan
     waitForCounter(tot_mgr_resubmit_unassigned, 0, 1, 2 * to + 500);
   }
-  
+
   @Test
   public void testDeadWorker() throws Exception {
     LOG.info("testDeadWorker");
@@ -486,6 +508,7 @@ public class TestSplitLogManager {
     Path logFile = new Path(logDir, UUID.randomUUID().toString());
     fs.createNewFile(logFile);
     new Thread() {
+      @Override
       public void run() {
         try {
           // this call will block because there are no SplitLogWorkers

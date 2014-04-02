@@ -28,12 +28,16 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(TagRunner.class)
 public class TestFullLogReconstruction {
 
   private final static HBaseTestingUtility
@@ -93,6 +97,8 @@ public class TestFullLogReconstruction {
    * see all the rows.
    * @throws Exception
    */
+  // Marked as unstable and recored in #3977473
+  @TestTag({ "unstable" })
   @Test (timeout = 300000)
   public void testReconstruction() throws Exception {
 

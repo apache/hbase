@@ -27,9 +27,11 @@ import org.apache.hadoop.hbase.master.TestLogSplitOnMasterFailover;
 import org.apache.hadoop.hbase.master.TestRSLivenessOnMasterFailover;
 import org.apache.hadoop.hbase.master.TestRegionPlacement;
 import org.apache.hadoop.hbase.master.TestRegionStateOnMasterFailure;
+import org.apache.hadoop.hbase.master.TestSplitLogManager;
 import org.apache.hadoop.hbase.regionserver.TestHRegionCloseRetry;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerFileSystemFailure;
 import org.apache.hadoop.hbase.regionserver.metrics.TestThriftMetrics;
+import org.apache.hadoop.hbase.regionserver.wal.TestHLog;
 import org.apache.hadoop.hbase.regionserver.wal.TestLogRolling;
 import org.apache.hadoop.hbase.regionserver.wal.TestWALReplay;
 import org.apache.hadoop.hbase.replication.regionserver.TestReplicationSink;
@@ -47,6 +49,7 @@ import org.junit.runners.Suite.SuiteClasses;
     TestRegionPlacement.class, TestServerConfigFromClient.class,
     TestRSLivenessOnMasterFailover.class, TestLogSplitOnMasterFailover.class,
     TagRunner.class, TestHRegionServerFileSystemFailure.class,
-    TestFromClientSide.class })
+    TestFromClientSide.class, TestFullLogReconstruction.class,
+    TestSplitLogManager.class, TestHLog.class })
 public class UnstableTestSuite {
 }
