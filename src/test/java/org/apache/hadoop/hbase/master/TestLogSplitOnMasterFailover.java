@@ -247,6 +247,8 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     runTest();
   }
 
+  // Marked as unstable and recored in 3376780
+  @TestTag({ "unstable" })
   @Test(timeout=180000)
   public void testWithDistributedLogSplitting() throws Exception {
     ZooKeeperWrapper.setNamespaceForTesting();

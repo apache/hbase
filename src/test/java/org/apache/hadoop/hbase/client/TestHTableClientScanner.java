@@ -31,6 +31,10 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+/**
+ * Testcase for HTableClientScanner.
+ * TODO daviddeng add some edge case explicitly.
+ */
 public class TestHTableClientScanner {
   final Log LOG = LogFactory.getLog(getClass());
 

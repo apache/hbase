@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.RuntimeExceptionAbortStrategy;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -46,7 +48,9 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(TagRunner.class)
 public class TestZooKeeper {
   private final Log LOG = LogFactory.getLog(this.getClass());
 
@@ -89,6 +93,8 @@ public class TestZooKeeper {
    * @throws IOException
    * @throws InterruptedException
    */
+  // Marked as unstable and recorded at #2747689
+  @TestTag({ "unstable" })
   @Test (timeout = 300000)
   public void testClientSessionExpired()
       throws IOException, InterruptedException {
@@ -203,6 +209,9 @@ public class TestZooKeeper {
     assertNull(zkw.getData("/l1", "l2"));
   }
 
+
+  // Marked as unstable and recorded at #2747689
+  @TestTag({ "unstable" })
   @Test (timeout = 300000)
   public void testRegionServerSessionExpired() throws Exception{
     LOG.info("Starting testRegionServerSessionExpired");
@@ -218,8 +227,8 @@ public class TestZooKeeper {
     LOG.info("Starting testMasterSessionExpired");
     new HTable(conf, HConstants.META_TABLE_NAME);
     TEST_UTIL.expireMasterSession();
-    
-    List<RegionServerThread> regionServerThreadList = 
+
+    List<RegionServerThread> regionServerThreadList =
       TEST_UTIL.getHBaseCluster().getRegionServerThreads();
     for (RegionServerThread regionServerThread : regionServerThreadList) {
       regionServerThread.getRegionServer().kill();

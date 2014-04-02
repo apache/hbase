@@ -75,18 +75,22 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * Run tests that use the HBase clients; {@link HTable} and {@link HTablePool}.
  * Sets up the HBase mini cluster once at start and runs through all client tests.
  * Each creates a table named for the method and does its stuff against that.
  */
+@RunWith(TagRunner.class)
 public class TestFromClientSide {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -137,42 +141,42 @@ public class TestFromClientSide {
     byte [] r2 = Bytes.toBytes("r12");
     byte[] value =  Bytes.toBytes("v");
     Result result1, result2;
-    
+
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
     Put put = new Put(r1);
     put.add(FAMILY, null, value);
     ht.put(put);
-   
+
     Get.Builder g1 = new Get.Builder(r1);
     g1.addColumn(FAMILY, null);
     result1 = ht.get(g1.create());
-    
+
     Get.Builder g2 = new Get.Builder(r1);
     g2.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
     result2 = ht.get(g2.create());
-    
+
     assertEquals(result1.getBytes(), result2.getBytes());
     assertEquals(1, result2.raw().length);
     assertEquals(result1.raw().length, result2.raw().length);
-    
+
     put = new Put(r2);
     put.add(FAMILY, HConstants.EMPTY_BYTE_ARRAY, value);
     ht.put(put);
     ht.flushCommits();
-    
+
     g1 = new Get.Builder(r2);
     g1.addColumn(FAMILY, null);
     result1 = ht.get(g1.create());
-    
+
     g2 = new Get.Builder(r2);
     g2.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
     result2 = ht.get(g2.create());
-    
+
     assertEquals(result1.getBytes(), result2.getBytes());
     assertEquals(1, result2.raw().length);
     assertEquals(result1.raw().length, result2.raw().length);
   }
-  
+
   @Test
   public void testFlashBackTime() throws Exception {
     byte[] TABLE = Bytes.toBytes("testFlashBackTime");
@@ -734,6 +738,8 @@ public class TestFromClientSide {
    * we should get an exception instead of the server trying until
    * OOM.
    */
+  // Marked as unstable and recorded at #3925054
+  @TestTag({ "unstable" })
   @Test
   public void testResultLimits() throws Exception {
     // We want to set the max result size to something small
@@ -3535,7 +3541,7 @@ public class TestFromClientSide {
     }
   }
 
-  
+
   @Test
   public void testRowsPutMultiGet() throws IOException {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");

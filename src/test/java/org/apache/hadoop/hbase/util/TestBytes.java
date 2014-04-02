@@ -318,14 +318,14 @@ public class TestBytes extends TestCase {
     return list;
   }
 
-  public void testComparatorPerfRandom() {
+  public void testComparator() {
     // The rows in a given region follow the following pattern:
     // [PREFIX BYTES][ID BYTES]
-    // With long prefixes, the comparison using guava is faster.
-    // With fewer common bytes, the guava comparison is slower.
-    for (int PREFIX = 50; PREFIX >= 0; PREFIX -= 5) {
+    // With long prefixes, the comparison using Guava is faster.
+    // With fewer common bytes, the Guava comparison is slower.
+    for (int PREFIX = 50; PREFIX >= 0; PREFIX -= 10) {
       int ID = 100;
-      int numRows = 10000;
+      int numRows = 1000;
       List<byte[]> list = getRowsRandom(numRows, PREFIX, ID);
 
       // Correctness
@@ -335,36 +335,8 @@ public class TestBytes extends TestCase {
           int bg = Bytes.compareTo(list.get(i), list.get(j));
           Bytes.useGuavaBytesComparision = false;
           int bs = Bytes.compareTo(list.get(i), list.get(j));
-          assertTrue(bg == bs);
+          assertTrue(bg + " != " + bs, bg == bs);
         }
-      }
-
-      // Comparing the Bytes
-      boolean[] bools = new boolean[]{true, false};
-      long[] timeNs = new long[2];
-
-      for (int idx = 0; idx < 2; idx++) {
-        Bytes.useGuavaBytesComparision = bools[idx];
-        long st = System.nanoTime();
-        for (int i=0; i<numRows; i++) {
-          for (int j=0; j<numRows; j++) {
-            Bytes.compareTo(list.get(i), list.get(j));
-          }
-        }
-        long en = System.nanoTime();
-        timeNs[idx] += (en - st);
-      }
-      double gain = (timeNs[1] - timeNs[0]) / ((double)timeNs[1]);
-      System.out.println("Prefix : " + PREFIX + ", gain : " + gain * 100 + " ");
-      if (PREFIX > 20) {
-        assertTrue(gain > 0.1);
-        assertTrue(timeNs[1] > timeNs[0]);
-      } else if (PREFIX < 10) {
-        assertTrue(gain < -0.1);
-        if (PREFIX == 0) {
-          assertTrue(gain < -0.5);
-        }
-        assertTrue(timeNs[1] < timeNs[0]);
       }
     }
   }

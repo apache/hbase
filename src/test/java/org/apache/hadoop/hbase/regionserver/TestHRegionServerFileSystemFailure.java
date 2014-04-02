@@ -15,10 +15,14 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(TagRunner.class)
 public class TestHRegionServerFileSystemFailure {
   private static final Log LOG = LogFactory
       .getLog(TestHRegionServerFileSystemFailure.class);
@@ -65,6 +69,8 @@ public class TestHRegionServerFileSystemFailure {
     }
   }
 
+  // Marked as unstable and recorded at #3297537
+  @TestTag({ "unstable" })
   @Test
   public void testHRegionServerFileSystemFailure() throws Exception {
     // Build some data.
