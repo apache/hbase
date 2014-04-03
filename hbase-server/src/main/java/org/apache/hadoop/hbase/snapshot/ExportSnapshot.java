@@ -51,8 +51,6 @@ import org.apache.hadoop.hbase.mapreduce.JobUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -63,6 +61,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -583,8 +582,7 @@ public final class ExportSnapshot extends Configured implements Tool {
   /**
    * Run Map-Reduce Job to perform the files copy.
    */
-  private void runCopyJob(final FileSystem inputFs, final Path inputRoot,
-      final FileSystem outputFs, final Path outputRoot,
+  private void runCopyJob(final Path inputRoot, final Path outputRoot,
       final List<Pair<Path, Long>> snapshotFiles, final boolean verifyChecksum,
       final String filesUser, final String filesGroup, final int filesMode,
       final int mappers) throws IOException, InterruptedException, ClassNotFoundException {
@@ -614,13 +612,10 @@ public final class ExportSnapshot extends Configured implements Tool {
       SequenceFileInputFormat.addInputPath(job, path);
     }
 
-    UserProvider userProvider = UserProvider.instantiate(job.getConfiguration());
-    FsDelegationToken inputFsToken = new FsDelegationToken(userProvider, "irenewer");
-    FsDelegationToken outputFsToken = new FsDelegationToken(userProvider, "orenewer");
     try {
       // Acquire the delegation Tokens
-      inputFsToken.acquireDelegationToken(inputFs);
-      outputFsToken.acquireDelegationToken(outputFs);
+      TokenCache.obtainTokensForNamenodes(job.getCredentials(),
+        new Path[] { inputRoot, outputRoot }, conf);
 
       // Run the MR Job
       if (!job.waitForCompletion(true)) {
@@ -629,9 +624,6 @@ public final class ExportSnapshot extends Configured implements Tool {
         throw new ExportSnapshotException("Copy Files Map-Reduce Job failed");
       }
     } finally {
-      inputFsToken.releaseDelegationToken();
-      outputFsToken.releaseDelegationToken();
-
       // Remove MR Input
       try {
         inputFolderPath.getFileSystem(conf).delete(inputFolderPath, true);
@@ -780,7 +772,7 @@ public final class ExportSnapshot extends Configured implements Tool {
       if (files.size() == 0) {
         LOG.warn("There are 0 store file to be copied. There may be no data in the table.");
       } else {
-        runCopyJob(inputFs, inputRoot, outputFs, outputRoot, files, verifyChecksum,
+        runCopyJob(inputRoot, outputRoot, files, verifyChecksum,
                    filesUser, filesGroup, filesMode, mappers);
       }
 
