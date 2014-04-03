@@ -1371,6 +1371,11 @@
         <version>${htrace.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.htrace</groupId>
+        <artifactId>htrace-zipkin</artifactId>
+        <version>${htrace.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.lmax</groupId>
         <artifactId>disruptor</artifactId>
         <version>${disruptor.version}</version>
