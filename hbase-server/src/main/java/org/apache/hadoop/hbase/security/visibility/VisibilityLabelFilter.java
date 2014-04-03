@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.visibility;
 import java.io.IOException;
 import java.util.BitSet;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
@@ -27,7 +28,10 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.util.ByteRange;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 
 /**
  * This Filter checks the visibility expression with each KV against visibility labels associated
@@ -36,14 +40,46 @@ import org.apache.hadoop.hbase.util.Pair;
 @InterfaceAudience.Private
 class VisibilityLabelFilter extends FilterBase {
 
-  private BitSet authLabels;
+  private final BitSet authLabels;
+  private final Map<ByteRange, Integer> cfVsMaxVersions;
+  private final ByteRange curFamily;
+  private final ByteRange curQualifier;
+  private int curFamilyMaxVersions;
+  private int curQualMetVersions;
 
-  public VisibilityLabelFilter(BitSet authLabels) {
+  public VisibilityLabelFilter(BitSet authLabels, Map<ByteRange, Integer> cfVsMaxVersions) {
     this.authLabels = authLabels;
+    this.cfVsMaxVersions = cfVsMaxVersions;
+    this.curFamily = new SimpleByteRange();
+    this.curQualifier = new SimpleByteRange();
   }
 
   @Override
   public ReturnCode filterKeyValue(Cell cell) throws IOException {
+    if (curFamily.getBytes() == null
+        || (Bytes.compareTo(curFamily.getBytes(), curFamily.getOffset(), curFamily.getLength(),
+            cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()) != 0)) {
+      curFamily.set(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
+      // For this family, all the columns can have max of curFamilyMaxVersions versions. No need to
+      // consider the older versions for visibility label check.
+      // Ideally this should have been done at a lower layer by HBase (?)
+      curFamilyMaxVersions = cfVsMaxVersions.get(curFamily);
+      // Family is changed. Just unset curQualifier.
+      curQualifier.unset();
+    }
+    if (curQualifier.getBytes() == null
+        || (Bytes.compareTo(curQualifier.getBytes(), curQualifier.getOffset(),
+            curQualifier.getLength(), cell.getQualifierArray(), cell.getQualifierOffset(),
+            cell.getQualifierLength()) != 0)) {
+      curQualifier.set(cell.getQualifierArray(), cell.getQualifierOffset(),
+          cell.getQualifierLength());
+      curQualMetVersions = 0;
+    }
+    curQualMetVersions++;
+    if (curQualMetVersions > curFamilyMaxVersions) {
+      return ReturnCode.SKIP;
+    }
+
     Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
         cell.getTagsLength());
     boolean visibilityTagPresent = false;
@@ -81,5 +117,13 @@ class VisibilityLabelFilter extends FilterBase {
       }
     }
     return visibilityTagPresent ? ReturnCode.SKIP : ReturnCode.INCLUDE;
+  }
+
+  @Override
+  public void reset() throws IOException {
+    this.curFamily.unset();
+    this.curQualifier.unset();
+    this.curFamilyMaxVersions = 0;
+    this.curQualMetVersions = 0;
   }
 }

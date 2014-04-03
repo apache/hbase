@@ -764,6 +764,105 @@ public class TestVisibilityLabels {
     }
   }
 
+  @Test
+  public void testMultipleVersions() throws Exception {
+    final byte[] r1 = Bytes.toBytes("row1");
+    final byte[] r2 = Bytes.toBytes("row2");
+    final byte[] v1 = Bytes.toBytes("100");
+    final byte[] v2 = Bytes.toBytes("101");
+    final byte[] fam2 = Bytes.toBytes("info2");
+    final byte[] qual2 = Bytes.toBytes("qual2");
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HColumnDescriptor col = new HColumnDescriptor(fam);// Default max versions is 1.
+    desc.addFamily(col);
+    col = new HColumnDescriptor(fam2);
+    col.setMaxVersions(5);
+    desc.addFamily(col);
+    TEST_UTIL.getHBaseAdmin().createTable(desc);
+    HTable table = null;
+    try {
+      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      Put put = new Put(r1);
+      put.add(fam, qual, 3l, v1);
+      put.add(fam, qual2, 3l, v1);
+      put.add(fam2, qual, 3l, v1);
+      put.add(fam2, qual2, 3l, v1);
+      put.setCellVisibility(new CellVisibility(SECRET));
+      table.put(put);
+      put = new Put(r1);
+      put.add(fam, qual, 4l, v2);
+      put.add(fam, qual2, 4l, v2);
+      put.add(fam2, qual, 4l, v2);
+      put.add(fam2, qual2, 4l, v2);
+      put.setCellVisibility(new CellVisibility(PRIVATE));
+      table.put(put);
+
+      put = new Put(r2);
+      put.add(fam, qual, 3l, v1);
+      put.add(fam, qual2, 3l, v1);
+      put.add(fam2, qual, 3l, v1);
+      put.add(fam2, qual2, 3l, v1);
+      put.setCellVisibility(new CellVisibility(SECRET));
+      table.put(put);
+      put = new Put(r2);
+      put.add(fam, qual, 4l, v2);
+      put.add(fam, qual2, 4l, v2);
+      put.add(fam2, qual, 4l, v2);
+      put.add(fam2, qual2, 4l, v2);
+      put.setCellVisibility(new CellVisibility(SECRET));
+      table.put(put);
+
+      // TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      Scan s = new Scan();
+      s.setMaxVersions(1);
+      s.setAuthorizations(new Authorizations(SECRET));
+      ResultScanner scanner = table.getScanner(s);
+      Result result = scanner.next();
+      assertTrue(Bytes.equals(r1, result.getRow()));
+      // for cf 'fam' max versions in HCD is 1. So the old version cells, which are having matching
+      // CellVisibility with Authorizations, should not get considered in the label evaluation at
+      // all.
+      assertNull(result.getColumnLatestCell(fam, qual));
+      assertNull(result.getColumnLatestCell(fam, qual2));
+      // for cf 'fam2' max versions in HCD is > 1. So we can consider the old version cells, which
+      // are having matching CellVisibility with Authorizations, in the label evaluation. It can
+      // just skip those recent versions for which visibility is not there as per the new version's
+      // CellVisibility. The old versions which are having visibility can be send back
+      Cell cell = result.getColumnLatestCell(fam2, qual);
+      assertNotNull(cell);
+      assertTrue(Bytes.equals(v1, 0, v1.length, cell.getValueArray(), cell.getValueOffset(),
+          cell.getValueLength()));
+      cell = result.getColumnLatestCell(fam2, qual2);
+      assertNotNull(cell);
+      assertTrue(Bytes.equals(v1, 0, v1.length, cell.getValueArray(), cell.getValueOffset(),
+          cell.getValueLength()));
+
+      result = scanner.next();
+      assertTrue(Bytes.equals(r2, result.getRow()));
+      cell = result.getColumnLatestCell(fam, qual);
+      assertNotNull(cell);
+      assertTrue(Bytes.equals(v2, 0, v2.length, cell.getValueArray(), cell.getValueOffset(),
+          cell.getValueLength()));
+      cell = result.getColumnLatestCell(fam, qual2);
+      assertNotNull(cell);
+      assertTrue(Bytes.equals(v2, 0, v2.length, cell.getValueArray(), cell.getValueOffset(),
+          cell.getValueLength()));
+      cell = result.getColumnLatestCell(fam2, qual);
+      assertNotNull(cell);
+      assertTrue(Bytes.equals(v2, 0, v2.length, cell.getValueArray(), cell.getValueOffset(),
+          cell.getValueLength()));
+      cell = result.getColumnLatestCell(fam2, qual2);
+      assertNotNull(cell);
+      assertTrue(Bytes.equals(v2, 0, v2.length, cell.getValueArray(), cell.getValueOffset(),
+          cell.getValueLength()));
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+    }
+  }
+
   private static HTable createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
       throws Exception {
     HTable table = null;
