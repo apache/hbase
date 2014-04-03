@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
@@ -83,6 +84,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
@@ -225,6 +227,65 @@ public class TestFromClientSide {
      assertArrayEquals(T1, CellUtil.cloneValue(kvs[4]));
      scanner.close();
      h.close();
+   }
+
+    /**
+    * Basic client side validation of HBASE-10118
+    */
+   @Test
+   public void testPurgeFutureDeletes() throws Exception {
+     final byte[] TABLENAME = Bytes.toBytes("testPurgeFutureDeletes");
+     final byte[] ROW = Bytes.toBytes("row");
+     final byte[] FAMILY = Bytes.toBytes("family");
+     final byte[] COLUMN = Bytes.toBytes("column");
+     final byte[] VALUE = Bytes.toBytes("value");
+
+     HTable table = TEST_UTIL.createTable(TABLENAME, FAMILY);
+
+     // future timestamp
+     long ts = System.currentTimeMillis() * 2;
+     Put put = new Put(ROW, ts);
+     put.add(FAMILY, COLUMN, VALUE);
+     table.put(put);
+
+     Get get = new Get(ROW);
+     Result result = table.get(get);
+     assertArrayEquals(VALUE, result.getValue(FAMILY, COLUMN));
+
+     Delete del = new Delete(ROW);
+     del.deleteColumn(FAMILY, COLUMN, ts);
+     table.delete(del);
+
+     get = new Get(ROW);
+     result = table.get(get);
+     assertNull(result.getValue(FAMILY, COLUMN));
+
+     // major compaction, purged future deletes 
+     TEST_UTIL.getHBaseAdmin().flush(TABLENAME);
+     TEST_UTIL.getHBaseAdmin().majorCompact(TABLENAME);
+
+     // waiting for the major compaction to complete
+     TEST_UTIL.waitFor(6000, new Waiter.Predicate<IOException>() {
+       @Override
+       public boolean evaluate() throws IOException {
+         try {
+           return TEST_UTIL.getHBaseAdmin().getCompactionState(TABLENAME) ==
+               AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
+         } catch (InterruptedException e) {
+           throw new IOException(e);
+         }
+       }
+     });
+
+     put = new Put(ROW, ts);
+     put.add(FAMILY, COLUMN, VALUE);
+     table.put(put);
+
+     get = new Get(ROW);
+     result = table.get(get);
+     assertArrayEquals(VALUE, result.getValue(FAMILY, COLUMN));
+     
+     table.close();
    }
 
    @Test
