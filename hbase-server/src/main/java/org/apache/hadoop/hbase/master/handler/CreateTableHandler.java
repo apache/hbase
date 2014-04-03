@@ -88,7 +88,7 @@ public class CreateTableHandler extends EventHandler {
     int timeout = conf.getInt("hbase.client.catalog.timeout", 10000);
     // Need hbase:meta availability to create a table
     try {
-      if(catalogTracker.waitForMeta(timeout) == null) {
+      if (catalogTracker.waitForMeta(timeout) == null) {
         throw new NotAllMetaRegionsOnlineException();
       }
     } catch (InterruptedException e) {
@@ -114,7 +114,9 @@ public class CreateTableHandler extends EventHandler {
       // Use enabling state to tell if there is already a request for the same
       // table in progress. This will introduce a new zookeeper call. Given
       // createTable isn't a frequent operation, that should be ok.
-      //TODO: now that we have table locks, re-evaluate above
+      // TODO: now that we have table locks, re-evaluate above -- table locks are not enough.
+      // We could have cleared the hbase.rootdir and not zk.  How can we detect this case?
+      // Having to clean zk AND hdfs is awkward.
       try {
         if (!this.assignmentManager.getZKTable().checkAndSetEnablingTable(tableName)) {
           throw new TableExistsException(tableName);

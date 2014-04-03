@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -1972,7 +1973,13 @@ public class HLogSplitter {
    * @return true when distributed log replay is turned on
    */
   public static boolean isDistributedLogReplay(Configuration conf) {
-    return conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
+    boolean dlr = conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
       HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
+    int version = conf.getInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Distributed log replay=" + dlr + ", " + HFile.FORMAT_VERSION_KEY + "=" + version);
+    }
+    // For distributed log replay, hfile version must be 3 at least; we need tag support.
+    return dlr && (version >= 3);
   }
 }

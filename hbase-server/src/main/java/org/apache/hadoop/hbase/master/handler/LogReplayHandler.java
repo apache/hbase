@@ -83,6 +83,6 @@ public class LogReplayHandler extends EventHandler {
       this.deadServers.finish(serverName);
     }
     // logReplay is the last step of SSH so log a line to indicate that
-    LOG.info("Finished processing of shutdown of " + serverName);
+    LOG.info("Finished processing shutdown of " + serverName);
   }
 }

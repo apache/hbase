@@ -628,7 +628,7 @@ public class SplitLogManager extends ZooKeeperListener {
     try {
       if (regions == null) {
         // remove all children under /home/recovering-regions
-        LOG.info("Garbage collecting all recovering regions.");
+        LOG.debug("Garbage collecting all recovering region znodes");
         ZKUtil.deleteChildrenRecursively(watcher, watcher.recoveringRegionsZNode);
       } else {
         for (String curRegion : regions) {
