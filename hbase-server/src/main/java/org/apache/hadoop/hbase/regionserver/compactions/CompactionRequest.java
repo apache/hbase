@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
@@ -210,7 +211,8 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
               }
           }), new Function<StoreFile, String>() {
             public String apply(StoreFile sf) {
-              return StringUtils.humanReadableInt(sf.getReader().length());
+              return StringUtils.humanReadableInt(
+                (sf.getReader() == null) ? 0 : sf.getReader().length());
             }
           }));
 
@@ -228,7 +230,8 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
   private void recalculateSize() {
     long sz = 0;
     for (StoreFile sf : this.filesToCompact) {
-      sz += sf.getReader().length();
+      Reader r = sf.getReader();
+      sz += r == null ? 0 : r.length();
     }
     this.totalSize = sz;
   }
