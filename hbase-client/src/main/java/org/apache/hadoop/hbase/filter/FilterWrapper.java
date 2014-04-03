@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
-import org.apache.zookeeper.KeeperException.UnimplementedException;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -154,15 +153,29 @@ final public class FilterWrapper extends Filter {
 
   @Override
   public void filterRowCells(List<Cell> kvs) throws IOException {
+    filterRowCellsWithRet(kvs);
+  }
+
+  public enum FilterRowRetCode {
+    NOT_CALLED,
+    INCLUDE,     // corresponds to filter.filterRow() returning false
+    EXCLUDE      // corresponds to filter.filterRow() returning true
+  }
+  public FilterRowRetCode filterRowCellsWithRet(List<Cell> kvs) throws IOException {
     //To fix HBASE-6429,
     //Filter with filterRow() returning true is incompatible with scan with limit
     //1. hasFilterRow() returns true, if either filterRow() or filterRow(kvs) is implemented.
     //2. filterRow() is merged with filterRow(kvs),
     //so that to make all those row related filtering stuff in the same function.
     this.filter.filterRowCells(kvs);
-    if (!kvs.isEmpty() && this.filter.filterRow()) {
-      kvs.clear();
+    if (!kvs.isEmpty()) {
+      if (this.filter.filterRow()) {
+        kvs.clear();
+        return FilterRowRetCode.EXCLUDE;
+      }
+      return FilterRowRetCode.INCLUDE;
     }
+    return FilterRowRetCode.NOT_CALLED;
   }
 
   /**
