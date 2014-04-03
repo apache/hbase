@@ -108,8 +108,10 @@ import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.LeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.NonLeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.Operator;
+import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 import com.google.common.collect.Lists;
@@ -979,6 +981,10 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   }
 
   private Filter createVisibilityLabelFilter(HRegion region, Authorizations authorizations) {
+    Map<ByteRange, Integer> cfVsMaxVersions = new HashMap<ByteRange, Integer>();
+    for (HColumnDescriptor hcd : region.getTableDesc().getFamilies()) {
+      cfVsMaxVersions.put(new SimpleByteRange(hcd.getName()), hcd.getMaxVersions());
+    }
     if (authorizations == null) {
       // No Authorizations present for this scan/Get!
       // In case of "labels" table and user tables, create an empty auth set. In other system tables
@@ -988,7 +994,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       if (table.isSystemTable() && !table.equals(LABELS_TABLE_NAME)) {
         return null;
       }
-      return new VisibilityLabelFilter(new BitSet(0));
+      return new VisibilityLabelFilter(new BitSet(0), cfVsMaxVersions);
     }
     Filter visibilityLabelFilter = null;
     if (this.scanLabelGenerator != null) {
@@ -1008,7 +1014,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
           }
         }
       }
-      visibilityLabelFilter = new VisibilityLabelFilter(bs);
+      visibilityLabelFilter = new VisibilityLabelFilter(bs, cfVsMaxVersions);
     }
     return visibilityLabelFilter;
   }
