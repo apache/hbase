@@ -18,22 +18,18 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
 
 /**
  * Tests the value filter
@@ -56,6 +52,7 @@ public class TestSingleColumnValueFilter {
   private static final Pattern QUICK_PATTERN = Pattern.compile("QuIcK", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
   Filter basicFilter;
+  Filter nullFilter;
   Filter substrFilter;
   Filter regexFilter;
   Filter regexPatternFilter;
@@ -63,6 +60,7 @@ public class TestSingleColumnValueFilter {
   @Before
   public void setUp() throws Exception {
     basicFilter = basicFilterNew();
+    nullFilter = nullFilterNew();
     substrFilter = substrFilterNew();
     regexFilter = regexFilterNew();
     regexPatternFilter = regexFilterNew(QUICK_PATTERN);
@@ -71,6 +69,11 @@ public class TestSingleColumnValueFilter {
   private Filter basicFilterNew() {
     return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
       CompareOp.GREATER_OR_EQUAL, VAL_2);
+  }
+
+  private Filter nullFilterNew() {
+    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER, CompareOp.NOT_EQUAL,
+        new NullComparator());
   }
 
   private Filter substrFilterNew() {
@@ -114,6 +117,17 @@ public class TestSingleColumnValueFilter {
     kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_2);
     assertTrue("basicFilter5", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     assertFalse("basicFilterNotNull", filter.filterRow());
+  }
+
+  private void nullFilterTests(Filter filter) throws Exception {
+    ((SingleColumnValueFilter) filter).setFilterIfMissing(true);
+    KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, FULLSTRING_1);
+    assertTrue("null1", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    assertFalse("null1FilterRow", filter.filterRow());
+    filter.reset();
+    kv = new KeyValue(ROW, COLUMN_FAMILY, Bytes.toBytes("qual2"), FULLSTRING_2);
+    assertTrue("null2", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    assertTrue("null2FilterRow", filter.filterRow());
   }
 
   private void substrFilterTests(Filter filter)
@@ -168,7 +182,8 @@ public class TestSingleColumnValueFilter {
    */
   @Test
   public void testStop() throws Exception {
-    basicFilterTests((SingleColumnValueFilter)basicFilter);
+    basicFilterTests((SingleColumnValueFilter) basicFilter);
+    nullFilterTests(nullFilter);
     substrFilterTests(substrFilter);
     regexFilterTests(regexFilter);
     regexPatternFilterTests(regexPatternFilter);
@@ -182,6 +197,8 @@ public class TestSingleColumnValueFilter {
   public void testSerialization() throws Exception {
     Filter newFilter = serializationTest(basicFilter);
     basicFilterTests((SingleColumnValueFilter)newFilter);
+    newFilter = serializationTest(nullFilter);
+    nullFilterTests(newFilter);
     newFilter = serializationTest(substrFilter);
     substrFilterTests(newFilter);
     newFilter = serializationTest(regexFilter);
