@@ -45,10 +45,9 @@ import org.junit.runners.Suite.SuiteClasses;
     TestLogRolling.class, TestHFileOutputFormat.class,
     TestProcessBasedCluster.class, TestRegionStateOnMasterFailure.class,
     TestScannerTimeout.class, TestWALReplay.class, TestThriftMetrics.class,
-    TestRegionPlacement.class, TestServerConfigFromClient.class,
-    TestRSLivenessOnMasterFailover.class, TestLogSplitOnMasterFailover.class,
-    TagRunner.class, TestHRegionServerFileSystemFailure.class,
-    TestFullLogReconstruction.class, TestSplitLogManager.class,
-    TestHLog.class })
+    TestServerConfigFromClient.class, TestRSLivenessOnMasterFailover.class,
+    TestLogSplitOnMasterFailover.class, TagRunner.class,
+    TestHRegionServerFileSystemFailure.class, TestFullLogReconstruction.class,
+    TestSplitLogManager.class, TestHLog.class })
 public class UnstableTestSuite {
 }

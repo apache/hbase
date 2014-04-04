@@ -58,9 +58,9 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hbase.util.Writables;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -101,6 +101,22 @@ public class TestRegionPlacement {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @After
+  public void cleanUpTables() throws IOException {
+    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    for(HTableDescriptor htd: admin.listTables()) {
+      try {
+        if (!htd.isMetaTable() ) {
+          admin.disableTable(htd.getName());
+          admin.deleteTable(htd.getName());
+        }
+      } catch (IOException ioe) {
+        // Ignored. so that we can try and remove all tables.
+      }
+    }
+  }
+
+
   @Test
   public void testLoadBalancerImpl() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
@@ -117,12 +133,10 @@ public class TestRegionPlacement {
    *
    * @throws Exception
    */
-  // Marked as unstable and recorded in #2747703
-  @TestTag({ "unstable" })
   @Test(timeout = 360000)
   public void testPrimaryPlacement() throws Exception {
     // Create a table with REGION_NUM regions.
-    createTable("testRegionAssignment", REGION_NUM);
+    createTable("testPrimaryPlacement", REGION_NUM);
     AssignmentPlan plan = rp.getExistingAssignmentPlan();
     Map<Integer, Integer> expected = new HashMap<Integer, Integer>();
     // we expect 2 regionservers with 2 regions and 2 with 3 regions
@@ -131,7 +145,7 @@ public class TestRegionPlacement {
     assertTrue(verifyNumPrimaries(expected, plan));
 
     //create additional table with 5 regions
-    createTable("testTable2", 5);
+    createTable("testPrimaryPlacement2", 5);
     expected.clear();
     // after this we expect 3 regionservers with 4 regions and one with 3
     expected.put(4, 3);
@@ -139,7 +153,6 @@ public class TestRegionPlacement {
     plan = rp.getExistingAssignmentPlan();
     assertTrue(verifyNumPrimaries(expected, plan));
   }
-
 
   public boolean verifyNumPrimaries(Map<Integer, Integer> expected, AssignmentPlan plan) {
     Map<HServerAddress, List<HRegionInfo>> assignment = new HashMap<HServerAddress, List<HRegionInfo>>();
@@ -167,13 +180,12 @@ public class TestRegionPlacement {
     return expected.equals(rswithNumRegions);
   }
 
-  // Marked as unstable and recored in #2747703
-  @TestTag({ "unstable" })
   @Test(timeout = 360000)
   public void testRegionPlacement() throws Exception {
     AssignmentPlan currentPlan;
-    // ONLY meta regions, ROOT and META, are assigned at beginning.
-    verifyRegionMovementNum(META_REGION_NUM);
+
+    // Reset all of the counters.
+    resetLastOpenedRegionCount();
 
     // Create a table with REGION_NUM regions.
     createTable("testRegionAssignment", REGION_NUM);
@@ -366,14 +378,22 @@ public class TestRegionPlacement {
       LOG.debug("There are " + regionMovement + "/" + expected +
           " regions moved after " + attempt + " attempts");
       Thread.sleep((++attempt) * sleep);
-    } while (regionMovement != expected && attempt <= retry);
+    } while (regionMovement < expected && attempt <= retry);
 
     // update the lastRegionOpenedCount
-    lastRegionOpenedCount = currentRegionOpened;
+    resetLastOpenedRegionCount(currentRegionOpened);
 
     assertEquals("There are only " + regionMovement + " instead of "
           + expected + " region movement for " + attempt + " attempts",
           regionMovement, expected);
+  }
+
+  private void resetLastOpenedRegionCount() {
+    resetLastOpenedRegionCount(TEST_UTIL.getHBaseCluster().getMaster().getMetrics().getRegionsOpened());
+  }
+
+  private void resetLastOpenedRegionCount(int newCount) {
+    this.lastRegionOpenedCount = newCount;
   }
 
   /**
