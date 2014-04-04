@@ -78,8 +78,8 @@ import com.google.common.util.concurrent.ListenableFuture;
  */
 public class HBaseToThriftAdapter implements HRegionInterface {
   public static final Log LOG = LogFactory.getLog(HBaseToThriftAdapter.class);
-  private ThriftHRegionInterface connection;
-  private ThriftClientManager clientManager;
+  public ThriftHRegionInterface connection;
+  public ThriftClientManager clientManager;
   private InetSocketAddress addr;
   private Configuration conf;
   private Class<? extends ThriftClientInterface> clazz;
@@ -118,7 +118,8 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     } else if (e instanceof RuntimeTApplicationException) {
       throw new RuntimeException(e);
     } else {
-      //TODO: creating a new connection is unnecessary. We should replace it with cleanUpConnection later
+      //TODO: creating a new connection is unnecessary.
+      // We should replace it with cleanUpConnection later
       Pair<ThriftClientInterface, ThriftClientManager> interfaceAndManager = HBaseThriftRPC
           .refreshConnection(this.addr, this.conf, this.connection, this.clazz);
       this.connection = (ThriftHRegionInterface) interfaceAndManager.getFirst();
@@ -179,7 +180,14 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   }
 
   private void preProcess() {
-    if (this.connection == null || this.clientManager == null) {
+    if (this.connection == null || clientManager == null) {
+      if (connection != null) {
+        try {
+          connection.close();
+        } catch (Exception e) {
+          LOG.error("Could not close connection : " + connection, e);
+        }
+      }
       try {
         Pair<ThriftClientInterface, ThriftClientManager> clientAndManager = HBaseThriftRPC
             .getClientWithoutWrapper(addr, conf, clazz);
@@ -193,8 +201,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       try {
         setHeader();
       } catch (Exception e) {
-        e.printStackTrace();
-        LOG.error("Header could not be sent");
+        LOG.error("Header could not be sent", e);
       }
     }
   }
@@ -300,7 +307,11 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   @Override
   public void close() throws Exception {
-    throw new UnsupportedOperationException("Method is not supported for thrift");
+    clientManager = null;
+    if (this.connection != null) {
+      this.connection.close();
+      this.connection = null;
+    }
   }
 
   @Override
@@ -585,6 +596,8 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return false;
+    } finally {
+      postProcess();
     }
   }
 

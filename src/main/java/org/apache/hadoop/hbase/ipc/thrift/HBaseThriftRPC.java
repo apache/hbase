@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.util.Pair;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
@@ -119,8 +121,9 @@ public class HBaseThriftRPC {
       HBaseRPCOptions options) throws IOException {
     Pair<ThriftClientInterface, ThriftClientManager> interfaceAndManager = getClientWithoutWrapper(
         addr, conf, clazz);
-    return new HBaseToThriftAdapter(interfaceAndManager.getFirst(),
+    HBaseToThriftAdapter ret = new HBaseToThriftAdapter(interfaceAndManager.getFirst(),
         interfaceAndManager.getSecond(), addr, conf, clazz, options);
+    return ret;
   }
 
   /**

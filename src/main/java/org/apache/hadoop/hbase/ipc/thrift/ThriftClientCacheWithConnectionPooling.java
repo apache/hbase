@@ -184,6 +184,7 @@ public class ThriftClientCacheWithConnectionPooling implements
       closeAll(pair.getFirst(), pair.getSecond());
     }
     clientPools.clear();
+    this.clientManager.close();
   }
 
   private void closeAll(InetSocketAddress server,

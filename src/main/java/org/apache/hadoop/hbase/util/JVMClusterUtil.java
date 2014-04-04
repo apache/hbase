@@ -209,6 +209,22 @@ public class JVMClusterUtil {
       if (interrupted) {
         Thread.currentThread().interrupt();
       }
+      for (Thread t : regionservers) {
+        try {
+          ((RegionServerThread)t).regionServer.close();
+        } catch (Exception e) {
+          LOG.error("Could not close regionserver resources");
+          e.printStackTrace();
+        }
+      }
+      for (HMaster t : masters) {
+        try {
+          t.close();
+        } catch (Exception e) {
+          LOG.error("Could not close master resources");
+          e.printStackTrace();
+        }
+      }
     }
 
     LOG.info("Shutdown of " +

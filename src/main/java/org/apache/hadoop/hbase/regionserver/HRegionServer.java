@@ -4078,6 +4078,7 @@ public class HRegionServer implements HRegionInterface,
 
   @Override
   public void close() throws Exception {
+    this.shutdownServers();
   }
 
   @Override
