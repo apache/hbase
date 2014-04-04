@@ -58,11 +58,11 @@ public class TestROOTAssignment {
     TEST_UTIL.getConfiguration().setInt("hbase.regions.percheckin", 2);
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(2);
+
     // Create a table of three families.  This will assign a region.
-    TEST_UTIL.createTable(TABLENAME, FAMILIES);
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
-    int countOfRegions = TEST_UTIL.createMultiRegions(t, FAMILIES[0]);
-    TEST_UTIL.waitUntilAllRegionsAssigned(countOfRegions);
+    TEST_UTIL.createTable(TABLENAME, FAMILIES, 3, Bytes.toBytes("bbb"),
+        Bytes.toBytes("yyy"), 25);
+
     HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
     TEST_UTIL.loadTable(table, FAMILIES[0]);
     table.close();
@@ -86,7 +86,7 @@ public class TestROOTAssignment {
     private boolean done = false;
     private final HServerAddress rootServerAddress;
     private final HMaster master;
- 
+
     PostponeShutdownProcessing(final HMaster master,
         final HServerAddress rootServerAddress) {
       this.master = master;
@@ -138,7 +138,7 @@ public class TestROOTAssignment {
    * If the split of the log for the regionserver hosting ROOT doesn't go off
    * smoothly, if the process server shutdown gets added to the delayed queue
    * of events to process, then ROOT was not being allocated, ever.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2707">HBASE-2707</a> 
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2707">HBASE-2707</a>
    */
   @Test (timeout=300000) public void testROOTDeployedThoughProblemSplittingLog()
   throws Exception {
@@ -148,7 +148,7 @@ public class TestROOTAssignment {
     byte [] rootRegion = Bytes.toBytes("-ROOT-,,0");
     int rootIndex = cluster.getServerWith(rootRegion);
     final HRegionServer rootHRS = cluster.getRegionServer(rootIndex);
- 
+
     // Add our RegionServerOperationsListener
     PostponeShutdownProcessing listener = new PostponeShutdownProcessing(master,
       rootHRS.getHServerInfo().getServerAddress());

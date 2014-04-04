@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -41,17 +40,15 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
 
 /**
  * Tests TableInputFormat with varying numbers of mappers per region.
  */
 public class TestTableInputFormatNMappersPerRegion {
-  
+
   static final String SPECULATIVE_EXECUTION = "mapred.map.tasks.speculative.execution";
   static final Log LOG = LogFactory.getLog(TestTableInputFormatScan.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -109,13 +106,13 @@ public class TestTableInputFormatNMappersPerRegion {
         }
       }
     }
-    
+
   }
-  
+
   /**
    * Tests whether TableInputFormat works correctly when number of mappers
    * per region is set to 1.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    * @throws ClassNotFoundException
@@ -125,10 +122,10 @@ public class TestTableInputFormatNMappersPerRegion {
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("testOneMapperPerRegion", 1, 25);
   }
-  
+
   /**
-   * Tests when number of mappers is set to 3. 
-   * 
+   * Tests when number of mappers is set to 3.
+   *
    * @throws IOException
    * @throws InterruptedException
    * @throws ClassNotFoundException
@@ -138,11 +135,11 @@ public class TestTableInputFormatNMappersPerRegion {
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("testThreeMappersPerRegion", 3, 25);
   }
-  
+
   /**
    * Tests the scenario where there is only one region. Expecting resumption to
    * one mapper per region.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    * @throws ClassNotFoundException
@@ -152,11 +149,11 @@ public class TestTableInputFormatNMappersPerRegion {
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("testOnTableWithOneRegion", 5, 1);
   }
-  
+
   /**
    * Tests the scenario where there is only two regions. Expecting resumption to
    * one mapper per region.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    * @throws ClassNotFoundException
@@ -166,10 +163,10 @@ public class TestTableInputFormatNMappersPerRegion {
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("testOnTableWithTwoRegions", 5, 2);
   }
-  
+
   /**
    * Tests whether the framework correctly detects illegal inputs.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    * @throws ClassNotFoundException
@@ -179,20 +176,20 @@ public class TestTableInputFormatNMappersPerRegion {
   throws IOException, InterruptedException, ClassNotFoundException {
     try {
       testScan("testZeroMapper", 0, 25);
-      assertTrue("Should not be able to take 0 as number of mappers " +
-          "per region", false);
+      Assert.assertTrue("Should not be able to take 0 as number of mappers "
+          + "per region", false);
     } catch (IllegalArgumentException e) {
       // Expected
     }
     try {
       testScan("testNegOneMapper", -1, 25);
-      assertTrue("Should not be able to take -1 as number of mappers " +
-          "per region", false);
+      Assert.assertTrue("Should not be able to take -1 as number of mappers "
+          + "per region", false);
     } catch (IllegalArgumentException e) {
       // Expected
     }
   }
-  
+
   // If numRegions > 2, this creates 25 regions, rather than numRegions regions.
   private void testScan(String tableName, int numMappersPerRegion, int numRegions)
   throws IOException, InterruptedException, ClassNotFoundException {
@@ -202,17 +199,21 @@ public class TestTableInputFormatNMappersPerRegion {
     c.setBoolean(SPECULATIVE_EXECUTION, false);
     // Set the number of maps per region for this job
     c.setInt(TableInputFormat.MAPPERS_PER_REGION, numMappersPerRegion);
-    // Create and fill table
-    table = TEST_UTIL.createTable(Bytes.toBytes(tableName), INPUT_FAMILY);
     // Store the number of regions opened
     int regionsOpened = 0;
     if (numRegions == 2) {
-      byte[][] startKeys = { HConstants.EMPTY_START_ROW, Bytes.toBytes("mmm") };
-      regionsOpened = TEST_UTIL.createMultiRegions(c, table, INPUT_FAMILY, startKeys);
+      regionsOpened = numRegions;
+      table = TEST_UTIL.createTable(Bytes.toBytes(tableName),
+          new byte[][] { INPUT_FAMILY }, 3, Bytes.toBytes("mmm"), null,
+          regionsOpened);
     } else if (numRegions == 1) {
+      table = TEST_UTIL.createTable(Bytes.toBytes(tableName), INPUT_FAMILY);
       regionsOpened = 1;
     } else if (numRegions > 2) {
-      regionsOpened = TEST_UTIL.createMultiRegions(table, INPUT_FAMILY);
+      regionsOpened = 25;
+      table = TEST_UTIL.createTable(Bytes.toBytes(tableName),
+          new byte[][] { INPUT_FAMILY }, 3, Bytes.toBytes("bbb"),
+          Bytes.toBytes("yyy"), regionsOpened);
     } else {
       throw new IllegalArgumentException("Expect positive number of regions but got " +
           numRegions);
@@ -227,7 +228,7 @@ public class TestTableInputFormatNMappersPerRegion {
     TableMapReduceUtil.initTableMapperJob(tableName, scan,
         RowCounterMapper.class, ImmutableBytesWritable.class, Result.class, job);
     job.waitForCompletion(true);
-    assertTrue(job.isComplete());
+    Assert.assertTrue(job.isComplete());
     // Get statistics
     Counters counters = job.getCounters();
     long totalMapCount = counters
@@ -235,10 +236,10 @@ public class TestTableInputFormatNMappersPerRegion {
     long totalRowCount = counters
         .findCounter(RowCounterMapper.Counters.ROWS).getValue();
     int actualNumMappersPerRegion = (numRegions > 2) ? numMappersPerRegion : 1;
-    assertEquals("Tried to open " + actualNumMappersPerRegion * regionsOpened + 
-        " maps but got " + totalMapCount, 
+    Assert.assertEquals("Tried to open " + actualNumMappersPerRegion * regionsOpened +
+        " maps but got " + totalMapCount,
         actualNumMappersPerRegion * regionsOpened, totalMapCount);
-    assertEquals("Supposed to find " + rowsLoaded + " rows but got " + totalRowCount, 
+    Assert.assertEquals("Supposed to find " + rowsLoaded + " rows but got " + totalRowCount,
         rowsLoaded, totalRowCount);
   }
 }

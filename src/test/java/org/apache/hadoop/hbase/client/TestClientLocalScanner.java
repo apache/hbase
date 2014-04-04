@@ -79,10 +79,10 @@ public class TestClientLocalScanner {
   @Test(timeout=200000)
   public void testCompareLocalScanToRemoteScan() throws IOException {
     byte [] name = Bytes.toBytes("testCompareLocalScanToRemoteScan");
-    HTable t = TEST_UTIL.createTable(name, new byte[][] {FAMILY, FAMILY2});
+    HTable t = TEST_UTIL.createTable(name, new byte[][] {FAMILY, FAMILY2}, 3,
+        Bytes.toBytes("aaa"), Bytes.toBytes("yyy"), 25);
     HTable tmpTable = new HTable(TEST_UTIL.getConfiguration(), name);
-    int cnt = TEST_UTIL.createMultiRegions(t, FAMILY);
-    TEST_UTIL.waitUntilAllRegionsAssigned(cnt);
+
     int rowCount = TEST_UTIL.loadTable(t, FAMILY);
     TEST_UTIL.loadTable(t, FAMILY2);
     t.flushCommits();
@@ -106,6 +106,7 @@ public class TestClientLocalScanner {
     ReadOnlyStoreCompactionInjectionHandler(byte[] tableName) {
       this.tableName = tableName;
     }
+    @Override
     protected void _processEvent(InjectionEvent event, Object... args) {
       if (event == InjectionEvent.READONLYSTORE_COMPACTION_WHILE_SNAPSHOTTING && !done) {
         try {
@@ -158,7 +159,7 @@ public class TestClientLocalScanner {
         new ReadOnlyStoreCompactionInjectionHandler(name);
     InjectionHandler.set(ih);
     ResultScanner scanner = t.getLocalScanner(new Scan());
-    for (Result r : scanner) {
+    for (@SuppressWarnings("unused") Result r : scanner) {
       rowCnt++;
     }
     InjectionHandler.clear();

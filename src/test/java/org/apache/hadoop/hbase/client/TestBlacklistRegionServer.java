@@ -19,6 +19,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -31,23 +36,15 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-
-import static org.junit.Assert.assertTrue;
 
 public class TestBlacklistRegionServer {
   private static final Log LOG = LogFactory.getLog(TestHCM.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final byte[] TABLE_NAME = Bytes.toBytes("test");
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
-  private static final byte[] ROW = Bytes.toBytes("bbd");
 
   private static final int REGION_SERVERS = 5;
 
@@ -67,8 +64,8 @@ public class TestBlacklistRegionServer {
 
     byte[] tableName = Bytes.toBytes("testBlacklistRegionServerWithoutTimeout");
 
-    HTable table = TEST_UTIL.createTable(tableName, FAM_NAM);
-    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+    TEST_UTIL.createTable(tableName, new byte[][] { FAM_NAM }, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
 
     List<JVMClusterUtil.RegionServerThread> servers =
       TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads();
@@ -126,7 +123,7 @@ public class TestBlacklistRegionServer {
       }
     }
 
-    assertTrue(numberOfNonMetaRegions == 0);
+    Assert.assertTrue(numberOfNonMetaRegions == 0);
 
     LOG.debug("Removing blacklisted Region Server");
 

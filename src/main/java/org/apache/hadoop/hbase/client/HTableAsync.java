@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ipc.thrift.HBaseToThriftAdapter;
 import org.apache.hadoop.hbase.thrift.SelfRetryingListenableFuture;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
+import org.apache.hadoop.hbase.util.StringBytes;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -81,6 +82,20 @@ public class HTableAsync extends HTable implements HTableAsyncInterface {
    * @throws IOException if a remote or network exception occurs
    */
   public HTableAsync(Configuration conf, byte[] tableName)
+      throws IOException {
+    super(conf, tableName);
+
+    this.hConnectionParams = HConnectionParams.getInstance(conf);
+  }
+
+  /**
+   * Creates an object to access a HBase table through asynchronous APIs.
+   *
+   * @param conf Configuration object to use.
+   * @param tableName Name of the table.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HTableAsync(Configuration conf, StringBytes tableName)
       throws IOException {
     super(conf, tableName);
 

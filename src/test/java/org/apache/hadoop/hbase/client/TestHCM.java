@@ -56,7 +56,7 @@ public class TestHCM {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final StringBytes TABLE_NAME = new StringBytes("test");
-  private static final byte[] FAM_NAM = Bytes.toBytes("f");
+  private static final byte[] FAM_NAME = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbd");
 
   private static final int REGION_SERVERS = 5;
@@ -80,10 +80,10 @@ public class TestHCM {
   @Test
   public void testRemoteServerFailure() throws Exception {
 
-    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRemoteServerFailure"), FAM_NAM);
+    HTable table = TEST_UTIL.createTable(
+        Bytes.toBytes("testRemoteServerFailure"), new byte[][] { FAM_NAME }, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
     table.setAutoFlush(true);
-
-    TEST_UTIL.createMultiRegions(table, FAM_NAM);
 
     try {
 
@@ -98,7 +98,7 @@ public class TestHCM {
       Thread.sleep(10000);
 
       Put put = new Put(ROW);
-      put.add(FAM_NAM, ROW, ROW);
+      put.add(FAM_NAME, ROW, ROW);
 
       table.put(put);
 
@@ -122,10 +122,12 @@ public class TestHCM {
   @Test
   public void testRegionCaching() throws Exception{
 
-    HTable table = TEST_UTIL.createTable(TABLE_NAME, FAM_NAM);
-    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+    HTable table = TEST_UTIL.createTable(TABLE_NAME, new byte[][] { FAM_NAME },
+        3, Bytes.toBytes("bbb"),
+        Bytes.toBytes("yyy"), 25);
+
     Put put = new Put(ROW);
-    put.add(FAM_NAM, ROW, ROW);
+    put.add(FAM_NAME, ROW, ROW);
     table.put(put);
     TableServers conn =
         (TableServers) table.getConnectionAndResetOperationContext();
@@ -141,12 +143,13 @@ public class TestHCM {
    */
   @Test
   public void testClientFailureReporting() throws Exception {
-
-    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testClientFailureReporting"), FAM_NAM);
-    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+    HTable table = TEST_UTIL.createTable(
+        new StringBytes("testClientFailureReporting"),
+        new byte[][] { FAM_NAME }, 3, Bytes.toBytes("bbb"),
+        Bytes.toBytes("yyy"), 25);
 
     Put put = new Put(ROW);
-    put.add(FAM_NAM, ROW, ROW);
+    put.add(FAM_NAME, ROW, ROW);
     setupFailure(table,
         TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size());
     try {
@@ -174,12 +177,14 @@ public class TestHCM {
    */
   @Test
   public void testClientFailureReportingGet() throws Exception {
-    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testClientFailureReportingGet"), FAM_NAM);
-    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+    HTable table = TEST_UTIL.createTable(
+        new StringBytes("testClientFailureReportingGet"),
+        new byte[][] { FAM_NAME }, 3, Bytes.toBytes("bbb"),
+        Bytes.toBytes("yyy"), 25);
 
 
     Put put = new Put(ROW);
-    put.add(FAM_NAM, ROW, ROW);
+    put.add(FAM_NAME, ROW, ROW);
     table.put(put);
 
     setupFailure(table,
@@ -203,11 +208,13 @@ public class TestHCM {
   @Test
   public void testClientFailureReportingDelete() throws Exception {
 
-    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testClientFailureReportingDelete"), FAM_NAM);
-    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+    HTable table = TEST_UTIL.createTable(
+        Bytes.toBytes("testClientFailureReportingDelete"),
+        new byte[][] { FAM_NAME }, 3, Bytes.toBytes("bbb"),
+        Bytes.toBytes("yyy"), 25);
 
     Put put = new Put(ROW);
-    put.add(FAM_NAM, ROW, ROW);
+    put.add(FAM_NAME, ROW, ROW);
     table.put(put);
 
     setupFailure(table,
@@ -232,11 +239,12 @@ public class TestHCM {
   @Test
   public void testClientGetSuccess() throws Exception {
 
-    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testClientSuccess"), FAM_NAM);
-    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testClientSuccess"),
+        new byte[][] { FAM_NAME }, 3, Bytes.toBytes("bbb"),
+        Bytes.toBytes("yyy"), 25);
 
     Put put = new Put(ROW);
-    put.add(FAM_NAM, ROW, ROW);
+    put.add(FAM_NAME, ROW, ROW);
     table.put(put);
 
     setupFailure(table, 0);

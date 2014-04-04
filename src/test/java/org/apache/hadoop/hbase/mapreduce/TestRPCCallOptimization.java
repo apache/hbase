@@ -55,8 +55,8 @@ public class TestRPCCallOptimization {
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
-    table = TEST_UTIL.createTable(TABLE_NAME, INPUT_FAMILY);
-    TEST_UTIL.createMultiRegions(table, INPUT_FAMILY);
+    table = TEST_UTIL.createTable(TABLE_NAME, new byte[][] { INPUT_FAMILY }, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
     TEST_UTIL.loadTable(table, INPUT_FAMILY);
     // start MR cluster
     TEST_UTIL.startMiniMapReduceCluster();
@@ -89,11 +89,13 @@ public class TestRPCCallOptimization {
       extends
       TableReducer<ImmutableBytesWritable, ImmutableBytesWritable, NullWritable> {
     
+    @Override
     protected void reduce(ImmutableBytesWritable key,
         Iterable<ImmutableBytesWritable> values, Context context)
         throws IOException, InterruptedException {
     }
 
+    @Override
     protected void cleanup(Context context) throws IOException,
         InterruptedException {
     }    

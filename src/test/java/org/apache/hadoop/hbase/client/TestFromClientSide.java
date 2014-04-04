@@ -67,7 +67,6 @@ import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestHelper;
@@ -77,15 +76,12 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.StringBytes;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 /**
  * Run tests that use the HBase clients; {@link HTable} and {@link HTablePool}.
@@ -3985,14 +3981,12 @@ public class TestFromClientSide {
     final StringBytes TABLENAME = new StringBytes("testCachePrewarm2");
      final byte[] FAMILY = Bytes.toBytes("family");
      Configuration conf = TEST_UTIL.getConfiguration();
-     TEST_UTIL.createTable(TABLENAME, FAMILY);
+    TEST_UTIL.createTable(TABLENAME, new byte[][] { FAMILY }, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
 
      // Set up test table:
      // Create table:
      HTable table = new HTable(conf, TABLENAME);
-
-     // Create multiple regions for this table
-     TEST_UTIL.createMultiRegions(table, FAMILY);
 
      Path tempPath = new Path(TEST_UTIL.getTestDir(), "regions.dat");
 
@@ -4053,7 +4047,8 @@ public class TestFromClientSide {
 
     // Set up test table:
     // Create table:
-    TEST_UTIL.createTable(TABLENAME, FAMILY);
+    TEST_UTIL.createTable(TABLENAME, new byte[][] { FAMILY }, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
 
     // disable region cache for the table.
     HTable.setRegionCachePrefetch(conf, TABLENAME.getBytes(), false);
@@ -4062,8 +4057,6 @@ public class TestFromClientSide {
 
     HTable table = new HTable(conf, TABLENAME);
 
-    // create many regions for the table.
-    TEST_UTIL.createMultiRegions(table, FAMILY);
     // This count effectively waits until the regions have been
     // fully assigned
     TEST_UTIL.countRows(table);

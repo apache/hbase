@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
@@ -170,8 +169,8 @@ public class TestHRegionInfo {
     testUtil.startMiniCluster();
     Configuration conf = testUtil.getConfiguration();
 
-    HTable htable = testUtil.createTable(table, family);
-    testUtil.createMultiRegions(htable, family);
+    testUtil.createTable(table, new byte[][] { family }, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
 
     List<HRegion> regions = testUtil.getMiniHBaseCluster().getRegions(table);
     HRegion region = regions.get(0);

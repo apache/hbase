@@ -27,25 +27,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.ProcessRegionClose;
-import org.apache.hadoop.hbase.master.RegionServerOperation;
-import org.apache.hadoop.hbase.master.RegionServerOperationListener;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -66,10 +61,11 @@ public class TestZKBasedCloseRegion {
     c.setInt(HConstants.REGIONSERVER_INFO_PORT, 0);
     c.setInt("hbase.master.meta.thread.rescanfrequency", 5*1000);
     TEST_UTIL.startMiniCluster(2);
-    TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES);
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
-    int countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
-    waitUntilAllRegionsAssigned(countOfRegions);
+
+    int countOfRegions = 25;
+    TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), countOfRegions);
+
     addToEachStartKey(countOfRegions);
   }
 
@@ -82,7 +78,7 @@ public class TestZKBasedCloseRegion {
       // Need at least two servers.
       LOG.info("Started new server=" +
         TEST_UTIL.getHBaseCluster().startRegionServer());
-      
+
     }
   }
 
@@ -99,16 +95,16 @@ public class TestZKBasedCloseRegion {
     LOG.debug("Asking RS to close region " + region.getRegionNameAsString());
 
     AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
-    RegionServerOperationListener listener = 
+    RegionServerOperationListener listener =
       new CloseRegionEventListener(region.getRegionNameAsString(), closeEventProcessed);
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     master.getRegionServerOperationQueue().registerRegionServerOperationListener(listener);
-    HMsg closeRegionMsg = new HMsg(HMsg.Type.MSG_REGION_CLOSE, 
+    HMsg closeRegionMsg = new HMsg(HMsg.Type.MSG_REGION_CLOSE,
                                    region.getRegionInfo(),
                                    Bytes.toBytes("Forcing close in test")
                                   );
     TEST_UTIL.getHBaseCluster().addMessageToSendRegionServer(rsIdx, closeRegionMsg);
-    
+
     synchronized(closeEventProcessed) {
       // wait for 3 minutes
       closeEventProcessed.wait(3*60*1000);
@@ -120,9 +116,9 @@ public class TestZKBasedCloseRegion {
       LOG.info("Done with test, RS informed master successfully.");
     }
   }
-  
+
   public static class CloseRegionEventListener implements RegionServerOperationListener {
-    
+
     private static final Log LOG = LogFactory.getLog(CloseRegionEventListener.class);
     String regionToClose;
     AtomicBoolean closeEventProcessed;
@@ -157,32 +153,9 @@ public class TestZKBasedCloseRegion {
         }
       }
     }
-    
-  }
-  
 
-  private static void waitUntilAllRegionsAssigned(final int countOfRegions)
-  throws IOException {
-    HTable meta = new HTable(TEST_UTIL.getConfiguration(),
-      HConstants.META_TABLE_NAME);
-    while (true) {
-      int rows = 0;
-      Scan scan = new Scan();
-      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-      ResultScanner s = meta.getScanner(scan);
-      for (Result r = null; (r = s.next()) != null;) {
-        byte [] b =
-          r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-        if (b == null || b.length <= 0) break;
-        rows++;
-      }
-      s.close();
-      // If I get to here and all rows have a Server, then all have been assigned.
-      if (rows == countOfRegions) break;
-      LOG.info("Found=" + rows);
-      Threads.sleep(1000); 
-    }
   }
+
 
   /*
    * Add to each of the regions in .META. a value.  Key is the startrow of the
@@ -228,14 +201,14 @@ public class TestZKBasedCloseRegion {
   private static byte [] getTestQualifier() {
     return getTestFamily();
   }
-  
+
   public static void main(String args[]) throws Exception {
     TestZKBasedCloseRegion.beforeAllTests();
-    
+
     TestZKBasedCloseRegion test = new TestZKBasedCloseRegion();
     test.setup();
     test.testCloseRegion();
-    
+
     TestZKBasedCloseRegion.afterAllTests();
   }
 }

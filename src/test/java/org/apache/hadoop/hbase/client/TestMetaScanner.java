@@ -59,15 +59,12 @@ public class TestMetaScanner {
     LOG.info("Starting testMetaScanner");
     final StringBytes TABLENAME = new StringBytes("testMetaScanner");
     final byte[] FAMILY = Bytes.toBytes("family");
-    TEST_UTIL.createTable(TABLENAME, FAMILY);
+
+    HTable table = TEST_UTIL.createTable(TABLENAME, new byte[][] { FAMILY }, 3,
+        Bytes.toBytes("region_a"), Bytes.toBytes("region_b"), 3);
+
     Configuration conf = TEST_UTIL.getConfiguration();
-    HTable table = new HTable(conf, TABLENAME);
-    TEST_UTIL.createMultiRegions(conf, table, FAMILY,
-        new byte[][]{
-          HConstants.EMPTY_START_ROW,
-          Bytes.toBytes("region_a"),
-          Bytes.toBytes("region_b")});
-    // Make sure all the regions are deployed
+     // Make sure all the regions are deployed
     TEST_UTIL.countRows(table);
 
     MetaScanner.MetaScannerVisitor visitor =

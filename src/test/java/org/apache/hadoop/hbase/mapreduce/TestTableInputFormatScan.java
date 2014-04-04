@@ -41,12 +41,10 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Tests various scan start and stop row scenarios. This is set in a scan and
@@ -73,8 +71,8 @@ public class TestTableInputFormatScan {
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
-    table = TEST_UTIL.createTable(TABLE_NAME, INPUT_FAMILY);
-    TEST_UTIL.createMultiRegions(table, INPUT_FAMILY);
+    table = TEST_UTIL.createTable(TABLE_NAME, new byte[][] { INPUT_FAMILY }, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
     TEST_UTIL.loadTable(table, INPUT_FAMILY);
     // start MR cluster
     TEST_UTIL.startMiniMapReduceCluster();
@@ -145,6 +143,7 @@ public class TestTableInputFormatScan {
     private String first = null;
     private String last = null;
 
+    @Override
     protected void reduce(ImmutableBytesWritable key,
         Iterable<ImmutableBytesWritable> values, Context context)
     throws IOException ,InterruptedException {
@@ -159,6 +158,7 @@ public class TestTableInputFormatScan {
       }
     }
 
+    @Override
     protected void cleanup(Context context)
     throws IOException, InterruptedException {
       Configuration c = context.getConfiguration();
@@ -167,10 +167,10 @@ public class TestTableInputFormatScan {
       LOG.info("cleanup: first -> \"" + first + "\", start row -> \"" + startRow + "\"");
       LOG.info("cleanup: last -> \"" + last + "\", last row -> \"" + lastRow + "\"");
       if (startRow != null && startRow.length() > 0) {
-        assertEquals(startRow, first);
+        Assert.assertEquals(startRow, first);
       }
       if (lastRow != null && lastRow.length() > 0) {
-        assertEquals(lastRow, last);
+        Assert.assertEquals(lastRow, last);
       }
     }
 
@@ -326,7 +326,6 @@ public class TestTableInputFormatScan {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
-  @SuppressWarnings("deprecation")
   private void testScan(String start, String stop, String last)
   throws IOException, InterruptedException, ClassNotFoundException {
     String jobName = "Scan" + (start != null ? start.toUpperCase() : "Empty") +
@@ -353,7 +352,7 @@ public class TestTableInputFormatScan {
     FileOutputFormat.setOutputPath(job, new Path(job.getJobName()));
     LOG.info("Started " + job.getJobName());
     job.waitForCompletion(true);
-    assertTrue(job.isComplete());
+    Assert.assertTrue(job.isComplete());
     LOG.info("After map/reduce completion - job " + jobName);
   }
 }

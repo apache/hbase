@@ -1,7 +1,5 @@
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,15 +11,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
-import org.apache.hadoop.hbase.io.hfile.histogram.TestUniformSplitHistogram;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
+import org.apache.hadoop.hbase.io.hfile.histogram.TestUniformSplitHistogram;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionUtilities;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -51,15 +48,15 @@ public class TestHFileHistogramE2E {
     HTable table = util.createTable(TABLE, FAMILY);
     util.loadTable(table, FAMILY);
     util.flush(TABLE);
-    assertTrue(util.getHBaseCluster().getRegions(TABLE).size() == 1);
+    Assert.assertTrue(util.getHBaseCluster().getRegions(TABLE).size() == 1);
     HRegion region = util.getHBaseCluster().getRegions(TABLE).get(0);
     HFileHistogram hist = region.getHistogram();
-    assertTrue(hist != null);
+    Assert.assertTrue(hist != null);
     boolean first = true;
     List<Bucket> buckets = hist.getUniformBuckets();
     int idx = 0;
-    assertTrue(buckets != null);
-    assertTrue(buckets.size() > 0);
+    Assert.assertTrue(buckets != null);
+    Assert.assertTrue(buckets.size() > 0);
     Bucket prevBucket = buckets.get(0);
     for (Bucket b : buckets) {
       if (first) {
@@ -68,8 +65,8 @@ public class TestHFileHistogramE2E {
         idx++;
         continue;
       }
-      assertTrue(Bytes.compareTo(b.getStartRow(), prevBucket.getEndRow()) >= 0);
-      assertTrue(Bytes.toStringBinary(b.getEndRow()) + " : " +
+      Assert.assertTrue(Bytes.compareTo(b.getStartRow(), prevBucket.getEndRow()) >= 0);
+      Assert.assertTrue(Bytes.toStringBinary(b.getEndRow()) + " : " +
           Bytes.toStringBinary(prevBucket.getStartRow()),
           ++idx >= buckets.size() || // The last bucket
           Bytes.compareTo(b.getEndRow(), prevBucket.getStartRow()) > 0);
@@ -83,28 +80,29 @@ public class TestHFileHistogramE2E {
     HTable table = util.createTable(TABLE2, FAMILY);
     util.loadTable(table, FAMILY);
     util.flush(TABLE2);
-    assertTrue(util.getHBaseCluster().getRegions(TABLE2).size() == 1);
+    Assert.assertTrue(util.getHBaseCluster().getRegions(TABLE2).size() == 1);
     HRegion region = util.getHBaseCluster().getRegions(TABLE2).get(0);
     List<Bucket> buckets = region.getHistogram().getUniformBuckets();
-    assertTrue(buckets != null);
-    assertTrue(buckets.size() > 0);
+    Assert.assertTrue(buckets != null);
+    Assert.assertTrue(buckets.size() > 0);
     List<Bucket> serBuckets = table.getHistogramForColumnFamily(
         region.getStartKey(), FAMILY);
-    assertTrue(serBuckets != null);
-    assertTrue(serBuckets.size() > 1);
-    assertTrue(Bytes.equals(serBuckets.get(0).getStartRow(),
+    Assert.assertTrue(serBuckets != null);
+    Assert.assertTrue(serBuckets.size() > 1);
+    Assert.assertTrue(Bytes.equals(serBuckets.get(0).getStartRow(),
         region.getStartKey()));
-    assertTrue(Bytes.equals(serBuckets.get(serBuckets.size() - 1).getEndRow(),
+    Assert.assertTrue(Bytes.equals(serBuckets.get(serBuckets.size() - 1)
+        .getEndRow(),
         region.getEndKey()));
     buckets = HRegionUtilities
         .adjustHistogramBoundariesToRegionBoundaries(buckets, region.getStartKey(), region.getEndKey());
-    assertTrue(compareBuckets(buckets, serBuckets));
+    Assert.assertTrue(compareBuckets(buckets, serBuckets));
   }
 
   public boolean compareBuckets(List<Bucket> buckets1, List<Bucket> buckets2) {
     int len1 = buckets1.size();
     int len2 = buckets2.size();
-    assertTrue(len1 == len2);
+    Assert.assertTrue(len1 == len2);
     for (int i=0; i<len1; i++) {
       Bucket b1 = buckets1.get(i);
       Bucket b2 = buckets2.get(i);
@@ -144,10 +142,10 @@ public class TestHFileHistogramE2E {
     List<byte[]> inputList = putRandomKVs(table, numEntries, 15);
     Collections.sort(inputList, Bytes.BYTES_COMPARATOR);
     List<HRegion> regions = util.getHBaseCluster().getRegions(TABLE3);
-    assertTrue(regions.size() == 1);
+    Assert.assertTrue(regions.size() == 1);
     HRegion region = regions.get(0);
     List<Bucket> lst = table.getHistogram(region.getStartKey());
-    assertTrue(lst.size() > 0);
+    Assert.assertTrue(lst.size() > 0);
 
     TestUniformSplitHistogram.checkError(inputList, lst,
         0.2, expectedBucketCnt);
@@ -157,20 +155,23 @@ public class TestHFileHistogramE2E {
   public void testHistogramForAllRegions() throws IOException {
     byte[] tableName = Bytes.toBytes("TestHistogramForAllRegions");
     byte[] cf = Bytes.toBytes("cf");
-    HTable table = util.createTable(tableName, cf);
-    util.createMultiRegions(table, cf);
+    HTable table = util.createTable(tableName, new byte[][] { cf }, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
+
     util.loadTable(table, cf);
     util.flush(tableName);
-    assertTrue(util.getHBaseCluster().getRegions(tableName).size() > 1);
+
+    Assert.assertTrue(util.getHBaseCluster().getRegions(tableName).size() > 1);
     Map<byte[], byte[]> map = table.getStartEndKeysMap();
     List<List<Bucket>> buckets = table.getHistogramsForAllRegions();
-    assertTrue(map.size() == buckets.size());
+    Assert.assertTrue(map.size() == buckets.size());
     int regionIndex = 0;
     int regionCnt = map.size();
     for (List<Bucket> bucketsForRegion : buckets) {
-      assertTrue(bucketsForRegion.size() > 1);
-      assertTrue(map.containsKey(bucketsForRegion.get(0).getStartRow()));
-      assertTrue(Bytes.equals(map.get(bucketsForRegion.get(0).getStartRow()),
+      Assert.assertTrue(bucketsForRegion.size() > 1);
+      Assert.assertTrue(map.containsKey(bucketsForRegion.get(0).getStartRow()));
+      Assert.assertTrue(Bytes.equals(
+          map.get(bucketsForRegion.get(0).getStartRow()),
           bucketsForRegion.get(bucketsForRegion.size() - 1).getEndRow()));
       Bucket prevBucket = null;
       for (Bucket b : bucketsForRegion) {
@@ -179,18 +180,21 @@ public class TestHFileHistogramE2E {
         // * curBucket.startRow >= prevBucket.endRow
         // * curBucket.endRow >= prevBucket.endRow
         if (prevBucket != null) {
-          assertTrue(Bytes.toStringBinary(b.getStartRow())
+          Assert.assertTrue(
+              Bytes.toStringBinary(b.getStartRow())
               + " not greater than "
               + Bytes.toStringBinary(prevBucket.getStartRow()),
               Bytes.compareTo(b.getStartRow(), prevBucket.getStartRow()) > 0);
           if (regionIndex < (regionCnt - 1)) {
             // last region's end row is going to be an empty row,
             // so we need to special case it here.
-            assertTrue(Bytes.toStringBinary(b.getEndRow())
+            Assert.assertTrue(
+                Bytes.toStringBinary(b.getEndRow())
                 + " not greater than "
                 + Bytes.toStringBinary(prevBucket.getEndRow()),
                 Bytes.compareTo(b.getEndRow(), prevBucket.getEndRow()) >= 0);
-            assertTrue(Bytes.toStringBinary(b.getEndRow())
+            Assert.assertTrue(
+                Bytes.toStringBinary(b.getEndRow())
                 + " not greater than "
                 + Bytes.toStringBinary(prevBucket.getStartRow()),
                 Bytes.compareTo(b.getEndRow(), prevBucket.getStartRow()) >= 0);

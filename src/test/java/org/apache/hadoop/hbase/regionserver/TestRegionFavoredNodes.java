@@ -33,9 +33,9 @@ public class TestRegionFavoredNodes {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(REGION_SERVERS);
-    table = TEST_UTIL.createTable(TABLE_NAME, COLUMN_FAMILY);
-    int numRegions = TEST_UTIL.createMultiRegions(table, COLUMN_FAMILY);
-    TEST_UTIL.waitUntilAllRegionsAssigned(numRegions);
+
+    table = TEST_UTIL.createTable(TABLE_NAME, new byte[][] { COLUMN_FAMILY }, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
   }
 
   @AfterClass

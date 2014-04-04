@@ -580,21 +580,64 @@ public class HBaseTestingUtility {
 
   public HTable createTable(byte[] tableName, byte[][] families,
       int numVersions, byte[] startKey, byte[] endKey, int numRegions)
-  throws IOException{
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+      throws IOException {
+    return createTable(new StringBytes(tableName), families, numVersions,
+        startKey, endKey, numRegions);
+  }
+
+  /**
+   * Creates a table.
+   *
+   * @param startKey the startKey of the second region.
+   * @param endKey the endKey of the last second region.
+   * @param numRegions if numRegions equals 1, startKey and endKey are not used,
+   *                   if numRegions equals 2, endKey is not used.
+   */
+  public HTableAsync createTable(StringBytes tableName, byte[][] families,
+      int numVersions, byte[] startKey, byte[] endKey, int numRegions)
+      throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName.getBytes());
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family)
-          .setMaxVersions(numVersions);
+      HColumnDescriptor hcd =
+          new HColumnDescriptor(family).setMaxVersions(numVersions);
       desc.addFamily(hcd);
     }
-    (new HBaseAdmin(getConfiguration())).createTable(desc, startKey,
-        endKey, numRegions);
+    if (numRegions == 1) {
+      new HBaseAdmin(getConfiguration()).createTable(desc);
+    } if (numRegions == 2) {
+      new HBaseAdmin(getConfiguration()).createTable(desc,
+          new byte[][] { startKey });
+    } else {
+      new HBaseAdmin(getConfiguration()).createTable(desc, startKey, endKey,
+          numRegions);
+    };
+    return new HTableAsync(getConfiguration(), tableName);
+  }
+
+  /**
+   * Creates a table.
+   *
+   * @param startKey the startKey of the second region.
+   * @param endKey the endKey of the last second region.
+   * @param numRegions if numRegions equals 1, startKey and endKey are not used,
+   *          if numRegions equals 2, endKey is not used.
+   */
+  public HTable createTable(StringBytes tableName, byte[][] families,
+      int numVersions, byte[][] splitKeys) throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName.getBytes());
+    for (byte[] family : families) {
+      HColumnDescriptor hcd =
+          new HColumnDescriptor(family).setMaxVersions(numVersions);
+      desc.addFamily(hcd);
+    }
+    new HBaseAdmin(getConfiguration()).createTable(desc, splitKeys);
+
     return new HTable(getConfiguration(), tableName);
   }
 
-
   /**
    * Create a table.
+   *
    * @param tableName
    * @param families
    * @return An HTableAsync instance for the created table, which is a sub-class
@@ -822,29 +865,20 @@ public class HBaseTestingUtility {
   }
 
   /**
-   * Creates many regions names "aaa" to "zzz".
-   *
-   * @param table  The table to use for the data.
-   * @param columnFamily  The family to insert the data into.
-   * @return count of regions created.
-   * @throws IOException When creating the regions fails.
+   * @deprecated Use createTable with startKey/stopKey versions to create
    */
+  @Deprecated
   public int createMultiRegions(HTable table, byte[] columnFamily)
   throws IOException {
     return createMultiRegions(getConfiguration(), table, columnFamily);
   }
 
   /**
-   * Creates many regions names "aaa" to "zzz".
-   * @param c Configuration to use.
-   * @param table  The table to use for the data.
-   * @param columnFamily  The family to insert the data into.
-   * @return count of regions created.
-   * @throws IOException When creating the regions fails.
+   * @deprecated Use createTable with startKey/stopKey versions to create
    */
+  @Deprecated
   public int createMultiRegions(final Configuration c, final HTable table,
-      final byte[] columnFamily)
-  throws IOException {
+      final byte[] columnFamily) throws IOException {
     return createMultiRegions(c, table, columnFamily, getTmpKeys());
   }
 
@@ -863,6 +897,10 @@ public class HBaseTestingUtility {
     return KEYS;
   }
 
+  /**
+   * @deprecated Use createTable with startKey/stopKey versions to create
+   */
+  @Deprecated
   public int createMultiRegions(final Configuration c, final HTable table,
       final byte[] columnFamily, byte [][] startKeys)
   throws IOException {

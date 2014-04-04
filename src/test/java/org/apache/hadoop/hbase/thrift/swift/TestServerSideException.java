@@ -19,7 +19,8 @@
  */
 package org.apache.hadoop.hbase.thrift.swift;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import java.util.concurrent.ExecutionException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,13 +36,13 @@ import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
 import org.apache.hadoop.hbase.regionserver.FailureInjectingThriftHRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOverloadedException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.concurrent.ExecutionException;
-
-import static org.junit.Assert.assertTrue;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Test failure handling in HTableAsync. We can also use it in
@@ -113,7 +114,7 @@ public class TestServerSideException {
         hasIOE = true;
       }
     }
-    assertTrue(hasIOE);
+    Assert.assertTrue(hasIOE);
   }
 
   /**
@@ -130,7 +131,7 @@ public class TestServerSideException {
     Get get = new Get.Builder(ROW).addFamily(FAMILY).create();
     ListenableFuture<Result> future = table.getAsync(get);
     Result result = future.get();
-    assertTrue(Bytes.equals(result.getValue(FAMILY, null), VALUE));
+    Assert.assertTrue(Bytes.equals(result.getValue(FAMILY, null), VALUE));
 
     // Expect the client to retry once and fail on the second attempt.
     // In the mean time, it should sleep enough time as the server requested.
@@ -148,11 +149,11 @@ public class TestServerSideException {
         long futureFinishTime = System.currentTimeMillis();
         // The default value is 1000ms, larger than 200ms set for normal retries.
         // So we know client listens to the instruction of server.
-        assertTrue(futureFinishTime - futureStartTime > HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+        Assert.assertTrue(futureFinishTime - futureStartTime > HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
         hasROE = true;
       }
     }
-    assertTrue(hasROE);
+    Assert.assertTrue(hasROE);
   }
 
   /**
@@ -169,7 +170,7 @@ public class TestServerSideException {
     Get get = new Get.Builder(ROW).addFamily(FAMILY).create();
     ListenableFuture<Result> future = table.getAsync(get);
     Result result = future.get();
-    assertTrue(Bytes.equals(result.getValue(FAMILY, null), VALUE));
+    Assert.assertTrue(Bytes.equals(result.getValue(FAMILY, null), VALUE));
   }
 
   /**
@@ -192,7 +193,7 @@ public class TestServerSideException {
         hasDoNotRetryIOE = true;
       }
     }
-    assertTrue(hasDoNotRetryIOE);
+    Assert.assertTrue(hasDoNotRetryIOE);
   }
 
   /**
@@ -205,11 +206,9 @@ public class TestServerSideException {
    */
   @Test
   public void testTTransportException() throws Exception {
-    HTableAsync table = TEST_UTIL.createTable(
-        Bytes.toBytes("testTable2"), FAMILY);
-
-    int numRegions = TEST_UTIL.createMultiRegions(table, FAMILY);
-    TEST_UTIL.waitUntilAllRegionsAssigned(numRegions);
+    HTableAsync table = TEST_UTIL.createTable(new StringBytes("testTable2"),
+        new byte[][] { FAMILY }, 3, Bytes.toBytes("bbb"),
+        Bytes.toBytes("yyy"), 25);
 
     Put put = new Put(ROW);
     put.add(FAMILY, null, VALUE);
@@ -222,6 +221,6 @@ public class TestServerSideException {
     Get get = new Get.Builder(ROW).addFamily(FAMILY).create();
     ListenableFuture<Result> future = table.getAsync(get);
     Result result = future.get();
-    assertTrue(Bytes.equals(result.getValue(FAMILY, null), VALUE));
+    Assert.assertTrue(Bytes.equals(result.getValue(FAMILY, null), VALUE));
   }
 }

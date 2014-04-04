@@ -100,13 +100,13 @@ public class TestFullLogReconstruction {
   // Marked as unstable and recored in #3977473
   @TestTag({ "unstable" })
   @Test (timeout = 300000)
+  @SuppressWarnings("unused")
   public void testReconstruction() throws Exception {
 
-    TEST_UTIL.createTable(TABLE_NAME, FAMILY);
+    TEST_UTIL.createTable(TABLE_NAME, new byte[][] { FAMILY }, 10,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
 
     HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME);
-
-    TEST_UTIL.createMultiRegions(table, Bytes.toBytes("family"));
 
     // Load up the table with simple rows and count them
     int initialCount = TEST_UTIL.loadTable(table, FAMILY);

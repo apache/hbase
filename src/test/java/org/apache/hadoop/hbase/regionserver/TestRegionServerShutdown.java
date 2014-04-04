@@ -19,6 +19,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -33,20 +37,12 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
 public class TestRegionServerShutdown {
 
@@ -62,10 +58,11 @@ public class TestRegionServerShutdown {
     c.setInt(HConstants.REGIONSERVER_INFO_PORT, 0);
     c.setInt("hbase.master.meta.thread.rescanfrequency", 5*1000);
     TEST_UTIL.startMiniCluster(2);
-    TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES);
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
-    int countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
-    waitUntilAllRegionsAssigned(countOfRegions);
+
+    int countOfRegions = 25;
+    TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), countOfRegions);
+
     addToEachStartKey(countOfRegions);
   }
 
@@ -99,7 +96,7 @@ public class TestRegionServerShutdown {
     LOG.debug("Asking RS " + regionServer1.getServerInfo().getHostnamePort()
         + " to close region " + region.getRegionNameAsString());
     regionServer1.closeRegion(region.getRegionInfo(), true);
-    assertNull(regionServer1.getOnlineRegion(region.getRegionName()));
+    Assert.assertNull(regionServer1.getOnlineRegion(region.getRegionName()));
 
     // Let master assign the region to the RS0, otherwise the region has a chance
     // to be assign it back to RS1 and void this test.
@@ -120,30 +117,8 @@ public class TestRegionServerShutdown {
     Thread.sleep(5000);
     LOG.debug("RS " + regionServer0.getServerInfo().getHostnamePort() + " has "
         + regionServer0.getOnlineRegions().size() + " online regions");
-    assertEquals("No open region should exist", 0, regionServer0.getOnlineRegions().size());
-  }
-
-  private static void waitUntilAllRegionsAssigned(final int countOfRegions)
-      throws IOException {
-    HTable meta = new HTable(TEST_UTIL.getConfiguration(),
-        HConstants.META_TABLE_NAME);
-    while (true) {
-      int rows = 0;
-      Scan scan = new Scan();
-      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-      ResultScanner s = meta.getScanner(scan);
-      for (Result r = null; (r = s.next()) != null;) {
-        byte [] b =
-            r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-        if (b == null || b.length <= 0) break;
-        rows++;
-      }
-      s.close();
-      // If I get to here and all rows have a Server, then all have been assigned.
-      if (rows == countOfRegions) break;
-      LOG.info("Found=" + rows);
-      Threads.sleep(1000);
-    }
+    Assert.assertEquals("No open region should exist", 0, regionServer0
+        .getOnlineRegions().size());
   }
 
   /*

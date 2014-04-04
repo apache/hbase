@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.hbase.util.TagRunner;
 import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -107,7 +108,7 @@ public class TestHFileOutputFormat  {
     = { Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-A"))
       , Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-B"))
       , Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-C"))};
-  private static final byte[] TABLE_NAME = Bytes.toBytes("TestTable");
+  private static final StringBytes TABLE_NAME = new StringBytes("TestTable");
   private static final String oldValue = "valAAAAA";
   private static final String newValue = "valBBBBB";
 
@@ -535,12 +536,10 @@ public class TestHFileOutputFormat  {
     assertEquals(job.getNumReduceTasks(), 4);
   }
 
-  private byte [][] generateRandomStartKeys(int numKeys) {
+  private byte [][] generateRandomSplitKeys(int numSplits) {
     Random random = new Random();
-    byte[][] ret = new byte[numKeys][];
-    // first region start key is always empty
-    ret[0] = HConstants.EMPTY_BYTE_ARRAY;
-    for (int i = 1; i < numKeys; i++) {
+    byte[][] ret = new byte[numSplits][];
+    for (int i = 0; i < numSplits; i++) {
       ret[i] = PerformanceEvaluation.generateValue(random);
     }
     return ret;
@@ -563,19 +562,14 @@ public class TestHFileOutputFormat  {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
     Path testDir = util.getTestDir("testLocalMRIncrementalLoad");
-    byte[][] startKeys = generateRandomStartKeys(5);
 
     try {
       util.startMiniCluster();
       HBaseAdmin admin = new HBaseAdmin(conf);
-      HTable table = util.createTable(TABLE_NAME, FAMILIES);
+      byte[][] splitKeys = generateRandomSplitKeys(4);
+      HTable table = util.createTable(TABLE_NAME, FAMILIES, 3, splitKeys);
       assertEquals("Should start with empty table",
           0, util.countRows(table));
-      for (byte[] family : FAMILIES) {
-        int numRegions = util.createMultiRegions(
-            util.getConfiguration(), table, family, startKeys);
-        assertEquals("Should make 5 regions", numRegions, 5);
-      }
 
       // Generate the bulk load files
       util.startMiniMapReduceCluster();
@@ -598,18 +592,10 @@ public class TestHFileOutputFormat  {
       // handle the split case
       if (shouldChangeRegions) {
         LOG.info("Changing regions in table");
-        admin.disableTable(table.getTableName());
-        byte[][] newStartKeys = generateRandomStartKeys(15);
-        for (byte[] family : FAMILIES) {
-          util.createMultiRegions(
-              util.getConfiguration(), table, family, newStartKeys);
-        }
-        admin.enableTable(table.getTableName());
-        while (table.getRegionsInfo().size() != 15 ||
-            !admin.isTableAvailable(table.getTableName())) {
-          Thread.sleep(1000);
-          LOG.info("Waiting for new region assignment to happen");
-        }
+        admin.deleteTable(table.getTableName());
+
+        byte[][] newSplitKeys = generateRandomSplitKeys(14);
+        table = util.createTable(TABLE_NAME, FAMILIES, 3, newSplitKeys);
       }
 
       // Perform the actual load
@@ -633,13 +619,13 @@ public class TestHFileOutputFormat  {
       String tableDigestBefore = util.checksumRows(table);
 
       // Cause regions to reopen
-      admin.disableTable(TABLE_NAME);
+      admin.disableTable(TABLE_NAME.getBytes());
       while (table.getRegionsInfo().size() != 0) {
         Thread.sleep(1000);
         LOG.info("Waiting for table to disable");
       }
-      admin.enableTable(TABLE_NAME);
-      util.waitTableAvailable(TABLE_NAME, 30000);
+      admin.enableTable(TABLE_NAME.getBytes());
+      util.waitTableAvailable(TABLE_NAME.getBytes(), 30000);
 
       assertEquals("Data should remain after reopening of regions",
           tableDigestBefore, util.checksumRows(table));
@@ -672,7 +658,7 @@ public class TestHFileOutputFormat  {
     try {
       MiniHBaseCluster cluster = util.startMiniCluster();
       cluster.getMaster();
-      HTable table = util.createTable(TABLE_NAME, FAMILIES);
+      HTable table = util.createTable(TABLE_NAME.getBytes(), FAMILIES);
       Configuration conf = table.getConfiguration() ;
       Path testDir = util.getTestDir("testUploadByTask");
 
@@ -743,7 +729,8 @@ public class TestHFileOutputFormat  {
   private void setupMockColumnFamilies(HTable table,
     Map<String, Compression.Algorithm> familyToCompression) throws IOException
   {
-    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
+    HTableDescriptor mockTableDescriptor =
+        new HTableDescriptor(TABLE_NAME.getBytes());
     for (Entry<String, Compression.Algorithm> entry : familyToCompression.entrySet()) {
       mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
           .setMaxVersions(1)
@@ -891,7 +878,8 @@ public class TestHFileOutputFormat  {
   private void setupColumnFamiliesBloomType(HTable table,
     Map<String, BloomType> familyToBloom) throws IOException
   {
-    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
+    HTableDescriptor mockTableDescriptor =
+        new HTableDescriptor(TABLE_NAME.getBytes());
     for (Entry<String, BloomType> entry : familyToBloom.entrySet()) {
       mockTableDescriptor.addFamily(
           new HColumnDescriptor(entry.getKey().getBytes())
@@ -988,6 +976,7 @@ public class TestHFileOutputFormat  {
     }
   }
 
+  @SuppressWarnings("deprecation")
   private void setupColumnFamiliesEncodingType(HTable table,
       Map<String, DataBlockEncoding> familyToEncoding) throws IOException {
     HTableDescriptor mockTableDesc = new HTableDescriptor();
@@ -1255,17 +1244,11 @@ public class TestHFileOutputFormat  {
     Configuration conf = HBaseConfiguration.create();
     util = new HBaseTestingUtility(conf);
     if ("newtable".equals(args[0])) {
-      byte[] tname = args[1].getBytes();
-      HTable table = util.createTable(tname, FAMILIES);
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      admin.disableTable(tname);
-      byte[][] startKeys = generateRandomStartKeys(5);
-      for (byte[] family : FAMILIES) {
-        util.createMultiRegions(conf, table, family, startKeys);
-      }
-      admin.enableTable(tname);
+      StringBytes tname = new StringBytes(args[1]);
+      byte[][] splitKeys = generateRandomSplitKeys(4);
+      util.createTable(tname, FAMILIES, 3, splitKeys);
     } else if ("incremental".equals(args[0])) {
-      byte[] tname = args[1].getBytes();
+      StringBytes tname = new StringBytes(args[1]);
       HTable table = new HTable(conf, tname);
       Path outDir = new Path("incremental-out");
       runIncrementalPELoad(conf, table, outDir);

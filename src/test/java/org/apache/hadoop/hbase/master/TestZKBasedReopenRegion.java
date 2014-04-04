@@ -27,26 +27,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.ProcessRegionClose;
-import org.apache.hadoop.hbase.master.ProcessRegionOpen;
-import org.apache.hadoop.hbase.master.RegionServerOperation;
-import org.apache.hadoop.hbase.master.RegionServerOperationListener;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -67,10 +61,11 @@ public class TestZKBasedReopenRegion {
     c.setInt(HConstants.REGIONSERVER_INFO_PORT, 0);
     c.setInt("hbase.master.meta.thread.rescanfrequency", 5*1000);
     TEST_UTIL.startMiniCluster(2);
-    TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES);
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
-    int countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
-    waitUntilAllRegionsAssigned(countOfRegions);
+
+    int countOfRegions = 25;
+    TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
+
     addToEachStartKey(countOfRegions);
   }
 
@@ -83,7 +78,7 @@ public class TestZKBasedReopenRegion {
       // Need at least two servers.
       LOG.info("Started new server=" +
         TEST_UTIL.getHBaseCluster().startRegionServer());
-      
+
     }
   }
 
@@ -100,18 +95,18 @@ public class TestZKBasedReopenRegion {
 
     AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
     AtomicBoolean reopenEventProcessed = new AtomicBoolean(false);
-    RegionServerOperationListener listener = 
-      new ReopenRegionEventListener(region.getRegionNameAsString(), 
+    RegionServerOperationListener listener =
+      new ReopenRegionEventListener(region.getRegionNameAsString(),
                                     closeEventProcessed,
                                     reopenEventProcessed);
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     master.getRegionServerOperationQueue().registerRegionServerOperationListener(listener);
-    HMsg closeRegionMsg = new HMsg(HMsg.Type.MSG_REGION_CLOSE, 
+    HMsg closeRegionMsg = new HMsg(HMsg.Type.MSG_REGION_CLOSE,
                                    region.getRegionInfo(),
                                    Bytes.toBytes("Forcing close in test")
                                   );
     TEST_UTIL.getHBaseCluster().addMessageToSendRegionServer(rsIdx, closeRegionMsg);
-    
+
     synchronized(closeEventProcessed) {
       closeEventProcessed.wait(3*60*1000);
     }
@@ -124,19 +119,19 @@ public class TestZKBasedReopenRegion {
     }
     if(!reopenEventProcessed.get()) {
       throw new Exception("Timed out, open event not called on master after region close.");
-    }    
-    
+    }
+
     LOG.info("Done with test, RS informed master successfully.");
   }
-  
+
   public static class ReopenRegionEventListener implements RegionServerOperationListener {
-    
+
     private static final Log LOG = LogFactory.getLog(ReopenRegionEventListener.class);
     String regionToClose;
     AtomicBoolean closeEventProcessed;
     AtomicBoolean reopenEventProcessed;
 
-    public ReopenRegionEventListener(String regionToClose, 
+    public ReopenRegionEventListener(String regionToClose,
                                      AtomicBoolean closeEventProcessed,
                                      AtomicBoolean reopenEventProcessed) {
       this.regionToClose = regionToClose;
@@ -180,35 +175,11 @@ public class TestZKBasedReopenRegion {
           synchronized(reopenEventProcessed) {
             reopenEventProcessed.notifyAll();
           }
-        }        
+        }
       }
-      
-    }
-    
-  }
-  
 
-  private static void waitUntilAllRegionsAssigned(final int countOfRegions)
-  throws IOException {
-    HTable meta = new HTable(TEST_UTIL.getConfiguration(),
-      HConstants.META_TABLE_NAME);
-    while (true) {
-      int rows = 0;
-      Scan scan = new Scan();
-      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-      ResultScanner s = meta.getScanner(scan);
-      for (Result r = null; (r = s.next()) != null;) {
-        byte [] b =
-          r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-        if (b == null || b.length <= 0) break;
-        rows++;
-      }
-      s.close();
-      // If I get to here and all rows have a Server, then all have been assigned.
-      if (rows == countOfRegions) break;
-      LOG.info("Found=" + rows);
-      Threads.sleep(1000); 
     }
+
   }
 
   /*
@@ -255,14 +226,14 @@ public class TestZKBasedReopenRegion {
   private static byte [] getTestQualifier() {
     return getTestFamily();
   }
-  
+
   public static void main(String args[]) throws Exception {
     TestZKBasedReopenRegion.beforeAllTests();
-    
+
     TestZKBasedReopenRegion test = new TestZKBasedReopenRegion();
     test.setup();
     test.testOpenRegion();
-    
+
     TestZKBasedReopenRegion.afterAllTests();
   }
 }

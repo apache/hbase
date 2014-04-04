@@ -58,9 +58,8 @@ public class TestHTableClientScanner {
 
   @Test
   public void testScanner() throws IOException {
-    HTable table = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
-    int regionCnt = TEST_UTIL.createMultiRegions(table, FAMILY);
-    TEST_UTIL.waitUntilAllRegionsAssigned(regionCnt);
+    HTable table = TEST_UTIL.createTable(TABLE_NAME, new byte[][] { FAMILY }, 3,
+        Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
 
     int rowCount = TEST_UTIL.loadTable(table, FAMILY);
 

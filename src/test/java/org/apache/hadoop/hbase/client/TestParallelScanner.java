@@ -55,9 +55,10 @@ public class TestParallelScanner {
   public void testParallelScanner() throws IOException {
     // Create and load the table
     byte [] name = Bytes.toBytes("testParallelScanner");
-    HTable table = TEST_UTIL.createTable(name, new byte[][] {FAMILY});
-    final int regionCnt = TEST_UTIL.createMultiRegions(table, FAMILY);
-    TEST_UTIL.waitUntilAllRegionsAssigned(regionCnt);
+    int regionCnt = 25;
+    HTable table = TEST_UTIL.createTable(name, new byte[][] { FAMILY }, 3,
+            Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), regionCnt);
+
     final int rowCount = TEST_UTIL.loadTable(table, FAMILY);
     TEST_UTIL.flush(name);
 
