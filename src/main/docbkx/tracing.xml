@@ -80,10 +80,12 @@
     </para>
 
     <para>
-      HTrace also provides a <classname>ZipkinSpanReceiver</classname>
-      which converts all span information to
+      HTrace also includes a <classname>ZipkinSpanReceiver</classname>
+      that converts all span information to
       <link xlink:href="http://github.com/twitter/zipkin">Zipkin</link>
       span format and send them to Zipkin server.
+      You need to install htrace-zipkin jar and add it to your HBase classpath
+      in order to use this receiver.
       The <classname>ZipkinSpanReceiver</classname>
       looks in <filename>hbase-site.xml</filename>
       for a <varname>hbase.zipkin.collector-hostname</varname>
