@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.client.TestFromClientSide;
 import org.apache.hadoop.hbase.client.TestScannerTimeout;
 import org.apache.hadoop.hbase.client.TestServerConfigFromClient;
 import org.apache.hadoop.hbase.mapreduce.TestHFileOutputFormat;
@@ -49,7 +48,7 @@ import org.junit.runners.Suite.SuiteClasses;
     TestRegionPlacement.class, TestServerConfigFromClient.class,
     TestRSLivenessOnMasterFailover.class, TestLogSplitOnMasterFailover.class,
     TagRunner.class, TestHRegionServerFileSystemFailure.class,
-    TestFromClientSide.class, TestFullLogReconstruction.class,
-    TestSplitLogManager.class, TestHLog.class })
+    TestFullLogReconstruction.class, TestSplitLogManager.class,
+    TestHLog.class })
 public class UnstableTestSuite {
 }

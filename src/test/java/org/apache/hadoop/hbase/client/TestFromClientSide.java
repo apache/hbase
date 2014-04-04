@@ -92,7 +92,6 @@ import org.junit.runner.RunWith;
  * Sets up the HBase mini cluster once at start and runs through all client tests.
  * Each creates a table named for the method and does its stuff against that.
  */
-@RunWith(TagRunner.class)
 public class TestFromClientSide {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -740,8 +739,6 @@ public class TestFromClientSide {
    * we should get an exception instead of the server trying until
    * OOM.
    */
-  // Marked as unstable and recorded at #3925054
-  @TestTag({ "unstable" })
   @Test
   public void testResultLimits() throws Exception {
     // We want to set the max result size to something small
