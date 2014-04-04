@@ -190,7 +190,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       try {
         regionLocation = reverseDNS(regionAddress);
       } catch (NamingException e) {
-        LOG.error("Cannot resolve the host name for " + regionAddress + " because of " + e);
+        LOG.warn("Cannot resolve the host name for " + regionAddress + " because of " + e);
         regionLocation = location.getHostname();
       }
 
