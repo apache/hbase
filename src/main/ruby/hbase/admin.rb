@@ -22,9 +22,11 @@ include Java
 
 java_import java.util.ArrayList
 java_import java.util.concurrent.TimeUnit
+java_import java.util.HashSet
 
 java_import org.apache.hadoop.hbase.client.HBaseAdmin
 java_import org.apache.zookeeper.ZooKeeperMain
+java_import org.apache.hadoop.hbase.HServerAddress
 java_import org.apache.hadoop.hbase.HColumnDescriptor
 java_import org.apache.hadoop.hbase.HTableDescriptor
 java_import org.apache.hadoop.hbase.io.hfile.Compression
@@ -206,6 +208,14 @@ module Hbase
               num_regions = arg[NUMREGIONS]
               split_algo = RegionSplitter.newSplitAlgoInstance(@conf, arg[SPLITALGO])
             end
+            if arg[SERVER_SET]
+              raise(ArgumentError, "#{SERVER_SET} must be an array but was #{arg[SERVER_SET].class}") unless arg[SERVER_SET].kind_of?(Array)
+              servers = HashSet.new
+              for s in arg[SERVER_SET]
+                servers.add(HServerAddress.new(s))
+              end
+              htd.setServers(servers)
+            end
             if arg[CONFIG]
               raise(ArgumentError, "#{CONFIG} must be a Hash type") unless arg.kind_of?(Hash)
               for k,v in arg[CONFIG]
@@ -381,6 +391,14 @@ module Hbase
           htd.setReadOnly(JBoolean.valueOf(arg[READONLY])) if arg[READONLY]
           htd.setMemStoreFlushSize(JLong.valueOf(arg[MEMSTORE_FLUSHSIZE])) if arg[MEMSTORE_FLUSHSIZE]
           htd.setDeferredLogFlush(JBoolean.valueOf(arg[DEFERRED_LOG_FLUSH])) if arg[DEFERRED_LOG_FLUSH]
+          if arg[SERVER_SET]
+            raise(ArgumentError, "#{SERVER_SET} must be an array but was #{arg[SERVER_SET].class}") unless arg[SERVER_SET].kind_of?(Array)
+            servers = HashSet.new
+            for s in arg[SERVER_SET]
+              servers.add(HServerAddress.new(s))
+            end
+            htd.setServers(servers)
+          end
           if arg[CONFIG]
             raise(ArgumentError, "#{CONFIG} must be a Hash type") unless arg.kind_of?(Hash)
             for k,v in arg[CONFIG]

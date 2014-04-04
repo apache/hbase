@@ -134,6 +134,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     for (String s : DEFAULT_VALUES.keySet()) {
       RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
     }
+    RESERVED_KEYWORDS.add(SERVER_SET_KEY);
     RESERVED_KEYWORDS.add(IS_ROOT_KEY);
     RESERVED_KEYWORDS.add(IS_META_KEY);
   }
@@ -598,11 +599,34 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     // print all reserved keys first
     for (ImmutableBytesWritable k : reservedKeys) {
       String key = Bytes.toString(k.get());
-      String value = Bytes.toString(values.get(k).get());
+      String value = null;
+      boolean needsQuotes = true;
+      if (key.equals(SERVER_SET)) {
+        needsQuotes = false;
+        value = "[ ";
+        boolean printComma = false;
+
+        for (HServerAddress serverAddress : this.getServers()) {
+          if (printComma) {
+            value += ", ";
+          }
+          printComma = true;
+          value += "'" + serverAddress.getHostNameWithPort() + "'";
+        }
+        value += " ]";
+      } else {
+        value = Bytes.toString(values.get(k).get());
+      }
       s.append(", ");
       s.append(key);
       s.append(" => ");
-      s.append('\'').append(value).append('\'');
+      if (needsQuotes) {
+        s.append('\'');
+      }
+      s.append(value);
+      if (needsQuotes) {
+        s.append('\'');
+      }
     }
 
     if (!configKeys.isEmpty()) {
@@ -878,9 +902,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
     this.serverSet.setServers(ImmutableSet.copyOf(servers));
     try {
-      // Hex encode everything so that the HTD can still be printed everywhere.
-      String encodedStringSet = Bytes.writeThriftBytesAndGetString(serverSet, ServerSet.class);
-      this.setValue(SERVER_SET_KEY, Bytes.toBytes(encodedStringSet));
+      this.setValue(SERVER_SET_KEY, Bytes.writeThriftBytes(serverSet, ServerSet.class));
     } catch (Exception e) {
       LOG.error("Error serializing server set from HTableDescriptor", e);
     }
@@ -891,8 +913,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       byte[] serverSetBytes = getValue(SERVER_SET_KEY);
       if (serverSetBytes != null) {
         try {
-          byte[] decodedBytes = Bytes.hexToBytes(Bytes.toString(serverSetBytes));
-          serverSet = Bytes.readThriftBytes(decodedBytes, ServerSet.class);
+          serverSet = Bytes.readThriftBytes(serverSetBytes, ServerSet.class);
         } catch (Exception e) {
           LOG.error("Error de-serializing server set into HTableDescriptor", e);
         }

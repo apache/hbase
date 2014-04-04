@@ -25,11 +25,12 @@ import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.net.InetAddress;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
+import static org.junit.Assert.*;
+import static org.junit.matchers.JUnitMatchers.containsString;
 
 public class TestHTableDescriptor {
   @Test
@@ -122,5 +123,33 @@ public class TestHTableDescriptor {
     HTableDescriptor htd = new HTableDescriptor("testThrowErrorNoServers");
     htd.addFamily(new HColumnDescriptor("d"));
     htd.setServers(new HashSet<HServerAddress>());
+  }
+
+  @Test
+  public void testToStringServerSet() throws Exception {
+    HTableDescriptor htd = new HTableDescriptor("TestTable");
+    htd.addFamily(new HColumnDescriptor("d"));
+
+    Set<HServerAddress> servers = new HashSet<>();
+
+    String hostName = InetAddress.getLocalHost().getHostName();
+
+    servers.add(new HServerAddress(hostName,0));
+    servers.add(new HServerAddress(hostName,1));
+    servers.add(new HServerAddress(hostName,2));
+    servers.add(new HServerAddress(hostName,3));
+    htd.setServers(servers);
+
+    final String htdString = htd.toStringCustomizedValues();
+
+    // Don't assert the whole string as set can have
+    // different order based on which set is used and we shouldn't
+    // tie the test to implementation.
+    assertThat(htdString, containsString("SERVER_SET => ["));
+    assertThat(htdString, containsString("'"+hostName+":0'"));
+    assertThat(htdString, containsString("'"+hostName+":1'"));
+    assertThat(htdString, containsString("'"+hostName+":2'"));
+    assertThat(htdString, containsString("'"+hostName+":3'"));
+    assertThat(htdString, containsString(" ]"));
   }
 }
