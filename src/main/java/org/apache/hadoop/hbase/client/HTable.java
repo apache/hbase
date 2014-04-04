@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -1414,6 +1415,17 @@ getRegionCachePrefetch(new StringBytes(tableName));
   }
 
   /**
+   * Returns all the histograms related to the current table.
+   * This is a batch operation including nultiple
+   * @return
+   * @throws IOException
+   */
+  public List<List<Bucket>> batchgetHistogramsForAllRegions()
+      throws IOException {
+    return getHistogramForAllRegionsInternal();
+  }
+
+  /**
    * API to get the histograms for all the regions in the table.
    * @param family : the family whose histogram is being requested.
    * Returns data for all the families if family is null.
@@ -1449,6 +1461,57 @@ getRegionCachePrefetch(new StringBytes(tableName));
             e);
       }
     }
+    return ret;
+  }
+
+  public Map<HServerAddress, List<HRegionInfo>> getServersToRegionsMap()
+      throws IOException {
+    Map<HServerAddress, List<HRegionInfo>> serversToRegionsMap =
+        new TreeMap<>();
+    for (Entry<HRegionInfo, HServerAddress> entry : getRegionsInfo().entrySet())
+    {
+      List<HRegionInfo> lst = serversToRegionsMap.get(entry.getValue());
+      if (lst == null) {
+        lst = new ArrayList<>();
+      }
+      lst.add(entry.getKey());
+      serversToRegionsMap.put(entry.getValue(), lst);
+    }
+    return serversToRegionsMap;
+  }
+
+  private List<List<Bucket>> getHistogramForAllRegionsInternal()
+      throws IOException {
+    List<List<Bucket>> ret = new ArrayList<List<Bucket>>();
+    TreeMap<byte[], List<Bucket>> retMap =
+        new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    List<Future<List<List<Bucket>>>>futures = new ArrayList<>();
+    for (final Entry<HServerAddress, List<HRegionInfo>> entry :
+      getServersToRegionsMap().entrySet()) {
+      final List<byte[]> regionNames = new ArrayList<>();
+      for (HRegionInfo info : entry.getValue()) {
+        regionNames.add(info.getRegionName());
+      }
+      futures.add(HTable.multiActionThreadPool.submit(new Callable<List<List<Bucket>>>() {
+        @Override
+        public List<List<Bucket>> call() throws Exception {
+          return getConnectionAndResetOperationContext()
+                .getHRegionConnection(entry.getKey()).getHistograms(regionNames);
+        }
+      }));
+    }
+    for (Future<List<List<Bucket>>> future : futures) {
+      try {
+        for (List<Bucket> histogram : future.get()) {
+          if (histogram.size() >= 1) {
+            retMap.put(histogram.get(0).getStartRow(), histogram);
+          }
+        }
+      } catch (InterruptedException | ExecutionException e) {
+        throw new IOException(e);
+      }
+    }
+    ret.addAll(retMap.values());
     return ret;
   }
 

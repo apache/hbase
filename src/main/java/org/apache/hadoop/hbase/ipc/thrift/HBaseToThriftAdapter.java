@@ -1206,4 +1206,23 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     }
   }
 
+  @Override
+  public List<List<Bucket>> getHistograms(List<byte[]> regionNames)
+      throws IOException {
+    preProcess();
+    try {
+      return connection.getHistograms(regionNames);
+    } catch (ThriftHBaseException te) {
+      Exception e = te.getServerJavaException();
+      handleIOException(e);
+      LOG.warn("Unexpected Exception: " + e);
+      return null;
+    } catch (Exception e) {
+      refreshConnectionAndThrowIOException(e);
+      return null;
+    } finally {
+      postProcess();
+    }
+  }
+
 }

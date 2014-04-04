@@ -472,4 +472,14 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable,
    */
   public List<Bucket> getHistogramForStore(byte[] regionName, byte[] family)
       throws IOException;
+
+  /**
+   * Returns the list of buckets which represent the uniform depth histogram
+   * for all the given regions
+   * @param regionName
+   * @return
+   * @throws IOException
+   */
+  public List<List<Bucket>> getHistograms(List<byte[]> regionNames)
+      throws IOException;
 }

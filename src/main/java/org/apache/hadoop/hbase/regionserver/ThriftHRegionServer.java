@@ -59,6 +59,8 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 
+import com.facebook.swift.service.ThriftException;
+import com.facebook.swift.service.ThriftMethod;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -640,5 +642,12 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
       throws ThriftHBaseException {
     return endpointServer.callEndpoint(epName, methodName, regionName,
         startRow, stopRow);
+  }
+
+  @Override
+  @ThriftMethod(value = "getHistograms", exception = @ThriftException(type = ThriftHBaseException.class, id = 1))
+  public List<List<Bucket>> getHistograms(List<byte[]> regionNames)
+      throws ThriftHBaseException {
+    return this.getHistograms(regionNames);
   }
 }

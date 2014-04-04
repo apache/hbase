@@ -205,5 +205,24 @@ public class TestHFileHistogramE2E {
       prevBucket = null;
       regionIndex++;
     }
+    int tries = 5;
+    while (tries-- >= 0) {
+      List<List<Bucket>> batchBuckets = null;
+      try {
+        batchBuckets =
+            table.batchgetHistogramsForAllRegions();
+      } catch (IOException e) {
+        continue;
+      }
+      compareHistograms(buckets, batchBuckets);
+    }
+  }
+
+  private void compareHistograms(List<List<Bucket>> buckets,
+      List<List<Bucket>> batchBuckets) {
+    assertTrue(buckets.size() == batchBuckets.size());
+    for (int i = 0; i < buckets.size(); i++) {
+      assertTrue(compareBuckets(buckets.get(i), batchBuckets.get(i)));
+    }
   }
 }

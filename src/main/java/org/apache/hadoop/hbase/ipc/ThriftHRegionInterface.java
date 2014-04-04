@@ -655,4 +655,9 @@ public interface ThriftHRegionInterface extends ThriftClientInterface {
       @ThriftException(type = ThriftHBaseException.class, id = 1) })
   public List<Bucket> getHistogramForStore(byte[] regionName, byte[] family)
       throws ThriftHBaseException;
+
+  @ThriftMethod(value = "getHistograms", exception = {
+      @ThriftException(type = ThriftHBaseException.class, id = 1) })
+  public List<List<Bucket>> getHistograms(List<byte[]> regionNames)
+      throws ThriftHBaseException;
 }

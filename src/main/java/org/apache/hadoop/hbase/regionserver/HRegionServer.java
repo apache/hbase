@@ -118,6 +118,7 @@ import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.PreloadThreadPool;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
+import org.apache.hadoop.hbase.io.hfile.histogram.HistogramUtils;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
@@ -4059,6 +4060,21 @@ public class HRegionServer implements HRegionInterface,
     if (hist == null) return null;
     return HRegionUtilities.adjustHistogramBoundariesToRegionBoundaries(
         hist.getUniformBuckets(), region.getStartKey(), region.getEndKey());
+  }
+
+  @Override
+  public List<List<Bucket>> getHistograms(List<byte[]> regionNames)
+      throws IOException {
+    List<List<Bucket>> ret = new ArrayList<>();
+    for (HRegion oregion : this.onlineRegions.values()) {
+      checkOpen();
+      HRegion region = getRegion(oregion.getRegionName());
+      HFileHistogram hist = region.getHistogram();
+      if (hist == null) return null;
+      ret.add(HRegionUtilities.adjustHistogramBoundariesToRegionBoundaries(
+        hist.getUniformBuckets(), region.getStartKey(), region.getEndKey()));
+    }
+    return ret;
   }
 
   /**
