@@ -780,8 +780,9 @@ public class TestFromClientSide {
     try {
       get3 = new Get(ROWS[2]);
       ht.get(get3);
-      assert(false);
+      assertTrue(false);
     } catch (IOException e) {
+      LOG.error("Expected result size is greater than limit", e);
     }
 
     // try with the multiple rows.
@@ -791,8 +792,9 @@ public class TestFromClientSide {
       list.add(get1);
       list.add(get2);
       ht.get(list);
-      assert(false);
+      assertTrue(false);
     } catch (IOException e) {
+      LOG.error("Expected result size is greater than limit", e);
     }
 
     // reset the max response size

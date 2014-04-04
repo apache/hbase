@@ -229,19 +229,15 @@ public class ThriftCallStatsReporter extends ThriftEventHandler {
     if (useHeaderProtocol) {
       if (ctx.requestContext instanceof NiftyRequestContext) {
         Call call = getCallInfoFromClient(ctx.requestContext);
+        // we anyway want to set the call object on serverside
+        // since it is not used only for profiling
+        if (call == null) {
+          call = new Call(HBaseRPCOptions.DEFAULT);
+        }
         if (HRegionServer.enableServerSideProfilingForAllCalls.get()
             || (call != null && call.isShouldProfile())) {
-          // it is possible that call is null - if profiling is enabled only on
-          // serverside
-          if (call == null) {
-            call = new Call(HBaseRPCOptions.DEFAULT);
-          }
           call.setShouldProfile(true);
           call.setProfilingData(new ProfilingData());
-        } else if (call != null) {
-          // call is not null but profiling is not enabled, so set profiling
-          // data to null
-          call.setProfilingData(null);
         }
         HRegionServer.callContext.set(call);
       } else {
@@ -268,7 +264,7 @@ public class ThriftCallStatsReporter extends ThriftEventHandler {
       try {
         Call call = HRegionServer.callContext.get();
         HRegionServer.callContext.remove();
-        if (call!= null && call.isShouldProfile()) {
+        if (call != null && call.isShouldProfile()) {
           sendCallInfoToClient(call, ctx.requestContext);
         }
       } catch (Exception e) {

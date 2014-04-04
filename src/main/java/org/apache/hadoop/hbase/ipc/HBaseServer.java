@@ -293,6 +293,7 @@ public abstract class HBaseServer {
      */
     public Call(HBaseRPCOptions options) {
       this.shouldProfile = options.getRequestProfiling();
+      this.profilingData = null;
     }
 
     @ThriftField(1)
