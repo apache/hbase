@@ -70,6 +70,13 @@ public class MetaScanner {
     metaScan(configuration, visitor, tableName, null, Integer.MAX_VALUE);
   }
 
+  public static void metaScan(Configuration configuration,
+      MetaScannerVisitor visitor, byte[] tableName)
+  throws IOException {
+    metaScan(configuration, visitor, new StringBytes(tableName),
+        null, Integer.MAX_VALUE);
+  }
+
   /**
    * Scans the meta table and calls a visitor on each RowResult. Uses a table
    * name and a row name to locate meta regions. And it only scans at most
@@ -90,6 +97,14 @@ public class MetaScanner {
   throws IOException {
     metaScan(configuration, visitor, HConstants.META_TABLE_NAME_STRINGBYTES,
         tableName, row, rowLimit);
+  }
+
+  public static void metaScan(Configuration configuration,
+      MetaScannerVisitor visitor, byte[] tableName, byte[] row,
+      int rowLimit)
+  throws IOException {
+    metaScan(configuration, visitor, HConstants.META_TABLE_NAME_STRINGBYTES,
+        new StringBytes(tableName), row, rowLimit);
   }
 
   /**
@@ -195,6 +210,14 @@ public class MetaScanner {
         connection.getRegionServerWithRetries(callable);
       }
     } while (Bytes.compareTo(startRow, HConstants.LAST_ROW) != 0);
+  }
+
+  public static void metaScan(Configuration configuration, MetaScannerVisitor visitor,
+      byte[] metaTableName, byte[] tableName, byte[] row,
+      int rowLimit) throws IOException{
+    metaScan(configuration, visitor,
+        HConstants.META_TABLE_NAME_STRINGBYTES,
+        new StringBytes(tableName), row, rowLimit);
   }
 
   /**
