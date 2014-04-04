@@ -424,6 +424,12 @@ public final class HConstants {
   public static final String HREGION_MEMSTORE_FLUSH_SIZE =
       "hbase.hregion.memstore.flush.size";
 
+  /** Parameter name for the number of split threads */
+  public static final String FLUSH_THREADS = "hbase.regionserver.flusher.count";
+
+  /** Default number of split threads */
+  public static final int DEFAULT_FLUSH_THREADS = 2;
+
   /** Conf key for enabling Per Column Family flushing of memstores */
   public static final String HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH =
       "hbase.hregion.memstore.percolumnfamilyflush.enabled";

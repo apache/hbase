@@ -127,6 +127,23 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
                  rs1.enableServerSideProfilingForAllCalls.get());
   }
 
+
+  /**
+   * Check if the number of flush threads changes online
+   * @throws IOException
+   */
+  public void testNumMemstoreFlushThreadsOnlineChange() throws IOException {
+    assertTrue(rs1.cacheFlusher != null);
+    int newNumFlushThreads =
+            rs1.cacheFlusher.getFlushThreadNum() + 1;
+
+    conf.setInt(HConstants.FLUSH_THREADS, newNumFlushThreads);
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+
+    assertEquals(newNumFlushThreads,
+            rs1.cacheFlusher.getFlushThreadNum());
+  }
+
   /**
    * Test that the configurations in the CompactionConfiguration class change
    * properly.

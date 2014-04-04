@@ -656,6 +656,7 @@ public class HRegionServer implements HRegionInterface,
     this.compactSplitThread = new CompactSplitThread(this);
     // Registering the compactSplitThread object with the ConfigurationManager.
     configurationManager.registerObserver(this.compactSplitThread);
+    configurationManager.registerObserver(this.cacheFlusher);
 
     // Log rolling thread
     int hlogCntPerServer = this.conf.getInt(HConstants.HLOG_CNT_PER_SERVER, 2);
@@ -1822,7 +1823,6 @@ public class HRegionServer implements HRegionInterface,
         abort("Uncaught exception in service thread " + t.getName(), e);
       }
     };
-    this.cacheFlusher.start(n, handler);
 
     // Initialize the hlog roller threads
     for (int i = 0; i < this.hlogRollers.length; i++) {
