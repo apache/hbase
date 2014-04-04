@@ -421,6 +421,10 @@ public class ThriftUtilities {
       out.setAuthorizations(new Authorizations(in.getAuthorizations().getLabels()));
     }
 
+    if (in.isSetReversed()) {
+      out.setReversed(in.isReversed());
+    }
+
     return out;
   }
 

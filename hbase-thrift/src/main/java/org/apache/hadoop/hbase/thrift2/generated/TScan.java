@@ -49,6 +49,7 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
   private static final org.apache.thrift.protocol.TField BATCH_SIZE_FIELD_DESC = new org.apache.thrift.protocol.TField("batchSize", org.apache.thrift.protocol.TType.I32, (short)8);
   private static final org.apache.thrift.protocol.TField ATTRIBUTES_FIELD_DESC = new org.apache.thrift.protocol.TField("attributes", org.apache.thrift.protocol.TType.MAP, (short)9);
   private static final org.apache.thrift.protocol.TField AUTHORIZATIONS_FIELD_DESC = new org.apache.thrift.protocol.TField("authorizations", org.apache.thrift.protocol.TType.STRUCT, (short)10);
+  private static final org.apache.thrift.protocol.TField REVERSED_FIELD_DESC = new org.apache.thrift.protocol.TField("reversed", org.apache.thrift.protocol.TType.BOOL, (short)11);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -66,6 +67,7 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
   public int batchSize; // optional
   public Map<ByteBuffer,ByteBuffer> attributes; // optional
   public TAuthorization authorizations; // optional
+  public boolean reversed; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -78,7 +80,8 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
     FILTER_STRING((short)7, "filterString"),
     BATCH_SIZE((short)8, "batchSize"),
     ATTRIBUTES((short)9, "attributes"),
-    AUTHORIZATIONS((short)10, "authorizations");
+    AUTHORIZATIONS((short)10, "authorizations"),
+    REVERSED((short)11, "reversed");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -113,6 +116,8 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
           return ATTRIBUTES;
         case 10: // AUTHORIZATIONS
           return AUTHORIZATIONS;
+        case 11: // REVERSED
+          return REVERSED;
         default:
           return null;
       }
@@ -156,8 +161,9 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
   private static final int __CACHING_ISSET_ID = 0;
   private static final int __MAXVERSIONS_ISSET_ID = 1;
   private static final int __BATCHSIZE_ISSET_ID = 2;
+  private static final int __REVERSED_ISSET_ID = 3;
   private byte __isset_bitfield = 0;
-  private _Fields optionals[] = {_Fields.START_ROW,_Fields.STOP_ROW,_Fields.COLUMNS,_Fields.CACHING,_Fields.MAX_VERSIONS,_Fields.TIME_RANGE,_Fields.FILTER_STRING,_Fields.BATCH_SIZE,_Fields.ATTRIBUTES,_Fields.AUTHORIZATIONS};
+  private _Fields optionals[] = {_Fields.START_ROW,_Fields.STOP_ROW,_Fields.COLUMNS,_Fields.CACHING,_Fields.MAX_VERSIONS,_Fields.TIME_RANGE,_Fields.FILTER_STRING,_Fields.BATCH_SIZE,_Fields.ATTRIBUTES,_Fields.AUTHORIZATIONS,_Fields.REVERSED};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -184,6 +190,8 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
             new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , true))));
     tmpMap.put(_Fields.AUTHORIZATIONS, new org.apache.thrift.meta_data.FieldMetaData("authorizations", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TAuthorization.class)));
+    tmpMap.put(_Fields.REVERSED, new org.apache.thrift.meta_data.FieldMetaData("reversed", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TScan.class, metaDataMap);
   }
@@ -230,6 +238,7 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
     if (other.isSetAuthorizations()) {
       this.authorizations = new TAuthorization(other.authorizations);
     }
+    this.reversed = other.reversed;
   }
 
   public TScan deepCopy() {
@@ -251,6 +260,8 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
     this.batchSize = 0;
     this.attributes = null;
     this.authorizations = null;
+    setReversedIsSet(false);
+    this.reversed = false;
   }
 
   public byte[] getStartRow() {
@@ -546,6 +557,29 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
     }
   }
 
+  public boolean isReversed() {
+    return this.reversed;
+  }
+
+  public TScan setReversed(boolean reversed) {
+    this.reversed = reversed;
+    setReversedIsSet(true);
+    return this;
+  }
+
+  public void unsetReversed() {
+    __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __REVERSED_ISSET_ID);
+  }
+
+  /** Returns true if field reversed is set (has been assigned a value) and false otherwise */
+  public boolean isSetReversed() {
+    return EncodingUtils.testBit(__isset_bitfield, __REVERSED_ISSET_ID);
+  }
+
+  public void setReversedIsSet(boolean value) {
+    __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __REVERSED_ISSET_ID, value);
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case START_ROW:
@@ -628,6 +662,14 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       }
       break;
 
+    case REVERSED:
+      if (value == null) {
+        unsetReversed();
+      } else {
+        setReversed((Boolean)value);
+      }
+      break;
+
     }
   }
 
@@ -663,6 +705,9 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
     case AUTHORIZATIONS:
       return getAuthorizations();
 
+    case REVERSED:
+      return Boolean.valueOf(isReversed());
+
     }
     throw new IllegalStateException();
   }
@@ -694,6 +739,8 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       return isSetAttributes();
     case AUTHORIZATIONS:
       return isSetAuthorizations();
+    case REVERSED:
+      return isSetReversed();
     }
     throw new IllegalStateException();
   }
@@ -798,6 +845,15 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       if (!(this_present_authorizations && that_present_authorizations))
         return false;
       if (!this.authorizations.equals(that.authorizations))
+        return false;
+    }
+
+    boolean this_present_reversed = true && this.isSetReversed();
+    boolean that_present_reversed = true && that.isSetReversed();
+    if (this_present_reversed || that_present_reversed) {
+      if (!(this_present_reversed && that_present_reversed))
+        return false;
+      if (this.reversed != that.reversed)
         return false;
     }
 
@@ -917,6 +973,16 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetReversed()).compareTo(other.isSetReversed());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetReversed()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.reversed, other.reversed);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -1024,6 +1090,12 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       }
       first = false;
     }
+    if (isSetReversed()) {
+      if (!first) sb.append(", ");
+      sb.append("reversed:");
+      sb.append(this.reversed);
+      first = false;
+    }
     sb.append(")");
     return sb.toString();
   }
@@ -1094,14 +1166,14 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
           case 3: // COLUMNS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list88 = iprot.readListBegin();
-                struct.columns = new ArrayList<TColumn>(_list88.size);
-                for (int _i89 = 0; _i89 < _list88.size; ++_i89)
+                org.apache.thrift.protocol.TList _list106 = iprot.readListBegin();
+                struct.columns = new ArrayList<TColumn>(_list106.size);
+                for (int _i107 = 0; _i107 < _list106.size; ++_i107)
                 {
-                  TColumn _elem90;
-                  _elem90 = new TColumn();
-                  _elem90.read(iprot);
-                  struct.columns.add(_elem90);
+                  TColumn _elem108;
+                  _elem108 = new TColumn();
+                  _elem108.read(iprot);
+                  struct.columns.add(_elem108);
                 }
                 iprot.readListEnd();
               }
@@ -1154,15 +1226,15 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
           case 9: // ATTRIBUTES
             if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
               {
-                org.apache.thrift.protocol.TMap _map91 = iprot.readMapBegin();
-                struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map91.size);
-                for (int _i92 = 0; _i92 < _map91.size; ++_i92)
+                org.apache.thrift.protocol.TMap _map109 = iprot.readMapBegin();
+                struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map109.size);
+                for (int _i110 = 0; _i110 < _map109.size; ++_i110)
                 {
-                  ByteBuffer _key93;
-                  ByteBuffer _val94;
-                  _key93 = iprot.readBinary();
-                  _val94 = iprot.readBinary();
-                  struct.attributes.put(_key93, _val94);
+                  ByteBuffer _key111;
+                  ByteBuffer _val112;
+                  _key111 = iprot.readBinary();
+                  _val112 = iprot.readBinary();
+                  struct.attributes.put(_key111, _val112);
                 }
                 iprot.readMapEnd();
               }
@@ -1176,6 +1248,14 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
               struct.authorizations = new TAuthorization();
               struct.authorizations.read(iprot);
               struct.setAuthorizationsIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 11: // REVERSED
+            if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
+              struct.reversed = iprot.readBool();
+              struct.setReversedIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -1214,9 +1294,9 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.columns.size()));
-            for (TColumn _iter95 : struct.columns)
+            for (TColumn _iter113 : struct.columns)
             {
-              _iter95.write(oprot);
+              _iter113.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -1257,10 +1337,10 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter96 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter114 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter96.getKey());
-              oprot.writeBinary(_iter96.getValue());
+              oprot.writeBinary(_iter114.getKey());
+              oprot.writeBinary(_iter114.getValue());
             }
             oprot.writeMapEnd();
           }
@@ -1273,6 +1353,11 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
           struct.authorizations.write(oprot);
           oprot.writeFieldEnd();
         }
+      }
+      if (struct.isSetReversed()) {
+        oprot.writeFieldBegin(REVERSED_FIELD_DESC);
+        oprot.writeBool(struct.reversed);
+        oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -1322,7 +1407,10 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       if (struct.isSetAuthorizations()) {
         optionals.set(9);
       }
-      oprot.writeBitSet(optionals, 10);
+      if (struct.isSetReversed()) {
+        optionals.set(10);
+      }
+      oprot.writeBitSet(optionals, 11);
       if (struct.isSetStartRow()) {
         oprot.writeBinary(struct.startRow);
       }
@@ -1332,9 +1420,9 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       if (struct.isSetColumns()) {
         {
           oprot.writeI32(struct.columns.size());
-          for (TColumn _iter97 : struct.columns)
+          for (TColumn _iter115 : struct.columns)
           {
-            _iter97.write(oprot);
+            _iter115.write(oprot);
           }
         }
       }
@@ -1356,22 +1444,25 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       if (struct.isSetAttributes()) {
         {
           oprot.writeI32(struct.attributes.size());
-          for (Map.Entry<ByteBuffer, ByteBuffer> _iter98 : struct.attributes.entrySet())
+          for (Map.Entry<ByteBuffer, ByteBuffer> _iter116 : struct.attributes.entrySet())
           {
-            oprot.writeBinary(_iter98.getKey());
-            oprot.writeBinary(_iter98.getValue());
+            oprot.writeBinary(_iter116.getKey());
+            oprot.writeBinary(_iter116.getValue());
           }
         }
       }
       if (struct.isSetAuthorizations()) {
         struct.authorizations.write(oprot);
       }
+      if (struct.isSetReversed()) {
+        oprot.writeBool(struct.reversed);
+      }
     }
 
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, TScan struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(10);
+      BitSet incoming = iprot.readBitSet(11);
       if (incoming.get(0)) {
         struct.startRow = iprot.readBinary();
         struct.setStartRowIsSet(true);
@@ -1382,14 +1473,14 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       }
       if (incoming.get(2)) {
         {
-          org.apache.thrift.protocol.TList _list99 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.columns = new ArrayList<TColumn>(_list99.size);
-          for (int _i100 = 0; _i100 < _list99.size; ++_i100)
+          org.apache.thrift.protocol.TList _list117 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.columns = new ArrayList<TColumn>(_list117.size);
+          for (int _i118 = 0; _i118 < _list117.size; ++_i118)
           {
-            TColumn _elem101;
-            _elem101 = new TColumn();
-            _elem101.read(iprot);
-            struct.columns.add(_elem101);
+            TColumn _elem119;
+            _elem119 = new TColumn();
+            _elem119.read(iprot);
+            struct.columns.add(_elem119);
           }
         }
         struct.setColumnsIsSet(true);
@@ -1417,15 +1508,15 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       }
       if (incoming.get(8)) {
         {
-          org.apache.thrift.protocol.TMap _map102 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-          struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map102.size);
-          for (int _i103 = 0; _i103 < _map102.size; ++_i103)
+          org.apache.thrift.protocol.TMap _map120 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+          struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map120.size);
+          for (int _i121 = 0; _i121 < _map120.size; ++_i121)
           {
-            ByteBuffer _key104;
-            ByteBuffer _val105;
-            _key104 = iprot.readBinary();
-            _val105 = iprot.readBinary();
-            struct.attributes.put(_key104, _val105);
+            ByteBuffer _key122;
+            ByteBuffer _val123;
+            _key122 = iprot.readBinary();
+            _val123 = iprot.readBinary();
+            struct.attributes.put(_key122, _val123);
           }
         }
         struct.setAttributesIsSet(true);
@@ -1434,6 +1525,10 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
         struct.authorizations = new TAuthorization();
         struct.authorizations.read(iprot);
         struct.setAuthorizationsIsSet(true);
+      }
+      if (incoming.get(10)) {
+        struct.reversed = iprot.readBool();
+        struct.setReversedIsSet(true);
       }
     }
   }
