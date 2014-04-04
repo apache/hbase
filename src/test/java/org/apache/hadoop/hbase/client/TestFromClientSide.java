@@ -223,6 +223,72 @@ public class TestFromClientSide {
      h.close();
    }
 
+  /**
+   * Basic client side validation of HBASE-10118
+   */
+  @Test
+  public void testPurgeFutureDeletes() throws Exception {
+    final byte[] TABLENAME = Bytes.toBytes("testPurgeFutureDeletes");
+    final byte[] ROW = Bytes.toBytes("row");
+    final byte[] FAMILY = Bytes.toBytes("family");
+    final byte[] COLUMN = Bytes.toBytes("column");
+    final byte[] VALUE = Bytes.toBytes("value");
+
+    HTable table = TEST_UTIL.createTable(TABLENAME, FAMILY);
+
+    // future timestamp
+    long ts = System.currentTimeMillis() * 2;
+    Put put = new Put(ROW, ts);
+    put.add(FAMILY, COLUMN, VALUE);
+    table.put(put);
+
+    Get get = new Get(ROW);
+    Result result = table.get(get);
+    assertArrayEquals(VALUE, result.getValue(FAMILY, COLUMN));
+
+    Delete del = new Delete(ROW);
+    del.deleteColumn(FAMILY, COLUMN, ts);
+    table.delete(del);
+
+    get = new Get(ROW);
+    result = table.get(get);
+    assertNull(result.getValue(FAMILY, COLUMN));
+
+    // major compaction, purged future deletes
+    TEST_UTIL.getHBaseAdmin().flush(TABLENAME);
+    TEST_UTIL.getHBaseAdmin().majorCompact(TABLENAME);
+
+    // waiting for the major compaction to complete
+    int sleepTime = 0;
+    while (true) {
+      Thread.sleep(200);
+      sleepTime += 200;
+
+      Scan s = new Scan();
+      s.setRaw(true);
+      ResultScanner scanner = table.getScanner(s);
+      if (scanner.next() == null) {
+        scanner.close();
+        break;
+      }
+      scanner.close();
+
+      if (sleepTime > 6000) {
+        throw new IOException("Major compaction time is larger than 6000s");
+      }
+    }
+
+    put = new Put(ROW, ts);
+    put.add(FAMILY, COLUMN, VALUE);
+    table.put(put);
+
+    get = new Get(ROW);
+    result = table.get(get);
+    assertArrayEquals(VALUE, result.getValue(FAMILY, COLUMN));
+
+    table.close();
+  }
+
    /**
    * HBASE-2468 use case 1 and 2: region info de/serialization
    */

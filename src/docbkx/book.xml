@@ -485,6 +485,15 @@ htable.put(put);
           up on the user mailing list.</para>
           <para>Also see <xref linkend="keyvalue"/> for more information on the internal KeyValue format.
           </para>
+          <para>Delete markers are purged during the major compaction of store, 
+          unless the KEEP_DELETED_CELLS is set in the column family. In some 
+          scenarios, users want to keep the deletes for a time and you can set the 
+          delete TTL: hbase.hstore.time.to.purge.deletes in the configuration. 
+          If this delete TTL is not set or set to 0, all delete markers including those 
+          with future timestamp are purged during the later major compaction. 
+          Otherwise, a delete marker is kept until the major compaction after 
+          marker's timestamp + delete TTL. 
+          </para>
         </section>
        </section>
 
