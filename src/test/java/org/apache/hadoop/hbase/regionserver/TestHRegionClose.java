@@ -19,7 +19,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.conf.Configuration;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.HTable;
@@ -30,14 +34,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.data.Stat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestHRegionClose {
+  private static final Log LOG = LogFactory.getLog(TestHRegionClose.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected static byte[][] FAMILIES = { Bytes.toBytes("f1"),
       Bytes.toBytes("f2"), Bytes.toBytes("f3"), Bytes.toBytes("f4") };
@@ -52,22 +54,21 @@ public class TestHRegionClose {
 
     // Build some data.
     byte[] tableName = Bytes.toBytes(getClass().getSimpleName());
-    TEST_UTIL.createTable(tableName, FAMILIES);
+    TEST_UTIL.createTable(tableName, FAMILIES, 1, Bytes.toBytes("bbb"),
+        Bytes.toBytes("yyy"), 25);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     for (int i = 0; i < FAMILIES.length; i++) {
       byte[] columnFamily = FAMILIES[i];
-      TEST_UTIL.createMultiRegions(table, columnFamily);
       TEST_UTIL.loadTable(table, columnFamily);
     }
 
     // Pick a regionserver.
-    Configuration conf = TEST_UTIL.getConfiguration();
     server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
 
     HRegion[] region = server.getOnlineRegionsAsArray();
     regionInfo = region[0].getRegionInfo();
 
-    // Some initializtion relevant to zk.
+    // Some initialization relevant to zk.
     zkWrapper = server.getZooKeeperWrapper();
     regionZNode = zkWrapper.getZNode(
         zkWrapper.getRegionInTransitionZNode(), regionInfo.getEncodedName());
@@ -95,7 +96,15 @@ public class TestHRegionClose {
   }
 
   @Test
-  public void mainTest() throws Exception {
+  public void singleClose() throws Exception {
+    tryCloseRegion();
+  }
+
+  @Test
+  public void doubleClose() throws Exception {
+    tryCloseRegion();
+    LOG.info("Trying to close the region again, to check that the RegionServer "
+        + "is idempotent. i.e. CLOSED -> CLOSING transition bug");
     tryCloseRegion();
   }
 
