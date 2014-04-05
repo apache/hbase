@@ -19,14 +19,16 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.*;
-
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_mgr_wait_for_zk_delete;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_final_transistion_failed;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_task_acquired;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_task_err;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_task_resigned;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -47,7 +49,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -55,18 +56,21 @@ import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.Before;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(TagRunner.class)
 public class TestDistributedLogSplitting {
   private static final Log LOG = LogFactory.getLog(TestDistributedLogSplitting.class);
   static {
@@ -117,6 +121,8 @@ public class TestDistributedLogSplitting {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  // Marked as unstable and recorded in #4053598
+  @TestTag({ "unstable" })
   @Test
   public void testThreeRSAbort() throws Exception {
     LOG.info("testThreeRSAbort");
@@ -172,7 +178,7 @@ public class TestDistributedLogSplitting {
         HLog.getHLogDirectoryName(hrs.getServerInfo().getServerName()));
 
     HTable htable = installTable(table, family, NUM_REGIONS);
-    
+
     Collection<HRegion> regions = new LinkedList<HRegion>(hrs.getOnlineRegions());
     LOG.info("#regions = " + regions.size());
     Iterator<HRegion> it = regions.iterator();
@@ -190,7 +196,7 @@ public class TestDistributedLogSplitting {
         htable.put(p);
       }
     }
-    
+
     slm.splitLogDistributed(logDir);
 
     for (HRegion rgn : regions) {
@@ -234,6 +240,7 @@ public class TestDistributedLogSplitting {
     }
 
     new Thread() {
+      @Override
       public void run() {
         waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
         for (RegionServerThread rst : rsts) {
@@ -249,7 +256,7 @@ public class TestDistributedLogSplitting {
     long curt = System.currentTimeMillis();
     long endt = curt + 30000;
     while (curt < endt) {
-      if ((tot_wkr_task_resigned.get() + tot_wkr_task_err.get() + 
+      if ((tot_wkr_task_resigned.get() + tot_wkr_task_err.get() +
           tot_wkr_final_transistion_failed.get()) == 0) {
         Thread.yield();
         curt = System.currentTimeMillis();

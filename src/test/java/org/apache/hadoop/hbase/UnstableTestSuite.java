@@ -22,19 +22,19 @@ package org.apache.hadoop.hbase;
 import org.apache.hadoop.hbase.client.TestScannerTimeout;
 import org.apache.hadoop.hbase.client.TestServerConfigFromClient;
 import org.apache.hadoop.hbase.mapreduce.TestHFileOutputFormat;
+import org.apache.hadoop.hbase.master.TestDistributedLogSplitting;
 import org.apache.hadoop.hbase.master.TestLogSplitOnMasterFailover;
 import org.apache.hadoop.hbase.master.TestRSLivenessOnMasterFailover;
-import org.apache.hadoop.hbase.master.TestRegionPlacement;
 import org.apache.hadoop.hbase.master.TestRegionStateOnMasterFailure;
 import org.apache.hadoop.hbase.master.TestSplitLogManager;
 import org.apache.hadoop.hbase.regionserver.TestHRegionCloseRetry;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerFileSystemFailure;
+import org.apache.hadoop.hbase.regionserver.TestQOS;
 import org.apache.hadoop.hbase.regionserver.metrics.TestThriftMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.TestHLog;
 import org.apache.hadoop.hbase.regionserver.wal.TestLogRolling;
 import org.apache.hadoop.hbase.regionserver.wal.TestWALReplay;
 import org.apache.hadoop.hbase.replication.regionserver.TestReplicationSink;
-import org.apache.hadoop.hbase.util.TagRunner;
 import org.apache.hadoop.hbase.util.TestProcessBasedCluster;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -46,8 +46,9 @@ import org.junit.runners.Suite.SuiteClasses;
     TestProcessBasedCluster.class, TestRegionStateOnMasterFailure.class,
     TestScannerTimeout.class, TestWALReplay.class, TestThriftMetrics.class,
     TestServerConfigFromClient.class, TestRSLivenessOnMasterFailover.class,
-    TestLogSplitOnMasterFailover.class, TagRunner.class,
+    TestLogSplitOnMasterFailover.class,
     TestHRegionServerFileSystemFailure.class, TestFullLogReconstruction.class,
-    TestSplitLogManager.class, TestHLog.class })
+    TestSplitLogManager.class, TestHLog.class, TestQOS.class,
+    TestDistributedLogSplitting.class })
 public class UnstableTestSuite {
 }

@@ -1,14 +1,13 @@
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.util.InjectionEvent;
-import org.apache.hadoop.util.InjectionEventI;
-import org.apache.hadoop.util.InjectionHandler;
-import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -16,13 +15,19 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
+import org.apache.hadoop.hdfs.util.InjectionEvent;
 import org.apache.hadoop.io.nativeio.NativeIO;
-
+import org.apache.hadoop.util.InjectionEventI;
+import org.apache.hadoop.util.InjectionHandler;
+import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.AfterClass;
-import static org.junit.Assert.*;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(TagRunner.class)
 public class TestQOS {
   private static final Log LOG = LogFactory.getLog(TestQOS.class);
   protected static HBaseTestingUtility TEST_UTIL;
@@ -46,6 +51,7 @@ public class TestQOS {
 
   public static class TestQOSHandler extends
       InjectionHandler {
+    @Override
     protected void _processEvent(InjectionEventI event, Object... args) {
       if (event == InjectionEvent.DATANODE_WRITE_BLOCK
           || event == InjectionEvent.DATANODE_READ_BLOCK) {
@@ -68,6 +74,8 @@ public class TestQOS {
     }
   }
 
+  // Marked as unstable and recorded in #4053465
+  @TestTag({ "unstable" })
   @Test
   public void testBasic() throws Exception {
     byte[] family = "family".getBytes();
