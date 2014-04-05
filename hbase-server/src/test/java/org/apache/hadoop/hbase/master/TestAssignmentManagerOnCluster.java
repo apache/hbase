@@ -754,11 +754,11 @@ public class TestAssignmentManagerOnCluster {
       // You can't assign a dead region before SSH
       am.assign(hri, true, true);
       RegionState state = regionStates.getRegionState(hri);
-      assertTrue(state.isOffline());
+      assertTrue(state.isFailedClose());
 
       // You can't unassign a dead region before SSH either
       am.unassign(hri, true);
-      assertTrue(state.isOffline());
+      assertTrue(state.isFailedClose());
 
       // Enable SSH so that log can be split
       master.enableSSH(true);

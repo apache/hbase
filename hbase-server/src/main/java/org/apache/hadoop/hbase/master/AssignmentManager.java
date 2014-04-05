@@ -1698,8 +1698,7 @@ public class AssignmentManager extends ZooKeeperListener {
         boolean logRetries = true;
         if (t instanceof NotServingRegionException
             || t instanceof RegionServerStoppedException
-            || t instanceof ServerNotRunningYetException
-            || t instanceof FailedServerException) {
+            || t instanceof ServerNotRunningYetException) {
           LOG.debug("Offline " + region.getRegionNameAsString()
             + ", it's not any more on " + server, t);
           if (transitionInZK) {
