@@ -140,7 +140,7 @@ public class TestAssignmentManagerOnCluster {
   @Test (timeout=120000)
   public void testAssignRegionOnRestartedServer() throws Exception {
     String table = "testAssignRegionOnRestartedServer";
-    TEST_UTIL.getMiniHBaseCluster().getConf().setInt("hbase.assignment.maximum.attempts", 40);
+    TEST_UTIL.getMiniHBaseCluster().getConf().setInt("hbase.assignment.maximum.attempts", 20);
     TEST_UTIL.getMiniHBaseCluster().stopMaster(0);
     TEST_UTIL.getMiniHBaseCluster().startMaster(); //restart the master so that conf take into affect
 
@@ -738,11 +738,11 @@ public class TestAssignmentManagerOnCluster {
       // You can't assign a dead region before SSH
       am.assign(hri, true, true);
       RegionState state = regionStates.getRegionState(hri);
-      assertTrue(state.isOffline());
+      assertTrue(state.isFailedClose());
 
       // You can't unassign a dead region before SSH either
       am.unassign(hri, true);
-      assertTrue(state.isOffline());
+      assertTrue(state.isFailedClose());
 
       // Enable SSH so that log can be split
       master.enableSSH(true);
