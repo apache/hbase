@@ -777,7 +777,7 @@ public class HTable implements HTableInterface, IEndpointClient {
 
   @Override
   public Result[] get(List<Get> gets) throws IOException {
-    return this.getConnectionAndResetOperationContext().processBatchOfGets(gets, tableName, this.options);
+    return batchGet(gets);
   }
 
   /**
