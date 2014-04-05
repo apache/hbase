@@ -18,11 +18,18 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import java.io.IOException;
+import java.util.Map;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.ByteRange;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 
 /**
  * <strong>NOTE: for internal use only by AccessController implementation</strong>
@@ -46,6 +53,11 @@ class AccessControlFilter extends FilterBase {
   private User user;
   private boolean isSystemTable;
   private boolean cellFirstStrategy;
+  private Map<ByteRange, Integer> cfVsMaxVersions;
+  private int familyMaxVersions;
+  private int currentVersions;
+  private ByteRange prevFam;
+  private ByteRange prevQual;
 
   /**
    * For Writable
@@ -54,18 +66,42 @@ class AccessControlFilter extends FilterBase {
   }
 
   AccessControlFilter(TableAuthManager mgr, User ugi, TableName tableName,
-      boolean cellFirstStrategy) {
+      boolean cellFirstStrategy, Map<ByteRange, Integer> cfVsMaxVersions) {
     authManager = mgr;
     table = tableName;
     user = ugi;
     isSystemTable = tableName.isSystemTable();
     this.cellFirstStrategy = cellFirstStrategy;
+    this.cfVsMaxVersions = cfVsMaxVersions;
+    this.prevFam = new SimpleByteRange();
+    this.prevQual = new SimpleByteRange();
   }
 
   @Override
   public ReturnCode filterKeyValue(Cell cell) {
     if (isSystemTable) {
       return ReturnCode.INCLUDE;
+    }
+    if (prevFam.getBytes() == null
+        || (Bytes.compareTo(prevFam.getBytes(), prevFam.getOffset(), prevFam.getLength(),
+            cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()) != 0)) {
+      prevFam.set(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
+      // Similar to VisibilityLabelFilter
+      familyMaxVersions = cfVsMaxVersions.get(prevFam);
+      // Family is changed. Just unset curQualifier.
+      prevQual.unset();
+    }
+    if (prevQual.getBytes() == null
+        || (Bytes.compareTo(prevQual.getBytes(), prevQual.getOffset(),
+            prevQual.getLength(), cell.getQualifierArray(), cell.getQualifierOffset(),
+            cell.getQualifierLength()) != 0)) {
+      prevQual.set(cell.getQualifierArray(), cell.getQualifierOffset(),
+          cell.getQualifierLength());
+      currentVersions = 0;
+    }
+    currentVersions++;
+    if (currentVersions > familyMaxVersions) {
+      return ReturnCode.SKIP;
     }
     if (authManager.authorize(user, table, cell, cellFirstStrategy, Permission.Action.READ)) {
       return ReturnCode.INCLUDE;
@@ -74,6 +110,14 @@ class AccessControlFilter extends FilterBase {
     // no longer do that since, given the possibility of per cell ACLs
     // anywhere, we now need to examine all KVs with this filter.
     return ReturnCode.SKIP;
+  }
+
+  @Override
+  public void reset() throws IOException {
+    this.prevFam.unset();
+    this.prevQual.unset();
+    this.familyMaxVersions = 0;
+    this.currentVersions = 0;
   }
 
   /**
