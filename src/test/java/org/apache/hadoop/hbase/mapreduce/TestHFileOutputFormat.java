@@ -592,6 +592,7 @@ public class TestHFileOutputFormat  {
       // handle the split case
       if (shouldChangeRegions) {
         LOG.info("Changing regions in table");
+        admin.disableTable(table.getTableName());
         admin.deleteTable(table.getTableName());
 
         byte[][] newSplitKeys = generateRandomSplitKeys(14);

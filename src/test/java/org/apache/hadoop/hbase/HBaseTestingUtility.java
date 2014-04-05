@@ -913,6 +913,12 @@ public class HBaseTestingUtility {
   throws IOException {
     byte[][] startKeys = startKeysAndFavNodes.getFirst();
     byte[][] favNodes = startKeysAndFavNodes.getSecond();
+
+    HBaseAdmin admin = new HBaseAdmin(conf);
+
+    // Disable the table before modifying the META table
+    admin.disableTable(table.getTableName());
+
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
     HTableDescriptor htd = table.getTableDescriptor();
@@ -948,6 +954,9 @@ public class HBaseTestingUtility {
         Bytes.toStringBinary(row));
       meta.delete(new Delete(row));
     }
+
+    admin.enableTable(table.getTableName());
+
     // flush cache of regions
     HConnection conn = table.getConnectionAndResetOperationContext();
     conn.clearRegionCache();
