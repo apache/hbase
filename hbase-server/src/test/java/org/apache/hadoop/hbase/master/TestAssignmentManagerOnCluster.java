@@ -141,7 +141,7 @@ public class TestAssignmentManagerOnCluster {
   @Test (timeout=120000)
   public void testAssignRegionOnRestartedServer() throws Exception {
     String table = "testAssignRegionOnRestartedServer";
-    TEST_UTIL.getMiniHBaseCluster().getConf().setInt("hbase.assignment.maximum.attempts", 40);
+    TEST_UTIL.getMiniHBaseCluster().getConf().setInt("hbase.assignment.maximum.attempts", 20);
     TEST_UTIL.getMiniHBaseCluster().stopMaster(0);
     TEST_UTIL.getMiniHBaseCluster().startMaster(); //restart the master so that conf take into affect
 
