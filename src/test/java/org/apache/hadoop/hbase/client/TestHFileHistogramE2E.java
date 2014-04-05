@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -18,7 +20,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionUtilities;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -220,9 +221,9 @@ public class TestHFileHistogramE2E {
 
   private void compareHistograms(List<List<Bucket>> buckets,
       List<List<Bucket>> batchBuckets) {
-    assertTrue(buckets.size() == batchBuckets.size());
+    Assert.assertTrue(buckets.size() == batchBuckets.size());
     for (int i = 0; i < buckets.size(); i++) {
-      assertTrue(compareBuckets(buckets.get(i), batchBuckets.get(i)));
+      Assert.assertTrue(compareBuckets(buckets.get(i), batchBuckets.get(i)));
     }
   }
 }

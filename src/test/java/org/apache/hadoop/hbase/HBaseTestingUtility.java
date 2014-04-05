@@ -1456,7 +1456,7 @@ public class HBaseTestingUtility {
         }
 
       };
-      MetaScanner.metaScan(conf, visitor, null);
+      MetaScanner.metaScan(conf, visitor, (StringBytes)null);
 
       // Location info from region servers
       final Map<String, Map<String, HServerAddress>> fromRS = new HashMap<>();
