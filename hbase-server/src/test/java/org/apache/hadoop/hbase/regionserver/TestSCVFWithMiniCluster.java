@@ -28,7 +28,6 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -47,8 +46,8 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -66,14 +65,14 @@ public class TestSCVFWithMiniCluster {
   private static final byte[] QUALIFIER_FOO = Bytes.toBytes("foo");
   private static final byte[] QUALIFIER_BAR = Bytes.toBytes("bar");
 
-  private HTable htable;
+  private static HTable htable;
 
-  private Filter scanFilter;
+  private static Filter scanFilter;
 
   private int expected = 1;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeClass
+  public static void setUp() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
 
     util.startMiniCluster(1);
@@ -122,8 +121,9 @@ public class TestSCVFWithMiniCluster {
       new BinaryComparator(Bytes.toBytes("false")));
     ((SingleColumnValueFilter) scanFilter).setFilterIfMissing(true);
   }
-  @After
-  public void tearDown() throws Exception {
+  
+  @AfterClass
+  public static void tearDown() throws Exception {
     htable.close();
   }
 
