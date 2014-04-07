@@ -199,15 +199,6 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
   }
 
   @Override
-  public String toString() {
-    String name = "UnknownServerName";
-    if(server != null && server.getServerName() != null) {
-      name = server.getServerName().toString();
-    }
-    return getClass().getSimpleName() + "-" + name + "-" + getSeqid();
-  }
-
-  @Override
   protected void handleException(Throwable t) {
     int count = eventExceptionCount.getAndIncrement();
     if (count < 0) count = eventExceptionCount.getAndSet(0);

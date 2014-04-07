@@ -108,11 +108,7 @@ public class ServerShutdownHandler extends EventHandler {
 
   @Override
   public String toString() {
-    String name = "UnknownServerName";
-    if(server != null && server.getServerName() != null) {
-      name = server.getServerName().toString();
-    }
-    return getClass().getSimpleName() + "-" + name + "-" + getSeqid();
+    return getClass().getSimpleName() + "-" + serverName + "-" + getSeqid();
   }
 
   @Override
