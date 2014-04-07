@@ -83,7 +83,11 @@ public class TestHRegionServerBulkLoad {
     }
   }
 
-  static byte[] rowkey(int i) {
+  /**
+   * Create a rowkey compatible with
+   * {@link #createHFile(FileSystem, Path, byte[], byte[], byte[], int)}.
+   */
+  public static byte[] rowkey(int i) {
     return Bytes.toBytes(String.format("row_%08d", i));
   }
 
