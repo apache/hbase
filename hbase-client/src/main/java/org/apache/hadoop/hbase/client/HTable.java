@@ -716,8 +716,10 @@ public class HTable implements HTableInterface {
 
   /**
    * {@inheritDoc}
+   * @deprecated Use reversed scan instead.
    */
    @Override
+   @Deprecated
    public Result getRowOrBefore(final byte[] row, final byte[] family)
        throws IOException {
      RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
@@ -1492,22 +1494,20 @@ public class HTable implements HTableInterface {
    * @param enable Set to true to enable region cache prefetch. Or set to
    * false to disable it.
    * @throws IOException
+   * @deprecated does nothing since 0.99
    */
+  @Deprecated
   public static void setRegionCachePrefetch(final byte[] tableName,
-      final boolean enable) throws IOException {
-    setRegionCachePrefetch(TableName.valueOf(tableName), enable);
+      final boolean enable)  throws IOException {
   }
 
+  /**
+   * @deprecated does nothing since 0.99
+   */
+  @Deprecated
   public static void setRegionCachePrefetch(
       final TableName tableName,
       final boolean enable) throws IOException {
-    HConnectionManager.execute(new HConnectable<Void>(HBaseConfiguration.create()) {
-      @Override
-      public Void connect(HConnection connection) throws IOException {
-        connection.setRegionCachePrefetch(tableName, enable);
-        return null;
-      }
-    });
   }
 
   /**
@@ -1519,22 +1519,20 @@ public class HTable implements HTableInterface {
    * @param enable Set to true to enable region cache prefetch. Or set to
    * false to disable it.
    * @throws IOException
+   * @deprecated does nothing since 0.99
    */
+  @Deprecated
   public static void setRegionCachePrefetch(final Configuration conf,
       final byte[] tableName, final boolean enable) throws IOException {
-    setRegionCachePrefetch(conf, TableName.valueOf(tableName), enable);
   }
 
+  /**
+   * @deprecated does nothing since 0.99
+   */
+  @Deprecated
   public static void setRegionCachePrefetch(final Configuration conf,
       final TableName tableName,
       final boolean enable) throws IOException {
-    HConnectionManager.execute(new HConnectable<Void>(conf) {
-      @Override
-      public Void connect(HConnection connection) throws IOException {
-        connection.setRegionCachePrefetch(tableName, enable);
-        return null;
-      }
-    });
   }
 
   /**
@@ -1544,20 +1542,21 @@ public class HTable implements HTableInterface {
    * @return true if table's region cache prefecth is enabled. Otherwise
    * it is disabled.
    * @throws IOException
+   * @deprecated always return false since 0.99
    */
+  @Deprecated
   public static boolean getRegionCachePrefetch(final Configuration conf,
       final byte[] tableName) throws IOException {
-    return getRegionCachePrefetch(conf, TableName.valueOf(tableName));
+    return false;
   }
 
+  /**
+   * @deprecated always return false since 0.99
+   */
+  @Deprecated
   public static boolean getRegionCachePrefetch(final Configuration conf,
       final TableName tableName) throws IOException {
-    return HConnectionManager.execute(new HConnectable<Boolean>(conf) {
-      @Override
-      public Boolean connect(HConnection connection) throws IOException {
-        return connection.getRegionCachePrefetch(tableName);
-      }
-    });
+    return false;
   }
 
   /**
@@ -1566,20 +1565,20 @@ public class HTable implements HTableInterface {
    * @return true if table's region cache prefecth is enabled. Otherwise
    * it is disabled.
    * @throws IOException
+   * @deprecated always return false since 0.99
    */
+  @Deprecated
   public static boolean getRegionCachePrefetch(final byte[] tableName) throws IOException {
-    return getRegionCachePrefetch(TableName.valueOf(tableName));
+    return false;
   }
 
+  /**
+   * @deprecated always return false since 0.99
+   */
+  @Deprecated
   public static boolean getRegionCachePrefetch(
       final TableName tableName) throws IOException {
-    return HConnectionManager.execute(new HConnectable<Boolean>(
-        HBaseConfiguration.create()) {
-      @Override
-      public Boolean connect(HConnection connection) throws IOException {
-        return connection.getRegionCachePrefetch(tableName);
-      }
-    });
+    return false;
   }
 
   /**

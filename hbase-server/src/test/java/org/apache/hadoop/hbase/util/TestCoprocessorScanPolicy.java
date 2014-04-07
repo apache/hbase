@@ -281,16 +281,21 @@ public class TestCoprocessorScanPolicy {
     public KeyValueScanner preStoreScannerOpen(
         final ObserverContext<RegionCoprocessorEnvironment> c, Store store, final Scan scan,
         final NavigableSet<byte[]> targetCols, KeyValueScanner s) throws IOException {
-      Long newTtl = ttls.get(store.getTableName());
-      Integer newVersions = versions.get(store.getTableName());
-      ScanInfo oldSI = store.getScanInfo();
-      HColumnDescriptor family = store.getFamily();
-      ScanInfo scanInfo = new ScanInfo(family.getName(), family.getMinVersions(),
-          newVersions == null ? family.getMaxVersions() : newVersions,
-          newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
-          oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
-      return new StoreScanner(store, scanInfo, scan, targetCols,
-        ((HStore)store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED));
+      TableName tn = store.getTableName();
+      if (!tn.isSystemTable()) {
+        Long newTtl = ttls.get(store.getTableName());
+        Integer newVersions = versions.get(store.getTableName());
+        ScanInfo oldSI = store.getScanInfo();
+        HColumnDescriptor family = store.getFamily();
+        ScanInfo scanInfo = new ScanInfo(family.getName(), family.getMinVersions(),
+            newVersions == null ? family.getMaxVersions() : newVersions,
+            newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
+            oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
+        return new StoreScanner(store, scanInfo, scan, targetCols,
+            ((HStore) store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED));
+      } else {
+        return s;
+      }
     }
   }
 

@@ -36,7 +36,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -421,39 +420,6 @@ class ConnectionManager {
     }
   }
 
-  /**
-   * It is provided for unit test cases which verify the behavior of region
-   * location cache prefetch.
-   * @return Number of cached regions for the table.
-   * @throws ZooKeeperConnectionException
-   */
-  static int getCachedRegionCount(Configuration conf, final TableName tableName)
-  throws IOException {
-    return execute(new HConnectable<Integer>(conf) {
-      @Override
-      public Integer connect(HConnection connection) {
-        return ((HConnectionImplementation)connection).getNumberOfCachedRegionLocations(tableName);
-      }
-    });
-  }
-
-  /**
-   * It's provided for unit test cases which verify the behavior of region
-   * location cache prefetch.
-   * @return true if the region where the table and row reside is cached.
-   * @throws ZooKeeperConnectionException
-   */
-  static boolean isRegionCached(Configuration conf,
-                                final TableName tableName,
-                                final byte[] row)
-  throws IOException {
-    return execute(new HConnectable<Boolean>(conf) {
-      @Override
-      public Boolean connect(HConnection connection) {
-        return ((HConnectionImplementation) connection).isRegionCached(tableName, row);
-      }
-    });
-  }
 
   /**
    * This convenience method invokes the given {@link HConnectable#connect}
@@ -500,7 +466,6 @@ class ConnectionManager {
     private final int numTries;
     final int rpcTimeout;
     private NonceGenerator nonceGenerator = null;
-    private final int prefetchRegionLimit;
     private final AsyncProcess asyncProcess;
 
     private volatile boolean closed;
@@ -545,11 +510,6 @@ class ConnectionManager {
     // maps to the absent server.
     // The access to this attribute must be protected by a lock on cachedRegionLocations
     private final Set<ServerName> cachedServers = new ConcurrentSkipListSet<ServerName>();
-
-    // region cache prefetch is enabled by default. this set contains all
-    // tables whose region cache prefetch are disabled.
-    private final Set<Integer> regionCachePrefetchDisabledTables =
-      new CopyOnWriteArraySet<Integer>();
 
     private int refCount;
 
@@ -637,10 +597,6 @@ class ConnectionManager {
         this.nonceGenerator = new NoNonceGenerator();
       }
       this.asyncProcess = createAsyncProcess(this.conf);
-
-      this.prefetchRegionLimit = conf.getInt(
-          HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
-          HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
     }
 
     @Override
@@ -1029,62 +985,7 @@ class ConnectionManager {
         return this.registry.getMetaRegionLocation();
       } else {
         // Region not in the cache - have to go to the meta RS
-        return locateRegionInMeta(TableName.META_TABLE_NAME, tableName, row,
-          useCache, userRegionLock, retry);
-      }
-    }
-
-    /*
-     * Search hbase:meta for the HRegionLocation info that contains the table and
-     * row we're seeking. It will prefetch certain number of regions info and
-     * save them to the global region cache.
-     */
-    private void prefetchRegionCache(final TableName tableName,
-        final byte[] row) {
-      // Implement a new visitor for MetaScanner, and use it to walk through
-      // the hbase:meta
-      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
-        public boolean processRow(Result result) throws IOException {
-          try {
-            HRegionInfo regionInfo = MetaScanner.getHRegionInfo(result);
-            if (regionInfo == null) {
-              return true;
-            }
-
-            // possible we got a region of a different table...
-            if (!regionInfo.getTable().equals(tableName)) {
-              return false; // stop scanning
-            }
-            if (regionInfo.isOffline()) {
-              // don't cache offline regions
-              return true;
-            }
-
-            ServerName serverName = HRegionInfo.getServerName(result);
-            if (serverName == null) {
-              return true; // don't cache it
-            }
-            // instantiate the location
-            long seqNum = HRegionInfo.getSeqNumDuringOpen(result);
-            HRegionLocation loc = new HRegionLocation(regionInfo, serverName, seqNum);
-            // cache this meta entry
-            cacheLocation(tableName, null, loc);
-            return true;
-          } catch (RuntimeException e) {
-            throw new IOException(e);
-          }
-        }
-      };
-      try {
-        // pre-fetch certain number of regions info at region cache.
-        MetaScanner.metaScan(conf, this, visitor, tableName, row,
-            this.prefetchRegionLimit, TableName.META_TABLE_NAME);
-      } catch (IOException e) {
-        if (ExceptionUtil.isInterrupt(e)) {
-          Thread.currentThread().interrupt();
-        } else {
-          LOG.warn("Encountered problems when prefetch hbase:meta table: ", e);
-        }
+        return locateRegionInMeta(tableName, row, useCache, retry);
       }
     }
 
@@ -1092,72 +993,57 @@ class ConnectionManager {
       * Search the hbase:meta table for the HRegionLocation
       * info that contains the table and row we're seeking.
       */
-    private HRegionLocation locateRegionInMeta(final TableName parentTable,
-      final TableName tableName, final byte [] row, boolean useCache,
-      Object regionLockObject, boolean retry)
-    throws IOException {
-      HRegionLocation location;
+    private HRegionLocation locateRegionInMeta(TableName tableName, byte[] row,
+                   boolean useCache, boolean retry) throws IOException {
+
       // If we are supposed to be using the cache, look in the cache to see if
       // we already have the region.
       if (useCache) {
-        location = getCachedLocation(tableName, row);
+        HRegionLocation location = getCachedLocation(tableName, row);
         if (location != null) {
           return location;
         }
       }
-      int localNumRetries = retry ? numTries : 1;
+
       // build the key of the meta region we should be looking for.
       // the extra 9's on the end are necessary to allow "exact" matches
       // without knowing the precise region names.
-      byte [] metaKey = HRegionInfo.createRegionName(tableName, row,
-        HConstants.NINES, false);
+      byte[] metaKey = HRegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
+
+      Scan s = new Scan();
+      s.setReversed(true);
+      s.setStartRow(metaKey);
+      s.setSmall(true);
+      s.setCaching(1);
+
+      HConnection connection = ConnectionManager.getConnectionInternal(conf);
+      int localNumRetries = (retry ? numTries : 1);
+
       for (int tries = 0; true; tries++) {
         if (tries >= localNumRetries) {
           throw new NoServerForRegionException("Unable to find region for "
-            + Bytes.toStringBinary(row) + " after " + numTries + " tries.");
+              + Bytes.toStringBinary(row) + " in " + tableName +
+              " after " + localNumRetries + " tries.");
+        }
+        if (useCache) {
+          HRegionLocation location = getCachedLocation(tableName, row);
+          if (location != null) {
+            return location;
+          }
         }
 
-        HRegionLocation metaLocation = null;
+        // Query the meta region
         try {
-          // locate the meta region
-          metaLocation = locateRegion(parentTable, metaKey, true, false);
-          // If null still, go around again.
-          if (metaLocation == null) continue;
-          ClientService.BlockingInterface service = getClient(metaLocation.getServerName());
-
-          Result regionInfoRow;
-          // This block guards against two threads trying to load the meta
-          // region at the same time. The first will load the meta region and
-          // the second will use the value that the first one found.
-          if (useCache) {
-            if (TableName.META_TABLE_NAME.equals(parentTable) &&
-                getRegionCachePrefetch(tableName)) {
-              synchronized (regionLockObject) {
-                // Check the cache again for a hit in case some other thread made the
-                // same query while we were waiting on the lock.
-                location = getCachedLocation(tableName, row);
-                if (location != null) {
-                  return location;
-                }
-                // If the parent table is META, we may want to pre-fetch some
-                // region info into the global region cache for this table.
-                prefetchRegionCache(tableName, row);
-              }
+          Result regionInfoRow = null;
+          ReversedClientScanner rcs = null;
+          try {
+            rcs = new ClientSmallReversedScanner(conf, s, TableName.META_TABLE_NAME, connection);
+            regionInfoRow = rcs.next();
+          } finally {
+            if (rcs != null) {
+              rcs.close();
             }
-            location = getCachedLocation(tableName, row);
-            if (location != null) {
-              return location;
-            }
-          } else {
-            // If we are not supposed to be using the cache, delete any existing cached location
-            // so it won't interfere.
-            forceDeleteCachedLocation(tableName, row);
           }
-
-          // Query the meta region for the location of the meta region
-          regionInfoRow = ProtobufUtil.getRowOrBefore(service,
-              metaLocation.getRegionInfo().getRegionName(), metaKey,
-              HConstants.CATALOG_FAMILY);
 
           if (regionInfoRow == null) {
             throw new TableNotFoundException(tableName);
@@ -1167,7 +1053,7 @@ class ConnectionManager {
           HRegionInfo regionInfo = MetaScanner.getHRegionInfo(regionInfoRow);
           if (regionInfo == null) {
             throw new IOException("HRegionInfo was null or empty in " +
-              parentTable + ", row=" + regionInfoRow);
+              TableName.META_TABLE_NAME + ", row=" + regionInfoRow);
           }
 
           // possible we got a region of a different table...
@@ -1191,7 +1077,7 @@ class ConnectionManager {
           ServerName serverName = HRegionInfo.getServerName(regionInfoRow);
           if (serverName == null) {
             throw new NoServerForRegionException("No server address listed " +
-              "in " + parentTable + " for region " +
+              "in " + TableName.META_TABLE_NAME + " for region " +
               regionInfo.getRegionNameAsString() + " containing row " +
               Bytes.toStringBinary(row));
           }
@@ -1203,10 +1089,11 @@ class ConnectionManager {
           }
 
           // Instantiate the location
-          location = new HRegionLocation(regionInfo, serverName,
+          HRegionLocation location = new HRegionLocation(regionInfo, serverName,
             HRegionInfo.getSeqNumDuringOpen(regionInfoRow));
           cacheLocation(tableName, null, location);
           return location;
+
         } catch (TableNotFoundException e) {
           // if we got this error, probably means the table just plain doesn't
           // exist. rethrow the error immediately. this should always be coming
@@ -1218,13 +1105,12 @@ class ConnectionManager {
           if (e instanceof RemoteException) {
             e = ((RemoteException)e).unwrapRemoteException();
           }
-          if (tries < numTries - 1) {
+          if (tries < localNumRetries - 1) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("locateRegionInMeta parentTable=" +
-                parentTable + ", metaLocation=" +
-                ((metaLocation == null)? "null": "{" + metaLocation + "}") +
+                  TableName.META_TABLE_NAME + ", metaLocation=" +
                 ", attempt=" + tries + " of " +
-                this.numTries + " failed; retrying after sleep of " +
+                localNumRetries + " failed; retrying after sleep of " +
                 ConnectionUtils.getPauseTime(this.pause, tries) + " because: " + e.getMessage());
             }
           } else {
@@ -1233,7 +1119,7 @@ class ConnectionManager {
           // Only relocate the parent region if necessary
           if(!(e instanceof RegionOfflineException ||
               e instanceof NoServerForRegionException)) {
-            relocateRegion(parentTable, metaKey);
+            relocateRegion(TableName.META_TABLE_NAME, metaKey);
           }
         }
         try{
@@ -2336,30 +2222,26 @@ class ConnectionManager {
     }
 
     @Override
-    public void setRegionCachePrefetch(final TableName tableName,
-        final boolean enable) {
-      if (!enable) {
-        regionCachePrefetchDisabledTables.add(Bytes.mapKey(tableName.getName()));
-      }
-      else {
-        regionCachePrefetchDisabledTables.remove(Bytes.mapKey(tableName.getName()));
-      }
+    @Deprecated
+    public void setRegionCachePrefetch(final TableName tableName, final boolean enable) {
     }
 
     @Override
+    @Deprecated
     public void setRegionCachePrefetch(final byte[] tableName,
         final boolean enable) {
-      setRegionCachePrefetch(TableName.valueOf(tableName), enable);
     }
 
     @Override
+    @Deprecated
     public boolean getRegionCachePrefetch(TableName tableName) {
-      return !regionCachePrefetchDisabledTables.contains(Bytes.mapKey(tableName.getName()));
+      return false;
     }
 
     @Override
+    @Deprecated
     public boolean getRegionCachePrefetch(byte[] tableName) {
-      return getRegionCachePrefetch(TableName.valueOf(tableName));
+      return false;
     }
 
     @Override

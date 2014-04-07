@@ -77,7 +77,6 @@ public class TestClientTimeouts {
    */
   @Test
   public void testAdminTimeout() throws Exception {
-    long lastLimit = HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT;
     HConnection lastConnection = null;
     boolean lastFailed = false;
     int initialInvocations = RandomTimeoutBlockingRpcChannel.invokations.get();
@@ -87,7 +86,7 @@ public class TestClientTimeouts {
         lastFailed = false;
         // Ensure the HBaseAdmin uses a new connection by changing Configuration.
         Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
-        conf.setLong(HConstants.HBASE_CLIENT_PREFETCH_LIMIT, ++lastLimit);
+        conf.set(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(-1));
         HBaseAdmin admin = null;
         try {
           admin = new HBaseAdmin(conf);

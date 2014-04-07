@@ -1437,7 +1437,9 @@ public final class ProtobufUtil {
    * @param family
    * @return the row or the closestRowBefore if it doesn't exist
    * @throws IOException
+   * @deprecated since 0.99 - use reversed scanner instead.
    */
+  @Deprecated
   public static Result getRowOrBefore(final ClientService.BlockingInterface client,
       final byte[] regionName, final byte[] row,
       final byte[] family) throws IOException {

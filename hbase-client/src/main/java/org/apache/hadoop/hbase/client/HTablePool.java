@@ -407,6 +407,7 @@ public class HTablePool implements Closeable {
 
     @Override
     @SuppressWarnings("deprecation")
+    @Deprecated
     public Result getRowOrBefore(byte[] row, byte[] family) throws IOException {
       checkState();
       return table.getRowOrBefore(row, family);

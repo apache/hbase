@@ -127,21 +127,24 @@ public class MetaScanner {
       final MetaScannerVisitor visitor, final TableName tableName,
       final byte[] row, final int rowLimit, final TableName metaTableName)
     throws IOException {
-    int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
-    HTable metaTable;
-    if (connection == null) {
-      metaTable = new HTable(configuration, TableName.META_TABLE_NAME, null);
-    } else {
-      metaTable = new HTable(TableName.META_TABLE_NAME, connection, null);
+
+    if (connection == null){
+      connection = ConnectionManager.getConnectionInternal(configuration);
     }
+
+    int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
     // Calculate startrow for scan.
     byte[] startRow;
     ResultScanner scanner = null;
+
     try {
       if (row != null) {
         // Scan starting at a particular row in a particular table
         byte[] searchRow = HRegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
+        HTable metaTable;
+        metaTable = new HTable(TableName.META_TABLE_NAME, connection, null);
         Result startRowResult = metaTable.getRowOrBefore(searchRow, HConstants.CATALOG_FAMILY);
+        metaTable.close();
         if (startRowResult == null) {
           throw new TableNotFoundException("Cannot find row in "+ TableName
               .META_TABLE_NAME.getNameAsString()+" for table: "
@@ -175,8 +178,10 @@ public class MetaScanner {
           Bytes.toStringBinary(startRow) + " for max=" + rowUpperLimit + " with caching=" + rows);
       }
       // Run the scan
-      scanner = metaTable.getScanner(scan);
-      Result result = null;
+      scanner = (scan.isSmall() ?
+          new ClientSmallScanner(configuration, scan, TableName.META_TABLE_NAME, connection) :
+          new ClientScanner(configuration, scan, TableName.META_TABLE_NAME, connection));
+      Result result;
       int processedRows = 0;
       while ((result = scanner.next()) != null) {
         if (visitor != null) {
@@ -200,14 +205,6 @@ public class MetaScanner {
         } catch (Throwable t) {
           ExceptionUtil.rethrowIfInterrupt(t);
           LOG.debug("Got exception in closing the meta scanner visitor", t);
-        }
-      }
-      if (metaTable != null) {
-        try {
-          metaTable.close();
-        } catch (Throwable t) {
-          ExceptionUtil.rethrowIfInterrupt(t);
-          LOG.debug("Got exception in closing the meta table", t);
         }
       }
     }

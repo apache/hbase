@@ -270,7 +270,7 @@ end
 # Get configuration instance
 def getConfiguration()
   config = HBaseConfiguration.create()
-  # No prefetching on .META.
+  # No prefetching on .META. This is for versions pre 0.99. Newer versions do not prefetch.
   config.setInt("hbase.client.prefetch.limit", 1)
   # Make a config that retries at short intervals many times
   config.setInt("hbase.client.pause", 500)

@@ -126,6 +126,7 @@ public class HTableWrapper implements HTableInterface {
     }
   }
 
+  @Deprecated
   public Result getRowOrBefore(byte[] row, byte[] family)
       throws IOException {
     return table.getRowOrBefore(row, family);

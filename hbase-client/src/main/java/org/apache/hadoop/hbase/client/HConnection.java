@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
@@ -466,27 +465,28 @@ public interface HConnection extends Abortable, Closeable {
       Batch.Callback<R> callback) throws IOException, InterruptedException;
 
   /**
-   * Enable or disable region cache prefetch for the table. It will be
-   * applied for the given table's all HTable instances within this
-   * connection. By default, the cache prefetch is enabled.
-   * @param tableName name of table to configure.
-   * @param enable Set to true to enable region cache prefetch.
-   */
+   * @deprecated does nothing since since 0.99
+   **/
+  @Deprecated
   public void setRegionCachePrefetch(final TableName tableName,
       final boolean enable);
 
+  /**
+   * @deprecated does nothing since 0.99
+   **/
   @Deprecated
   public void setRegionCachePrefetch(final byte[] tableName,
       final boolean enable);
 
   /**
-   * Check whether region cache prefetch is enabled or not.
-   * @param tableName name of table to check
-   * @return true if table's region cache prefetch is enabled. Otherwise
-   * it is disabled.
-   */
+   * @deprecated always return false since 0.99
+   **/
+  @Deprecated
   boolean getRegionCachePrefetch(final TableName tableName);
 
+  /**
+   * @deprecated always return false since 0.99
+   **/
   @Deprecated
   boolean getRegionCachePrefetch(final byte[] tableName);
 

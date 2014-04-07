@@ -1396,6 +1396,7 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
+    @Deprecated
     @Override
     public List<TCell> getRowOrBefore(ByteBuffer tableName, ByteBuffer row,
         ByteBuffer family) throws IOError {

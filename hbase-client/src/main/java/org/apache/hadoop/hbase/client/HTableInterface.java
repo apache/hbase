@@ -196,7 +196,7 @@ public interface HTableInterface extends Closeable {
    * @since 0.20.0
    * 
    * @deprecated As of version 0.92 this method is deprecated without
-   * replacement.   
+   * replacement. Since version 0.96+, you can use reversed scan.
    * getRowOrBefore is used internally to find entries in hbase:meta and makes
    * various assumptions about the table (which are true for hbase:meta but not
    * in general) to be efficient.
