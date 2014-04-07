@@ -615,7 +615,7 @@ There is one report for small tests, and one report for medium and large tests i
 pass multiple, individual tests as a comma-delimited list:
 <programlisting>mvn test -Dtest=MyTest1,MyTest2,MyTest3</programlisting>
 You can also pass a package, which will run all tests under the package:
-<programlisting>mvn test -Dtest=org.apache.hadoop.hbase.client.*</programlisting>
+<programlisting>mvn test '-Dtest=org.apache.hadoop.hbase.client.*'</programlisting>
 </para>
 
 <para>
