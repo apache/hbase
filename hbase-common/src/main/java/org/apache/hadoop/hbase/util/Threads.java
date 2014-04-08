@@ -30,7 +30,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Thread Utility
@@ -39,16 +38,6 @@ import org.apache.hadoop.util.StringUtils;
 public class Threads {
   protected static final Log LOG = LogFactory.getLog(Threads.class);
   private static final AtomicInteger poolNumber = new AtomicInteger(1);
-
-  private static UncaughtExceptionHandler LOGGING_EXCEPTION_HANDLER =
-    new UncaughtExceptionHandler() {
-    @Override
-    public void uncaughtException(Thread t, Throwable e) {
-      LOG.warn("Thread:" + t + " exited with Exception:"
-          + StringUtils.stringifyException(e));
-    }
-  };
-
   /**
    * Utility method that sets name, daemon status and starts passed thread.
    * @param t thread to run
@@ -171,15 +160,15 @@ public class Threads {
   }
 
   /**
-   * Create a new CachedThreadPool with a bounded number as the maximum
+   * Create a new CachedThreadPool with a bounded number as the maximum 
    * thread size in the pool.
-   *
+   * 
    * @param maxCachedThread the maximum thread could be created in the pool
    * @param timeout the maximum time to wait
    * @param unit the time unit of the timeout argument
    * @param threadFactory the factory to use when creating new threads
-   * @return threadPoolExecutor the cachedThreadPool with a bounded number
-   * as the maximum thread size in the pool.
+   * @return threadPoolExecutor the cachedThreadPool with a bounded number 
+   * as the maximum thread size in the pool. 
    */
   public static ThreadPoolExecutor getBoundedCachedThreadPool(
       int maxCachedThread, long timeout, TimeUnit unit,
@@ -191,8 +180,8 @@ public class Threads {
     boundedCachedThreadPool.allowCoreThreadTimeOut(true);
     return boundedCachedThreadPool;
   }
-
-
+  
+  
   /**
    * Returns a {@link java.util.concurrent.ThreadFactory} that names each created thread uniquely,
    * with a common prefix.
@@ -241,8 +230,6 @@ public class Threads {
         Thread t = namedFactory.newThread(r);
         if (handler != null) {
           t.setUncaughtExceptionHandler(handler);
-        } else {
-          t.setUncaughtExceptionHandler(LOGGING_EXCEPTION_HANDLER);
         }
         if (!t.isDaemon()) {
           t.setDaemon(true);
@@ -254,12 +241,5 @@ public class Threads {
       }
 
     };
-  }
-
-  /** Sets an UncaughtExceptionHandler for the thread which logs the
-   * Exception stack if the thread dies.
-   */
-  public static void setLoggingUncaughtExceptionHandler(Thread t) {
-    t.setUncaughtExceptionHandler(LOGGING_EXCEPTION_HANDLER);
   }
 }

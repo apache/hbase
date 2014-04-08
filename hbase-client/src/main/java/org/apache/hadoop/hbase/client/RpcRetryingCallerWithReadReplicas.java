@@ -21,18 +21,6 @@
 package org.apache.hadoop.hbase.client;
 
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -45,6 +33,17 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.BoundedCompletionService;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Caller that goes to replica if the primary region does no answer within a configurable
@@ -105,11 +104,11 @@ public class RpcRetryingCallerWithReadReplicas {
       }
 
       if (reload || location == null) {
-        RegionLocations rl = getRegionLocations(false, id);
+        RegionLocations rl = getRegionLocations(false);
         location = id < rl.size() ? rl.getRegionLocation(id) : null;
       }
 
-      if (location == null || location.getServerName() == null) {
+      if (location == null) {
         // With this exception, there will be a retry. The location can be null for a replica
         //  when the table is created or after a split.
         throw new HBaseIOException("There is no location for replica id #" + id);
@@ -171,61 +170,30 @@ public class RpcRetryingCallerWithReadReplicas {
    */
   public synchronized Result call()
       throws DoNotRetryIOException, InterruptedIOException, RetriesExhaustedException {
-    RegionLocations rl = getRegionLocations(true, RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    RegionLocations rl = getRegionLocations(true);
     BoundedCompletionService<Result> cs = new BoundedCompletionService<Result>(pool, rl.size());
 
-    List<ExecutionException> exceptions = null;
-    int submitted = 0, completed = 0;
-    // submit call for the primary replica.
-    submitted += addCallsForReplica(cs, rl, 0, 0);
-    try {
-      // wait for the timeout to see whether the primary responds back
-      Future<Result> f = cs.poll(timeBeforeReplicas, TimeUnit.MICROSECONDS); // Yes, microseconds
-      if (f != null) {
-        return f.get(); //great we got a response
-      }
-    } catch (ExecutionException e) {
-      // the primary call failed with RetriesExhaustedException or DoNotRetryIOException
-      // but the secondaries might still succeed. Continue on the replica RPCs.
-      exceptions = new ArrayList<ExecutionException>(rl.size());
-      exceptions.add(e);
-      completed++;
-    } catch (CancellationException e) {
-      throw new InterruptedIOException();
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException();
-    }
+    addCallsForReplica(cs, rl, 0, 0); // primary.
 
-    // submit call for the all of the secondaries at once
-    // TODO: this may be an overkill for large region replication
-    submitted += addCallsForReplica(cs, rl, 1, rl.size() - 1);
     try {
-      while (completed < submitted) {
-        try {
-          Future<Result> f = cs.take();
-          return f.get(); // great we got an answer
-        } catch (ExecutionException e) {
-          // if not cancel or interrupt, wait until all RPC's are done
-          // one of the tasks failed. Save the exception for later.
-          if (exceptions == null) exceptions = new ArrayList<ExecutionException>(rl.size());
-          exceptions.add(e);
-          completed++;
-        }
+      Future<Result> f = cs.poll(timeBeforeReplicas, TimeUnit.MICROSECONDS); // Yes, microseconds
+      if (f == null) {
+        addCallsForReplica(cs, rl, 1, rl.size() - 1);  // secondaries
+        f = cs.take();
       }
+      return f.get();
+    } catch (ExecutionException e) {
+      throwEnrichedException(e);
+      return null; // unreachable
     } catch (CancellationException e) {
       throw new InterruptedIOException();
     } catch (InterruptedException e) {
       throw new InterruptedIOException();
     } finally {
       // We get there because we were interrupted or because one or more of the
-      // calls succeeded or failed. In all case, we stop all our tasks.
+      //  calls succeeded or failed. In all case, we stop all our tasks.
       cs.cancelAll(true);
     }
-
-    if (exceptions != null && !exceptions.isEmpty()) {
-      throwEnrichedException(exceptions.get(0)); // just rethrow the first exception for now.
-    }
-    return null; // unreachable
   }
 
   /**
@@ -262,9 +230,8 @@ public class RpcRetryingCallerWithReadReplicas {
    * @param rl         - the region locations
    * @param min        - the id of the first replica, inclusive
    * @param max        - the id of the last replica, inclusive.
-   * @return the number of submitted calls
    */
-  private int addCallsForReplica(BoundedCompletionService<Result> cs,
+  private void addCallsForReplica(BoundedCompletionService<Result> cs,
                                   RegionLocations rl, int min, int max) {
     for (int id = min; id <= max; id++) {
       HRegionLocation hrl = rl.getRegionLocation(id);
@@ -272,22 +239,21 @@ public class RpcRetryingCallerWithReadReplicas {
       RetryingRPC retryingOnReplica = new RetryingRPC(callOnReplica);
       cs.submit(retryingOnReplica);
     }
-    return max - min + 1;
   }
 
-  private RegionLocations getRegionLocations(boolean useCache, int replicaId)
-      throws RetriesExhaustedException, DoNotRetryIOException, InterruptedIOException {
+  private RegionLocations getRegionLocations(boolean useCache)
+      throws RetriesExhaustedException, DoNotRetryIOException {
     RegionLocations rl;
     try {
-      rl = cConnection.locateRegion(tableName, get.getRow(), useCache, true, replicaId);
-    } catch (DoNotRetryIOException e) {
-      throw e;
-    } catch (RetriesExhaustedException e) {
-      throw e;
-    } catch (InterruptedIOException e) {
-      throw e;
+      rl = cConnection.locateRegion(tableName, get.getRow(), useCache, true);
     } catch (IOException e) {
-      throw new RetriesExhaustedException("Can't get the location", e);
+      if (e instanceof DoNotRetryIOException) {
+        throw (DoNotRetryIOException) e;
+      } else if (e instanceof RetriesExhaustedException) {
+        throw (RetriesExhaustedException) e;
+      } else {
+        throw new RetriesExhaustedException("Can't get the location", e);
+      }
     }
     if (rl == null) {
       throw new RetriesExhaustedException("Can't get the locations");

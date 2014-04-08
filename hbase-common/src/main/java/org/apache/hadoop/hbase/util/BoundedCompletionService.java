@@ -34,12 +34,11 @@ import java.util.concurrent.TimeUnit;
  * A completion service, close to the one available in the JDK 1.7
  * However, this ones keeps the list of the future, and allows to cancel them all.
  * This means as well that it can be used for a small set of tasks only.
- * <br>Implementation is not Thread safe.
  */
 public class BoundedCompletionService<V> {
   private final Executor executor;
-  private final List<Future<V>> tasks; // alls the tasks
-  private final BlockingQueue<Future<V>> completed; // all the tasks that are completed
+  private final List<Future<V>> sent; // alls the call we sent
+  private final BlockingQueue<Future<V>> completed; // all the results we got so far.
 
   class QueueingFuture extends FutureTask<V> {
 
@@ -47,7 +46,6 @@ public class BoundedCompletionService<V> {
       super(callable);
     }
 
-    @Override
     protected void done() {
       completed.add(QueueingFuture.this);
     }
@@ -55,7 +53,7 @@ public class BoundedCompletionService<V> {
 
   public BoundedCompletionService(Executor executor, int maxTasks) {
     this.executor = executor;
-    this.tasks = new ArrayList<Future<V>>(maxTasks);
+    this.sent = new ArrayList<Future<V>>(maxTasks);
     this.completed = new ArrayBlockingQueue<Future<V>>(maxTasks);
   }
 
@@ -63,7 +61,7 @@ public class BoundedCompletionService<V> {
   public Future<V> submit(Callable<V> task) {
     QueueingFuture newFuture = new QueueingFuture(task);
     executor.execute(newFuture);
-    tasks.add(newFuture);
+    sent.add(newFuture);
     return newFuture;
   }
 
@@ -76,7 +74,7 @@ public class BoundedCompletionService<V> {
   }
 
   public void cancelAll(boolean interrupt) {
-    for (Future<V> future : tasks) {
+    for (Future<V> future : sent) {
       future.cancel(interrupt);
     }
   }

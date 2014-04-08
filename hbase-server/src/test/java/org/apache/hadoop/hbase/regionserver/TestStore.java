@@ -81,7 +81,6 @@ import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.util.Progressable;
 import org.junit.experimental.categories.Category;
-import org.junit.Test;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
@@ -918,7 +917,6 @@ public class TestStore extends TestCase {
     store.getRegionFileSystem().removeStoreFiles(store.getColumnFamilyName(), Lists.newArrayList(sf));
   }
 
-  @Test
   public void testRefreshStoreFiles() throws Exception {
     init(this.getName());
 
@@ -965,7 +963,6 @@ public class TestStore extends TestCase {
   }
 
   @SuppressWarnings("unchecked")
-  @Test
   public void testRefreshStoreFilesNotChanged() throws IOException {
     init(this.getName());
 

@@ -73,7 +73,6 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
   protected void createWriterThreads(int numThreads) throws IOException {
     for (int i = 0; i < numThreads; ++i) {
       HBaseWriterThread writer = new HBaseWriterThread(i);
-      Threads.setLoggingUncaughtExceptionHandler(writer);
       writers.add(writer);
     }
   }
@@ -90,7 +89,6 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
       return new HTable(conf, tableName);
     }
 
-    @Override
     public void run() {
       try {
         long rowKeyBase;

@@ -561,9 +561,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
         break;
       }
     }
-    if (offset == -1) {
-      throw new IOException("Invalid regionName format: " + Bytes.toStringBinary(regionName));
-    }
+    if(offset == -1) throw new IOException("Invalid regionName format");
     byte[] tableName = new byte[offset];
     System.arraycopy(regionName, 0, tableName, 0, offset);
     offset = -1;
@@ -592,9 +590,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
         break;
       }
     }
-    if (offset == -1) {
-      throw new IOException("Invalid regionName format: " + Bytes.toStringBinary(regionName));
-    }
+    if(offset == -1) throw new IOException("Invalid regionName format");
     byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
     if(offset != tableName.length + 1) {
       startKey = new byte[offset - tableName.length - 1];

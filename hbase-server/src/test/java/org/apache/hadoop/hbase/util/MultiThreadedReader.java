@@ -120,9 +120,7 @@ public class MultiThreadedReader extends MultiThreadedAction
   }
 
   protected HBaseReaderThread createReaderThread(int readerId) throws IOException {
-    HBaseReaderThread reader = new HBaseReaderThread(readerId);
-    Threads.setLoggingUncaughtExceptionHandler(reader);
-    return reader;
+    return new HBaseReaderThread(readerId);
   }
 
   public class HBaseReaderThread extends Thread {
