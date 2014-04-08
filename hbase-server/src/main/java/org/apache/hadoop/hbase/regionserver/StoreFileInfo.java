@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -133,6 +133,22 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
   }
 
   /**
+   * Create a Store File Info from an HFileLink
+   * @param conf the {@link Configuration} to use
+   * @param fs The current file system to use.
+   * @param fileStatus The {@link FileStatus} of the file
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
+      final HFileLink link)
+      throws IOException {
+    this.conf = conf;
+    this.fileStatus = fileStatus;
+      // HFileLink
+    this.reference = null;
+    this.link = link;
+  }
+
+  /**
    * Sets the region coprocessor env.
    * @param coprocessorHost
    */
@@ -195,6 +211,8 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
     long length = status.getLen();
     if (this.reference != null) {
       hdfsBlocksDistribution = computeRefFileHDFSBlockDistribution(fs, reference, status);
+    } else if (this.link != null) {
+      hdfsBlocksDistribution = computeHDFSBlocksDistribution(fs);
     } else {
       hdfsBlocksDistribution = FSUtils.computeHDFSBlocksDistribution(fs, status, 0, length);
     }
@@ -226,8 +244,18 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
     FileStatus status;
     if (this.reference != null) {
       if (this.link != null) {
-        // HFileLink Reference
-        status = link.getFileStatus(fs);
+        FileNotFoundException exToThrow = null;
+        for (int i = 0; i < this.link.getLocations().length; i++) {
+          // HFileLink Reference
+          try {
+            status = link.getFileStatus(fs);
+            return computeRefFileHDFSBlockDistribution(fs, reference, status);
+          } catch (FileNotFoundException ex) {
+            // try the other location
+            exToThrow = ex;
+          }
+        }
+        throw exToThrow;
       } else {
         // HFile Reference
         Path referencePath = getReferredToFile(this.getPath());
@@ -236,8 +264,18 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
       return computeRefFileHDFSBlockDistribution(fs, reference, status);
     } else {
       if (this.link != null) {
-        // HFileLink
-        status = link.getFileStatus(fs);
+        FileNotFoundException exToThrow = null;
+        for (int i = 0; i < this.link.getLocations().length; i++) {
+          // HFileLink
+          try {
+            status = link.getFileStatus(fs);
+            return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+          } catch (FileNotFoundException ex) {
+            // try the other location
+            exToThrow = ex;
+          }
+        }
+        throw exToThrow;
       } else {
         status = this.fileStatus;
       }

@@ -497,7 +497,7 @@ public class HStore implements Store {
       completionService.submit(new Callable<StoreFile>() {
         @Override
         public StoreFile call() throws IOException {
-          StoreFile storeFile = createStoreFileAndReader(storeFileInfo.getPath());
+          StoreFile storeFile = createStoreFileAndReader(storeFileInfo);
           return storeFile;
         }
       });
@@ -592,6 +592,10 @@ public class HStore implements Store {
 
   private StoreFile createStoreFileAndReader(final Path p) throws IOException {
     StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(), p);
+    return createStoreFileAndReader(info);
+  }
+
+  private StoreFile createStoreFileAndReader(final StoreFileInfo info) throws IOException {
     info.setRegionCoprocessorHost(this.region.getCoprocessorHost());
     StoreFile storeFile = new StoreFile(this.getFileSystem(), info, this.conf, this.cacheConf,
       this.family.getBloomFilterType());

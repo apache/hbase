@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -34,26 +33,41 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class RegionLocations {
 
   private final int numNonNullElements;
+
+  // locations array contains the HRL objects for known region replicas indexes by the replicaId.
+  // elements can be null if the region replica is not known at all. A null value indicates
+  // that there is a region replica with the index as replicaId, but the location is not known
+  // in the cache.
   private final HRegionLocation[] locations; // replicaId -> HRegionLocation.
 
   /**
    * Constructs the region location list. The locations array should
    * contain all the locations for known replicas for the region, and should be
-   * sorted in replicaId ascending order.
+   * sorted in replicaId ascending order, although it can contain nulls indicating replicaIds
+   * that the locations of which are not known.
    * @param locations an array of HRegionLocations for the same region range
    */
   public RegionLocations(HRegionLocation... locations) {
     int numNonNullElements = 0;
     int maxReplicaId = -1;
+    int maxReplicaIdIndex = -1;
+    int index = 0;
     for (HRegionLocation loc : locations) {
       if (loc != null) {
-        numNonNullElements++;
-        if (loc.getRegionInfo().getReplicaId() > maxReplicaId) {
+        if (loc.getServerName() != null) {
+          numNonNullElements++;
+        }
+        if (loc.getRegionInfo().getReplicaId() >= maxReplicaId) {
           maxReplicaId = loc.getRegionInfo().getReplicaId();
+          maxReplicaIdIndex = index;
         }
       }
+      index++;
     }
     this.numNonNullElements = numNonNullElements;
+
+    // account for the null elements in the array after maxReplicaIdIndex
+    maxReplicaId = maxReplicaId + (locations.length - (maxReplicaIdIndex + 1) );
 
     if (maxReplicaId + 1 == locations.length) {
       this.locations = locations;
@@ -97,10 +111,10 @@ public class RegionLocations {
   }
 
   /**
-   * Returns a new HRegionLocationList with the locations removed (set to null)
+   * Returns a new RegionLocations with the locations removed (set to null)
    * which have the destination server as given.
    * @param serverName the serverName to remove locations of
-   * @return an HRegionLocationList object with removed locations or the same object
+   * @return an RegionLocations object with removed locations or the same object
    * if nothing is removed
    */
   public RegionLocations removeByServer(ServerName serverName) {
@@ -123,36 +137,58 @@ public class RegionLocations {
   /**
    * Removes the given location from the list
    * @param location the location to remove
-   * @return an HRegionLocationList object with removed locations or the same object
+   * @return an RegionLocations object with removed locations or the same object
    * if nothing is removed
    */
   public RegionLocations remove(HRegionLocation location) {
-    HRegionLocation[] newLocations = null;
-    for (int i = 0; i < locations.length; i++) {
-      // check whether something to remove. HRL.compareTo() compares ONLY the
-      // serverName. We want to compare the HRI's as well.
-      if (locations[i] != null
-          && location.getRegionInfo().equals(locations[i].getRegionInfo())
-          && location.equals(locations[i])) {
-        if (newLocations == null) { //first time
-          newLocations = new HRegionLocation[locations.length];
-          System.arraycopy(locations, 0, newLocations, 0, i);
-        }
-        newLocations[i] = null;
-      } else if (newLocations != null) {
-        newLocations[i] = locations[i];
-      }
+    if (location == null) return this;
+    if (location.getRegionInfo() == null) return this;
+    int replicaId = location.getRegionInfo().getReplicaId();
+    if (replicaId >= locations.length) return this;
+
+    // check whether something to remove. HRL.compareTo() compares ONLY the
+    // serverName. We want to compare the HRI's as well.
+    if (locations[replicaId] == null
+        || !location.getRegionInfo().equals(locations[replicaId].getRegionInfo())
+        || !location.equals(locations[replicaId])) {
+      return this;
     }
-    return newLocations == null ? this : new RegionLocations(newLocations);
+
+    HRegionLocation[] newLocations = new HRegionLocation[locations.length];
+    System.arraycopy(locations, 0, newLocations, 0, locations.length);
+    newLocations[replicaId] = null;
+
+    return new RegionLocations(newLocations);
   }
 
   /**
-   * Merges this HRegionLocation list with the given list assuming
+   * Removes location of the given replicaId from the list
+   * @param replicaId the replicaId of the location to remove
+   * @return an RegionLocations object with removed locations or the same object
+   * if nothing is removed
+   */
+  public RegionLocations remove(int replicaId) {
+    if (getRegionLocation(replicaId) == null) {
+      return this;
+    }
+
+    HRegionLocation[] newLocations = new HRegionLocation[locations.length];
+
+    System.arraycopy(locations, 0, newLocations, 0, locations.length);
+    if (replicaId < newLocations.length) {
+      newLocations[replicaId] = null;
+    }
+
+    return new RegionLocations(newLocations);
+  }
+
+  /**
+   * Merges this RegionLocations list with the given list assuming
    * same range, and keeping the most up to date version of the
    * HRegionLocation entries from either list according to seqNum. If seqNums
    * are equal, the location from the argument (other) is taken.
    * @param other the locations to merge with
-   * @return an HRegionLocationList object with merged locations or the same object
+   * @return an RegionLocations object with merged locations or the same object
    * if nothing is merged
    */
   public RegionLocations mergeLocations(RegionLocations other) {
@@ -160,7 +196,9 @@ public class RegionLocations {
 
     HRegionLocation[] newLocations = null;
 
-    int max = Math.max(this.locations.length, other.locations.length);
+    // Use the length from other, since it is coming from meta. Otherwise,
+    // in case of region replication going down, we might have a leak here.
+    int max = other.locations.length;
 
     for (int i = 0; i < max; i++) {
       HRegionLocation thisLoc = this.getRegionLocation(i);
@@ -207,7 +245,7 @@ public class RegionLocations {
    * @param checkForEquals whether to update the location if seqNums for the
    * HRegionLocations for the old and new location are the same
    * @param force whether to force update
-   * @return an HRegionLocationList object with updated locations or the same object
+   * @return an RegionLocations object with updated locations or the same object
    * if nothing is updated
    */
   public RegionLocations updateLocation(HRegionLocation location,
@@ -282,12 +320,10 @@ public class RegionLocations {
   public String toString() {
     StringBuilder builder = new StringBuilder("[");
     for (HRegionLocation loc : locations) {
-      if (loc != null) {
-        if (builder.length() > 1) {
-          builder.append(", ");
-        }
-        builder.append(loc);
+      if (builder.length() > 1) {
+        builder.append(", ");
       }
+      builder.append(loc == null ? "null" : loc);
     }
     builder.append("]");
     return builder.toString();
