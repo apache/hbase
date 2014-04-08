@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.client.Delete;
@@ -1208,7 +1209,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   @Override
   public List<List<Bucket>> getHistograms(List<byte[]> regionNames)
-      throws IOException {
+    throws IOException {
     preProcess();
     try {
       return connection.getHistograms(regionNames);
@@ -1217,6 +1218,25 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       handleIOException(e);
       LOG.warn("Unexpected Exception: " + e);
       return null;
+    } catch (Exception e) {
+      refreshConnectionAndThrowIOException(e);
+      return null;
+    } finally {
+      postProcess();
+    }
+  }
+
+  @Override
+  public HRegionLocation getLocation(byte[] table, byte[] row, boolean reload)
+    throws IOException {
+    preProcess();
+    try {
+      return connection.getLocation(table, row, reload);
+    } catch (ThriftHBaseException te) {
+      Exception e = te.getServerJavaException();
+      handleIOException(e);
+      LOG.warn("Unexpected Exception: " + e);
+      throw new RuntimeException(e);
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;

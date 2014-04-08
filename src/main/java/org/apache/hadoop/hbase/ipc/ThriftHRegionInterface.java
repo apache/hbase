@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -659,5 +660,23 @@ public interface ThriftHRegionInterface extends ThriftClientInterface {
   @ThriftMethod(value = "getHistograms", exception = {
       @ThriftException(type = ThriftHBaseException.class, id = 1) })
   public List<List<Bucket>> getHistograms(List<byte[]> regionNames)
+      throws ThriftHBaseException;
+
+  /**
+   * Gets the location of the a particular row in a table.
+   *
+   * @param tableName
+   * @param row
+   * @param reload Should we reload the location cache? Set true if you get a
+   *               network exception / NotServingRegionException.
+   * @return
+   * @throws ThriftHBaseException
+   */
+  @ThriftMethod(value = "getLocation", exception = {
+    @ThriftException(type = ThriftHBaseException.class, id = 1) })
+  public HRegionLocation getLocation(
+    @ThriftField(name="tableName") byte[] tableName,
+    @ThriftField(name="row") byte[] row,
+    @ThriftField(name="reload") boolean reload)
       throws ThriftHBaseException;
 }

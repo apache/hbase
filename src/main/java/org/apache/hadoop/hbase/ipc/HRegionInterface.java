@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Restartable;
@@ -476,10 +477,23 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable,
   /**
    * Returns the list of buckets which represent the uniform depth histogram
    * for all the given regions
-   * @param regionName
+   * @param regionNames
    * @return
    * @throws IOException
    */
   public List<List<Bucket>> getHistograms(List<byte[]> regionNames)
+      throws IOException;
+
+  /*
+   * Gets the location of the a particular row in a table.
+   *
+   * @param table
+   * @param row
+   * @param reload Should we reload the location cache? Set true if you get a
+   *               network exception / NotServingRegionException.
+   * @return
+   * @throws IOException
+   */
+  public HRegionLocation getLocation(byte[] table, byte[] row, boolean reload)
       throws IOException;
 }

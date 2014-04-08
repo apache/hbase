@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.client.MultiPutResponse;
@@ -109,6 +110,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
+import org.apache.hadoop.hbase.client.TableServers;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -150,6 +152,7 @@ import org.apache.hadoop.hbase.util.ParamFormat;
 import org.apache.hadoop.hbase.util.ParamFormatter;
 import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -230,6 +233,8 @@ public class HRegionServer implements HRegionInterface,
   protected final Configuration conf;
 
   private final ServerConnection connection;
+  private final TableServers regionServerConnection;
+
   protected final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
   private FileSystem fs;
   private Path rootDir;
@@ -445,6 +450,13 @@ public class HRegionServer implements HRegionInterface,
     this.fsOk = true;
     this.conf = conf;
     this.connection = ServerConnectionManager.getConnection(conf);
+    if (connection instanceof TableServers) {
+      // This is always true in the current case...
+      regionServerConnection = (TableServers) connection;
+    } else {
+      // ... but handling this possibility, just in case something changes.
+      regionServerConnection = new TableServers(conf);
+    }
 
     this.isOnline = false;
 
@@ -4102,5 +4114,14 @@ public class HRegionServer implements HRegionInterface,
       final byte[] regionName, final byte[] startRow, final byte[] stopRow)
       throws IOException {
     throw new NotImplementedException("HRegionserver.callEndpoint");
+  }
+
+  @Override
+  public HRegionLocation getLocation(byte[] table, byte[] row, boolean reload)
+    throws IOException {
+    if (reload) {
+      return regionServerConnection.relocateRegion(new StringBytes(table), row);
+    }
+    return regionServerConnection.locateRegion(new StringBytes(table), row);
   }
 }

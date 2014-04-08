@@ -19,18 +19,19 @@
  */
 package org.apache.hadoop.hbase;
 
+import com.facebook.swift.codec.ThriftConstructor;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+
 /**
  * Contains the HRegionInfo for the region and the HServerAddress for the
  * HRegionServer serving the region
  */
+@ThriftStruct
 public class HRegionLocation implements Comparable<HRegionLocation> {
   private HRegionInfo regionInfo;
   private HServerAddress serverAddress;
   private long serverStartCode;
-
-  public long getServerStartCode() {
-    return serverStartCode;
-  }
 
   /**
    * Constructor
@@ -41,8 +42,12 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   public HRegionLocation(HRegionInfo regionInfo, HServerAddress serverAddress) {
     this(regionInfo, serverAddress, -1);
   }
-  public HRegionLocation(HRegionInfo regionInfo, HServerAddress serverAddress,
-      long serverStartCode) {
+
+  @ThriftConstructor
+  public HRegionLocation(
+    @ThriftField(1) HRegionInfo regionInfo,
+    @ThriftField(2) HServerAddress serverAddress,
+    @ThriftField(3) long serverStartCode) {
     this.regionInfo = regionInfo;
     this.serverAddress = serverAddress;
     this.serverStartCode = serverStartCode;
@@ -86,13 +91,20 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   }
 
   /** @return HRegionInfo */
+  @ThriftField(1)
   public HRegionInfo getRegionInfo(){
     return regionInfo;
   }
 
   /** @return HServerAddress */
+  @ThriftField(2)
   public HServerAddress getServerAddress(){
     return serverAddress;
+  }
+
+  @ThriftField(3)
+  public long getServerStartCode() {
+    return serverStartCode;
   }
 
   //

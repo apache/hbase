@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -645,9 +646,18 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
   }
 
   @Override
-  @ThriftMethod(value = "getHistograms", exception = @ThriftException(type = ThriftHBaseException.class, id = 1))
   public List<List<Bucket>> getHistograms(List<byte[]> regionNames)
-      throws ThriftHBaseException {
+    throws ThriftHBaseException {
     return this.getHistograms(regionNames);
+  }
+
+  @Override
+  public HRegionLocation getLocation(byte[] table, byte[] row, boolean reload)
+    throws ThriftHBaseException {
+    try {
+      return server.getLocation(table, row, reload);
+    } catch (IOException e) {
+      throw new ThriftHBaseException(e);
+    }
   }
 }
