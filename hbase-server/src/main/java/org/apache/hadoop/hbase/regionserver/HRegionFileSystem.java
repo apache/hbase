@@ -205,8 +205,10 @@ public class HRegionFileSystem {
         LOG.warn("Invalid StoreFile: " + status.getPath());
         continue;
       }
+      StoreFileInfo info = ServerRegionReplicaUtil.getStoreFileInfo(conf, fs, regionInfo,
+        regionInfoForFs, familyName, status);
+      storeFiles.add(info);
 
-      storeFiles.add(new StoreFileInfo(this.conf, this.fs, status));
     }
     return storeFiles;
   }

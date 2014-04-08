@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -117,6 +118,18 @@ public class TestRegionServerNoMaster {
       }
       Thread.sleep(100);
     }
+  }
+
+  /** Flush the given region in the mini cluster. Since no master, we cannot use HBaseAdmin.flush() */
+  public static void flushRegion(HBaseTestingUtility HTU, HRegionInfo regionInfo) throws IOException {
+    for (RegionServerThread rst : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
+      HRegion region = rst.getRegionServer().getRegionByEncodedName(regionInfo.getEncodedName());
+      if (region != null) {
+        region.flushcache();
+        return;
+      }
+    }
+    throw new IOException("Region to flush cannot be found");
   }
 
   @AfterClass

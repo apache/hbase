@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.junit.Assert;
 import org.junit.Before;
@@ -63,6 +64,7 @@ public class TestStoreFileRefresherChore {
   public void setUp() {
     TEST_UTIL = new HBaseTestingUtility();
     testDir = TEST_UTIL.getDataTestDir("TestStoreFileRefresherChore");
+    TEST_UTIL.getConfiguration().set(HConstants.HBASE_DIR, testDir.toString());
   }
 
   private HTableDescriptor getTableDesc(TableName tableName, byte[]... families) {
@@ -93,7 +95,7 @@ public class TestStoreFileRefresherChore {
 
   private HRegion initHRegion(HTableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId) throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
-    Path tableDir = new Path(testDir, htd.getTableName().getNameAsString());
+    Path tableDir = FSUtils.getTableDir(testDir, htd.getTableName());
 
     HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false, 0, replicaId);
 

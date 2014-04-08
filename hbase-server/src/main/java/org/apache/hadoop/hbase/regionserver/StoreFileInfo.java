@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -133,6 +133,22 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
   }
 
   /**
+   * Create a Store File Info from an HFileLink
+   * @param conf the {@link Configuration} to use
+   * @param fs The current file system to use.
+   * @param fileStatus The {@link FileStatus} of the file
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
+      final HFileLink link)
+      throws IOException {
+    this.conf = conf;
+    this.fileStatus = fileStatus;
+      // HFileLink
+    this.reference = null;
+    this.link = link;
+  }
+
+  /**
    * Sets the region coprocessor env.
    * @param coprocessorHost
    */
@@ -193,11 +209,8 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
       status = fileStatus;
     }
     long length = status.getLen();
-    if (this.reference != null) {
-      hdfsBlocksDistribution = computeRefFileHDFSBlockDistribution(fs, reference, status);
-    } else {
-      hdfsBlocksDistribution = FSUtils.computeHDFSBlocksDistribution(fs, status, 0, length);
-    }
+    hdfsBlocksDistribution = computeHDFSBlocksDistribution(fs);
+
     StoreFile.Reader reader = null;
     if (this.coprocessorHost != null) {
       reader = this.coprocessorHost.preStoreFileReaderOpen(fs, this.getPath(), in, length,
@@ -223,6 +236,27 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
    */
   public HDFSBlocksDistribution computeHDFSBlocksDistribution(final FileSystem fs)
       throws IOException {
+
+    // guard agains the case where we get the FileStatus from link, but by the time we
+    // call compute the file is moved again
+    if (this.link != null) {
+      FileNotFoundException exToThrow = null;
+      for (int i = 0; i < this.link.getLocations().length; i++) {
+        try {
+          return computeHDFSBlocksDistributionInternal(fs);
+        } catch (FileNotFoundException ex) {
+          // try the other location
+          exToThrow = ex;
+        }
+      }
+      throw exToThrow;
+    } else {
+      return computeHDFSBlocksDistributionInternal(fs);
+    }
+  }
+
+  private HDFSBlocksDistribution computeHDFSBlocksDistributionInternal(final FileSystem fs)
+      throws IOException {
     FileStatus status = getReferencedFileStatus(fs);
     if (this.reference != null) {
       return computeRefFileHDFSBlockDistribution(fs, reference, status);
@@ -240,8 +274,17 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
     FileStatus status;
     if (this.reference != null) {
       if (this.link != null) {
-        // HFileLink Reference
-        status = link.getFileStatus(fs);
+        FileNotFoundException exToThrow = null;
+        for (int i = 0; i < this.link.getLocations().length; i++) {
+          // HFileLink Reference
+          try {
+            return link.getFileStatus(fs);
+          } catch (FileNotFoundException ex) {
+            // try the other location
+            exToThrow = ex;
+          }
+        }
+        throw exToThrow;
       } else {
         // HFile Reference
         Path referencePath = getReferredToFile(this.getPath());
@@ -249,8 +292,17 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
       }
     } else {
       if (this.link != null) {
-        // HFileLink
-        status = link.getFileStatus(fs);
+        FileNotFoundException exToThrow = null;
+        for (int i = 0; i < this.link.getLocations().length; i++) {
+          // HFileLink
+          try {
+            return link.getFileStatus(fs);
+          } catch (FileNotFoundException ex) {
+            // try the other location
+            exToThrow = ex;
+          }
+        }
+        throw exToThrow;
       } else {
         status = this.fileStatus;
       }

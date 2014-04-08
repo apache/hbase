@@ -4216,6 +4216,7 @@ public class TestHRegion {
     // create a primary region, load some data and flush
     // create a secondary region, and do a get against that
     Path rootDir = new Path(dir + "testRegionReplicaSecondary");
+    TEST_UTIL.getConfiguration().set(HConstants.HBASE_DIR, rootDir.toString());
 
     byte[][] families = new byte[][] {
         Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
@@ -4265,6 +4266,7 @@ public class TestHRegion {
     // create a primary region, load some data and flush
     // create a secondary region, and do a put against that
     Path rootDir = new Path(dir + "testRegionReplicaSecondary");
+    TEST_UTIL.getConfiguration().set(HConstants.HBASE_DIR, rootDir.toString());
 
     byte[][] families = new byte[][] {
         Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
@@ -4312,7 +4314,60 @@ public class TestHRegion {
         HRegion.closeHRegion(secondaryRegion);
       }
     }
+  }
 
+  @Test
+  public void testCompactionFromPrimary() throws IOException {
+    Path rootDir = new Path(dir + "testRegionReplicaSecondary");
+    TEST_UTIL.getConfiguration().set(HConstants.HBASE_DIR, rootDir.toString());
+
+    byte[][] families = new byte[][] {
+        Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
+    };
+    byte[] cq = Bytes.toBytes("cq");
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionReplicaSecondary"));
+    for (byte[] family : families) {
+      htd.addFamily(new HColumnDescriptor(family));
+    }
+
+    long time = System.currentTimeMillis();
+    HRegionInfo primaryHri = new HRegionInfo(htd.getTableName(),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+      false, time, 0);
+    HRegionInfo secondaryHri = new HRegionInfo(htd.getTableName(),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+      false, time, 1);
+
+    HRegion primaryRegion = null, secondaryRegion = null;
+
+    try {
+      primaryRegion = HRegion.createHRegion(primaryHri,
+        rootDir, TEST_UTIL.getConfiguration(), htd);
+
+      // load some data
+      putData(primaryRegion, 0, 1000, cq, families);
+
+      // flush region
+      primaryRegion.flushcache();
+
+      // open secondary region
+      secondaryRegion = HRegion.openHRegion(rootDir, secondaryHri, htd, null, CONF);
+
+      // move the file of the primary region to the archive, simulating a compaction
+      Collection<StoreFile> storeFiles = primaryRegion.getStore(families[0]).getStorefiles();
+      primaryRegion.getRegionFileSystem().removeStoreFiles(Bytes.toString(families[0]), storeFiles);
+      Collection<StoreFileInfo> storeFileInfos = primaryRegion.getRegionFileSystem().getStoreFiles(families[0]);
+      Assert.assertTrue(storeFileInfos == null || storeFileInfos.size() == 0);
+
+      verifyData(secondaryRegion, 0, 1000, cq, families);
+    } finally {
+      if (primaryRegion != null) {
+        HRegion.closeHRegion(primaryRegion);
+      }
+      if (secondaryRegion != null) {
+        HRegion.closeHRegion(secondaryRegion);
+      }
+    }
   }
 
   private void putData(int startRow, int numRows, byte[] qf, byte[]... families) throws IOException {

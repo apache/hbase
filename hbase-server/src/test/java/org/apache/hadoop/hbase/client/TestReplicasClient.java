@@ -231,14 +231,7 @@ public class TestReplicasClient {
   }
 
   private void flushRegion(HRegionInfo regionInfo) throws IOException {
-    for (RegionServerThread rst : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
-      HRegion region = rst.getRegionServer().getRegionByEncodedName(regionInfo.getEncodedName());
-      if (region != null) {
-        region.flushcache();
-        return;
-      }
-    }
-    throw new IOException("Region to flush cannot be found");
+    TestRegionServerNoMaster.flushRegion(HTU, regionInfo);
   }
 
   @Test

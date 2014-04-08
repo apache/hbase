@@ -19,6 +19,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +37,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.TestMetaReaderEditor;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -39,6 +46,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -304,6 +312,128 @@ public class TestRegionReplicas {
 
     } finally {
       HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, 0, 1000);
+      closeRegion(hriSecondary);
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testFlushAndCompactionsInPrimary() throws Exception {
+
+    long runtime = 30 * 1000;
+    // enable store file refreshing
+    final int refreshPeriod = 100; // 100ms refresh is a lot
+    HTU.getConfiguration().setInt("hbase.hstore.compactionThreshold", 3);
+    HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, refreshPeriod);
+    // restart the region server so that it starts the refresher chore
+    restartRegionServer();
+    final int startKey = 0, endKey = 1000;
+
+    try {
+      openRegion(hriSecondary);
+
+      //load some data to primary so that reader won't fail
+      HTU.loadNumericRows(table, f, startKey, endKey);
+      TestRegionServerNoMaster.flushRegion(HTU, hriPrimary);
+      // ensure that chore is run
+      Threads.sleep(2 * refreshPeriod);
+
+      final AtomicBoolean running = new AtomicBoolean(true);
+      @SuppressWarnings("unchecked")
+      final AtomicReference<Exception>[] exceptions = new AtomicReference[3];
+      for (int i=0; i < exceptions.length; i++) {
+        exceptions[i] = new AtomicReference<Exception>();
+      }
+
+      Runnable writer = new Runnable() {
+        int key = startKey;
+        @Override
+        public void run() {
+          try {
+            while (running.get()) {
+              byte[] data = Bytes.toBytes(String.valueOf(key));
+              Put put = new Put(data);
+              put.add(f, null, data);
+              table.put(put);
+              key++;
+              if (key == endKey) key = startKey;
+            }
+          } catch (Exception ex) {
+            LOG.warn(ex);
+            exceptions[0].compareAndSet(null, ex);
+          }
+        }
+      };
+
+      Runnable flusherCompactor = new Runnable() {
+        Random random = new Random();
+        @Override
+        public void run() {
+          try {
+            while (running.get()) {
+              // flush or compact
+              if (random.nextBoolean()) {
+                TestRegionServerNoMaster.flushRegion(HTU, hriPrimary);
+              } else {
+                HTU.compact(table.getName(), random.nextBoolean());
+              }
+            }
+          } catch (Exception ex) {
+            LOG.warn(ex);
+            exceptions[1].compareAndSet(null, ex);
+          }
+        }
+      };
+
+      Runnable reader = new Runnable() {
+        Random random = new Random();
+        @Override
+        public void run() {
+          try {
+            while (running.get()) {
+              // whether to do a close and open
+              if (random.nextInt(10) == 0) {
+                try {
+                  closeRegion(hriSecondary);
+                } catch (Exception ex) {
+                  LOG.warn("Failed closing the region " + hriSecondary + " "  + StringUtils.stringifyException(ex));
+                  exceptions[2].compareAndSet(null, ex);
+                }
+                try {
+                  openRegion(hriSecondary);
+                } catch (Exception ex) {
+                  LOG.warn("Failed opening the region " + hriSecondary + " "  + StringUtils.stringifyException(ex));
+                  exceptions[2].compareAndSet(null, ex);
+                }
+              }
+
+              int key = random.nextInt(endKey - startKey) + startKey;
+              assertGetRpc(hriSecondary, key, true);
+            }
+          } catch (Exception ex) {
+            LOG.warn("Failed getting the value in the region " + hriSecondary + " "  + StringUtils.stringifyException(ex));
+            exceptions[2].compareAndSet(null, ex);
+          }
+        }
+      };
+
+      LOG.info("Starting writer and reader");
+      ExecutorService executor = Executors.newFixedThreadPool(3);
+      executor.submit(writer);
+      executor.submit(flusherCompactor);
+      executor.submit(reader);
+
+      // wait for threads
+      Threads.sleep(runtime);
+      running.set(false);
+      executor.shutdown();
+      executor.awaitTermination(30, TimeUnit.SECONDS);
+
+      for (AtomicReference<Exception> exRef : exceptions) {
+        Assert.assertNull(exRef.get());
+      }
+
+    } finally {
+      HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, startKey, endKey);
       closeRegion(hriSecondary);
     }
   }

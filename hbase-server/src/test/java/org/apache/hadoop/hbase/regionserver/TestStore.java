@@ -1005,6 +1005,7 @@ public class TestStore {
     store.getRegionFileSystem().removeStoreFiles(store.getColumnFamilyName(), Lists.newArrayList(sf));
   }
 
+  @Test
   public void testRefreshStoreFiles() throws Exception {
     init(name.getMethodName());
 
@@ -1051,6 +1052,7 @@ public class TestStore {
   }
 
   @SuppressWarnings("unchecked")
+  @Test
   public void testRefreshStoreFilesNotChanged() throws IOException {
     init(name.getMethodName());
 

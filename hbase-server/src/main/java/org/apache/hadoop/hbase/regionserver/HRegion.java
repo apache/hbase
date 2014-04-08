@@ -720,24 +720,28 @@ public class HRegion implements HeapSize { // , Writable{
     status.setStatus("Writing region info on filesystem");
     fs.checkRegionInfoOnFilesystem();
 
-    // Remove temporary data left over from old regions
-    status.setStatus("Cleaning up temporary data from old regions");
-    fs.cleanupTempDir();
-
     // Initialize all the HStores
     status.setStatus("Initializing all the Stores");
     long maxSeqId = initializeRegionStores(reporter, status);
 
-    status.setStatus("Cleaning up detritus from prior splits");
-    // Get rid of any splits or merges that were lost in-progress.  Clean out
-    // these directories here on open.  We may be opening a region that was
-    // being split but we crashed in the middle of it all.
-    fs.cleanupAnySplitDetritus();
-    fs.cleanupMergesDir();
-
     this.writestate.setReadOnly(ServerRegionReplicaUtil.isReadOnly(this));
     this.writestate.flushRequested = false;
     this.writestate.compacting = 0;
+
+    if (this.writestate.writesEnabled) {
+      // Remove temporary data left over from old regions
+      status.setStatus("Cleaning up temporary data from old regions");
+      fs.cleanupTempDir();
+    }
+
+    if (this.writestate.writesEnabled) {
+      status.setStatus("Cleaning up detritus from prior splits");
+      // Get rid of any splits or merges that were lost in-progress.  Clean out
+      // these directories here on open.  We may be opening a region that was
+      // being split but we crashed in the middle of it all.
+      fs.cleanupAnySplitDetritus();
+      fs.cleanupMergesDir();
+    }
 
     // Initialize split policy
     this.splitPolicy = RegionSplitPolicy.create(this, conf);
@@ -832,9 +836,11 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
     }
-    // Recover any edits if available.
-    maxSeqId = Math.max(maxSeqId, replayRecoveredEditsIfAny(
-        this.fs.getRegionDir(), maxSeqIdInStores, reporter, status));
+    if (ServerRegionReplicaUtil.shouldReplayRecoveredEdits(this)) {
+      // Recover any edits if available.
+      maxSeqId = Math.max(maxSeqId, replayRecoveredEditsIfAny(
+          this.fs.getRegionDir(), maxSeqIdInStores, reporter, status));
+    }
     maxSeqId = Math.max(maxSeqId, maxMemstoreTS + 1);
     mvcc.initialize(maxSeqId);
     return maxSeqId;
