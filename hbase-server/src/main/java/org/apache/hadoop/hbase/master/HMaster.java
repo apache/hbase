@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -116,10 +117,10 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
@@ -147,6 +148,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJani
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
@@ -163,6 +166,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorE
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
@@ -197,10 +202,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
@@ -210,6 +211,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
+import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -1742,7 +1744,7 @@ MasterServices, Server {
 
     HRegionInfo[] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
-    checkCompression(hTableDescriptor);
+    sanityCheckTableDescriptor(hTableDescriptor);
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
@@ -1754,6 +1756,97 @@ MasterServices, Server {
       cpHost.postCreateTable(hTableDescriptor, newRegions);
     }
 
+  }
+
+  /**
+   * Checks whether the table conforms to some sane limits, and configured
+   * values (compression, etc) work. Throws an exception if something is wrong.
+   * @throws IOException
+   */
+  private void sanityCheckTableDescriptor(final HTableDescriptor htd) throws IOException {
+    final String CONF_KEY = "hbase.table.sanity.checks";
+    if (!conf.getBoolean(CONF_KEY, true)) {
+      return;
+    }
+    String tableVal = htd.getConfigurationValue(CONF_KEY);
+    if (tableVal != null && !Boolean.valueOf(tableVal)) {
+      return;
+    }
+
+    // check max file size
+    long maxFileSizeLowerLimit = 2 * 1024 * 1024L; // 2M is the default lower limit
+    long maxFileSize = htd.getMaxFileSize();
+    if (maxFileSize < 0) {
+      maxFileSize = conf.getLong(HConstants.HREGION_MAX_FILESIZE, maxFileSizeLowerLimit);
+    }
+    if (maxFileSize < conf.getLong("hbase.hregion.max.filesize.limit", maxFileSizeLowerLimit)) {
+      throw new DoNotRetryIOException("MAX_FILESIZE for table descriptor or "
+        + "\"hbase.hregion.max.filesize\" (" + maxFileSize
+        + ") is too small, which might cause over splitting into unmanageable "
+        + "number of regions. Set " + CONF_KEY + " to false at conf or table descriptor "
+          + "if you want to bypass sanity checks");
+    }
+
+    // check flush size
+    long flushSizeLowerLimit = 1024 * 1024L; // 1M is the default lower limit
+    long flushSize = htd.getMemStoreFlushSize();
+    if (flushSize < 0) {
+      flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeLowerLimit);
+    }
+    if (flushSize < conf.getLong("hbase.hregion.memstore.flush.size.limit", flushSizeLowerLimit)) {
+      throw new DoNotRetryIOException("MEMSTORE_FLUSHSIZE for table descriptor or "
+          + "\"hbase.hregion.memstore.flush.size\" ("+flushSize+") is too small, which might cause"
+          + " very frequent flushing. Set " + CONF_KEY + " to false at conf or table descriptor "
+          + "if you want to bypass sanity checks");
+    }
+
+    // check split policy class can be loaded
+    try {
+      RegionSplitPolicy.getSplitPolicyClass(htd, conf);
+    } catch (Exception ex) {
+      throw new DoNotRetryIOException(ex);
+    }
+
+    // check compression can be loaded
+    checkCompression(htd);
+
+    // check that we have at least 1 CF
+    if (htd.getColumnFamilies().length == 0) {
+      throw new DoNotRetryIOException("Table should have at least one column family "
+          + "Set "+CONF_KEY+" at conf or table descriptor if you want to bypass sanity checks");
+    }
+
+    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
+      if (hcd.getTimeToLive() <= 0) {
+        throw new DoNotRetryIOException("TTL for column family " + hcd.getNameAsString()
+          + "  must be positive. Set " + CONF_KEY + " to false at conf or table descriptor "
+          + "if you want to bypass sanity checks");
+      }
+
+      // check blockSize
+      if (hcd.getBlocksize() < 1024 || hcd.getBlocksize() > 16 * 1024 * 1024) {
+        throw new DoNotRetryIOException("Block size for column family " + hcd.getNameAsString()
+          + "  must be between 1K and 16MB Set "+CONF_KEY+" to false at conf or table descriptor "
+          + "if you want to bypass sanity checks");
+      }
+
+      // check versions
+      if (hcd.getMinVersions() < 0) {
+        throw new DoNotRetryIOException("Min versions for column family " + hcd.getNameAsString()
+          + "  must be positive. Set " + CONF_KEY + " to false at conf or table descriptor "
+          + "if you want to bypass sanity checks");
+      }
+      // max versions already being checked
+
+      // check replication scope
+      if (hcd.getScope() < 0) {
+        throw new DoNotRetryIOException("Replication scope for column family "
+          + hcd.getNameAsString() + "  must be positive. Set " + CONF_KEY + " to false at conf "
+          + "or table descriptor if you want to bypass sanity checks");
+      }
+
+      // TODO: should we check coprocessors and encryption ?
+    }
   }
 
   private void checkCompression(final HTableDescriptor htd)
@@ -2038,7 +2131,7 @@ MasterServices, Server {
   public void modifyTable(final TableName tableName, final HTableDescriptor descriptor)
       throws IOException {
     checkInitialized();
-    checkCompression(descriptor);
+    sanityCheckTableDescriptor(descriptor);
     if (cpHost != null) {
       cpHost.preModifyTable(tableName, descriptor);
     }
