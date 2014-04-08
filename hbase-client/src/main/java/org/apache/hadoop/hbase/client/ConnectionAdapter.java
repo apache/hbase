@@ -294,6 +294,18 @@ class ConnectionAdapter implements ClusterConnection {
   }
 
   @Override
+  public RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache,
+      boolean retry, int replicaId) throws IOException {
+    return wrappedConnection.locateRegion(tableName, row, useCache, retry, replicaId);
+  }
+
+  @Override
+  public HRegionLocation relocateRegion(TableName tableName, byte[] row, int replicaId)
+      throws IOException {
+    return wrappedConnection.relocateRegion(tableName, row, replicaId);
+  }
+
+  @Override
   public MasterService.BlockingInterface getMaster() throws IOException {
     return wrappedConnection.getMaster();
   }

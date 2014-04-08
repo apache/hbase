@@ -107,6 +107,19 @@ interface ClusterConnection extends HConnection {
       final byte [] row) throws IOException;
 
   /**
+   * Find the location of the region of <i>tableName</i> that <i>row</i>
+   * lives in, ignoring any value that might be in the cache.
+   * @param tableName name of the table <i>row</i> is in
+   * @param row row key you're trying to find the region of
+   * @param replicaId the replicaId of the region
+   * @return HRegionLocation that describes where to find the region in
+   * question
+   * @throws IOException if a remote or network exception occurs
+   */
+  HRegionLocation relocateRegion(final TableName tableName,
+      final byte [] row, int replicaId) throws IOException;
+
+  /**
    * Update the location cache. This is used internally by HBase, in most cases it should not be
    *  used by the client application.
    * @param tableName the table name
@@ -165,6 +178,20 @@ interface ClusterConnection extends HConnection {
    */
   RegionLocations locateRegion(TableName tableName,
                                byte[] row, boolean useCache, boolean retry) throws IOException;
+
+  /**
+  *
+  * @param tableName table to get regions of
+  * @param row the row
+  * @param useCache Should we use the cache to retrieve the region information.
+  * @param retry do we retry
+  * @param replicaId the replicaId for the region
+  * @return region locations for this row.
+  * @throws IOException
+  */
+ RegionLocations locateRegion(TableName tableName,
+                              byte[] row, boolean useCache, boolean retry, int replicaId) throws IOException;
+
   /**
    * Returns a {@link MasterKeepAliveConnection} to the active master
    */
@@ -247,4 +274,5 @@ interface ClusterConnection extends HConnection {
    * @return All locations for a particular region.
    */
   RegionLocations locateRegionAll(TableName tableName, byte[] row) throws IOException;
+
 }

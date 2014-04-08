@@ -75,7 +75,89 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.*;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -968,6 +1050,12 @@ class ConnectionManager {
     @Override
     public HRegionLocation relocateRegion(final TableName tableName,
         final byte [] row) throws IOException{
+      return relocateRegion(tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    }
+
+    @Override
+    public HRegionLocation relocateRegion(final TableName tableName,
+        final byte [] row, int replicaId) throws IOException{
       // Since this is an explicit request not to use any caching, finding
       // disabled tables should not be desirable.  This will ensure that an exception is thrown when
       // the first time a disabled table is interacted with.
@@ -975,8 +1063,8 @@ class ConnectionManager {
         throw new TableNotEnabledException(tableName.getNameAsString() + " is disabled.");
       }
 
-      RegionLocations locations = locateRegion(tableName, row, false, true);
-      return locations == null ? null : locations.getRegionLocation();
+      RegionLocations locations = locateRegion(tableName, row, false, true, replicaId);
+      return locations == null ? null : locations.getRegionLocation(replicaId);
     }
 
     @Override
@@ -985,10 +1073,16 @@ class ConnectionManager {
       return relocateRegion(TableName.valueOf(tableName), row);
     }
 
-
     @Override
     public RegionLocations locateRegion(final TableName tableName,
       final byte [] row, boolean useCache, boolean retry)
+    throws IOException {
+      return locateRegion(tableName, row, useCache, retry, RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    }
+
+    @Override
+    public RegionLocations locateRegion(final TableName tableName,
+      final byte [] row, boolean useCache, boolean retry, int replicaId)
     throws IOException {
       if (this.closed) throw new IOException(toString() + " closed");
       if (tableName== null || tableName.getName().length == 0) {
@@ -1000,7 +1094,7 @@ class ConnectionManager {
         return this.registry.getMetaRegionLocation();
       } else {
         // Region not in the cache - have to go to the meta RS
-        return locateRegionInMeta(tableName, row, useCache, retry);
+        return locateRegionInMeta(tableName, row, useCache, retry, replicaId);
       }
     }
 
@@ -1009,13 +1103,13 @@ class ConnectionManager {
       * info that contains the table and row we're seeking.
       */
     private RegionLocations locateRegionInMeta(TableName tableName, byte[] row,
-                   boolean useCache, boolean retry) throws IOException {
+                   boolean useCache, boolean retry, int replicaId) throws IOException {
 
       // If we are supposed to be using the cache, look in the cache to see if
       // we already have the region.
       if (useCache) {
         RegionLocations locations = getCachedLocation(tableName, row);
-        if (locations != null) {
+        if (locations != null && locations.getRegionLocation(replicaId) != null) {
           return locations;
         }
       }
@@ -1042,9 +1136,13 @@ class ConnectionManager {
         }
         if (useCache) {
           RegionLocations locations = getCachedLocation(tableName, row);
-          if (locations != null) {
+          if (locations != null && locations.getRegionLocation(replicaId) != null) {
             return locations;
           }
+        } else {
+          // If we are not supposed to be using the cache, delete any existing cached location
+          // so it won't interfere.
+          metaCache.clearCache(tableName, row);
         }
 
         // Query the meta region
@@ -1066,11 +1164,11 @@ class ConnectionManager {
 
           // convert the row result into the HRegionLocation we need!
           RegionLocations locations = MetaReader.getRegionLocations(regionInfoRow);
-          if (locations == null || locations.getRegionLocation() == null) {
+          if (locations == null || locations.getRegionLocation(replicaId) == null) {
             throw new IOException("HRegionInfo was null in " +
               tableName + ", row=" + regionInfoRow);
           }
-          HRegionInfo regionInfo = locations.getRegionLocation().getRegionInfo();
+          HRegionInfo regionInfo = locations.getRegionLocation(replicaId).getRegionInfo();
           if (regionInfo == null) {
             throw new IOException("HRegionInfo was null or empty in " +
               TableName.META_TABLE_NAME + ", row=" + regionInfoRow);
@@ -1094,7 +1192,7 @@ class ConnectionManager {
               regionInfo.getRegionNameAsString());
           }
 
-          ServerName serverName = locations.getRegionLocation().getServerName();
+          ServerName serverName = locations.getRegionLocation(replicaId).getServerName();
           if (serverName == null) {
             throw new NoServerForRegionException("No server address listed " +
               "in " + TableName.META_TABLE_NAME + " for region " +
@@ -1107,11 +1205,9 @@ class ConnectionManager {
                 regionInfo.getRegionNameAsString()+" is managed by the server " + serverName +
                 ", but it is dead.");
           }
-
           // Instantiate the location
           cacheLocation(tableName, locations);
           return locations;
-
         } catch (TableNotFoundException e) {
           // if we got this error, probably means the table just plain doesn't
           // exist. rethrow the error immediately. this should always be coming
@@ -1137,7 +1233,7 @@ class ConnectionManager {
           // Only relocate the parent region if necessary
           if(!(e instanceof RegionOfflineException ||
               e instanceof NoServerForRegionException)) {
-            relocateRegion(TableName.META_TABLE_NAME, metaKey);
+            relocateRegion(TableName.META_TABLE_NAME, metaKey, replicaId);
           }
         }
         try{

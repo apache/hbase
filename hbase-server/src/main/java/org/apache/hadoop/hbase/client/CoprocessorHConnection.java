@@ -244,6 +244,12 @@ class CoprocessorHConnection implements ClusterConnection {
   }
 
   @Override
+  public HRegionLocation relocateRegion(TableName tableName, byte[] row, int replicaId)
+      throws IOException {
+    return delegate.relocateRegion(tableName, row, replicaId);
+  }
+
+  @Override
   public HRegionLocation relocateRegion(byte[] tableName, byte[] row) throws IOException {
     return delegate.relocateRegion(tableName, row);
   }
@@ -291,6 +297,12 @@ class CoprocessorHConnection implements ClusterConnection {
   public RegionLocations locateRegion(TableName tableName, byte[] row,
                                       boolean useCache, boolean retry) throws IOException {
     return delegate.locateRegion(tableName, row, useCache, retry);
+  }
+
+  @Override
+  public RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache,
+      boolean retry, int replicaId) throws IOException {
+    return delegate.locateRegion(tableName, row, useCache, retry, replicaId);
   }
 
   @Override

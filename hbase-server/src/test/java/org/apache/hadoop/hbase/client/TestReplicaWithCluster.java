@@ -325,7 +325,7 @@ public class TestReplicaWithCluster {
     RegionServerCallable<Void> callable = new RegionServerCallable<Void>(
       conn, hdt.getTableName(), TestHRegionServerBulkLoad.rowkey(0)) {
         @Override
-        public Void call() throws Exception {
+        public Void call(int timeout) throws Exception {
           LOG.debug("Going to connect to server " + getLocation() + " for row "
             + Bytes.toStringBinary(getRow()));
           byte[] regionName = getLocation().getRegionInfo().getRegionName();
@@ -337,7 +337,7 @@ public class TestReplicaWithCluster {
       };
     RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(HTU.getConfiguration());
     RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
-    caller.callWithRetries(callable);
+    caller.callWithRetries(callable, 10000);
 
     // verify we can read them from the primary
     LOG.debug("Verifying data load");
