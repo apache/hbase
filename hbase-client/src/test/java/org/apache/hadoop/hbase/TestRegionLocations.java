@@ -46,25 +46,25 @@ public class TestRegionLocations {
 
     list = hrll((HRegionLocation)null);
     assertTrue(list.isEmpty());
-    assertEquals(0, list.size());
+    assertEquals(1, list.size());
     assertEquals(0, list.numNonNullElements());
 
     HRegionInfo info0 = hri(0);
     list = hrll(hrl(info0, null));
-    assertFalse(list.isEmpty());
+    assertTrue(list.isEmpty());
     assertEquals(1, list.size());
-    assertEquals(1, list.numNonNullElements());
+    assertEquals(0, list.numNonNullElements());
 
     HRegionInfo info9 = hri(9);
     list = hrll(hrl(info9, null));
-    assertFalse(list.isEmpty());
+    assertTrue(list.isEmpty());
     assertEquals(10, list.size());
-    assertEquals(1, list.numNonNullElements());
+    assertEquals(0, list.numNonNullElements());
 
     list = hrll(hrl(info0, null), hrl(info9, null));
-    assertFalse(list.isEmpty());
+    assertTrue(list.isEmpty());
     assertEquals(10, list.size());
-    assertEquals(2, list.numNonNullElements());
+    assertEquals(0, list.numNonNullElements());
   }
 
   private HRegionInfo hri(int replicaId) {
@@ -100,7 +100,7 @@ public class TestRegionLocations {
     list = hrll(hrl(info0, sn0));
     assertTrue(list == list.removeByServer(sn1));
     list = list.removeByServer(sn0);
-    assertTrue(list.isEmpty());
+    assertEquals(0, list.numNonNullElements());
 
     // test remove from multi element list
     list = hrll(hrl(info0, sn0), hrl(info1, sn1), hrl(info2, sn2), hrl(info9, sn2));
@@ -226,7 +226,7 @@ public class TestRegionLocations {
     list1 = list2.mergeLocations(list1);
     assertEquals(sn0, list1.getRegionLocation(0).getServerName());
     assertEquals(sn1, list1.getRegionLocation(1).getServerName());
-    assertEquals(sn2, list1.getRegionLocation(2).getServerName());
+    assertEquals(2, list1.size()); // the size is taken from the argument list to merge
 
     // do the other way merge as well
     list1 = hrll(hrl(info0, sn0), hrl(info1, sn1));
@@ -240,10 +240,9 @@ public class TestRegionLocations {
     list1 = hrll(hrl(info0, sn0), hrl(info1, sn1));
     list2 = hrll(hrl(info0, sn2), hrl(info1, sn2), hrl(info9, sn3));
     list1 = list2.mergeLocations(list1); // list1 should override
-    assertEquals(10, list1.size());
+    assertEquals(2, list1.size());
     assertEquals(sn0, list1.getRegionLocation(0).getServerName());
     assertEquals(sn1, list1.getRegionLocation(1).getServerName());
-    assertEquals(sn3, list1.getRegionLocation(9).getServerName());
 
     // do the other way
     list1 = hrll(hrl(info0, sn0), hrl(info1, sn1));
@@ -271,5 +270,36 @@ public class TestRegionLocations {
     assertEquals(sn2, list1.getRegionLocation(0).getServerName());
     assertEquals(sn2, list1.getRegionLocation(1).getServerName());
     assertEquals(sn3, list1.getRegionLocation(9).getServerName());
+  }
+
+  @Test
+  public void testConstructWithNullElements() {
+    // RegionLocations can contain null elements as well. These null elements can
+
+    RegionLocations list = new RegionLocations((HRegionLocation)null);
+    assertTrue(list.isEmpty());
+    assertEquals(1, list.size());
+    assertEquals(0, list.numNonNullElements());
+
+    list = new RegionLocations(null, hrl(info1, sn0));
+    assertFalse(list.isEmpty());
+    assertEquals(2, list.size());
+    assertEquals(1, list.numNonNullElements());
+
+    list = new RegionLocations(hrl(info0, sn0), null);
+    assertEquals(2, list.size());
+    assertEquals(1, list.numNonNullElements());
+
+    list = new RegionLocations(null, hrl(info2, sn0), null, hrl(info9, sn0));
+    assertEquals(10, list.size());
+    assertEquals(2, list.numNonNullElements());
+
+    list = new RegionLocations(null, hrl(info2, sn0), null, hrl(info9, sn0), null);
+    assertEquals(11, list.size());
+    assertEquals(2, list.numNonNullElements());
+
+    list = new RegionLocations(null, hrl(info2, sn0), null, hrl(info9, sn0), null, null);
+    assertEquals(12, list.size());
+    assertEquals(2, list.numNonNullElements());
   }
 }

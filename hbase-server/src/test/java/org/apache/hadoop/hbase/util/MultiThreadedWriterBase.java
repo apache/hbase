@@ -101,8 +101,8 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
     if (cached != null) {
       result = "cached: " + cached.toString();
     }
-    if (real != null) {
-      if (real.equals(cached)) {
+    if (real != null && real.getServerName() != null) {
+      if (cached != null && cached.getServerName() != null && real.equals(cached)) {
         result += "; cache is up to date";
       } else {
         result = (cached != null) ? (result + "; ") : "";
