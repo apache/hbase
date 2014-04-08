@@ -192,8 +192,9 @@ public class HRegionFileSystem {
     ArrayList<StoreFileInfo> storeFiles = new ArrayList<StoreFileInfo>(files.length);
     for (FileStatus status: files) {
       if (!StoreFileInfo.isValid(status)) continue;
-
-      storeFiles.add(new StoreFileInfo(this.conf, this.fs, status));
+      StoreFileInfo info = ServerRegionReplicaUtil.getStoreFileInfo(conf, fs, regionInfo,
+        regionInfoForFs, familyName, status);
+      storeFiles.add(info);
     }
     return storeFiles;
   }
