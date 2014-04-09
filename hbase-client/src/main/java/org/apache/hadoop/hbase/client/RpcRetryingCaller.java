@@ -205,4 +205,10 @@ public class RpcRetryingCaller<T> {
     }
     return t;
   }
+
+  @Override
+  public String toString() {
+    return "RpcRetryingCaller{" + "globalStartTime=" + globalStartTime +
+        ", pause=" + pause + ", retries=" + retries + '}';
+  }
 }

@@ -749,7 +749,8 @@ public class HRegionFileSystem {
         throw new IOException("Unable to remove existing " + regionInfoFile);
       }
     } catch (FileNotFoundException e) {
-      LOG.warn(REGION_INFO_FILE + " file not found for region: " + regionInfo.getEncodedName());
+      LOG.warn(REGION_INFO_FILE + " file not found for region: " + regionInfo.getEncodedName() +
+          " on table " + regionInfo.getTable());
     }
 
     // Write HRI to a file in case we need to recover hbase:meta

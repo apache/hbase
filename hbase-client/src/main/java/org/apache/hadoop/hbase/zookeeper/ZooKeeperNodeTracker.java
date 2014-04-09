@@ -243,4 +243,10 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
     }
     return true;
   }
+
+  @Override
+  public String toString() {
+    return "ZooKeeperNodeTracker{" +
+        "node='" + node + ", stopped=" + stopped + '}';
+  }
 }

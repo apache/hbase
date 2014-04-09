@@ -441,4 +441,10 @@ public class CatalogTracker {
   public HConnection getConnection() {
     return this.connection;
   }
+
+  @Override
+  public String toString() {
+    return "CatalogTracker{" + "connection=" + connection + ", zookeeper=" + zookeeper +
+        ", metaRegionTracker=" + metaRegionTracker + ", stopped=" + stopped + '}';
+  }
 }
