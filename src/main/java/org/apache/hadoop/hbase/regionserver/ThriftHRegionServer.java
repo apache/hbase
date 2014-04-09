@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TMultiResponse;
 import org.apache.hadoop.hbase.client.TRowMutations;
-import org.apache.hadoop.hbase.coprocessor.EndpointServer;
+import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointServer;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
