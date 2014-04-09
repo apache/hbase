@@ -261,9 +261,8 @@ public class Result implements CellScannable {
     }
 
     for (int i = pos ; i < kvs.length ; i++ ) {
-      KeyValue kv = KeyValueUtil.ensureKeyValue(kvs[i]);
-      if (kv.matchingColumn(family,qualifier)) {
-        result.add(kv);
+      if (CellUtil.matchingColumn(kvs[i], family,qualifier)) {
+        result.add(kvs[i]);
       } else {
         break;
       }
@@ -276,7 +275,7 @@ public class Result implements CellScannable {
                              final byte [] family,
                              final byte [] qualifier) {
     Cell searchTerm =
-        KeyValue.createFirstOnRow(CellUtil.cloneRow(kvs[0]),
+        KeyValueUtil.createFirstOnRow(CellUtil.cloneRow(kvs[0]),
             family, qualifier);
 
     // pos === ( -(insertion point) - 1)
@@ -317,7 +316,7 @@ public class Result implements CellScannable {
       buffer = new byte[(int) Math.ceil(keyValueSize / PAD_WIDTH) * PAD_WIDTH];
     }
 
-    Cell searchTerm = KeyValue.createFirstOnRow(buffer, 0,
+    Cell searchTerm = KeyValueUtil.createFirstOnRow(buffer, 0,
         kvs[0].getRowArray(), kvs[0].getRowOffset(), kvs[0].getRowLength(),
         family, foffset, flength,
         qualifier, qoffset, qlength);
@@ -361,9 +360,8 @@ public class Result implements CellScannable {
     if (pos == -1) {
       return null;
     }
-    KeyValue kv = KeyValueUtil.ensureKeyValue(kvs[pos]);
-    if (kv.matchingColumn(family, qualifier)) {
-      return kv;
+    if (CellUtil.matchingColumn(kvs[pos], family, qualifier)) {
+      return kvs[pos];
     }
     return null;
   }
@@ -402,9 +400,8 @@ public class Result implements CellScannable {
     if (pos == -1) {
       return null;
     }
-    KeyValue kv = KeyValueUtil.ensureKeyValue(kvs[pos]);
-    if (kv.matchingColumn(family, foffset, flength, qualifier, qoffset, qlength)) {
-      return kv;
+    if (CellUtil.matchingColumn(kvs[pos], family, foffset, flength, qualifier, qoffset, qlength)) {
+      return kvs[pos];
     }
     return null;
   }

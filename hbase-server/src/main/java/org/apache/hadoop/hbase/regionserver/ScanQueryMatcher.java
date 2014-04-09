@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
@@ -151,7 +152,7 @@ public class ScanQueryMatcher {
     this.rowComparator = scanInfo.getComparator();
     this.deletes =  new ScanDeleteTracker();
     this.stopRow = scan.getStopRow();
-    this.startKey = KeyValue.createFirstDeleteFamilyOnRow(scan.getStartRow(),
+    this.startKey = KeyValueUtil.createFirstDeleteFamilyOnRow(scan.getStartRow(),
         scanInfo.getFamily());
     this.filter = scan.getFilter();
     this.earliestPutTs = earliestPutTs;
@@ -535,12 +536,12 @@ public class ScanQueryMatcher {
   public KeyValue getKeyForNextColumn(KeyValue kv) {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
-      return KeyValue.createLastOnRow(
+      return KeyValueUtil.createLastOnRow(
           kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
           kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
           kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength());
     } else {
-      return KeyValue.createFirstOnRow(
+      return KeyValueUtil.createFirstOnRow(
           kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
           kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
           nextColumn.getBuffer(), nextColumn.getOffset(), nextColumn.getLength());
@@ -548,7 +549,7 @@ public class ScanQueryMatcher {
   }
 
   public KeyValue getKeyForNextRow(KeyValue kv) {
-    return KeyValue.createLastOnRow(
+    return KeyValueUtil.createLastOnRow(
         kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
         null, 0, 0,
         null, 0, 0);

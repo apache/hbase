@@ -148,7 +148,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         return delegate.getValueString();
       }
 
-      public KeyValue getKeyValue() {
+      public Cell getKeyValue() {
         if (atEnd) return null;
 
         return delegate.getKeyValue();

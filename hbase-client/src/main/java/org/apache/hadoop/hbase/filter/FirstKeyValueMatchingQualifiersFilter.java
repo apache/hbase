@@ -18,21 +18,20 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.HBaseZeroCopyByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.util.Set;
-import java.util.TreeSet;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.HBaseZeroCopyByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * The filter looks for the given columns in KeyValue. Once there is a match for
@@ -73,9 +72,7 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
 
   private boolean hasOneMatchingQualifier(Cell v) {
     for (byte[] q : qualifiers) {
-      // TODO get rid of this by adding matching qualifier to interface.
-      KeyValue kv = KeyValueUtil.ensureKeyValue(v);
-      if (kv.matchingQualifier(q)) {
+      if (CellUtil.matchingQualifier(v, q)) {
         return true;
       }
     }

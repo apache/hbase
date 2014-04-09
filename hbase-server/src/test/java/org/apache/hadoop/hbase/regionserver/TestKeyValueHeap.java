@@ -21,11 +21,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.junit.experimental.categories.Category;
@@ -103,7 +105,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     KeyValueHeap kvh =
       new KeyValueHeap(scanners, KeyValue.COMPARATOR);
 
-    List<KeyValue> actual = new ArrayList<KeyValue>();
+    List<Cell> actual = new ArrayList<Cell>();
     while(kvh.peek() != null){
       actual.add(kvh.next());
     }
@@ -159,7 +161,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     KeyValue seekKv = new KeyValue(row2, fam1, null, null);
     kvh.seek(seekKv);
 
-    List<KeyValue> actual = new ArrayList<KeyValue>();
+    List<Cell> actual = new ArrayList<Cell>();
     actual.add(kvh.peek());
 
     assertEquals(expected.size(), actual.size());
@@ -209,7 +211,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
   }
 
   private static class Scanner extends CollectionBackedScanner {
-    private Iterator<KeyValue> iter;
+    private Iterator<Cell> iter;
     private KeyValue current;
     private boolean closed = false;
 

@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.util;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
 
 @InterfaceAudience.Private
 public class CompoundBloomFilterBase implements BloomFilterBase {
@@ -84,7 +84,7 @@ public class CompoundBloomFilterBase implements BloomFilterBase {
 
     // Make sure this does not specify a timestamp so that the default maximum
     // (most recent) timestamp is used.
-    KeyValue kv = KeyValue.createFirstOnRow(row, roffset, rlength, DUMMY, 0, 0,
+    KeyValue kv = KeyValueUtil.createFirstOnRow(row, roffset, rlength, DUMMY, 0, 0,
         qualifier, qoffset, qlength);
     return kv.getKey();
   }

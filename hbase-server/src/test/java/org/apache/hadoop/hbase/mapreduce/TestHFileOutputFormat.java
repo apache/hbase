@@ -33,7 +33,9 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
+
 import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -196,7 +198,7 @@ public class TestHFileOutputFormat  {
       writer.write(new ImmutableBytesWritable(), kv);
       assertFalse(original.equals(kv));
       assertTrue(Bytes.equals(original.getRow(), kv.getRow()));
-      assertTrue(original.matchingColumn(kv.getFamily(), kv.getQualifier()));
+      assertTrue(CellUtil.matchingColumn(original, kv.getFamily(), kv.getQualifier()));
       assertNotSame(original.getTimestamp(), kv.getTimestamp());
       assertNotSame(HConstants.LATEST_TIMESTAMP, kv.getTimestamp());
 

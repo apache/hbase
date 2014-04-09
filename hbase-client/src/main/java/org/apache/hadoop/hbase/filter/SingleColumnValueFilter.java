@@ -22,12 +22,12 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -182,7 +183,7 @@ public class SingleColumnValueFilter extends FilterBase {
       // We found but did not match the single column, skip to next row
       return ReturnCode.NEXT_ROW;
     }
-    if (!keyValue.matchingColumn(this.columnFamily, this.columnQualifier)) {
+    if (!CellUtil.matchingColumn(keyValue, this.columnFamily, this.columnQualifier)) {
       return ReturnCode.INCLUDE;
     }
     foundColumn = true;

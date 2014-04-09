@@ -36,9 +36,11 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
@@ -220,8 +222,9 @@ public class TestHFileEncryption {
         assertTrue("Initial seekTo failed", scanner.seekTo());
         int i = 0;
         do {
-          KeyValue kv = scanner.getKeyValue();
-          assertTrue("Read back an unexpected or invalid KV", testKvs.contains(kv));
+          Cell kv = scanner.getKeyValue();
+          assertTrue("Read back an unexpected or invalid KV",
+              testKvs.contains(KeyValueUtil.ensureKeyValue(kv)));
           i++;
         } while (scanner.next());
         reader.close();

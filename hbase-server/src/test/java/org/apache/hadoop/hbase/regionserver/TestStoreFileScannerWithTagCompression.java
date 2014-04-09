@@ -27,8 +27,10 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -73,15 +75,15 @@ public class TestStoreFileScannerWithTagCompression {
     StoreFileScanner s = reader.getStoreFileScanner(false, false);
     try {
       // Now do reseek with empty KV to position to the beginning of the file
-      KeyValue k = KeyValue.createFirstOnRow(Bytes.toBytes("k2"));
+      KeyValue k = KeyValueUtil.createFirstOnRow(Bytes.toBytes("k2"));
       s.reseek(k);
-      KeyValue kv = s.next();
+      Cell kv = s.next();
       kv = s.next();
       kv = s.next();
       byte[] key5 = Bytes.toBytes("k5");
       assertTrue(Bytes.equals(key5, 0, key5.length, kv.getRowArray(), kv.getRowOffset(),
           kv.getRowLength()));
-      List<Tag> tags = kv.getTags();
+      List<Tag> tags = KeyValueUtil.ensureKeyValue(kv).getTags();
       assertEquals(1, tags.size());
       assertEquals("tag3", Bytes.toString(tags.get(0).getValue()));
     } finally {

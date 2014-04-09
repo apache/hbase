@@ -23,7 +23,7 @@ import java.util.SortedSet;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
 
 /**
@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.client.Scan;
 public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
 
   @Override
-  public boolean requestSeek(KeyValue kv, boolean forward, boolean useBloom)
+  public boolean requestSeek(Cell kv, boolean forward, boolean useBloom)
       throws IOException {
     return doRealSeek(this, kv, forward);
   }
@@ -51,7 +51,7 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
   }
 
   public static boolean doRealSeek(KeyValueScanner scanner,
-      KeyValue kv, boolean forward) throws IOException {
+      Cell kv, boolean forward) throws IOException {
     return forward ? scanner.reseek(kv) : scanner.seek(kv);
   }
 

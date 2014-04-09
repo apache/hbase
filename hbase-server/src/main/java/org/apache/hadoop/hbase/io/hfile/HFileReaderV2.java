@@ -716,7 +716,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
     }
 
     @Override
-    public KeyValue getKeyValue() {
+    public Cell getKeyValue() {
       if (!isSeeked())
         return null;
 
@@ -1178,7 +1178,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
     }
 
     @Override
-    public KeyValue getKeyValue() {
+    public Cell getKeyValue() {
       if (block == null) {
         return null;
       }

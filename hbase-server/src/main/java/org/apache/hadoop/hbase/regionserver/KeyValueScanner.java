@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.SortedSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
 
 /**
@@ -31,23 +31,23 @@ import org.apache.hadoop.hbase.client.Scan;
 @InterfaceAudience.Private
 public interface KeyValueScanner {
   /**
-   * Look at the next KeyValue in this scanner, but do not iterate scanner.
-   * @return the next KeyValue
+   * Look at the next Cell in this scanner, but do not iterate scanner.
+   * @return the next Cell
    */
-  KeyValue peek();
+  Cell peek();
 
   /**
-   * Return the next KeyValue in this scanner, iterating the scanner
-   * @return the next KeyValue
+   * Return the next Cell in this scanner, iterating the scanner
+   * @return the next Cell
    */
-  KeyValue next() throws IOException;
+  Cell next() throws IOException;
 
   /**
    * Seek the scanner at or after the specified KeyValue.
    * @param key seek value
    * @return true if scanner has values left, false if end of scanner
    */
-  boolean seek(KeyValue key) throws IOException;
+  boolean seek(Cell key) throws IOException;
 
   /**
    * Reseek the scanner at or after the specified KeyValue.
@@ -57,7 +57,7 @@ public interface KeyValueScanner {
    * @param key seek value (should be non-null)
    * @return true if scanner has values left, false if end of scanner
    */
-  boolean reseek(KeyValue key) throws IOException;
+  boolean reseek(Cell key) throws IOException;
 
   /**
    * Get the sequence id associated with this KeyValueScanner. This is required
@@ -98,7 +98,7 @@ public interface KeyValueScanner {
    * @param forward do a forward-only "reseek" instead of a random-access seek
    * @param useBloom whether to enable multi-column Bloom filter optimization
    */
-  boolean requestSeek(KeyValue kv, boolean forward, boolean useBloom)
+  boolean requestSeek(Cell kv, boolean forward, boolean useBloom)
       throws IOException;
 
   /**
@@ -126,10 +126,10 @@ public interface KeyValueScanner {
 
   // Support for "Reversed Scanner"
   /**
-   * Seek the scanner at or before the row of specified KeyValue, it firstly
-   * tries to seek the scanner at or after the specified KeyValue, return if
-   * peek KeyValue of scanner has the same row with specified KeyValue,
-   * otherwise seek the scanner at the first KeyValue of the row which is the
+   * Seek the scanner at or before the row of specified Cell, it firstly
+   * tries to seek the scanner at or after the specified Cell, return if
+   * peek KeyValue of scanner has the same row with specified Cell,
+   * otherwise seek the scanner at the first Cell of the row which is the
    * previous row of specified KeyValue
    * 
    * @param key seek KeyValue
@@ -137,16 +137,16 @@ public interface KeyValueScanner {
    *         KeyValue does not exist
    * 
    */
-  public boolean backwardSeek(KeyValue key) throws IOException;
+  public boolean backwardSeek(Cell key) throws IOException;
 
   /**
-   * Seek the scanner at the first KeyValue of the row which is the previous row
+   * Seek the scanner at the first Cell of the row which is the previous row
    * of specified key
    * @param key seek value
-   * @return true if the scanner at the first valid KeyValue of previous row,
-   *         false if not existing such KeyValue
+   * @return true if the scanner at the first valid Cell of previous row,
+   *         false if not existing such Cell
    */
-  public boolean seekToPreviousRow(KeyValue key) throws IOException;
+  public boolean seekToPreviousRow(Cell key) throws IOException;
 
   /**
    * Seek the scanner at the first KeyValue of last row

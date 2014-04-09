@@ -30,8 +30,10 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -121,7 +123,7 @@ public class TestHalfStoreFileReader {
     final HFileScanner scanner = halfreader.getScanner(false, false);
 
     scanner.seekTo();
-    KeyValue curr;
+    Cell curr;
     do {
       curr = scanner.getKeyValue();
       KeyValue reseekKv =
@@ -183,7 +185,7 @@ public class TestHalfStoreFileReader {
 
 
       // Seek on the splitKey, should be in top, not in bottom
-      KeyValue foundKeyValue = doTestOfSeekBefore(p, fs, bottom, midKV, cacheConf);
+      Cell foundKeyValue = doTestOfSeekBefore(p, fs, bottom, midKV, cacheConf);
       assertEquals(beforeMidKey, foundKeyValue);
 
       // Seek tot the last thing should be the penultimate on the top, the one before the midkey on the bottom.
@@ -213,7 +215,7 @@ public class TestHalfStoreFileReader {
       assertNull(foundKeyValue);
     }
 
-  private KeyValue doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, KeyValue seekBefore,
+  private Cell doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, KeyValue seekBefore,
                                         CacheConfig cacheConfig)
             throws IOException {
       final HalfStoreFileReader halfreader = new HalfStoreFileReader(fs, p,
@@ -224,8 +226,8 @@ public class TestHalfStoreFileReader {
       return scanner.getKeyValue();
   }
 
-  private KeyValue getLastOnCol(KeyValue curr) {
-    return KeyValue.createLastOnRow(
+  private KeyValue getLastOnCol(Cell curr) {
+    return KeyValueUtil.createLastOnRow(
         curr.getRowArray(), curr.getRowOffset(), curr.getRowLength(),
         curr.getFamilyArray(), curr.getFamilyOffset(), curr.getFamilyLength(),
         curr.getQualifierArray(), curr.getQualifierOffset(), curr.getQualifierLength());

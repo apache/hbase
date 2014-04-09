@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -176,7 +177,7 @@ public class TestReversibleScanners {
       for (int i = startRowNum; i >= 0; i--) {
         if (i - 2 < 0) break;
         i = i - 2;
-        kvHeap.seekToPreviousRow(KeyValue.createFirstOnRow(ROWS[i + 1]));
+        kvHeap.seekToPreviousRow(KeyValueUtil.createFirstOnRow(ROWS[i + 1]));
         Pair<Integer, Integer> nextReadableNum = getNextReadableNumWithBackwardScan(
             i, 0, readPoint);
         if (nextReadableNum == null) break;
@@ -457,7 +458,7 @@ public class TestReversibleScanners {
     for (int i = startRowNum; i >= 0; i--) {
       if (i % 2 == 1 && i - 2 >= 0) {
         i = i - 2;
-        kvHeap.seekToPreviousRow(KeyValue.createFirstOnRow(ROWS[i + 1]));
+        kvHeap.seekToPreviousRow(KeyValueUtil.createFirstOnRow(ROWS[i + 1]));
       }
       for (int j = 0; j < QUALSIZE; j++) {
         if (j % 2 == 1 && (j + 1) < QUALSIZE) {
@@ -499,7 +500,7 @@ public class TestReversibleScanners {
           scanner.seekToLastRow();
         }
       } else {
-        KeyValue startKey = KeyValue.createFirstOnRow(startRow);
+        KeyValue startKey = KeyValueUtil.createFirstOnRow(startRow);
         for (KeyValueScanner scanner : scanners) {
           scanner.backwardSeek(startKey);
         }
@@ -525,17 +526,17 @@ public class TestReversibleScanners {
 
     // Case2: seek to the previous row in backwardSeek
     int seekRowNum = ROWSIZE - 2;
-    assertTrue(scanner.backwardSeek(KeyValue.createLastOnRow(ROWS[seekRowNum])));
+    assertTrue(scanner.backwardSeek(KeyValueUtil.createLastOnRow(ROWS[seekRowNum])));
     KeyValue expectedKey = makeKV(seekRowNum - 1, 0);
     assertEquals(expectedKey, scanner.peek());
 
     // Case3: unable to backward seek
-    assertFalse(scanner.backwardSeek(KeyValue.createLastOnRow(ROWS[0])));
+    assertFalse(scanner.backwardSeek(KeyValueUtil.createLastOnRow(ROWS[0])));
     assertEquals(null, scanner.peek());
 
     // Test seek to previous row
     seekRowNum = ROWSIZE - 4;
-    assertTrue(scanner.seekToPreviousRow(KeyValue
+    assertTrue(scanner.seekToPreviousRow(KeyValueUtil
         .createFirstOnRow(ROWS[seekRowNum])));
     expectedKey = makeKV(seekRowNum - 1, 0);
     assertEquals(expectedKey, scanner.peek());
@@ -566,7 +567,7 @@ public class TestReversibleScanners {
 
       // Case2: seek to the previous row in backwardSeek
     int seekRowNum = ROWSIZE - 3;
-    KeyValue seekKey = KeyValue.createLastOnRow(ROWS[seekRowNum]);
+    KeyValue seekKey = KeyValueUtil.createLastOnRow(ROWS[seekRowNum]);
       expectedKey = getNextReadableKeyValueWithBackwardScan(seekRowNum - 1, 0,
           readPoint);
       assertEquals(expectedKey != null, scanner.backwardSeek(seekKey));
@@ -576,7 +577,7 @@ public class TestReversibleScanners {
       seekRowNum = ROWSIZE - 4;
       expectedKey = getNextReadableKeyValueWithBackwardScan(seekRowNum - 1, 0,
           readPoint);
-      assertEquals(expectedKey != null, scanner.seekToPreviousRow(KeyValue
+      assertEquals(expectedKey != null, scanner.seekToPreviousRow(KeyValueUtil
           .createFirstOnRow(ROWS[seekRowNum])));
       assertEquals(expectedKey, scanner.peek());
   }

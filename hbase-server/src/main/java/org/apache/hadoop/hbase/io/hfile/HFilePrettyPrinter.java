@@ -29,9 +29,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.SortedMap;
 
-import com.yammer.metrics.core.*;
-import com.yammer.metrics.reporting.ConsoleReporter;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -45,10 +42,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
@@ -58,6 +56,13 @@ import org.apache.hadoop.hbase.util.ByteBloomFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
+
+import com.yammer.metrics.core.Histogram;
+import com.yammer.metrics.core.Metric;
+import com.yammer.metrics.core.MetricName;
+import com.yammer.metrics.core.MetricPredicate;
+import com.yammer.metrics.core.MetricsRegistry;
+import com.yammer.metrics.reporting.ConsoleReporter;
 
 /**
  * Implements pretty-printing functionality for {@link HFile}s.
@@ -228,7 +233,7 @@ public class HFilePrettyPrinter {
       if (this.isSeekToRow) {
         // seek to the first kv on this row
         shouldScanKeysValues = 
-          (scanner.seekTo(KeyValue.createFirstOnRow(this.row).getKey()) != -1);
+          (scanner.seekTo(KeyValueUtil.createFirstOnRow(this.row).getKey()) != -1);
       } else {
         shouldScanKeysValues = scanner.seekTo();
       }
@@ -258,7 +263,7 @@ public class HFilePrettyPrinter {
       HFileScanner scanner,  byte[] row) throws IOException {
     KeyValue pkv = null;
     do {
-      KeyValue kv = scanner.getKeyValue();
+      KeyValue kv = KeyValueUtil.ensureKeyValue(scanner.getKeyValue());
       if (row != null && row.length != 0) {
         int result = Bytes.compareTo(kv.getRow(), row);
         if (result > 0) {

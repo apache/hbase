@@ -259,7 +259,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public KeyValue getKeyValue() {
+    public Cell getKeyValue() {
       ByteBuffer kvBuf = getKeyValueBuffer();
       KeyValue kv = new KeyValue(kvBuf.array(), kvBuf.arrayOffset(), kvBuf.array().length
           - kvBuf.arrayOffset());

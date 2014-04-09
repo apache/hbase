@@ -45,15 +45,15 @@ public class TestKeyValue extends TestCase {
     byte [] qualifier2 = Bytes.toBytes("ef");
 
     KeyValue aaa = new KeyValue(a, family1, qualifier1, 0L, Type.Put, a);
-    assertFalse(aaa.matchingColumn(family2, qualifier2));
-    assertTrue(aaa.matchingColumn(family1, qualifier1));
+    assertFalse(CellUtil.matchingColumn(aaa, family2, qualifier2));
+    assertTrue(CellUtil.matchingColumn(aaa, family1, qualifier1));
     aaa = new KeyValue(a, family2, qualifier2, 0L, Type.Put, a);
-    assertFalse(aaa.matchingColumn(family1, qualifier1));
-    assertTrue(aaa.matchingColumn(family2,qualifier2));
+    assertFalse(CellUtil.matchingColumn(aaa, family1, qualifier1));
+    assertTrue(CellUtil.matchingColumn(aaa, family2,qualifier2));
     byte [] nullQualifier = new byte[0];
     aaa = new KeyValue(a, family1, nullQualifier, 0L, Type.Put, a);
-    assertTrue(aaa.matchingColumn(family1,null));
-    assertFalse(aaa.matchingColumn(family2,qualifier2));
+    assertTrue(CellUtil.matchingColumn(aaa, family1,null));
+    assertFalse(CellUtil.matchingColumn(aaa, family2,qualifier2));
   }
 
   /**
@@ -68,7 +68,7 @@ public class TestKeyValue extends TestCase {
     byte [] qualifier2 = Bytes.toBytes("def");
 
     KeyValue aaa = new KeyValue(a, family1, qualifier1, 0L, Type.Put, a);
-    assertFalse(aaa.matchingColumn(family2, qualifier2));
+    assertFalse(CellUtil.matchingColumn(aaa, family2, qualifier2));
   }
 
   public void testBasics() throws Exception {
@@ -90,7 +90,7 @@ public class TestKeyValue extends TestCase {
     final long timestamp, final byte [] value) {
     KeyValue kv = new KeyValue(row, family, qualifier, timestamp, value);
     assertTrue(Bytes.compareTo(kv.getRow(), row) == 0);
-    assertTrue(kv.matchingColumn(family, qualifier));
+    assertTrue(CellUtil.matchingColumn(kv, family, qualifier));
     // Call toString to make sure it works.
     LOG.info(kv.toString());
   }
@@ -363,15 +363,15 @@ public class TestKeyValue extends TestCase {
 
     // These are listed in sort order (ie: every one should be less
     // than the one on the next line).
-    final KeyValue firstOnRowA = KeyValue.createFirstOnRow(rowA);
-    final KeyValue firstOnRowABufferFamQual = KeyValue.createFirstOnRow(bufferA, offsetA,
+    final KeyValue firstOnRowA = KeyValueUtil.createFirstOnRow(rowA);
+    final KeyValue firstOnRowABufferFamQual = KeyValueUtil.createFirstOnRow(bufferA, offsetA,
         rowA, 0, rowA.length, family, 0, family.length, qualA, 0, qualA.length);
     final KeyValue kvA_1 = new KeyValue(rowA, null, null, ts, Type.Put);
     final KeyValue kvA_2 = new KeyValue(rowA, family, qualA, ts, Type.Put);
 
-    final KeyValue lastOnRowA = KeyValue.createLastOnRow(rowA);
-    final KeyValue firstOnRowB = KeyValue.createFirstOnRow(rowB);
-    final KeyValue firstOnRowBBufferFam = KeyValue.createFirstOnRow(bufferB, offsetB,
+    final KeyValue lastOnRowA = KeyValueUtil.createLastOnRow(rowA);
+    final KeyValue firstOnRowB = KeyValueUtil.createFirstOnRow(rowB);
+    final KeyValue firstOnRowBBufferFam = KeyValueUtil.createFirstOnRow(bufferB, offsetB,
         rowB, 0, rowB.length, family, 0, family.length, null, 0, 0);
     final KeyValue kvB = new KeyValue(rowB, family, qualA, ts, Type.Put);
 

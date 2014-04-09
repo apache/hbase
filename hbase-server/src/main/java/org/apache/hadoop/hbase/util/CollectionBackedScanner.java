@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.SortedSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.NonReversedNonLazyKeyValueScanner;
 
@@ -99,14 +100,14 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
   }
 
   @Override
-  public boolean seek(KeyValue seekKv) {
+  public boolean seek(Cell seekKv) {
     // restart iterator
     iter = data.iterator();
     return reseek(seekKv);
   }
 
   @Override
-  public boolean reseek(KeyValue seekKv) {
+  public boolean reseek(Cell seekKv) {
     while(iter.hasNext()){
       KeyValue next = iter.next();
       int ret = comparator.compare(next, seekKv);

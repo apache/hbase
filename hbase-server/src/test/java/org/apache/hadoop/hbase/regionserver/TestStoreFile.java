@@ -33,11 +33,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
@@ -590,7 +592,7 @@ public class TestStoreFile extends HBaseTestCase {
 
     // Now do reseek with empty KV to position to the beginning of the file
 
-    KeyValue k = KeyValue.createFirstOnRow(HConstants.EMPTY_BYTE_ARRAY);
+    KeyValue k = KeyValueUtil.createFirstOnRow(HConstants.EMPTY_BYTE_ARRAY);
     StoreFileScanner s = reader.getStoreFileScanner(false, false);
     s.reseek(k);
 
@@ -882,14 +884,16 @@ public class TestStoreFile extends HBaseTestCase {
     readerTwo.loadFileInfo();
     StoreFileScanner scannerTwo = readerTwo.getStoreFileScanner(true, true);
     scannerTwo.seek(KeyValue.LOWESTKEY);
-    KeyValue kv1 = null;
-    KeyValue kv2 = null;
+    Cell kv1 = null;
+    Cell kv2 = null;
     while ((kv1 = scannerOne.next()) != null) {
       kv2 = scannerTwo.next();
       assertTrue(kv1.equals(kv2));
+      KeyValue keyv1 = KeyValueUtil.ensureKeyValue(kv1);
+      KeyValue keyv2 = KeyValueUtil.ensureKeyValue(kv2);
       assertTrue(Bytes.compareTo(
-          kv1.getBuffer(), kv1.getKeyOffset(), kv1.getKeyLength(), 
-          kv2.getBuffer(), kv2.getKeyOffset(), kv2.getKeyLength()) == 0);
+          keyv1.getBuffer(), keyv1.getKeyOffset(), keyv1.getKeyLength(), 
+          keyv2.getBuffer(), keyv2.getKeyOffset(), keyv2.getKeyLength()) == 0);
       assertTrue(Bytes.compareTo(
           kv1.getValueArray(), kv1.getValueOffset(), kv1.getValueLength(),
           kv2.getValueArray(), kv2.getValueOffset(), kv2.getValueLength()) == 0);

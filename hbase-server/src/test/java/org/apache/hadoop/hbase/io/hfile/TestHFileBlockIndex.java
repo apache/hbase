@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -540,7 +541,7 @@ public class TestHFileBlockIndex {
           byte[] row = TestHFileWriterV2.randomOrderedKey(rand, i);
 
           // Key will be interpreted by KeyValue.KEY_COMPARATOR
-          byte[] k = KeyValue.createFirstOnRow(row, 0, row.length, row, 0, 0,
+          byte[] k = KeyValueUtil.createFirstOnRow(row, 0, row.length, row, 0, 0,
               row, 0, 0).getKey();
 
           byte[] v = TestHFileWriterV2.randomValue(rand);

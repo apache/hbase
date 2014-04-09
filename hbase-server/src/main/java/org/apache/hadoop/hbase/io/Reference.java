@@ -24,15 +24,16 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.protobuf.HBaseZeroCopyByteString;
 
 /**
  * A reference to the top or bottom half of a store file where 'bottom' is the first half
@@ -90,7 +91,7 @@ public class Reference {
    * @param fr
    */
   Reference(final byte [] splitRow, final Range fr) {
-    this.splitkey = splitRow == null?  null: KeyValue.createFirstOnRow(splitRow).getKey();
+    this.splitkey = splitRow == null?  null: KeyValueUtil.createFirstOnRow(splitRow).getKey();
     this.region = fr;
   }
 

@@ -47,11 +47,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
@@ -631,19 +633,19 @@ public class HStore implements Store {
       }
 
       if (verifyBulkLoads) {
-        KeyValue prevKV = null;
+        Cell prevKV = null;
         HFileScanner scanner = reader.getScanner(false, false, false);
         scanner.seekTo();
         do {
-          KeyValue kv = scanner.getKeyValue();
+          Cell kv = scanner.getKeyValue();
           if (prevKV != null) {
             if (Bytes.compareTo(prevKV.getRowArray(), prevKV.getRowOffset(),
                 prevKV.getRowLength(), kv.getRowArray(), kv.getRowOffset(),
                 kv.getRowLength()) > 0) {
               throw new InvalidHFileException("Previous row is greater than"
                   + " current row: path=" + srcPath + " previous="
-                  + Bytes.toStringBinary(prevKV.getKey()) + " current="
-                  + Bytes.toStringBinary(kv.getKey()));
+                  + Bytes.toStringBinary(KeyValueUtil.ensureKeyValue(prevKV).getKey()) + " current="
+                  + Bytes.toStringBinary(KeyValueUtil.ensureKeyValue(kv).getKey()));
             }
             if (Bytes.compareTo(prevKV.getFamilyArray(), prevKV.getFamilyOffset(),
                 prevKV.getFamilyLength(), kv.getFamilyArray(), kv.getFamilyOffset(),
@@ -1527,7 +1529,7 @@ public class HStore implements Store {
     return wantedVersions > maxVersions ? maxVersions: wantedVersions;
   }
 
-  static boolean isExpired(final KeyValue key, final long oldestTimestamp) {
+  static boolean isExpired(final Cell key, final long oldestTimestamp) {
     return key.getTimestamp() < oldestTimestamp;
   }
 
@@ -1557,15 +1559,17 @@ public class HStore implements Store {
         StoreFile sf = sfIterator.next();
         sfIterator.remove(); // Remove sf from iterator.
         boolean haveNewCandidate = rowAtOrBeforeFromStoreFile(sf, state);
-        KeyValue keyv = state.getCandidate();
+        KeyValue keyv = KeyValueUtil.ensureKeyValue(state.getCandidate());
         // we have an optimization here which stops the search if we find exact match.
-        if (keyv != null && keyv.matchingRow(row)) return state.getCandidate();
+        if (keyv != null && CellUtil.matchingRow(keyv, row)) {
+          return KeyValueUtil.ensureKeyValue(state.getCandidate());
+        }
         if (haveNewCandidate) {
           sfIterator = this.storeEngine.getStoreFileManager().updateCandidateFilesForRowKeyBefore(
-              sfIterator, state.getTargetKey(), state.getCandidate());
+              sfIterator, state.getTargetKey(), KeyValueUtil.ensureKeyValue(state.getCandidate()));
         }
       }
-      return state.getCandidate();
+      return KeyValueUtil.ensureKeyValue(state.getCandidate());
     } finally {
       this.lock.readLock().unlock();
     }
@@ -1615,7 +1619,7 @@ public class HStore implements Store {
     // If here, need to start backing up.
     while (scanner.seekBefore(firstOnRow.getBuffer(), firstOnRow.getKeyOffset(),
        firstOnRow.getKeyLength())) {
-      KeyValue kv = scanner.getKeyValue();
+      Cell kv = scanner.getKeyValue();
       if (!state.isTargetTable(kv)) break;
       if (!state.isBetterCandidate(kv)) break;
       // Make new first on row.
@@ -1663,7 +1667,7 @@ public class HStore implements Store {
       throws IOException {
     boolean foundCandidate = false;
     do {
-      KeyValue kv = scanner.getKeyValue();
+      Cell kv = scanner.getKeyValue();
       // If we are not in the row, skip.
       if (this.comparator.compareRows(kv, firstOnRow) < 0) continue;
       // Did we go beyond the target row? If so break.

@@ -574,7 +574,7 @@ public class HFileReadWriteTest {
           return false;
         }
         for (int i = 0; i < rand.nextInt(10) + 1; ++i) {
-          KeyValue kv = scanner.next();
+          Cell kv = scanner.next();
           numKV.incrementAndGet();
           if (i == 0 && kv == null) {
             error("scanner.next() returned null at the first iteration for " +
@@ -584,9 +584,10 @@ public class HFileReadWriteTest {
           if (kv == null)
             break;
 
-          String keyHashStr = MD5Hash.getMD5AsHex(kv.getKey());
+          KeyValue keyv = KeyValueUtil.ensureKeyValue(kv);
+          String keyHashStr = MD5Hash.getMD5AsHex(keyv.getKey());
           keysRead.add(keyHashStr);
-          totalBytes.addAndGet(kv.getLength());
+          totalBytes.addAndGet(keyv.getLength());
         }
       }
 

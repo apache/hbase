@@ -35,7 +35,9 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeCodec;
@@ -113,14 +115,14 @@ public class TestPrefixTreeEncoding {
     seeker.setCurrentBuffer(readBuffer);
 
     // Seek before the first keyvalue;
-    KeyValue seekKey = KeyValue.createFirstDeleteFamilyOnRow(getRowKey(batchId, 0), CF_BYTES);
+    KeyValue seekKey = KeyValueUtil.createFirstDeleteFamilyOnRow(getRowKey(batchId, 0), CF_BYTES);
     seeker.seekToKeyInBlock(
         new KeyValue.KeyOnlyKeyValue(seekKey.getBuffer(), seekKey.getKeyOffset(), seekKey
             .getKeyLength()), true);
     assertEquals(null, seeker.getKeyValue());
 
     // Seek before the middle keyvalue;
-    seekKey = KeyValue.createFirstDeleteFamilyOnRow(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3),
+    seekKey = KeyValueUtil.createFirstDeleteFamilyOnRow(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3),
         CF_BYTES);
     seeker.seekToKeyInBlock(
         new KeyValue.KeyOnlyKeyValue(seekKey.getBuffer(), seekKey.getKeyOffset(), seekKey
@@ -129,7 +131,7 @@ public class TestPrefixTreeEncoding {
     assertArrayEquals(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3 - 1), seeker.getKeyValue().getRow());
 
     // Seek before the last keyvalue;
-    seekKey = KeyValue.createFirstDeleteFamilyOnRow(Bytes.toBytes("zzzz"), CF_BYTES);
+    seekKey = KeyValueUtil.createFirstDeleteFamilyOnRow(Bytes.toBytes("zzzz"), CF_BYTES);
     seeker.seekToKeyInBlock(
         new KeyValue.KeyOnlyKeyValue(seekKey.getBuffer(), seekKey.getKeyOffset(), seekKey
             .getKeyLength()), true);
@@ -156,9 +158,9 @@ public class TestPrefixTreeEncoding {
     ByteBuffer readBuffer = ByteBuffer.wrap(onDiskBytes, DataBlockEncoding.ID_SIZE,
         onDiskBytes.length - DataBlockEncoding.ID_SIZE);
     seeker.setCurrentBuffer(readBuffer);
-    KeyValue previousKV = null;
+    Cell previousKV = null;
     do {
-      KeyValue currentKV = seeker.getKeyValue();
+      Cell currentKV = seeker.getKeyValue();
       System.out.println(currentKV);
       if (previousKV != null && KeyValue.COMPARATOR.compare(currentKV, previousKV) < 0) {
         dumpInputKVSet();
@@ -223,7 +225,7 @@ public class TestPrefixTreeEncoding {
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
       kvList.clear();
       encodeSeeker.setCurrentBuffer(encodedData);
-      KeyValue firstOnRow = KeyValue.createFirstOnRow(getRowKey(batchId, i));
+      KeyValue firstOnRow = KeyValueUtil.createFirstOnRow(getRowKey(batchId, i));
       encodeSeeker.seekToKeyInBlock(
           new KeyValue.KeyOnlyKeyValue(firstOnRow.getBuffer(), firstOnRow.getKeyOffset(),
               firstOnRow.getKeyLength()), false);

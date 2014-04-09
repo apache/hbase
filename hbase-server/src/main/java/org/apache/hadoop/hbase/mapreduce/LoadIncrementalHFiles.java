@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -734,7 +735,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();
       do {
-        KeyValue kv = scanner.getKeyValue();
+        KeyValue kv = KeyValueUtil.ensureKeyValue(scanner.getKeyValue());
         halfWriter.append(kv);
       } while (scanner.next());
 

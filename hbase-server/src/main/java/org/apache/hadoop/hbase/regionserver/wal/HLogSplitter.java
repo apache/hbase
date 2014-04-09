@@ -1437,7 +1437,7 @@ public class HLogSplitter {
           // We don't handle HBASE-2231 because we may or may not replay a compaction event.
           // Details at https://issues.apache.org/jira/browse/HBASE-2231?focusedCommentId=13647143&
           // page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-13647143
-          if (kv.matchingFamily(WALEdit.METAFAMILY)) {
+          if (CellUtil.matchingFamily(kv, WALEdit.METAFAMILY)) {
             skippedKVs.add(kv);
             continue;
           }

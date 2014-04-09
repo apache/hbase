@@ -19,10 +19,15 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -30,10 +35,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A {@link Filter} that checks a single column value, but does not emit the
@@ -109,7 +111,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
       KeyValue kv = KeyValueUtil.ensureKeyValue(it.next());
       // If the current column is actually the tested column,
       // we will skip it instead.
-      if (kv.matchingColumn(this.columnFamily, this.columnQualifier)) {
+      if (CellUtil.matchingColumn(kv, this.columnFamily, this.columnQualifier)) {
         it.remove();
       }
     }

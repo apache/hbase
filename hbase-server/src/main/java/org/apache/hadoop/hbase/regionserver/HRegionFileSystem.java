@@ -20,8 +20,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.FileNotFoundException;
-import java.io.InterruptedIOException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.Reference;
@@ -534,7 +535,7 @@ public class HRegionFileSystem {
     // If it is outside the range, return directly.
     if (top) {
       //check if larger than last key.
-      KeyValue splitKey = KeyValue.createFirstOnRow(splitRow);
+      KeyValue splitKey = KeyValueUtil.createFirstOnRow(splitRow);
       byte[] lastKey = f.createReader().getLastKey();      
       // If lastKey is null means storefile is empty.
       if (lastKey == null) return null;
@@ -544,7 +545,7 @@ public class HRegionFileSystem {
       }
     } else {
       //check if smaller than first key
-      KeyValue splitKey = KeyValue.createLastOnRow(splitRow);
+      KeyValue splitKey = KeyValueUtil.createLastOnRow(splitRow);
       byte[] firstKey = f.createReader().getFirstKey();
       // If firstKey is null means storefile is empty.
       if (firstKey == null) return null;

@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -31,9 +32,8 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import com.google.protobuf.HBaseZeroCopyByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Filters data based on fuzzy row key. Performs fast-forwards during scanning.
@@ -131,7 +131,7 @@ public class FuzzyRowFilter extends FilterBase {
                                          " currentKV: " + currentKV.toString());
     }
 
-    return KeyValue.createFirstOnRow(nextRowKey);
+    return KeyValueUtil.createFirstOnRow(nextRowKey);
   }
 
   @Override

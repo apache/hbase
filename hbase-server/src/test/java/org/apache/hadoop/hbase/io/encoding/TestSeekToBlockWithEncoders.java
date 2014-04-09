@@ -23,8 +23,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -154,7 +156,7 @@ public class TestSeekToBlockWithEncoders {
         Bytes.toBytes("q1"), Bytes.toBytes("val"));
     sampleKv.add(kv4);
     ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv, false);
-    KeyValue toSeek = KeyValue.createLastOnRow(kv3.getRowArray(), kv3.getRowOffset(),
+    KeyValue toSeek = KeyValueUtil.createLastOnRow(kv3.getRowArray(), kv3.getRowOffset(),
         kv3.getRowLength(), null, 0, 0, null, 0, 0);
     seekToTheKey(kv3, originalBuffer, toSeek);
   }
@@ -304,7 +306,7 @@ public class TestSeekToBlockWithEncoders {
       seeker.seekToKeyInBlock(
           new KeyValue.KeyOnlyKeyValue(keyValue.getBuffer(), keyValue.getKeyOffset(), keyValue
               .getKeyLength()), false);
-      KeyValue keyValue2 = seeker.getKeyValue();
+      Cell keyValue2 = seeker.getKeyValue();
       assertEquals(expected, keyValue2);
       seeker.rewind();
     }

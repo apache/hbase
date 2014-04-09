@@ -82,7 +82,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * KVs skipped via seeking to next row/column. TODO: estimate them?
    */
   private long kvsScanned = 0;
-  private KeyValue prevKV = null;
+  private Cell prevKV = null;
 
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
@@ -94,7 +94,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       LAZY_SEEK_ENABLED_BY_DEFAULT;
 
   // if heap == null and lastTop != null, you need to reseek given the key below
-  protected KeyValue lastTop = null;
+  protected Cell lastTop = null;
 
   // A flag whether use pread for scan
   private boolean scanUsePread = false;
@@ -301,7 +301,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @throws IOException
    */
   protected void seekScanners(List<? extends KeyValueScanner> scanners,
-      KeyValue seekKey, boolean isLazy, boolean isParallelSeek)
+      Cell seekKey, boolean isLazy, boolean isParallelSeek)
       throws IOException {
     // Seek all scanners to the start of the Row (or if the exact matching row
     // key does not exist, then to the start of the next matching Row).
@@ -368,7 +368,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   @Override
-  public KeyValue peek() {
+  public Cell peek() {
     lock.lock();
     try {
     if (this.heap == null) {
@@ -405,7 +405,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   @Override
-  public boolean seek(KeyValue key) throws IOException {
+  public boolean seek(Cell key) throws IOException {
     lock.lock();
     try {
     // reset matcher state, in case that underlying store changed
@@ -437,7 +437,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       return false;
     }
 
-    KeyValue peeked = this.heap.peek();
+    Cell peeked = this.heap.peek();
     if (peeked == null) {
       close();
       return false;
@@ -454,7 +454,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       matcher.setRow(row, offset, length);
     }
 
-    KeyValue kv;
+    Cell kv;
 
     // Only do a sanity-check if store and comparator are available.
     KeyValue.KVComparator comparator =
@@ -466,7 +466,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       checkScanOrder(prevKV, kv, comparator);
       prevKV = kv;
 
-      ScanQueryMatcher.MatchCode qcode = matcher.match(kv);
+      ScanQueryMatcher.MatchCode qcode = matcher.match(KeyValueUtil.ensureKeyValue(kv));
       switch(qcode) {
         case INCLUDE:
         case INCLUDE_AND_SEEK_NEXT_ROW:
@@ -482,7 +482,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           if (storeLimit > -1 &&
               this.countPerRow > (storeLimit + storeOffset)) {
             // do what SEEK_NEXT_ROW does.
-            if (!matcher.moreRowsMayExistAfter(kv)) {
+            if (!matcher.moreRowsMayExistAfter(KeyValueUtil.ensureKeyValue(kv))) {
               return false;
             }
             seekToNextRow(kv);
@@ -497,12 +497,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           }
 
           if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
-            if (!matcher.moreRowsMayExistAfter(kv)) {
+            if (!matcher.moreRowsMayExistAfter(KeyValueUtil.ensureKeyValue(kv))) {
               return false;
             }
             seekToNextRow(kv);
           } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
-            seekAsDirection(matcher.getKeyForNextColumn(kv));
+            seekAsDirection(matcher.getKeyForNextColumn(KeyValueUtil.ensureKeyValue(kv)));
           } else {
             this.heap.next();
           }
@@ -522,7 +522,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         case SEEK_NEXT_ROW:
           // This is just a relatively simple end of scan fix, to short-cut end
           // us if there is an endKey in the scan.
-          if (!matcher.moreRowsMayExistAfter(kv)) {
+          if (!matcher.moreRowsMayExistAfter(KeyValueUtil.ensureKeyValue(kv))) {
             return false;
           }
 
@@ -530,7 +530,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           break;
 
         case SEEK_NEXT_COL:
-          seekAsDirection(matcher.getKeyForNextColumn(kv));
+          seekAsDirection(matcher.getKeyForNextColumn(KeyValueUtil.ensureKeyValue(kv)));
           break;
 
         case SKIP:
@@ -619,7 +619,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return false;
   }
 
-  protected void resetScannerStack(KeyValue lastTopKey) throws IOException {
+  protected void resetScannerStack(Cell lastTopKey) throws IOException {
     if (heap != null) {
       throw new RuntimeException("StoreScanner.reseek run on an existing heap!");
     }
@@ -638,7 +638,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // Reset the state of the Query Matcher and set to top row.
     // Only reset and call setRow if the row changes; avoids confusing the
     // query matcher if scanning intra-row.
-    KeyValue kv = heap.peek();
+    Cell kv = heap.peek();
     if (kv == null) {
       kv = lastTopKey;
     }
@@ -660,7 +660,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @param comparator
    * @throws IOException
    */
-  protected void checkScanOrder(KeyValue prevKV, KeyValue kv,
+  protected void checkScanOrder(Cell prevKV, Cell kv,
       KeyValue.KVComparator comparator) throws IOException {
     // Check that the heap gives us KVs in an increasing order.
     assert prevKV == null || comparator == null
@@ -668,8 +668,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         + " followed by a " + "smaller key " + kv + " in cf " + store;
   }
 
-  protected boolean seekToNextRow(KeyValue kv) throws IOException {
-    return reseek(matcher.getKeyForNextRow(kv));
+  protected boolean seekToNextRow(Cell kv) throws IOException {
+    return reseek(KeyValueUtil.createLastOnRow(kv));
   }
 
   /**
@@ -684,7 +684,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   @Override
-  public boolean reseek(KeyValue kv) throws IOException {
+  public boolean reseek(Cell kv) throws IOException {
     lock.lock();
     try {
     //Heap will not be null, if this is called from next() which.
@@ -712,7 +712,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @throws IOException
    */
   private void parallelSeek(final List<? extends KeyValueScanner>
-      scanners, final KeyValue kv) throws IOException {
+      scanners, final Cell kv) throws IOException {
     if (scanners.isEmpty()) return;
     int storeFileScannerCount = scanners.size();
     CountDownLatch latch = new CountDownLatch(storeFileScannerCount);

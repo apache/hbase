@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -204,7 +205,7 @@ public class TestDefaultMemStore extends TestCase {
     List<KeyValueScanner> memstorescanners = this.memstore.getScanners(mvcc.memstoreReadPoint());
     assertEquals(1, memstorescanners.size());
     final KeyValueScanner scanner = memstorescanners.get(0);
-    scanner.seek(KeyValue.createFirstOnRow(HConstants.EMPTY_START_ROW));
+    scanner.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_START_ROW));
     assertEquals(kv1, scanner.next());
     assertEquals(kv2, scanner.next());
     assertNull(scanner.next());
@@ -212,11 +213,11 @@ public class TestDefaultMemStore extends TestCase {
 
   private void assertScannerResults(KeyValueScanner scanner, KeyValue[] expected)
       throws IOException {
-    scanner.seek(KeyValue.createFirstOnRow(new byte[]{}));
+    scanner.seek(KeyValueUtil.createFirstOnRow(new byte[]{}));
     List<Cell> returned = Lists.newArrayList();
 
     while (true) {
-      KeyValue next = scanner.next();
+      Cell next = scanner.next();
       if (next == null) break;
       returned.add(next);
     }
@@ -417,7 +418,7 @@ public class TestDefaultMemStore extends TestCase {
         KeyValueScanner s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
         s.seek(kv);
 
-        KeyValue ret = s.next();
+        Cell ret = s.next();
         assertNotNull("Didnt find own write at all", ret);
         assertEquals("Didnt read own writes",
                      kv.getTimestamp(), ret.getTimestamp());
@@ -1009,7 +1010,7 @@ public class TestDefaultMemStore extends TestCase {
   static void doScan(MemStore ms, int iteration) throws IOException {
     long nanos = System.nanoTime();
     KeyValueScanner s = ms.getScanners(0).get(0);
-    s.seek(KeyValue.createFirstOnRow(new byte[]{}));
+    s.seek(KeyValueUtil.createFirstOnRow(new byte[]{}));
 
     System.out.println(iteration + " create/seek took: " + (System.nanoTime() - nanos)/1000);
     int cnt=0;

@@ -102,7 +102,6 @@ import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -3214,7 +3213,7 @@ public class HRegion implements HeapSize { // , Writable{
           for (KeyValue kv: val.getKeyValues()) {
             // Check this edit is for me. Also, guard against writing the special
             // METACOLUMN info such as HBASE::CACHEFLUSH entries
-            if (kv.matchingFamily(WALEdit.METAFAMILY) ||
+            if (CellUtil.matchingFamily(kv, WALEdit.METAFAMILY) ||
                 !Bytes.equals(key.getEncodedRegionName(),
                   this.getRegionInfo().getEncodedNameAsBytes())) {
               //this is a special edit, we should handle it
@@ -3228,7 +3227,7 @@ public class HRegion implements HeapSize { // , Writable{
               continue;
             }
             // Figure which store the edit is meant for.
-            if (store == null || !kv.matchingFamily(store.getFamily().getName())) {
+            if (store == null || !CellUtil.matchingFamily(kv, store.getFamily().getName())) {
               store = this.stores.get(kv.getFamily());
             }
             if (store == null) {
@@ -3632,7 +3631,7 @@ public class HRegion implements HeapSize { // , Writable{
     /**
      * If the joined heap data gathering is interrupted due to scan limits, this will
      * contain the row for which we are populating the values.*/
-    protected KeyValue joinedContinuationRow = null;
+    protected Cell joinedContinuationRow = null;
     // KeyValue indicating that limit is reached when scanning
     private final KeyValue KV_LIMIT = new KeyValue();
     protected final byte[] stopRow;
@@ -3795,7 +3794,7 @@ public class HRegion implements HeapSize { // , Writable{
     private void populateFromJoinedHeap(List<Cell> results, int limit)
         throws IOException {
       assert joinedContinuationRow != null;
-      KeyValue kv = populateResult(results, this.joinedHeap, limit,
+      Cell kv = populateResult(results, this.joinedHeap, limit,
           joinedContinuationRow.getRowArray(), joinedContinuationRow.getRowOffset(),
           joinedContinuationRow.getRowLength());
       if (kv != KV_LIMIT) {
@@ -3817,16 +3816,16 @@ public class HRegion implements HeapSize { // , Writable{
      * @param length length for currentRow
      * @return KV_LIMIT if limit reached, next KeyValue otherwise.
      */
-    private KeyValue populateResult(List<Cell> results, KeyValueHeap heap, int limit,
+    private Cell populateResult(List<Cell> results, KeyValueHeap heap, int limit,
         byte[] currentRow, int offset, short length) throws IOException {
-      KeyValue nextKv;
+      Cell nextKv;
       do {
         heap.next(results, limit - results.size());
         if (limit > 0 && results.size() == limit) {
           return KV_LIMIT;
         }
         nextKv = heap.peek();
-      } while (nextKv != null && nextKv.matchingRow(currentRow, offset, length));
+      } while (nextKv != null && CellUtil.matchingRow(nextKv, currentRow, offset, length));
 
       return nextKv;
     }
@@ -3870,7 +3869,7 @@ public class HRegion implements HeapSize { // , Writable{
         }
 
         // Let's see what we have in the storeHeap.
-        KeyValue current = this.storeHeap.peek();
+        Cell current = this.storeHeap.peek();
 
         byte[] currentRow = null;
         int offset = 0;
@@ -3901,7 +3900,7 @@ public class HRegion implements HeapSize { // , Writable{
             continue;
           }
 
-          KeyValue nextKv = populateResult(results, this.storeHeap, limit, currentRow, offset,
+          Cell nextKv = populateResult(results, this.storeHeap, limit, currentRow, offset,
               length);
           // Ok, we are good, let's try to get some results from the main heap.
           if (nextKv == KV_LIMIT) {
@@ -3940,14 +3939,14 @@ public class HRegion implements HeapSize { // , Writable{
           // These values are not needed for filter to work, so we postpone their
           // fetch to (possibly) reduce amount of data loads from disk.
           if (this.joinedHeap != null) {
-            KeyValue nextJoinedKv = joinedHeap.peek();
+            Cell nextJoinedKv = joinedHeap.peek();
             // If joinedHeap is pointing to some other row, try to seek to a correct one.
-            boolean mayHaveData =
-              (nextJoinedKv != null && nextJoinedKv.matchingRow(currentRow, offset, length))
-              || (this.joinedHeap.requestSeek(KeyValue.createFirstOnRow(currentRow, offset, length),
-                true, true)
-                && joinedHeap.peek() != null
-                && joinedHeap.peek().matchingRow(currentRow, offset, length));
+            boolean mayHaveData = (nextJoinedKv != null && CellUtil.matchingRow(nextJoinedKv,
+                currentRow, offset, length))
+                || (this.joinedHeap.requestSeek(
+                    KeyValueUtil.createFirstOnRow(currentRow, offset, length), true, true)
+                    && joinedHeap.peek() != null && CellUtil.matchingRow(joinedHeap.peek(),
+                    currentRow, offset, length));
             if (mayHaveData) {
               joinedContinuationRow = current;
               populateFromJoinedHeap(results, limit);
@@ -3999,9 +3998,9 @@ public class HRegion implements HeapSize { // , Writable{
 
     protected boolean nextRow(byte [] currentRow, int offset, short length) throws IOException {
       assert this.joinedContinuationRow == null: "Trying to go to next row during joinedHeap read.";
-      KeyValue next;
+      Cell next;
       while ((next = this.storeHeap.peek()) != null &&
-             next.matchingRow(currentRow, offset, length)) {
+             CellUtil.matchingRow(next, currentRow, offset, length)) {
         this.storeHeap.next(MOCKED_LIST);
       }
       resetFilters();
@@ -4045,7 +4044,7 @@ public class HRegion implements HeapSize { // , Writable{
       boolean result = false;
       startRegionOperation();
       try {
-        KeyValue kv = KeyValue.createFirstOnRow(row);
+        KeyValue kv = KeyValueUtil.createFirstOnRow(row);
         // use request seek to make use of the lazy seek option. See HBASE-5520
         result = this.storeHeap.requestSeek(kv, true, true);
         if (this.joinedHeap != null) {

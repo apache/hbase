@@ -29,8 +29,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
@@ -47,11 +50,11 @@ public class StoreFileScanner implements KeyValueScanner {
   // the reader it comes from:
   private final StoreFile.Reader reader;
   private final HFileScanner hfs;
-  private KeyValue cur = null;
+  private Cell cur = null;
 
   private boolean realSeekDone;
   private boolean delayedReseek;
-  private KeyValue delayedSeekKV;
+  private Cell delayedSeekKV;
 
   private boolean enforceMVCC = false;
   private boolean hasMVCCInfo = false;
@@ -124,12 +127,12 @@ public class StoreFileScanner implements KeyValueScanner {
     return "StoreFileScanner[" + hfs.toString() + ", cur=" + cur + "]";
   }
 
-  public KeyValue peek() {
+  public Cell peek() {
     return cur;
   }
 
-  public KeyValue next() throws IOException {
-    KeyValue retKey = cur;
+  public Cell next() throws IOException {
+    Cell retKey = cur;
 
     try {
       // only seek if we aren't at the end. cur == null implies 'end'.
@@ -145,7 +148,7 @@ public class StoreFileScanner implements KeyValueScanner {
     return retKey;
   }
 
-  public boolean seek(KeyValue key) throws IOException {
+  public boolean seek(Cell key) throws IOException {
     if (seekCount != null) seekCount.incrementAndGet();
 
     try {
@@ -166,7 +169,7 @@ public class StoreFileScanner implements KeyValueScanner {
     }
   }
 
-  public boolean reseek(KeyValue key) throws IOException {
+  public boolean reseek(Cell key) throws IOException {
     if (seekCount != null) seekCount.incrementAndGet();
 
     try {
@@ -190,7 +193,7 @@ public class StoreFileScanner implements KeyValueScanner {
   protected boolean skipKVsNewerThanReadpoint() throws IOException {
     // We want to ignore all key-values that are newer than our current
     // readPoint
-    KeyValue startKV = cur;
+    Cell startKV = cur;
     while(enforceMVCC
         && cur != null
         && (cur.getMvccVersion() > readPt)) {
@@ -216,7 +219,7 @@ public class StoreFileScanner implements KeyValueScanner {
     // not old enough during flush). Make sure that we set it correctly now,
     // so that the comparision order does not change.
     if (cur.getMvccVersion() <= readPt) {
-      cur.setMvccVersion(0);
+      KeyValueUtil.ensureKeyValue(cur).setMvccVersion(0);
     }
     return true;
   }
@@ -233,7 +236,7 @@ public class StoreFileScanner implements KeyValueScanner {
    * @return false if not found or if k is after the end.
    * @throws IOException
    */
-  public static boolean seekAtOrAfter(HFileScanner s, KeyValue k)
+  public static boolean seekAtOrAfter(HFileScanner s, Cell k)
   throws IOException {
     int result = s.seekTo(k);
     if(result < 0) {
@@ -252,7 +255,7 @@ public class StoreFileScanner implements KeyValueScanner {
     return true;
   }
 
-  static boolean reseekAtOrAfter(HFileScanner s, KeyValue k)
+  static boolean reseekAtOrAfter(HFileScanner s, Cell k)
   throws IOException {
     //This function is similar to seekAtOrAfter function
     int result = s.reseekTo(k);
@@ -294,7 +297,7 @@ public class StoreFileScanner implements KeyValueScanner {
    * row/column and use OLDEST_TIMESTAMP in the seek key.
    */
   @Override
-  public boolean requestSeek(KeyValue kv, boolean forward, boolean useBloom)
+  public boolean requestSeek(Cell kv, boolean forward, boolean useBloom)
       throws IOException {
     if (kv.getFamilyLength() == 0) {
       useBloom = false;
@@ -308,7 +311,7 @@ public class StoreFileScanner implements KeyValueScanner {
             kv.getRowOffset(), kv.getRowLength(), kv.getQualifierArray(),
             kv.getQualifierOffset(), kv.getQualifierLength());
       } else if (this.matcher != null && !matcher.hasNullColumnInQuery() &&
-          (kv.isDeleteFamily() || kv.isDeleteFamilyVersion())) {
+          ((CellUtil.isDeleteFamily(kv) || CellUtil.isDeleteFamilyVersion(kv)))) {
         // if there is no such delete family kv in the store file,
         // then no need to seek.
         haveToSeek = reader.passesDeleteFamilyBloomFilter(kv.getRowArray(),
@@ -332,7 +335,7 @@ public class StoreFileScanner implements KeyValueScanner {
         // a higher timestamp than the max timestamp in this file. We know that
         // the next point when we have to consider this file again is when we
         // pass the max timestamp of this file (with the same row/column).
-        cur = kv.createFirstOnRowColTS(maxTimestampInFile);
+        cur = KeyValueUtil.createFirstOnRowColTS(kv, maxTimestampInFile);
       } else {
         // This will be the case e.g. when we need to seek to the next
         // row/column, and we don't know exactly what they are, so we set the
@@ -350,7 +353,7 @@ public class StoreFileScanner implements KeyValueScanner {
     // key/value and the store scanner will progress to the next column. This
     // is obviously not a "real real" seek, but unlike the fake KV earlier in
     // this method, we want this to be propagated to ScanQueryMatcher.
-    cur = kv.createLastOnRowCol();
+    cur = KeyValueUtil.createLastOnRowCol(kv);
 
     realSeekDone = true;
     return true;
@@ -402,18 +405,19 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean seekToPreviousRow(KeyValue key) throws IOException {
+  public boolean seekToPreviousRow(Cell key) throws IOException {
     try {
       try {
-        KeyValue seekKey = KeyValue.createFirstOnRow(key.getRow());
+        KeyValue seekKey = KeyValueUtil.createFirstOnRow(key.getRowArray(), key.getRowOffset(),
+            key.getRowLength());
         if (seekCount != null) seekCount.incrementAndGet();
         if (!hfs.seekBefore(seekKey.getBuffer(), seekKey.getKeyOffset(),
             seekKey.getKeyLength())) {
           close();
           return false;
         }
-        KeyValue firstKeyOfPreviousRow = KeyValue.createFirstOnRow(hfs
-            .getKeyValue().getRow());
+        KeyValue firstKeyOfPreviousRow = KeyValueUtil.createFirstOnRow(hfs.getKeyValue()
+            .getRowArray(), hfs.getKeyValue().getRowOffset(), hfs.getKeyValue().getRowLength());
 
         if (seekCount != null) seekCount.incrementAndGet();
         if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
@@ -430,10 +434,7 @@ public class StoreFileScanner implements KeyValueScanner {
           this.stopSkippingKVsIfNextRow = false;
         }
         if (!resultOfSkipKVs
-            || Bytes.compareTo(cur.getBuffer(), cur.getRowOffset(),
-                cur.getRowLength(), firstKeyOfPreviousRow.getBuffer(),
-                firstKeyOfPreviousRow.getRowOffset(),
-                firstKeyOfPreviousRow.getRowLength()) > 0) {
+            || KeyValue.COMPARATOR.compareRows(cur, firstKeyOfPreviousRow) > 0) {
           return seekToPreviousRow(firstKeyOfPreviousRow);
         }
 
@@ -453,7 +454,7 @@ public class StoreFileScanner implements KeyValueScanner {
     if (lastRow == null) {
       return false;
     }
-    KeyValue seekKey = KeyValue.createFirstOnRow(lastRow);
+    KeyValue seekKey = KeyValueUtil.createFirstOnRow(lastRow);
     if (seek(seekKey)) {
       return true;
     } else {
@@ -462,7 +463,7 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean backwardSeek(KeyValue key) throws IOException {
+  public boolean backwardSeek(Cell key) throws IOException {
     seek(key);
     if (cur == null
         || Bytes.compareTo(cur.getRowArray(), cur.getRowOffset(),

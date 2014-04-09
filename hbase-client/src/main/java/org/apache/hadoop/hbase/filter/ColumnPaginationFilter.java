@@ -20,16 +20,16 @@ package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -145,7 +145,7 @@ public class ColumnPaginationFilter extends FilterBase
 
   @Override
   public Cell getNextCellHint(Cell kv) {
-    return KeyValue.createFirstOnRow(
+    return KeyValueUtil.createFirstOnRow(
         kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), kv.getFamilyArray(),
         kv.getFamilyOffset(), kv.getFamilyLength(), columnOffset, 0, columnOffset.length);
   }

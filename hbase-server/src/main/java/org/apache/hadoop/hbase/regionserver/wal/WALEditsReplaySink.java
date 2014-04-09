@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -230,7 +231,7 @@ public class WALEditsReplaySink {
         List<KeyValue> kvs = edit.getKeyValues();
         for (KeyValue kv : kvs) {
           // filtering HLog meta entries
-          if (kv.matchingFamily(WALEdit.METAFAMILY)) continue;
+          if (CellUtil.matchingFamily(kv, WALEdit.METAFAMILY)) continue;
 
           setLocation(conn.locateRegion(tableName, kv.getRow()));
           skip = true;

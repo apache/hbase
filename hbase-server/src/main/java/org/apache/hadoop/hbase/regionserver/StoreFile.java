@@ -41,9 +41,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -1311,11 +1311,11 @@ public class StoreFile {
           && Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
         return true;
       }
-      KeyValue smallestScanKeyValue = scan.isReversed() ? KeyValue
-          .createFirstOnRow(scan.getStopRow()) : KeyValue.createFirstOnRow(scan
+      KeyValue smallestScanKeyValue = scan.isReversed() ? KeyValueUtil
+          .createFirstOnRow(scan.getStopRow()) : KeyValueUtil.createFirstOnRow(scan
           .getStartRow());
-      KeyValue largestScanKeyValue = scan.isReversed() ? KeyValue
-          .createLastOnRow(scan.getStartRow()) : KeyValue.createLastOnRow(scan
+      KeyValue largestScanKeyValue = scan.isReversed() ? KeyValueUtil
+          .createLastOnRow(scan.getStartRow()) : KeyValueUtil.createLastOnRow(scan
           .getStopRow());
       boolean nonOverLapping = (getComparator().compareFlatKey(
           this.getFirstKey(), largestScanKeyValue.getKey()) > 0 && !Bytes

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.row.BaseTestRowData;
@@ -71,7 +72,7 @@ public class TestRowDataTrivialWithTags extends BaseTestRowData{
      * The searcher should get a token mismatch on the "r" branch. Assert that
      * it skips not only rA, but rB as well.
      */
-    KeyValue afterLast = KeyValue.createFirstOnRow(Bytes.toBytes("zzz"));
+    KeyValue afterLast = KeyValueUtil.createFirstOnRow(Bytes.toBytes("zzz"));
     CellScannerPosition position = searcher.positionAtOrAfter(afterLast);
     Assert.assertEquals(CellScannerPosition.AFTER_LAST, position);
     Assert.assertNull(searcher.current());

@@ -22,7 +22,12 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hbase.*;
+
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
@@ -42,19 +47,19 @@ public class TestKeyValueScanFixture extends TestCase {
     KeyValueScanner scan = new KeyValueScanFixture(
         KeyValue.COMPARATOR, kvs);
 
-    KeyValue kv = KeyValue.createFirstOnRow(Bytes.toBytes("RowA"));
+    KeyValue kv = KeyValueUtil.createFirstOnRow(Bytes.toBytes("RowA"));
     // should seek to this:
     assertTrue(scan.seek(kv));
-    KeyValue res = scan.peek();
+    Cell res = scan.peek();
     assertEquals(kvs[0], res);
 
-    kv = KeyValue.createFirstOnRow(Bytes.toBytes("RowB"));
+    kv = KeyValueUtil.createFirstOnRow(Bytes.toBytes("RowB"));
     assertTrue(scan.seek(kv));
     res = scan.peek();
     assertEquals(kvs[2], res);
 
     // ensure we pull things out properly:
-    kv = KeyValue.createFirstOnRow(Bytes.toBytes("RowA"));
+    kv = KeyValueUtil.createFirstOnRow(Bytes.toBytes("RowA"));
     assertTrue(scan.seek(kv));
     assertEquals(kvs[0], scan.peek());
     assertEquals(kvs[0], scan.next());

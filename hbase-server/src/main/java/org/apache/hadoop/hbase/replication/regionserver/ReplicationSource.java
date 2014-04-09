@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -672,7 +673,7 @@ public class ReplicationSource extends Thread
     int distinctRowKeys = 1;
     KeyValue lastKV = kvs.get(0);
     for (int i = 0; i < edit.size(); i++) {
-      if (!kvs.get(i).matchingRow(lastKV)) {
+      if (!CellUtil.matchingRow(kvs.get(i), lastKV)) {
         distinctRowKeys++;
       }
     }

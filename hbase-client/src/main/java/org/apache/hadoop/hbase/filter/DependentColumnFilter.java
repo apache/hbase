@@ -25,10 +25,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -139,7 +140,7 @@ public class DependentColumnFilter extends CompareFilter {
     // TODO make matching Column a cell method or CellUtil method.
     KeyValue v = KeyValueUtil.ensureKeyValue(c);
     // Check if the column and qualifier match
-  	if (!v.matchingColumn(this.columnFamily, this.columnQualifier)) {
+  	if (!CellUtil.matchingColumn(v, this.columnFamily, this.columnQualifier)) {
         // include non-matches for the time being, they'll be discarded afterwards
         return ReturnCode.INCLUDE;
   	}

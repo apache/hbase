@@ -24,11 +24,10 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
-import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
 
 /**
  * Handler to seek storefiles in parallel.
@@ -37,12 +36,12 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
 public class ParallelSeekHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(ParallelSeekHandler.class);
   private KeyValueScanner scanner;
-  private KeyValue keyValue;
+  private Cell keyValue;
   private long readPoint;
   private CountDownLatch latch;
   private Throwable err = null;
 
-  public ParallelSeekHandler(KeyValueScanner scanner,KeyValue keyValue,
+  public ParallelSeekHandler(KeyValueScanner scanner,Cell keyValue, 
       long readPoint, CountDownLatch latch) {
     super(null, EventType.RS_PARALLEL_SEEK);
     this.scanner = scanner;

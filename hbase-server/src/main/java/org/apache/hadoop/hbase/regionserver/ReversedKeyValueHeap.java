@@ -23,7 +23,8 @@ import java.util.List;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
 /**
@@ -47,26 +48,26 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
   }
 
   @Override
-  public boolean seek(KeyValue seekKey) throws IOException {
+  public boolean seek(Cell seekKey) throws IOException {
     throw new IllegalStateException(
         "seek cannot be called on ReversedKeyValueHeap");
   }
 
   @Override
-  public boolean reseek(KeyValue seekKey) throws IOException {
+  public boolean reseek(Cell seekKey) throws IOException {
     throw new IllegalStateException(
         "reseek cannot be called on ReversedKeyValueHeap");
   }
 
   @Override
-  public boolean requestSeek(KeyValue key, boolean forward, boolean useBloom)
+  public boolean requestSeek(Cell key, boolean forward, boolean useBloom)
       throws IOException {
     throw new IllegalStateException(
         "requestSeek cannot be called on ReversedKeyValueHeap");
   }
 
   @Override
-  public boolean seekToPreviousRow(KeyValue seekKey) throws IOException {
+  public boolean seekToPreviousRow(Cell seekKey) throws IOException {
     if (current == null) {
       return false;
     }
@@ -75,7 +76,7 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
 
     KeyValueScanner scanner;
     while ((scanner = heap.poll()) != null) {
-      KeyValue topKey = scanner.peek();
+      Cell topKey = scanner.peek();
       if (comparator.getComparator().compareRows(topKey.getRowArray(),
           topKey.getRowOffset(), topKey.getRowLength(), seekKey.getRowArray(),
           seekKey.getRowOffset(), seekKey.getRowLength()) < 0) {
@@ -97,7 +98,7 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
   }
 
   @Override
-  public boolean backwardSeek(KeyValue seekKey) throws IOException {
+  public boolean backwardSeek(Cell seekKey) throws IOException {
     if (current == null) {
       return false;
     }
@@ -106,8 +107,8 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
 
     KeyValueScanner scanner;
     while ((scanner = heap.poll()) != null) {
-      KeyValue topKey = scanner.peek();
-      if ((comparator.getComparator().matchingRows(seekKey, topKey) && comparator
+      Cell topKey = scanner.peek();
+      if ((CellUtil.matchingRow(seekKey, topKey) && comparator
           .getComparator().compare(seekKey, topKey) <= 0)
           || comparator.getComparator().compareRows(seekKey, topKey) > 0) {
         heap.add(scanner);
@@ -124,12 +125,12 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
   }
 
   @Override
-  public KeyValue next() throws IOException {
+  public Cell next() throws IOException {
     if (this.current == null) {
       return null;
     }
-    KeyValue kvReturn = this.current.next();
-    KeyValue kvNext = this.current.peek();
+    Cell kvReturn = this.current.next();
+    Cell kvNext = this.current.peek();
     if (kvNext == null
         || this.comparator.kvComparator.compareRows(kvNext, kvReturn) > 0) {
       if (this.current.seekToPreviousRow(kvReturn)) {
@@ -180,7 +181,7 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
      * @param right
      * @return less than 0 if left is smaller, 0 if equal etc..
      */
-    public int compareRows(KeyValue left, KeyValue right) {
+    public int compareRows(Cell left, Cell right) {
       return super.kvComparator.compareRows(left, right);
     }
   }

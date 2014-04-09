@@ -35,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -463,14 +464,14 @@ public class DefaultMemStore implements MemStore {
                                 byte[] qualifier,
                                 long newValue,
                                 long now) {
-    KeyValue firstKv = KeyValue.createFirstOnRow(
+    KeyValue firstKv = KeyValueUtil.createFirstOnRow(
         row, family, qualifier);
     // Is there a KeyValue in 'snapshot' with the same TS? If so, upgrade the timestamp a bit.
     SortedSet<KeyValue> snSs = snapshot.tailSet(firstKv);
     if (!snSs.isEmpty()) {
       KeyValue snKv = snSs.first();
       // is there a matching KV in the snapshot?
-      if (snKv.matchingRow(firstKv) && snKv.matchingQualifier(firstKv)) {
+      if (CellUtil.matchingRow(snKv, firstKv) && CellUtil.matchingQualifier(snKv, firstKv)) {
         if (snKv.getTimestamp() == now) {
           // poop,
           now += 1;
@@ -487,13 +488,13 @@ public class DefaultMemStore implements MemStore {
     SortedSet<KeyValue> ss = kvset.tailSet(firstKv);
     for (KeyValue kv : ss) {
       // if this isnt the row we are interested in, then bail:
-      if (!kv.matchingColumn(family, qualifier) || !kv.matchingRow(firstKv)) {
+      if (!CellUtil.matchingColumn(kv, family, qualifier) || !CellUtil.matchingRow(kv, firstKv)) {
         break; // rows dont match, bail.
       }
 
       // if the qualifier matches and it's a put, just RM it out of the kvset.
       if (kv.getTypeByte() == KeyValue.Type.Put.getCode() &&
-          kv.getTimestamp() > now && firstKv.matchingQualifier(kv)) {
+          kv.getTimestamp() > now && CellUtil.matchingQualifier(firstKv, kv)) {
         now = kv.getTimestamp();
       }
     }
@@ -558,7 +559,7 @@ public class DefaultMemStore implements MemStore {
 
     // Get the KeyValues for the row/family/qualifier regardless of timestamp.
     // For this case we want to clean up any other puts
-    KeyValue firstKv = KeyValue.createFirstOnRow(
+    KeyValue firstKv = KeyValueUtil.createFirstOnRow(
         kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
         kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
         kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength());
@@ -574,7 +575,7 @@ public class DefaultMemStore implements MemStore {
         continue;
       }
       // check that this is the row and column we are interested in, otherwise bail
-      if (kv.matchingRow(cur) && kv.matchingQualifier(cur)) {
+      if (CellUtil.matchingRow(kv, cur) && CellUtil.matchingQualifier(kv, cur)) {
         // only remove Puts that concurrent scanners cannot possibly see
         if (cur.getTypeByte() == KeyValue.Type.Put.getCode() &&
             cur.getMvccVersion() <= readpoint) {
@@ -766,20 +767,20 @@ public class DefaultMemStore implements MemStore {
      * @return false if the key is null or if there is no data
      */
     @Override
-    public synchronized boolean seek(KeyValue key) {
+    public synchronized boolean seek(Cell key) {
       if (key == null) {
         close();
         return false;
       }
-
+      KeyValue kv = KeyValueUtil.ensureKeyValue(key);
       // kvset and snapshot will never be null.
       // if tailSet can't find anything, SortedSet is empty (not null).
-      kvsetIt = kvsetAtCreation.tailSet(key).iterator();
-      snapshotIt = snapshotAtCreation.tailSet(key).iterator();
+      kvsetIt = kvsetAtCreation.tailSet(kv).iterator();
+      snapshotIt = snapshotAtCreation.tailSet(kv).iterator();
       kvsetItRow = null;
       snapshotItRow = null;
 
-      return seekInSubLists(key);
+      return seekInSubLists(kv);
     }
 
 
@@ -804,7 +805,7 @@ public class DefaultMemStore implements MemStore {
      * @return true if there is at least one KV to read, false otherwise
      */
     @Override
-    public synchronized boolean reseek(KeyValue key) {
+    public synchronized boolean reseek(Cell key) {
       /*
       See HBASE-4195 & HBASE-3855 & HBASE-6591 for the background on this implementation.
       This code is executed concurrently with flush and puts, without locks.
@@ -817,11 +818,11 @@ public class DefaultMemStore implements MemStore {
        get it. So we remember the last keys we iterated to and restore
        the reseeked set to at least that point.
        */
+      KeyValue kv = KeyValueUtil.ensureKeyValue(key);
+      kvsetIt = kvsetAtCreation.tailSet(getHighest(kv, kvsetItRow)).iterator();
+      snapshotIt = snapshotAtCreation.tailSet(getHighest(kv, snapshotItRow)).iterator();
 
-      kvsetIt = kvsetAtCreation.tailSet(getHighest(key, kvsetItRow)).iterator();
-      snapshotIt = snapshotAtCreation.tailSet(getHighest(key, snapshotItRow)).iterator();
-
-      return seekInSubLists(key);
+      return seekInSubLists(kv);
     }
 
 
@@ -928,7 +929,7 @@ public class DefaultMemStore implements MemStore {
      * the scanner to the previous row of given key
      */
     @Override
-    public synchronized boolean backwardSeek(KeyValue key) {
+    public synchronized boolean backwardSeek(Cell key) {
       seek(key);
       if (peek() == null || comparator.compareRows(peek(), key) > 0) {
         return seekToPreviousRow(key);
@@ -942,8 +943,9 @@ public class DefaultMemStore implements MemStore {
      * specified key, then seek to the first KeyValue of previous row
      */
     @Override
-    public synchronized boolean seekToPreviousRow(KeyValue key) {
-      KeyValue firstKeyOnRow = KeyValue.createFirstOnRow(key.getRow());
+    public synchronized boolean seekToPreviousRow(Cell key) {
+      KeyValue firstKeyOnRow = KeyValueUtil.createFirstOnRow(key.getRowArray(), key.getRowOffset(),
+          key.getRowLength());
       SortedSet<KeyValue> kvHead = kvsetAtCreation.headSet(firstKeyOnRow);
       KeyValue kvsetBeforeRow = kvHead.isEmpty() ? null : kvHead.last();
       SortedSet<KeyValue> snapshotHead = snapshotAtCreation
@@ -955,8 +957,8 @@ public class DefaultMemStore implements MemStore {
         theNext = null;
         return false;
       }
-      KeyValue firstKeyOnPreviousRow = KeyValue
-          .createFirstOnRow(lastKVBeforeRow.getRow());
+      KeyValue firstKeyOnPreviousRow = KeyValueUtil.createFirstOnRow(lastKVBeforeRow.getRowArray(),
+          lastKVBeforeRow.getRowOffset(), lastKVBeforeRow.getRowLength());
       this.stopSkippingKVsIfNextRow = true;
       seek(firstKeyOnPreviousRow);
       this.stopSkippingKVsIfNextRow = false;
@@ -977,7 +979,8 @@ public class DefaultMemStore implements MemStore {
       if (higherKv == null) {
         return false;
       }
-      KeyValue firstKvOnLastRow = KeyValue.createFirstOnRow(higherKv.getRow());
+      KeyValue firstKvOnLastRow = KeyValueUtil.createFirstOnRow(higherKv.getRowArray(),
+          higherKv.getRowOffset(), higherKv.getRowLength());
       if (seek(firstKvOnLastRow)) {
         return true;
       } else {

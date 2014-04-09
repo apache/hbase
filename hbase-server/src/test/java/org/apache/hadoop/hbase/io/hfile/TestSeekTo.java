@@ -22,9 +22,11 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -63,8 +65,8 @@ public class TestSeekTo extends HBaseTestCase {
       }
     }
   }
-  static String toRowStr(KeyValue kv) {
-    return Bytes.toString(kv.getRow());
+  static String toRowStr(Cell kv) {
+    return Bytes.toString(KeyValueUtil.ensureKeyValue(kv).getRow());
   }
 
   Path makeNewFile(TagUsage tagUsage) throws IOException {

@@ -180,7 +180,7 @@ public class DataBlockEncodingTool {
         new ByteArrayOutputStream();
 
     int j = 0;
-    while ((currentKV = scanner.next()) != null && j < kvLimit) {
+    while ((currentKV = KeyValueUtil.ensureKeyValue(scanner.next())) != null && j < kvLimit) {
       // Iterates through key/value pairs
       j++;
       currentKey = currentKV.getKey();
@@ -242,7 +242,7 @@ public class DataBlockEncodingTool {
     }
 
     int j = 0;
-    while ((currentKv = scanner.next()) != null && j < kvLimit) {
+    while ((currentKv = KeyValueUtil.ensureKeyValue(scanner.next())) != null && j < kvLimit) {
       // Iterates through key/value pairs
       ++j;
       for (Iterator<Cell> it : codecIterators) {

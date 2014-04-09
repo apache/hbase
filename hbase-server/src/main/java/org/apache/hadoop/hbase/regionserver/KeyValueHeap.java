@@ -26,7 +26,6 @@ import java.util.PriorityQueue;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
 /**
@@ -94,19 +93,19 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     }
   }
 
-  public KeyValue peek() {
+  public Cell peek() {
     if (this.current == null) {
       return null;
     }
     return this.current.peek();
   }
 
-  public KeyValue next()  throws IOException {
+  public Cell next()  throws IOException {
     if(this.current == null) {
       return null;
     }
-    KeyValue kvReturn = this.current.next();
-    KeyValue kvNext = this.current.peek();
+    Cell kvReturn = this.current.next();
+    Cell kvNext = this.current.peek();
     if (kvNext == null) {
       this.current.close();
       this.current = pollRealKV();
@@ -138,7 +137,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     }
     InternalScanner currentAsInternal = (InternalScanner)this.current;
     boolean mayContainMoreRows = currentAsInternal.next(result, limit);
-    KeyValue pee = this.current.peek();
+    Cell pee = this.current.peek();
     /*
      * By definition, any InternalScanner must return false only when it has no
      * further rows to be fetched. So, we can close a scanner if it returns
@@ -202,7 +201,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
      * @param right
      * @return less than 0 if left is smaller, 0 if equal etc..
      */
-    public int compare(KeyValue left, KeyValue right) {
+    public int compare(Cell left, Cell right) {
       return this.kvComparator.compare(left, right);
     }
     /**
@@ -233,15 +232,15 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
    * As individual scanners may run past their ends, those scanners are
    * automatically closed and removed from the heap.
    * <p>
-   * This function (and {@link #reseek(KeyValue)}) does not do multi-column
+   * This function (and {@link #reseek(Cell)}) does not do multi-column
    * Bloom filter and lazy-seek optimizations. To enable those, call
-   * {@link #requestSeek(KeyValue, boolean, boolean)}.
+   * {@link #requestSeek(Cell, boolean, boolean)}.
    * @param seekKey KeyValue to seek at or after
    * @return true if KeyValues exist at or after specified key, false if not
    * @throws IOException
    */
   @Override
-  public boolean seek(KeyValue seekKey) throws IOException {
+  public boolean seek(Cell seekKey) throws IOException {
     return generalizedSeek(false,    // This is not a lazy seek
                            seekKey,
                            false,    // forward (false: this is not a reseek)
@@ -249,11 +248,11 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
-   * This function is identical to the {@link #seek(KeyValue)} function except
+   * This function is identical to the {@link #seek(Cell)} function except
    * that scanner.seek(seekKey) is changed to scanner.reseek(seekKey).
    */
   @Override
-  public boolean reseek(KeyValue seekKey) throws IOException {
+  public boolean reseek(Cell seekKey) throws IOException {
     return generalizedSeek(false,    // This is not a lazy seek
                            seekKey,
                            true,     // forward (true because this is reseek)
@@ -264,7 +263,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
    * {@inheritDoc}
    */
   @Override
-  public boolean requestSeek(KeyValue key, boolean forward,
+  public boolean requestSeek(Cell key, boolean forward,
       boolean useBloom) throws IOException {
     return generalizedSeek(true, key, forward, useBloom);
   }
@@ -277,7 +276,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
    * @param forward whether to seek forward (also known as reseek)
    * @param useBloom whether to optimize seeks using Bloom filters
    */
-  private boolean generalizedSeek(boolean isLazy, KeyValue seekKey,
+  private boolean generalizedSeek(boolean isLazy, Cell seekKey,
       boolean forward, boolean useBloom) throws IOException {
     if (!isLazy && useBloom) {
       throw new IllegalArgumentException("Multi-column Bloom filter " +
@@ -292,7 +291,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
 
     KeyValueScanner scanner;
     while ((scanner = heap.poll()) != null) {
-      KeyValue topKey = scanner.peek();
+      Cell topKey = scanner.peek();
       if (comparator.getComparator().compare(seekKey, topKey) <= 0) {
         // Top KeyValue is at-or-after Seek KeyValue. We only know that all
         // scanners are at or after seekKey (because fake keys of
@@ -345,7 +344,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     while (kvScanner != null && !kvScanner.realSeekDone()) {
       if (kvScanner.peek() != null) {
         kvScanner.enforceSeek();
-        KeyValue curKV = kvScanner.peek();
+        Cell curKV = kvScanner.peek();
         if (curKV != null) {
           KeyValueScanner nextEarliestScanner = heap.peek();
           if (nextEarliestScanner == null) {
@@ -355,7 +354,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
 
           // Compare the current scanner to the next scanner. We try to avoid
           // putting the current one back into the heap if possible.
-          KeyValue nextKV = nextEarliestScanner.peek();
+          Cell nextKV = nextEarliestScanner.peek();
           if (nextKV == null || comparator.compare(curKV, nextKV) < 0) {
             // We already have the scanner with the earliest KV, so return it.
             return kvScanner;

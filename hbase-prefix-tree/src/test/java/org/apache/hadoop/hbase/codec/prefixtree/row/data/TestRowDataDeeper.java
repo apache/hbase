@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.row.data;
 import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.row.BaseTestRowData;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition;
@@ -72,7 +73,7 @@ public class TestRowDataDeeper extends BaseTestRowData{
      * The searcher should get a token mismatch on the "r" branch.  Assert that it skips not only
      * rA, but rB as well.
      */
-    KeyValue cfcRow = KeyValue.createFirstOnRow(Bytes.toBytes("cfc"));
+    KeyValue cfcRow = KeyValueUtil.createFirstOnRow(Bytes.toBytes("cfc"));
     CellScannerPosition position = searcher.positionAtOrAfter(cfcRow);
     Assert.assertEquals(CellScannerPosition.AFTER, position);
     Assert.assertEquals(d.get(2), searcher.current());

@@ -28,9 +28,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -133,7 +134,8 @@ public class WALPlayer extends Configured implements Tool {
             // multiple rows (HBASE-5229).
             // Aggregate as much as possible into a single Put/Delete
             // operation before writing to the context.
-            if (lastKV == null || lastKV.getType() != kv.getType() || !lastKV.matchingRow(kv)) {
+            if (lastKV == null || lastKV.getType() != kv.getType()
+                || !CellUtil.matchingRow(lastKV, kv)) {
               // row or type changed, write out aggregate KVs.
               if (put != null) context.write(tableOut, put);
               if (del != null) context.write(tableOut, del);

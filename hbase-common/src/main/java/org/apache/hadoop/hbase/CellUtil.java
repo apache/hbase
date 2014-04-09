@@ -304,13 +304,19 @@ public final class CellUtil {
    * @return True if the rows in <code>left</code> and <code>right</code> Cells match
    */
   public static boolean matchingRow(final Cell left, final Cell right) {
-    return Bytes.equals(left.getRowArray(),  left.getRowOffset(), left.getRowLength(),
-      right.getRowArray(), right.getRowOffset(), right.getRowLength());
+    return Bytes.equals(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
+        right.getRowArray(), right.getRowOffset(), right.getRowLength());
   }
 
   public static boolean matchingRow(final Cell left, final byte[] buf) {
-    return Bytes.equals(left.getRowArray(),  left.getRowOffset(), left.getRowLength(),
-      buf, 0, buf.length);
+    return Bytes.equals(left.getRowArray(), left.getRowOffset(), left.getRowLength(), buf, 0,
+        buf.length);
+  }
+
+  public static boolean matchingRow(final Cell left, final byte[] buf, final int offset,
+      final int length) {
+    return Bytes.equals(left.getRowArray(), left.getRowOffset(), left.getRowLength(), buf, offset,
+        length);
   }
 
   public static boolean matchingFamily(final Cell left, final Cell right) {
@@ -319,20 +325,57 @@ public final class CellUtil {
   }
 
   public static boolean matchingFamily(final Cell left, final byte[] buf) {
-    return Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
-        buf, 0, buf.length);
+    return Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(), buf,
+        0, buf.length);
+  }
+
+  public static boolean matchingFamily(final Cell left, final byte[] buf, final int offset,
+      final int length) {
+    return Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(), buf,
+        offset, length);
   }
 
   public static boolean matchingQualifier(final Cell left, final Cell right) {
-    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(), left.getQualifierLength(),
-        right.getQualifierArray(), right.getQualifierOffset(), right.getQualifierLength());
+    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
+        left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
+        right.getQualifierLength());
   }
 
   public static boolean matchingQualifier(final Cell left, final byte[] buf) {
-    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(), left.getQualifierLength(),
-        buf, 0, buf.length);
+    if (buf == null) {
+      return left.getQualifierLength() == 0;
+    }
+    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
+        left.getQualifierLength(), buf, 0, buf.length);
   }
 
+  public static boolean matchingQualifier(final Cell left, final byte[] buf, final int offset,
+      final int length) {
+    if (buf == null) {
+      return left.getQualifierLength() == 0;
+    }
+    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
+        left.getQualifierLength(), buf, offset, length);
+  }
+
+  public static boolean matchingColumn(final Cell left, final byte[] fam, final byte[] qual) {
+    if (!matchingFamily(left, fam))
+      return false;
+    return matchingQualifier(left, qual);
+  }
+
+  public static boolean matchingColumn(final Cell left, final byte[] fam, final int foffset,
+      final int flength, final byte[] qual, final int qoffset, final int qlength) {
+    if (!matchingFamily(left, fam, foffset, flength))
+      return false;
+    return matchingQualifier(left, qual, qoffset, qlength);
+  }
+
+  public static boolean matchingColumn(final Cell left, final Cell right) {
+    if (!matchingFamily(left, right))
+      return false;
+    return matchingQualifier(left, right);
+  }
 
   public static boolean matchingValue(final Cell left, final Cell right) {
     return Bytes.equals(left.getValueArray(), left.getValueOffset(), left.getValueLength(),
@@ -340,13 +383,14 @@ public final class CellUtil {
   }
 
   public static boolean matchingValue(final Cell left, final byte[] buf) {
-    return Bytes.equals(left.getValueArray(), left.getValueOffset(), left.getValueLength(),
-        buf, 0, buf.length);
+    return Bytes.equals(left.getValueArray(), left.getValueOffset(), left.getValueLength(), buf, 0,
+        buf.length);
   }
+
   /**
-   * @return True if a delete type, a {@link KeyValue.Type#Delete} or
-   * a {KeyValue.Type#DeleteFamily} or a {@link KeyValue.Type#DeleteColumn}
-   * KeyValue type.
+   * @return True if a delete type, a {@link KeyValue.Type#Delete} or a
+   *         {KeyValue.Type#DeleteFamily} or a
+   *         {@link KeyValue.Type#DeleteColumn} KeyValue type.
    */
   public static boolean isDelete(final Cell cell) {
     return KeyValue.isDelete(cell.getTypeByte());
@@ -354,6 +398,10 @@ public final class CellUtil {
 
   public static boolean isDeleteFamily(final Cell cell) {
     return cell.getTypeByte() == Type.DeleteFamily.getCode();
+  }
+
+  public static boolean isDeleteFamilyVersion(final Cell cell) {
+    return cell.getTypeByte() == Type.DeleteFamilyVersion.getCode();
   }
 
   /**

@@ -134,7 +134,7 @@ public interface HFileScanner {
   /**
    * @return Instance of {@link KeyValue}.
    */
-  KeyValue getKeyValue();
+  Cell getKeyValue();
   /**
    * Convenience method to get a copy of the key as a string - interpreting the
    * bytes as UTF8. You must call {@link #seekTo(byte[])} before this method.
