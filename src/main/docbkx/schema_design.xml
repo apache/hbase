@@ -294,7 +294,7 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
      <section xml:id="schema.versions.max"><title>Maximum Number of Versions</title>
       <para>The maximum number of row versions to store is configured per column
       family via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>.
-      The default for max versions is 3.
+      The default for max versions is 1.
       This is an important parameter because as described in <xref linkend="datamodel" />
       section HBase does <emphasis>not</emphasis> overwrite row values, but rather
       stores different values per row by time (and qualifier).  Excess versions are removed during major
