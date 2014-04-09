@@ -82,26 +82,20 @@ public interface HTableInterface {
    */
   Result get(Get get) throws IOException;
 
-  /**
-   * Extracts certain cells from the given rows, in batch. It does completely
-   * the same thing as {@link #batchGet(List)}, so we are planning to get rid of
-   * this one soon in favor of {@link #batchGet(List)}
+   /**
+   * Extracts certain cells from the given rows, in batch.
    *
-   * @param gets
-   *          The objects that specify what data to fetch and from which rows.
+   * @param gets The objects that specify what data to fetch and from which rows.
    *
-   * @return The data coming from the specified rows, if it exists. If the row
+   * @return The data coming from the specified rows, if it exists.  If the row
    *         specified doesn't exist, the {@link Result} instance returned won't
-   *         contain any {@link KeyValue}, as indicated by
-   *         {@link Result#isEmpty()}. If there are any failures even after
-   *         retries, there will be a null in the results array for those Gets,
-   *         AND an exception will be thrown.
-   * @throws IOException
-   *           if a remote or network exception occurs.
+   *         contain any {@link KeyValue}, as indicated by {@link Result#isEmpty()}.
+   *         If there are any failures even after retries, there will be a null in
+   *         the results array for those Gets, AND an exception will be thrown.
+   * @throws IOException if a remote or network exception occurs.
    *
    * @since 0.20.0
    */
-  @Deprecated
   public Result[] get(List<Get> gets) throws IOException;
 
   /**
