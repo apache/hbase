@@ -35,7 +35,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -117,6 +116,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
@@ -980,7 +980,8 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     }
   }
 
-  private Filter createVisibilityLabelFilter(HRegion region, Authorizations authorizations) {
+  private Filter createVisibilityLabelFilter(HRegion region, Authorizations authorizations)
+      throws IOException {
     Map<ByteRange, Integer> cfVsMaxVersions = new HashMap<ByteRange, Integer>();
     for (HColumnDescriptor hcd : region.getTableDesc().getFamilies()) {
       cfVsMaxVersions.put(new SimpleByteRange(hcd.getName()), hcd.getMaxVersions());
@@ -995,6 +996,12 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
         return null;
       }
       return new VisibilityLabelFilter(new BitSet(0), cfVsMaxVersions);
+    }
+    for (String label : authorizations.getLabels()) {
+      if (!VisibilityLabelsValidator.isValidLabel(label)) {
+        throw new IllegalArgumentException("Invalid authorization label : " + label
+            + ". Authorizations cannot contain '(', ')' ,'&' ,'|', '!'" + " and cannot be empty");
+      }
     }
     Filter visibilityLabelFilter = null;
     if (this.scanLabelGenerator != null) {
