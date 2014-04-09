@@ -32,7 +32,6 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
@@ -71,10 +70,12 @@ import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
+import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsValidator;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.HBaseZeroCopyByteString;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONMarshaller;
@@ -525,6 +526,11 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     if (authorizations != null) {
       List<String> labels = authorizations.getLabels();
       for (String label : labels) {
+        if (!VisibilityLabelsValidator.isValidLabel(label)) {
+          throw new IllegalArgumentException("Invalid authorization label : " + label
+              + ". Authorizations cannot contain '(', ')' ,'&' ,'|', '!'" + " " +
+              		"and cannot be empty");
+        }
         model.addLabel(label);
       }
     }

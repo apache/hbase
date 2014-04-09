@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
@@ -26,6 +28,7 @@ import java.util.Set;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -106,6 +109,62 @@ public class TestScan {
     scan.addColumn(family, null);
     Set<byte[]> qualifiers = scan.getFamilyMap().get(family);
     Assert.assertEquals(1, qualifiers.size());
+  }
+
+  @Test
+  public void testSetAuthorizations() {
+    Scan scan = new Scan();
+    scan.setAuthorizations(new Authorizations("A", "B", "0123", "A0", "1A1", "_a"));
+    try {
+      scan.setAuthorizations(new Authorizations("A|B"));
+      fail("Should have failed for A|B.");
+    } catch (IllegalArgumentException e) {
+    }
+    try {
+      scan.setAuthorizations(new Authorizations("A&B"));
+      fail("Should have failed for A&B.");
+    } catch (IllegalArgumentException e) {
+    }
+    try {
+      scan.setAuthorizations(new Authorizations("!B"));
+      fail("Should have failed for !B.");
+    } catch (IllegalArgumentException e) {
+    }
+    try {
+      scan.setAuthorizations(new Authorizations("A", "(A)"));
+      fail("Should have failed for (A).");
+    } catch (IllegalArgumentException e) {
+    }
+    try {
+      scan.setAuthorizations(new Authorizations("A", "{A"));
+      fail("Should have failed for {A.");
+    } catch (IllegalArgumentException e) {
+    }
+    try {
+      scan.setAuthorizations(new Authorizations(" "));
+      fail("Should have failed for empty");
+    } catch (IllegalArgumentException e) {
+    }
+    try {
+      scan.setAuthorizations(new Authorizations(":B"));
+    } catch (IllegalArgumentException e) {
+      fail("Should not have failed for :B");
+    }
+    try {
+      scan.setAuthorizations(new Authorizations("-B"));
+    } catch (IllegalArgumentException e) {
+      fail("Should not have failed for -B");
+    }
+    try {
+      scan.setAuthorizations(new Authorizations(".B"));
+    } catch (IllegalArgumentException e) {
+      fail("Should not have failed for .B");
+    }
+    try {
+      scan.setAuthorizations(new Authorizations("/B"));
+    } catch (IllegalArgumentException e) {
+      fail("Should not have failed for /B");
+    }
   }
 }
 

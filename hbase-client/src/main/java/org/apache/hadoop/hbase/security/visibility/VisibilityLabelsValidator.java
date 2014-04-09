@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -26,6 +29,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public class VisibilityLabelsValidator {
   // We follow Accumulo parity for valid visibility labels.
   private static final boolean[] validAuthChars = new boolean[256];
+
+  public static final String regex = "[A-Za-z_\\-\\:\\/\\.0-9]+";
+  public static final Pattern pattern = Pattern.compile(regex);
 
   static {
     for (int i = 0; i < 256; i++) {
@@ -62,5 +68,10 @@ public class VisibilityLabelsValidator {
       }
     }
     return true;
+  }
+
+  public static final boolean isValidLabel(String label) {
+    Matcher matcher = pattern.matcher(label);
+    return matcher.matches();
   }
 }
