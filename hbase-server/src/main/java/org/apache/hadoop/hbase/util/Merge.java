@@ -111,7 +111,7 @@ public class Merge extends Configured implements Tool {
     try {
       mergeTwoRegions();
       return 0;
-    } catch (Exception e) {
+    } catch (IOException e) {
       LOG.fatal("Merge failed", e);
       return -1;
 

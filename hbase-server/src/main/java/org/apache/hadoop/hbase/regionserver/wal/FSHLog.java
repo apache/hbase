@@ -1979,7 +1979,7 @@ class FSHLog implements HLog, Syncable {
           Path logPath = new Path(args[i]);
           FSUtils.setFsDefault(conf, logPath);
           split(conf, logPath);
-        } catch (Throwable t) {
+        } catch (IOException t) {
           t.printStackTrace(System.err);
           System.exit(-1);
         }

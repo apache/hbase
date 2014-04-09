@@ -152,13 +152,17 @@ public class CloseRegionHandler extends EventHandler {
             regionInfo.getRegionNameAsString());
           return;
         }
-      } catch (Throwable t) {
-        // A throwable here indicates that we couldn't successfully flush the
+      } catch (KeeperException ke) {
+          server.abort("Unrecoverable exception while checking state with zk " +
+            regionInfo.getRegionNameAsString() + ", still finishing close", ke);
+        throw new RuntimeException(ke);
+      } catch (IOException ioe) {
+        // An IOException here indicates that we couldn't successfully flush the
         // memstore before closing. So, we need to abort the server and allow
         // the master to split our logs in order to recover the data.
         server.abort("Unrecoverable exception while closing region " +
-          regionInfo.getRegionNameAsString() + ", still finishing close", t);
-        throw new RuntimeException(t);
+          regionInfo.getRegionNameAsString() + ", still finishing close", ioe);
+        throw new RuntimeException(ioe);
       }
 
       this.rsServices.removeFromOnlineRegions(region, destination);
