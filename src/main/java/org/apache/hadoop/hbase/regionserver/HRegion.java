@@ -886,7 +886,8 @@ public class HRegion implements HeapSize, ConfigurationObserver {
         } catch (IOException ioe) {
           // Failed to flush the region but probably it is still able to serve request,
           // so re-enable writes to it.
-          status.setStatus("Failed to flush the region, putting it online again");
+          LOG.warn("Not able to flush " + this.getRegionNameAsString() +
+              " . Putting it online again");
           synchronized (writestate) {
             writestate.writesEnabled = true;
           }
@@ -895,6 +896,10 @@ public class HRegion implements HeapSize, ConfigurationObserver {
       }
       newScannerLock.writeLock().lock();
       this.closing.set(true);
+      synchronized (writestate) {
+        writestate.readOnly = true;
+      }
+      LOG.debug("Region " + this.getRegionNameAsString() + " is readonly now");
       status.setStatus("Disabling writes for close");
       try {
         splitsAndClosesLock.writeLock().lock();
@@ -912,9 +917,11 @@ public class HRegion implements HeapSize, ConfigurationObserver {
             try {
               internalFlushcache(status);
             } catch (IOException ioe) {
-              status.setStatus("Failed to flush the region, putting it online again");
+              LOG.warn("Not able to flush " + this.getRegionNameAsString() +
+                  " . Putting it online again");
               synchronized (writestate) {
                 writestate.writesEnabled = true;
+                writestate.readOnly = false;
               }
               this.closing.set(false);
               throw ioe;
