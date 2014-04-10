@@ -37,8 +37,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -344,7 +346,8 @@ public class TestAsyncProcess {
     }
 
     @Override
-    public RegionLocations locateRegionAll(TableName tableName, byte[] row) throws IOException {
+    public RegionLocations locateRegion(TableName tableName,
+        byte[] row, boolean useCache, boolean retry, int replicaId) throws IOException {
       return new RegionLocations(loc1);
     }
   }
@@ -363,7 +366,8 @@ public class TestAsyncProcess {
     }
 
     @Override
-    public RegionLocations locateRegionAll(TableName tableName, byte[] row) throws IOException {
+    public RegionLocations locateRegion(TableName tableName,
+        byte[] row, boolean useCache, boolean retry, int replicaId) throws IOException {
       int i = 0;
       for (HRegionLocation hr : hrl){
         if (Arrays.equals(row, hr.getRegionInfo().getStartKey())) {
@@ -376,6 +380,9 @@ public class TestAsyncProcess {
     }
 
   }
+
+  @Rule
+  public Timeout timeout = new Timeout(10000); // 10 seconds max per method tested
 
   @Test
   public void testSubmit() throws Exception {
@@ -627,8 +634,8 @@ public class TestAsyncProcess {
 
   private static void setMockLocation(ClusterConnection hc, byte[] row,
       RegionLocations result) throws IOException {
-    Mockito.when(hc.locateRegionAll(
-        Mockito.eq(DUMMY_TABLE), Mockito.eq(row))).thenReturn(result);
+    Mockito.when(hc.locateRegion(Mockito.eq(DUMMY_TABLE), Mockito.eq(row),
+        Mockito.anyBoolean(), Mockito.anyBoolean(), Mockito.anyInt())).thenReturn(result);
   }
 
   private static ClusterConnection createHConnectionCommon() {
@@ -1009,7 +1016,7 @@ public class TestAsyncProcess {
     for (int i = 0; i < expecteds.length; ++i) {
       Object actual = actuals[i];
       RR expected = expecteds[i];
-      Assert.assertEquals(expected == RR.FAILED, actual instanceof Throwable);
+      Assert.assertEquals(actual.toString(), expected == RR.FAILED, actual instanceof Throwable);
       if (expected != RR.FAILED && expected != RR.DONT_CARE) {
         Assert.assertEquals(expected == RR.TRUE, ((Result)actual).isStale());
       }

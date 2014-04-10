@@ -111,8 +111,9 @@ public class HConnectionTestingUtility {
       thenReturn(loc);
     Mockito.when(c.locateRegion((TableName) Mockito.any(), (byte[]) Mockito.any())).
       thenReturn(loc);
-    Mockito.when(c.locateRegionAll((TableName) Mockito.any(), (byte[]) Mockito.any())).
-      thenReturn(new RegionLocations(loc));
+    Mockito.when(c.locateRegion((TableName) Mockito.any(), (byte[]) Mockito.any(),
+        Mockito.anyBoolean(), Mockito.anyBoolean(),  Mockito.anyInt()))
+        .thenReturn(new RegionLocations(loc));
     if (admin != null) {
       // If a call to getAdmin, return this implementation.
       Mockito.when(c.getAdmin(Mockito.any(ServerName.class))).
