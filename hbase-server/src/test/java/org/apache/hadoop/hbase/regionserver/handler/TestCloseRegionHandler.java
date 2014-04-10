@@ -104,7 +104,7 @@ public class TestCloseRegionHandler {
       HRegion spy = Mockito.spy(region);
       final boolean abort = false;
       Mockito.when(spy.close(abort)).
-      thenThrow(new RuntimeException("Mocked failed close!"));
+      thenThrow(new IOException("Mocked failed close!"));
       // The CloseRegionHandler will try to get an HRegion that corresponds
       // to the passed hri -- so insert the region into the online region Set.
       rss.addToOnlineRegions(spy);
