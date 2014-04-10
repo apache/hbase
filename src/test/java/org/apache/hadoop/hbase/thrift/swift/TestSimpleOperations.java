@@ -474,7 +474,7 @@ public class TestSimpleOperations {
    * @throws IOException
    */
   @Test
-  public void testSimpleMultiActionUsingThrift() throws IOException {
+  public void testSimpleMultiAction() throws IOException {
     byte[] r1 = Bytes.toBytes("r1");
     byte[] value = Bytes.toBytes("test-value");
     Result[] result;
@@ -487,35 +487,8 @@ public class TestSimpleOperations {
 
     // do a batch get via Thrift
     Get g = new Get.Builder(r1).addFamily(FAMILY).create();
-    List<Get> gets = new ArrayList<Get>();
+    List<Get> gets = new ArrayList<>();
     gets.add(g);
-    result = ht.batchGet(gets);
-    LOG.debug("Found the result : " + result);
-    assertTrue(result.length == 1);
-    assertTrue(Bytes.equals(result[0].getValue(FAMILY, null), value));
-  }
-
-  /**
-   * Test if doing batchGet works via hadoop rpc
-   *
-   * @throws IOException
-   */
-  @Test
-  public void testSimpleMultiActionUsingHadoopRpc() throws IOException {
-    byte[] r1 = Bytes.toBytes("r1");
-    byte[] value = Bytes.toBytes("test-value");
-    Result[] result;
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
-
-    //do a put via hadoop rpc
-    Put put = new Put(r1);
-    put.add(FAMILY, null, value);
-    ht.put(put);
-
-    Get g = new Get.Builder(r1).addFamily(FAMILY).create();
-    List<Get> gets = new ArrayList<Get>();
-    gets.add(g);
-    // do a batch get via hadoop rpc
     result = ht.batchGet(gets);
     LOG.debug("Found the result : " + result);
     assertTrue(result.length == 1);
