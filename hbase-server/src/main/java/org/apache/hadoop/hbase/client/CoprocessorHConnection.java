@@ -480,9 +480,4 @@ class CoprocessorHConnection implements ClusterConnection {
   public AsyncProcess getAsyncProcess() {
     return delegate.getAsyncProcess();
   }
-
-  @Override
-  public RegionLocations locateRegionAll(TableName tableName, byte[] row) throws IOException {
-    return delegate.locateRegionAll(tableName, row);
-  }
 }
