@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -264,6 +265,7 @@ public class ThriftServerRunner implements Runnable {
       } catch (Exception e) {
         LOG.error("Cannot run ThriftServer", e);
         metrics.incNumRestarted();
+        Threads.sleepRetainInterrupt(1000);
       }
     }
   }
@@ -712,11 +714,11 @@ public class ThriftServerRunner implements Runnable {
                                  timestamp, regionName);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public List<TRowResult> getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row,
         List<ByteBuffer> columns, long timestamp, ByteBuffer regionName) throws IOError {
       try {
-        HTable table = getTable(tableName);
         byte[] rowBytes = getBytes(row);
         if (columns == null) {
           Get get = new Get(rowBytes);
@@ -748,6 +750,7 @@ public class ThriftServerRunner implements Runnable {
                                        HConstants.LATEST_TIMESTAMP, regionName));
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public List<TRowResult> getRowWithColumnPrefixTs(ByteBuffer tableName, ByteBuffer row,
         ByteBuffer prefix, long timestamp, ByteBuffer regionName) throws IOError {
@@ -803,6 +806,7 @@ public class ThriftServerRunner implements Runnable {
       return getRowsWithColumnsTs(tableName, rows, null, timestamp, regionName);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public List<TRowResult> getRowsWithColumnsTs(ByteBuffer tableName,
         List<ByteBuffer> rows, List<ByteBuffer> columns, long timestamp,
