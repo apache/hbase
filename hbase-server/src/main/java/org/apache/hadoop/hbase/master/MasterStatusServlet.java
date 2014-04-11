@@ -33,11 +33,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
 import org.apache.hadoop.hbase.util.FSUtils;
-
-import com.google.protobuf.ServiceException;
 
 /**
  * The servlet responsible for rendering the index page of the
@@ -57,12 +54,6 @@ public class MasterStatusServlet extends HttpServlet {
 
     response.setContentType("text/html");
 
-    if (!master.isOnline()) {
-      response.getWriter().write("The Master is initializing!");
-      response.getWriter().close();
-      return;
-    }
-
     Configuration conf = master.getConfiguration();
     HBaseAdmin admin = new HBaseAdmin(conf);
 
@@ -72,29 +63,21 @@ public class MasterStatusServlet extends HttpServlet {
     Set<ServerName> deadServers = null;
     
     if(master.isActiveMaster()) {
-      if (!master.isInitialized()) {
-        response.sendError(503, "Master not ready");
-        return;
-      }
       metaLocation = getMetaLocationOrNull(master);
-      //ServerName metaLocation = master.getCatalogTracker().getMetaLocation();
-      servers = master.getServerManager().getOnlineServersList();
-      deadServers = master.getServerManager().getDeadServers().copyServerNames();
+      ServerManager serverManager = master.getServerManager();
+      if (serverManager != null) {
+        deadServers = serverManager.getDeadServers().copyServerNames();
+        servers = serverManager.getOnlineServersList();
+      }
     }
 
-    MasterStatusTmpl tmpl;
-    try {
-       tmpl = new MasterStatusTmpl()
+    MasterStatusTmpl tmpl = new MasterStatusTmpl()
       .setFrags(frags)
       .setMetaLocation(metaLocation)
       .setServers(servers)
       .setDeadServers(deadServers)
-      .setCatalogJanitorEnabled(master.getMasterRpcServices().isCatalogJanitorEnabled(
-          null, RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue());
-    } catch (ServiceException s) {
-      admin.close();
-      throw new IOException(s);
-    }
+      .setCatalogJanitorEnabled(master.isCatalogJanitorEnabled());
+
     if (request.getParameter("filter") != null)
       tmpl.setFilter(request.getParameter("filter"));
     if (request.getParameter("format") != null)

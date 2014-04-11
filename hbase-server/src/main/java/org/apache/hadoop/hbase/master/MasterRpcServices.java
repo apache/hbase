@@ -814,9 +814,8 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public IsCatalogJanitorEnabledResponse isCatalogJanitorEnabled(RpcController c,
       IsCatalogJanitorEnabledRequest req) throws ServiceException {
-    boolean isEnabled = master.catalogJanitorChore != null ?
-      master.catalogJanitorChore.getEnabled() : false;
-    return IsCatalogJanitorEnabledResponse.newBuilder().setValue(isEnabled).build();
+    return IsCatalogJanitorEnabledResponse.newBuilder().setValue(
+      master.isCatalogJanitorEnabled()).build();
   }
 
   @Override

@@ -198,7 +198,9 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 </div>
             </div>
         </section>
+        <%if master.getAssignmentManager() != null %>
         <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
+        </%if>
 	<%else>
         <section>
             <& BackupMasterStatusTmpl; master = master &>
@@ -266,7 +268,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 	                </tr>
 	                <tr>
 	                    <td>Load average</td>
-	                    <td><% StringUtils.limitDecimalTo2(master.getServerManager().getAverageLoad()) %></td>
+	                    <td><% master.getServerManager() == null ? "0.00" :
+	                      StringUtils.limitDecimalTo2(master.getServerManager().getAverageLoad()) %></td>
 	                    <td>Average number of regions per regionserver. Naive computation.</td>
 	                </tr>
 	                <%if frags != null %>
@@ -278,7 +281,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 	                </%if>
 	                <tr>
 	                    <td>Coprocessors</td>
-	                    <td><% java.util.Arrays.toString(master.getMasterCoprocessors()) %></td>
+	                    <td><% master.getMasterCoprocessorHost() == null ? "[]" :
+	                      java.util.Arrays.toString(master.getMasterCoprocessors()) %></td>
 	                    <td>Coprocessors currently loaded by the master</td>
 	                </tr>
                 </%if>
@@ -295,10 +299,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
 <%def catalogTables>
 <%java>
- HTableDescriptor[] sysTables = admin.listTableDescriptorsByNamespace(NamespaceDescriptor
- .SYSTEM_NAMESPACE_NAME_STR);
+ HTableDescriptor[] sysTables = master.isInitialized() ? admin.listTableDescriptorsByNamespace(
+   NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR) : null;
 </%java>
-
+<%if (sysTables != null && sysTables.length > 0)%>
 <table class="table table-striped">
 <tr>
     <th>Table Name</th>
@@ -326,11 +330,12 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 </tr>
 </%for>
 </table>
+</%if>
 </%def>
 
 <%def userTables>
 <%java>
-   HTableDescriptor[] tables = admin.listTables();
+   HTableDescriptor[] tables = master.isInitialized() ? admin.listTables() : null;
 </%java>
 <%if (tables != null && tables.length > 0)%>
 <table class="table table-striped">
@@ -360,7 +365,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
 <%def userSnapshots>
 <%java>
-   List<SnapshotDescription> snapshots = admin.listSnapshots();
+   List<SnapshotDescription> snapshots = master.isInitialized() ? admin.listSnapshots() : null;
 </%java>
 <%if (snapshots != null && snapshots.size() > 0)%>
 <table class="table table-striped">

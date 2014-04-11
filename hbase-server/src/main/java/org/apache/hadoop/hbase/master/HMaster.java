@@ -722,6 +722,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     tableNamespaceManager.start();
   }
 
+  boolean isCatalogJanitorEnabled() {
+    return catalogJanitorChore != null ?
+      catalogJanitorChore.getEnabled() : false;
+  }
+
   private void splitMetaLogBeforeAssignment(ServerName currentMetaServer) throws IOException {
     if (this.distributedLogReplay) {
       // In log replay mode, we mark hbase:meta region as recovering in ZK
@@ -1503,14 +1508,22 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         return s1.getServerName().compareTo(s2.getServerName());
       }});
 
-    return new ClusterStatus(VersionInfo.getVersion(),
-      this.fileSystemManager.getClusterId().toString(),
-      this.serverManager.getOnlineServers(),
-      this.serverManager.getDeadServers().copyServerNames(),
-      this.serverName,
-      backupMasters,
-      this.assignmentManager.getRegionStates().getRegionsInTransition(),
-      this.getMasterCoprocessors(), this.loadBalancerTracker.isBalancerOn());
+    String clusterId = fileSystemManager != null ?
+      fileSystemManager.getClusterId().toString() : null;
+    Map<String, RegionState> regionsInTransition = assignmentManager != null ?
+      assignmentManager.getRegionStates().getRegionsInTransition() : null;
+    String[] coprocessors = cpHost != null ? getMasterCoprocessors() : null;
+    boolean balancerOn = loadBalancerTracker != null ?
+      loadBalancerTracker.isBalancerOn() : false;
+    Map<ServerName, ServerLoad> onlineServers = null;
+    Set<ServerName> deadServers = null;
+    if (serverManager != null) {
+      deadServers = serverManager.getDeadServers().copyServerNames();
+      onlineServers = serverManager.getOnlineServers();
+    }
+    return new ClusterStatus(VersionInfo.getVersion(), clusterId,
+      onlineServers, deadServers, serverName, backupMasters,
+      regionsInTransition, coprocessors, balancerOn);
   }
 
   /**

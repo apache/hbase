@@ -427,13 +427,12 @@ public class ServerManager {
   public double getAverageLoad() {
     int totalLoad = 0;
     int numServers = 0;
-    double averageLoad;
     for (ServerLoad sl: this.onlineServers.values()) {
         numServers++;
         totalLoad += sl.getNumberOfRegions();
     }
-    averageLoad = (double)totalLoad / (double)numServers;
-    return averageLoad;
+    return numServers == 0 ? 0 :
+      (double)totalLoad / (double)numServers;
   }
 
   /**
