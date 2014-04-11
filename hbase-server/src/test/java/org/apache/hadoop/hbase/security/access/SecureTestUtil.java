@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -57,6 +58,7 @@ import com.google.protobuf.ServiceException;
  * Utility methods for testing security
  */
 public class SecureTestUtil {
+  
   private static final Log LOG = LogFactory.getLog(SecureTestUtil.class);
   private static final int WAIT_TIME = 10000;
 
@@ -83,6 +85,17 @@ public class SecureTestUtil {
     conf.set("hbase.superuser", sb.toString());
     // Need HFile V3 for tags for security features
     conf.setInt("hfile.format.version", 3);
+  }
+
+  public static void verifyConfiguration(Configuration conf) {
+    if (!(conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY).contains(
+        AccessController.class.getName())
+        && conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY).contains(
+            AccessController.class.getName()) && conf.get(
+        CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY).contains(
+        AccessController.class.getName()))) {
+      throw new RuntimeException("AccessController is missing from a system coprocessor list");
+    }
   }
 
   public void checkTablePerms(Configuration conf, byte[] table, byte[] family, byte[] column,
@@ -145,6 +158,21 @@ public class SecureTestUtil {
   public void verifyAllowed(AccessTestAction action, User... users) throws Exception {
     for (User user : users) {
       verifyAllowed(user, action);
+    }
+  }
+
+  public void verifyAllowed(User user, AccessTestAction action, int count) throws Exception {
+    try {
+      Object obj = user.runAs(action);
+      if (obj != null && obj instanceof List<?>) {
+        List<?> results = (List<?>) obj;
+        if (results != null && results.isEmpty()) {
+          fail("Empty non null results from action for user '" + user.getShortName() + "'");
+        }
+        assertEquals(results.size(), count);
+      }
+    } catch (AccessDeniedException ade) {
+      fail("Expected action to pass for user '" + user.getShortName() + "' but was denied");
     }
   }
 

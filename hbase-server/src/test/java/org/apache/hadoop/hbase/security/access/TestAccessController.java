@@ -24,8 +24,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -37,7 +35,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -61,7 +58,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -110,7 +106,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Lists;
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -160,17 +155,6 @@ public class TestAccessController extends SecureTestUtil {
   private static RegionServerCoprocessorEnvironment RSCP_ENV;
   private RegionCoprocessorEnvironment RCP_ENV;
 
-  static void verifyConfiguration(Configuration conf) {
-    if (!(conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY)
-            .contains(AccessController.class.getName())
-          && conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY)
-            .contains(AccessController.class.getName())
-          && conf.get(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY)
-            .contains(AccessController.class.getName()))) {
-      throw new RuntimeException("AccessController is missing from a system coprocessor list");
-    }
-  }
-
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     // setup configuration
@@ -181,7 +165,7 @@ public class TestAccessController extends SecureTestUtil {
     conf.set("hbase.master.logcleaner.plugins",
       "org.apache.hadoop.hbase.master.snapshot.SnapshotLogCleaner");
     // Enable security
-    SecureTestUtil.enableSecurity(conf);
+    enableSecurity(conf);
     // Verify enableSecurity sets up what we require
     verifyConfiguration(conf);
 
@@ -236,25 +220,25 @@ public class TestAccessController extends SecureTestUtil {
 
     // Set up initial grants
 
-    SecureTestUtil.grantGlobal(TEST_UTIL, USER_ADMIN.getShortName(),
+    grantGlobal(TEST_UTIL, USER_ADMIN.getShortName(),
       Permission.Action.ADMIN,
       Permission.Action.CREATE,
       Permission.Action.READ,
       Permission.Action.WRITE);
 
-    SecureTestUtil.grantOnTable(TEST_UTIL, USER_RW.getShortName(),
+    grantOnTable(TEST_UTIL, USER_RW.getShortName(),
       TEST_TABLE.getTableName(), TEST_FAMILY, null,
       Permission.Action.READ,
       Permission.Action.WRITE);
 
     // USER_CREATE is USER_RW plus CREATE permissions
-    SecureTestUtil.grantOnTable(TEST_UTIL, USER_CREATE.getShortName(),
+    grantOnTable(TEST_UTIL, USER_CREATE.getShortName(),
       TEST_TABLE.getTableName(), null, null,
       Permission.Action.CREATE,
       Permission.Action.READ,
       Permission.Action.WRITE);
 
-    SecureTestUtil.grantOnTable(TEST_UTIL, USER_RO.getShortName(),
+    grantOnTable(TEST_UTIL, USER_RO.getShortName(),
       TEST_TABLE.getTableName(), TEST_FAMILY, null,
       Permission.Action.READ);
 
@@ -955,383 +939,6 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
-  public void testCellPermissions() throws Exception {
-    // table/column/qualifier level permissions
-    final byte[] TEST_ROW = Bytes.toBytes("cellpermtest");
-    final byte[] TEST_Q1 = Bytes.toBytes("q1");
-    final byte[] TEST_Q2 = Bytes.toBytes("q2");
-    final byte[] TEST_Q3 = Bytes.toBytes("q3");
-    final byte[] TEST_Q4 = Bytes.toBytes("q4");
-    // test value
-    final byte[] ZERO = Bytes.toBytes(0L);
-
-    /* ---- Setup ---- */
-
-    // additional test user
-    final User userOther = User.createUserForTesting(conf, "user_check_cell_perms_other",
-      new String[0]);
-
-    // store two sets of values, one store with a cell level ACL, and one without
-    verifyAllowed(new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Put p;
-          // with ro ACL
-          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
-          p.setACL(userOther.getShortName(), new Permission(Permission.Action.READ));
-          t.put(p);
-          // with rw ACL
-          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q2, ZERO);
-          p.setACL(userOther.getShortName(), new Permission(Permission.Action.READ,
-            Permission.Action.WRITE));
-          t.put(p);
-          // no ACL
-          p = new Put(TEST_ROW)
-            .add(TEST_FAMILY, TEST_Q3, ZERO)
-            .add(TEST_FAMILY, TEST_Q4, ZERO);
-          t.put(p);
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    }, USER_OWNER);
-
-    /* ---- Gets ---- */
-
-    AccessTestAction getQ1 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          return t.get(get).listCells();
-        } finally {
-          t.close();
-        }
-      }
-    };
-
-    AccessTestAction getQ2 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          return t.get(get).listCells();
-        } finally {
-          t.close();
-        }
-      }
-    };
-
-    AccessTestAction getQ3 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q3);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          return t.get(get).listCells();
-        } finally {
-          t.close();
-        }
-      }
-    };
-
-    AccessTestAction getQ4 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q4);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          return t.get(get).listCells();
-        } finally {
-          t.close();
-        }
-      }
-    };
-
-    // Confirm special read access set at cell level
-
-    verifyAllowed(getQ1, userOther);
-    verifyAllowed(getQ2, userOther);
-
-    // Confirm this access does not extend to other cells
-
-    verifyDenied(getQ3, userOther);
-    verifyDenied(getQ4, userOther);
-
-    /* ---- Scans ---- */
-
-    // check that a scan over the test data returns the expected number of KVs
-
-    final List<Cell> scanResults = Lists.newArrayList();
-
-    AccessTestAction scanAction = new AccessTestAction() {
-      @Override
-      public List<Cell> run() throws Exception {
-        Scan scan = new Scan();
-        scan.setStartRow(TEST_ROW);
-        scan.setStopRow(Bytes.add(TEST_ROW, new byte[]{ 0 } ));
-        scan.addFamily(TEST_FAMILY);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          ResultScanner scanner = t.getScanner(scan);
-          Result result = null;
-          do {
-            result = scanner.next();
-            if (result != null) {
-              scanResults.addAll(result.listCells());
-            }
-          } while (result != null);
-        } finally {
-          t.close();
-        }
-        return scanResults;
-      }
-    };
-
-    // owner will see all values
-    scanResults.clear();
-    verifyAllowed(scanAction, USER_OWNER);
-    assertEquals(4, scanResults.size());
-
-    // other user will see 2 values
-    scanResults.clear();
-    verifyAllowed(scanAction, userOther);
-    assertEquals(2, scanResults.size());
-
-    /* ---- Increments ---- */
-
-    AccessTestAction incrementQ1 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1, 1L);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          t.increment(i);
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    };
-
-    AccessTestAction incrementQ2 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2, 1L);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          t.increment(i);
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    };
-
-    AccessTestAction incrementQ2newDenyACL = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2, 1L);
-        // Tag this increment with an ACL that denies write permissions to userOther
-        i.setACL(userOther.getShortName(), new Permission(Permission.Action.READ));
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          t.increment(i);
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    };
-
-    AccessTestAction incrementQ3 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q3, 1L);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          t.increment(i);
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    };
-
-    verifyDenied(incrementQ1, userOther);
-    verifyDenied(incrementQ3, userOther);
-
-    // We should be able to increment Q2 twice, the previous ACL will be
-    // carried forward
-    verifyAllowed(incrementQ2, userOther);
-    verifyAllowed(incrementQ2newDenyACL, userOther);
-    // But not again after we denied ourselves write permission with an ACL
-    // update
-    verifyDenied(incrementQ2, userOther);
-
-    /* ---- Deletes ---- */
-
-    AccessTestAction deleteFamily = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        Delete delete = new Delete(TEST_ROW).deleteFamily(TEST_FAMILY);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          t.delete(delete);
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    };
-
-    AccessTestAction deleteQ1 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        Delete delete = new Delete(TEST_ROW).deleteColumn(TEST_FAMILY, TEST_Q1);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          t.delete(delete);
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    };
-
-    verifyDenied(deleteFamily, userOther);
-    verifyDenied(deleteQ1, userOther);
-    verifyAllowed(deleteQ1, USER_OWNER);
-  }
-
-  @Test
-  public void testCellPermissionsWithDeleteMutipleVersions() throws Exception {
-    // table/column/qualifier level permissions
-    final byte[] TEST_ROW1 = Bytes.toBytes("r1");
-    final byte[] TEST_ROW2 = Bytes.toBytes("r2");
-    final byte[] TEST_Q1 = Bytes.toBytes("q1");
-    final byte[] TEST_Q2 = Bytes.toBytes("q2");
-    final byte[] ZERO = Bytes.toBytes(0L);
-
-    // additional test user
-    final User user1 = User.createUserForTesting(conf, "user1", new String[0]);
-    final User user2 = User.createUserForTesting(conf, "user2", new String[0]);
-
-    verifyAllowed(new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          // with rw ACL for "user1"
-          Put p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY, TEST_Q1, ZERO);
-          p.add(TEST_FAMILY, TEST_Q2, ZERO);
-          p.setACL(user1.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          t.put(p);
-          // with rw ACL for "user1"
-          p = new Put(TEST_ROW2);
-          p.add(TEST_FAMILY, TEST_Q1, ZERO);
-          p.add(TEST_FAMILY, TEST_Q2, ZERO);
-          p.setACL(user1.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          t.put(p);
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    }, USER_OWNER);
-
-    verifyAllowed(new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          // with rw ACL for "user1" and "user2"
-          Put p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY, TEST_Q1, ZERO);
-          p.add(TEST_FAMILY, TEST_Q2, ZERO);
-          Map<String, Permission> perms = new HashMap<String, Permission>();
-          perms.put(user1.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          perms.put(user2.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          p.setACL(perms);
-          t.put(p);
-          // with rw ACL for "user1" and "user2"
-          p = new Put(TEST_ROW2);
-          p.add(TEST_FAMILY, TEST_Q1, ZERO);
-          p.add(TEST_FAMILY, TEST_Q2, ZERO);
-          p.setACL(perms);
-          t.put(p);
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    }, user1);
-
-    // user1 should be allowed to delete TEST_ROW1 as he is having write permission on both
-    // versions of the cells
-    user1.runAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW1);
-          d.deleteColumns(TEST_FAMILY, TEST_Q1);
-          d.deleteColumns(TEST_FAMILY, TEST_Q2);
-          t.delete(d);
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    });
-    // user2 should not be allowed to delete TEST_ROW2 as he is having write permission only on one
-    // version of the cells.
-    user2.runAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW2);
-          d.deleteColumns(TEST_FAMILY, TEST_Q1);
-          d.deleteColumns(TEST_FAMILY, TEST_Q2);
-          t.delete(d);
-          fail("user2 should not be allowed to delete the row");
-        } catch (Exception e) {
-
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    });
-    // user1 should be allowed to delete the cf. (All data under cf for a row)
-    user1.runAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW2);
-          d.deleteFamily(TEST_FAMILY);
-          t.delete(d);
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    });
-  }
-
-  @Test
   public void testGrantRevoke() throws Exception {
     AccessTestAction grantAction = new AccessTestAction() {
       @Override
@@ -1567,9 +1174,9 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // grant table read permission
-    SecureTestUtil.grantGlobal(TEST_UTIL, gblUser.getShortName(),
+    grantGlobal(TEST_UTIL, gblUser.getShortName(),
       Permission.Action.READ);
-    SecureTestUtil.grantOnTable(TEST_UTIL, tblUser.getShortName(),
+    grantOnTable(TEST_UTIL, tblUser.getShortName(),
       tableName, null, null,
       Permission.Action.READ);
 
@@ -1583,9 +1190,9 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // grant table write permission while revoking read permissions
-    SecureTestUtil.grantGlobal(TEST_UTIL, gblUser.getShortName(),
+    grantGlobal(TEST_UTIL, gblUser.getShortName(),
       Permission.Action.WRITE);
-    SecureTestUtil.grantOnTable(TEST_UTIL, tblUser.getShortName(),
+    grantOnTable(TEST_UTIL, tblUser.getShortName(),
       tableName, null, null,
       Permission.Action.WRITE);
 
@@ -1598,8 +1205,8 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // revoke table permissions
-    SecureTestUtil.revokeGlobal(TEST_UTIL, gblUser.getShortName());
-    SecureTestUtil.revokeFromTable(TEST_UTIL, tblUser.getShortName(),
+    revokeGlobal(TEST_UTIL, gblUser.getShortName());
+    revokeFromTable(TEST_UTIL, tblUser.getShortName(),
       tableName, null, null);
 
     verifyDenied(tblUser, getActionAll, getAction1, getAction2);
@@ -1611,9 +1218,9 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // grant column family read permission
-    SecureTestUtil.grantGlobal(TEST_UTIL, gblUser.getShortName(),
+    grantGlobal(TEST_UTIL, gblUser.getShortName(),
       Permission.Action.READ);
-    SecureTestUtil.grantOnTable(TEST_UTIL, tblUser.getShortName(),
+    grantOnTable(TEST_UTIL, tblUser.getShortName(),
       tableName, family1, null, Permission.Action.READ);
 
     // Access should be denied for family2
@@ -1627,9 +1234,9 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // grant column family write permission
-    SecureTestUtil.grantGlobal(TEST_UTIL, gblUser.getShortName(),
+    grantGlobal(TEST_UTIL, gblUser.getShortName(),
       Permission.Action.WRITE);
-    SecureTestUtil.grantOnTable(TEST_UTIL, tblUser.getShortName(),
+    grantOnTable(TEST_UTIL, tblUser.getShortName(),
       tableName, family2, null, Permission.Action.WRITE);
 
     // READ from family1, WRITE to family2 are allowed
@@ -1644,8 +1251,8 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // revoke column family permission
-    SecureTestUtil.revokeGlobal(TEST_UTIL, gblUser.getShortName());
-    SecureTestUtil.revokeFromTable(TEST_UTIL, tblUser.getShortName(), tableName, family2, null);
+    revokeGlobal(TEST_UTIL, gblUser.getShortName());
+    revokeFromTable(TEST_UTIL, tblUser.getShortName(), tableName, family2, null);
 
     // Revoke on family2 should not have impact on family1 permissions
     verifyAllowed(tblUser, getActionAll, getAction1);
@@ -1735,13 +1342,13 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    SecureTestUtil.revokeFromTable(TEST_UTIL, user.getShortName(), tableName, family1, null);
+    revokeFromTable(TEST_UTIL, user.getShortName(), tableName, family1, null);
 
     verifyDenied(user, getQualifierAction);
     verifyDenied(user, putQualifierAction);
     verifyDenied(user, deleteQualifierAction);
 
-    SecureTestUtil.grantOnTable(TEST_UTIL, user.getShortName(),
+    grantOnTable(TEST_UTIL, user.getShortName(),
       tableName, family1, qualifier,
       Permission.Action.READ);
 
@@ -1751,7 +1358,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // only grant write permission
     // TODO: comment this portion after HBASE-3583
-    SecureTestUtil.grantOnTable(TEST_UTIL, user.getShortName(),
+    grantOnTable(TEST_UTIL, user.getShortName(),
       tableName, family1, qualifier,
       Permission.Action.WRITE);
 
@@ -1760,7 +1367,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(user, deleteQualifierAction);
 
     // grant both read and write permission
-    SecureTestUtil.grantOnTable(TEST_UTIL, user.getShortName(),
+    grantOnTable(TEST_UTIL, user.getShortName(),
       tableName, family1, qualifier,
       Permission.Action.READ, Permission.Action.WRITE);
 
@@ -1769,7 +1376,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(user, deleteQualifierAction);
 
     // revoke family level permission won't impact column level
-    SecureTestUtil.revokeFromTable(TEST_UTIL, user.getShortName(),
+    revokeFromTable(TEST_UTIL, user.getShortName(),
       tableName, family1, qualifier);
 
     verifyDenied(user, getQualifierAction);
@@ -1827,7 +1434,7 @@ public class TestAccessController extends SecureTestUtil {
       hasFoundUserPermission(up, perms));
 
     // grant read permission
-    SecureTestUtil.grantOnTable(TEST_UTIL, user.getShortName(),
+    grantOnTable(TEST_UTIL, user.getShortName(),
       tableName, family1, qualifier, Permission.Action.READ);
 
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
@@ -1851,7 +1458,7 @@ public class TestAccessController extends SecureTestUtil {
       hasFoundUserPermission(upToVerify, perms));
 
     // grant read+write
-    SecureTestUtil.grantOnTable(TEST_UTIL, user.getShortName(),
+    grantOnTable(TEST_UTIL, user.getShortName(),
       tableName, family1, qualifier,
       Permission.Action.WRITE, Permission.Action.READ);
 
@@ -1871,7 +1478,7 @@ public class TestAccessController extends SecureTestUtil {
       hasFoundUserPermission(upToVerify, perms));
 
     // revoke
-    SecureTestUtil.revokeFromTable(TEST_UTIL, user.getShortName(), tableName, family1, qualifier,
+    revokeFromTable(TEST_UTIL, user.getShortName(), tableName, family1, qualifier,
       Permission.Action.WRITE, Permission.Action.READ);
     
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
@@ -2030,13 +1637,13 @@ public class TestAccessController extends SecureTestUtil {
     User userColumn = User.createUserForTesting(conf, "user_check_perms_family", new String[0]);
     User userQualifier = User.createUserForTesting(conf, "user_check_perms_q", new String[0]);
 
-    SecureTestUtil.grantOnTable(TEST_UTIL, userTable.getShortName(),
+    grantOnTable(TEST_UTIL, userTable.getShortName(),
       TEST_TABLE.getTableName(), null, null,
       Permission.Action.READ);
-    SecureTestUtil.grantOnTable(TEST_UTIL, userColumn.getShortName(),
+    grantOnTable(TEST_UTIL, userColumn.getShortName(),
       TEST_TABLE.getTableName(), TEST_FAMILY, null,
       Permission.Action.READ);
-    SecureTestUtil.grantOnTable(TEST_UTIL, userQualifier.getShortName(),
+    grantOnTable(TEST_UTIL, userQualifier.getShortName(),
       TEST_TABLE.getTableName(), TEST_FAMILY, TEST_Q1,
       Permission.Action.READ);
 
@@ -2251,7 +1858,7 @@ public class TestAccessController extends SecureTestUtil {
     String currentUser = User.getCurrent().getShortName();
     String activeUserForNewRs = currentUser + ".hfs." +
       hbaseCluster.getLiveRegionServerThreads().size();
-    SecureTestUtil.grantGlobal(TEST_UTIL, activeUserForNewRs,
+    grantGlobal(TEST_UTIL, activeUserForNewRs,
       Permission.Action.ADMIN, Permission.Action.CREATE, Permission.Action.READ,
         Permission.Action.WRITE);
 
@@ -2319,7 +1926,7 @@ public class TestAccessController extends SecureTestUtil {
     User TABLE_ADMIN = User.createUserForTesting(conf, "UserA", new String[0]);
 
     // Grant TABLE ADMIN privs
-    SecureTestUtil.grantOnTable(TEST_UTIL, TABLE_ADMIN.getShortName(),
+    grantOnTable(TEST_UTIL, TABLE_ADMIN.getShortName(),
       TEST_TABLE.getTableName(), null, null,
       Permission.Action.ADMIN);
 
@@ -2361,7 +1968,7 @@ public class TestAccessController extends SecureTestUtil {
     User TABLE_ADMIN = User.createUserForTesting(conf, "TestUser", new String[0]);
 
     // Grant TABLE ADMIN privs
-    SecureTestUtil.grantOnTable(TEST_UTIL, TABLE_ADMIN.getShortName(),
+    grantOnTable(TEST_UTIL, TABLE_ADMIN.getShortName(),
       TEST_TABLE.getTableName(), null, null,
       Permission.Action.ADMIN);
 
@@ -2400,7 +2007,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(getAction, USER_NONE);
 
     // Grant namespace READ to USER_NONE, this should supersede any table permissions
-    SecureTestUtil.grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(),
+    grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(),
       TEST_TABLE.getTableName().getNamespaceAsString(),
       Permission.Action.READ);
 
@@ -2470,7 +2077,7 @@ public class TestAccessController extends SecureTestUtil {
     User userA = User.createUserForTesting(conf, "UserA", new String[0]);
     User userB = User.createUserForTesting(conf, "UserB", new String[0]);
 
-    SecureTestUtil.grantOnTable(TEST_UTIL, userA.getShortName(),
+    grantOnTable(TEST_UTIL, userA.getShortName(),
       TEST_TABLE.getTableName(), null, null,
       Permission.Action.EXEC);
 
@@ -2494,7 +2101,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(execEndpointAction, userA);
 
     // Now grant EXEC to the entire namespace to user B
-    SecureTestUtil.grantOnNamespace(TEST_UTIL, userB.getShortName(),
+    grantOnNamespace(TEST_UTIL, userB.getShortName(),
       TEST_TABLE.getTableName().getNamespaceAsString(),
       Permission.Action.EXEC);
 

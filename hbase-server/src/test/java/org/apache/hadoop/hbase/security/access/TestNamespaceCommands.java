@@ -66,7 +66,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
   @BeforeClass
   public static void beforeClass() throws Exception {
     conf = UTIL.getConfiguration();
-    SecureTestUtil.enableSecurity(conf);
+    enableSecurity(conf);
 
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
     USER_RW = User.createUserForTesting(conf, "rw_user", new String[0]);
@@ -83,7 +83,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
     UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TestNamespace).build());
 
-    SecureTestUtil.grantOnNamespace(UTIL, USER_NSP_WRITE.getShortName(),
+    grantOnNamespace(UTIL, USER_NSP_WRITE.getShortName(),
       TestNamespace, Permission.Action.WRITE);
   }
   
@@ -99,7 +99,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
       // Grant and check state in ACL table
-      SecureTestUtil.grantOnNamespace(UTIL, userTestNamespace, TestNamespace,
+      grantOnNamespace(UTIL, userTestNamespace, TestNamespace,
         Permission.Action.WRITE);
 
       Result result = acl.get(new Get(Bytes.toBytes(userTestNamespace)));
@@ -118,7 +118,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
       assertEquals(Permission.Action.WRITE, namespacePerms.get(0).getActions()[0]);
 
       // Revoke and check state in ACL table
-      SecureTestUtil.revokeFromNamespace(UTIL, userTestNamespace, TestNamespace,
+      revokeFromNamespace(UTIL, userTestNamespace, TestNamespace,
         Permission.Action.WRITE);
 
       perms = AccessControlLists.getNamespacePermissions(conf, TestNamespace);
