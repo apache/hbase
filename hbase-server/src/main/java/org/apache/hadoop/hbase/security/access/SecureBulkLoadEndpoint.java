@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -50,7 +51,9 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.security.SecureBulkLoadUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
@@ -83,8 +86,8 @@ import java.util.List;
  * 2. A user writes out data to his secure output directory: /user/foo/data
  * 3. A call is made to hbase to create a secret staging directory
  * which globally rwx (777): /user/staging/averylongandrandomdirectoryname
- * 4. The user makes the data world readable and writable, then moves it
- * into the random staging directory, then calls bulkLoadHFiles()
+ * 4. The user moves the data into the random staging directory,
+ * then calls bulkLoadHFiles()
  *
  * Like delegation tokens the strength of the security lies in the length
  * and randomness of the secret directory.
@@ -220,6 +223,21 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     }
     boolean loaded = false;
     if (!bypass) {
+      // Get the target fs (HBase region server fs) delegation token
+      // Since we have checked the permission via 'preBulkLoadHFile', now let's give
+      // the 'request user' necessary token to operate on the target fs.
+      // After this point the 'doAs' user will hold two tokens, one for the source fs
+      // ('request user'), another for the target fs (HBase region server principal).
+      FsDelegationToken targetfsDelegationToken = new FsDelegationToken(userProvider, "renewer");
+      try {
+        targetfsDelegationToken.acquireDelegationToken(fs);
+      } catch (IOException e) {
+        ResponseConverter.setControllerException(controller, e);
+        done.run(null);
+        return;
+      }
+      ugi.addToken(targetfsDelegationToken.getUserToken());
+
       loaded = ugi.doAs(new PrivilegedAction<Boolean>() {
         @Override
         public Boolean run() {
@@ -228,9 +246,6 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
             Configuration conf = env.getConfiguration();
             fs = FileSystem.get(conf);
             for(Pair<byte[], String> el: familyPaths) {
-              Path p = new Path(el.getSecond());
-              LOG.trace("Setting permission for: " + p);
-              fs.setPermission(p, PERM_ALL_ACCESS);
               Path stageFamily = new Path(bulkToken, Bytes.toString(el.getFirst()));
               if(!fs.exists(stageFamily)) {
                 fs.mkdirs(stageFamily);
@@ -240,7 +255,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
             //We call bulkLoadHFiles as requesting user
             //To enable access prior to staging
             return env.getRegion().bulkLoadHFiles(familyPaths, true,
-                new SecureBulkLoadListener(fs, bulkToken));
+                new SecureBulkLoadListener(fs, bulkToken, conf));
           } catch (Exception e) {
             LOG.error("Failed to complete bulk load", e);
           }
@@ -303,26 +318,42 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   }
 
   private static class SecureBulkLoadListener implements HRegion.BulkLoadListener {
+    // Target filesystem
     private FileSystem fs;
     private String stagingDir;
+    private Configuration conf;
+    // Source filesystem
+    private FileSystem srcFs = null;
 
-    public SecureBulkLoadListener(FileSystem fs, String stagingDir) {
+    public SecureBulkLoadListener(FileSystem fs, String stagingDir, Configuration conf) {
       this.fs = fs;
       this.stagingDir = stagingDir;
+      this.conf = conf;
     }
 
     @Override
     public String prepareBulkLoad(final byte[] family, final String srcPath) throws IOException {
       Path p = new Path(srcPath);
       Path stageP = new Path(stagingDir, new Path(Bytes.toString(family), p.getName()));
+      if (srcFs == null) {
+        srcFs = FileSystem.get(p.toUri(), conf);
+      }
 
       if(!isFile(p)) {
         throw new IOException("Path does not reference a file: " + p);
       }
 
-      LOG.debug("Moving " + p + " to " + stageP);
-      if(!fs.rename(p, stageP)) {
-        throw new IOException("Failed to move HFile: " + p + " to " + stageP);
+      // Check to see if the source and target filesystems are the same
+      if (!FSHDFSUtils.isSameHdfs(conf, srcFs, fs)) {
+        LOG.debug("Bulk-load file " + srcPath + " is on different filesystem than " +
+            "the destination filesystem. Copying file over to destination staging dir.");
+        FileUtil.copy(srcFs, p, fs, stageP, false, conf);
+      }
+      else {
+        LOG.debug("Moving " + p + " to " + stageP);
+        if(!fs.rename(p, stageP)) {
+          throw new IOException("Failed to move HFile: " + p + " to " + stageP);
+        }
       }
       return stageP.toString();
     }
@@ -350,7 +381,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
      * @throws IOException
      */
     private boolean isFile(Path p) throws IOException {
-      FileStatus status = fs.getFileStatus(p);
+      FileStatus status = srcFs.getFileStatus(p);
       boolean isFile = !status.isDir();
       try {
         isFile = isFile && !(Boolean)Methods.call(FileStatus.class, status, "isSymlink", null, null);

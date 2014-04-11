@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -110,6 +111,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private int maxFilesPerRegionPerFamily;
   private boolean assignSeqIds;
 
+  // Source filesystem
+  private FileSystem fs;
+  // Source delegation token
   private FsDelegationToken fsDelegationToken;
   private String bulkToken;
   private UserProvider userProvider;
@@ -161,7 +165,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    */
   private void discoverLoadQueue(Deque<LoadQueueItem> ret, Path hfofDir)
   throws IOException {
-    FileSystem fs = hfofDir.getFileSystem(getConf());
+    fs = hfofDir.getFileSystem(getConf());
 
     if (!fs.exists(hfofDir)) {
       throw new FileNotFoundException("HFileOutputFormat dir " +
@@ -257,10 +261,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         return;
       }
 
-      //If using secure bulk load
+      //If using secure bulk load, get source delegation token, and
       //prepare staging directory and token
       if (userProvider.isHBaseSecurityEnabled()) {
-        FileSystem fs = FileSystem.get(getConf());
+        // fs is the source filesystem
         fsDelegationToken.acquireDelegationToken(fs);
 
         bulkToken = new SecureBulkLoadClient(table).prepareBulkLoad(table.getName());
@@ -319,7 +323,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         LOG.error(err);
       }
     }
-    
+
     if (queue != null && !queue.isEmpty()) {
         throw new RuntimeException("Bulk load aborted with some files not yet loaded."
           + "Please check log for more details.");
@@ -497,7 +501,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       final Pair<byte[][], byte[][]> startEndKeys)
       throws IOException {
     final Path hfilePath = item.hfilePath;
-    final FileSystem fs = hfilePath.getFileSystem(getConf());
     HFile.Reader hfr = HFile.createReader(fs, hfilePath,
         new CacheConfig(getConf()), getConf());
     final byte[] first, last;
@@ -627,23 +630,28 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           //from the staging directory back to original location
           //in user directory
           if(secureClient != null && !success) {
-            FileSystem fs = FileSystem.get(getConf());
-            for(Pair<byte[], String> el : famPaths) {
-              Path hfileStagingPath = null;
-              Path hfileOrigPath = new Path(el.getSecond());
-              try {
-                hfileStagingPath= new Path(secureClient.getStagingPath(bulkToken, el.getFirst()),
+            FileSystem targetFs = FileSystem.get(getConf());
+            // Check to see if the source and target filesystems are the same
+            // If they are the same filesystem, we will try move the files back
+            // because previously we moved them to the staging directory.
+            if (FSHDFSUtils.isSameHdfs(getConf(), fs, targetFs)) {
+              for(Pair<byte[], String> el : famPaths) {
+                Path hfileStagingPath = null;
+                Path hfileOrigPath = new Path(el.getSecond());
+                try {
+                  hfileStagingPath= new Path(secureClient.getStagingPath(bulkToken, el.getFirst()),
                     hfileOrigPath.getName());
-                if(fs.rename(hfileStagingPath, hfileOrigPath)) {
-                  LOG.debug("Moved back file " + hfileOrigPath + " from " +
-                      hfileStagingPath);
-                } else if(fs.exists(hfileStagingPath)){
+                  if(targetFs.rename(hfileStagingPath, hfileOrigPath)) {
+                    LOG.debug("Moved back file " + hfileOrigPath + " from " +
+                        hfileStagingPath);
+                  } else if(targetFs.exists(hfileStagingPath)){
+                    LOG.debug("Unable to move back file " + hfileOrigPath + " from " +
+                        hfileStagingPath);
+                  }
+                } catch(Exception ex) {
                   LOG.debug("Unable to move back file " + hfileOrigPath + " from " +
-                      hfileStagingPath);
+                      hfileStagingPath, ex);
                 }
-              } catch(Exception ex) {
-                LOG.debug("Unable to move back file " + hfileOrigPath + " from " +
-                    hfileStagingPath, ex);
               }
             }
           }
