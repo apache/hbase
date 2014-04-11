@@ -23,9 +23,12 @@ import java.security.DigestException;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.io.IOUtils;
@@ -195,6 +198,52 @@ public final class Encryption {
     } catch (NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
     } catch (DigestException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Return a 128 bit key derived from the concatenation of the supplied
+   * arguments using PBKDF2WithHmacSHA1 at 10,000 iterations.
+   * 
+   */
+  public static byte[] pbkdf128(String... args) {
+    byte[] salt = new byte[128];
+    Bytes.random(salt);
+    StringBuilder sb = new StringBuilder();
+    for (String s: args) {
+      sb.append(s);
+    }
+    PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 128);
+    try {
+      return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+        .generateSecret(spec).getEncoded();
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
+    } catch (InvalidKeySpecException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Return a 128 bit key derived from the concatenation of the supplied
+   * arguments using PBKDF2WithHmacSHA1 at 10,000 iterations.
+   * 
+   */
+  public static byte[] pbkdf128(byte[]... args) {
+    byte[] salt = new byte[128];
+    Bytes.random(salt);
+    StringBuilder sb = new StringBuilder();
+    for (byte[] b: args) {
+      sb.append(b);
+    }
+    PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 128);
+    try {
+      return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+        .generateSecret(spec).getEncoded();
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
+    } catch (InvalidKeySpecException e) {
       throw new RuntimeException(e);
     }
   }

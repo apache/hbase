@@ -640,7 +640,7 @@ module Hbase
         algorithm = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION).upcase
         family.setEncryptionType(algorithm)
         if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION_KEY)
-          key = org.apache.hadoop.hbase.io.crypto.Encryption.hash128(
+          key = org.apache.hadoop.hbase.io.crypto.Encryption.pbkdf128(
             arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION_KEY))
           family.setEncryptionKey(org.apache.hadoop.hbase.security.EncryptionUtil.wrapKey(@conf, key,
             algorithm))
