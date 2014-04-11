@@ -30,15 +30,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Writes HFiles. Passed KeyValues must arrive in order.
  * Writes current time as the sequence id for the file. Sets the major compacted
- * attribute on created hfiles. Calling write(null,null) will forceably roll
+ * attribute on created hfiles. Calling write(null,null) will forcibly roll
  * all HFiles being written.
  * <p>
  * Using this class as part of a MapReduce job is best done
@@ -51,6 +56,13 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 @InterfaceStability.Stable
 public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, KeyValue> {
   static Log LOG = LogFactory.getLog(HFileOutputFormat.class);
+
+  // This constant is public since the client can modify this when setting
+  // up their conf object and thus refer to this symbol.
+  // It is present for backwards compatibility reasons. Use it only to
+  // override the auto-detection of datablock encoding.
+  public static final String DATABLOCK_ENCODING_OVERRIDE_CONF_KEY =
+    HFileOutputFormat2.DATABLOCK_ENCODING_OVERRIDE_CONF_KEY;
 
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(final TaskAttemptContext context)
   throws IOException, InterruptedException {
@@ -77,17 +89,54 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   }
 
   /**
-   * Run inside the task to deserialize column family to compression algorithm
-   * map from the
-   * configuration.
+   * Runs inside the task to deserialize column family to compression algorithm
+   * map from the configuration.
    *
-   * Package-private for unit tests only.
-   *
-   * @return a map from column family to the name of the configured compression
-   *         algorithm
+   * @param conf to read the serialized values from
+   * @return a map from column family to the configured compression algorithm
    */
-  static Map<byte[], String> createFamilyCompressionMap(Configuration conf) {
+  @VisibleForTesting
+  static Map<byte[], Algorithm> createFamilyCompressionMap(Configuration
+      conf) {
     return HFileOutputFormat2.createFamilyCompressionMap(conf);
+  }
+
+  /**
+   * Runs inside the task to deserialize column family to bloom filter type
+   * map from the configuration.
+   *
+   * @param conf to read the serialized values from
+   * @return a map from column family to the the configured bloom filter type
+   */
+  @VisibleForTesting
+  static Map<byte[], BloomType> createFamilyBloomTypeMap(Configuration conf) {
+    return HFileOutputFormat2.createFamilyBloomTypeMap(conf);
+  }
+
+  /**
+   * Runs inside the task to deserialize column family to block size
+   * map from the configuration.
+   *
+   * @param conf to read the serialized values from
+   * @return a map from column family to the configured block size
+   */
+  @VisibleForTesting
+  static Map<byte[], Integer> createFamilyBlockSizeMap(Configuration conf) {
+    return HFileOutputFormat2.createFamilyBlockSizeMap(conf);
+  }
+
+  /**
+   * Runs inside the task to deserialize column family to data block encoding
+   * type map from the configuration.
+   *
+   * @param conf to read the serialized values from
+   * @return a map from column family to HFileDataBlockEncoder for the
+   *         configured data block type for the family
+   */
+  @VisibleForTesting
+  static Map<byte[], HFileDataBlockEncoder> createFamilyDataBlockEncodingMap(
+      Configuration conf) {
+    return HFileOutputFormat2.createFamilyDataBlockEncodingMap(conf);
   }
 
   /**
@@ -103,25 +152,58 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * Serialize column family to compression algorithm map to configuration.
    * Invoked while configuring the MR job for incremental load.
    *
-   * Package-private for unit tests only.
-   *
+   * @param table to read the properties from
+   * @param conf to persist serialized values into
    * @throws IOException
    *           on failure to read column family descriptors
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
+  @VisibleForTesting
   static void configureCompression(HTable table, Configuration conf) throws IOException {
     HFileOutputFormat2.configureCompression(table, conf);
+  }
+
+  /**
+   * Serialize column family to block size map to configuration.
+   * Invoked while configuring the MR job for incremental load.
+   *
+   * @param table to read the properties from
+   * @param conf to persist serialized values into
+   * @throws IOException
+   *           on failure to read column family descriptors
+   */
+  @VisibleForTesting
+  static void configureBlockSize(HTable table, Configuration conf) throws IOException {
+    HFileOutputFormat2.configureBlockSize(table, conf);
   }
 
   /**
    * Serialize column family to bloom type map to configuration.
    * Invoked while configuring the MR job for incremental load.
    *
+   * @param table to read the properties from
+   * @param conf to persist serialized values into
    * @throws IOException
    *           on failure to read column family descriptors
    */
+  @VisibleForTesting
   static void configureBloomType(HTable table, Configuration conf) throws IOException {
     HFileOutputFormat2.configureBloomType(table, conf);
+  }
+
+  /**
+   * Serialize column family to data block encoding map to configuration.
+   * Invoked while configuring the MR job for incremental load.
+   *
+   * @param table to read the properties from
+   * @param conf to persist serialized values into
+   * @throws IOException
+   *           on failure to read column family descriptors
+   */
+  @VisibleForTesting
+  static void configureDataBlockEncoding(HTable table,
+      Configuration conf) throws IOException {
+    HFileOutputFormat2.configureDataBlockEncoding(table, conf);
   }
 }
