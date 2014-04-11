@@ -146,7 +146,7 @@ import com.google.common.collect.Lists;
  * regionName is a unique identifier for this HRegion. (startKey, endKey]
  * defines the keyspace for this HRegion.
  */
-public class HRegion implements HeapSize, ConfigurationObserver {
+public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
   public static final Log LOG = LogFactory.getLog(HRegion.class);
   static final String SPLITDIR = "splits";
   static final String MERGEDIR = "merges";
@@ -718,10 +718,8 @@ public class HRegion implements HeapSize, ConfigurationObserver {
     }
   }
 
-  /**
-   * @return True if this region has references.
-   */
-  boolean hasReferences() {
+  @Override
+  public boolean hasReferences() {
     for (Store store : this.stores.values()) {
       for (StoreFile sf : store.getStorefiles()) {
         // Found a reference, return.
@@ -789,6 +787,7 @@ public class HRegion implements HeapSize, ConfigurationObserver {
   }
 
   /** @return a HRegionInfo object for this region */
+  @Override
   public HRegionInfo getRegionInfo() {
     return this.regionInfo;
   }
@@ -1052,7 +1051,7 @@ public class HRegion implements HeapSize, ConfigurationObserver {
     return this.lastStoreFlushTimeMap.get(store);
   }
 
-  /** @return how info about the last flushes <time, size> */
+  @Override
   public List<Pair<Long,Long>> getRecentFlushInfo() {
     // only MemStoreFlusher thread should be calling this, so read lock is okay
     this.splitsAndClosesLock.readLock().lock();
@@ -1344,32 +1343,11 @@ public class HRegion implements HeapSize, ConfigurationObserver {
    * @throws IOException
    */
   public boolean flushcache() throws IOException {
-    return flushcache(false);
+    return flushMemstoreShapshot(false);
   }
 
-  /**
-   * Flush the cache.
-   *
-   * When this method is called the cache will be flushed unless:
-   * <ol>
-   *   <li>the cache is empty</li>
-   *   <li>the region is closed.</li>
-   *   <li>a flush is already in progress</li>
-   *   <li>writes are disabled</li>
-   * </ol>
-   *
-   * <p>This method may block for some time, so it should not be called from a
-   * time-sensitive thread.
-   *
-   * @param selectiveFlushRequest If true, selectively flush column families
-   *                              which dominate the memstore size, provided it
-   *                              is enabled in the configuration.
-   *
-   * @return true if cache was flushed
-   *
-   * @throws IOException general io exceptions
-   */
-  public boolean flushcache(boolean selectiveFlushRequest) throws IOException {
+  @Override
+  public boolean flushMemstoreShapshot(boolean selectiveFlushRequest) throws IOException {
     // If a selective flush was requested, but the per-column family switch is
     // off, we cannot do a selective flush.
     if (selectiveFlushRequest && !perColumnFamilyFlushEnabled) {
@@ -2337,6 +2315,7 @@ public class HRegion implements HeapSize, ConfigurationObserver {
    * @throws IOException
    * @return true if the new put was execute, false otherwise
    */
+  @SuppressWarnings("deprecation")
   public boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier,
       byte [] expectedValue, Writable w, Integer lockId, boolean writeToWAL)
   throws IOException{
@@ -2914,6 +2893,9 @@ public class HRegion implements HeapSize, ConfigurationObserver {
     return this.stores.get(column);
   }
 
+  /**
+   * @return a map from column family to Store.
+   */
   public Map<byte[], Store> getStores() {
     return this.stores;
   }
@@ -3675,6 +3657,7 @@ public class HRegion implements HeapSize, ConfigurationObserver {
    * @return result
    * @throws IOException read exceptions
    */
+  @SuppressWarnings("deprecation")
   public Result get(final Get get, final Integer lockid) throws IOException {
     // Verify families are all valid
     if (get.hasFamilies()) {
@@ -4156,5 +4139,14 @@ public class HRegion implements HeapSize, ConfigurationObserver {
     for (Store s : stores.values()) {
       s.updateConfiguration();
     }
+  }
+
+  @Override
+  public int maxStoreFilesCount() {
+    int res = 0;
+    for (Store hstore : this.stores.values()) {
+      res = Math.max(res, hstore.getStorefilesCount());
+    }
+    return res;
   }
 }

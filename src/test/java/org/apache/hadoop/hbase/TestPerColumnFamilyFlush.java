@@ -164,7 +164,7 @@ public class TestPerColumnFamilyFlush extends TestCase {
                 (cf1MemstoreSize + cf2MemstoreSize + cf3MemstoreSize));
 
     // Flush!
-    region.flushcache(true);
+    region.flushMemstoreShapshot(true);
 
     // Will use these to check if anything changed.
     long oldCF2MemstoreSize = cf2MemstoreSize;
@@ -205,7 +205,7 @@ public class TestPerColumnFamilyFlush extends TestCase {
     oldCF3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
 
     // Flush again
-    region.flushcache(true);
+    region.flushMemstoreShapshot(true);
 
     // Recalculate everything
     cf1MemstoreSize = region.getStore(FAMILY1).getMemStoreSize();
@@ -228,7 +228,7 @@ public class TestPerColumnFamilyFlush extends TestCase {
     // In that case, we should flush all the CFs.
 
     // Clearing the existing memstores.
-    region.flushcache(false);
+    region.flushMemstoreShapshot(false);
 
     // The memstore limit is 200*1024 and the column family flush threshold is
     // around 50*1024. We try to just hit the memstore limit with each CF's
@@ -241,7 +241,7 @@ public class TestPerColumnFamilyFlush extends TestCase {
       region.put(createPut(5, i));
     }
 
-    region.flushcache(true);
+    region.flushMemstoreShapshot(true);
     // Since we won't find any CF above the threshold, and hence no specific
     // store to flush, we should flush all the memstores.
     Assert.assertEquals(0, region.getMemstoreSize().get());
@@ -254,7 +254,7 @@ public class TestPerColumnFamilyFlush extends TestCase {
      *           FM1   FM2   FM3
      */
     // flush all
-    region.flushcache(false);
+    region.flushMemstoreShapshot(false);
     region.put(createPut(2, 1));
     region.put(createPut(3, 1));
 
@@ -279,7 +279,7 @@ public class TestPerColumnFamilyFlush extends TestCase {
      *           FM1   FM2   FM3
      */
     // flush, should only flush family 1
-    region.flushcache(true);
+    region.flushMemstoreShapshot(true);
 
     final long sizeFamily1_2 = region.getStore(FAMILY1).getMemStoreSize();
     final long sizeFamily2_2 = region.getStore(FAMILY2).getMemStoreSize();
@@ -295,7 +295,7 @@ public class TestPerColumnFamilyFlush extends TestCase {
      *           FM1   FM2   FM3
      */
     // flush all
-    region.flushcache(false);
+    region.flushMemstoreShapshot(false);
 
     region.put(createPut(2, 1));
     region.put(createPut(3, 1));
@@ -318,7 +318,7 @@ public class TestPerColumnFamilyFlush extends TestCase {
      *           FM1   FM2   FM3
      */
     // flush, should flush all
-    region.flushcache(true);
+    region.flushMemstoreShapshot(true);
 
     final long sizeFamily1_4 = region.getStore(FAMILY1).getMemStoreSize();
     final long sizeFamily2_4 = region.getStore(FAMILY2).getMemStoreSize();
@@ -417,7 +417,7 @@ public class TestPerColumnFamilyFlush extends TestCase {
             (cf1MemstoreSize + cf2MemstoreSize + cf3MemstoreSize));
 
     // Flush!
-    region.flushcache(true);
+    region.flushMemstoreShapshot(true);
 
     cf1MemstoreSize = region.getStore(FAMILY1).getMemStoreSize();
     cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
@@ -501,7 +501,7 @@ public class TestPerColumnFamilyFlush extends TestCase {
       desiredRegion != null);
 
     // Flush the region selectively.
-    desiredRegion.flushcache(true);
+    desiredRegion.flushMemstoreShapshot(true);
 
     long totalMemstoreSize;
     long cf1MemstoreSize, cf2MemstoreSize, cf3MemstoreSize;

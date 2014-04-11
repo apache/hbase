@@ -19,30 +19,29 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
-import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
-
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.Future;
-import java.util.concurrent.Delayed;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Thread that flushes cache on request
@@ -55,14 +54,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
   static final Log LOG = LogFactory.getLog(MemStoreFlusher.class);
-  // These two data members go together.  Any entry in the one must have
-  // a corresponding entry in the other.
-  private final Map<HRegion, FlushQueueEntry> regionsInQueue =
-    new HashMap<HRegion, FlushQueueEntry>();
+  private final Map<HRegionIf, Pair<FlushQueueEntry, Future<Boolean>>>
+      regionsInQueue = new HashMap<>();
 
-  private final boolean perColumnFamilyFlushEnabled;
-  private final HRegionServer server;
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  private final HRegionServerIf server;
 
   protected final long globalMemStoreLimit;
   protected final long globalMemStoreLimitLowMark;
@@ -73,20 +68,18 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
     "hbase.regionserver.global.memstore.upperLimit";
   private static final String LOWER_KEY =
     "hbase.regionserver.global.memstore.lowerLimit";
-  private long blockingStoreFilesNumber;
+
+  private int blockingStoreFilesNumber;
   private long blockingWaitTime;
 
   private int handlerCount;
-  private final ThreadPoolExecutor flushes;
-  Map<FlushQueueEntry, Future> futures = new HashMap<FlushQueueEntry, Future>();
+  private final ScheduledThreadPoolExecutor threadPool;
 
   /**
    * @param conf
    * @param server
    */
-  public MemStoreFlusher(final Configuration conf,
-      final HRegionServer server) {
-    super();
+  public MemStoreFlusher(final Configuration conf, HRegionServerIf server) {
     this.server = server;
     long max = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
     this.globalMemStoreLimit = globalMemStoreLimit(max, DEFAULT_UPPER,
@@ -99,17 +92,15 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
     }
     this.globalMemStoreLimitLowMark = lower;
     this.blockingStoreFilesNumber =
-      conf.getInt("hbase.hstore.blockingStoreFiles", -1);
+        conf.getInt(HConstants.HSTORE_BLOCKING_STORE_FILES_KEY, -1);
     if (this.blockingStoreFilesNumber == -1) {
       this.blockingStoreFilesNumber = 1 +
         conf.getInt("hbase.hstore.compactionThreshold", 3);
     }
-    this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
-      90000);
+    this.blockingWaitTime =
+        conf.getLong(HConstants.HSTORE_BLOCKING_WAIT_TIME_KEY,
+            HConstants.DEFAULT_HSTORE_BLOCKING_WAIT_TIME);
 
-    this.perColumnFamilyFlushEnabled = conf.getBoolean(
-            HConstants.HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH,
-            HConstants.DEFAULT_HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH);
     // number of "memstore flusher" threads per region server
     this.handlerCount = conf.getInt(HConstants.FLUSH_THREADS, HConstants.DEFAULT_FLUSH_THREADS);
 
@@ -118,9 +109,9 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
       ", globalMemStoreLimitLowMark=" +
       StringUtils.humanReadableInt(this.globalMemStoreLimitLowMark) +
       ", maxHeap=" + StringUtils.humanReadableInt(max));
-    this.flushes = new ThreadPoolExecutor(handlerCount, handlerCount,
-        60, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(),
+    this.threadPool = new ScheduledThreadPoolExecutor(handlerCount,
         new DaemonThreadFactory("flush-thread-"));
+    this.threadPool.setMaximumPoolSize(handlerCount);
   }
 
   /**
@@ -147,58 +138,70 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
     return (long)(max * limit);
   }
 
-  public void request(HRegion r, boolean isSelective) {
+  @Override
+  public void request(HRegionIf r, boolean isSelective) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has no delay so it will be added at the top of the flush
         // queue.  It'll come out near immediately.
         FlushQueueEntry fqe = new FlushQueueEntry(r, isSelective);
-        this.regionsInQueue.put(r, fqe);
-        executeFlushQueueEntry(fqe);
+        regionsInQueue.put(r, Pair.newPair(fqe, (Future<Boolean>) null));
+        executeFlushQueueEntry(fqe, 0);
+      } else {
+        LOG.info("Flush for " + r + " already scheduled.");
       }
     }
   }
 
-  protected void executeFlushQueueEntry(final FlushQueueEntry fqe) {
-    Runnable runnable = new Runnable() {
+  /**
+   * Called synchronized with regionsInQueue
+   */
+  protected void executeFlushQueueEntry(final FlushQueueEntry fqe, long msDelay) {
+    Callable<Boolean> callable = new Callable<Boolean>() {
       @Override
-      public void run() {
-        try {
-          String name = String.format("%s.cacheFlusher.%d", MemStoreFlusher.this.server.getRSThreadName(),
-                  MemStoreFlusher.this.flushes.getCorePoolSize() + 1);
-          if (!flushRegion(fqe, name)) {
-            LOG.warn("Failed to flush " + fqe.region);
-          }
-        } catch (Exception ex) {
-          LOG.error("Cache flush failed" +
-                   (fqe != null ? (" for region " + Bytes.toString(fqe.region.getRegionName())) : ""),
-                   ex
-          );
-          server.checkFileSystem();
+      public Boolean call() throws Exception {
+        String name =
+            String.format("%s.cacheFlusher.%d",
+                MemStoreFlusher.this.server.getRSThreadName(),
+                Thread.currentThread().getId());
+        if (!flushRegion(fqe, name)) {
+          LOG.warn("Failed to flush " + fqe.region);
+          return false;
         }
+        return true;
       }
     };
-    futures.put(fqe, this.flushes.submit(runnable));
+
+    LOG.debug("Schedule a flush request " + fqe + " with delay " + msDelay
+        + "ms");
+
+    Future<Boolean> future =
+        this.threadPool.schedule(callable, msDelay, TimeUnit.MILLISECONDS);
+    Pair<FlushQueueEntry, Future<Boolean>> pair =
+        regionsInQueue.get(fqe.region);
+    if (pair != null) {
+      pair.setSecond(future);
+    }
   }
 
   /**
    * Only interrupt once it's done with a run through the work loop.
    */
   void interruptIfNecessary() {
-    flushes.shutdown();
+    threadPool.shutdown();
   }
 
 
   boolean isAlive() {
-    return !flushes.isShutdown();
+    return !threadPool.isShutdown();
   }
 
   void join() {
     boolean done = false;
     while (!done) {
       try {
-        done = flushes.awaitTermination(60, TimeUnit.SECONDS);
         LOG.debug("Waiting for flush thread to finish...");
+        done = threadPool.awaitTermination(60, TimeUnit.SECONDS);
       } catch (InterruptedException ie) {
         LOG.error("Interrupted waiting for flush thread to finish...");
       }
@@ -209,25 +212,26 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
    * A flushRegion that checks store file count.  If too many, puts the flush
    * on delay queue to retry later.
    * @param fqe
-   * @return true if the region was successfully flushed, false otherwise. If 
+   * @return true if the region was successfully flushed, false otherwise. If
    * false, there will be accompanying log messages explaining why the log was
    * not flushed.
    */
   private boolean flushRegion(final FlushQueueEntry fqe, String why) {
-    HRegion region = fqe.region;
+    HRegionIf region = fqe.region;
     if (!fqe.region.getRegionInfo().isMetaRegion() &&
-        isTooManyStoreFiles(region)) {
+        region.maxStoreFilesCount() > this.blockingStoreFilesNumber) {
       if (fqe.isMaximumWait(this.blockingWaitTime)) {
-        LOG.info("Waited " + (System.currentTimeMillis() - fqe.createTime) +
-          "ms on a compaction to clean up 'too many store files'; waited " +
-          "long enough... proceeding with flush of " +
-          region.getRegionNameAsString());
+        LOG.info("Waited " + (System.currentTimeMillis() - fqe.createTime)
+            + "ms on a compaction to clean up 'too many store files'; waited "
+            + "long enough... proceeding with flush of "
+            + region.getRegionInfo().getRegionNameAsString());
       } else {
         // If this is first time we've been put off, then emit a log message.
         if (fqe.getRequeueCount() <= 0) {
           // Note: We don't impose blockingStoreFiles constraint on meta regions
-          LOG.warn("Region " + region.getRegionNameAsString() + " has too many " +
-            "store files; delaying flush up to " + this.blockingWaitTime + "ms");
+          LOG.warn("Region " + region.getRegionInfo().getRegionNameAsString()
+              + " has too many store files; delaying flush up to "
+              + this.blockingWaitTime + "ms");
         }
 
         /* If a split has been requested, we avoid scheduling a compaction
@@ -237,27 +241,32 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
          * references to parent regions are removed, and we can split this
          * region further.
          */
-        if (!this.server.compactSplitThread.requestSplit(region)
-            || region.hasReferences()) {
-          this.server.compactSplitThread.requestCompaction(region, why);
+        if (!this.server.requestSplit(region) || region.hasReferences()) {
+          this.server.requestCompaction(region, why);
         }
-        // Put back on the queue.  Have it come back out of the queue
-        // after a delay of this.blockingWaitTime / 100 ms.
-        executeFlushQueueEntry(fqe.requeue(this.blockingWaitTime / 100));
-        // Tell a lie, it's not flushed but it's ok
+
+        synchronized (this.regionsInQueue) {
+          // Put back on the queue. Have it come back out of the queue
+          // after a delay of this.blockingWaitTime / 100 ms.
+          executeFlushQueueEntry(fqe.requeue(), this.blockingWaitTime / 100);
+        }
+        // Tell a lie, it's not flushed but it's OK
         return true;
       }
     }
-    return flushRegion(region, why, false, fqe.isSelectiveFlushRequest());
+    try {
+      return flushRegionNow(region, why, fqe.selective());
+    } finally {
+      // the task is executed, remove from regionsInQueue
+      synchronized (this.regionsInQueue) {
+        this.regionsInQueue.remove(region);
+      }
+    }
   }
 
   /**
    * Flush a region.
    * @param region Region to flush.
-   * @param emergencyFlush Set if we are being force flushed. If true the region
-   * needs to be removed from the flush queue. If false, when we were called
-   * from the main flusher run loop and we got the entry to flush by calling
-   * poll on the flush queue (which removed it).
    * @param selectiveFlushRequest Do we want to selectively flush only the
    * column families that dominate the memstore size?
    *
@@ -265,52 +274,25 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
    * false, there will be accompanying log messages explaining why the log was
    * not flushed.
    */
-  private boolean flushRegion(final HRegion region, String why,
-      final boolean emergencyFlush, boolean selectiveFlushRequest) {
-
-    synchronized (this.regionsInQueue) {
-      FlushQueueEntry fqe = this.regionsInQueue.remove(region);
-      if (fqe != null && emergencyFlush) {
-        Future future = futures.get(fqe);
-        if (future != null) {
-          try {
-            future.get();
-            if (region.flushcache(selectiveFlushRequest)) {
-              server.compactSplitThread.requestCompaction(region, why);
-            }
-            server.getMetrics().addFlush(region.getRecentFlushInfo());
-          } catch (IOException ex) {
-            LOG.warn("Cache flush failed" +
-                            (region != null ? (" for region " +
-                                    Bytes.toString(region.getRegionName())) : ""),
-                    RemoteExceptionHandler.checkIOException(ex)
-            );
-            server.checkFileSystem();
-            return false;
-          } catch (InterruptedException e) {
-            LOG.warn("Flush failed" +
-                    (region != null ? (" for region " +
-                            Bytes.toString(region.getRegionName())) : ""));
-          } catch (ExecutionException e) {
-            LOG.warn("Flush failed" +
-                    (region != null ? (" for region " +
-                            Bytes.toString(region.getRegionName())) : ""));
-          } finally {
-            lock.readLock().unlock();
-          }
-        }
+  private boolean flushRegionNow(HRegionIf region, String why,
+      boolean selectiveFlushRequest) {
+    try {
+      boolean res = region.flushMemstoreShapshot(selectiveFlushRequest);
+      if (res) {
+        server.requestCompaction(region, why);
       }
+      server.getMetrics().addFlush(region.getRecentFlushInfo());
+      return res;
+    } catch (IOException ex) {
+      LOG.warn(
+          "Cache flush failed"
+          + (region != null
+            ? (" for region " + region.getRegionInfo().getRegionNameAsString())
+            : ""),
+          RemoteExceptionHandler.checkIOException(ex));
+      server.checkFileSystem();
+      return false;
     }
-    return true;
-  }
-
-  private boolean isTooManyStoreFiles(HRegion region) {
-    for (Store hstore: region.stores.values()) {
-      if (hstore.getStorefilesCount() > this.blockingStoreFilesNumber) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
@@ -325,6 +307,39 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
     }
   }
 
+  /**
+   * Makes an emergency flush.
+   *
+   * If a flush request is found in the queue, these method will wait for that
+   * flush to be finished. Otherwise a flush will be performed in the current
+   * thread by calling to {@code #flushRegionNow(IRegion, String, boolean)}
+   */
+  private boolean doEmergencyFlush(HRegionIf region, String why,
+      boolean selectiveFlushRequest) {
+    Pair<FlushQueueEntry, Future<Boolean>> pair;
+    synchronized (regionsInQueue) {
+      pair = regionsInQueue.get(region);
+    }
+    if (pair != null) {
+      // Already has flush request, wait for its finish.
+      try {
+        return pair.getSecond().get();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        LOG.info("Interrupted waiting for flushing of " + region, e);
+        return false;
+      } catch (ExecutionException e) {
+        // This should not happen actually, all exception should have been
+        // caught in Callable.
+        LOG.info("ExecutionException caught for flushing of " + region, e);
+        return false;
+      }
+    }
+
+    // Perform a flush in current thread
+    return flushRegionNow(region, why, selectiveFlushRequest);
+  }
+
   /*
    * Emergency!  Need to flush memory.
    */
@@ -332,14 +347,17 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
     if (this.server.getGlobalMemstoreSize().get() < globalMemStoreLimit) {
       return; // double check the global memstore size inside of the synchronized block.
     }
-    
+
     // keep flushing until we hit the low water mark
     long globalMemStoreSize = -1;
     ArrayList<HRegion> regionsToCompact = new ArrayList<HRegion>();
-    for (SortedMap<Long, HRegion> m =
+    SortedMap<Long, HRegion> m =
         this.server.getCopyOfOnlineRegionsSortedBySize();
-      (globalMemStoreSize = this.server.getGlobalMemstoreSize().get()) >=
-        this.globalMemStoreLimitLowMark;) {
+    while (true) {
+      globalMemStoreSize = this.server.getGlobalMemstoreSize().get();
+      if (globalMemStoreSize < this.globalMemStoreLimitLowMark) {
+        break;
+      }
       // flush the region with the biggest memstore
       if (m.size() <= 0) {
         LOG.info("No online regions to flush though we've been asked flush " +
@@ -356,52 +374,50 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
         " exceeded; currently " +
         StringUtils.humanReadableInt(globalMemStoreSize) + " and flushing till " +
         StringUtils.humanReadableInt(this.globalMemStoreLimitLowMark));
-      if (!flushRegion(biggestMemStoreRegion, "emergencyFlush", true, false)) {
+      if (!doEmergencyFlush(biggestMemStoreRegion, "emergencyFlush", false)) {
         LOG.warn("Flush failed");
         break;
       }
       regionsToCompact.add(biggestMemStoreRegion);
     }
     for (HRegion region : regionsToCompact) {
-      server.compactSplitThread.requestCompaction(region, "emergencyFlush");
+      server.requestCompaction(region, "emergencyFlush");
     }
   }
 
   /**
-   * Datastructure used in the flush queue.  Holds region and retry count.
-   * Keeps tabs on how old this object is.  Implements {@link Delayed}.  On
+   * Data structure used in the flush queue. Holds region and retry count.
+   * Keeps tabs on how old this object is. Implements {@link Delayed}. On
    * construction, the delay is zero. When added to a delay queue, we'll come
-   * out near immediately.  Call {@link #requeue(long)} passing delay in
-   * milliseconds before readding to delay queue if you want it to stay there
+   * out near immediately. Call {@link #requeue(long)} passing delay in
+   * milliseconds before reading to delay queue if you want it to stay there
    * a while.
    */
-  static class FlushQueueEntry implements Delayed {
-    private final HRegion region;
+  static class FlushQueueEntry {
+    private final HRegionIf region;
     private final long createTime;
-    private long whenToExpire;
     private int requeueCount = 0;
-    private boolean selectiveFlushRequest;
+    private boolean selective;
 
     /**
      * @param r The region to flush
-     * @param selectiveFlushRequest Do we want to flush only the column
+     * @param selective Do we want to flush only the column
      *                              families that dominate the memstore size,
      *                              i.e., do a selective flush? If we are
      *                              doing log rolling, then we should not do a
      *                              selective flush.
      */
-    FlushQueueEntry(final HRegion r, boolean selectiveFlushRequest) {
+    FlushQueueEntry(final HRegionIf r, boolean selective) {
       this.region = r;
       this.createTime = System.currentTimeMillis();
-      this.whenToExpire = this.createTime;
-      this.selectiveFlushRequest = selectiveFlushRequest;
+      this.selective = selective;
     }
 
     /**
      * @return Is this a request for a selective flush?
      */
-    public boolean isSelectiveFlushRequest() {
-      return selectiveFlushRequest;
+    public boolean selective() {
+      return selective;
     }
 
     /**
@@ -419,29 +435,21 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
     public int getRequeueCount() {
       return this.requeueCount;
     }
- 
+
     /**
-     * @param when When to expire, when to come up out of the queue.
-     * Specify in milliseconds.  This method adds System.currentTimeMillis()
-     * to whatever you pass.
-     * @return This.
+     * Increases the requeue count.
+     *
+     * @return this.
      */
-    public FlushQueueEntry requeue(final long when) {
-      this.whenToExpire = System.currentTimeMillis() + when;
+    public FlushQueueEntry requeue() {
       this.requeueCount++;
       return this;
     }
 
     @Override
-    public long getDelay(TimeUnit unit) {
-      return unit.convert(this.whenToExpire - System.currentTimeMillis(),
-          TimeUnit.MILLISECONDS);
-    }
-
-    @Override
-    public int compareTo(Delayed other) {
-      return Long.valueOf(getDelay(TimeUnit.MILLISECONDS) -
-        other.getDelay(TimeUnit.MILLISECONDS)).intValue();
+    public String toString() {
+      return "{regin: " + region + ", created: " + createTime + ", requeue: "
+          + requeueCount + ", selective: " + selective + "}";
     }
   }
 
@@ -451,12 +459,11 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
     // number of "memstore flusher" threads per region server
     int handlerCount = newConf.getInt(HConstants.FLUSH_THREADS, HConstants.DEFAULT_FLUSH_THREADS);
     if(this.handlerCount != handlerCount){
-      LOG.info("Changing the value of " + HConstants.FLUSH_THREADS +
-              " from " + this.handlerCount + " to " +
-              handlerCount);
+      LOG.info("Changing the value of " + HConstants.FLUSH_THREADS + " from "
+          + this.handlerCount + " to " + handlerCount);
     }
-    this.flushes.setMaximumPoolSize(handlerCount);
-    this.flushes.setCorePoolSize(handlerCount);
+    this.threadPool.setMaximumPoolSize(handlerCount);
+    this.threadPool.setCorePoolSize(handlerCount);
     this.handlerCount = handlerCount;
   }
 
@@ -467,7 +474,35 @@ class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
    * @return
    */
   protected int getFlushThreadNum() {
-    return this.flushes.getCorePoolSize();
+    return this.threadPool.getCorePoolSize();
   }
 
+  /**
+   * Waits for all current request to be done.
+   * Used only in testcases.
+   */
+  void waitAllRequestDone() throws ExecutionException, InterruptedException {
+    while (true) {
+      // Fetch futures.
+      List<Future<Boolean>> futures = new ArrayList<>();
+      synchronized (this.regionsInQueue) {
+        for (Pair<FlushQueueEntry, Future<Boolean>> pair :
+            regionsInQueue.values()) {
+          futures.add(pair.getSecond());
+        }
+      }
+
+      if (futures.size() == 0) {
+        // No more requests, quit
+        return;
+      }
+
+      // Wait for futures
+      for (Future<Boolean> future : futures) {
+        future.get();
+      }
+      // This is a loop because some new requests may be generated during
+      // executing current requests.
+    }
+  }
 }

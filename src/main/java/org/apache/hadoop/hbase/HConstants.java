@@ -1092,6 +1092,18 @@ public final class HConstants {
 
   public static final String SWIFT_CLIENT_SOCKS_PROXY_HOST_AND_PORT =
       "hbase.client.swift.socks.proxy.hostAndPort";
+  /**
+   * Key of the number of store-files for blocking flush
+   */
+  public static final String HSTORE_BLOCKING_STORE_FILES_KEY =
+  "hbase.hstore.blockingStoreFiles";
+
+  /**
+   * Key to the maximum wait time in milliseconds for blocking flush
+   */
+  public static final String HSTORE_BLOCKING_WAIT_TIME_KEY =
+      "hbase.hstore.blockingWaitTime";
+  public static final long DEFAULT_HSTORE_BLOCKING_WAIT_TIME = 90000;
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

@@ -98,7 +98,6 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.client.MultiPutResponse;
@@ -120,7 +119,6 @@ import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.PreloadThreadPool;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
-import org.apache.hadoop.hbase.io.hfile.histogram.HistogramUtils;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
@@ -176,7 +174,7 @@ import com.google.common.base.Preconditions;
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
-public class HRegionServer implements HRegionInterface,
+public class HRegionServer implements HRegionInterface, HRegionServerIf,
     HBaseRPCErrorHandler, Runnable, Watcher, ConfigurationObserver {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
@@ -1322,6 +1320,7 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
+  @Override
   public AtomicLong getGlobalMemstoreSize() {
     return globalMemstoreSize;
   }
@@ -1459,12 +1458,7 @@ public class HRegionServer implements HRegionInterface,
     return stop;
   }
 
-  /**
-   * Checks to see if the file system is still accessible.
-   * If not, sets abortRequested and stopRequested
-   *
-   * @return false if file system is not available
-   */
+  @Override
   public void checkFileSystem() {
     long curtime = EnvironmentEdgeManager.currentTimeMillis();
     synchronized (lastCheckFSAt){
@@ -1808,9 +1802,7 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
-  /**
-   * @return Region server metrics instance.
-   */
+  @Override
   public RegionServerMetrics getMetrics() {
     return this.metrics;
   }
@@ -3468,10 +3460,7 @@ public class HRegionServer implements HRegionInterface,
         Bytes.mapKey(hr.getRegionInfo().getRegionName()), hr);
   }
 
-  /**
-   * @return A new Map of online regions sorted by region size with the first
-   * entry being the biggest.
-   */
+  @Override
   public SortedMap<Long, HRegion> getCopyOfOnlineRegionsSortedBySize() {
     // we'll sort the regions in reverse
     SortedMap<Long, HRegion> sortedRegions = new TreeMap<Long, HRegion>(
@@ -4004,7 +3993,7 @@ public class HRegionServer implements HRegionInterface,
     return null;
   }
 
-  /** @return what the regionserver thread name should be */
+  @Override
   public String getRSThreadName() {
     return "RS-" + serverInfo.getServerName();
   }
@@ -4118,10 +4107,20 @@ public class HRegionServer implements HRegionInterface,
 
   @Override
   public HRegionLocation getLocation(byte[] table, byte[] row, boolean reload)
-    throws IOException {
+      throws IOException {
     if (reload) {
       return regionServerConnection.relocateRegion(new StringBytes(table), row);
     }
     return regionServerConnection.locateRegion(new StringBytes(table), row);
+  }
+
+  @Override
+  public boolean requestSplit(HRegionIf r) {
+    return this.compactSplitThread.requestSplit((HRegion) r);
+  }
+
+  @Override
+  public void requestCompaction(HRegionIf r, String why) {
+    this.compactSplitThread.requestCompaction((HRegion) r, why);
   }
 }

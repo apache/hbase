@@ -37,5 +37,5 @@ public interface FlushRequester {
    *                              would be flushed.
    *
    */
-  void request(HRegion region, boolean selectiveFlushRequest);
+  void request(HRegionIf region, boolean selectiveFlushRequest);
 }
