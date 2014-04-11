@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
@@ -67,22 +68,39 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Writes HFiles. Passed KeyValues must arrive in order.
  * Currently, can only write files to a single column family at a
  * time.  Multiple column families requires coordinating keys cross family.
  * Writes current time as the sequence id for the file. Sets the major compacted
- * attribute on created hfiles. Calling write(null,null) will forceably roll
+ * attribute on created hfiles. Calling write(null,null) will forcibly roll
  * all HFiles being written.
  * @see KeyValueSortReducer
  */
 public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, KeyValue> {
   static Log LOG = LogFactory.getLog(HFileOutputFormat.class);
-  static final String COMPRESSION_CONF_KEY = "hbase.hfileoutputformat.families.compression";
-  private static final String BLOOM_TYPE_CONF_KEY = "hbase.hfileoutputformat.families.bloomtype";
-  private static final String DATABLOCK_ENCODING_CONF_KEY = 
-     "hbase.mapreduce.hfileoutputformat.datablock.encoding";
-  private static final String BLOCK_SIZE_CONF_KEY = "hbase.mapreduce.hfileoutputformat.blocksize";
+  
+  // The following constants are private since these are used by
+  // HFileOutputFormat to internally transfer data between job setup and
+  // reducer run using conf.
+  // These should not be changed by the client.
+  private static final String COMPRESSION_FAMILIES_CONF_KEY =
+      "hbase.hfileoutputformat.families.compression";
+  private static final String BLOOM_TYPE_FAMILIES_CONF_KEY =
+      "hbase.hfileoutputformat.families.bloomtype";
+  private static final String BLOCK_SIZE_FAMILIES_CONF_KEY =
+      "hbase.mapreduce.hfileoutputformat.blocksize";
+  private static final String DATABLOCK_ENCODING_FAMILIES_CONF_KEY =
+      "hbase.mapreduce.hfileoutputformat.families.datablock.encoding";
+
+  // This constant is public since the client can modify this when setting
+  // up their conf object and thus refer to this symbol.
+  // It is present for backwards compatibility reasons. Use it only to
+  // override the auto-detection of datablock encoding.
+  public static final String DATABLOCK_ENCODING_OVERRIDE_CONF_KEY =
+      "hbase.mapreduce.hfileoutputformat.datablock.encoding";
 
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(final TaskAttemptContext context)
   throws IOException, InterruptedException {
@@ -95,30 +113,27 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     final long maxsize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
         HConstants.DEFAULT_MAX_FILE_SIZE);
     // Invented config.  Add to hbase-*.xml if other than default compression.
-    final String defaultCompression = conf.get("hfile.compression",
+    final String defaultCompressionStr = conf.get("hfile.compression",
         Compression.Algorithm.NONE.getName());
+    final Algorithm defaultCompression =
+        AbstractHFileWriter.compressionByName(defaultCompressionStr);
+
     final boolean compactionExclude = conf.getBoolean(
         "hbase.mapreduce.hfileoutputformat.compaction.exclude", false);
 
     // create a map from column family to the compression algorithm
-    final Map<byte[], String> compressionMap = createFamilyCompressionMap(conf);
-    final Map<byte[], String> bloomTypeMap = createFamilyBloomMap(conf);
-    final Map<byte[], String> blockSizeMap = createFamilyBlockSizeMap(conf);
-
-    String dataBlockEncodingStr = conf.get(DATABLOCK_ENCODING_CONF_KEY);
-    final HFileDataBlockEncoder encoder;
-    if (dataBlockEncodingStr == null) {
-      encoder = NoOpDataBlockEncoder.INSTANCE;
+    final Map<byte[], Algorithm> compressionMap = createFamilyCompressionMap(conf);
+    final Map<byte[], BloomType> bloomTypeMap = createFamilyBloomTypeMap(conf);
+    final Map<byte[], Integer> blockSizeMap = createFamilyBlockSizeMap(conf);
+    
+    String dataBlockEncodingStr = conf.get(DATABLOCK_ENCODING_OVERRIDE_CONF_KEY);
+    final Map<byte[], HFileDataBlockEncoder> datablockEncodingMap =
+        createFamilyDataBlockEncodingMap(conf);
+    final HFileDataBlockEncoder overriddenEncoder;
+    if (dataBlockEncodingStr != null) {
+      overriddenEncoder = getDataBlockEncoderFromString(dataBlockEncodingStr);
     } else {
-      try {
-        encoder = new HFileDataBlockEncoderImpl(DataBlockEncoding
-            .valueOf(dataBlockEncodingStr));
-      } catch (IllegalArgumentException ex) {
-        throw new RuntimeException(
-            "Invalid data block encoding type configured for the param "
-                + DATABLOCK_ENCODING_CONF_KEY + " : "
-                + dataBlockEncodingStr);
-      }
+      overriddenEncoder = null;
     }
 
     return new RecordWriter<ImmutableBytesWritable, KeyValue>() {
@@ -194,21 +209,21 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
           throws IOException {
         WriterLength wl = new WriterLength();
         Path familydir = new Path(outputdir, Bytes.toString(family));
-        String compression = compressionMap.get(family);
+        Algorithm compression = compressionMap.get(family);
         compression = compression == null ? defaultCompression : compression;
-        String bloomTypeStr = bloomTypeMap.get(family);
-        BloomType bloomType = BloomType.NONE;
-        if (bloomTypeStr != null) {
-          bloomType = BloomType.valueOf(bloomTypeStr);
-        }
-        String blockSizeString = blockSizeMap.get(family);
-        int blockSize = blockSizeString == null ? HFile.DEFAULT_BLOCKSIZE
-            : Integer.parseInt(blockSizeString);
+        BloomType bloomType = bloomTypeMap.get(family);
+        bloomType = bloomType == null ? BloomType.NONE : bloomType;
+        Integer blockSize = blockSizeMap.get(family);
+        blockSize = blockSize == null ? HFile.DEFAULT_BLOCKSIZE : blockSize;
+        HFileDataBlockEncoder encoder = overriddenEncoder;
+        encoder = encoder == null ? datablockEncodingMap.get(family) : encoder;
+        encoder = encoder == null ? NoOpDataBlockEncoder.INSTANCE : encoder;
+
         Configuration tempConf = new Configuration(conf);
         tempConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
         wl.writer = new StoreFile.WriterBuilder(conf, new CacheConfig(tempConf), fs, blockSize)
             .withOutputDir(familydir)
-            .withCompression(AbstractHFileWriter.compressionByName(compression))
+            .withCompression(compression)
             .withBloomType(bloomType)
             .withComparator(KeyValue.COMPARATOR)
             .withDataBlockEncoder(encoder)
@@ -378,6 +393,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     configureCompression(table, conf);
     configureBloomType(table, conf);
     configureBlockSize(table, conf);
+    configureDataBlockEncoding(table, conf);
     
     TableMapReduceUtil.addDependencyJars(job);
     LOG.info("Incremental table output configured.");
@@ -405,32 +421,95 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   }
 
   /**
-   * Run inside the task to deserialize column family to compression algorithm
-   * map from the
-   * configuration.
-   *
-   * Package-private for unit tests only.
+   * Runs inside the task to deserialize column family to compression algorithm
+   * map from the configuration.
    *
    * @return a map from column family to the name of the configured compression
    *         algorithm
    */
-  static Map<byte[], String> createFamilyCompressionMap(Configuration conf) {
-    return createFamilyConfValueMap(conf, COMPRESSION_CONF_KEY);
+  @VisibleForTesting
+  static Map<byte[], Algorithm> createFamilyCompressionMap(Configuration conf) {
+    Map<byte[], String> stringMap = createFamilyConfValueMap(conf, COMPRESSION_FAMILIES_CONF_KEY);
+    Map<byte[], Algorithm> compressionMap = new TreeMap<byte[], Algorithm>(Bytes.BYTES_COMPARATOR);
+    for (Map.Entry<byte[], String> e : stringMap.entrySet()) {
+      Algorithm algorithm = AbstractHFileWriter.compressionByName(e.getValue());
+      compressionMap.put(e.getKey(), algorithm);
+    }
+    return compressionMap;
   }
 
-  private static Map<byte[], String> createFamilyBloomMap(Configuration conf) {
-    return createFamilyConfValueMap(conf, BLOOM_TYPE_CONF_KEY);
+  /**
+   * Runs inside the task to deserialize column family to bloom type
+   * map from the configuration.
+   *
+   * @param conf to read the serialized values from
+   * @return a map from column family to the configured bloom type
+   */
+  @VisibleForTesting
+  static Map<byte[], BloomType> createFamilyBloomTypeMap(Configuration conf) {
+    Map<byte[], String> stringMap = createFamilyConfValueMap(conf, BLOOM_TYPE_FAMILIES_CONF_KEY);
+    Map<byte[], BloomType> bloomTypeMap = new TreeMap<byte[], BloomType>(Bytes.BYTES_COMPARATOR);
+    for (Map.Entry<byte[], String> e : stringMap.entrySet()) {
+      BloomType bloomType = BloomType.valueOf(e.getValue());
+      bloomTypeMap.put(e.getKey(), bloomType);
+    }
+    return bloomTypeMap;
   }
 
-  private static Map<byte[], String> createFamilyBlockSizeMap(Configuration conf) {
-    return createFamilyConfValueMap(conf, BLOCK_SIZE_CONF_KEY);
+  /**
+   * Runs inside the task to deserialize column family to block size
+   * map from the configuration.
+   *
+   * @param conf to read the serialized values from
+   * @return a map from column family to the configured block size
+   */
+  @VisibleForTesting
+  static Map<byte[], Integer> createFamilyBlockSizeMap(Configuration conf) {
+    Map<byte[], String> stringMap = createFamilyConfValueMap(conf, BLOCK_SIZE_FAMILIES_CONF_KEY);
+    Map<byte[], Integer> blockSizeMap = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    for (Map.Entry<byte[], String> e : stringMap.entrySet()) {
+      Integer blockSize = Integer.parseInt(e.getValue());
+      blockSizeMap.put(e.getKey(), blockSize);
+    }
+    return blockSizeMap;
+  }
+  
+  /**
+   * Runs inside the task to deserialize column family to data block encoding type map from the
+   * configuration.
+   * 
+   * @param conf to read the serialized values from
+   * @return a map from column family to HFileDataBlockEncoder for the configured data block type
+   *         for the family
+   */
+  @VisibleForTesting
+  static Map<byte[], HFileDataBlockEncoder> createFamilyDataBlockEncodingMap(Configuration conf) {
+    Map<byte[], String> stringMap =
+        createFamilyConfValueMap(conf, DATABLOCK_ENCODING_FAMILIES_CONF_KEY);
+    Map<byte[], HFileDataBlockEncoder> encoderMap =
+        new TreeMap<byte[], HFileDataBlockEncoder>(Bytes.BYTES_COMPARATOR);
+    for (Map.Entry<byte[], String> e : stringMap.entrySet()) {
+      encoderMap.put(e.getKey(), getDataBlockEncoderFromString(e.getValue()));
+    }
+    return encoderMap;
+  }
+
+  private static HFileDataBlockEncoder getDataBlockEncoderFromString(String dataBlockEncodingStr) {
+    HFileDataBlockEncoder encoder;
+    try {
+      encoder = new HFileDataBlockEncoderImpl(DataBlockEncoding.valueOf(dataBlockEncodingStr));
+    } catch (IllegalArgumentException ex) {
+      throw new RuntimeException("Invalid data block encoding type configured for the param "
+          + DATABLOCK_ENCODING_FAMILIES_CONF_KEY + " : " + dataBlockEncodingStr);
+    }
+    return encoder;
   }
 
   /**
    * Run inside the task to deserialize column family to given conf value map.
    * 
-   * @param conf
-   * @param confName
+   * @param conf to read the serialized values from
+   * @param confName conf key to read from the configuration
    * @return a map of column family to the given configuration value
    */
   private static Map<byte[], String> createFamilyConfValueMap(Configuration conf, String confName) {
@@ -455,12 +534,13 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   /**
    * Serialize column family to compression algorithm map to configuration.
    * Invoked while configuring the MR job for incremental load.
-   *
-   * Package-private for unit tests only.
-   *
-   * @throws IOException
-   *           on failure to read column family descriptors
+   * 
+   * @param table to read the properties from
+   * @param conf to persist serialized values into
+   * @throws IOException 
+   *            on failure to read column family descriptors
    */
+  @VisibleForTesting
   static void configureCompression(HTable table, Configuration conf) throws IOException {
     StringBuilder compressionConfigValue = new StringBuilder();
     HTableDescriptor tableDescriptor = table.getTableDescriptor();
@@ -479,10 +559,20 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       compressionConfigValue.append(URLEncoder.encode(familyDescriptor.getCompression().getName(), "UTF-8"));
     }
     // Get rid of the last ampersand
-    conf.set(COMPRESSION_CONF_KEY, compressionConfigValue.toString());
+    conf.set(COMPRESSION_FAMILIES_CONF_KEY, compressionConfigValue.toString());
   }
   
-  private static void configureBlockSize(HTable table, Configuration conf) throws IOException {
+  /**
+   * Serialize column family to block size map to configuration.
+   * Invoked while configuring the MR job for incremental load.
+   * 
+   * @param table to read the properties from
+   * @param conf to persist serialized values into
+   * @throws IOException 
+   *            on failure to read column family descriptors
+   */
+  @VisibleForTesting
+  static void configureBlockSize(HTable table, Configuration conf) throws IOException {
     StringBuilder blockSizeConfigValue = new StringBuilder();
     HTableDescriptor tableDescriptor = table.getTableDescriptor();
     if (tableDescriptor == null) {
@@ -502,16 +592,19 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
           String.valueOf(familyDescriptor.getBlocksize()), "UTF-8"));
     }
     // Get rid of the last ampersand
-    conf.set(BLOCK_SIZE_CONF_KEY, blockSizeConfigValue.toString());
+    conf.set(BLOCK_SIZE_FAMILIES_CONF_KEY, blockSizeConfigValue.toString());
   }
 
   /**
    * Serialize column family to bloom type map to configuration.
    * Invoked while configuring the MR job for incremental load.
-   *
-   * @throws IOException
-   *           on failure to read column family descriptors
+   * 
+   * @param table to read the properties from
+   * @param conf to persist serialized values into
+   * @throws IOException 
+   *            on failure to read column family descriptors
    */
+  @VisibleForTesting
   static void configureBloomType(HTable table, Configuration conf) throws IOException {
     HTableDescriptor tableDescriptor = table.getTableDescriptor();
     if (tableDescriptor == null) {
@@ -533,6 +626,42 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       }
       bloomTypeConfigValue.append(URLEncoder.encode(bloomType, "UTF-8"));
     }
-    conf.set(BLOOM_TYPE_CONF_KEY, bloomTypeConfigValue.toString());
+    conf.set(BLOOM_TYPE_FAMILIES_CONF_KEY, bloomTypeConfigValue.toString());
   }
+
+  /**
+   * Serialize column family to data block encoding map to configuration.
+   * Invoked while configuring the MR job for incremental load.
+   * 
+   * @param table to read the properties from
+   * @param conf to persist serialized values into
+   * @throws IOException 
+   *            on failure to read column family descriptors
+   */
+  @VisibleForTesting
+  static void configureDataBlockEncoding(HTable table, Configuration conf) throws IOException {
+    HTableDescriptor tableDescriptor = table.getTableDescriptor();
+    if (tableDescriptor == null) {
+      // could happen with mock table instance
+      return;
+    }
+    StringBuilder dataBlockEncodingConfigValue = new StringBuilder();
+    Collection<HColumnDescriptor> families = tableDescriptor.getFamilies();
+    int i = 0;
+    for (HColumnDescriptor familyDescriptor : families) {
+      if (i++ > 0) {
+        dataBlockEncodingConfigValue.append('&');
+      }
+      dataBlockEncodingConfigValue.append(URLEncoder.encode(familyDescriptor.getNameAsString(),
+        "UTF-8"));
+      dataBlockEncodingConfigValue.append('=');
+      DataBlockEncoding encoding = familyDescriptor.getDataBlockEncoding();
+      if (encoding == null) {
+        encoding = DataBlockEncoding.NONE;
+      }
+      dataBlockEncodingConfigValue.append(URLEncoder.encode(encoding.toString(), "UTF-8"));
+    }
+    conf.set(DATABLOCK_ENCODING_FAMILIES_CONF_KEY, dataBlockEncodingConfigValue.toString());
+  }
+
 }
