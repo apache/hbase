@@ -564,6 +564,13 @@
               <goal>jar-no-fork</goal>
             </goals>
           </execution>
+          <execution>
+            <id>attach-test-sources</id>
+            <phase>package</phase>
+            <goals>
+              <goal>test-jar-no-fork</goal>
+            </goals>
+          </execution>
         </executions>
       </plugin>
       <plugin>
