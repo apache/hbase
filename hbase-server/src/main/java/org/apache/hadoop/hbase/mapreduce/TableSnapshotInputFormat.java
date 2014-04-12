@@ -235,10 +235,8 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       scan.setCacheBlocks(false);
 
       scanner = new ClientSideRegionScanner(conf, fs, tmpRootDir, htd, hri, scan, null);
-      if (context != null) {
-        this.context = context;
-        getCounter = TableRecordReaderImpl.retrieveGetCounterWithStringsParams(context);
-      }
+      this.context = context;
+      getCounter = TableRecordReaderImpl.retrieveGetCounterWithStringsParams(context);
     }
 
     @Override
@@ -300,7 +298,6 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     FileSystem fs = rootDir.getFileSystem(conf);
 
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
 
     Set<String> snapshotRegionNames
       = SnapshotReferenceUtil.getSnapshotRegionNames(fs, snapshotDir);
