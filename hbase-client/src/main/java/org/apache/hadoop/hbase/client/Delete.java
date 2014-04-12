@@ -180,7 +180,7 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @return this for invocation chaining
    */
   public Delete deleteFamily(byte [] family) {
-    this.deleteFamily(family, HConstants.LATEST_TIMESTAMP);
+    this.deleteFamily(family, this.ts);
     return this;
   }
 
@@ -237,7 +237,7 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @return this for invocation chaining
    */
   public Delete deleteColumns(byte [] family, byte [] qualifier) {
-    this.deleteColumns(family, qualifier, HConstants.LATEST_TIMESTAMP);
+    this.deleteColumns(family, qualifier, this.ts);
     return this;
   }
 
@@ -274,7 +274,7 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @return this for invocation chaining
    */
   public Delete deleteColumn(byte [] family, byte [] qualifier) {
-    this.deleteColumn(family, qualifier, HConstants.LATEST_TIMESTAMP);
+    this.deleteColumn(family, qualifier, this.ts);
     return this;
   }
 
