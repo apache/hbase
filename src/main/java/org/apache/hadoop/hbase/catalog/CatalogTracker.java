@@ -303,7 +303,7 @@ public class CatalogTracker {
    * @throws NotAllMetaRegionsOnlineException if root not available before
    * timeout
    */
-  ServerName waitForRoot(final long timeout)
+  public ServerName waitForRoot(final long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException {
     ServerName sn = rootRegionTracker.waitRootRegionLocation(timeout);
     if (sn == null) {

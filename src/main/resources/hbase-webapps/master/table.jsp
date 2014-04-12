@@ -43,7 +43,7 @@
   String tableName = request.getParameter("name");
   HTable table = new HTable(conf, tableName);
   String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th></tr>";
-  ServerName rl = master.getCatalogTracker().getRootLocation();
+  ServerName rl = master.getCatalogTracker().waitForRoot(1);
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
   Map<String, Integer> frags = null;
