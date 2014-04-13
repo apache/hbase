@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * KeyValueScanner adaptor over the Reader.  It also provides hooks into
@@ -200,7 +199,7 @@ public class StoreFileScanner implements KeyValueScanner {
       hfs.next();
       cur = hfs.getKeyValue();
       if (this.stopSkippingKVsIfNextRow
-          && Bytes.compareTo(cur.getRowArray(), cur.getRowOffset(),
+          && getComparator().compareRows(cur.getRowArray(), cur.getRowOffset(),
               cur.getRowLength(), startKV.getRowArray(), startKV.getRowOffset(),
               startKV.getRowLength()) > 0) {
         return false;
@@ -363,6 +362,10 @@ public class StoreFileScanner implements KeyValueScanner {
     return reader;
   }
 
+  KeyValue.KVComparator getComparator() {
+    return reader.getComparator();
+  }
+
   @Override
   public boolean realSeekDone() {
     return realSeekDone;
@@ -405,6 +408,7 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public boolean seekToPreviousRow(Cell key) throws IOException {
     try {
       try {
@@ -434,7 +438,7 @@ public class StoreFileScanner implements KeyValueScanner {
           this.stopSkippingKVsIfNextRow = false;
         }
         if (!resultOfSkipKVs
-            || KeyValue.COMPARATOR.compareRows(cur, firstKeyOfPreviousRow) > 0) {
+            || getComparator().compareRows(cur, firstKeyOfPreviousRow) > 0) {
           return seekToPreviousRow(firstKeyOfPreviousRow);
         }
 
@@ -466,7 +470,7 @@ public class StoreFileScanner implements KeyValueScanner {
   public boolean backwardSeek(Cell key) throws IOException {
     seek(key);
     if (cur == null
-        || Bytes.compareTo(cur.getRowArray(), cur.getRowOffset(),
+        || getComparator().compareRows(cur.getRowArray(), cur.getRowOffset(),
             cur.getRowLength(), key.getRowArray(), key.getRowOffset(),
             key.getRowLength()) > 0) {
       return seekToPreviousRow(key);
