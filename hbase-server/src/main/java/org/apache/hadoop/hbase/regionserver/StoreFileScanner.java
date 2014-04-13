@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * KeyValueScanner adaptor over the Reader.  It also provides hooks into
@@ -197,7 +196,7 @@ public class StoreFileScanner implements KeyValueScanner {
       hfs.next();
       cur = hfs.getKeyValue();
       if (this.stopSkippingKVsIfNextRow
-          && Bytes.compareTo(cur.getBuffer(), cur.getRowOffset(),
+          && getComparator().compareRows(cur.getBuffer(), cur.getRowOffset(),
               cur.getRowLength(), startKV.getBuffer(), startKV.getRowOffset(),
               startKV.getRowLength()) > 0) {
         return false;
@@ -360,6 +359,10 @@ public class StoreFileScanner implements KeyValueScanner {
     return reader;
   }
 
+  KeyValue.KVComparator getComparator() {
+    return reader.getComparator();
+  }
+
   @Override
   public boolean realSeekDone() {
     return realSeekDone;
@@ -430,7 +433,7 @@ public class StoreFileScanner implements KeyValueScanner {
           this.stopSkippingKVsIfNextRow = false;
         }
         if (!resultOfSkipKVs
-            || Bytes.compareTo(cur.getBuffer(), cur.getRowOffset(),
+            || getComparator().compareRows(cur.getBuffer(), cur.getRowOffset(),
                 cur.getRowLength(), firstKeyOfPreviousRow.getBuffer(),
                 firstKeyOfPreviousRow.getRowOffset(),
                 firstKeyOfPreviousRow.getRowLength()) > 0) {
@@ -465,7 +468,7 @@ public class StoreFileScanner implements KeyValueScanner {
   public boolean backwardSeek(KeyValue key) throws IOException {
     seek(key);
     if (cur == null
-        || Bytes.compareTo(cur.getBuffer(), cur.getRowOffset(),
+        || getComparator().compareRows(cur.getBuffer(), cur.getRowOffset(),
             cur.getRowLength(), key.getBuffer(), key.getRowOffset(),
             key.getRowLength()) > 0) {
       return seekToPreviousRow(key);
