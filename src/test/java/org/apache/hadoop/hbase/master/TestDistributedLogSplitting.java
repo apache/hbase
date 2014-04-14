@@ -122,10 +122,11 @@ public class TestDistributedLogSplitting {
 
   @After
   public void after() throws Exception {
-    for (MasterThread mt : TEST_UTIL.getHBaseCluster().getLiveMasterThreads()) {
-      mt.getMaster().abort("closing...", new Exception("Trace info"));
+    if (TEST_UTIL.getHBaseCluster() != null) {
+      for (MasterThread mt : TEST_UTIL.getHBaseCluster().getLiveMasterThreads()) {
+        mt.getMaster().abort("closing...", new Exception("Trace info"));
+      }
     }
-
     TEST_UTIL.shutdownMiniCluster();
   }
 
