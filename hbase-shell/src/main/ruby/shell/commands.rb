@@ -95,7 +95,7 @@ module Shell
         # Get the special java exception which will be handled
         cause = e.cause
         if cause.kind_of?(org.apache.hadoop.hbase.TableNotFoundException) then
-	  str = java.lang.String.new("#{cause}")
+          str = java.lang.String.new("#{cause}")
           raise "Unknown table #{str}!"
         end
         if cause.kind_of?(org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException) then
