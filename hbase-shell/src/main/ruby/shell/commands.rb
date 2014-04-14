@@ -95,14 +95,28 @@ module Shell
         # Get the special java exception which will be handled
         cause = e.cause
         if cause.kind_of?(org.apache.hadoop.hbase.TableNotFoundException) then
-          raise "Unknown table #{args.first}!"
+          str = java.lang.String.new("#{cause}")
+          raise "Unknown table #{str}!"
         end
-        if cause.kind_of?(org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException) then
-          valid_cols = table(args.first).get_all_columns.map { |c| c + '*' }
-          raise "Unknown column family! Valid column names: #{valid_cols.join(", ")}"
+        if cause.kind_of?(org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException) then
+          exceptions = cause.getCauses
+          exceptions.each do |exception|
+            if exception.kind_of?(org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException) then
+              valid_cols = table(args.first).get_all_columns.map { |c| c + '*' }
+              raise "Unknown column family! Valid column names: #{valid_cols.join(", ")}"
+            end
+          end
         end
         if cause.kind_of?(org.apache.hadoop.hbase.TableExistsException) then
-          raise "Table already exists: #{args.first}!"
+          str = java.lang.String.new("#{cause}")
+          strs = str.split("\n")
+          if strs.size > 0 then
+            s = strs[0].split(' ');
+            if(s.size > 1)
+              raise "Table already exists: #{s[1]}!"
+            end
+              raise "Table already exists: #{strs[0]}!"
+          end
         end
         # To be safe, here only AccessDeniedException is considered. In future
         # we might support more in more generic approach when possible.
