@@ -72,13 +72,37 @@ module Shell
 
       def translate_hbase_exceptions(*args)
         yield
-      rescue org.apache.hadoop.hbase.TableNotFoundException
-        raise "Unknown table #{args.first}!"
-      rescue org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException
-        valid_cols = table(args.first).get_all_columns.map { |c| c + '*' }
-        raise "Unknown column family! Valid column names: #{valid_cols.join(", ")}"
-      rescue org.apache.hadoop.hbase.TableExistsException
-        raise "Table already exists: #{args.first}!"
+      rescue => e
+        raise e unless e.respond_to?(:cause) && e.cause != nil
+        
+        # Get the special java exception which will be handled
+        cause = e.cause
+        if cause.kind_of?(org.apache.hadoop.hbase.TableNotFoundException) then
+          str = java.lang.String.new("#{cause}")
+          raise "Unknown table #{str}!"
+        end
+        if cause.kind_of?(org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException) then
+          exceptions = cause.getCauses
+          exceptions.each do |exception|
+            if exception.kind_of?(org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException) then
+              valid_cols = table(args.first).get_all_columns.map { |c| c + '*' }
+              raise "Unknown column family! Valid column names: #{valid_cols.join(", ")}"
+            end
+          end
+        end
+        if cause.kind_of?(org.apache.hadoop.hbase.TableExistsException) then
+          str = java.lang.String.new("#{cause}")
+          strs = str.split("\n")
+          if strs.size > 0 then
+            s = strs[0].split(' ');
+            if(s.size > 1)
+              raise "Table already exists: #{s[1]}!"
+            end
+              raise "Table already exists: #{strs[0]}!"
+          end
+        end
+        # Throw the other exception which hasn't been handled above       
+        raise e
       end
     end
   end
