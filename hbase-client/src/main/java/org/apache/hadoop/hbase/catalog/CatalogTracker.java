@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.catalog;
 
+import com.google.common.base.Stopwatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -303,9 +304,15 @@ public class CatalogTracker {
    * @throws InterruptedException if interrupted while waiting
    */
   public void waitForMeta() throws InterruptedException {
+    Stopwatch stopwatch = new Stopwatch().start();
     while (!this.stopped) {
       try {
         if (waitForMeta(100) != null) break;
+        long sleepTime = stopwatch.elapsedMillis();
+        // +1 in case sleepTime=0
+        if ((sleepTime + 1) % 10000 == 0) {
+          LOG.warn("Have been waiting for meta to be assigned for " + sleepTime + "ms");
+        }
       } catch (NotAllMetaRegionsOnlineException e) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("hbase:meta still not available, sleeping and retrying." +
