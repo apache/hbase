@@ -292,6 +292,8 @@ public class DefaultMemStore implements MemStore {
     KeyValue found = this.snapshot.get(kv);
     if (found != null && found.getMvccVersion() == kv.getMvccVersion()) {
       this.snapshot.remove(kv);
+      long sz = heapSizeChange(kv, true);
+      this.snapshotSize -= sz;
     }
     // If the key is in the memstore, delete it. Update this.size.
     found = this.kvset.get(kv);

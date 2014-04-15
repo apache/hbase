@@ -116,6 +116,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.HRegion.RowLock;
 import org.apache.hadoop.hbase.regionserver.TestStore.FaultyFileSystem;
+import org.apache.hadoop.hbase.regionserver.wal.FaultyHLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -234,6 +235,58 @@ public class TestHRegion {
     HRegion.closeHRegion(region);
   }
 
+  /*
+   * This test is for verifying memstore snapshot size is correctly updated in case of rollback
+   * See HBASE-10845
+   */
+  @Test (timeout=60000)
+  public void testMemstoreSnapshotSize() throws IOException {
+    class MyFaultyHLog extends FaultyHLog {
+      StoreFlushContext storeFlushCtx;
+      public MyFaultyHLog(FileSystem fs, Path rootDir, String logName, Configuration conf)
+          throws IOException {
+        super(fs, rootDir, logName, conf);
+      }
+      
+      void setStoreFlushCtx(StoreFlushContext storeFlushCtx) {
+        this.storeFlushCtx = storeFlushCtx;
+      }
+
+      @Override
+      public void sync(long txid) throws IOException {
+        storeFlushCtx.prepare();
+        super.sync(txid);
+      }
+    }
+    
+    FileSystem fs = FileSystem.get(CONF);
+    Path rootDir = new Path(dir + "testMemstoreSnapshotSize");
+    MyFaultyHLog faultyLog = new MyFaultyHLog(fs, rootDir, "testMemstoreSnapshotSize", CONF);
+    HRegion region = initHRegion(tableName, null, null, name.getMethodName(),
+      CONF, false, Durability.SYNC_WAL, faultyLog, COLUMN_FAMILY_BYTES);
+    
+    Store store = region.getStore(COLUMN_FAMILY_BYTES);
+    // Get some random bytes.
+    byte [] value = Bytes.toBytes(name.getMethodName());
+    faultyLog.setStoreFlushCtx(store.createFlushContext(12345));
+    
+    Put put = new Put(value);
+    put.add(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
+    faultyLog.setFailureType(FaultyHLog.FailureType.SYNC);
+
+    boolean threwIOE = false;
+    try {
+      region.put(put);
+    } catch (IOException ioe) {
+      threwIOE = true;
+    } finally {
+      assertTrue("The regionserver should have thrown an exception", threwIOE);
+    }
+    long sz = store.getFlushableSize();
+    assertTrue("flushable size should be zero, but it is " + sz, sz == 0);
+    HRegion.closeHRegion(region);
+  }
+  
   /**
    * Test we do not lose data if we fail a flush and then close.
    * Part of HBase-10466.  Tests the following from the issue description:
