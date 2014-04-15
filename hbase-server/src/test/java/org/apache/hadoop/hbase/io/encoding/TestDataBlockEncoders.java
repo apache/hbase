@@ -408,5 +408,27 @@ public class TestDataBlockEncoders {
       assertEquals("Input of two methods is changed", onDataset, dataset);
     }
   }
+  
+  @Test
+  public void testZeroByte() throws IOException {
+    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    byte[] row = Bytes.toBytes("abcd");
+    byte[] family = new byte[] { 'f' };
+    byte[] qualifier0 = new byte[] { 'b' };
+    byte[] qualifier1 = new byte[] { 'c' };
+    byte[] value0 = new byte[] { 'd' };
+    byte[] value1 = new byte[] { 0x00 };
+    if (includesTags) {
+      kvList.add(new KeyValue(row, family, qualifier0, 0, value0, new Tag[] { new Tag((byte) 1,
+          "value1") }));
+      kvList.add(new KeyValue(row, family, qualifier1, 0, value1, new Tag[] { new Tag((byte) 1,
+          "value1") }));
+    } else {
+      kvList.add(new KeyValue(row, family, qualifier0, 0, Type.Put, value0));
+      kvList.add(new KeyValue(row, family, qualifier1, 0, Type.Put, value1));
+    }
+    testEncodersOnDataset(RedundantKVGenerator.convertKvToByteBuffer(kvList, includesMemstoreTS),
+        kvList);
+  }
 
 }
