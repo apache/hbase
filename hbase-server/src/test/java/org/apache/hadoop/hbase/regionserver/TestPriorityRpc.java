@@ -110,7 +110,7 @@ public class TestPriorityRpc {
   @Test
   public void testQosFunctionForScanMethod() throws IOException {
     RequestHeader.Builder headerBuilder = RequestHeader.newBuilder();
-    headerBuilder.setMethodName("scan");
+    headerBuilder.setMethodName("Scan");
     RequestHeader header = headerBuilder.build();
 
     //build an empty scan request
