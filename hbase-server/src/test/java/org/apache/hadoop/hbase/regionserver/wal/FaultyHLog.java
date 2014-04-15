@@ -58,13 +58,11 @@ public class FaultyHLog extends FSHLog {
   }
   @Override
   public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
-      List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId,
-      boolean isInMemstore, long nonceGroup, long nonce) throws IOException {
+      List<UUID> clusterIds, final long now, HTableDescriptor htd) throws IOException {
     if (this.ft == FailureType.APPENDNOSYNC) {
       throw new IOException("appendNoSync");
     }
-    return super.appendNoSync(info, tableName, edits, clusterIds, now, htd, sequenceId,
-      isInMemstore, nonceGroup, nonce);
+    return super.appendNoSync(info, tableName, edits, clusterIds, now, htd);
   }
 }
 
