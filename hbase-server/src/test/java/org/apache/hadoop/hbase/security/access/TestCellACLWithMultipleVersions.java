@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.TestTableName;
 
 import org.apache.log4j.Level;
@@ -71,12 +72,16 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
   private static final byte[] TEST_ROW = Bytes.toBytes("cellpermtest");
   private static final byte[] TEST_Q1 = Bytes.toBytes("q1");
+  private static final byte[] TEST_Q2 = Bytes.toBytes("q2");
   private static final byte[] ZERO = Bytes.toBytes(0L);
+  private static final byte[] ONE = Bytes.toBytes(1L);
+  private static final byte[] TWO = Bytes.toBytes(2L);
 
   private static Configuration conf;
 
   private static User USER_OWNER;
   private static User USER_OTHER;
+  private static User USER_OTHER2;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -112,6 +117,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     // create a set of test users
     USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
     USER_OTHER = User.createUserForTesting(conf, "other", new String[0]);
+    USER_OTHER2 = User.createUserForTesting(conf, "other2", new String[0]);
   }
 
   @AfterClass
@@ -340,6 +346,173 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try {
           Delete d = new Delete(TEST_ROW2);
           d.deleteFamily(TEST_FAMILY);
+          t.delete(d);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    });
+  }
+
+
+  @Test
+  public void testDeleteWithFutureTimestamp() throws Exception {
+    // Store two values, one in the future
+
+    verifyAllowed(new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          // Store read only ACL at a future time
+          Put p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1,
+            EnvironmentEdgeManager.currentTimeMillis() + 1000000,
+            ZERO);
+          p.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.READ));
+          t.put(p);
+          // Store a read write ACL without a timestamp, server will use current time
+          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q2, ONE);
+          p.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
+            Permission.Action.WRITE));
+          t.put(p);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    }, USER_OWNER);
+
+    // Confirm stores are visible
+
+    AccessTestAction getQ1 = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1);
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          return t.get(get).listCells();
+        } finally {
+          t.close();
+        }
+      }
+    };
+
+    AccessTestAction getQ2 = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2);
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          return t.get(get).listCells();
+        } finally {
+          t.close();
+        }
+      }
+    };
+
+    verifyAllowed(getQ1, USER_OWNER, USER_OTHER);
+    verifyAllowed(getQ2, USER_OWNER, USER_OTHER);
+
+
+    // Issue a DELETE for the family, should succeed because the future ACL is
+    // not considered
+
+    AccessTestAction deleteFamily = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        Delete delete = new Delete(TEST_ROW).deleteFamily(TEST_FAMILY);
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          t.delete(delete);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    };
+
+    verifyAllowed(deleteFamily, USER_OTHER);
+
+    // The future put should still exist
+    
+    verifyAllowed(getQ1, USER_OWNER, USER_OTHER);
+    
+    // The other put should be covered by the tombstone
+
+    verifyDenied(getQ2, USER_OTHER);
+  }
+
+  @Test
+  public void testCellPermissionsWithDeleteWithUserTs() throws Exception {
+    USER_OWNER.runAs(new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          // This version (TS = 123) with rw ACL for USER_OTHER and USER_OTHER2
+          Put p = new Put(TEST_ROW);
+          p.add(TEST_FAMILY, TEST_Q1, 123L, ZERO);
+          p.add(TEST_FAMILY, TEST_Q2, 123L, ZERO);
+          Map<String, Permission> perms = new HashMap<String, Permission>();
+          perms.put(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
+            Permission.Action.WRITE));
+          perms.put(USER_OTHER2.getShortName(), new Permission(Permission.Action.READ,
+            Permission.Action.WRITE));
+          p.setACL(perms);
+          t.put(p);
+
+          // This version (TS = 125) with rw ACL for USER_OTHER
+          p = new Put(TEST_ROW);
+          p.add(TEST_FAMILY, TEST_Q1, 125L, ONE);
+          p.add(TEST_FAMILY, TEST_Q2, 125L, ONE);
+          perms = new HashMap<String, Permission>();
+          perms.put(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
+            Permission.Action.WRITE));
+          p.setACL(perms);
+          t.put(p);
+
+          // This version (TS = 127) with rw ACL for USER_OTHER
+          p = new Put(TEST_ROW);
+          p.add(TEST_FAMILY, TEST_Q1, 127L, TWO);
+          p.add(TEST_FAMILY, TEST_Q2, 127L, TWO);
+          perms = new HashMap<String, Permission>();
+          perms.put(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
+            Permission.Action.WRITE));
+          p.setACL(perms);
+          t.put(p);
+
+          return null;
+        } finally {
+          t.close();
+        }
+      }
+    });
+
+    // USER_OTHER2 should be allowed to delete the column f1:q1 versions older than TS 124L
+    USER_OTHER2.runAs(new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Delete d = new Delete(TEST_ROW, 124L);
+          d.deleteColumns(TEST_FAMILY, TEST_Q1);
+          t.delete(d);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    });
+
+    // USER_OTHER2 should be allowed to delete the column f1:q2 versions older than TS 124L
+    USER_OTHER2.runAs(new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Delete d = new Delete(TEST_ROW);
+          d.deleteColumns(TEST_FAMILY, TEST_Q2, 124L);
           t.delete(d);
         } finally {
           t.close();
