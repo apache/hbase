@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -125,13 +126,14 @@ public class RowCounter {
     scan.setFilter(new FirstKeyOnlyFilter());
     if (sb.length() > 0) {
       for (String columnName : sb.toString().trim().split(" ")) {
-        String [] fields = columnName.split(":");
-        if(fields.length == 1) {
-          scan.addFamily(Bytes.toBytes(fields[0]));
-        } else {
-          byte[] qualifier = Bytes.toBytes(fields[1]);
-          qualifiers.add(qualifier);
-          scan.addColumn(Bytes.toBytes(fields[0]), qualifier);
+        String family = StringUtils.substringBefore(columnName, ":");
+        String qualifier = StringUtils.substringAfter(columnName, ":");
+
+        if (StringUtils.isBlank(qualifier)) {
+          scan.addFamily(Bytes.toBytes(family));
+        }
+        else {
+          scan.addColumn(Bytes.toBytes(family), Bytes.toBytes(qualifier));
         }
       }
     }

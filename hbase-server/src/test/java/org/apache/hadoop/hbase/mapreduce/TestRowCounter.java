@@ -52,6 +52,7 @@ public class TestRowCounter {
   private final static String COL_FAM = "col_fam";
   private final static String COL1 = "c1";
   private final static String COL2 = "c2";
+  private final static String COMPOSITE_COLUMN = "C:A:A";
   private final static int TOTAL_ROWS = 10;
   private final static int ROWS_WITH_ONE_COL = 2;
 
@@ -105,6 +106,20 @@ public class TestRowCounter {
   }
 
   /**
+   * Test a case when the column specified in command line arguments is
+   * one for which the qualifier contains colons.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testRowCounterColumnWithColonInQualifier() throws Exception {
+    String[] args = new String[] {
+        TABLE_NAME, COL_FAM + ":" + COMPOSITE_COLUMN
+    };
+    runRowCount(args, 8);
+  }
+
+  /**
    * Test a case when the column specified in command line arguments is not part
    * of first KV for a row.
    * 
@@ -150,6 +165,7 @@ public class TestRowCounter {
     final byte[] value = Bytes.toBytes("abcd");
     final byte[] col1 = Bytes.toBytes(COL1);
     final byte[] col2 = Bytes.toBytes(COL2);
+    final byte[] col3 = Bytes.toBytes(COMPOSITE_COLUMN);
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
     // write few rows with two columns
     int i = 0;
@@ -158,6 +174,7 @@ public class TestRowCounter {
       Put put = new Put(row);
       put.add(family, col1, value);
       put.add(family, col2, value);
+      put.add(family, col3, value);
       rowsUpdate.add(put);
     }
 
