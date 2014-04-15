@@ -204,8 +204,8 @@ public class TestZKLeaderManager {
   private MockLeader getCurrentLeader() throws Exception {
     MockLeader currentLeader = null;
     outer:
-    // wait up to 2 secs for initial leader
-    for (int i = 0; i < 20; i++) {
+    // wait up to 10 secs for initial leader
+    for (int i = 0; i < 100; i++) {
       for (int j = 0; j < CANDIDATES.length; j++) {
         if (CANDIDATES[j].isMaster()) {
           // should only be one leader
