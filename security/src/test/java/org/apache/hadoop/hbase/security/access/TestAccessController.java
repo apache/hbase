@@ -1845,11 +1845,11 @@ public class TestAccessController {
 
       final int RETRIES_LIMIT = 10;
       int retries = 0;
-      while (newRs.getOnlineRegions().size() < 1 && retries < RETRIES_LIMIT) {
+      while (newRs.getOnlineRegions(TEST_TABLE2).size() < 1 && retries < RETRIES_LIMIT) {
         LOG.debug("Waiting for region to be opened. Already retried " + retries
             + " times.");
         try {
-          Thread.sleep(200);
+          Thread.sleep(1000);
         } catch (InterruptedException e) {
         }
         retries++;
