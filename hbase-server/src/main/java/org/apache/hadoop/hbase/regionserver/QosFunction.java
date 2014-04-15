@@ -186,7 +186,7 @@ class QosFunction implements Function<Pair<RequestHeader, Message>, Integer> {
       return HConstants.NORMAL_QOS;
     }
 
-    if (methodName.equals("scan")) { // scanner methods...
+    if (methodName.equalsIgnoreCase("scan")) { // scanner methods...
       ScanRequest request = (ScanRequest)param;
       if (!request.hasScannerId()) {
         return HConstants.NORMAL_QOS;
