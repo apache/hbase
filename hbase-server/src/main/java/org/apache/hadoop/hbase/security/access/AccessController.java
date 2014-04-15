@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -476,7 +477,7 @@ public class AccessController extends BaseRegionObserver
   }
 
   private void requireCoveringPermission(String request, RegionCoprocessorEnvironment e,
-      byte[] row, Map<byte[], ? extends Collection<?>> familyMap, long timestamp,
+      byte[] row, Map<byte[], ? extends Collection<?>> familyMap, long opTs,
       boolean allVersions, Action...actions) throws IOException {
     User user = getActiveUser();
 
@@ -511,9 +512,10 @@ public class AccessController extends BaseRegionObserver
     // Table or CF permissions do not allow, enumerate the covered KVs. We
     // can stop at the first which does not grant access.
     int cellsChecked = 0;
+    opTs = opTs != HConstants.LATEST_TIMESTAMP ? opTs : 0;
+    long latestCellTs = 0;
     if (canPersistCellACLs) {
       Get get = new Get(row);
-      if (timestamp != HConstants.LATEST_TIMESTAMP) get.setTimeStamp(timestamp);
       if (allVersions) {
         get.setMaxVersions();
       } else {
@@ -546,6 +548,9 @@ public class AccessController extends BaseRegionObserver
               } else {
                 get.addColumn(col, CellUtil.cloneQualifier(cell));
               }
+              if (cell.getTimestamp() != HConstants.LATEST_TIMESTAMP) {
+                latestCellTs = Math.max(latestCellTs, cell.getTimestamp());
+              }
             }
           }
         } else {
@@ -553,6 +558,17 @@ public class AccessController extends BaseRegionObserver
             entry.getValue().getClass().getName());
         }
       }
+      // We want to avoid looking into the future. So, if the cells of the
+      // operation specify a timestamp, or the operation itself specifies a
+      // timestamp, then we use the maximum ts found. Otherwise, we bound
+      // the Get to the current server time. We add 1 to the timerange since
+      // the upper bound of a timerange is exclusive yet we need to examine
+      // any cells found there inclusively.
+      long latestTs = Math.max(opTs, latestCellTs);
+      if (latestTs == 0) {
+        latestTs = EnvironmentEdgeManager.currentTimeMillis();
+      }
+      get.setTimeRange(0, latestTs + 1);
       if (LOG.isTraceEnabled()) {
         LOG.trace("Scanning for cells with " + get);
       }
