@@ -468,18 +468,15 @@ public class HRegionServer extends HasThread implements
       // Open connection to zookeeper and set primary watcher
       zooKeeper = new ZooKeeperWatcher(conf, getProcessName() + ":" +
         rpcServices.isa.getPort(), this, canCreateBaseZNode());
-  
+
       tableLockManager = TableLockManager.createTableLockManager(
         conf, zooKeeper, serverName);
-  
+
       masterAddressTracker = new MasterAddressTracker(getZooKeeper(), this);
       masterAddressTracker.start();
-  
+
       clusterStatusTracker = new ClusterStatusTracker(zooKeeper, this);
       clusterStatusTracker.start();
-  
-      catalogTracker = createCatalogTracker();
-      catalogTracker.start();
     }
 
     rpcServices.start();
@@ -602,6 +599,9 @@ public class HRegionServer extends HasThread implements
       this.abort("Failed to retrieve Cluster ID",e);
     }
 
+    // Now we have the cluster ID, start catalog tracker
+    startCatalogTracker();
+
     // watch for snapshots and other procedures
     try {
       rspmHost = new RegionServerProcedureManagerHost();
@@ -672,6 +672,17 @@ public class HRegionServer extends HasThread implements
       rpcServices.isa.getAddress(), 0));
     this.pauseMonitor = new JvmPauseMonitor(conf);
     pauseMonitor.start();
+  }
+
+  /**
+   * Create and start the catalog tracker if not already done.
+   */
+  protected synchronized void startCatalogTracker()
+      throws IOException, InterruptedException {
+    if (catalogTracker == null) {
+      catalogTracker = createCatalogTracker();
+      catalogTracker.start();
+    }
   }
 
   /**

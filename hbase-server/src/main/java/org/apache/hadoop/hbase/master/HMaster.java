@@ -472,6 +472,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.serverManager = createServerManager(this, this);
 
+    // Now we have the cluster ID, start catalog tracker
+    startCatalogTracker();
+
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();
 
