@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import org.apache.commons.lang.StringUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+
 
 /**
  * A job with a just a map phase to count rows. Map outputs table rows IF the
@@ -119,11 +121,12 @@ public class RowCounter {
     scan.setFilter(new FirstKeyOnlyFilter());
     if (sb.length() > 0) {
       for (String columnName : sb.toString().trim().split(" ")) {
-        String [] fields = columnName.split(":");
-        if(fields.length == 1) {
-          scan.addFamily(Bytes.toBytes(fields[0]));
+        String family = StringUtils.substringBefore(columnName, ":");
+        String qualifier = StringUtils.substringAfter(columnName, ":");
+        if (StringUtils.isBlank(qualifier)) {
+          scan.addFamily(Bytes.toBytes(family));
         } else {
-          scan.addColumn(Bytes.toBytes(fields[0]), Bytes.toBytes(fields[1]));
+          scan.addColumn(Bytes.toBytes(family), Bytes.toBytes(qualifier));
         }
       }
     }
