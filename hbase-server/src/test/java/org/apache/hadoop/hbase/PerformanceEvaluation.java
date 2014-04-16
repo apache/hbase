@@ -488,6 +488,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.perClientRunRows = that.perClientRunRows;
       this.numClientThreads = that.numClientThreads;
       this.totalRows = that.totalRows;
+      this.modulo = that.modulo;
       this.sampleRate = that.sampleRate;
       this.tableName = that.tableName;
       this.flushCommits = that.flushCommits;
@@ -507,6 +508,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public int perClientRunRows = ROWS_PER_GB;
     public int numClientThreads = 1;
     public int totalRows = ROWS_PER_GB;
+    public int modulo = -1;
     public float sampleRate = 1.0f;
     public String tableName = TABLE_NAME;
     public boolean flushCommits = true;
@@ -653,7 +655,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(final int i) throws IOException {
-      Scan scan = new Scan(getRandomRow(this.rand, opts.totalRows));
+      Scan scan = new Scan(getRandomRow(this.rand, opts.modulo));
       scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
       scan.setFilter(new WhileMatchFilter(new PageFilter(120)));
       ResultScanner s = this.table.getScanner(scan);
@@ -768,8 +770,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(final int i) throws IOException {
-      Get get = new Get(getRandomRow(this.rand, opts.totalRows));
+      Get get = new Get(getRandomRow(this.rand, opts.modulo));
       get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (LOG.isTraceEnabled()) LOG.trace(get.toString());
       if (opts.multiGet > 0) {
         this.gets.add(get);
         if (this.gets.size() == opts.multiGet) {
@@ -804,7 +807,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(final int i) throws IOException {
-      byte[] row = getRandomRow(this.rand, opts.totalRows);
+      byte[] row = getRandomRow(this.rand, opts.modulo);
       Put put = new Put(row);
       byte[] value = generateData(this.rand, VALUE_LENGTH);
       if (opts.useTags) {
@@ -990,8 +993,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     return b;
   }
 
-  static byte [] getRandomRow(final Random random, final int totalRows) {
-    return format(random.nextInt(Integer.MAX_VALUE) % totalRows);
+  static byte [] getRandomRow(final Random random, final int modulo) {
+    return format(random.nextInt(Integer.MAX_VALUE) % modulo);
   }
 
   static long runOneClient(final Class<? extends Test> cmd, Configuration conf, TestOptions opts,
@@ -1055,6 +1058,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" nomapred        Run multiple clients using threads " +
       "(rather than use mapreduce)");
     System.err.println(" rows            Rows each client runs. Default: One million");
+    System.err.println(" modulo          Modulo we use dividing random. Default: Clients x rows");
     System.err.println(" sampleRate      Execute test on a sample of total " +
       "rows. Only supported by randomRead. Default: 1.0");
     System.err.println(" table           Alternate table name. Default: 'TestTable'");
@@ -1215,11 +1219,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
           continue;
         }
 
+        final String modulo = "--modulo=";
+        if (cmd.startsWith(modulo)) {
+          opts.modulo = Integer.parseInt(cmd.substring(modulo.length()));
+          continue;
+        }
+
         Class<? extends Test> cmdClass = determineCommandClass(cmd);
         if (cmdClass != null) {
           opts.numClientThreads = getNumClients(i + 1, args);
           // number of rows specified
           opts.totalRows = opts.perClientRunRows * opts.numClientThreads;
+          if (opts.modulo == -1) opts.modulo = opts.totalRows;
           runTest(cmdClass, opts);
           errCode = 0;
           break;
