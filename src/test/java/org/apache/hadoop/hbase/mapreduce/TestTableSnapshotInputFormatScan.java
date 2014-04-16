@@ -67,9 +67,6 @@ public class TestTableSnapshotInputFormatScan {
     // config snapshot support
     TEST_UTIL.getConfiguration().setBoolean(
         SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
-    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
-    TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
-    TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
     TEST_UTIL.getConfiguration().setBoolean(
         "hbase.master.enabletable.roundrobin", true);
 
