@@ -175,7 +175,8 @@ public class TestThriftServerCmdLine {
     startCmdLineThread(args.toArray(new String[0]));
 
     // wait up to 10s for the server to start
-    for (int i=0; i<100 && (thriftServer.serverRunner == null || thriftServer.serverRunner.tserver == null); i++) {
+    for (int i = 0; i < 100
+        && (thriftServer.serverRunner == null || thriftServer.serverRunner.tserver == null); i++) {
       Thread.sleep(100);
     }
 
