@@ -125,8 +125,12 @@ class HMerge {
             "HBase instance must be running to merge a normal table");
       }
       HBaseAdmin admin = new HBaseAdmin(conf);
-      if (!admin.isTableDisabled(tableName)) {
-        throw new TableNotDisabledException(tableName);
+      try {
+        if (!admin.isTableDisabled(tableName)) {
+          throw new TableNotDisabledException(tableName);
+        }
+      } finally {
+        admin.close();
       }
       new OnlineMerger(conf, fs, tableName).process();
     }
