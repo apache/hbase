@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -187,12 +186,10 @@ public class HBaseFsckRepair {
       HRegionInfo hri, HTableDescriptor htd) throws IOException {
     // Create HRegion
     Path root = FSUtils.getRootDir(conf);
-    HRegion region = HRegion.createHRegion(hri, root, conf, htd);
-    HLog hlog = region.getLog();
+    HRegion region = HRegion.createHRegion(hri, root, conf, htd, null);
 
     // Close the new region to flush to disk. Close log file too.
     region.close();
-    hlog.closeAndDelete();
     return region;
   }
 }
