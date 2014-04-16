@@ -350,7 +350,7 @@ def unloadRegions(options, hostname)
       # Get a random server to move the region to.
       server = servers[rand(servers.length)]
       $LOG.info("Moving region " + r.getRegionNameAsString() + " (" + 
-        count.to_s + " of " + rs.length.to_s + ") from server=" + 
+        (count + 1).to_s + " of " + rs.length.to_s + ") from server=" +
         servername + " to server=" + server);
       count = count + 1
       # Assert we can scan region in its current location
@@ -410,8 +410,8 @@ def loadRegions(options, hostname)
         " of " + regions.length.to_s + ") already on target server=" + servername) 
       next
     end
-    $LOG.info("Moving region " + r.getRegionNameAsString() + " (" + 
-      count.to_s + " of " + regions.length.to_s + ") from server=" + 
+    $LOG.info("Moving region " + r.getRegionNameAsString() + " (" +
+      (count + 1).to_s + " of " + regions.length.to_s + ") from server=" +
       currentServer.to_s + " to server=" + servername.to_s);
     move(admin, r, servername, currentServer)
   end
