@@ -164,7 +164,11 @@ public class TestThriftServerCmdLine {
 
     thriftServer = new ThriftServer(TEST_UTIL.getConfiguration());
     startCmdLineThread(args.toArray(new String[0]));
-    Threads.sleepWithoutInterrupt(2000);
+    // wait up to 10s for the server to start
+    for (int i = 0; i < 100
+        && (thriftServer.serverRunner == null || thriftServer.serverRunner.tserver == null); i++) {
+      Thread.sleep(100);
+    }
 
     Class<? extends TServer> expectedClass = implType != null ?
         implType.serverClass : TBoundedThreadPoolServer.class;
