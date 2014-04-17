@@ -20,11 +20,19 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -34,12 +42,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class TestGetRegionLocation {
   private static final Log LOG = LogFactory.getLog(TestGetRegionLocation.class);
@@ -55,6 +57,9 @@ public class TestGetRegionLocation {
 
   @Before
   public void setUp() throws IOException, InterruptedException {
+    // Use assignment plan so that regions are not moved unexpectedly.
+    TEST_UTIL.getConfiguration().set(HConstants.LOAD_BALANCER_IMPL,
+        "org.apache.hadoop.hbase.master.RegionManager$AssignmentLoadBalancer");
     TEST_UTIL.startMiniCluster(NUM_SLAVES);
     TEST_UTIL.createTable(TABLE, FAMILIES, 1, START_KEY, END_KEY, NUM_REGIONS);
   }
@@ -77,9 +82,6 @@ public class TestGetRegionLocation {
     List<HServerInfo> serverInfos = new ArrayList<>();
     Map<HRegionInfo, HServerInfo> regionInfoToServerInfoMap = new HashMap<>();
 
-    // Wait till all the regions becomes assigned.
-    TEST_UTIL.waitForOnlineRegionsToBeAssigned(NUM_REGIONS);
-
     // Get the list of servers, and regions, and regions->servers mapping.
     for (HRegionServer regionServer : regionServers) {
       serverInfos.add(regionServer.getServerInfo());
@@ -89,108 +91,108 @@ public class TestGetRegionLocation {
       }
     }
 
-    TableServers connection = new TableServers(CONF);
+    try (TableServers connection = new TableServers(CONF)) {
+      // Iterate through each of the servers, and check if the locations for
+      // all the regions are correct.
+      for (HServerInfo serverInfo : serverInfos) {
+        HRegionInterface server =
+          connection.getHRegionConnection(serverInfo.getServerAddress());
 
-    // Iterate through each of the servers, and check if the locations for
-    // all the regions are correct.
-    for (HServerInfo serverInfo : serverInfos) {
+        for (Map.Entry<HRegionInfo, HServerInfo> entry :
+          regionInfoToServerInfoMap.entrySet()) {
+          HRegionInfo info = entry.getKey();
+
+          // Get the location for this particular region's start key...
+          HRegionLocation location =
+            server.getLocation(info.getTableDesc().getName(),
+              info.getStartKey(),
+              false);
+
+          // ... which should be the same as the actual location of this region.
+          Assert.assertEquals(
+            "getLocation() returned an incorrect server location for region: "
+                + info.getRegionNameAsString(),
+            entry.getValue().getServerAddress(),
+            location.getServerAddress());
+        }
+      }
+
+      // Now let us try moving a random region (let's pick the first)
+      // to a different location, and see if the getLocation works with reloading
+      Map.Entry<HRegionInfo, HServerInfo> firstRegion =
+        regionInfoToServerInfoMap.entrySet().iterator().next();
+      HRegionInfo firstRegionInfo = firstRegion.getKey();
+      HServerInfo firstServerInfo = firstRegion.getValue();
+
+      LOG.info("Region: " + firstRegionInfo.getRegionNameAsString() +
+        " was located at " + firstServerInfo.getServerAddress().toString());
+
+      // Pick up a server to query getRegionLocation
       HRegionInterface server =
-        connection.getHRegionConnection(serverInfo.getServerAddress());
+        connection.getHRegionConnection(
+          serverInfos.iterator().next().getServerAddress());
 
-      for (Map.Entry<HRegionInfo, HServerInfo> entry :
-        regionInfoToServerInfoMap.entrySet()) {
-        HRegionInfo info = entry.getKey();
+      // Check that the location before moving is sane
+      HRegionLocation locationBeforeMoving =
+        server.getLocation(firstRegionInfo.getTableDesc().getName(),
+          firstRegionInfo.getStartKey(), false);
 
-        // Get the location for this particular region's start key...
-        HRegionLocation location =
-          server.getLocation(info.getTableDesc().getName(),
-            info.getStartKey(),
-            false);
+      Assert.assertEquals(
+        "getLocation() returned an incorrect server location for region: " +
+          firstRegionInfo.getRegionNameAsString(),
+          firstServerInfo.getServerAddress(),
+          locationBeforeMoving.getServerAddress()
+      );
 
-        // ... which should be the same as the actual location of this region.
-        Assert.assertEquals(
-          "getLocation() returned an incorrect server location for region: " +
-            info.getRegionNameAsString(),
-          entry.getValue().getServerAddress(),
-          location.getServerAddress());
+      HServerInfo targetServer = null;
+      // Find a targetServer to host the first region
+      for (HServerInfo serverInfo : serverInfos) {
+        if (serverInfo.equals(firstServerInfo)) {
+          continue;
+        }
+        targetServer = serverInfo;
       }
+
+      LOG.info("Region: " + firstRegionInfo.getRegionNameAsString()
+          + " will be moved from: " + firstServerInfo.getServerAddress()
+          + " to: " + targetServer.getServerAddress().toString());
+
+      // Now move the region to the target server
+      TEST_UTIL.getHBaseAdmin().moveRegion(firstRegionInfo.getRegionName(),
+        targetServer.getServerAddress().toString());
+
+      // Wait till the region becomes assigned.
+      TEST_UTIL.waitForOnlineRegionsToBeAssigned(NUM_REGIONS);
+      TEST_UTIL.waitForTableConsistent();
+
+      HRegionLocation staleLocationAfterMoving =
+        server.getLocation(firstRegionInfo.getTableDesc().getName(),
+          firstRegionInfo.getStartKey(), false);
+
+      LOG.info("As per (stale) cache, region: " +
+        firstRegionInfo.getRegionNameAsString() +
+        " was located at " +
+        staleLocationAfterMoving.getServerAddress().toString());
+
+      // Getting the location after reloading the cache.
+      HRegionLocation newLocationAfterMoving =
+        server.getLocation(firstRegionInfo.getTableDesc().getName(),
+        firstRegionInfo.getStartKey(), true);
+
+      LOG.info("As per (fresh) cache, region: " +
+        firstRegionInfo.getRegionNameAsString() +
+        " was located at " +
+        newLocationAfterMoving.getServerAddress().toString());
+
+      // The new location after reloading the cache, should be the same as
+      // what we expect.
+      Assert.assertEquals(
+        "getLocation() returned a stale server location for region: " +
+          firstRegionInfo.getRegionNameAsString(),
+        targetServer.getServerAddress(),
+        newLocationAfterMoving.getServerAddress()
+      );
     }
-
-    // Now let us try moving a random region (let's pick the first)
-    // to a different location, and see if the getLocation works with reloading
-    Map.Entry<HRegionInfo, HServerInfo> firstRegion =
-      regionInfoToServerInfoMap.entrySet().iterator().next();
-    HRegionInfo firstRegionInfo = firstRegion.getKey();
-    HServerInfo firstServerInfo = firstRegion.getValue();
-
-    LOG.info("Region: " + firstRegionInfo.getRegionNameAsString() +
-      " was located at " + firstServerInfo.getServerAddress().toString());
-
-    // Pick up a server to query getRegionLocation
-    HRegionInterface server =
-      connection.getHRegionConnection(
-        serverInfos.iterator().next().getServerAddress());
-
-    // Check that the location before moving is sane
-    HRegionLocation locationBeforeMoving =
-      server.getLocation(firstRegionInfo.getTableDesc().getName(),
-        firstRegionInfo.getStartKey(), false);
-
-    Assert.assertEquals(
-      "getLocation() returned an incorrect server location for region: " +
-        firstRegionInfo.getRegionNameAsString(),
-        firstServerInfo.getServerAddress(),
-        locationBeforeMoving.getServerAddress()
-    );
-
-    HServerInfo targetServer = null;
-    // Find a targetServer to host the first region
-    for (HServerInfo serverInfo : serverInfos) {
-      if (serverInfo.equals(firstServerInfo)) {
-        continue;
-      }
-      targetServer = serverInfo;
-    }
-
-    LOG.info("Region: " + firstRegionInfo.getRegionNameAsString() +
-      " will be moved from: " + firstServerInfo.getServerAddress().toString() +
-      " to: " + targetServer.getServerAddress().toString());
-
-    // Now move the region to the target server
-    TEST_UTIL.getHBaseAdmin().moveRegion(firstRegionInfo.getRegionName(),
-      targetServer.getServerAddress().toString());
-
-    // Wait till the region becomes assigned.
-    TEST_UTIL.waitForOnlineRegionsToBeAssigned(NUM_REGIONS);
-
-    HRegionLocation staleLocationAfterMoving =
-      server.getLocation(firstRegionInfo.getTableDesc().getName(),
-        firstRegionInfo.getStartKey(), false);
-
-    LOG.info("As per (stale) cache, region: " +
-      firstRegionInfo.getRegionNameAsString() +
-      " was located at " +
-      staleLocationAfterMoving.getServerAddress().toString());
-
-    // Getting the location after reloading the cache.
-    HRegionLocation newLocationAfterMoving =
-      server.getLocation(firstRegionInfo.getTableDesc().getName(),
-      firstRegionInfo.getStartKey(), true);
-
-    LOG.info("As per (fresh) cache, region: " +
-      firstRegionInfo.getRegionNameAsString() +
-      " was located at " +
-      newLocationAfterMoving.getServerAddress().toString());
-
-    // The new location after reloading the cache, should be the same as
-    // what we expect.
-    Assert.assertEquals(
-      "getLocation() returned a stale server location for region: " +
-        firstRegionInfo.getRegionNameAsString(),
-      targetServer.getServerAddress(),
-      newLocationAfterMoving.getServerAddress()
-    );
-
   }
 
 }
