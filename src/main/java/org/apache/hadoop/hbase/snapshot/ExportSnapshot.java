@@ -535,11 +535,16 @@ public final class ExportSnapshot extends Configured implements Tool {
     return fileGroups;
   }
 
-  private static Path getInputFolderPath(final FileSystem fs, final Configuration conf)
+  private static Path getInputFolderPath(final Configuration conf)
       throws IOException, InterruptedException {
     String stagingName = "exportSnapshot-" + EnvironmentEdgeManager.currentTimeMillis();
-    Path stagingDir = new Path(conf.get(CONF_STAGING_ROOT, fs.getWorkingDirectory().toString())
-        , stagingName);
+    String stagingDirPath = conf.get(CONF_STAGING_ROOT);
+    if (stagingDirPath == null) {
+      stagingDirPath = FileSystem.get(conf).getWorkingDirectory().toString();
+    }
+
+    Path stagingDir = new Path(stagingDirPath, stagingName);
+    FileSystem fs = stagingDir.getFileSystem(conf);
     fs.mkdirs(stagingDir);
     return new Path(stagingDir, INPUT_FOLDER_PREFIX +
       String.valueOf(EnvironmentEdgeManager.currentTimeMillis()));
@@ -554,8 +559,8 @@ public final class ExportSnapshot extends Configured implements Tool {
   private static Path[] createInputFiles(final Configuration conf,
       final List<Pair<Path, Long>> snapshotFiles, int mappers)
       throws IOException, InterruptedException {
-    FileSystem fs = FileSystem.get(conf);
-    Path inputFolderPath = getInputFolderPath(fs, conf);
+    Path inputFolderPath = getInputFolderPath(conf);
+    FileSystem fs = inputFolderPath.getFileSystem(conf);
     LOG.debug("Input folder location: " + inputFolderPath);
 
     List<List<Path>> splits = getBalancedSplits(snapshotFiles, mappers);
