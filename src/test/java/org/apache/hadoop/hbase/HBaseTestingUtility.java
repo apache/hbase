@@ -97,6 +97,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
@@ -266,15 +267,17 @@ public class HBaseTestingUtility {
    */
   public MiniDFSCluster startMiniDFSCluster(int servers) throws IOException {
     createDirsAndSetProperties();
-    this.dfsCluster = new MiniDFSCluster(0, this.conf, servers, true, true,
-      true, null, null, null, null);
+    this.dfsCluster = new MiniDFSCluster.Builder(this.conf).nameNodePort(0)
+        .numDataNodes(servers).format(true).manageDataDfsDirs(true)
+        .manageNameDfsDirs(true).build();
     return this.dfsCluster;
   }
 
   public MiniDFSCluster startMiniDFSClusterForTestHLog(int namenodePort) throws IOException {
     createDirsAndSetProperties();
-    dfsCluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null,
-        null, null, null);
+    this.dfsCluster = new MiniDFSCluster.Builder(this.conf).nameNodePort(0)
+        .numDataNodes(5).format(false).manageDataDfsDirs(true)
+        .manageNameDfsDirs(true).build();
     return dfsCluster;
   }
 
@@ -428,7 +431,9 @@ public class HBaseTestingUtility {
         this.conf.set("fs.defaultFS", fs.getUri().toString());
         // Do old style too just to be safe.
         this.conf.set("fs.default.name", fs.getUri().toString());
-        this.dfsCluster.waitClusterUp();
+        for (DataNode dn : dfsCluster.getDataNodes()) {
+          this.dfsCluster.waitDataNodeInitialized(dn);
+        }
         hbaseRootdir = fs.getHomeDirectory();
         break;
 

@@ -69,7 +69,7 @@ import org.junit.runner.RunWith;
 public class TestHLog  {
   private static final Log LOG = LogFactory.getLog(TestHLog.class);
   {
-    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
+    DataNode.LOG.getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);

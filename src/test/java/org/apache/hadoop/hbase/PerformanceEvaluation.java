@@ -1198,7 +1198,8 @@ public class PerformanceEvaluation {
     MiniDFSCluster dfsCluster = null;
     MiniZooKeeperCluster zooKeeperCluster = null;
     if (this.miniCluster) {
-      dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+      dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+          .manageDataDfsDirs(true).manageNameDfsDirs(true).build();
       zooKeeperCluster = new MiniZooKeeperCluster();
       int zooKeeperPort = zooKeeperCluster.startup(new File(System.getProperty("java.io.tmpdir")));
 

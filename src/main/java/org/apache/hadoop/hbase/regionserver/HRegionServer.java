@@ -1792,12 +1792,12 @@ public class HRegionServer implements HRegionInterface, HRegionServerIf,
     if (this.fs instanceof DistributedFileSystem) {
       DFSClient client = ((DistributedFileSystem)fs).getClient();
 
-      long quorumReadsDone = client.quorumReadMetrics.getParallelReadOps();
+      long quorumReadsDone = client.getQuorumReadMetrics().getParallelReadOps();
       this.metrics.quorumReadsDone.set(quorumReadsDone);
-      long quorumReadWins = client.quorumReadMetrics.getParallelReadWins();
+      long quorumReadWins = client.getQuorumReadMetrics().getParallelReadWins();
       this.metrics.quorumReadWins.set(quorumReadWins);
       long quorumReadsExecutedInCurThread =
-          client.quorumReadMetrics.getParallelReadOpsInCurThread();
+          client.getQuorumReadMetrics().getParallelReadOpsInCurThread();
       this.metrics.quorumReadsExecutedInCurThread.set(quorumReadsExecutedInCurThread);
     }
   }

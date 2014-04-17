@@ -70,7 +70,8 @@ public class TestWideScanner extends HBaseTestCase {
 
   @Override
   public void setUp() throws Exception {
-    cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+        .manageDataDfsDirs(true).manageNameDfsDirs(true).build();;
     // Set the hbase.rootdir to be the home directory in mini dfs.
     this.conf.set(HConstants.HBASE_DIR,
       this.cluster.getFileSystem().getHomeDirectory().toString());

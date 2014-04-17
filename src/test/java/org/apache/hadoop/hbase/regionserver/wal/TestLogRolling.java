@@ -63,7 +63,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
 
  // verbose logging on classes that are touched in these tests
  {
-   ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
+   DataNode.LOG.getLogger().setLevel(Level.ALL);
    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);

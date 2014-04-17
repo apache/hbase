@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.SequenceFile;
 
@@ -289,7 +290,7 @@ public class FSUtils {
       // the datanode report, just ignore it
     }
     // Make sure dfs is not in safe mode
-    while (dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET)) {
+    while (DFSAdmin.getSafeMode(dfs, conf)) {
       LOG.info("Waiting for dfs to exit safe mode...");
       try {
         Thread.sleep(wait);

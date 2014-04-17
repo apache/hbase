@@ -85,7 +85,8 @@ public class TestStoreFile extends HBaseTestCase {
   public void setUp() throws Exception {
     startingMetrics = SchemaMetrics.getMetricsSnapshot();
     try {
-      this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
+      this.cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+          .manageDataDfsDirs(true).manageNameDfsDirs(true).build();;
       // Set the hbase.rootdir to be the home directory in mini dfs.
       this.conf.set(HConstants.HBASE_DIR,
         this.cluster.getFileSystem().getHomeDirectory().toString());

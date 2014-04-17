@@ -82,6 +82,16 @@ class DummyMetricsRecord implements MetricsRecord {
       setMetric(metricName, value.longValue() + (long)metricValue);
     }
   }
+  @Override
+  public void incrMetric(String arg0, double arg1) {
+    // TODO Auto-generated method stub
+
+  }
+  @Override
+  public void setMetric(String arg0, double arg1) {
+    // TODO Auto-generated method stub
+
+  }
 }
 
 public class TestRpcMetricWrapper extends TestCase {

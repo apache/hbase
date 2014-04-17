@@ -110,7 +110,8 @@ public class TestMergeTool extends HBaseTestCase {
         "row_1000", "row_1000", "row_1000", "row_1000" });
 
     // Start up dfs
-    this.dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    this.dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+        .manageDataDfsDirs(true).manageNameDfsDirs(true).build();;
     this.fs = this.dfsCluster.getFileSystem();
     System.out.println("fs=" + this.fs);
     this.conf.set("fs.defaultFS", fs.getUri().toString());
