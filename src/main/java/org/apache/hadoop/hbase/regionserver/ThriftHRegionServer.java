@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TMultiResponse;
 import org.apache.hadoop.hbase.client.TRowMutations;
 import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointServer;
+import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointServer;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
@@ -60,8 +61,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 
-import com.facebook.swift.service.ThriftException;
-import com.facebook.swift.service.ThriftMethod;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -70,10 +69,10 @@ import com.google.common.util.concurrent.ListenableFuture;
  *
  */
 public class ThriftHRegionServer implements ThriftHRegionInterface {
-  public static Log LOG = LogFactory.getLog(ThriftHRegionServer.class);
+  private static Log LOG = LogFactory.getLog(ThriftHRegionServer.class);
 
   private HRegionServer server;
-  private EndpointServer endpointServer;
+  private IEndpointServer endpointServer;
 
   public ThriftHRegionServer(HRegionServer server) {
     this.server = server;
@@ -639,9 +638,9 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
 
   @Override
   public byte[] callEndpoint(String epName, String methodName,
-      final byte[] regionName, final byte[] startRow, final byte[] stopRow)
-      throws ThriftHBaseException {
-    return endpointServer.callEndpoint(epName, methodName, regionName,
+      ArrayList<byte[]> params, final byte[] regionName, final byte[] startRow,
+      final byte[] stopRow) throws ThriftHBaseException {
+    return endpointServer.callEndpoint(epName, methodName, params, regionName,
         startRow, stopRow);
   }
 

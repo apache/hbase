@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -65,7 +66,8 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable,
    * @return  the computed value.
    */
   public byte[] callEndpoint(String epName, String methodName,
-      byte[] regionName, byte[] startRow, byte[] stopRow) throws IOException;
+      ArrayList<byte[]> params, byte[] regionName, byte[] startRow,
+      byte[] stopRow) throws IOException;
 
   /**
    * Get metainfo about an HRegion

@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.coprocessor.endpoints;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.HRegionInfo;
+
 /**
  * The interface of a client for calling a endpoint.
  */
@@ -30,10 +32,10 @@ public interface IEndpointClient {
   /**
    * The interface of a caller for <code>coprocessorEndpoint</code>
    *
-   * @param <T>
-   *          The type of the endpoint interface. (NOT the implementation)
+   * @param <T> the type of the endpoint interface. (NOT the implementation)
+   * @param <R> the type of the return value.
    */
-  public interface Caller<T extends IEndpoint> {
+  public interface Caller<T extends IEndpoint, R> {
 
     /**
      * Calls an endpoint.
@@ -42,7 +44,7 @@ public interface IEndpointClient {
      *          an RPC client.
      * @return the result to be put as a value in coprocessorEndpoint's results
      */
-    byte[] call(T client) throws IOException;
+    R call(T client) throws IOException;
   }
 
   /**
@@ -61,6 +63,7 @@ public interface IEndpointClient {
    *          the caller for each region
    * @return a map from region name to results.
    */
-  <T extends IEndpoint> Map<byte[], byte[]> coprocessorEndpoint(Class<T> clazz,
-      byte[] startRow, byte[] stopRow, Caller<T> caller) throws IOException;
+  <T extends IEndpoint, R> Map<HRegionInfo, R> coprocessorEndpoint(
+      Class<T> clazz, byte[] startRow, byte[] stopRow, Caller<T, R> caller)
+      throws IOException;
 }

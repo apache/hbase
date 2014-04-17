@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TMultiResponse;
 import org.apache.hadoop.hbase.client.TRowMutations;
+import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointServer;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
@@ -56,28 +57,8 @@ import com.google.common.util.concurrent.ListenableFuture;
  *
  */
 @ThriftService
-public interface ThriftHRegionInterface extends ThriftClientInterface {
-
-  /**
-   * Calls an endpoint on an region server.
-   *
-   * TODO make regionName/startRow/stopRow a list.
-   *
-   * @param epName  the endpoint name.
-   * @param methodName  the method name.
-   * @param regionName  the name of the region
-   * @param startRow  the start row, inclusive
-   * @param stopRow  the stop row, exclusive
-   * @return  the computed value.
-   */
-  @ThriftMethod(value = "callEndpoint", exception = {
-      @ThriftException(type = ThriftHBaseException.class, id = 1) })
-  public byte[] callEndpoint(@ThriftField(name = "epName") String epName,
-      @ThriftField(name = "methodName") String methodName,
-      @ThriftField(name = "regionName") byte[] regionName,
-      @ThriftField(name = "startRow") byte[] startRow,
-      @ThriftField(name = "stopRow") byte[] stopRow)
-      throws ThriftHBaseException;
+public interface ThriftHRegionInterface extends ThriftClientInterface,
+    IEndpointServer {
 
   /**
    * Get metainfo about an HRegion

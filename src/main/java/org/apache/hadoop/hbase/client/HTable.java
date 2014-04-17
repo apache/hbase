@@ -1528,8 +1528,8 @@ getRegionCachePrefetch(new StringBytes(tableName));
   }
 
   @Override
-  public <T extends IEndpoint> Map<byte[], byte[]> coprocessorEndpoint(
-      Class<T> clazz, byte[] startRow, byte[] stopRow, Caller<T> caller)
+  public <T extends IEndpoint, R> Map<HRegionInfo, R> coprocessorEndpoint(
+      Class<T> clazz, byte[] startRow, byte[] stopRow, Caller<T, R> caller)
       throws IOException {
     return this.endpointClient.coprocessorEndpoint(clazz, startRow, stopRow,
         caller);

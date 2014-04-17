@@ -23,9 +23,9 @@ import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ServerCallable;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A IEndpointClient served as part of an HTable.
@@ -63,17 +62,20 @@ public class HTableEndpointClient implements IEndpointClient {
 
     InvocationHandler handler = new InvocationHandler() {
       @Override
-      public Object invoke(Object proxy, final Method method, Object[] args)
-          throws Throwable {
+      public Object invoke(Object proxy, final Method method,
+          final Object[] args) throws Throwable {
         HConnection conn = table.getConnectionAndResetOperationContext();
-        return conn.getRegionServerWithRetries(new ServerCallable<byte[]>(
+        return conn.getRegionServerWithRetries(new ServerCallable<Object>(
             table.getConnection(), table.getTableNameStringBytes(),
             region.getStartKey(), table.getOptions()) {
           @Override
-          public byte[] call() throws IOException {
-            // TODO support arguments
-            return server.callEndpoint(clazz.getName(), method.getName(),
-                region.getRegionName(), startRow, stopRow);
+          public Object call() throws IOException {
+            byte[] res = server.callEndpoint(clazz.getName(),method.getName(),
+                EndpointBytesCodec.encodeArray(args), region.getRegionName(),
+                startRow, stopRow);
+
+            return EndpointBytesCodec.decode(method.getReturnType(),
+                res);
           }
         });
       }
@@ -84,10 +86,10 @@ public class HTableEndpointClient implements IEndpointClient {
   }
 
   @Override
-  public <T extends IEndpoint> Map<byte[], byte[]> coprocessorEndpoint(
-      Class<T> clazz, byte[] startRow, byte[] stopRow, Caller<T> caller)
+  public <T extends IEndpoint, R> Map<HRegionInfo, R> coprocessorEndpoint(
+      Class<T> clazz, byte[] startRow, byte[] stopRow, Caller<T, R> caller)
       throws IOException {
-    Map<byte[], byte[]> results = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    Map<HRegionInfo, R> results = new HashMap<>();
 
     NavigableMap<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();
 
@@ -95,7 +97,7 @@ public class HTableEndpointClient implements IEndpointClient {
       // TODO compute startRow and stopRow
       T ep = getEndpointProxy(clazz, region, HConstants.EMPTY_BYTE_ARRAY,
           HConstants.EMPTY_BYTE_ARRAY);
-      results.put(region.getRegionName(), caller.call(ep));
+      results.put(region, caller.call(ep));
     }
 
     return results;

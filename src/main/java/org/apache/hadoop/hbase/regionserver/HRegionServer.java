@@ -4100,8 +4100,8 @@ public class HRegionServer implements HRegionInterface, HRegionServerIf,
 
   @Override
   public byte[] callEndpoint(String epName, String methodName,
-      final byte[] regionName, final byte[] startRow, final byte[] stopRow)
-      throws IOException {
+      ArrayList<byte[]> params, final byte[] regionName, final byte[] startRow,
+      final byte[] stopRow) throws IOException {
     throw new NotImplementedException("HRegionserver.callEndpoint");
   }
 

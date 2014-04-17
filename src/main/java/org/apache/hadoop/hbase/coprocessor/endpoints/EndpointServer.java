@@ -19,18 +19,19 @@
  */
 package org.apache.hadoop.hbase.coprocessor.endpoints;
 
-import java.lang.reflect.Method;
+import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointManager.EndpointInfo;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 
 /**
- * A endpoint server.
+ * An endpoint server.
  */
-public class EndpointServer {
+public class EndpointServer implements IEndpointServer {
 
   private HRegionServer server;
 
@@ -38,35 +39,22 @@ public class EndpointServer {
     this.server = server;
   }
 
-  /**
-   * Calls an endpoint on an region server.
-   *
-   * TODO make regionName a list.
-   *
-   * @param epName
-   *          the endpoint name.
-   * @param methodName
-   *          the method name.
-   * @param regionName
-   *          the name of the region
-   * @param startRow
-   *          the start row, inclusive
-   * @param stopRow
-   *          the stop row, exclusive
-   * @return the computed value.
-   */
+  @Override
   public byte[] callEndpoint(String epName, String methodName,
-      final byte[] regionName, final byte[] startRow, final byte[] stopRow)
-      throws ThriftHBaseException {
+      ArrayList<byte[]> params, final byte[] regionName, final byte[] startRow,
+      final byte[] stopRow) throws ThriftHBaseException {
     try {
-      IEndpointFactory<?> fact = EndpointManager.get().getFactory(epName);
-      if (fact == null) {
+      EndpointInfo ent = EndpointManager.get().getEndpointEntry(epName);
+      if (ent == null) {
         // TODO daviddeng make a special exception for this
         throw new DoNotRetryIOException("Endpoint " + epName
             + " does not exists");
       }
-      IEndpoint ep = fact.create();
 
+      // Create an IEndpoint instance.
+      IEndpoint ep = ent.createEndpoint();
+
+      // Set the context.
       ep.setContext(new IEndpointContext() {
         @Override
         public HRegion getRegion() throws NotServingRegionException {
@@ -84,12 +72,10 @@ public class EndpointServer {
         }
       });
 
-      // TODO daviddeng: now we only support methods without any parameters.
-      Method mth = ep.getClass().getMethod(methodName);
-      return (byte[]) mth.invoke(ep);
+      // Invoke the specified method with parameters, the return value is
+      // encoded and returned.
+      return ent.invoke(ep, methodName, params);
     } catch (Exception e) {
-      // TODO daviddeng if the method is not found, should throw
-      // DoNotRetryIOException
       throw new ThriftHBaseException(e);
     }
   }

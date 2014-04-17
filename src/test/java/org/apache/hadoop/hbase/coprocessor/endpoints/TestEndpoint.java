@@ -23,20 +23,16 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointLib;
 import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointLib.IAggregator;
-import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointManager;
-import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpoint;
-import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointClient;
 import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointClient.Caller;
-import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointContext;
-import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -47,12 +43,15 @@ import org.junit.Test;
  */
 public class TestEndpoint {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final byte[] TABLE_NAME = Bytes.toBytes("cp");
+  private static final StringBytes TABLE_NAME = new StringBytes("cp");
   private static final byte[] FAMILY_NAME = Bytes.toBytes("f");
   private static final byte[] QUALITY_NAME = Bytes.toBytes("q");
 
   @Before
   public void setUp() throws Exception {
+    TEST_UTIL.getConfiguration().set(HBaseTestingUtility.FS_TYPE_KEY,
+        HBaseTestingUtility.FS_TYPE_LFS);
+
     TEST_UTIL.startMiniCluster();
     // Register an endpoint in the server side.
     EndpointManager.get().register(ISummer.class,
@@ -75,7 +74,7 @@ public class TestEndpoint {
    *
    */
   public static interface ISummer extends IEndpoint {
-    byte[] sum() throws IOException;
+    long sum(int offset) throws IOException;
   }
 
   /**
@@ -83,6 +82,7 @@ public class TestEndpoint {
    */
   public static class Summer implements ISummer, IAggregator {
     IEndpointContext context;
+    int offset;
     long result;
 
     @Override
@@ -91,21 +91,23 @@ public class TestEndpoint {
     }
 
     @Override
-    public byte[] sum() throws IOException {
+    public long sum(int offset) throws IOException {
       HRegion region = context.getRegion();
       Scan scan = new Scan();
       scan.addFamily(FAMILY_NAME);
       scan.addColumn(FAMILY_NAME, QUALITY_NAME);
 
+      this.offset = offset;
       this.result = 0L;
       EndpointLib.aggregateScan(region, scan, this);
-      return Bytes.toBytes(this.result);
+      return this.result;
     }
 
     @Override
     public void aggregate(KeyValue kv) {
-      this.result += Bytes.toLong(kv.getBuffer(), kv.getValueOffset(),
+      long vl = Bytes.toLong(kv.getBuffer(), kv.getValueOffset(),
           kv.getValueLength());
+      this.result += vl + offset;
     }
   }
 
@@ -120,23 +122,42 @@ public class TestEndpoint {
           QUALITY_NAME, Bytes.toBytes((long) i)));
     }
 
-    // Calling endpoints.
     IEndpointClient cp = (IEndpointClient) table;
-    Map<byte[], byte[]> results = cp.coprocessorEndpoint(ISummer.class, null,
-        null, new Caller<ISummer>() {
+
+    // Calling endpoints with zero offsets.
+    Map<HRegionInfo, Long> results = cp.coprocessorEndpoint(ISummer.class, null,
+        null, new Caller<ISummer, Long>() {
           @Override
-          public byte[] call(ISummer client) throws IOException {
-            return client.sum();
+          public Long call(ISummer client) throws IOException {
+            return client.sum(0);
           }
         });
 
     // Aggregates results from all regions
     long sum = 0;
-    for (byte[] res : results.values()) {
-      sum += Bytes.toLong(res);
+    for (Long res : results.values()) {
+      sum += res;
     }
 
     // Check the final results
     Assert.assertEquals("sum", 55, sum);
+
+    // Calling endpoints with -1 offsets.
+    results = cp.coprocessorEndpoint(ISummer.class, null,
+        null, new Caller<ISummer, Long>() {
+          @Override
+          public Long call(ISummer client) throws IOException {
+            return client.sum(-1);
+          }
+        });
+
+    // Aggregates results from all regions
+    sum = 0;
+    for (Long res : results.values()) {
+      sum += res;
+    }
+
+    // Check the final results
+    Assert.assertEquals("sum", 45, sum);
   }
 }
