@@ -80,17 +80,34 @@
     </para>
 
     <para>
-      HTrace also includes a <classname>ZipkinSpanReceiver</classname>
-      that converts all span information to
+      HTrace also provides <classname>ZipkinSpanReceiver</classname>
+      which converts spans to
       <link xlink:href="http://github.com/twitter/zipkin">Zipkin</link>
       span format and send them to Zipkin server.
-      You need to install htrace-zipkin jar and add it to your HBase classpath
-      in order to use this receiver.
+      In order to use this span receiver,
+      you need to install the jar of htrace-zipkin to your HBase's classpath
+      on all of the nodes in your cluster.
+      </para>
+     <para>
+      <filename>htrace-zipkin</filename> is published to the maven central repository.
+      You could get the latest version from there or just build it locally and then
+      copy it out to all nodes, change your config to use zipkin receiver, distribute
+      the new configuration and then (rolling) restart.
+      </para>
+      <para>
+      Here is the example of manual setup procedure.
+<programlisting><![CDATA[
+  $ git clone https://github.com/cloudera/htrace
+  $ cd htrace/htrace-zipkin
+  $ mvn compile assembly:single
+  $ cp target/htrace-zipkin-*-jar-with-dependencies.jar $HBASE_HOME/lib/
+    # copy jar to all nodes...
+]]></programlisting>
       The <classname>ZipkinSpanReceiver</classname>
       looks in <filename>hbase-site.xml</filename>
       for a <varname>hbase.zipkin.collector-hostname</varname>
       and <varname>hbase.zipkin.collector-port</varname>
-      property with a value describing the Zipkin server
+      property with a value describing the Zipkin collector server
       to which span information are sent.
 <programlisting><![CDATA[
   <property>
