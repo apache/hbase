@@ -138,6 +138,7 @@ public class TestChangingEncoding {
       int batchId) throws Exception {
     LOG.debug("Writing test data batch " + batchId);
     HTable table = new HTable(conf, tableName);
+    table.setAutoFlushTo(false);
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
       Put put = new Put(getRowKey(batchId, i));
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
@@ -147,6 +148,7 @@ public class TestChangingEncoding {
       put.setDurability(Durability.SKIP_WAL);
       table.put(put);
     }
+    table.flushCommits();
     table.close();
   }
 
