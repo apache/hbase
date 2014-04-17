@@ -1,26 +1,9 @@
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.RegionChecker.RegionAvailabilityInfo;
@@ -29,6 +12,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.junit.Assert.*;
 
 public class TestRegionChecker {
   final static Log LOG = LogFactory.getLog(TestRegionChecker.class);
@@ -157,7 +148,8 @@ public class TestRegionChecker {
 
     List<String> regionsToKill = new ArrayList<String>();
     for (HRegionInfo info : cluster.getRegionServer(serverId).getRegionsAssignment()) {
-      regionsToKill.add(info.getRegionNameAsString());
+      if (!info.isMetaRegion() && !info.isRootRegion())
+        regionsToKill.add(info.getRegionNameAsString());
     }
 
     int regionCnt = cluster.getRegionServer(serverId).getOnlineRegions().size();
