@@ -20,17 +20,15 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 
@@ -49,16 +47,16 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
   final byte[] FIVE_HUNDRED_KBYTES;
 
   final byte [] FAMILY_NAME = Bytes.toBytes("col");
-  
+
   private static int regionServerNum =4;
   private static int regionNum = 16;
   // total region num = region num + root and meta region
   private static int totalRegionNum = regionNum +2;
-  
+
   /** constructor */
   public TestGlobalMemStoreSize() {
     super(regionServerNum);
-    
+
     FIVE_HUNDRED_KBYTES = new byte[500 * 1024];
     for (int i = 0; i < 500 * 1024; i++) {
       FIVE_HUNDRED_KBYTES[i] = 'x';
@@ -81,7 +79,7 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
     }
     startKeys.add(null);
     LOG.debug(startKeys.size() + " start keys generated");
-    
+
     List<HRegion> regions = new ArrayList<HRegion>();
     for (int i = 0; i < regionNum; i++) {
       regions.add(createAregion(startKeys.get(i), startKeys.get(i+1)));
@@ -96,7 +94,7 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
     }
     closeRootAndMeta();
   }
-  
+
   /**
    * Test the global mem store size in the region server is equal to sum of each
    * region's mem store size
@@ -106,7 +104,7 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
   public void testGlobalMemStore() throws IOException {
     waitForAllRegionsAssigned();
     assertEquals(getOnlineRegionServers().size(), regionServerNum);
-    
+
     int totalRegionNum = 0;
     for (HRegionServer server : getOnlineRegionServers()) {
       long globalMemStoreSize = 0;
@@ -116,13 +114,26 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
       }
       assertEquals(server.getGlobalMemstoreSize().get(),globalMemStoreSize);
     }
-    assertEquals(totalRegionNum,totalRegionNum);
-    
+    LOG.debug("TotalRegionNum: " + totalRegionNum);
+
     for (HRegionServer server : getOnlineRegionServers()) {
+      boolean containsMeta = false;
       for(HRegion region : server.getOnlineRegions()) {
+        LOG.debug("Flushing region: " + region);
         region.flushcache();
+        containsMeta = containsMeta ||
+            (region.getRegionInfo().isMetaRegion() &&
+                !region.getRegionInfo().isRootRegion());
       }
-      assertEquals(server.getGlobalMemstoreSize().get(),0);
+
+      if (containsMeta) {
+        // If the server contains META table, it's possible some data is written
+        // to mem-store after flushing, so skip asserting.
+        continue;
+      }
+
+      assertEquals("GlobalMemstoreSize of server " + server + " with regions "
+          + server.getOnlineRegions(), 0, server.getGlobalMemstoreSize().get());
     }
   }
 
@@ -135,7 +146,7 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
     }
     return total;
   }
-  
+
   private List<HRegionServer> getOnlineRegionServers() {
     List<HRegionServer> list = new ArrayList<HRegionServer>();
     for (JVMClusterUtil.RegionServerThread rst : cluster.getRegionServerThreads()) {
