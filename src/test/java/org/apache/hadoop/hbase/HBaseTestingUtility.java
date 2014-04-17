@@ -1951,12 +1951,13 @@ REGION_LOOP:
   public static int countRows(final HTable t, final Scan s)
     throws IOException {
     // Assert all rows in table.
-    ResultScanner scanner = t.getScanner(s);
-    int count = 0;
-    for (Result result: scanner) {
-      count++;
-      assertTrue(result.size() > 0);
+    try (ResultScanner scanner = t.getScanner(s)) {
+      int count = 0;
+      for (Result result : scanner) {
+        count++;
+        assertTrue(result.size() > 0);
+      }
+      return count;
     }
-    return count;
   }
 }

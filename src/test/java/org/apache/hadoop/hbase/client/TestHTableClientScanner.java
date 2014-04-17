@@ -22,11 +22,17 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -39,7 +45,6 @@ public class TestHTableClientScanner {
   final Log LOG = LogFactory.getLog(getClass());
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final byte[] TABLE_NAME = Bytes.toBytes("TABLE");
   private static final byte[] FAMILY = Bytes.toBytes("FAMILY");
   private static final int SLAVES = 3;
 
@@ -58,6 +63,7 @@ public class TestHTableClientScanner {
 
   @Test
   public void testScanner() throws IOException {
+    final StringBytes TABLE_NAME = new StringBytes("testScanner");
     HTable table = TEST_UTIL.createTable(TABLE_NAME, new byte[][] { FAMILY }, 3,
         Bytes.toBytes("bbb"), Bytes.toBytes("yyy"), 25);
 
@@ -65,5 +71,49 @@ public class TestHTableClientScanner {
 
     int counted = HBaseTestingUtility.countRows(table, new Scan());
     assertEquals("rowCount", rowCount, counted);
+  }
+
+  /**
+   * Testing parallel scanning with more threads than background threads.
+   */
+  @Test
+  public void testMoreThreads() throws Exception {
+    final int ROW_COUNT = 10000;
+    final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() + 1;
+    final StringBytes TABLE_NAME = new StringBytes("testMoreThreads");
+
+    HTable table = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
+    table.setAutoFlush(false);
+    for (int i = 0; i < ROW_COUNT; i++) {
+      byte[] row = Bytes.toBytes("row-" + i);
+      Put put = new Put(row).add(FAMILY, row, row);
+      table.put(put);
+    }
+    table.flushCommits();
+
+    ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
+    Future<?>[] futures = new Future<?>[THREAD_COUNT];
+    for (int i = 0; i < THREAD_COUNT; i++) {
+      futures[i] = executor.submit(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            HTable table = new HTableAsync(TEST_UTIL.getConfiguration(),
+                TABLE_NAME);
+            try (ResultScanner scanner = table.getScanner(new Scan())) {
+              for (Result result : scanner) {
+                Assert.assertTrue("result.size should > 0", result.size() > 0);
+              }
+            }
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      });
+    }
+
+    for (Future<?> future : futures) {
+      future.get();
+    }
   }
 }

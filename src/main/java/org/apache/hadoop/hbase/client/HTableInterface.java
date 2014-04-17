@@ -113,7 +113,8 @@ public interface HTableInterface {
    * Returns a scanner on the current table as specified by the {@link Scan}
    * object.
    *
-   * @param scan A configured {@link Scan} object.
+   * @param scan A configured {@link Scan} object. NOTE scan may be kept and
+   *             changed inside. The caller should not reuse it.
    * @return A scanner.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
