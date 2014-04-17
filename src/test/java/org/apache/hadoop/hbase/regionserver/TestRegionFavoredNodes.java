@@ -43,7 +43,7 @@ public class TestRegionFavoredNodes {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testFavoredNodes() throws Exception {
     // Get the addresses of the datanodes in the cluster.
     InetSocketAddress[] nodes = new InetSocketAddress[REGION_SERVERS];

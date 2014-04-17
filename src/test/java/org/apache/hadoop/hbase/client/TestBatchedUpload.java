@@ -90,12 +90,13 @@ public class TestBatchedUpload {
     ht.close();
   }
 
-  @Test(timeout = 200000)
+
   /*
    * Test to make sure that if a region moves benignly, and both
    * the source and dest region servers are alive, then the batch
    * should succeed.
    */
+  @Test(timeout = 200000)
   public void testBatchedUploadWithRegionMoves() throws Exception {
     byte [] TABLE = Bytes.toBytes("testBatchedUploadWithRegionMoves");
     int NUM_REGIONS = 10;

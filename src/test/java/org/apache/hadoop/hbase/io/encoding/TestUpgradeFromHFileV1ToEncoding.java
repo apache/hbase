@@ -63,7 +63,7 @@ public class TestUpgradeFromHFileV1ToEncoding {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test(timeout=180000)
   public void testUpgrade() throws Exception {
     int numBatches = 0;
     HTableDescriptor htd = new HTableDescriptor(TABLE);

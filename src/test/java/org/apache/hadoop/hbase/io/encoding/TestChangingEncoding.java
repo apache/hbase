@@ -235,7 +235,7 @@ public class TestChangingEncoding {
     LOG.debug("Compaction queue size reached 0, continuing");
   }
 
-  @Test
+  @Test(timeout=TIMEOUT_MS)
   public void testCrazyRandomChanges() throws Exception {
     prepareTest("RandomChanges");
     Random rand = new Random(2934298742974297L);
@@ -255,7 +255,7 @@ public class TestChangingEncoding {
             metrics.getDataBlockEncodingMismatchMetricNames(isCompaction));
   }
 
-  @Test
+  @Test(timeout=TIMEOUT_MS)
   public void testDataBlockEncodingMismatchMetrics() throws Exception {
     prepareTest("DataEncodingMismatchMetrics");
 

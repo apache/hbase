@@ -53,7 +53,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestClientLocalScanner {
-  final Log LOG = LogFactory.getLog(getClass());
+  private final static Log LOG = LogFactory.getLog(TestClientLocalScanner.class);
   private final static HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
@@ -76,7 +76,7 @@ public class TestClientLocalScanner {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=200000)
+  @Test(timeout=180000)
   public void testCompareLocalScanToRemoteScan() throws IOException {
     byte [] name = Bytes.toBytes("testCompareLocalScanToRemoteScan");
     HTable t = TEST_UTIL.createTable(name, new byte[][] {FAMILY, FAMILY2}, 3,
@@ -138,7 +138,7 @@ public class TestClientLocalScanner {
    * failure by observing the logs.
    * @throws IOException
    */
-  @Test
+  @Test(timeout=180000)
   public void testCompactionWhileSnapshotting() throws IOException {
     final byte [] name = Bytes.toBytes("testCompactionWhileSnapshotting");
     final HTable t = TEST_UTIL.createTable(name, FAMILY);
@@ -172,7 +172,7 @@ public class TestClientLocalScanner {
    * With a small difference that the data is flushed to disk
    * since the scan works only on the data present in files.
    */
-  @Test
+  @Test(timeout=180000)
   public void testFilterAcrossMutlipleRegionsWithLocalScan() throws IOException {
     byte [] name = Bytes.toBytes("testFilterAcrossMutlipleRegionsWithLocalScan");
     HTable t = TEST_UTIL.createTable(name, FAMILY);
@@ -236,7 +236,7 @@ public class TestClientLocalScanner {
     t.close();
   }
 
-  @Test
+  @Test(timeout=180000)
   public void testInconsistentRegionDirectories() throws IOException {
     byte [] tableName = Bytes.toBytes("testInconsistentRegionDirectories");
     String rootDir = TEST_UTIL.getConfiguration().get("hbase.rootdir");
@@ -263,7 +263,7 @@ public class TestClientLocalScanner {
     assertTrue(false);
   }
 
-  @Test
+  @Test(timeout=180000)
   public void testLocalScannerWithoutHardlinks() throws IOException {
     byte [] tableName = Bytes.toBytes("testLocalScannerWithoutHardlinks");
     HTable t = TEST_UTIL.createTable(tableName, FAMILY);
@@ -394,7 +394,7 @@ public class TestClientLocalScanner {
 
   /**
    * @param t
-   * @param s
+   * @param scanner
    * @return Count of rows in table.
    * @throws IOException
    */

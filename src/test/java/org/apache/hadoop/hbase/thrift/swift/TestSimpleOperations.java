@@ -28,7 +28,9 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -50,7 +52,7 @@ public class TestSimpleOperations {
   static final byte[] QUALIFIER1 = Bytes.toBytes("q1");
   static final byte[] QUALIFIER2 = Bytes.toBytes("q2");
 
-  @Before
+  @BeforeClass
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(
         HConstants.REGION_SERVER_WRITE_THRIFT_INFO_TO_META, true);
@@ -61,7 +63,7 @@ public class TestSimpleOperations {
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
-  @After
+  @AfterClass
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -71,7 +73,7 @@ public class TestSimpleOperations {
    * on that row (using thrift, this time), works or not.
    * @throws IOException
    */
-  @Test
+  @Test(timeout=180000)
   public void testSimpleGetUsingThrift() throws IOException {
     byte[] r1 = Bytes.toBytes("r1");
     byte[] value = Bytes.toBytes("test-value");
@@ -96,7 +98,7 @@ public class TestSimpleOperations {
    *
    * @throws IOException
    */
-  @Test
+  @Test(timeout=180000)
   public void testPutMultiViaThrift() throws IOException {
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
     List<Mutation> mutations = new ArrayList<>();
@@ -121,7 +123,7 @@ public class TestSimpleOperations {
    * get on that row (using thrift), works or not.
    * @throws Exception
    */
-  @Test
+  @Test(timeout=180000)
   public void testSimpleAsynchronousGet() throws Exception {
     byte[] r1 = Bytes.toBytes("r1");
     byte[] value = Bytes.toBytes("test-value");
@@ -143,7 +145,7 @@ public class TestSimpleOperations {
    * on that row (using Hadoop RPC, this time), works or not.
    * @throws IOException
    */
-  @Test
+  @Test(timeout=180000)
   public void testSimplePutUsingThrift() throws IOException {
     byte[] r1 = Bytes.toBytes("r1");
     byte[] value = Bytes.toBytes("test-value");
@@ -167,7 +169,7 @@ public class TestSimpleOperations {
    *
    * @throws Exception
    */
-  @Test
+  @Test(timeout=180000)
   public void testMultiPutUsingThrift() throws Exception {
     HTable table = TEST_UTIL.createTable(TABLE, FAMILIES);
     List<Put> puts = createDummyPuts(10);
@@ -208,7 +210,7 @@ public class TestSimpleOperations {
    * Only the Delete is done using Thrift.
    * @throws Exception
    */
-  @Test
+  @Test(timeout=180000)
   public void testDeleteUsingThrift() throws Exception {
     HTable table = TEST_UTIL.createTable(TABLE, FAMILIES);
     byte[] r1 = Bytes.toBytes("r1");
@@ -242,7 +244,7 @@ public class TestSimpleOperations {
    * Only the Delete is done using Thrift.
    * @throws Exception
    */
-  @Test
+  @Test(timeout=180000)
   public void testSimpleAsynchronousDelete() throws Exception {
     HTableAsyncInterface table = TEST_UTIL.createTable(TABLE, FAMILIES);
     byte[] r1 = Bytes.toBytes("r1");
@@ -274,7 +276,7 @@ public class TestSimpleOperations {
    * earlier delete would let you.
    * @throws Exception
    */
-  @Test
+  @Test(timeout=180000)
   public void testDeleteThriftAnnotationIsSufficient() throws Exception {
     HTable table = TEST_UTIL.createTable(TABLE, FAMILIES1);
     byte[] r1 = Bytes.toBytes("r1");
@@ -340,7 +342,7 @@ public class TestSimpleOperations {
    * Only the Deletes use Thrift.
    * @throws IOException
    */
-  @Test
+  @Test(timeout=180000)
   public void testBatchOfDeletesUsingThrift() throws IOException {
     HTable table = TEST_UTIL.createTable(TABLE, FAMILIES);
     Result result;
@@ -381,7 +383,7 @@ public class TestSimpleOperations {
    * earlier Put would let you.
    * @throws Exception
    */
-  @Test
+  @Test(timeout=180000)
   public void testPutThriftAnnotationIsSufficient() throws Exception {
     HTable table = TEST_UTIL.createTable(TABLE, FAMILIES1);
     byte[] r1 = Bytes.toBytes("r1");
@@ -430,7 +432,7 @@ public class TestSimpleOperations {
    * Test getRowOrBefore test
    * @throws IOException
    */
-  @Test
+  @Test(timeout=180000)
   public void testGetRowOrBefore() throws IOException {
     HTable table = TEST_UTIL.createTable(Bytes.toBytes("testGetRowOrBefore"),
         FAMILY);
@@ -451,7 +453,7 @@ public class TestSimpleOperations {
    * Test getRowOrBeforeAsync
    * @throws Exception
    */
-  @Test
+  @Test(timeout=180000)
   public void testGetRowOrBeforeAsync() throws Exception {
     HTableAsyncInterface table = TEST_UTIL.createTable(Bytes.toBytes("testGetRowOrBefore"),
         FAMILY);
@@ -473,7 +475,7 @@ public class TestSimpleOperations {
    *
    * @throws IOException
    */
-  @Test
+  @Test(timeout=180000)
   public void testSimpleMultiAction() throws IOException {
     byte[] r1 = Bytes.toBytes("r1");
     byte[] value = Bytes.toBytes("test-value");
@@ -500,7 +502,7 @@ public class TestSimpleOperations {
    *
    * @throws Exception
    */
-  @Test
+  @Test(timeout=180000)
   public void testBatchGetAsyncAction() throws Exception {
     byte[] r1 = Bytes.toBytes("r1");
     byte[] value = Bytes.toBytes("test-value");
@@ -532,7 +534,7 @@ public class TestSimpleOperations {
    *
    * @throws Exception
    */
-  @Test
+  @Test(timeout=180000)
   public void testMultiAsyncActions() throws Exception {
     HTableAsyncInterface ht = TEST_UTIL.createTable(TABLE, FAMILIES);
     List<Mutation> mutations = new ArrayList<>();
@@ -576,7 +578,7 @@ public class TestSimpleOperations {
    *
    * @throws Exception
    */
-  @Test
+  @Test(timeout=180000)
   public void testRowLock() throws Exception {
     HTableAsyncInterface ht = TEST_UTIL.createTable(TABLE, FAMILIES);
     byte[] row = Bytes.toBytes("test-row");

@@ -105,7 +105,6 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
    * Set the slot number near 0, so no server's load will large than 4.
    * The load balance algorithm should handle this case properly. 
    */
-  @Test(timeout=10000)
   public void testRebalancing() throws IOException {
 
     for (int i = 1; i <= 16; i++){

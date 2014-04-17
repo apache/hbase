@@ -130,7 +130,7 @@ public class TestFromClientSide {
     // Nothing to do.
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testEmptyColumn() throws Exception {
     byte [] TABLE = Bytes.toBytes("testEmptyColumn");
     byte [][] FAMILIES = new byte[][] {FAMILY};
@@ -174,7 +174,7 @@ public class TestFromClientSide {
     assertEquals(result1.raw().length, result2.raw().length);
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testFlashBackTime() throws Exception {
     byte[] TABLE = Bytes.toBytes("testFlashBackTime");
     HColumnDescriptor[] expected = new HColumnDescriptor[10];
@@ -196,7 +196,7 @@ public class TestFromClientSide {
    * Verifies that getConfiguration returns the same Configuration object used
    * to create the HTable instance.
    */
-  @Test
+  @Test(timeout = 180000)
   public void testGetConfiguration() throws Exception {
     byte[] TABLE = Bytes.toBytes("testGetConfiguration");
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
@@ -211,7 +211,7 @@ public class TestFromClientSide {
    *
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 180000)
   public void testWeirdCacheBehaviour() throws Exception {
     byte [] TABLE = Bytes.toBytes("testWeirdCacheBehaviour");
     byte [][] FAMILIES = new byte[][] { Bytes.toBytes("trans-blob"),
@@ -342,7 +342,7 @@ public class TestFromClientSide {
    * Related to the TestFilterAcrossRegions over in the o.a.h.h.filter package.
    * @throws IOException
    */
-  @Test
+  @Test(timeout = 180000)
   public void testFilterAcrossMutlipleRegions() throws IOException {
     byte [] name = Bytes.toBytes("testFilterAcrossMutlipleRegions");
     HTable t = TEST_UTIL.createTable(name, FAMILY);
@@ -514,7 +514,7 @@ public class TestFromClientSide {
     return regions;
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testSuperSimple() throws Exception {
     byte [] TABLE = Bytes.toBytes("testSuperSimple");
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
@@ -530,7 +530,7 @@ public class TestFromClientSide {
     System.out.println("Done.");
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testMaxKeyValueSize() throws Exception {
     byte [] TABLE = Bytes.toBytes("testMaxKeyValueSize");
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -552,7 +552,7 @@ public class TestFromClientSide {
     conf.set("hbase.client.keyvalue.maxsize", oldMaxSize);
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testFilters() throws Exception {
     byte [] TABLE = Bytes.toBytes("testFilters");
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
@@ -587,7 +587,7 @@ public class TestFromClientSide {
     scanner.close();
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testKeyOnlyFilter() throws Exception {
     byte [] TABLE = Bytes.toBytes("testKeyOnlyFilter");
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
@@ -623,7 +623,7 @@ public class TestFromClientSide {
   /**
    * Test simple table and non-existent row cases.
    */
-  @Test
+  @Test(timeout = 180000)
   public void testSimpleMissing() throws Exception {
     byte [] TABLE = Bytes.toBytes("testSimpleMissing");
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
@@ -735,7 +735,7 @@ public class TestFromClientSide {
    * we should get an exception instead of the server trying until
    * OOM.
    */
-  @Test
+  @Test(timeout = 180000)
   public void testResultLimits() throws Exception {
     // We want to set the max result size to something small
     HRegionServer.setResponseSizeLimit(40000L);
@@ -806,7 +806,7 @@ public class TestFromClientSide {
    * Test basic puts, gets, scans, and deletes for a single row
    * in a multiple family table.
    */
-  @Test
+  @Test(timeout = 180000)
   public void testSingleRowMultipleFamily() throws Exception {
     byte [] TABLE = Bytes.toBytes("testSingleRowMultipleFamily");
     byte [][] ROWS = makeN(ROW, 3);
@@ -1107,7 +1107,7 @@ public class TestFromClientSide {
 
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testNull() throws Exception {
     byte [] TABLE = Bytes.toBytes("testNull");
 
@@ -1215,7 +1215,7 @@ public class TestFromClientSide {
     }
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testVersions() throws Exception {
     byte [] TABLE = Bytes.toBytes("testVersions");
 
@@ -1429,7 +1429,7 @@ public class TestFromClientSide {
 
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testVersionLimits() throws Exception {
     byte [] TABLE = Bytes.toBytes("testVersionLimits");
     byte [][] FAMILIES = makeNAscii(FAMILY, 3);
@@ -1623,7 +1623,7 @@ public class TestFromClientSide {
 
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testDeletes() throws Exception {
     byte [] TABLE = Bytes.toBytes("testDeletes");
 
@@ -2005,7 +2005,7 @@ public class TestFromClientSide {
    *    To test at scale, up numColsPerRow to the millions
    *    (have not gotten that to work running as junit though)
    */
-  @Test
+  @Test(timeout = 180000)
   public void testJiraTest867() throws Exception {
     int numRows = 10;
     int numColsPerRow = 2000;
@@ -2090,7 +2090,7 @@ public class TestFromClientSide {
    *    get with timestamp will return a value if there is a version with an
    *    earlier timestamp
    */
-  @Test
+  @Test(timeout = 180000)
   public void testJiraTest861() throws Exception {
 
     byte [] TABLE = Bytes.toBytes("testJiraTest861");
@@ -2154,7 +2154,7 @@ public class TestFromClientSide {
    *    Add a HTable get/obtainScanner method that retrieves all versions of a
    *    particular column and row between two timestamps
    */
-  @Test
+  @Test(timeout = 180000)
   public void testJiraTest33() throws Exception {
 
     byte [] TABLE = Bytes.toBytes("testJiraTest33");
@@ -2203,7 +2203,7 @@ public class TestFromClientSide {
    * HBASE-1014
    *    commit(BatchUpdate) method should return timestamp
    */
-  @Test
+  @Test(timeout = 180000)
   public void testJiraTest1014() throws Exception {
 
     byte [] TABLE = Bytes.toBytes("testJiraTest1014");
@@ -2228,7 +2228,7 @@ public class TestFromClientSide {
    * HBASE-1182
    *    Scan for columns > some timestamp
    */
-  @Test
+  @Test(timeout = 180000)
   public void testJiraTest1182() throws Exception {
 
     byte [] TABLE = Bytes.toBytes("testJiraTest1182");
@@ -2272,7 +2272,7 @@ public class TestFromClientSide {
    * HBASE-52
    *    Add a means of scanning over all versions
    */
-  @Test
+  @Test(timeout = 180000)
   public void testJiraTest52() throws Exception {
     byte [] TABLE = Bytes.toBytes("testJiraTest52");
     byte [][] VALUES = makeNAscii(VALUE, 7);
@@ -3074,7 +3074,7 @@ public class TestFromClientSide {
     return Bytes.equals(left, right);
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testDuplicateVersions() throws Exception {
     byte [] TABLE = Bytes.toBytes("testDuplicateVersions");
 
@@ -3288,7 +3288,7 @@ public class TestFromClientSide {
         0, 9);
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testUpdates() throws Exception {
 
     byte [] TABLE = Bytes.toBytes("testUpdates");
@@ -3338,7 +3338,7 @@ public class TestFromClientSide {
     assertEquals("DDD", Bytes.toString(navigableMap.get(2L)));
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testUpdatesWithMajorCompaction() throws Exception {
 
     String tableName = "testUpdatesWithMajorCompaction";
@@ -3400,7 +3400,7 @@ public class TestFromClientSide {
     assertEquals("DDD", Bytes.toString(navigableMap.get(2L)));
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testMajorCompactionBetweenTwoUpdates() throws Exception {
 
     String tableName = "testMajorCompactionBetweenTwoUpdates";
@@ -3468,7 +3468,7 @@ public class TestFromClientSide {
     assertEquals("DDD", Bytes.toString(navigableMap.get(2L)));
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testGet_EmptyTable() throws IOException {
     HTable table = TEST_UTIL.createTable(Bytes.toBytes("testGet_EmptyTable"), FAMILY);
     Get get = new Get(ROW);
@@ -3477,7 +3477,7 @@ public class TestFromClientSide {
     assertTrue(r.isEmpty());
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testGet_NonExistentRow() throws IOException {
     HTable table = TEST_UTIL.createTable(Bytes.toBytes("testGet_NonExistentRow"), FAMILY);
     Put put = new Put(ROW);
@@ -3499,7 +3499,7 @@ public class TestFromClientSide {
     LOG.info("Row missing as it should be");
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testPut() throws IOException {
     final byte [] CONTENTS_FAMILY = Bytes.toBytes("contents");
     final byte [] SMALL_FAMILY = Bytes.toBytes("smallfam");
@@ -3539,7 +3539,7 @@ public class TestFromClientSide {
   }
 
 
-  @Test
+  @Test(timeout = 180000)
   public void testRowsPutMultiGet() throws IOException {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
     final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
@@ -3604,7 +3604,7 @@ public class TestFromClientSide {
     }
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testRowsPutBufferedOneFlush() throws IOException {
     final byte [] CONTENTS_FAMILY = Bytes.toBytes("contents");
     final byte [] SMALL_FAMILY = Bytes.toBytes("smallfam");
@@ -3644,7 +3644,7 @@ public class TestFromClientSide {
     assertEquals(NB_BATCH_ROWS * 10, nbRows);
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testRowsPutBufferedManyManyFlushes() throws IOException {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
     final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
@@ -3675,7 +3675,7 @@ public class TestFromClientSide {
     assertEquals(NB_BATCH_ROWS * 10, nbRows);
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testAddKeyValue() throws IOException {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
     final byte[] value = Bytes.toBytes("abcd");
@@ -3709,7 +3709,7 @@ public class TestFromClientSide {
    * test for HBASE-737
    * @throws IOException
    */
-  @Test
+  @Test(timeout = 180000)
   public void testHBase737 () throws IOException {
     final byte [] FAM1 = Bytes.toBytes("fam1");
     final byte [] FAM2 = Bytes.toBytes("fam2");
@@ -3800,7 +3800,7 @@ public class TestFromClientSide {
     }
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testListTables() throws IOException {
     byte [] t1 = Bytes.toBytes("testListTables1");
     byte [] t2 = Bytes.toBytes("testListTables2");
@@ -3829,7 +3829,7 @@ public class TestFromClientSide {
     }
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testMiscHTableStuff() throws IOException {
     final byte[] tableAname = Bytes.toBytes("testMiscHTableStuffA");
     final byte[] tableBname = Bytes.toBytes("testMiscHTableStuffB");
@@ -3906,7 +3906,7 @@ public class TestFromClientSide {
     }
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testGetClosestRowBefore() throws IOException {
     final byte [] tableAname = Bytes.toBytes("testGetClosestRowBefore");
     final byte [] row = Bytes.toBytes("row");
@@ -3960,6 +3960,7 @@ public class TestFromClientSide {
    * For HBASE-2156
    * @throws Exception
    */
+  @Test(timeout = 180000)
   public void testScanVariableReuse() throws Exception {
     Scan scan = new Scan();
     scan.addFamily(FAMILY);
@@ -3976,7 +3977,7 @@ public class TestFromClientSide {
   /**
    * HBASE-2468 use case 1 and 2: region info de/serialization
    */
-   @Test
+   @Test(timeout = 180000)
    public void testRegionCacheDeSerialization() throws Exception {
      // 1. test serialization.
      LOG.info("Starting testRegionCacheDeSerialization");
@@ -4041,7 +4042,7 @@ public class TestFromClientSide {
   /**
    * HBASE-2468 use case 3:
    */
-  @Test
+  @Test(timeout = 180000)
   public void testRegionCachePreWarm() throws Exception {
     LOG.info("Starting testRegionCachePreWarm");
     final StringBytes TABLENAME = new StringBytes("testCachePrewarm");
@@ -4280,12 +4281,12 @@ public class TestFromClientSide {
     }
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testCompactCFRegion() throws Exception {
     compactCFRegion(0);
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testCacheOnWriteEvictOnClose() throws Exception {
     byte [] tableName = Bytes.toBytes("testCOWEOCfromClient");
     byte [] data = Bytes.toBytes("data");
@@ -4387,35 +4388,35 @@ public class TestFromClientSide {
     assertEquals(count, store.getNumberOfStoreFiles());
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testMajorCompactCFRegion() throws Exception {
     compactCFRegion(1);
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testCompactMultipleCFRegion() throws Exception {
     compactMultipleCFRegion(0);
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testMajorCompactMultipleCFRegion() throws Exception {
     compactMultipleCFRegion(1);
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testCompactCFTable() throws Exception {
     compactCFTable(0);
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testMajorCompactCFTable() throws Exception {
     compactCFTable(1);
   }
 
-  @Test
   /**
    * Tests the non cached version of getRegionLocation by moving a region.
    */
+  @Test(timeout = 180000)
   public void testNonCachedGetRegionLocation() throws Exception {
     // Test Initialization.
     String tableName = "testNonCachedGetRegionLocation";
@@ -4463,7 +4464,7 @@ public class TestFromClientSide {
     assertEquals(addrAfter.getPort(), addrNoCache.getPort());
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testAtomicRowMutation() throws Exception {
     LOG.info("Starting testAtomicRowMutation");
     final byte [] TABLENAME = Bytes.toBytes("testAtomicRowMutation");
@@ -4491,7 +4492,7 @@ public class TestFromClientSide {
     assertTrue(r.isEmpty());
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testGetWithFilter() throws IOException {
     final byte [] TABLENAME = Bytes.toBytes("testGetWithFilter");
     HTable t = TEST_UTIL.createTable(TABLENAME, FAMILY);
