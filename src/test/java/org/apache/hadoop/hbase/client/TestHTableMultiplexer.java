@@ -19,6 +19,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
@@ -32,9 +40,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class TestHTableMultiplexer {
   final Log LOG = LogFactory.getLog(getClass());
@@ -232,6 +237,117 @@ public class TestHTableMultiplexer {
     byte[] TABLE1 = Arrays.copyOf(TABLE, TABLE.length);
     multiplexer.put(TABLE1, put, HBaseRPCOptions.DEFAULT);
     Assert.assertEquals("storedHTableCount", 1, status.getStoredHTableCount());
+  }
+
+  /**
+   * Test when multiple client threads are using HTableMultiplexer. Spawn 10
+   * threads that do 10k multiputs each, and check in the end that we got
+   * expected number of results back when we do Gets.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testMultipleThreads() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setLong("hbase.htablemultiplexer.flush.frequency.ms", 10);
+    byte[] TABLE = Bytes.toBytes("testMultipleThreads");
+    HTable ht = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY });
+    HTableMultiplexer multiplexer = new HTableMultiplexer(
+        TEST_UTIL.getConfiguration(), 1000);
+    ExecutorService executor = Executors.newFixedThreadPool(10);
+    List<Future<?>> futures = new ArrayList<>(10);
+    byte[] rowPrefix = Bytes.toBytes("row");
+    for (int i = 0; i < 10; i++) {
+      byte[] suffix = Bytes.toBytes(i);
+      byte[] row = Bytes.add(rowPrefix, suffix);
+      Runnable runnable = new Client(multiplexer, TABLE, row);
+      Future<?> future = executor.submit(runnable);
+      futures.add(future);
+    }
+    for (Future<?> f : futures) {
+      f.get();
+    }
+    // Wait for multiplexer flush
+    Thread.sleep(2000);
+    for (int i = 0; i < 10; i++) {
+      byte[] suffix = Bytes.toBytes(i);
+      byte[] row = Bytes.add(rowPrefix, suffix);
+      checkForGets(ht, row);
+    }
+    // check the latencies
+    HTableMultiplexerStatus status = multiplexer.getHTableMultiplexerStatus();
+    System.out.println("max latency: " + status.getMaxLatency());
+  }
+
+  /**
+   * Utility method to check if we got all the data back after putting with
+   * multiplexer
+   */
+  public void checkForGets(HTable ht, byte[] row) throws IOException {
+    for (int i = 0; i < 10000; i++) {
+
+      byte[] suffix = Bytes.toBytes(i);
+      byte[] exactRow = Bytes.add(row, suffix);
+
+      Get get = new Get(exactRow);
+      Result r = ht.get(get);
+      Assert.assertEquals(1, r.getKvs().size());
+      Assert.assertEquals(Bytes.toString(exactRow),
+          Bytes.toString(r.getKvs().get(0).getValue()));
+    }
+  }
+
+  /**
+   * A client which is doing 10k puts via multiplexer
+   *
+   */
+  public static class Client implements Runnable {
+    private HTableMultiplexer multiPlex;
+    private byte[] ht;
+    private byte[] row;
+    private byte[] dummy = Bytes.toBytes("dummy");
+
+    public Client(HTableMultiplexer multiPlex, byte[] ht, byte[] row) {
+      this.multiPlex = multiPlex;
+      this.ht = ht;
+      this.row = row;
+    }
+
+    @Override
+    public void run() {
+      int maxTry = 0;
+      for (int i = 0; i < 10000; i++) {
+        try {
+          // sleeping so that we don't put a whole bunch of data at once
+          Thread.sleep(1);
+        } catch (InterruptedException e1) {
+          Thread.currentThread().interrupt();
+        }
+        byte[] suffix = Bytes.toBytes(i);
+        byte[] exactRow = Bytes.add(row, suffix);
+        Put put = new Put(exactRow);
+        put.add(FAMILY, dummy, exactRow);
+        try {
+          boolean success = true;
+          int numTry = 0;
+          while (true) {
+            success = multiPlex.put(ht, put, HBaseRPCOptions.DEFAULT);
+            numTry++;
+            if (success)
+              break;
+            else
+              Thread.sleep(1000);
+          }
+          if (numTry > maxTry)
+            maxTry = numTry;
+        } catch (IOException e) {
+          e.printStackTrace();
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
+      System.out.println("Max number of times this thread retried: " + maxTry);
+    }
   }
 }
 
