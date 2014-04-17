@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -134,14 +135,17 @@ public class TestChangingEncoding {
       int batchId) throws Exception {
     LOG.debug("Writing test data batch " + batchId);
     HTable table = new HTable(conf, tableName);
+    table.setAutoFlush(false);
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
       Put put = new Put(getRowKey(batchId, i));
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         put.add(CF_BYTES, getQualifier(j),
             getValue(batchId, i, j));
-        table.put(put);
       }
+      put.setDurability(Durability.SKIP_WAL);
+      table.put(put);
     }
+    table.flushCommits();
     table.close();
   }
 
