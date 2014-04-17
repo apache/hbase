@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TRowMutations;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -209,6 +210,9 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
   KeyValue.KVComparator comparator;
 
   private ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
+
+  // Coprocessor host
+  private RegionCoprocessorHost coprocessorHost;
 
   /*
    * @return The smallest mvcc readPoint across all the scanners in this
@@ -545,6 +549,8 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
     // initialize dynamic parameters with current configuration
     this.loadDynamicConf(conf);
+    this.coprocessorHost = new RegionCoprocessorHost(this,
+        this.conf);
   }
 
   @Override
@@ -2125,6 +2131,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
       long newSize;
       splitsAndClosesLock.readLock().lock();
       try {
+        doPreMutationHook(batchOp);
         long addedSize = doMiniBatchOp(batchOp, methodName);
         newSize = this.incMemoryUsage(addedSize);
       } finally {
@@ -2136,6 +2143,39 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
     }
     HRegion.writeOps.incrementAndGet();
     return batchOp.retCodes;
+  }
+
+
+  /**
+   * Execute coprocessor hooks for mutations
+   * TODO: adela currently can work only with prePut and we need to implement the rest..
+   * @param batchOp
+   * @throws IOException
+   */
+  private void doPreMutationHook(
+      BatchOperationInProgress<Pair<Mutation, Integer>> batchOp)
+      throws IOException {
+    /* Run coprocessor pre hook outside of locks to avoid deadlock */
+    WALEdit walEdit = new WALEdit();
+    if (coprocessorHost != null) {
+      for (int i = 0; i < batchOp.operations.length; i++) {
+        Mutation m = batchOp.operations[i].getFirst();
+        if (m instanceof Put) {
+          if (coprocessorHost.prePut((Put) m, walEdit, m.getWriteToWAL())) {
+            // pre hook says skip this Put
+            // mark as success and skip in doMiniBatchMutation
+            batchOp.retCodes[i] = OperationStatusCode.SUCCESS;
+          }
+        } else if (m instanceof Delete) {
+          // TODO: adela
+        } else {
+          // TODO: adela
+        }
+        if (!walEdit.isEmpty()) {
+          // TODO: adela
+        }
+      }
+    }
   }
 
   private long doMiniBatchOp(BatchOperationInProgress<Pair<Mutation, Integer>> batchOp,

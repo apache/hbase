@@ -47,19 +47,6 @@ public interface CoprocessorEnvironment {
   Configuration getConfiguration();
 
   /**
-   * @return an interface for accessing the given table
-   * @throws IOException
-   */
-  HTableInterface getTable(String tableName) throws IOException;
-
-  /**
-   * @return an interface for accessing the given table using the passed executor to run batch
-   *         operations
-   * @throws IOException
-   */
-  HTableInterface getTable(String tableName, ExecutorService service) throws IOException;
-
-  /**
    * @return the classloader for the loaded coprocessor instance
    */
   ClassLoader getClassLoader();

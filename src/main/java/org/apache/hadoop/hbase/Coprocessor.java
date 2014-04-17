@@ -16,15 +16,11 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-
 /**
  * Coprocessor interface.
  */
-@InterfaceAudience.Private
 public interface Coprocessor {
   int VERSION = 1;
-
   /** Highest installation priority */
   int PRIORITY_HIGHEST = 0;
   /** High (system) installation priority */
@@ -41,8 +37,8 @@ public interface Coprocessor {
     UNINSTALLED, INSTALLED, STARTING, ACTIVE, STOPPING, STOPPED
   }
 
-  void start(CoprocessorEnvironment env) throws IOException;
+  void start() throws IOException;
 
-  void stop(CoprocessorEnvironment env) throws IOException;
+  void stop() throws IOException;
 
 }
