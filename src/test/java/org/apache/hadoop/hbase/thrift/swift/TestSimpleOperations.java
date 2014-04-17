@@ -15,8 +15,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableAsyncInterface;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -37,9 +39,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TestSimpleOperations {
-  private final Log LOG = LogFactory.getLog(TestSimpleOperations.class);
-  private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final int SLAVES = 1;
+  private static final Log LOG = LogFactory.getLog(TestSimpleOperations.class);
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final int SLAVES = 1;
+
   static final String ROW_PREFIX = "row";
   static final byte[] TABLE = Bytes.toBytes("testTable");
   static final byte[] FAMILY = Bytes.toBytes("family");
@@ -53,7 +56,7 @@ public class TestSimpleOperations {
   static final byte[] QUALIFIER2 = Bytes.toBytes("q2");
 
   @BeforeClass
-  public void setUp() throws Exception {
+  public static void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(
         HConstants.REGION_SERVER_WRITE_THRIFT_INFO_TO_META, true);
     TEST_UTIL.getConfiguration().setBoolean(HConstants.CLIENT_TO_RS_USE_THRIFT,
@@ -64,8 +67,17 @@ public class TestSimpleOperations {
   }
 
   @AfterClass
-  public void tearDown() throws Exception {
+  public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @After
+  public void cleanUp() throws IOException {
+    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    if (admin.tableExists(TABLE)) {
+      admin.disableTable(TABLE);
+      admin.deleteTable(TABLE);
+    }
   }
 
   /**
@@ -455,7 +467,7 @@ public class TestSimpleOperations {
    */
   @Test(timeout=180000)
   public void testGetRowOrBeforeAsync() throws Exception {
-    HTableAsyncInterface table = TEST_UTIL.createTable(Bytes.toBytes("testGetRowOrBefore"),
+    HTableAsyncInterface table = TEST_UTIL.createTable(Bytes.toBytes("testGetRowOrBeforeAsync"),
         FAMILY);
     byte[] value = Bytes.toBytes("value");
     Put p = new Put(Bytes.toBytes("bb"));
