@@ -48,10 +48,14 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(TagRunner.class)
 public class TestClientLocalScanner {
   private final static Log LOG = LogFactory.getLog(TestClientLocalScanner.class);
   private final static HBaseTestingUtility TEST_UTIL =
@@ -263,7 +267,9 @@ public class TestClientLocalScanner {
     assertTrue(false);
   }
 
+  //Marked as unstable and recored in t3864238
   @Test(timeout=180000)
+  @TestTag({ "unstable" })
   public void testLocalScannerWithoutHardlinks() throws IOException {
     byte [] tableName = Bytes.toBytes("testLocalScannerWithoutHardlinks");
     HTable t = TEST_UTIL.createTable(tableName, FAMILY);
