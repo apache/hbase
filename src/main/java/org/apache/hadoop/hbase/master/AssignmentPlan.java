@@ -66,7 +66,7 @@ public class AssignmentPlan implements Writable{
     SECONDARY,
     TERTIARY;
   };
-  
+
   public AssignmentPlan() {
     assignmentMap = new HashMap<HRegionInfo, List<HServerAddress>>();
   }
