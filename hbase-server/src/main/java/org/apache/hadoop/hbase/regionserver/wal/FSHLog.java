@@ -1125,7 +1125,7 @@ class FSHLog implements HLog, Syncable {
    * @param clusterIds that have consumed the change (for replication)
    * @param now
    * @param htd
-   * @param doSync shall we sync?
+   * @param doSync shall we sync after we call the append?
    * @param inMemstore
    * @param sequenceId of the region.
    * @param nonceGroup
@@ -1158,11 +1158,13 @@ class FSHLog implements HLog, Syncable {
     } finally {
       this.disruptor.getRingBuffer().publish(sequence);
     }
-    // Sync if we have been asked to -- only tests do this -- or if it is a meta table edit (these
-    // are precious). When we sync, we will sync to the current point, the txid of the last edit
-    // added.  Since we are single writer, the next txid should be the just next one in sequence;
-    // do not explicitly specify it (sequence id/txid is an implementation internal detail.
-    if (doSync || info.isMetaRegion()) publishSyncThenBlockOnCompletion();
+    // doSync is set in tests.  Usually we arrive in here via appendNoSync w/ the sync called after
+    // all edits on a handler have been added.
+    //
+    // When we sync, we will sync to the current point, the txid of the last edit added.
+    // Since we are single writer, the next txid should be the just next one in sequence;
+    // do not explicitly specify it. Sequence id/txid is an implementation internal detail.
+    if (doSync) publishSyncThenBlockOnCompletion();
     return sequence;
   }
 
