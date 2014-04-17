@@ -19,30 +19,35 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.RegionManager.AssignmentLoadBalancer;
 import org.apache.hadoop.hbase.master.RegionManager.LoadBalancer;
-import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@RunWith(TagRunner.class)
 public class TestRegionPlacement extends RegionPlacementTestBase {
 
-  private final static int SLAVES = 3;
+  private final static int SLAVES = 4;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -91,20 +96,21 @@ public class TestRegionPlacement extends RegionPlacementTestBase {
     // NumRegions -> Num Region Server with that num regions.
     Map<Integer, Integer> expected = new HashMap<Integer, Integer>();
 
-    // we expect 2 regionservers with 3 regions and 1 with 4 regions
-    expected.put(4, 1);
+    // we expect 2 regionservers with 3 regions and 2 with 2 regions
     expected.put(3, 2);
+    expected.put(2, 2);
 
     waitOnTable(tableName);
     waitOnStableRegionMovement();
 
+
     assertTrue(verifyNumPrimaries(expected, plan));
 
     //create additional table with 5 regions
-    createTable(tableNameTwo, 5);
+    createTable(tableNameTwo, 6);
     expected.clear();
-    // after this we expect 3 regionservers with 5 regions
-    expected.put(5, 3);
+    // after this we expect 4 regionservers with 4 regions
+    expected.put(4, 4);
 
     waitOnTable(tableName);
     waitOnTable(tableNameTwo);
@@ -201,10 +207,73 @@ public class TestRegionPlacement extends RegionPlacementTestBase {
   }
 
   /**
+   * Test to make sure that tables created with a specific server set
+   * will remain on those servers though region plan creation and updating.
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 180000)
+  public void testPinnedTable() throws Exception {
+    String tableName = "testPinnedTable";
+
+    resetLastOpenedRegionCount();
+    resetLastRegionOnPrimary();
+
+    try {
+      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      htd.addFamily(new HColumnDescriptor("d"));
+
+      Set<HServerAddress> servers = new HashSet<HServerAddress>(3);
+      HRegionServer unusedServer = cluster.getRegionServer(3);
+
+      for (int i =0 ; i <3; i++) {
+        servers.add(cluster.getRegionServer(i).getServerInfo().getServerAddress());
+      }
+
+      htd.setServers(servers);
+      admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      admin.createTable(htd, Bytes.toBytes("aaaa"), Bytes.toBytes("zzzz"), REGION_NUM);
+
+      // Wait for things to stabilize
+      waitOnTable(tableName);
+      waitOnStableRegionMovement();
+
+      // Reset all of the counters.
+      resetLastRegionOnPrimary();
+      resetLastOpenedRegionCount();
+
+      verifyRegionAssignment(rp.getExistingAssignmentPlan(), 0, REGION_NUM);
+      assertPinned(tableName, cluster, servers, unusedServer);
+
+      // Generate and apply a new region plan.
+      rp.updateAssignmentPlan(rp.getNewAssignmentPlan());
+
+      // Wait for things to stabilize
+      waitOnTable(tableName);
+      waitOnStableRegionMovement();
+
+      // Verify current plan
+      verifyRegionAssignment(rp.getExistingAssignmentPlan(), 0, REGION_NUM);
+      // Make sure the plans are stable.
+      verifyRegionAssignment(rp.getNewAssignmentPlan(), 0, REGION_NUM);
+
+      // Assert that the regions are still on the correct servers
+      // Though they really should be since there haven't been any region moves.
+      assertPinned(tableName, cluster, servers, unusedServer);
+
+    } finally {
+      if (admin != null) admin.close();
+    }
+  }
+
+
+  /**
    * Used to test the correctness of this class.
    */
   @Test
-  public void testRandomizedMatrix() {
+  public void testRandomizedMatrix() throws Exception {
     int rows = 100;
     int cols = 100;
     float[][] matrix = new float[rows][cols];

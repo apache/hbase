@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
@@ -129,6 +130,9 @@ public class RegionPlacementTestBase {
   }
 
   protected void waitOnTable(String tableName) throws IOException {
+
+    TEST_UTIL.waitForTableConsistent();
+
     HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
     Scan s = new Scan();
     ResultScanner rs = null;
@@ -530,6 +534,29 @@ public class RegionPlacementTestBase {
       rswithNumRegions.put(numRegions, numServers);
     }
     return expected.equals(rswithNumRegions);
+  }
+
+  protected void assertPinned(String tableName, MiniHBaseCluster cluster,
+      Set<HServerAddress> servers, HRegionServer unusedServer) throws IOException {
+    // The un-used server should have no regions from testPinnedTable
+    for (HRegion hr : unusedServer.getOnlineRegions()) {
+      assertTrue("The Un-used server should not have a user table on it",
+          !hr.getTableDesc().getNameAsString().equals(tableName));
+    }
+
+    // all of the regions of testPinnedTable are on the pinned servers
+    int onPinned = 0;
+    for (int i = 0; i < cluster.getRegionServers().size(); i++) {
+      HRegionServer hrs = cluster.getRegionServer(i);
+      for (HRegion hRegion : hrs.getOnlineRegions()) {
+        if (hRegion.getTableDesc().getNameAsString().equals(tableName)) {
+          assertTrue("Region " + hRegion.toString() + " should be on one of the pinned servers",
+              servers.contains(hrs.getServerInfo().getServerAddress()));
+          onPinned += 1;
+        }
+      }
+    }
+    assertEquals("Expecting " + REGION_NUM + " regions on pinned servers", REGION_NUM, onPinned);
   }
 
   protected void cleanUp() throws IOException, InterruptedException {
