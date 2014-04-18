@@ -123,6 +123,8 @@ public class HConnectionTestingUtility {
     Mockito.when(c.getNonceGenerator()).thenReturn(ng);
     Mockito.when(c.getAsyncProcess()).thenReturn(new AsyncProcess(
         c, conf, null, RpcRetryingCallerFactory.instantiate(conf), false));
+    Mockito.doNothing().when(c).incCount();
+    Mockito.doNothing().when(c).decCount();
     return c;
   }
 

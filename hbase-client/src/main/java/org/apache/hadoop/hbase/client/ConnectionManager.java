@@ -474,8 +474,6 @@ class ConnectionManager {
     // package protected for the tests
     ClusterStatusListener clusterStatusListener;
 
-    private final Object userRegionLock = new Object();
-
     // We have a single lock for master & zk to prevent deadlocks. Having
     //  one lock for ZK and one lock for master is not possible:
     //  When creating a connection to master, we need a connection to ZK to get
