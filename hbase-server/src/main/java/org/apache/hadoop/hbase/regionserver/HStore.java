@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -428,7 +429,7 @@ public class HStore implements Store {
       completionService.submit(new Callable<StoreFile>() {
         @Override
         public StoreFile call() throws IOException {
-          StoreFile storeFile = createStoreFileAndReader(storeFileInfo.getPath());
+          StoreFile storeFile = createStoreFileAndReader(storeFileInfo);
           return storeFile;
         }
       });
@@ -473,7 +474,13 @@ public class HStore implements Store {
   }
 
   private StoreFile createStoreFileAndReader(final Path p) throws IOException {
-    StoreFile storeFile = new StoreFile(this.getFileSystem(), p, this.conf, this.cacheConf,
+    StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(), p);
+    return createStoreFileAndReader(info);
+  }
+
+  private StoreFile createStoreFileAndReader(final StoreFileInfo info)
+      throws IOException {
+    StoreFile storeFile = new StoreFile(this.getFileSystem(), info, this.conf, this.cacheConf,
         this.family.getBloomFilterType());
     storeFile.createReader();
     return storeFile;
@@ -982,7 +989,7 @@ public class HStore implements Store {
       // TODO: get rid of this!
       if (!this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
         LOG.warn("hbase.hstore.compaction.complete is set to false");
-        sfs = new ArrayList<StoreFile>();
+        sfs = new ArrayList<StoreFile>(newFiles.size());
         for (Path newFile : newFiles) {
           // Create storefile around what we wrote with a reader on it.
           StoreFile sf = createStoreFileAndReader(newFile);
@@ -1006,7 +1013,7 @@ public class HStore implements Store {
 
   private List<StoreFile> moveCompatedFilesIntoPlace(
       CompactionRequest cr, List<Path> newFiles) throws IOException {
-    List<StoreFile> sfs = new ArrayList<StoreFile>();
+    List<StoreFile> sfs = new ArrayList<StoreFile>(newFiles.size());
     for (Path newFile : newFiles) {
       assert newFile != null;
       StoreFile sf = moveFileIntoPlace(newFile);
@@ -1035,7 +1042,7 @@ public class HStore implements Store {
   private void writeCompactionWalRecord(Collection<StoreFile> filesCompacted,
       Collection<StoreFile> newFiles) throws IOException {
     if (region.getLog() == null) return;
-    List<Path> inputPaths = new ArrayList<Path>();
+    List<Path> inputPaths = new ArrayList<Path>(filesCompacted.size());
     for (StoreFile f : filesCompacted) {
       inputPaths.add(f.getPath());
     }
@@ -1097,7 +1104,7 @@ public class HStore implements Store {
   /**
    * Call to complete a compaction. Its for the case where we find in the WAL a compaction
    * that was not finished.  We could find one recovering a WAL after a regionserver crash.
-   * See HBASE-2331.
+   * See HBASE-2231.
    * @param compaction
    */
   @Override
@@ -1105,43 +1112,37 @@ public class HStore implements Store {
       throws IOException {
     LOG.debug("Completing compaction from the WAL marker");
     List<String> compactionInputs = compaction.getCompactionInputList();
-    List<String> compactionOutputs = compaction.getCompactionOutputList();
 
-    List<StoreFile> outputStoreFiles = new ArrayList<StoreFile>(compactionOutputs.size());
-    for (String compactionOutput : compactionOutputs) {
-      //we should have this store file already
-      boolean found = false;
-      Path outputPath = new Path(fs.getStoreDir(family.getNameAsString()), compactionOutput);
-      outputPath = outputPath.makeQualified(fs.getFileSystem());
-      for (StoreFile sf : this.getStorefiles()) {
-        if (sf.getPath().makeQualified(sf.getPath().getFileSystem(conf)).equals(outputPath)) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        if (getFileSystem().exists(outputPath)) {
-          outputStoreFiles.add(createStoreFileAndReader(outputPath));
-        }
-      }
-    }
+    // The Compaction Marker is written after the compaction is completed,
+    // and the files moved into the region/family folder.
+    //
+    // If we crash after the entry is written, we may not have removed the
+    // input files, but the output file is present.
+    // (The unremoved input files will be removed by this function)
+    //
+    // If we scan the directory and the file is not present, it can mean that:
+    //   - The file was manually removed by the user
+    //   - The file was removed as consequence of subsequent compaction
+    // so, we can't do anything with the "compaction output list" because those
+    // files have already been loaded when opening the region (by virtue of
+    // being in the store's folder) or they may be missing due to a compaction.
 
+    String familyName = this.getColumnFamilyName();
     List<Path> inputPaths = new ArrayList<Path>(compactionInputs.size());
     for (String compactionInput : compactionInputs) {
-      Path inputPath = new Path(fs.getStoreDir(family.getNameAsString()), compactionInput);
-      inputPath = inputPath.makeQualified(fs.getFileSystem());
+      Path inputPath = fs.getStoreFilePath(familyName, compactionInput);
       inputPaths.add(inputPath);
     }
 
     //some of the input files might already be deleted
     List<StoreFile> inputStoreFiles = new ArrayList<StoreFile>(compactionInputs.size());
     for (StoreFile sf : this.getStorefiles()) {
-      if (inputPaths.contains(sf.getPath().makeQualified(fs.getFileSystem()))) {
+      if (inputPaths.contains(sf.getQualifiedPath())) {
         inputStoreFiles.add(sf);
       }
     }
 
-    this.replaceStoreFiles(inputStoreFiles, outputStoreFiles);
+    this.replaceStoreFiles(inputStoreFiles, Collections.EMPTY_LIST);
     this.completeCompaction(inputStoreFiles);
   }
 

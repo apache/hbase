@@ -239,6 +239,13 @@ public class StoreFile {
   }
 
   /**
+   * @return Returns the qualified path of this StoreFile
+   */
+  public Path getQualifiedPath() {
+    return this.fileInfo.getPath().makeQualified(fs);
+  }
+
+  /**
    * @return True if this is a StoreFile Reference; call after {@link #open()}
    * else may get wrong answer.
    */

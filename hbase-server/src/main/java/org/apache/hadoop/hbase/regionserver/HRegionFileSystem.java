@@ -196,6 +196,32 @@ public class HRegionFileSystem {
   }
 
   /**
+   * Return Qualified Path of the specified family/file
+   *
+   * @param familyName Column Family Name
+   * @param fileName File Name
+   * @return The qualified Path for the specified family/file
+   */
+  Path getStoreFilePath(final String familyName, final String fileName) {
+    Path familyDir = getStoreDir(familyName);
+    return new Path(familyDir, fileName).makeQualified(this.fs);
+  }
+
+  /**
+   * Return the store file information of the specified family/file.
+   *
+   * @param familyName Column Family Name
+   * @param fileName File Name
+   * @return The {@link StoreFileInfo} for the specified family/file
+   */
+  StoreFileInfo getStoreFileInfo(final String familyName, final String fileName)
+      throws IOException {
+    Path familyDir = getStoreDir(familyName);
+    FileStatus status = fs.getFileStatus(new Path(familyDir, fileName));
+    return new StoreFileInfo(this.conf, this.fs, status);
+  }
+
+  /**
    * Returns true if the specified family has reference files
    * @param familyName Column Family Name
    * @return true if family contains reference files
