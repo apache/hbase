@@ -4095,7 +4095,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
   }
 
   /**
-   * A mocked list implementaion - discards all updates.
+   * A mocked list implementation - discards all updates.
    */
   public static final List<KeyValue> MOCKED_LIST = new AbstractList<KeyValue>() {
 

@@ -82,7 +82,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.weakref.jmx.com.google.common.collect.Lists;
 
 /**
  * Run tests that use the HBase clients; {@link HTable} and {@link HTablePool}.
@@ -4515,37 +4514,6 @@ public class TestFromClientSide {
     assertTrue(result.getKvs().size() == 1);
     assertTrue(Bytes.equals(result.getKvs().iterator().next().getQualifier(),
         QUALIFIERS[0]));
-  }
-
-  /**
-   * Tests the case where the scan is done and the region is done, but the scan
-   * jumps to the next region.
-   * @throws InterruptedException
-   * @throws IOException
-   */
-  @Test
-  public void testScanDoneRegionDone() throws IOException, InterruptedException
-  {
-    final String TABLENAME = "testScanDoneRegionDone";
-    final String cf = "cf";
-    HTable t = TEST_UTIL.createRandomTable(TABLENAME,
-        Lists.asList(cf, new String[0]), 1, 100, 1, 10, 10);
-    Random rand = new Random();
-    int regionId = rand.nextInt(5);
-    Scan s = new Scan();
-    HRegionInfo info = t.getRegionsInfo().keySet()
-        .toArray(new HRegionInfo[0])[regionId];
-    s.setStartRow(info.getStartKey());
-    s.setStopRow(info.getEndKey());
-    try (ResultScanner scanner = t.getScanner(s)) {
-      if (scanner instanceof HTableClientScanner) {
-        for (Result r : scanner) {
-          // Do nothing.
-        }
-        assertEquals(1,
-            ((HTableClientScanner) scanner).getNumRegionsScanned());
-      }
-    }
   }
 }
 

@@ -71,7 +71,7 @@ public class RegionScanner implements InternalScanner {
   private AtomicBoolean closed;
   private HRegionInfo regionInfo;
   private AtomicInteger rowReadCnt;
-  private final List<KeyValue> MOCKED_LIST = HRegion.MOCKED_LIST;
+  private static final List<KeyValue> MOCKED_LIST = HRegion.MOCKED_LIST;
   private final ThreadPoolExecutor scanPrefetchThreadPool;
 
   public RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners,
@@ -209,12 +209,12 @@ public class RegionScanner implements InternalScanner {
       List<Result> outResults = new ArrayList<Result>();
       List<KeyValue> tmpList = new ArrayList<KeyValue>();
       int currentNbRows = 0;
-      boolean moreRows = true;
       try {
         // This is necessary b/c partialResponseSize is not serialized through
         // RPC
         getOriginalScan().setCurrentPartialResponseSize(0);
         int maxResponseSize = getOriginalScan().getMaxResponseSize();
+        boolean moreRows = true;
         do {
           moreRows = nextInternal(tmpList, limit, metric, null, true);
           if (!tmpList.isEmpty()) {
@@ -238,7 +238,7 @@ public class RegionScanner implements InternalScanner {
             && (getOriginalScan().getCurrentPartialResponseSize() <
                 maxResponseSize && currentNbRows < nbRows));
         scanResult = new ScanResult(moreRows,
-            outResults.toArray(new Result[0]));
+            outResults.toArray(new Result[outResults.size()]));
       } catch (IOException e) {
         // we should queue the exception as the result so that we can return
         // this when the result is asked for
@@ -247,6 +247,8 @@ public class RegionScanner implements InternalScanner {
       return scanResult;
     }
   }
+
+  private static final Result[] END_OF_SCAN = Result.SENTINEL_RESULT_ARRAY;
 
   /**
    * A method to return all the rows that can fit in the response size.
@@ -286,7 +288,7 @@ public class RegionScanner implements InternalScanner {
         throw scanResult.ioException;
       }
     }
-    // if there are no prefetched results, then preform the scan inline
+    // if there are no prefetched results, then perform the scan inline
     else {
       ScanPrefetcher scanFetch = new ScanPrefetcher(nbRows, limit, metric);
       scanResult = scanFetch.call();
@@ -303,24 +305,35 @@ public class RegionScanner implements InternalScanner {
     if (scanResult.outResults != null) {
       rowReadCnt.addAndGet(scanResult.outResults.length);
     }
-    Result[] ret = Result.SENTINEL_RESULT_ARRAY;
+
+    // Now we check whether need to scan next region.
+
     if (scanResult.outResults == null) {
-      return ret;
-    } else if (scanResult.outResults.length == 0) {
-      // We need to return Result.SENTINEL_RESULT_ARRAY to terminate the
-      // scan if isFilterDone()
-      if (!isFilterDone()) {
-        // In case then isFilterDone is false, do a sanity check
-        // to see if it makes sense to continue.
-        if (this.stopRow == null ||
-            Bytes.compareTo(this.regionInfo.getEndKey(), this.stopRow) > 0) {
-          ret = scanResult.outResults;
-        }
-      }
-    } else {
-      ret = scanResult.outResults;
+      // Case 1: outResults is null
+      return END_OF_SCAN;
     }
-    return ret;
+
+    if (scanResult.outResults.length == 0) {
+      // We arrive here only when no more results in this region.
+
+      if (regionInfo.getEndKey().length == 0) {
+        // Case 2: This is the last region
+        return END_OF_SCAN;
+      }
+
+      if (isFilterDone()) {
+        // Case 3: Filter indicates end-of-scan
+        return END_OF_SCAN;
+      }
+
+      if (this.stopRow != null
+          && Bytes.compareTo(this.regionInfo.getEndKey(), this.stopRow) >= 0) {
+        // Case 4: If stopRow is set and is included in this region
+        return END_OF_SCAN;
+      }
+    }
+
+    return scanResult.outResults;
   }
 
   /**
@@ -423,15 +436,17 @@ public class RegionScanner implements InternalScanner {
                 "Filter with filterRow(List<KeyValue>) incompatible with scan with limit!");
             return true; // we are expecting more yes, but also limited to how many we can return.
           }
-          // this gaurantees that we still complete the entire row if
+          // this guarantees that we still complete the entire row if
           // currentPartialResponseSize exceeds the maxResponseSize.
           if (partialRow && getOriginalScan().getCurrentPartialResponseSize()
                >= maxResponseSize) {
             return true;
           }
-        } while (Bytes.equals(currentRow, nextRow = peekRow()));
 
-        final boolean stopRow = isStopRow(nextRow);
+          nextRow = peekRow();
+        } while (Bytes.equals(currentRow, nextRow));
+
+        final boolean isStopRow = isStopRow(nextRow);
 
         // now that we have an entire row, lets process with a filters:
 
@@ -447,9 +462,9 @@ public class RegionScanner implements InternalScanner {
           // This row was totally filtered out, if this is NOT the last row,
           // we should continue on.
 
-          if (!stopRow) continue;
+          if (!isStopRow) continue;
         }
-        return !stopRow;
+        return !isStopRow;
       }
     }
   }
