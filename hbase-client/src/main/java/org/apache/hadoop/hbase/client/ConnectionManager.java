@@ -630,6 +630,14 @@ class ConnectionManager {
       return new HTable(tableName, this, pool);
     }
 
+    @Override
+    public Admin getAdmin() throws IOException {
+      if (managed) {
+        throw new IOException("The connection has to be unmanaged.");
+      }
+      return new HBaseAdmin(this);
+    }
+
     private ExecutorService getBatchPool() {
       if (batchPool == null) {
         // shared HTable thread executor not yet initialized

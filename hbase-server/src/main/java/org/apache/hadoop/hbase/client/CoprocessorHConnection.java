@@ -132,6 +132,8 @@ public class CoprocessorHConnection implements ClusterConnection {
     return delegate.getTable(tableName, pool);
   }
 
+  public Admin getAdmin() throws IOException { return delegate.getAdmin(); }
+
   public boolean isMasterRunning() throws MasterNotRunningException, ZooKeeperConnectionException {
     return delegate.isMasterRunning();
   }

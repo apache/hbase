@@ -85,7 +85,7 @@ import org.junit.experimental.categories.Category;
 import com.google.common.collect.Lists;
 
 /**
- * This class is for testing HCM features
+ * This class is for testing HBaseConnectionManager features
  */
 @Category(MediumTests.class)
 public class TestHCM {
@@ -197,6 +197,19 @@ public class TestHCM {
     // if the pool is passed, it is not closed
     assertFalse(otherPool.isShutdown());
     otherPool.shutdownNow();
+  }
+
+  /**
+   * Naive test to check that HConnection#getAdmin returns a properly constructed HBaseAdmin object
+   * @throws IOException Unable to construct admin
+   */
+  @Test
+  public void testAdminFactory() throws IOException {
+    HConnection con1 = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
+    HBaseAdmin admin = (HBaseAdmin)con1.getAdmin();
+    assertTrue(admin.getConnection() == con1);
+    assertTrue(admin.getConfiguration() == TEST_UTIL.getConfiguration());
+    con1.close();
   }
 
   @Ignore ("Fails in IDEs: HBASE-9042") @Test(expected = RegionServerStoppedException.class)

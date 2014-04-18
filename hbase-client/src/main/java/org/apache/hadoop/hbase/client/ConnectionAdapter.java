@@ -111,6 +111,11 @@ class ConnectionAdapter implements ClusterConnection {
   }
 
   @Override
+  public Admin getAdmin() throws IOException {
+    return wrappedConnection.getAdmin();
+  }
+
+  @Override
   public boolean isMasterRunning() throws MasterNotRunningException,
       ZooKeeperConnectionException {
     return wrappedConnection.isMasterRunning();

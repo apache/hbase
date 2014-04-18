@@ -158,7 +158,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class HBaseAdmin implements Abortable, Closeable {
+public class HBaseAdmin implements Admin {
   private static final Log LOG = LogFactory.getLog(HBaseAdmin.class);
 
   // We use the implementation class rather then the interface because we

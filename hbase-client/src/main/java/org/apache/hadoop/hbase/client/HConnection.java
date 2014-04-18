@@ -153,6 +153,17 @@ public interface HConnection extends Abortable, Closeable {
    */
   public HTableInterface getTable(TableName tableName, ExecutorService pool)  throws IOException;
 
+  /**
+   * Retrieve an Admin implementation to administer an HBase cluster.
+   * The returned Admin is not guaranteed to be thread-safe.  A new instance should be created for
+   * each using thread.  This is a lightweight operation.  Pooling or caching of the returned
+   * Admin is not recommended.  Note that HConnection needs to be unmanaged
+   * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   *
+   * @return an Admin instance for cluster administration
+   */
+  Admin getAdmin() throws IOException;
+
   /** @return - true if the master server is running
    * @deprecated internal method, do not use thru HConnection */
   @Deprecated
