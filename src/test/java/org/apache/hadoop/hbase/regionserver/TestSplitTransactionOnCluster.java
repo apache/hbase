@@ -937,7 +937,7 @@ public class TestSplitTransactionOnCluster {
       final int regionCount)
   throws IOException, InterruptedException {
     this.admin.split(hri.getRegionNameAsString());
-    for (int i=0; server.getOnlineRegions().size() <= regionCount && i<100; i++) {
+    for (int i=0; server.getOnlineRegions().size() <= regionCount && i<300; i++) {
       LOG.debug("Waiting on region to split");
       Thread.sleep(100);
     }
