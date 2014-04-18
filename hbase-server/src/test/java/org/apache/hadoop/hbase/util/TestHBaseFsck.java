@@ -1391,7 +1391,7 @@ public class TestHBaseFsck {
    * Split crashed after write to hbase:meta finished for the parent region, but
    * failed to write daughters (pre HBASE-7721 codebase)
    */
-  @Test
+  @Test(timeout=75000)
   public void testSplitDaughtersNotInMeta() throws Exception {
     TableName table =
         TableName.valueOf("testSplitdaughtersNotInMeta");
