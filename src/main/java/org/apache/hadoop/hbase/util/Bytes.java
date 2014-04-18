@@ -1836,6 +1836,9 @@ public class Bytes {
    * Return whether b equals nextOf(a)
    */
   public static boolean isNext(byte[] a, byte[] b) {
+    if (a == null || b == null) {
+      return false;
+    }
     return isNext(a, 0, a.length, b, 0, b.length);
   }
 

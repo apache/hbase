@@ -26,6 +26,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
@@ -245,6 +246,16 @@ public class HTableClientScanner implements ResultScanner {
     return closed;
   }
 
+  /**
+   * Returns the number of regions that we've scanned during the current scan.
+   * Only used during testing, but it can be used otherwise as well.
+   * Can be incorrect in case when the connection to the region fails.
+   * @return
+   */
+  int getNumRegionsScanned() {
+    return this.fetcher.numRegionsScanned.get();
+  }
+
   private static class Fetcher implements Runnable {
     // The startKey for opening a scanner.
     private byte[] startKey;
@@ -265,6 +276,7 @@ public class HTableClientScanner implements ResultScanner {
     private final AtomicReference<Result[]> justFetched;
     private final AtomicReference<Throwable> exception;
     private final AtomicBoolean closing;
+    private final AtomicInteger numRegionsScanned = new AtomicInteger(0);
 
     public Fetcher(HTable table, Scan scan, int caching,
         ArrayBlockingQueue<Result[]> queue,
@@ -337,6 +349,7 @@ public class HTableClientScanner implements ResultScanner {
 
         lastRes = null;
         lastSuccNextTs = System.currentTimeMillis();
+        this.numRegionsScanned.addAndGet(1);
       }
 
       boolean keepCallable = false;

@@ -267,7 +267,7 @@ public class RegionScanner implements InternalScanner {
     preCondition();
     boolean prefetchingEnabled = getOriginalScan().getServerPrefetching();
     int limit = this.getOriginalScan().getBatch();
-    ScanResult scanResult;
+    ScanResult scanResult = null;
     // if we have a prefetched result, then use it
     if (prefetchingEnabled && prefetchScanFuture != null) {
       try {
@@ -277,6 +277,10 @@ public class RegionScanner implements InternalScanner {
         throw new IOException(e);
       } catch (ExecutionException e) {
         throw new IOException(e);
+      } finally {
+        if (scanResult == null) {
+          scanResult = new ScanResult(new IOException("Unknown Exception"));
+        }
       }
       if (scanResult.isException) {
         throw scanResult.ioException;
@@ -296,11 +300,23 @@ public class RegionScanner implements InternalScanner {
       ScanPrefetcher callable = new ScanPrefetcher(nbRows, limit, metric);
       prefetchScanFuture = scanPrefetchThreadPool.submit(callable);
     }
-    rowReadCnt.addAndGet(scanResult.outResults.length);
-    Result[] ret;
-    if (scanResult.outResults == null ||
-        (isFilterDone() && scanResult.outResults.length == 0)) {
-      ret = Result.SENTINEL_RESULT_ARRAY;
+    if (scanResult.outResults != null) {
+      rowReadCnt.addAndGet(scanResult.outResults.length);
+    }
+    Result[] ret = Result.SENTINEL_RESULT_ARRAY;
+    if (scanResult.outResults == null) {
+      return ret;
+    } else if (scanResult.outResults.length == 0) {
+      // We need to return Result.SENTINEL_RESULT_ARRAY to terminate the
+      // scan if isFilterDone()
+      if (!isFilterDone()) {
+        // In case then isFilterDone is false, do a sanity check
+        // to see if it makes sense to continue.
+        if (this.stopRow == null ||
+            Bytes.compareTo(this.regionInfo.getEndKey(), this.stopRow) > 0) {
+          ret = scanResult.outResults;
+        }
+      }
     } else {
       ret = scanResult.outResults;
     }
