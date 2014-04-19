@@ -185,26 +185,6 @@ public class TestZKBasedOpenCloseRegion {
 
   }
 
-  @Test (timeout=300000) public void testCloseRegion()
-  throws Exception {
-    LOG.info("Running testCloseRegion");
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    LOG.info("Number of region servers = " + cluster.getLiveRegionServerThreads().size());
-
-    int rsIdx = 0;
-    HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
-    HRegionInfo hri = getNonMetaRegion(
-      ProtobufUtil.getOnlineRegions(regionServer.getRSRpcServices()));
-    LOG.debug("Asking RS to close region " + hri.getRegionNameAsString());
-
-    cluster.getMaster().assignmentManager.unassign(hri);
-
-    while (!cluster.getMaster().assignmentManager.wasClosedHandlerCalled(hri)) {
-      Threads.sleep(100);
-    }
-    LOG.info("Done with testCloseRegion");
-  }
-
   private void waitOnRIT() {
     // Close worked but we are going to open the region elsewhere.  Before going on, make sure
     // this completes.
@@ -317,16 +297,5 @@ public class TestZKBasedOpenCloseRegion {
   private static byte [] getTestQualifier() {
     return getTestFamily();
   }
-
-  public static void main(String args[]) throws Exception {
-    TestZKBasedOpenCloseRegion.beforeAllTests();
-
-    TestZKBasedOpenCloseRegion test = new TestZKBasedOpenCloseRegion();
-    test.setup();
-    test.testCloseRegion();
-
-    TestZKBasedOpenCloseRegion.afterAllTests();
-  }
-
 }
 
