@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 import java.io.IOException;
@@ -52,7 +53,12 @@ class RootScanner extends BaseScanner {
       synchronized(scannerLock) {
         HServerAddress rootRegionLocation = master.getRegionManager().getRootRegionLocation();
         if (rootRegionLocation != null) {
-          scanRegion(new MetaRegion(rootRegionLocation, HRegionInfo.ROOT_REGIONINFO));
+          if (HTableDescriptor.isMetaregionSeqidRecordEnabled(master.getConfiguration())) {
+            scanRegion(new MetaRegion(rootRegionLocation,
+                HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN));
+          } else {
+            scanRegion(new MetaRegion(rootRegionLocation, HRegionInfo.ROOT_REGIONINFO));
+          }
         }
       }
     } catch (IOException e) {

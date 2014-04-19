@@ -146,6 +146,19 @@ public class TestHRegionInfo {
     assertEquals(hregionInfo, hregionInfoCopy);
     assertEquals(hregionInfo.hashCode(), hregionInfoCopy.hashCode());
 
+    // test a root region info with historian column
+    hregionInfo = HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN;
+    assertTrue(hregionInfo.getTableDesc().isMetaRegion());
+    codec.write(hregionInfo, protocol);
+    hregionInfoCopy = codec.read(protocol);
+    assertEquals(hregionInfo, hregionInfoCopy);
+    assertEquals(hregionInfo.hashCode(), hregionInfoCopy.hashCode());
+
+    assertTrue(Bytes.equals(HRegionInfo.ROOT_REGIONINFO.getRegionName(),
+                 HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN.getRegionName()));
+    assertEquals(HRegionInfo.ROOT_REGIONINFO.getEncodedName(),
+                 HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN.getEncodedName());
+
     // test a meta region info
     hregionInfo = HRegionInfo.FIRST_META_REGIONINFO;
     assertTrue(hregionInfo.getTableDesc().isMetaRegion());

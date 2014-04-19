@@ -275,6 +275,7 @@ public class ZKClusterStateRecovery {
       // processing as dead. In that case we do need to reassign. This logic is similar to
       // what is done in BaseScanner.checkAssigned.
       String serverName = rootServerInfo.getServerName();
+      // ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN has the same regionName
       if (regionManager.regionIsInTransition(
           HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString())) {
         // Already in transition, we will wait until it is assigned.

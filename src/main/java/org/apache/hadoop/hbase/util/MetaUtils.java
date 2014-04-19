@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -266,8 +267,14 @@ public class MetaUtils {
     if (this.rootRegion != null) {
       return this.rootRegion;
     }
-    this.rootRegion = HRegion.openHRegion(HRegionInfo.ROOT_REGIONINFO,
-      this.rootdir, getLog(), this.conf);
+    if (HTableDescriptor.isMetaregionSeqidRecordEnabled(conf)) {
+      this.rootRegion = HRegion.openHRegion(
+          HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN,
+          this.rootdir, getLog(), this.conf);
+    } else {
+      this.rootRegion = HRegion.openHRegion(HRegionInfo.ROOT_REGIONINFO,
+          this.rootdir, getLog(), this.conf);
+    }
     this.rootRegion.compactStores();
     return this.rootRegion;
   }

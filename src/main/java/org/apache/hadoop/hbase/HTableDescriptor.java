@@ -38,6 +38,7 @@ import java.util.TreeSet;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -142,6 +143,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   private volatile Boolean meta = null;
   private volatile Boolean root = null;
   private Boolean isDeferredLog = null;
+
+ /** Master switch to enable column family in ROOT table */
+ public static final String METAREGION_SEQID_RECORD_ENABLED =
+   "metaregion.seqid.record.enabled";
 
   // Key is hash of the family name.
   public final Map<byte [], HColumnDescriptor> families =
@@ -821,6 +826,20 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /** Table descriptor for <core>-ROOT-</code> catalog table */
   public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
+    HConstants.ROOT_TABLE_NAME,
+    new HColumnDescriptor[] {
+      new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+        // Ten is arbitrary number.  Keep versions to help debugging.
+        .setMaxVersions(10)
+        .setInMemory(true)
+        .setBlocksize(8 * 1024)
+        .setTimeToLive(HConstants.FOREVER)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL),
+    });
+
+  /** Table descriptor for <core>-ROOT-</code> catalog table with historian column
+   * introduced to record sequenceid transition of meta table.*/
+  public static final HTableDescriptor ROOT_TABLEDESC_WITH_HISTORIAN_COLUMN = new HTableDescriptor(
       HConstants.ROOT_TABLE_NAME,
       new HColumnDescriptor[] {
           new HColumnDescriptor(HConstants.CATALOG_FAMILY)
@@ -829,6 +848,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
               .setInMemory(true)
               .setBlocksize(8 * 1024)
               .setTimeToLive(HConstants.FOREVER)
+              .setScope(HConstants.REPLICATION_SCOPE_LOCAL),
+          new HColumnDescriptor(HConstants.CATALOG_HISTORIAN_FAMILY)
+              .setMaxVersions(HConstants.ALL_VERSIONS)
+              .setBlocksize(8 * 1024)
+              // 13 weeks = 3 months TTL
+              .setTimeToLive(13 * HConstants.WEEK_IN_SECONDS)
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
       });
 
@@ -844,7 +869,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
           new HColumnDescriptor(HConstants.CATALOG_HISTORIAN_FAMILY)
               .setMaxVersions(HConstants.ALL_VERSIONS)
               .setBlocksize(8 * 1024)
-              .setTimeToLive(HConstants.WEEK_IN_SECONDS)
+              // 13 weeks = 3 months TTL
+              .setTimeToLive(13 * HConstants.WEEK_IN_SECONDS)
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
       });
 
@@ -923,5 +949,13 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       }
     }
     return this.serverSet.getServers();
+  }
+
+  /**
+   * @param conf
+   * @return true if the meta region seqid recording is enabled
+   */
+  public static boolean isMetaregionSeqidRecordEnabled(Configuration conf) {
+    return conf != null ? conf.getBoolean(METAREGION_SEQID_RECORD_ENABLED, false) : false;
   }
 }

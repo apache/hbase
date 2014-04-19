@@ -211,7 +211,8 @@ public class TestDistributedLogSplitting {
       int c = countHLog(files[0].getPath(), fs, conf);
       count += c;
       LOG.info(c + " edits in " + files[0].getPath());
-      assertEquals(NUM_LOG_LINES, count);
+      // one more hlog edit for recording the seqid transition
+      assertEquals(NUM_LOG_LINES+1, count);
     }
   }
 

@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
@@ -261,6 +262,7 @@ public class RegionManager {
     unsetRootRegion();
     if (!master.isClusterShutdownRequested()) {
       synchronized (regionsInTransition) {
+        // ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN has the same regionName
         String regionName = HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString();
         byte[] data = null;
         try {
@@ -268,10 +270,17 @@ public class RegionManager {
         } catch (IOException e) {
           LOG.error("Error creating event data for " + HBaseEventType.M2ZK_REGION_OFFLINE, e);
         }
+        // ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN has the same regionName
         zkWrapper.createOrUpdateUnassignedRegion(
             HRegionInfo.ROOT_REGIONINFO.getEncodedName(), data);
         LOG.debug("Created UNASSIGNED zNode " + regionName + " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
-        RegionState s = new RegionState(HRegionInfo.ROOT_REGIONINFO, RegionState.State.UNASSIGNED);
+        RegionState s;
+        if (HTableDescriptor.isMetaregionSeqidRecordEnabled(master.getConfiguration())) {
+          s = new RegionState(HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN,
+                  RegionState.State.UNASSIGNED);
+        } else {
+          s = new RegionState(HRegionInfo.ROOT_REGIONINFO, RegionState.State.UNASSIGNED);
+        }
         regionsInTransition.put(regionName, s);
         LOG.info("ROOT inserted into regionsInTransition");
       }
@@ -590,6 +599,7 @@ public class RegionManager {
 
     // Assign ROOT region if ROOT region is offline.
     synchronized (this.regionsInTransition) {
+      // ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN has the same regionName
       rootState = regionsInTransition.get(HRegionInfo.ROOT_REGIONINFO
           .getRegionNameAsString());
     }
@@ -734,6 +744,7 @@ public class RegionManager {
     int nonPreferredAssignmentCount = 0;
     // Handle if root is unassigned... only assign root if root is offline.
     synchronized (this.regionsInTransition) {
+      // ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN has the same regionName
       rootState = regionsInTransition.get(HRegionInfo.ROOT_REGIONINFO
           .getRegionNameAsString());
     }
@@ -1054,7 +1065,8 @@ public class RegionManager {
             Bytes.toString(HConstants.ROOT_TABLE_NAME));
       }
       metaRegions.add(new MetaRegion(rootRegionLocation.get().getServerAddress(),
-          HRegionInfo.ROOT_REGIONINFO));
+          HTableDescriptor.isMetaregionSeqidRecordEnabled(master.getConfiguration()) ?
+          HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN : HRegionInfo.ROOT_REGIONINFO));
     } else {
       if (!areAllMetaRegionsOnline()) {
         throw new NotAllMetaRegionsOnlineException();
@@ -1089,7 +1101,8 @@ public class RegionManager {
     if (row.length > prefixlen &&
      Bytes.compareTo(META_REGION_PREFIX, 0, prefixlen, row, 0, prefixlen) == 0) {
       return new MetaRegion(this.master.getRegionManager().getRootRegionLocation(),
-        HRegionInfo.ROOT_REGIONINFO);
+          HTableDescriptor.isMetaregionSeqidRecordEnabled(master.getConfiguration()) ?
+            HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN : HRegionInfo.ROOT_REGIONINFO);
     }
     return this.onlineMetaRegions.floorEntry(row).getValue();
   }
@@ -1703,6 +1716,7 @@ public class RegionManager {
     writeRootRegionLocationToZooKeeper(hsi);
     synchronized (rootRegionLocation) {
       // the root region has been assigned, remove it from transition in ZK
+      // ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN has the same regionName
       zkWrapper.deleteUnassignedRegion(HRegionInfo.ROOT_REGIONINFO.getEncodedName());
       rootRegionLocation.set(new HServerInfo(hsi));
       rootRegionLocation.notifyAll();

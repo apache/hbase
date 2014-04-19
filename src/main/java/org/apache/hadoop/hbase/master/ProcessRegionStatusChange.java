@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 
 /**
  * Abstract class that performs common operations for
@@ -68,9 +69,14 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
 
   protected MetaRegion getMetaRegion() {
     if (isMetaTable) {
+      // ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN has the same regionName()
       this.metaRegionName = HRegionInfo.ROOT_REGIONINFO.getRegionName();
-      this.metaRegion = new MetaRegion(master.getRegionManager().getRootRegionLocation(),
-          HRegionInfo.ROOT_REGIONINFO);
+      this.metaRegion = HTableDescriptor.isMetaregionSeqidRecordEnabled(
+          master.getConfiguration()) ?
+            new MetaRegion(master.getRegionManager().getRootRegionLocation(),
+                HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN) :
+            new MetaRegion(master.getRegionManager().getRootRegionLocation(),
+                HRegionInfo.ROOT_REGIONINFO);
     } else {
       this.metaRegion =
         master.getRegionManager().getFirstMetaRegionForRegion(regionInfo);

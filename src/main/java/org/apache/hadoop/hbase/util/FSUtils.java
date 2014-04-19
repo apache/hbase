@@ -334,9 +334,11 @@ public class FSUtils {
    */
   public static boolean rootRegionExists(FileSystem fs, Path rootdir)
   throws IOException {
-    Path rootRegionDir =
+    Path rootRegionDir1 =
       HRegion.getRegionDir(rootdir, HRegionInfo.ROOT_REGIONINFO);
-    return fs.exists(rootRegionDir);
+    Path rootRegionDir2 =
+      HRegion.getRegionDir(rootdir, HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN);
+    return fs.exists(rootRegionDir1) || fs.exists(rootRegionDir2);
   }
 
   /**

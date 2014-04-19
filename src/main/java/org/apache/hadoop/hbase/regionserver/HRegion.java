@@ -3304,6 +3304,14 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
     long seqid = r.initialize();
     if (log != null) {
       log.setSequenceNumber(seqid);
+      // add seqid to hlog
+      // to be strict, next sequence id is getSequenceNumber() + 1
+      // because of incrementAndGet in Hlog.java obtainSeqNum method
+      // after calling writeToHLog method nex line.
+      HRegionSeqidTransition seqidTransition =
+          new HRegionSeqidTransition(seqid-1, log.getSequenceNumber() + 1);
+      // no serverInfo b/c outside an HRS context
+      log.writeSeqidTransition(seqidTransition, null, r.getRegionInfo());
     }
     return r;
   }
@@ -3989,7 +3997,12 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
     String metaStr = Bytes.toString(HConstants.META_TABLE_NAME);
     // Currently expects tables have one region only.
     if (p.getName().startsWith(rootStr)) {
-      region = HRegion.newHRegion(p, log, fs, c, HRegionInfo.ROOT_REGIONINFO, null);
+      if (HTableDescriptor.isMetaregionSeqidRecordEnabled(c)) {
+        region = HRegion.newHRegion(p, log, fs, c,
+            HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN, null);
+      } else {
+        region = HRegion.newHRegion(p, log, fs, c, HRegionInfo.ROOT_REGIONINFO, null);
+      }
     } else if (p.getName().startsWith(metaStr)) {
       region = HRegion.newHRegion(p, log, fs, c, HRegionInfo.FIRST_META_REGIONINFO,
           null);

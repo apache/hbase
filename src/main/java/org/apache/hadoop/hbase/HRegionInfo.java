@@ -122,7 +122,12 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public static final HRegionInfo ROOT_REGIONINFO =
     new HRegionInfo(0L, HTableDescriptor.ROOT_TABLEDESC);
 
-  /** Encoded name for the root region. This is always the same. */
+  /** HRegionInfo for root region with historian column*/
+  public static final HRegionInfo ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN =
+    new HRegionInfo(0L, HTableDescriptor.ROOT_TABLEDESC_WITH_HISTORIAN_COLUMN);
+
+  /** Encoded name for the root region. This is always the same.
+   * ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN has the same getEncodeName() */
   public static final String ROOT_REGION_ENCODED_NAME_STR =
       HRegionInfo.ROOT_REGIONINFO.getEncodedName();
 

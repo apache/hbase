@@ -584,7 +584,11 @@ public class TableServers implements ServerConnection {
   public HTableDescriptor getHTableDescriptor(StringBytes tableName)
       throws IOException {
     if (tableName.equals(HConstants.ROOT_TABLE_NAME_STRINGBYTES)) {
-      return new UnmodifyableHTableDescriptor(HTableDescriptor.ROOT_TABLEDESC);
+      if (HTableDescriptor.isMetaregionSeqidRecordEnabled(conf)) {
+        return new UnmodifyableHTableDescriptor(HTableDescriptor.ROOT_TABLEDESC_WITH_HISTORIAN_COLUMN);
+      } else {
+        return new UnmodifyableHTableDescriptor(HTableDescriptor.ROOT_TABLEDESC);
+      }
     }
     if (tableName.equals(HConstants.META_TABLE_NAME_STRINGBYTES)) {
       return HTableDescriptor.META_TABLEDESC;
@@ -1295,6 +1299,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
         HRegionInterface server = getHRegionConnection(rootRegionAddress);
         // if this works, then we're good, and we have an acceptable address,
         // so we can stop doing retries and return the result.
+        // ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN has the same getRegionName()
         server.getRegionInfo(HRegionInfo.ROOT_REGIONINFO.getRegionName());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Found ROOT at " + rootRegionAddress);
@@ -1329,7 +1334,11 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
     }
 
     // return the region location
-    return new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootRegionAddress);
+    if (HTableDescriptor.isMetaregionSeqidRecordEnabled(conf)) {
+      return new HRegionLocation(HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN, rootRegionAddress);
+    } else {
+      return new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootRegionAddress);
+    }
   }
 
   @Override

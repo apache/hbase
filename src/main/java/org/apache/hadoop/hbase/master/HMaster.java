@@ -622,7 +622,9 @@ public class HMaster extends HasThread implements HMasterInterface,
       // created here in bootstap and it'll need to be cleaned up.  Better to
       // not make it in first place.  Turn off block caching for bootstrap.
       // Enable after.
-      HRegionInfo rootHRI = new HRegionInfo(HRegionInfo.ROOT_REGIONINFO);
+      HRegionInfo rootHRI = HTableDescriptor.isMetaregionSeqidRecordEnabled(c) ?
+        new HRegionInfo(HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN) :
+        new HRegionInfo(HRegionInfo.ROOT_REGIONINFO);
       setInfoFamilyCaching(rootHRI, false);
       HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
       setInfoFamilyCaching(metaHRI, false);

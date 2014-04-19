@@ -461,7 +461,11 @@ public class TestAdmin {
   public void testCreateBadTables() throws IOException {
     String msg = null;
     try {
-      this.admin.createTable(HTableDescriptor.ROOT_TABLEDESC);
+      if (HTableDescriptor.isMetaregionSeqidRecordEnabled(TEST_UTIL.getConfiguration())) {
+        this.admin.createTable(HTableDescriptor.ROOT_TABLEDESC_WITH_HISTORIAN_COLUMN);
+      } else {
+        this.admin.createTable(HTableDescriptor.ROOT_TABLEDESC);
+      }
     } catch (IllegalArgumentException e) {
       msg = e.toString();
     }

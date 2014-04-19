@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
@@ -84,6 +85,7 @@ import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionSeqidTransition;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -93,6 +95,7 @@ import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.RuntimeExceptionAbortStrategy;
 import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -2356,5 +2359,52 @@ public class HLog implements Syncable {
   public void kill() {
     logSyncerThread.syncerShuttingDown = true;
     logSyncerThread.interrupt();
+  }
+
+  /**
+   * write seqid transition to hlog
+   * @param seqidTransition
+   * @param serverInfo
+   * @param regionInfo
+   * @return true when operation successes
+   * @throws IOException
+   */
+  public boolean writeSeqidTransition(final HRegionSeqidTransition seqidTransition,
+      final HServerInfo serverInfo, final HRegionInfo regionInfo)
+    throws IOException {
+    if (regionInfo == null || seqidTransition == null) {
+      return false;
+    }
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    WALEdit walEdit = new WALEdit();
+    // serverInfo might be null as in HRegion$OpenHRegion
+    if (serverInfo != null) {
+      KeyValue kvServer = new KeyValue(regionInfo.getStartKey(), HLog.METAFAMILY,
+          HConstants.SERVER_QUALIFIER, now,
+          Bytes.toBytes(serverInfo.getHostnamePort()));
+      KeyValue kvStartcode = new KeyValue(regionInfo.getStartKey(), HLog.METAFAMILY,
+          HConstants.STARTCODE_QUALIFIER, now,
+          Bytes.toBytes(serverInfo.getStartCode()));
+      walEdit.add(kvServer);
+      walEdit.add(kvStartcode);
+    }
+    KeyValue kvLast = new KeyValue(regionInfo.getStartKey(), HLog.METAFAMILY,
+        HConstants.LAST_SEQID_QUALIFIER, now,
+        Bytes.toBytes(seqidTransition.getLastSeqid()));
+    KeyValue kvNext = new KeyValue(regionInfo.getStartKey(), HLog.METAFAMILY,
+        HConstants.NEXT_SEQID_QUALIFIER, now,
+        Bytes.toBytes(seqidTransition.getNextSeqid()));
+    KeyValue kvRegionInfo = new KeyValue(regionInfo.getStartKey(), HLog.METAFAMILY,
+        HConstants.REGIONINFO_QUALIFIER, now,
+        Writables.getBytes(regionInfo));
+    walEdit.add(kvLast);
+    walEdit.add(kvNext);
+    walEdit.add(kvRegionInfo);
+    long newSeqid = append(regionInfo, regionInfo.getTableDesc().getName(), walEdit, now);
+    LOG.info("Region " + regionInfo.getRegionNameAsString() +
+               " sequence id transition " +
+               seqidTransition.getLastSeqid() + "->" +
+               seqidTransition.getNextSeqid() + " appended to HLog at seqid=" + newSeqid);
+    return true;
   }
 }

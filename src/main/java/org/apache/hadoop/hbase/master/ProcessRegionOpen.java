@@ -25,9 +25,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.HRegionSeqidTransition;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
 /**
@@ -37,6 +40,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
  */
 public class ProcessRegionOpen extends ProcessRegionStatusChange {
   protected final HServerInfo serverInfo;
+  protected final HRegionSeqidTransition seqidTransition;
 
   /**
    * @param master
@@ -44,9 +48,21 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
    * @param regionInfo
    */
   public ProcessRegionOpen(HMaster master, HServerInfo info,
-      HRegionInfo regionInfo) {
+                           HRegionInfo regionInfo) {
+    this(master, info, regionInfo, null);
+  }
+
+  /**
+   * @param master
+   * @param info
+   * @param regionInfo
+   * @param seqidMsg region seqid jump information
+   */
+  public ProcessRegionOpen(HMaster master, HServerInfo info,
+                           HRegionInfo regionInfo, HRegionSeqidTransition seqidTran) {
     super(master, info.getServerName(), regionInfo);
     this.serverInfo = info;
+    this.seqidTransition = seqidTran;
   }
 
   @Override
@@ -99,6 +115,7 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
   void writeToMeta(MetaRegion region) throws IOException {
     HRegionInterface server =
         master.getServerConnection().getHRegionConnection(region.getServer());
+    String seqidLog = null;
     LOG.info(regionInfo.getRegionNameAsString() + " open on " + serverInfo.getServerName());
     // Register the newly-available Region's location.
     Put p = new Put(regionInfo.getRegionName());
@@ -106,11 +123,51 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
         Bytes.toBytes(serverInfo.getHostnamePort()));
     p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
         Bytes.toBytes(serverInfo.getStartCode()));
+    if (seqidTransition != null) {
+      // if it is not metaTable, OK
+      // if it is metaTable && meta region seqid recording enabled, OK
+      // otherwise, the ROOT will not have the historian family, not appending.
+      if (isMetaTable &&
+          !HTableDescriptor.isMetaregionSeqidRecordEnabled(master.getConfiguration())) {
+        seqidLog = ", sequence id of meta region not enabled, not recording.";
+      } else {
+        StringBuilder sb = new StringBuilder();
+        p.add(HConstants.CATALOG_HISTORIAN_FAMILY, HConstants.SERVER_QUALIFIER,
+              Bytes.toBytes(serverInfo.getHostnamePort()));
+        sb.append(Bytes.toString(HConstants.CATALOG_HISTORIAN_FAMILY))
+          .append(":").append(Bytes.toString(HConstants.SERVER_QUALIFIER))
+          .append("=").append(serverInfo.getHostnamePort());
+        p.add(HConstants.CATALOG_HISTORIAN_FAMILY, HConstants.STARTCODE_QUALIFIER,
+              Bytes.toBytes(serverInfo.getStartCode()));
+        sb.append(", ").append(Bytes.toString(HConstants.CATALOG_HISTORIAN_FAMILY))
+          .append(":").append(Bytes.toString(HConstants.STARTCODE_QUALIFIER))
+          .append("=").append(serverInfo.getStartCode());
+        p.add(HConstants.CATALOG_HISTORIAN_FAMILY,
+              HConstants.LAST_SEQID_QUALIFIER, Bytes.toBytes(seqidTransition.getLastSeqid()));
+        sb.append(", ").append(Bytes.toString(HConstants.CATALOG_HISTORIAN_FAMILY))
+          .append(":").append(Bytes.toString(HConstants.LAST_SEQID_QUALIFIER)).append("=")
+          .append(seqidTransition.getLastSeqid());
+        p.add(HConstants.CATALOG_HISTORIAN_FAMILY,
+              HConstants.NEXT_SEQID_QUALIFIER, Bytes.toBytes(seqidTransition.getNextSeqid()));
+        sb.append(", ").append(Bytes.toString(HConstants.CATALOG_HISTORIAN_FAMILY))
+          .append(":").append(Bytes.toString(HConstants.NEXT_SEQID_QUALIFIER)).append("=")
+          .append(seqidTransition.getNextSeqid());
+        p.add(HConstants.CATALOG_HISTORIAN_FAMILY,
+              HConstants.REGIONINFO_QUALIFIER, Writables.getBytes(regionInfo));
+        sb.append(", ").append(Bytes.toString(HConstants.CATALOG_HISTORIAN_FAMILY))
+          .append(":").append(Bytes.toString(HConstants.REGIONINFO_QUALIFIER)).append("=")
+          .append("[regionInfo object of ").append(regionInfo.getRegionNameAsString()).append("]");
+
+        seqidLog = sb.toString();
+      }
+    }
     server.put(region.getRegionName(), p);
-    LOG.info("Updated row " + regionInfo.getRegionNameAsString() + " in region "
-        + Bytes.toStringBinary(region.getRegionName())
-        + " with startcode=" + serverInfo.getStartCode()
-        + ", server=" + serverInfo.getHostnamePort());
+    LOG.info("Updated row " + regionInfo.getRegionNameAsString() + " in region " +
+        Bytes.toString(region.getRegionName()) + " with " +
+        Bytes.toString(HConstants.CATALOG_FAMILY) + ":startcode=" + serverInfo.getStartCode() +
+        ", " + Bytes.toString(HConstants.CATALOG_FAMILY) +
+        ":server=" + serverInfo.getHostnamePort() +
+        ((seqidLog == null) ? " and NO sequence id transition" : ", " + seqidLog) + ".");
     this.master.getServerManager().getRegionChecker().becameOpened(regionInfo);
   }
 

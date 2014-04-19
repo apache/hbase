@@ -168,7 +168,7 @@ public class TestMutationWriteToWAL extends ThriftServerTestBase {
           continue;
         }
         for (KeyValue kv : entry.getEdit().getKeyValues()) {
-          if (Bytes.equals(kv.getRow(), HLog.METAROW)) {
+          if (Bytes.equals(kv.getRow(), HLog.METAROW) || Bytes.equals(kv.getFamily(), HLog.METAFAMILY)) {
             continue;
           }
           actualLogEntries.add(Bytes.toStringBinary(kv.getRow()) + "," +

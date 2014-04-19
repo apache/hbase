@@ -330,9 +330,13 @@ class HMerge {
           HConstants.ROOT_TABLE_NAME);
 
       // Scan root region to find all the meta regions
-
-      root = HRegion.newHRegion(rootTableDir, hlog, fs, conf,
-          HRegionInfo.ROOT_REGIONINFO, null);
+      if (HTableDescriptor.isMetaregionSeqidRecordEnabled(conf)) {
+        root = HRegion.newHRegion(rootTableDir, hlog, fs, conf,
+            HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN, null);
+      } else {
+        root = HRegion.newHRegion(rootTableDir, hlog, fs, conf,
+            HRegionInfo.ROOT_REGIONINFO, null);
+      }
       root.initialize();
 
       Scan scan = new Scan();

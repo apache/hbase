@@ -825,8 +825,14 @@ public class HRegionServer implements HRegionInterface, HRegionServerIf,
           if (rootServer != null) {
             // By setting the root region location, we bypass the wait imposed
             // on HTable for all regions being assigned.
-            this.connection.setRootRegionLocation(
-                new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer));
+            if (HTableDescriptor.isMetaregionSeqidRecordEnabled(conf)) {
+              this.connection.setRootRegionLocation(
+                  new HRegionLocation(HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN,
+                      rootServer));
+            } else {
+              this.connection.setRootRegionLocation(
+                  new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer));
+            }
             haveRootRegion.set(true);
           }
         }
@@ -2360,6 +2366,7 @@ public class HRegionServer implements HRegionInterface, HRegionServerIf,
     RSZookeeperUpdater zkUpdater = new RSZookeeperUpdater(
         this.zooKeeperWrapper, serverInfo.getServerName(),
           regionInfo.getEncodedName());
+    HRegionSeqidTransition seqidTransition = null;
     if (region == null) {
       try {
         zkUpdater.startRegionOpenEvent(null, true);
@@ -2371,9 +2378,19 @@ public class HRegionServer implements HRegionInterface, HRegionServerIf,
           hLogIndex = Integer.valueOf((this.currentHLogIndex++) % (this.hlogs.length));
           this.regionNameToHLogIDMap.put(regionInfo.getRegionNameAsString(), hLogIndex);
         }
-        region = instantiateRegion(regionInfo, this.hlogs[hLogIndex.intValue()]);
+
+        ArrayList<HRegionSeqidTransition> seqidTransitionList =
+          new ArrayList<HRegionSeqidTransition>();
+        region = instantiateRegion(regionInfo,
+            this.hlogs[hLogIndex.intValue()], seqidTransitionList);
+
+        if (!seqidTransitionList.isEmpty()) {
+          seqidTransition = seqidTransitionList.get(0);
+        }
         LOG.info("Initiate the region: " + regionInfo.getRegionNameAsString() + " with HLog #" +
-            hLogIndex);
+            hLogIndex + ((seqidTransition == null) ?
+                " and no sequence id transition recorded." :
+                " and recorded " + seqidTransition));
 
         // Set up the favorite nodes for all the HFile for that region
         setFavoredNodes(region, favoredNodes);
@@ -2437,7 +2454,8 @@ public class HRegionServer implements HRegionInterface, HRegionServerIf,
       }
     }
     try {
-      HMsg hmsg = new HMsg(HMsg.Type.MSG_REPORT_OPEN, regionInfo);
+      HMsg hmsg = new HMsg(HMsg.Type.MSG_REPORT_OPEN, regionInfo,
+          HRegionSeqidTransition.toBytes(seqidTransition));
       zkUpdater.finishRegionOpenEvent(hmsg);
     } catch (IOException e) {
       try {
@@ -2465,11 +2483,13 @@ public class HRegionServer implements HRegionInterface, HRegionServerIf,
   /*
    * @param regionInfo RegionInfo for the Region we're to instantiate and
    * initialize.
-   * @param wal Set into here the regions' seqid.
+   * @param hlog Set into here the regions' seqid.
+   * @param seqidTransitionList a list to pass back seqidTransition.
    * @return
    * @throws IOException
    */
-  protected HRegion instantiateRegion(final HRegionInfo regionInfo, final HLog hlog)
+  protected HRegion instantiateRegion(final HRegionInfo regionInfo, final HLog hlog,
+      ArrayList<HRegionSeqidTransition> seqidTransitionList)
   throws IOException {
     Path dir =
       HTableDescriptor.getTableDir(rootDir, regionInfo.getTableDesc().getName());
@@ -2482,9 +2502,33 @@ public class HRegionServer implements HRegionInterface, HRegionServerIf,
       }
     });
     // If a wal and its seqid is < that of new region, use new regions seqid.
-    if (hlog != null) {
-      if (seqid > hlog.getSequenceNumber()) hlog.setSequenceNumber(seqid);
+    if (hlog != null && seqid > hlog.getSequenceNumber()) {
+      hlog.setSequenceNumber(seqid);
     }
+    // if it is metaRegion and not enable recording metaRegion Seqid, skip
+    if (regionInfo.isMetaTable() && !HTableDescriptor.isMetaregionSeqidRecordEnabled(conf)) {
+      LOG.info("Recording of sequence id of meta region not enabled!");
+    } else {
+      // update seqids. This array will record the last seqid
+      // and the next seqid on RegionServer. It will be recorded in HMaster meta table
+      // note @Jiqing: these lines are not atomic, which means edits can come in
+      // between setSequenceNumber and getSequenceNumber call.
+      // Example:
+      // If hlog.seqid = 100, seqid = 200, after hlog.setSequenceNumber(200),
+      // hlog.getSequenceNumber may return 210 if there're 10 edits inbound.
+      // The transition seqid is still valid
+      HRegionSeqidTransition seqidTransition =
+        new HRegionSeqidTransition(seqid - 1, hlog.getSequenceNumber());
+      LOG.info("Sequence id of region " + regionInfo.getRegionNameAsString() +
+          " has a transition from " + seqidTransition.getLastSeqid() +
+          " to " + seqidTransition.getNextSeqid() +
+          ". Will be recorded in meta/root table under " +
+          Bytes.toString(HConstants.CATALOG_HISTORIAN_FAMILY)  + " family.");
+      // append to hlog
+      hlog.writeSeqidTransition(seqidTransition, serverInfo, regionInfo);
+      seqidTransitionList.add(seqidTransition);
+    }
+
     return r;
   }
 

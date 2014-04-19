@@ -469,6 +469,7 @@ public class MiniHBaseCluster {
    * of HRS carrying regionName. Returns -1 if none found.
    */
   public int getServerWithRoot() {
+    // ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN has the same getRegionName()
     return getServerWith(HRegionInfo.ROOT_REGIONINFO.getRegionName());
   }
 

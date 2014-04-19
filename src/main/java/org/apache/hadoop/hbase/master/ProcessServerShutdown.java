@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -347,6 +348,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       scan.addFamily(HConstants.CATALOG_FAMILY);
       scan.setCaching(1000);
       scan.setCacheBlocks(true);
+      // ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN has the same regionName
       return scanMetaRegion(server, scan,
           HRegionInfo.ROOT_REGIONINFO.getRegionName());
     }
@@ -459,7 +461,9 @@ class ProcessServerShutdown extends RegionServerOperation {
       LOG.debug(this.toString() + ". Begin rescan Root ");
       Boolean result = new ScanRootRegion(
           new MetaRegion(master.getRegionManager().getRootRegionLocation(),
-              HRegionInfo.ROOT_REGIONINFO), this.master).doWithRetries();
+              (HTableDescriptor.isMetaregionSeqidRecordEnabled(master.getConfiguration()) ?
+              HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN : HRegionInfo.ROOT_REGIONINFO)),
+                  this.master).doWithRetries();
       if (result == null || result.booleanValue() == false) {
         LOG.debug("Root scan failed " + this);
         return RegionServerOperationResult.OPERATION_DELAYED;

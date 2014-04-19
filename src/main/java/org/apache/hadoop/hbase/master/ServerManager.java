@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.RegionManager.RegionState;
+import org.apache.hadoop.hbase.regionserver.HRegionSeqidTransition;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -818,13 +819,14 @@ public class ServerManager implements ConfigurationObserver {
   /*
    * Region server is reporting that a region is now opened
    * @param serverInfo
-   * @param region
+   * @param hmsg
    * @param returnMsgs
    */
   public void processRegionOpen(HServerInfo serverInfo,
-      HRegionInfo region, ArrayList<HMsg> returnMsgs) {
+      HMsg hmsg, ArrayList<HMsg> returnMsgs) {
 
     boolean duplicateAssignment = false;
+    HRegionInfo region = hmsg.getRegionInfo();
     RegionManager regionManager = master.getRegionManager();
     synchronized (regionManager) {
       if (!regionManager.isUnassigned(region) &&
@@ -894,7 +896,8 @@ public class ServerManager implements ConfigurationObserver {
           // meta table to be updated.
           regionManager.setOpen(region.getRegionNameAsString());
           RegionServerOperation op =
-              new ProcessRegionOpen(master, serverInfo, region);
+              new ProcessRegionOpen(master, serverInfo, region,
+                  HRegionSeqidTransition.fromBytes(hmsg.getMessage()));
           master.getRegionServerOperationQueue().put(op);
         }
       }

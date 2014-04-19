@@ -60,8 +60,7 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
    *                         entry in ZK.
    */
   @Override
-  public void process()
-  {
+  public void process() {
     LOG.debug("Event = " + getHBEvent() + ", region = " + regionName);
     if(this.getHBEvent() == HBaseEventType.RS2ZK_REGION_OPENING) {
       handleRegionOpeningEvent();
@@ -89,7 +88,7 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
       serverInfo = HServerInfo.fromServerName(hbEventData.getRsName());
     }
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
-    serverManager.processRegionOpen(serverInfo, hbEventData.getHmsg().getRegionInfo(), returnMsgs);
+    serverManager.processRegionOpen(serverInfo, hbEventData.getHmsg(), returnMsgs);
     if(returnMsgs.size() > 0) {
       LOG.debug("Open region tried to send message: " + returnMsgs.get(0).getType() + 
                 " about " + returnMsgs.get(0).getRegionInfo().getRegionNameAsString());

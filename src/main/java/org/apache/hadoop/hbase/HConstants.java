@@ -549,6 +549,12 @@ public final class HConstants {
   /** The favored nodes column qualifier*/
   public static final byte [] FAVOREDNODES_QUALIFIER = Bytes.toBytes("favorednodes");
 
+  /** The last region seqid qualifier*/
+  public static final byte [] LAST_SEQID_QUALIFIER = Bytes.toBytes("lastregionseqid");
+
+  /** The next region seqid qualifier*/
+  public static final byte [] NEXT_SEQID_QUALIFIER = Bytes.toBytes("nextregionseqid");
+
   // Other constants
 
   /**

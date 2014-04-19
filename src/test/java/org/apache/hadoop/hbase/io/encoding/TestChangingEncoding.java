@@ -51,7 +51,7 @@ public class TestChangingEncoding {
   private static final Log LOG = LogFactory.getLog(TestChangingEncoding.class);
 
   static final String CF = "EncodingTestCF";
-  static final byte[] CF_BYTES = Bytes.toBytes(CF);
+  public static final byte[] CF_BYTES = Bytes.toBytes(CF);
 
   private static final int NUM_ROWS_PER_BATCH = 100;
   private static final int NUM_COLS_PER_ROW = 20;
@@ -118,7 +118,7 @@ public class TestChangingEncoding {
         + "_col" + j);
   }
 
-  static void writeTestDataBatch(Configuration conf, String tableName,
+  public static void writeTestDataBatch(Configuration conf, String tableName,
       int batchId) throws Exception {
     LOG.debug("Writing test data batch " + batchId);
     HTable table = new HTable(conf, tableName);
@@ -133,7 +133,20 @@ public class TestChangingEncoding {
     table.close();
   }
 
-  static void verifyTestDataBatch(Configuration conf, String tableName,
+  public static void writeTestDataBatchToRegion(HRegion region, byte[] row,
+      int batchId) throws Exception {
+    LOG.debug("Writing test data batch " + batchId);
+    for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
+      Put put = new Put(row);
+      for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
+        put.add(CF_BYTES, getQualifier(j),
+                getValue(batchId, i, j));
+        region.put(put);
+      }
+    }
+  }
+
+  public static void verifyTestDataBatch(Configuration conf, String tableName,
       int batchId) throws Exception {
     LOG.debug("Verifying test data batch " + batchId);
     HTable table = new HTable(conf, tableName);

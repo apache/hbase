@@ -641,7 +641,11 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   protected void createRootAndMetaRegions() throws IOException {
-    root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO, testDir, conf);
+    if (HTableDescriptor.isMetaregionSeqidRecordEnabled(conf)) {
+      root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN, testDir, conf);
+    } else {
+      root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO, testDir, conf);
+    }
     meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
         conf);
     HRegion.addRegionToMETA(root, meta);

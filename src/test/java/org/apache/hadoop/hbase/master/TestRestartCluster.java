@@ -73,6 +73,7 @@ public class TestRestartCluster {
     } catch (IOException e) {
       LOG.error("Error creating event data for " + hbEventType, e);
     }
+    // ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN has the same regionName
     zkWrapper.createOrUpdateUnassignedRegion(
         HRegionInfo.ROOT_REGIONINFO.getEncodedName(), data);
     zkWrapper.createOrUpdateUnassignedRegion(
