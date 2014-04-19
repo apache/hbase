@@ -172,8 +172,7 @@ public class TestLogRolling  {
 
   private void startAndWriteData() throws IOException, InterruptedException {
     // When the hbase:meta table can be opened, the region servers are running
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
-    ht.close();
+    new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
     this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
     this.log = server.getWAL();
 
@@ -208,7 +207,6 @@ public class TestLogRolling  {
       newLog.rollWriter(true);
     } finally {
       newLog.closeAndDelete();
-      fs.close();
     }
   }
 
@@ -429,8 +427,7 @@ public class TestLogRolling  {
       fs.getDefaultReplication() > 1);
     LOG.info("Replication=" + fs.getDefaultReplication());
     // When the hbase:meta table can be opened, the region servers are running
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
-    ht.close();
+    new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
 
     this.server = cluster.getRegionServer(0);
     this.log = server.getWAL();
@@ -587,8 +584,7 @@ public class TestLogRolling  {
   @Test
   public void testCompactionRecordDoesntBlockRolling() throws Exception {
     // When the hbase:meta table can be opened, the region servers are running
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
-    ht.close();
+    new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
 
     String tableName = getName();
     HTable table = createTestTable(tableName);
