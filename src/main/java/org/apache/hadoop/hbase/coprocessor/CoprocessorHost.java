@@ -58,14 +58,17 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       "hbase.coprocessor.user.region.classes";
   public static final String MASTER_COPROCESSOR_CONF_KEY =
       "hbase.coprocessor.master.classes";
+  public static final String REGION_COPROCESSOR_REMOVE_CONF_KEY =
+      "hbase.coprocessor.remove.classes";
   public static final String WAL_COPROCESSOR_CONF_KEY =
     "hbase.coprocessor.wal.classes";
   public static final String ABORT_ON_ERROR_KEY = "hbase.coprocessor.abortonerror";
   public static final boolean DEFAULT_ABORT_ON_ERROR = true;
 
+
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   protected ThriftClientInterface tcInter;
-  /** Ordered set of loaded coprocessors with lock */
+  /** Ordered set of currently loaded coprocessors with lock */
   protected SortedSet<E> coprocessors =
       new SortedCopyOnWriteSet<E>(new EnvironmentPriorityComparator());
   protected Configuration conf;
@@ -85,10 +88,10 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * the intention is to preserve a history of all loaded coprocessors for
    * diagnosis in case of server crash (HBASE-4014).
    */
-  private static Set<String> coprocessorNames =
+  private static Set<String> everLoadedCoprocessorNames =
       Collections.synchronizedSet(new HashSet<String>());
   public static Set<String> getEverLoadedCoprocessors() {
-      return coprocessorNames;
+      return everLoadedCoprocessorNames;
   }
 
   /**
@@ -133,11 +136,21 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         LOG.info("System coprocessor " + className + " was loaded " +
             "successfully with priority (" + priority++ + ").");
       } catch (Throwable t) {
-        // We always abort if system coprocessors cannot be loaded
-       //TODO: check if we want to not start regionserver here.. but probably not
+        LOG.error("Coprocessor " + className + "could not be loaded", t);
       }
     }
     coprocessors.addAll(configured);
+  }
+
+  /**
+   * Generally used when we do online configuration change for the loaded coprocessors
+   * @param conf
+   * @param confKey
+   */
+  protected void reloadSysCoprocessorsOnConfigChange(Configuration conf, String confKey) {
+    //remove whatever is loaded already
+    coprocessors.clear();
+    loadSystemCoprocessors(conf, confKey);
   }
 
   /**
@@ -221,7 +234,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     }
     // HBASE-4014: maintain list of loaded coprocessors for later crash analysis
     // if server (master or regionserver) aborts.
-    coprocessorNames.add(implClass.getName());
+    everLoadedCoprocessorNames.add(implClass.getName());
     return env;
   }
 
@@ -491,6 +504,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     public void close() throws Exception {
       Thread.currentThread().setContextClassLoader(currentLoader);
     }
-
   }
+
 }

@@ -547,10 +547,10 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
     this.waitOnMemstoreBlock =
         conf.getBoolean(HConstants.HREGION_MEMSTORE_WAIT_ON_BLOCK, true);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
-    // initialize dynamic parameters with current configuration
-    this.loadDynamicConf(conf);
     this.coprocessorHost = new RegionCoprocessorHost(this,
         this.conf);
+    // initialize dynamic parameters with current configuration
+    this.loadDynamicConf(conf);
   }
 
   @Override
@@ -574,6 +574,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
     logIfChange("columnfamilyMemstoreFlushSize",
         this.columnfamilyMemstoreFlushSize, newColumnfamilyMemstoreFlushSize);
     this.columnfamilyMemstoreFlushSize = newColumnfamilyMemstoreFlushSize;
+    this.coprocessorHost.reloadCoprocessors(conf);
   }
 
   /**
@@ -4188,5 +4189,9 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
       res = Math.max(res, hstore.getStorefilesCount());
     }
     return res;
+  }
+
+  public RegionCoprocessorHost getCoprocessorHost() {
+    return coprocessorHost;
   }
 }

@@ -39,9 +39,8 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
  * Implements the coprocessor environment and runtime support for coprocessors
  * loaded within a {@link HRegion}.
  */
-public class RegionCoprocessorHost
-    extends CoprocessorHost<RegionCoprocessorHost.RegionEnvironment> {
-
+public class RegionCoprocessorHost extends
+    CoprocessorHost<RegionCoprocessorHost.RegionEnvironment> {
   private static final Log LOG = LogFactory.getLog(RegionCoprocessorHost.class);
   // The shared data map
   private static ReferenceMap sharedDataMap = new ReferenceMap(
@@ -69,6 +68,20 @@ public class RegionCoprocessorHost
     if (!region.getRegionInfo().getTableDesc().isMetaTable()
         && !region.getRegionInfo().getTableDesc().isRootRegion()) {
       loadSystemCoprocessors(conf, USER_REGION_COPROCESSOR_CONF_KEY);
+    }
+  }
+
+  /**
+   * Used mainly when we dynamically reload the configuration
+   */
+  public void reloadCoprocessors(Configuration newConf) {
+    // reload system default cp's from configuration.
+    reloadSysCoprocessorsOnConfigChange(newConf, REGION_COPROCESSOR_CONF_KEY);
+    // reload system default cp's for user tables from configuration.
+    //TODO: check whether this checks for ROOT too
+    if (!region.getRegionInfo().getTableDesc().isMetaRegion()
+        && !region.getRegionInfo().getTableDesc().isRootRegion()) {
+      reloadSysCoprocessorsOnConfigChange(newConf, USER_REGION_COPROCESSOR_CONF_KEY);
     }
   }
 

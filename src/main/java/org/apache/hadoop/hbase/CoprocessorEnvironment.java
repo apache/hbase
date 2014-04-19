@@ -15,17 +15,11 @@
 
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-import java.util.concurrent.ExecutorService;
-
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HTableInterface;
 
 /**
  * Coprocessor environment state.
  */
-@InterfaceAudience.Private
 public interface CoprocessorEnvironment {
 
   /** @return the Coprocessor interface version */
