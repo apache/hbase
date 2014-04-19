@@ -932,7 +932,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @see #startMiniCluster()
    */
   public MiniHBaseCluster getMiniHBaseCluster() {
-    if (this.hbaseCluster instanceof MiniHBaseCluster) {
+    if (this.hbaseCluster == null || this.hbaseCluster instanceof MiniHBaseCluster) {
       return (MiniHBaseCluster)this.hbaseCluster;
     }
     throw new RuntimeException(hbaseCluster + " not an instance of " +
