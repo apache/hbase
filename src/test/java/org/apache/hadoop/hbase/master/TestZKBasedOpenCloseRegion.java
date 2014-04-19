@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -213,40 +214,6 @@ public class TestZKBasedOpenCloseRegion {
     }
   }
 
-  public static class CloseRegionEventListener implements EventHandlerListener {
-    private static final Log LOG = LogFactory.getLog(CloseRegionEventListener.class);
-    String regionToClose;
-    AtomicBoolean closeEventProcessed;
-
-    public CloseRegionEventListener(String regionToClose,
-        AtomicBoolean closeEventProcessed) {
-      this.regionToClose = regionToClose;
-      this.closeEventProcessed = closeEventProcessed;
-    }
-
-    @Override
-    public void afterProcess(EventHandler event) {
-      LOG.info("afterProcess(" + event + ")");
-      if(event.getEventType() == EventType.RS_ZK_REGION_CLOSED) {
-        LOG.info("Finished processing CLOSE REGION");
-        TotesHRegionInfo hriCarrier = (TotesHRegionInfo)event;
-        if (regionToClose.equals(hriCarrier.getHRegionInfo().getRegionNameAsString())) {
-          LOG.info("Setting closeEventProcessed flag");
-          closeEventProcessed.set(true);
-        } else {
-          LOG.info("Region to close didn't match");
-        }
-      }
-    }
-
-    @Override
-    public void beforeProcess(EventHandler event) {
-      if(event.getEventType() == EventType.M_RS_CLOSE_REGION) {
-        LOG.info("Received CLOSE RPC and beginning to process it");
-      }
-    }
-  }
-
   /**
    * This test shows how a region won't be able to be assigned to a RS
    * if it's already "processing" it.
@@ -306,31 +273,6 @@ public class TestZKBasedOpenCloseRegion {
     // make sure the region has moved from the original RS
     assertTrue(hr1.getOnlineRegion(hri.getEncodedNameAsBytes()) == null);
 
-  }
-
-  @Test (timeout=300000) public void testCloseRegion()
-  throws Exception {
-    LOG.info("Running testCloseRegion");
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    LOG.info("Number of region servers = " + cluster.getLiveRegionServerThreads().size());
-
-    int rsIdx = 0;
-    HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
-    HRegionInfo hri = getNonMetaRegion(regionServer.getOnlineRegions());
-    LOG.debug("Asking RS to close region " + hri.getRegionNameAsString());
-
-    AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
-    EventHandlerListener listener =
-      new CloseRegionEventListener(hri.getRegionNameAsString(),
-          closeEventProcessed);
-    cluster.getMaster().executorService.registerListener(EventType.RS_ZK_REGION_CLOSED, listener);
-
-    cluster.getMaster().assignmentManager.unassign(hri);
-
-    while (!closeEventProcessed.get()) {
-      Threads.sleep(100);
-    }
-    LOG.info("Done with testCloseRegion");
   }
 
   /**
@@ -410,7 +352,7 @@ public class TestZKBasedOpenCloseRegion {
       // If start key, add 'aaa'.
       byte [] row = getStartKey(hri);
       Put p = new Put(row);
-      p.setWriteToWAL(false);
+      p.setDurability(Durability.SKIP_WAL);
       p.add(getTestFamily(), getTestQualifier(), row);
       t.put(p);
       rows++;
@@ -433,16 +375,6 @@ public class TestZKBasedOpenCloseRegion {
 
   private static byte [] getTestQualifier() {
     return getTestFamily();
-  }
-
-  public static void main(String args[]) throws Exception {
-    TestZKBasedOpenCloseRegion.beforeAllTests();
-
-    TestZKBasedOpenCloseRegion test = new TestZKBasedOpenCloseRegion();
-    test.setup();
-    test.testCloseRegion();
-
-    TestZKBasedOpenCloseRegion.afterAllTests();
   }
 
   @org.junit.Rule
