@@ -145,7 +145,7 @@ public class TestAccessController {
       Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
-    TEST_UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME, 5000);
+    TEST_UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME, 30000);
 
     // create a set of test users
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });

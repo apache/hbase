@@ -70,7 +70,7 @@ public class TestAccessControlFilter {
     conf.set("hbase.superuser", conf.get("hbase.superuser", "") +
         String.format(",%s.hfs.0,%s.hfs.1,%s.hfs.2", baseuser, baseuser, baseuser));
     TEST_UTIL.startMiniCluster();
-    TEST_UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME, 5000);
+    TEST_UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME, 30000);
 
     ADMIN = User.createUserForTesting(conf, "admin", new String[]{"supergroup"});
     READER = User.createUserForTesting(conf, "reader", new String[0]);
