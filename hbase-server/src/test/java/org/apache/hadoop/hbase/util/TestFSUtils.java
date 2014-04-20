@@ -232,12 +232,23 @@ public class TestFSUtils {
   public void testPermMask() throws Exception {
 
     Configuration conf = HBaseConfiguration.create();
-    conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
     FileSystem fs = FileSystem.get(conf);
-    // first check that we don't crash if we don't have perms set
-    FsPermission defaultPerms = FSUtils.getFilePermissions(fs, conf,
+
+    // default fs permission
+    FsPermission defaultFsPerm = FSUtils.getFilePermissions(fs, conf,
         HConstants.DATA_FILE_UMASK_KEY);
-    assertEquals(FsPermission.getDefault(), defaultPerms);
+    // 'hbase.data.umask.enable' is false. We will get default fs permission.
+    assertEquals(FsPermission.getFileDefault(), defaultFsPerm);
+
+    conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
+    // first check that we don't crash if we don't have perms set
+    FsPermission defaultStartPerm = FSUtils.getFilePermissions(fs, conf,
+        HConstants.DATA_FILE_UMASK_KEY);
+    // default 'hbase.data.umask'is 000, and this umask will be used when
+    // 'hbase.data.umask.enable' is true.
+    // Therefore we will not get the real fs default in this case.
+    // Instead we will get the starting point FULL_RWX_PERMISSIONS
+    assertEquals(new FsPermission(FSUtils.FULL_RWX_PERMISSIONS), defaultStartPerm);
 
     conf.setStrings(HConstants.DATA_FILE_UMASK_KEY, "077");
     // now check that we get the right perms
