@@ -70,28 +70,30 @@ public class TestForceCacheImportantBlocks {
   /** Extremely small block size, so that we can get some index blocks */
   private static final int BLOCK_SIZE = 256;
   
-  private static final Algorithm COMPRESSION_ALGORITHM =
-      Compression.Algorithm.GZ;
   private static final BloomType BLOOM_TYPE = BloomType.ROW;
 
   private final int hfileVersion;
   private final boolean cfCacheEnabled;
+  private final Algorithm compressionAlgorithm;
 
   @Parameters
   public static Collection<Object[]> parameters() {
     // HFile versions
     return Arrays.asList(new Object[][] {
-        new Object[] { new Integer(1), false },
-        new Object[] { new Integer(1), true },
-        new Object[] { new Integer(2), false },
-        new Object[] { new Integer(2), true }
+        new Object[] { new Integer(1), false, Compression.Algorithm.NONE },
+        new Object[] { new Integer(1), true, Compression.Algorithm.NONE },
+        new Object[] { new Integer(2), false, Compression.Algorithm.NONE },
+        new Object[] { new Integer(2), true, Compression.Algorithm.NONE },
+        new Object[] { new Integer(2), false, Compression.Algorithm.GZ },
+        new Object[] { new Integer(2), true, Compression.Algorithm.GZ }
     });
   }
 
   public TestForceCacheImportantBlocks(int hfileVersion,
-      boolean cfCacheEnabled) {
+      boolean cfCacheEnabled, Algorithm compression) {
     this.hfileVersion = hfileVersion;
     this.cfCacheEnabled = cfCacheEnabled;
+    this.compressionAlgorithm = compression;
     TEST_UTIL.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY,
         hfileVersion);
   }
@@ -106,7 +108,7 @@ public class TestForceCacheImportantBlocks {
     HColumnDescriptor hcd =
         new HColumnDescriptor(Bytes.toBytes(CF))
             .setMaxVersions(MAX_VERSIONS)
-            .setCompressionType(COMPRESSION_ALGORITHM)
+            .setCompressionType(compressionAlgorithm)
             .setBloomFilterType(BLOOM_TYPE);
     hcd.setBlocksize(BLOCK_SIZE);
     hcd.setBlockCacheEnabled(cfCacheEnabled);
