@@ -90,7 +90,7 @@ public abstract class FSUtils {
   private static final Log LOG = LogFactory.getLog(FSUtils.class);
 
   /** Full access permissions (starting point for a umask) */
-  public static final String FULL_RWX_PERMISSIONS = "777";
+  private static final String FULL_RWX_PERMISSIONS = "777";
   private static final String THREAD_POOLSIZE = "hbase.client.localityCheck.threadPoolSize";
   private static final int DEFAULT_THREAD_POOLSIZE = 2;
 
@@ -293,7 +293,7 @@ public abstract class FSUtils {
               .getDeclaredMethod("create", Path.class, FsPermission.class,
                   boolean.class, int.class, short.class, long.class,
                   Progressable.class, InetSocketAddress[].class)
-                  .invoke(backingFs, path, perm, true,
+                  .invoke(backingFs, path, FsPermission.getDefault(), true,
                       getDefaultBufferSize(backingFs),
                       getDefaultReplication(backingFs, path),
                       getDefaultBlockSize(backingFs, path),
@@ -366,7 +366,7 @@ public abstract class FSUtils {
         // make sure that we have a mask, if not, go default.
         String mask = conf.get(permssionConfKey);
         if (mask == null)
-          return FsPermission.getFileDefault();
+          return FsPermission.getDefault();
         // appy the umask
         FsPermission umask = new FsPermission(mask);
         return perm.applyUMask(umask);
@@ -375,10 +375,10 @@ public abstract class FSUtils {
             "Incorrect umask attempted to be created: "
                 + conf.get(permssionConfKey)
                 + ", using default file permissions.", e);
-        return FsPermission.getFileDefault();
+        return FsPermission.getDefault();
       }
     }
-    return FsPermission.getFileDefault();
+    return FsPermission.getDefault();
   }
 
   /**
