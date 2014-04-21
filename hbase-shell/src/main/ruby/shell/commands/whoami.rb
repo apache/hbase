@@ -30,7 +30,12 @@ EOF
       end
 
       def command()
-        puts "#{org.apache.hadoop.hbase.security.User.getCurrent().toString()}"
+        user = org.apache.hadoop.hbase.security.User.getCurrent()
+        puts "#{user.toString()}"
+        groups = user.getGroupNames().to_a
+        if not groups.nil? and groups.length > 0
+          puts "    groups: #{groups.join(', ')}"
+        end
       end
     end
   end
