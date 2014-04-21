@@ -344,7 +344,7 @@ public class StoreFileInfo {
       throws IOException {
     final Path p = fileStatus.getPath();
 
-    if (fileStatus.isDir())
+    if (fileStatus.isDirectory())
       return false;
 
     // Check for empty hfile. Should never be the case but can happen

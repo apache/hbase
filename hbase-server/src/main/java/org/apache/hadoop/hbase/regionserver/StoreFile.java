@@ -632,7 +632,7 @@ public class StoreFile {
    */
   public static Path getUniqueFile(final FileSystem fs, final Path dir)
       throws IOException {
-    if (!fs.getFileStatus(dir).isDir()) {
+    if (!fs.getFileStatus(dir).isDirectory()) {
       throw new IOException("Expecting " + dir.toString() +
         " to be a directory");
     }

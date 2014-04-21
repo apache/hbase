@@ -3858,7 +3858,7 @@ public class TestHRegion {
         fs.exists(regionInfoFile));
 
     // Remove the .regioninfo file and verify is recreated on region open
-    fs.delete(regionInfoFile);
+    fs.delete(regionInfoFile, true);
     assertFalse(HRegionFileSystem.REGION_INFO_FILE + " should be removed from the region dir",
         fs.exists(regionInfoFile));
 

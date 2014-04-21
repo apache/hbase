@@ -274,7 +274,7 @@ public class TestExportSnapshot {
     assertEquals(filesExpected, rootFiles.length);
     for (FileStatus fileStatus: rootFiles) {
       String name = fileStatus.getPath().getName();
-      assertTrue(fileStatus.isDir());
+      assertTrue(fileStatus.isDirectory());
       assertTrue(name.equals(HConstants.SNAPSHOT_DIR_NAME) ||
                  name.equals(HConstants.HFILE_ARCHIVE_DIRECTORY));
     }
@@ -381,7 +381,7 @@ public class TestExportSnapshot {
     if (list != null) {
       for (FileStatus fstat: list) {
         LOG.debug(fstat.getPath());
-        if (fstat.isDir()) {
+        if (fstat.isDirectory()) {
           files.addAll(listFiles(fs, root, fstat.getPath()));
         } else {
           files.add(fstat.getPath().toString().substring(rootPrefix));

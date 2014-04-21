@@ -144,7 +144,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     List<FileStatus> files = Lists.newArrayListWithCapacity(entries.length);
     for (FileStatus child : entries) {
       Path path = child.getPath();
-      if (child.isDir()) {
+      if (child.isDirectory()) {
         // for each subdirectory delete it and all entries if possible
         if (!checkAndDeleteDirectory(path)) {
           allEntriesDeleted = false;

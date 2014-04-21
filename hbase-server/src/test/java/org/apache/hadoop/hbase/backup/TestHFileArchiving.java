@@ -422,7 +422,7 @@ public class TestHFileArchiving {
     if (files == null || files.length == 0) return fileNames;
 
     for (FileStatus file : files) {
-      if (file.isDir()) {
+      if (file.isDirectory()) {
         recurseOnFiles(fs, FSUtils.listStatus(fs, file.getPath(), null), fileNames);
       } else fileNames.add(file.getPath().getName());
     }

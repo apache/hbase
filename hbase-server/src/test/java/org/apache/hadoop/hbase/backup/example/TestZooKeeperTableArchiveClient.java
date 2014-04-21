@@ -362,7 +362,7 @@ public class TestZooKeeperTableArchiveClient {
 
     List<Path> allFiles = new ArrayList<Path>();
     for (FileStatus file : files) {
-      if (file.isDir()) {
+      if (file.isDirectory()) {
         List<Path> subFiles = getAllFiles(fs, file.getPath());
         if (subFiles != null) allFiles.addAll(subFiles);
         continue;

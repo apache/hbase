@@ -237,7 +237,7 @@ public class HLogInputFormat extends InputFormat<HLogKey, WALEdit> {
     FileStatus[] files = fs.listStatus(dir);
     if (files == null) return Collections.emptyList();
     for (FileStatus file : files) {
-      if (file.isDir()) {
+      if (file.isDirectory()) {
         // recurse into sub directories
         result.addAll(getFiles(fs, file.getPath(), startTime, endTime));
       } else {

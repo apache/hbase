@@ -84,7 +84,7 @@ public class TestFSVisitor {
 
   @After
   public void tearDown() throws Exception {
-    fs.delete(rootDir);
+    fs.delete(rootDir, true);
   }
 
   @Test

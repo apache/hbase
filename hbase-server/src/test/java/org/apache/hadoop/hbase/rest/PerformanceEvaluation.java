@@ -338,7 +338,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       List<InputSplit> splitList = new ArrayList<InputSplit>();
 
       for (FileStatus file: listStatus(job)) {
-        if (file.isDir()) {
+        if (file.isDirectory()) {
           continue;
         }
         Path path = file.getPath();

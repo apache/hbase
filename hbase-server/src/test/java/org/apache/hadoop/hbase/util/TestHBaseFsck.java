@@ -1717,7 +1717,7 @@ public class TestHBaseFsck {
         continue;
       }
       for (FileStatus hfs : hfFss) {
-        if (!hfs.isDir()) {
+        if (!hfs.isDirectory()) {
           return hfs.getPath();
         }
       }

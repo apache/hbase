@@ -86,7 +86,7 @@ class FSRegionScanner implements Runnable {
 
       // for each cf, get all the blocks information
       for (FileStatus cfStatus : cfList) {
-        if (!cfStatus.isDir()) {
+        if (!cfStatus.isDirectory()) {
           // skip because this is not a CF directory
           continue;
         }

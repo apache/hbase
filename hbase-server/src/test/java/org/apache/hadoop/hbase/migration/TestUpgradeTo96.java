@@ -174,7 +174,7 @@ public class TestUpgradeTo96 {
     }
     FileStatus[] cfs = fs.listStatus(targetRegion);
     for (FileStatus f : cfs) {
-      if (f.isDir()) {
+      if (f.isDirectory()) {
         columnFamilyDir = f.getPath();
         break;
       }

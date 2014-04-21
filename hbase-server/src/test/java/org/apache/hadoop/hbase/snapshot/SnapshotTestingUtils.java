@@ -419,7 +419,7 @@ public class SnapshotTestingUtils {
           throws IOException {
         HFileLink link = HFileLink.create(util.getConfiguration(), table, region, family, hfile);
         if (corruptedFiles.size() % 2 == 0) {
-          fs.delete(link.getAvailablePath(fs));
+          fs.delete(link.getAvailablePath(fs), true);
           corruptedFiles.add(hfile);
         }
       }

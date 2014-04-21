@@ -51,7 +51,7 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
   public boolean isFileDeletable(FileStatus fStat) {
     try {
       // if its a directory, then it can be deleted
-      if (fStat.isDir()) return true;
+      if (fStat.isDirectory()) return true;
       
       Path file = fStat.getPath();
       // check to see if

@@ -145,7 +145,7 @@ public final class ExportSnapshot extends Configured implements Tool {
       }
 
       // Use the default block size of the outputFs if bigger
-      int defaultBlockSize = Math.max((int) outputFs.getDefaultBlockSize(), BUFFER_SIZE);
+      int defaultBlockSize = Math.max((int) outputFs.getDefaultBlockSize(outputRoot), BUFFER_SIZE);
       bufferSize = conf.getInt(CONF_BUFFER_SIZE, defaultBlockSize);
       LOG.info("Using bufferSize=" + StringUtils.humanReadableInt(bufferSize));
     }

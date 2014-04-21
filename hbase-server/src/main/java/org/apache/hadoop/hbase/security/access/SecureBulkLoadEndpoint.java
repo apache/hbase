@@ -382,7 +382,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
      */
     private boolean isFile(Path p) throws IOException {
       FileStatus status = srcFs.getFileStatus(p);
-      boolean isFile = !status.isDir();
+      boolean isFile = !status.isDirectory();
       try {
         isFile = isFile && !(Boolean)Methods.call(FileStatus.class, status, "isSymlink", null, null);
       } catch (Exception e) {

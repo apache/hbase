@@ -879,7 +879,7 @@ public class HFile {
     for(FileStatus dir : familyDirs) {
       FileStatus[] files = fs.listStatus(dir.getPath());
       for (FileStatus file : files) {
-        if (!file.isDir()) {
+        if (!file.isDirectory()) {
           res.add(file.getPath());
         }
       }

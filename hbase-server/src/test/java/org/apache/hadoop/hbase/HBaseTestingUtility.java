@@ -1972,7 +1972,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     Path tableDir = new Path(getDefaultRootDirPath().toString()
         + System.getProperty("file.separator") + htd.getTableName()
         + System.getProperty("file.separator") + regionToDeleteInFS);
-    FileSystem.get(c).delete(tableDir);
+    FileSystem.get(c).delete(tableDir, true);
     // flush cache of regions
     HConnection conn = table.getConnection();
     conn.clearRegionCache();

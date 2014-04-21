@@ -204,7 +204,7 @@ public abstract class FSUtils {
       m = null; // could happen on setAccessible()
     }
     if (m == null) {
-      return fs.getDefaultBlockSize();
+      return fs.getDefaultBlockSize(path);
     } else {
       try {
         Object ret = m.invoke(fs, path);
@@ -238,7 +238,7 @@ public abstract class FSUtils {
       m = null; // could happen on setAccessible()
     }
     if (m == null) {
-      return fs.getDefaultReplication();
+      return fs.getDefaultReplication(path);
     } else {
       try {
         Object ret = m.invoke(fs, path);
@@ -1220,7 +1220,7 @@ public abstract class FSUtils {
         if (blacklist.contains(p.getName().toString())) {
           isValid = false;
         } else {
-          isValid = fs.getFileStatus(p).isDir();
+          isValid = fs.getFileStatus(p).isDirectory();
         }
       } catch (IOException e) {
         LOG.warn("An error occurred while verifying if [" + p.toString()
@@ -1364,7 +1364,7 @@ public abstract class FSUtils {
       }
 
       try {
-        return fs.getFileStatus(rd).isDir();
+        return fs.getFileStatus(rd).isDirectory();
       } catch (IOException ioe) {
         // Maybe the file was moved or the fs was disconnected.
         LOG.warn("Skipping file " + rd +" due to IOException", ioe);
@@ -1414,7 +1414,7 @@ public abstract class FSUtils {
       }
 
       try {
-        return fs.getFileStatus(rd).isDir();
+        return fs.getFileStatus(rd).isDirectory();
       } catch (IOException ioe) {
         // Maybe the file was moved or the fs was disconnected.
         LOG.warn("Skipping file " + rd +" due to IOException", ioe);
@@ -1463,7 +1463,7 @@ public abstract class FSUtils {
 
       try {
         // only files
-        return !fs.getFileStatus(rd).isDir();
+        return !fs.getFileStatus(rd).isDirectory();
       } catch (IOException ioe) {
         // Maybe the file was moved or the fs was disconnected.
         LOG.warn("Skipping file " + rd +" due to IOException", ioe);
@@ -1686,7 +1686,7 @@ public abstract class FSUtils {
     if (files == null) return;
 
     for (FileStatus file : files) {
-      if (file.isDir()) {
+      if (file.isDirectory()) {
         LOG.debug(prefix + file.getPath().getName() + "/");
         logFSTree(LOG, fs, file.getPath(), prefix + "---");
       } else {
@@ -1836,7 +1836,7 @@ public abstract class FSUtils {
           continue;
         }
 
-        if (!regionStatus.isDir()) {
+        if (!regionStatus.isDirectory()) {
           continue;
         }
 

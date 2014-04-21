@@ -120,11 +120,11 @@ public class TestTableDeleteFamilyHandler {
     // 4 - Check if all the 3 column families exist in FS
     FileStatus[] fileStatus = fs.listStatus(tableDir);
     for (int i = 0; i < fileStatus.length; i++) {
-      if (fileStatus[i].isDir() == true) {
+      if (fileStatus[i].isDirectory() == true) {
         FileStatus[] cf = fs.listStatus(fileStatus[i].getPath());
         int k = 1;
         for (int j = 0; j < cf.length; j++) {
-          if (cf[j].isDir() == true
+          if (cf[j].isDirectory() == true
               && cf[j].getPath().getName().startsWith(".") == false) {
             assertEquals(cf[j].getPath().getName(), "cf" + k);
             k++;
@@ -147,10 +147,10 @@ public class TestTableDeleteFamilyHandler {
     // 6 - Check if the second column family is gone from the FS
     fileStatus = fs.listStatus(tableDir);
     for (int i = 0; i < fileStatus.length; i++) {
-      if (fileStatus[i].isDir() == true) {
+      if (fileStatus[i].isDirectory() == true) {
         FileStatus[] cf = fs.listStatus(fileStatus[i].getPath());
         for (int j = 0; j < cf.length; j++) {
-          if (cf[j].isDir() == true) {
+          if (cf[j].isDirectory() == true) {
             assertFalse(cf[j].getPath().getName().equals("cf2"));
           }
         }

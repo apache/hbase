@@ -1613,7 +1613,7 @@ class FSHLog implements HLog, Syncable {
     if (!fs.exists(p)) {
       throw new FileNotFoundException(p.toString());
     }
-    if (!fs.getFileStatus(p).isDir()) {
+    if (!fs.getFileStatus(p).isDirectory()) {
       throw new IOException(p + " is not a directory");
     }
 

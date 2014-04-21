@@ -181,7 +181,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
 
     for (FileStatus stat : familyDirStatuses) {
-      if (!stat.isDir()) {
+      if (!stat.isDirectory()) {
         LOG.warn("Skipping non-directory " + stat.getPath());
         continue;
       }
@@ -823,7 +823,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     TreeMap<byte[], Integer> map = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
 
     for (FileStatus stat : familyDirStatuses) {
-      if (!stat.isDir()) {
+      if (!stat.isDirectory()) {
         LOG.warn("Skipping non-directory " + stat.getPath());
         continue;
       }

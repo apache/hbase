@@ -323,8 +323,9 @@ public class TestLogRolling  {
   public void testLogRollOnDatanodeDeath() throws Exception {
     TEST_UTIL.ensureSomeRegionServersAvailable(2);
     assertTrue("This test requires HLog file replication set to 2.",
-      fs.getDefaultReplication() == 2);
-    LOG.info("Replication=" + fs.getDefaultReplication());
+      fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) == 2);
+    LOG.info("Replication=" + 
+      fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
 
     this.server = cluster.getRegionServer(0);
     this.log = server.getWAL();
@@ -362,8 +363,10 @@ public class TestLogRolling  {
     }
 
     assertTrue("DataNodes " + dfsCluster.getDataNodes().size() +
-        " default replication " + fs.getDefaultReplication(),
-    dfsCluster.getDataNodes().size() >= fs.getDefaultReplication() + 1);
+        " default replication " + 
+        fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()),
+    dfsCluster.getDataNodes().size() >= 
+      fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) + 1);
 
     writeData(table, 2);
 
@@ -375,7 +378,8 @@ public class TestLogRolling  {
     assertTrue("The log shouldn't have rolled yet",
       oldFilenum == ((FSHLog) log).getFilenum());
     final DatanodeInfo[] pipeline = getPipeline(log);
-    assertTrue(pipeline.length == fs.getDefaultReplication());
+    assertTrue(pipeline.length == 
+        fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
 
     // kill a datanode in the pipeline to force a log roll on the next sync()
     // This function is synchronous, when it returns the node is killed.
@@ -410,7 +414,8 @@ public class TestLogRolling  {
     batchWriteAndWait(table, 13, true, 10000);
     assertTrue("New log file should have the default replication instead of " +
       ((FSHLog) log).getLogReplication(),
-      ((FSHLog) log).getLogReplication() == fs.getDefaultReplication());
+      ((FSHLog) log).getLogReplication() == 
+        fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
     assertTrue("LowReplication Roller should've been enabled",
         log.isLowReplicationRollEnabled());
   }
@@ -424,8 +429,9 @@ public class TestLogRolling  {
   public void testLogRollOnPipelineRestart() throws Exception {
     LOG.info("Starting testLogRollOnPipelineRestart");
     assertTrue("This test requires HLog file replication.",
-      fs.getDefaultReplication() > 1);
-    LOG.info("Replication=" + fs.getDefaultReplication());
+      fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) > 1);
+    LOG.info("Replication=" + 
+      fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
     // When the hbase:meta table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
 

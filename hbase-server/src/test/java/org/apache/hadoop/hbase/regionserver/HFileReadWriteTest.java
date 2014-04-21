@@ -295,14 +295,14 @@ public class HFileReadWriteTest {
         return false;
       }
 
-      if (fs.getFileStatus(path).isDir()) {
+      if (fs.getFileStatus(path).isDirectory()) {
         LOG.error(inputFileName + " is a directory");
         return false;
       }
     }
 
     if (outputDir != null &&
-        (!fs.exists(outputDir) || !fs.getFileStatus(outputDir).isDir())) {
+        (!fs.exists(outputDir) || !fs.getFileStatus(outputDir).isDirectory())) {
       LOG.error(outputDir.toString() + " does not exist or is not a " +
           "directory");
       return false;

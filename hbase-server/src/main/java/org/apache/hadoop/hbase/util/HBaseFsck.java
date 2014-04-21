@@ -4109,7 +4109,7 @@ public class HBaseFsck extends Configured {
       return;
     }
 
-    if (fs.getFileStatus(p).isDir()) {
+    if (fs.getFileStatus(p).isDirectory()) {
       FileStatus[] fss= fs.listStatus(p);
       for (FileStatus status : fss) {
         debugLsr(conf, status.getPath(), errors);

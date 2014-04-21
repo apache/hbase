@@ -128,8 +128,8 @@ public class TestFileLink {
       assertEquals(256 << 20, size);
     } finally {
       in.close();
-      if (fs.exists(originalPath)) fs.delete(originalPath);
-      if (fs.exists(archivedPath)) fs.delete(archivedPath);
+      if (fs.exists(originalPath)) fs.delete(originalPath, true);
+      if (fs.exists(archivedPath)) fs.delete(archivedPath, true);
     }
   }
 
@@ -173,19 +173,19 @@ public class TestFileLink {
         // Switch to file 1
         n = in.read(data);
         dataVerify(data, n, (byte)0);
-        fs.delete(files.get(0));
+        fs.delete(files.get(0), true);
         skipBuffer(in, (byte)0);
 
         // Switch to file 2
         n = in.read(data);
         dataVerify(data, n, (byte)1);
-        fs.delete(files.get(1));
+        fs.delete(files.get(1), true);
         skipBuffer(in, (byte)1);
 
         // Switch to file 3
         n = in.read(data);
         dataVerify(data, n, (byte)2);
-        fs.delete(files.get(2));
+        fs.delete(files.get(2), true);
         skipBuffer(in, (byte)2);
 
         // No more files available

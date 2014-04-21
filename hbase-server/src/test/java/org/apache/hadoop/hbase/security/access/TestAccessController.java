@@ -900,7 +900,7 @@ public class TestAccessController extends SecureTestUtil {
     }
 
     public void setPermission(Path dir, FsPermission perm) throws IOException {
-      if(!fs.getFileStatus(dir).isDir()) {
+      if(!fs.getFileStatus(dir).isDirectory()) {
         fs.setPermission(dir,perm);
       }
       else {

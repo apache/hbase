@@ -185,7 +185,7 @@ public class DynamicClassLoader extends ClassLoaderBase {
     }
 
     for (FileStatus status: statuses) {
-      if (status.isDir()) continue; // No recursive lookup
+      if (status.isDirectory()) continue; // No recursive lookup
       Path path = status.getPath();
       String fileName = path.getName();
       if (!fileName.endsWith(".jar")) {

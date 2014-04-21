@@ -408,7 +408,7 @@ public class CompactionTool extends Configured implements Tool {
         } else if (!opt.startsWith("-")) {
           Path path = new Path(opt);
           FileStatus status = fs.getFileStatus(path);
-          if (!status.isDir()) {
+          if (!status.isDirectory()) {
             printUsage("Specified path is not a directory. path=" + path);
             return 1;
           }

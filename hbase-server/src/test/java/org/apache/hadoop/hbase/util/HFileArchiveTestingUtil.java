@@ -158,7 +158,7 @@ public class HFileArchiveTestingUtil {
         Path parent = f.getPath().getParent();
         String shortName = name.split("[.]")[0];
         Path modPath = new Path(parent, shortName);
-        FileStatus file = new FileStatus(f.getLen(), f.isDir(), f.getReplication(),
+        FileStatus file = new FileStatus(f.getLen(), f.isDirectory(), f.getReplication(),
             f.getBlockSize(), f.getModificationTime(), modPath);
         backedupFiles.add(file);
       } else {
