@@ -1,4 +1,44 @@
 HBase Change Log
+Release 0.94.19 - 04/21/2014
+Bug
+
+    [HBASE-10118] - Major compact keeps deletes with future timestamps
+    [HBASE-10312] - Flooding the cluster with administrative actions leads to collapse
+    [HBASE-10533] - commands.rb is giving wrong error messages on exceptions
+    [HBASE-10766] - SnapshotCleaner allows to delete referenced files
+    [HBASE-10805] - Speed up KeyValueHeap.next() a bit
+    [HBASE-10807] - -ROOT- still stale in table.jsp if it moved
+    [HBASE-10845] - Memstore snapshot size isn't updated in DefaultMemStore#rollback()
+    [HBASE-10847] - 0.94: drop non-secure builds, make security the default
+    [HBASE-10848] - Filter SingleColumnValueFilter combined with NullComparator does not work
+    [HBASE-10966] - RowCounter misinterprets column names that have colons in their qualifier
+    [HBASE-10991] - Port HBASE-10639 'Unload script displays wrong counts (off by one) when unloading regions' to 0.94
+    [HBASE-11003] - ExportSnapshot is using the wrong fs when staging dir is not in fs.defaultFS
+    [HBASE-11030] - HBaseTestingUtility.getMiniHBaseCluster should be able to return null
+
+Task
+
+    [HBASE-10921] - Port HBASE-10323 'Auto detect data block encoding in HFileOutputFormat' to 0.94 / 0.96
+
+Test
+
+    [HBASE-10782] - Hadoop2 MR tests fail occasionally because of mapreduce.jobhistory.address is no set in job conf
+    [HBASE-10969] - TestDistributedLogSplitting fails frequently in 0.94.
+    [HBASE-10982] - TestZKProcedure.testMultiCohortWithMemberTimeoutDuringPrepare fails frequently in 0.94
+    [HBASE-10987] - Increase timeout in TestZKLeaderManager.testLeaderSelection
+    [HBASE-10988] - Properly wait for server in TestThriftServerCmdLine
+    [HBASE-10989] - TestAccessController needs better timeout
+    [HBASE-10996] - TestTableSnapshotInputFormatScan fails frequently on 0.94
+    [HBASE-11010] - TestChangingEncoding is unnecessarily slow
+    [HBASE-11017] - TestHRegionBusyWait.testWritesWhileScanning fails frequently in 0.94
+    [HBASE-11022] - Increase timeout for TestHBaseFsck.testSplitDaughtersNotInMeta
+    [HBASE-11024] - TestSecureLoadIncrementalHFilesSplitRecovery should wait longer for ACL table
+    [HBASE-11029] - Increase wait in TestSplitTransactionOnCluster.split
+    [HBASE-11037] - Race condition in TestZKBasedOpenCloseRegion
+    [HBASE-11040] - TestAccessController, TestAccessControllerFilter, and TestTablePermissions need to wait longer to ACL table
+    [HBASE-11042] - TestForceCacheImportantBlocks OOMs occasionally in 0.94
+
+
 Release 0.94.18 - 03/14/2014
 Bug
 
