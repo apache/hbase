@@ -342,16 +342,17 @@ public interface HLog {
 
   void hflush() throws IOException;
 
+  /**
+   * Sync what we have in the WAL.
+   * @throws IOException
+   */
   void sync() throws IOException;
 
   /**
+   * Sync the WAL if the txId was not already sync'd.
    * @param txid Transaction id to sync to.
    * @throws IOException
-   * @deprecated Since 0.96.2.  Just call {@link #sync()}.  <code>txid</code> should not be allowed
-   * outside the implementation.
    */
-  // TODO: Why is this exposed?  txid is an internal detail.
-  @Deprecated
   void sync(long txid) throws IOException;
 
   /**
