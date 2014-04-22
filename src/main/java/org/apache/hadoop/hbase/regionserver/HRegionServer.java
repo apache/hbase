@@ -2930,7 +2930,9 @@ public class HRegionServer implements HRegionInterface, HRegionServerIf,
 
   @Override
   public String getConfProperty(String name){
-      return conf.get(name);
+      String ret = conf.get(name);
+      if (ret == null) return "";
+      return ret;
   }
 
   //

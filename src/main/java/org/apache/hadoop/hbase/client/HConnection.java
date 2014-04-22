@@ -422,6 +422,7 @@ public interface HConnection extends Closeable {
    * through this connection without retries.
    * @param prop : the String configuration property we want
    * @return String encoding of the property value
+   * Empty string if non property non existent.
    * @throws IOException
    */
   public String getServerConfProperty(String prop) throws IOException;

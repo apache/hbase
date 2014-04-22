@@ -88,9 +88,9 @@ public class TestServerConfigFromClient {
     assertEquals("test1", "org.apache.hadoop.hbase.ipc.HRegionInterface", val1);
     String val2 = table.getServerConfProperty("clientconfquery");
     assertEquals("test2", "Hello World", val2);
-    // should return null for nonexistent properties
+    // should return empty string for nonexistent properties
     String val3 = table.getServerConfProperty("notaproperty");
-    assertEquals("test3", null, val3);
+    assertEquals("test3", "", val3);
   }
 
 }

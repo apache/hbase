@@ -749,6 +749,7 @@ public class HTable implements HTableInterface, IEndpointClient {
    *
    * @param name : The name of the property requested
    * @return String value of the property requested
+   * Empty string for non existent properties
    * @throws IOException
    */
   public String getServerConfProperty(final String name) throws IOException {
