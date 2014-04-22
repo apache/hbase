@@ -1191,19 +1191,11 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   @Override
   public byte[] callEndpoint(String epName, String methodName,
       ArrayList<byte[]> params, byte[] regionName, byte[] startRow,
-      byte[] stopRow) throws IOException {
+      byte[] stopRow) throws ThriftHBaseException {
     preProcess();
     try {
       return connection.callEndpoint(epName, methodName, params, regionName,
           startRow, stopRow);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
-    } catch (Exception e) {
-      refreshConnectionAndThrowIOException(e);
-      return null;
     } finally {
       postProcess();
     }

@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointService;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -51,23 +51,7 @@ import org.apache.hadoop.io.MapWritable;
  * number in HBaseRPCProtocolVersion
  */
 public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable,
-    Stoppable, ThriftClientInterface, IRegionScanService {
-
-  /**
-   * Calls an endpoint on an region server.
-   *
-   * TODO make regionName a list.
-   *
-   * @param epName      the endpoint name.
-   * @param methodName  the method name.
-   * @param regionName  the name of the region
-   * @param startRow    the start row, inclusive
-   * @param stopRow     the stop row, exclusive
-   * @return  the computed value.
-   */
-  public byte[] callEndpoint(String epName, String methodName,
-      ArrayList<byte[]> params, byte[] regionName, byte[] startRow,
-      byte[] stopRow) throws IOException;
+    Stoppable, ThriftClientInterface, IEndpointService, IRegionScanService {
 
   /**
    * Get metainfo about an HRegion

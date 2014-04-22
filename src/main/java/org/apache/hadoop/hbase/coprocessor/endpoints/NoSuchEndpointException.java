@@ -19,20 +19,15 @@
  */
 package org.apache.hadoop.hbase.coprocessor.endpoints;
 
-/**
- * The factory for generating IEndpoint instances.
- *
- * @param <T>
- *          The type of the endpoint interface
- */
-public interface IEndpointFactory<T extends IEndpoint> {
-  /**
-   * Creates a new instance of the endpoint instance.
-   */
-  T create();
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 
-  /**
-   * @return the class of the interface of this endpoint.
-   */
-  Class<T> getEndpointInterface();
+/**
+ * An exception thrown when trying to call an endpoint that does not exist.
+ */
+public class NoSuchEndpointException extends DoNotRetryIOException {
+  private static final long serialVersionUID = 1L;
+
+  public NoSuchEndpointException(String name) {
+    super("Endpoint " + name + " does not exist!");
+  }
 }

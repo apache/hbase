@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.ThriftClientInterface;
 import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
 import org.apache.hadoop.hbase.ipc.thrift.HBaseThriftRPC;
+import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOverloadedException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1513,6 +1514,10 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
       throw pfe;
     } catch (ClientSideDoNotRetryException exp) {
       throw exp;
+    } catch (ThriftHBaseException e) {
+      handleThrowable(e.getServerJavaException(), callable,
+          couldNotCommunicateWithServer);
+      return null;
     } catch (Throwable t1) {
       handleThrowable(t1, callable, couldNotCommunicateWithServer);
       return null;

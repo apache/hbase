@@ -19,37 +19,20 @@
  */
 package org.apache.hadoop.hbase.coprocessor.endpoints;
 
-import java.util.ArrayList;
-
-import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
-
-import com.facebook.swift.codec.ThriftField;
-import com.facebook.swift.service.ThriftException;
-import com.facebook.swift.service.ThriftMethod;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.regionserver.HRegionServerIf;
 
 /**
- * The interface of a server executing endpoints.
+ * The interface of an endpoint server.
  */
-public interface IEndpointServer {
+public interface IEndpointServer extends IEndpointService {
   /**
-   * Calls an endpoint on an region server.
-   *
-   * TODO make regionName/startRow/stopRow a list.
-   *
-   * @param epName the endpoint name.
-   * @param methodName the method name.
-   * @param regionName the name of the region
-   * @param startRow the start row, inclusive
-   * @param stopRow the stop row, exclusive
-   * @return the computed value.
+   * Initializes the endpoint server.
    */
-  @ThriftMethod(value = "callEndpoint", exception = {
-      @ThriftException(type = ThriftHBaseException.class, id = 1) })
-  public byte[] callEndpoint(@ThriftField(name = "epName") String epName,
-      @ThriftField(name = "methodName") String methodName,
-      @ThriftField(name = "params") ArrayList<byte[]> params,
-      @ThriftField(name = "regionName") byte[] regionName,
-      @ThriftField(name = "startRow") byte[] startRow,
-      @ThriftField(name = "stopRow") byte[] stopRow)
-      throws ThriftHBaseException;
+  void initialize(Configuration conf, HRegionServerIf server);
+
+  /**
+   * Reloads all the current endpoints with the configuration given.
+   */
+  void reload(Configuration conf);
 }

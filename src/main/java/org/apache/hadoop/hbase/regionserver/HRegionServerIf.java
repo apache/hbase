@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.SortedMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 
@@ -73,4 +74,12 @@ public interface HRegionServerIf extends HRegionInterface {
    *         first entry being the biggest.
    */
   SortedMap<Long, HRegion> getCopyOfOnlineRegionsSortedBySize();
+
+  /**
+   * Protected utility method for safely obtaining an HRegion handle.
+   * @param regionName Name of online {@link HRegion} to return
+   * @return {@link HRegion} for <code>regionName</code>
+   * @throws NotServingRegionException
+   */
+  HRegion getRegion(final byte[] regionName) throws NotServingRegionException;
 }

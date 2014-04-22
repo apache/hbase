@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.coprocessor.endpoints;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -49,23 +50,31 @@ public class TestEndpoint {
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.getConfiguration().set(HBaseTestingUtility.FS_TYPE_KEY,
-        HBaseTestingUtility.FS_TYPE_LFS);
+    Configuration conf = TEST_UTIL.getConfiguration();
+
+    conf.set(HBaseTestingUtility.FS_TYPE_KEY, HBaseTestingUtility.FS_TYPE_LFS);
+
+    conf.setStrings(EndpointLoader.FACTORY_CLASSES_KEY,
+        new String[] { SummerFactory.class.getName() });
 
     TEST_UTIL.startMiniCluster();
-    // Register an endpoint in the server side.
-    EndpointManager.get().register(ISummer.class,
-        new IEndpointFactory<ISummer>() {
-          @Override
-          public ISummer create() {
-            return new Summer();
-          }
-        });
   }
 
   @After
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  public static class SummerFactory implements IEndpointFactory<ISummer> {
+    @Override
+    public ISummer create() {
+      return new Summer();
+    }
+
+    @Override
+    public Class<ISummer> getEndpointInterface() {
+      return ISummer.class;
+    }
   }
 
   /**
@@ -111,7 +120,7 @@ public class TestEndpoint {
     }
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testSummer() throws Exception {
     // Create the table
     HTableInterface table = TEST_UTIL.createTable(TABLE_NAME, FAMILY_NAME);

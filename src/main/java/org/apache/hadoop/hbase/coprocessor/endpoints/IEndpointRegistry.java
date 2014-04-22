@@ -20,19 +20,20 @@
 package org.apache.hadoop.hbase.coprocessor.endpoints;
 
 /**
- * The factory for generating IEndpoint instances.
- *
- * @param <T>
- *          The type of the endpoint interface
+ * The interface containing method for endpoint register/unregistering.
  */
-public interface IEndpointFactory<T extends IEndpoint> {
+public interface IEndpointRegistry {
   /**
-   * Creates a new instance of the endpoint instance.
+   * Registers an endpoint with its factory
+   *
+   * @throws UnsupportedTypeException if one of the parameter's type is not
+   *           supported.
    */
-  T create();
+  public <T extends IEndpoint> void register(Class<T> iEndpoint,
+      IEndpointFactory<T> factory);
 
   /**
-   * @return the class of the interface of this endpoint.
+   * Removes all registered endpoints in the manager.
    */
-  Class<T> getEndpointInterface();
+  public void unregisterAll();
 }

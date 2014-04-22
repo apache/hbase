@@ -17,22 +17,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.coprocessor.endpoints;
+package org.apache.hadoop.hbase.util;
+
+import java.io.IOException;
 
 /**
- * The factory for generating IEndpoint instances.
- *
- * @param <T>
- *          The type of the endpoint interface
+ * Some utility methods for handling exception.
  */
-public interface IEndpointFactory<T extends IEndpoint> {
+public class ExceptionUtils {
   /**
-   * Creates a new instance of the endpoint instance.
+   * Throws an arbitrary exception to an IOException. Wrap the exception with
+   * an IOException if the exception cannot be thrown directly.
    */
-  T create();
+  public static void throwIOExcetion(Throwable t)
+      throws IOException {
+    if (t instanceof IOException) {
+      throw (IOException) t;
+    }
 
-  /**
-   * @return the class of the interface of this endpoint.
-   */
-  Class<T> getEndpointInterface();
+    if (t instanceof RuntimeException) {
+      throw (RuntimeException) t;
+    }
+
+    throw new IOException(t);
+  }
 }

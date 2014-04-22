@@ -35,22 +35,7 @@ import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointBytesCodec.IBytesDe
  * The manager holding all endpoint factories in the server.
  *
  */
-public class EndpointManager {
-  private static EndpointManager instance = new EndpointManager();
-
-  /**
-   * Make constructor private for singleton mode.
-   */
-  private EndpointManager() {
-  }
-
-  /**
-   * Returns the singleton endpoint-manager
-   */
-  public static EndpointManager get() {
-    return instance;
-  }
-
+public class EndpointManager implements IEndpointRegistry {
   /**
    * Data-structure storing information of an Endpoint.
    */
@@ -152,14 +137,14 @@ public class EndpointManager {
     return nameFacts.get(name);
   }
 
-  /**
-   * Registers an endpoint with its factory
-   *
-   * @throws UnsupportedTypeException if one of the parameter's type is not
-   *           supported.
-   */
+  @Override
   public <T extends IEndpoint> void register(Class<T> iEndpoint,
       IEndpointFactory<T> factory) {
     nameFacts.put(iEndpoint.getName(), new EndpointInfo(iEndpoint, factory));
+  }
+
+  @Override
+  public void unregisterAll() {
+    nameFacts.clear();
   }
 }

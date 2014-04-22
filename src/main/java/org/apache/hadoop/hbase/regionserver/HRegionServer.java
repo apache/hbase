@@ -66,7 +66,6 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.mutable.MutableDouble;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -112,6 +111,8 @@ import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.client.TableServers;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointServer;
+import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointServer;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.L2BucketCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
@@ -409,6 +410,8 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
   private boolean useThrift;
   private boolean useHadoopRPC;
 
+  private IEndpointServer endpointServer = new EndpointServer();
+
   public static long getResponseSizeLimit() {
     return responseSizeLimit;
   }
@@ -615,6 +618,8 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
     for(int i = 0; i < nbBlocks; i++)  {
       reservedSpace.add(new byte[HConstants.DEFAULT_SIZE_RESERVATION_BLOCK]);
     }
+
+    this.endpointServer.initialize(conf, this);
   }
 
   @Override
@@ -1336,6 +1341,8 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
         thriftServer.start();
         LOG.info("Started Thrift API from Region Server.");
       }
+
+      this.endpointServer.reload(conf);
 
       // Register configuration update event for handling it on the fly
       configurationManager.registerObserver(this);
@@ -3565,12 +3572,7 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
     return this.cacheFlusher;
   }
 
-  /**
-   * Protected utility method for safely obtaining an HRegion handle.
-   * @param regionName Name of online {@link HRegion} to return
-   * @return {@link HRegion} for <code>regionName</code>
-   * @throws NotServingRegionException
-   */
+  @Override
   public HRegion getRegion(final byte[] regionName)
   throws NotServingRegionException {
     HRegion region = null;
@@ -4114,6 +4116,8 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
 
     HRegionServer.useSeekNextUsingHint =
         conf.getBoolean("hbase.regionserver.scan.timestampfilter.allow_seek_next_using_hint", true);
+
+    endpointServer.reload(conf);
   }
 
   /**
@@ -4168,8 +4172,9 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
   @Override
   public byte[] callEndpoint(String epName, String methodName,
       ArrayList<byte[]> params, final byte[] regionName, final byte[] startRow,
-      final byte[] stopRow) throws IOException {
-    throw new NotImplementedException("HRegionserver.callEndpoint");
+      final byte[] stopRow) throws ThriftHBaseException {
+    return endpointServer.callEndpoint(epName, methodName, params, regionName,
+        startRow, stopRow);
   }
 
   @Override

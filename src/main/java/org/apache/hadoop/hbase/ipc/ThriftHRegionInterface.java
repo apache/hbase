@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TMultiResponse;
 import org.apache.hadoop.hbase.client.TRowMutations;
-import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointServer;
+import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointService;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
@@ -58,7 +58,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  */
 @ThriftService
 public interface ThriftHRegionInterface extends ThriftClientInterface,
-    IEndpointServer, IRegionScanService {
+    IEndpointService, IRegionScanService {
 
   /**
    * Get metainfo about an HRegion

@@ -244,10 +244,15 @@ public class EndpointBytesCodec {
     return enc.encode(obj);
   }
 
+  private static final ArrayList<byte[]> EMPTY_ARRAY_LIST = new ArrayList<>(0);
+
   /**
    * Encodes an array of Objects into an ArrayList of byte arrays.
    */
   public static ArrayList<byte[]> encodeArray(Object[] args) {
+    if (args == null || args.length == 0) {
+      return EMPTY_ARRAY_LIST;
+    }
     ArrayList<byte[]> res = new ArrayList<>(args.length);
     for (int i = 0; i < args.length; i++) {
       res.add(encodeObject(args[i]));

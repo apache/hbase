@@ -21,22 +21,29 @@ package org.apache.hadoop.hbase.coprocessor.endpoints;
 
 import java.util.ArrayList;
 
-import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointManager.EndpointInfo;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HRegionServerIf;
 
 /**
  * An endpoint server.
  */
 public class EndpointServer implements IEndpointServer {
 
-  private HRegionServer server;
+  private HRegionServerIf server;
+  private EndpointManager manager = new EndpointManager();
 
-  public EndpointServer(HRegionServer server) {
+  @Override
+  public void initialize(Configuration conf, HRegionServerIf server) {
     this.server = server;
+  }
+
+  @Override
+  public void reload(Configuration conf) {
+    EndpointLoader.reload(conf, manager);
   }
 
   @Override
@@ -44,11 +51,9 @@ public class EndpointServer implements IEndpointServer {
       ArrayList<byte[]> params, final byte[] regionName, final byte[] startRow,
       final byte[] stopRow) throws ThriftHBaseException {
     try {
-      EndpointInfo ent = EndpointManager.get().getEndpointEntry(epName);
+      EndpointInfo ent = manager.getEndpointEntry(epName);
       if (ent == null) {
-        // TODO daviddeng make a special exception for this
-        throw new DoNotRetryIOException("Endpoint " + epName
-            + " does not exists");
+        throw new NoSuchEndpointException(epName);
       }
 
       // Create an IEndpoint instance.
