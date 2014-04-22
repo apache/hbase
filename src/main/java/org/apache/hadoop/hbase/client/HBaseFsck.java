@@ -147,6 +147,14 @@ public class HBaseFsck {
     return this.regionInfo;
   }
 
+  public int getTotalHolesFound() {
+    int numHoles = 0;
+    for (TInfo tInfo : this.tablesInfo.values()) {
+      numHoles += tInfo.getHolesFound();
+    }
+    return numHoles;
+  }
+
   public int initAndScanRootMeta() throws IOException {
     // print hbase server version
     errors.print("Version: " + status.getHBaseVersion());
@@ -604,6 +612,7 @@ public class HBaseFsck {
         modTInfo.addServer(server);
       }
       modTInfo.addEdge(hbi.metaEntry.getStartKey(), hbi.metaEntry.getEndKey());
+      modTInfo.addRegionStart(hbi.metaEntry.getStartKey());
       tablesInfo.put(tableName, modTInfo);
     }
 
@@ -632,8 +641,10 @@ public class HBaseFsck {
   private class TInfo {
     String tableName;
     TreeMap <byte[], byte[]> edges;
+    ArrayList<byte[]> regionStartKeys;
     TreeSet <HServerAddress> deployedOn;
     String lastError = null;
+    int holesFound = 0;
 
     private TreeMap<RegionType, ArrayList<String>> regionDetails = new TreeMap<RegionType, ArrayList<String>>();
     private ArrayList<String> regionErrors = new ArrayList<String>();
@@ -642,6 +653,7 @@ public class HBaseFsck {
       this.tableName = name;
       edges = new TreeMap <byte[], byte[]> (Bytes.BYTES_COMPARATOR);
       deployedOn = new TreeSet <HServerAddress>();
+      regionStartKeys = new ArrayList<byte[]>();
       for (RegionType regionType : RegionType.values()) {
         regionDetails.put(regionType, new ArrayList<String>());
       }
@@ -649,6 +661,10 @@ public class HBaseFsck {
 
     public void addEdge(byte[] fromNode, byte[] toNode) {
       this.edges.put(fromNode, toNode);
+    }
+
+    public void addRegionStart(byte[] key) {
+      this.regionStartKeys.add(key);
     }
 
     public void addServer(HServerAddress server) {
@@ -661,6 +677,10 @@ public class HBaseFsck {
 
     public int getNumRegions() {
       return edges.size();
+    }
+
+    public int getHolesFound() {
+      return this.holesFound;
     }
 
     public String getLastError() {
@@ -682,48 +702,55 @@ public class HBaseFsck {
           errors.detail('\t' + regionToStr(e));
         }
       }
-
-      byte[] last = new byte[0];
-      byte[] next = new byte[0];
-      TreeSet <byte[]> visited = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-      // Each table should start with a zero-length byte[] and end at a
-      // zero-length byte[]. Just follow the edges to see if this is true
-      while (true) {
-        // Check if region chain is broken
-        if (!edges.containsKey(last)) {
-          this.lastError = "Cannot find region with start key "
-            + posToStr(last);
-          return false;
-        }
-        next = edges.get(last);
-        // Found a cycle
-        if (visited.contains(next)) {
-          this.lastError = "Cycle found in region chain. "
-            + "Current = "+ posToStr(last)
-            + "; Cycle Start = " +  posToStr(next);
-          return false;
-        }
-        // Mark next node as visited
-        visited.add(next);
-        // If next is zero-length byte[] we are possibly at the end of the chain
-        if (next.length == 0) {
-          // If we have visited all elements we are fine
-          if (edges.size() != visited.size()) {
-            this.lastError = "Region in-order travesal does not include "
-              + "all elements found in META.  Chain=" + visited.size()
-              + "; META=" + edges.size() + "; Missing=";
-            for (Map.Entry<byte[], byte []> e : edges.entrySet()) {
-              if (!visited.contains(e.getKey())) {
-                this.lastError += regionToStr(e) + " , ";
-              }
-            }
-            return false;
-          }
-          return true;
-        }
-        last = next;
+      StringBuilder errorSB = new StringBuilder("\n");
+      if (this.regionStartKeys.size() == 0) {
+        errors.detail("No regions found in META for " + this.tableName);
+        return true;
       }
-      // How did we get here?
+
+      Collections.sort(this.regionStartKeys, Bytes.BYTES_COMPARATOR);
+      TreeSet <byte[]> visited = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+
+      // First region should start and end with a zero length byte[].
+      // We will go through each start key in order to see if the chain of
+      // regions is broken at any point and identify any holes that exist
+      byte[] prevEndKey = new byte[0];
+      for (int i = 0; i < this.regionStartKeys.size(); i++) {
+        byte[] curStartKey = this.regionStartKeys.get(i);
+        if (Bytes.compareTo(prevEndKey, curStartKey) != 0) {
+          this.holesFound++;
+          errorSB.append("Found hole in table from start key "
+            + posToStr(prevEndKey) + " to end key " + posToStr(curStartKey) + "\n");
+        }
+
+        visited.add(curStartKey);
+        prevEndKey = this.edges.get(curStartKey);
+        // Checks for cycles in the region chain, including a self cycle
+        // (where the start key equals the end key)
+        if (visited.contains(prevEndKey)
+            && Bytes.compareTo(prevEndKey, new byte[0]) != 0) {
+          errorSB.append("Cycle found in region chain. "
+            + "Current Start Key "+ posToStr(curStartKey)
+            + "; Cycle Start Key " +  posToStr(prevEndKey) + "\n");
+        }
+      }
+
+      // Check if there's a hole at the end of the table
+      if (Bytes.compareTo(prevEndKey, new byte[0]) != 0) {
+        this.holesFound++;
+        errorSB.append("Found hole in table from start key "
+          + posToStr(prevEndKey) + " to end of table (end key 0)\n");
+      }
+
+      if (this.holesFound > 0) {
+        errorSB.append("Total number of holes found:" + holesFound + "\n");
+      }
+
+      boolean noErrors = errorSB.length() == 0;
+      if (!noErrors) {
+        this.lastError = errorSB.toString();
+      }
+      return noErrors;
     }
 
     public JSONObject toJSONObject() {
