@@ -617,7 +617,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         if (i % everyN != 0) continue;
         long startTime = System.nanoTime();
         testRow(i);
-        latency.update((System.nanoTime() - startTime) / 100000);
+        latency.update((System.nanoTime() - startTime) / 1000);
         if (status != null && i > 0 && (i % getReportingPeriod()) == 0) {
           status.setStatus(generateStatus(opts.startRow, i, lastRow));
         }
@@ -628,7 +628,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
      * @throws IOException
      */
     private void reportLatency() throws IOException {
-      status.setStatus(testName + " latency log (ms), on " + latency.count() + " measures");
+      status.setStatus(testName + " latency log (microseconds), on " +
+          latency.count() + " measures");
       status.setStatus(testName + " Min      = " + latency.min());
       status.setStatus(testName + " Avg      = " + latency.mean());
       status.setStatus(testName + " StdDev   = " + latency.stdDev());
