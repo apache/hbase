@@ -275,9 +275,9 @@ public class HBaseTestingUtility {
 
   public MiniDFSCluster startMiniDFSClusterForTestHLog(int namenodePort) throws IOException {
     createDirsAndSetProperties();
-    this.dfsCluster = new MiniDFSCluster.Builder(this.conf).nameNodePort(0)
-        .numDataNodes(5).format(false).manageDataDfsDirs(true)
-        .manageNameDfsDirs(true).build();
+    this.dfsCluster = new MiniDFSCluster.Builder(this.conf)
+        .nameNodePort(namenodePort).numDataNodes(5).format(false)
+        .manageDataDfsDirs(true).manageNameDfsDirs(true).build();
     return dfsCluster;
   }
 
