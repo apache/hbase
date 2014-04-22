@@ -62,9 +62,8 @@ public class TestHeapSize extends TestCase {
   /**
    * Test our hard-coded sizing of native java objects
    */
-  @SuppressWarnings("unchecked")
   public void testNativeSizes() throws IOException {
-    Class cl = null;
+    Class<?> cl = null;
     long expected = 0L;
     long actual = 0L;
 
@@ -213,9 +212,8 @@ public class TestHeapSize extends TestCase {
    * TestHFile since it is a non public class
    * @throws IOException
    */
-  @SuppressWarnings("unchecked")
   public void testSizes() throws IOException {
-    Class cl = null;
+    Class<?> cl = null;
     long expected = 0L;
     long actual = 0L;
 

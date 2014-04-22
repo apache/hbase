@@ -3937,7 +3937,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (2 * Bytes.SIZEOF_BOOLEAN) +
       (6 * Bytes.SIZEOF_LONG) + 2 * ClassSize.ARRAY +
-      (29 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
+      (30 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) +
