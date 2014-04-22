@@ -21,13 +21,12 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-
-import javax.naming.NamingException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -206,7 +205,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       String regionLocation;
       try {
         regionLocation = reverseDNS(regionAddress);
-      } catch (NamingException e) {
+      } catch (UnknownHostException e) {
         LOG.error("Cannot resolve the host name for " + regionAddress +
             " because of " + e);
         regionLocation = regionServerAddress.getHostname();
@@ -325,7 +324,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       regionAddress =
         regionServerAddress.getInetSocketAddress().getAddress();
       regionLocation = reverseDNS(regionAddress);
-    } catch (NamingException e) {
+    } catch (UnknownHostException e) {
       LOG.error("Cannot resolve the host name for " + regionAddress +
           " because of " + e);
       regionLocation = regionServerAddress.getHostname();
@@ -334,10 +333,12 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   }
 
   private static String reverseDNS(InetAddress ipAddress)
-  throws NamingException {
+    throws UnknownHostException {
     String hostName = reverseDNSCacheMap.get(ipAddress);
     if (hostName == null) {
-      hostName = DNS.reverseDns(ipAddress, nameServer);
+      // DNS.reverseDns(ipAddress, nameServer) is abandoned
+      // this code will do a reverse DNS lookup
+      hostName = InetAddress.getByName(ipAddress.getHostAddress()).getHostName();
       reverseDNSCacheMap.put(ipAddress, hostName);
     }
     return hostName;
