@@ -19,158 +19,87 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
-import junit.framework.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Testcases for MemStoreFlusher
  */
 public class TestMemStoreFlusher {
-  private static class HRegionServerMock implements HRegionServerIf {
-    RegionServerMetrics metrics;
-    public HRegionServerMock(Configuration conf) {
-      metrics = new RegionServerMetrics(conf);
-    }
-
-    AtomicLong globalMemstoreSize = new AtomicLong(0);
-    @Override
-    public String getRSThreadName() {
-      return "RSThread";
-    }
-
-    @Override
-    public void checkFileSystem() {
-    }
-
-    @Override
-    public boolean requestSplit(HRegionIf r) {
-      return false;
-    }
-
-    @Override
-    public RegionServerMetrics getMetrics() {
-      return metrics;
-    }
-
-    @Override
-    public AtomicLong getGlobalMemstoreSize() {
-      return globalMemstoreSize;
-    }
-
-    @Override
-    public SortedMap<Long, HRegion> getCopyOfOnlineRegionsSortedBySize() {
-      return null;
-    }
-
-    @Override
-    public void requestCompaction(HRegionIf r, String why) {
-    }
-
-  }
-
-  private static class HRegionMock implements HRegionIf {
-    private final HRegionInfo info;
-    final AtomicInteger flushedCount = new AtomicInteger();
-    /**
-     * The number of checking maxStoreFilesCount times
-     */
-    final AtomicInteger checkingCount = new AtomicInteger();
-    final int maxStoreFilesCount;
-
-    public HRegionMock(StringBytes tableName, int maxStoreFilesCount) {
-      info = new HRegionInfo(new HTableDescriptor(tableName.getBytes()),
-          null, null);
-      this.maxStoreFilesCount = maxStoreFilesCount;
-    }
-
-    @Override
-    public boolean flushMemstoreShapshot(boolean selectiveFlushRequest)
-        throws IOException {
-      flushedCount.addAndGet(1);
-      return true;
-    }
-
-    @Override
-    public List<Pair<Long, Long>> getRecentFlushInfo() {
-      return new ArrayList<>();
-    }
-
-    @Override
-    public HRegionInfo getRegionInfo() {
-      return info;
-    }
-
-    @Override
-    public boolean hasReferences() {
-      return false;
-    }
-
-    @Override
-    public int maxStoreFilesCount() {
-      checkingCount.addAndGet(1);
-      return maxStoreFilesCount;
-    }
-  }
-
-  @Test
+  @Test(timeout = 30000)
   public void testFlush() throws Exception {
+    final StringBytes TABLE_NAME = new StringBytes("testFlush");
+
     final Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.HSTORE_BLOCKING_STORE_FILES_KEY, "1");
 
-    HRegionServerMock server = new HRegionServerMock(conf);
-    MemStoreFlusher flusher = new MemStoreFlusher(conf, server);
+    // Create mocked server instance.
+    HRegionServerIf server = Mockito.mock(HRegionServerIf.class);
 
-    HRegionMock region = new HRegionMock(new StringBytes("testFlush"), 1);
+    RegionServerMetrics metrics = new RegionServerMetrics(conf);
+    Mockito.when(server.getMetrics()).thenReturn(metrics);
+
+    // Create mocked region instance.
+    HRegionIf region = Mockito.mock(HRegionIf.class);
+
+    HRegionInfo info = new HRegionInfo(new HTableDescriptor(
+        TABLE_NAME.getBytes()), null, null);
+    Mockito.when(region.getRegionInfo()).thenReturn(info);
+
+    // Create flusher
+    MemStoreFlusher flusher = new MemStoreFlusher(conf, server);
 
     // Make a flush request
     flusher.request(region, false);
 
     flusher.waitAllRequestDone();
-    Assert.assertEquals("Number of flushing", 1, region.flushedCount.get());
+
+    Mockito.verify(region, Mockito.times(1)).flushMemstoreShapshot(false);
   }
 
   /**
    * In MemStoreFlusher, if there are too many store files, a delay should be
-   * performed waiting for some files to be merged. This case assure this delay
+   * performed waiting for some files to be merged. This case assures this delay
    * is performed.
    */
-  @Test
+  @Test(timeout = 30000)
   public void testDelay() throws Exception {
+    final StringBytes TABLE_NAME = new StringBytes("testDelay");
     final long blockingWaitTime = 2000;
 
     final Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.HSTORE_BLOCKING_STORE_FILES_KEY, "1");
     conf.set(HConstants.HSTORE_BLOCKING_WAIT_TIME_KEY, "" + blockingWaitTime);
 
-    HRegionServerMock server = new HRegionServerMock(conf);
-    MemStoreFlusher flusher = new MemStoreFlusher(conf, server);
+    HRegionServerIf server = Mockito.mock(HRegionServerIf.class);
 
-    // 3 is larger than 1
-    HRegionMock region = new HRegionMock(new StringBytes("testDelay"), 3);
+    RegionServerMetrics metrics = new RegionServerMetrics(conf);
+    Mockito.when(server.getMetrics()).thenReturn(metrics);
+
+    // Create mocked region instance.
+    HRegionIf region = Mockito.mock(HRegionIf.class);
+
+    HRegionInfo info = new HRegionInfo(new HTableDescriptor(
+        TABLE_NAME.getBytes()), null, null);
+    Mockito.when(region.getRegionInfo()).thenReturn(info);
+    // 3 is larger than 1 (HSTORE_BLOCKING_STORE_FILES)
+    Mockito.when(region.maxStoreFilesCount()).thenReturn(3);
+
+    MemStoreFlusher flusher = new MemStoreFlusher(conf, server);
 
     // Make a flush request
     flusher.request(region, false);
 
     flusher.waitAllRequestDone();
 
-    Assert.assertEquals("Number of flushing", 1, region.flushedCount.get());
-    Assert.assertTrue("Number of checking should <= " + 100 + ", but got "
-        + region.checkingCount.get(), region.checkingCount.get() <= 100);
+    Mockito.verify(region, Mockito.times(1)).flushMemstoreShapshot(false);
+    Mockito.verify(region, Mockito.atMost(100)).maxStoreFilesCount();
   }
 }
