@@ -91,12 +91,10 @@ public class ScannerResultGenerator extends ResultGenerator {
       if (filter != null) {
         scan.setFilter(filter);
       }
-      // always disable block caching on the cluster when scanning
-      scan.setCacheBlocks(false);
       if (caching > 0 ) {
         scan.setCaching(caching);
       }
-      if(rowspec.hasLabels()) {
+      if (rowspec.hasLabels()) {
         scan.setAuthorizations(new Authorizations(rowspec.getLabels()));
       }
       scanner = table.getScanner(scan);
