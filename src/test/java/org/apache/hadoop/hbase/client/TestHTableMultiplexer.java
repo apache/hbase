@@ -19,16 +19,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-
 import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +30,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 
 public class TestHTableMultiplexer {
@@ -68,7 +67,7 @@ public class TestHTableMultiplexer {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test(timeout = 300000)
   public void testHTableMultiplexer() throws Exception {
     byte[] TABLE = Bytes.toBytes("testHTableMultiplexer");
     final int NUM_REGIONS = 10;
@@ -127,7 +126,7 @@ public class TestHTableMultiplexer {
   }
 
   private void verifyAllBufferedPutsHasFlushed(HTableMultiplexerStatus status) {
-    int retries = 5;
+    int retries = 100; // max retry time is 200 * 100 ms => 20 sec
     int tries = 0;
     do {
       try {
@@ -150,7 +149,7 @@ public class TestHTableMultiplexer {
    *
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 150000)
   public void testCounters() throws Exception {
     byte[] TABLE = Bytes.toBytes("testCounters");
     Configuration conf = TEST_UTIL.getConfiguration();
