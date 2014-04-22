@@ -126,6 +126,7 @@ EOF
     # Note the below methods are prefixed with '_' to hide them from the average user, as
     # they will be much less likely to tab complete to the 'dangerous' internal method
     #----------------------------------------------------------------------------------------------
+
     # Put a cell 'value' at specified table/row/column
     def _put_internal(row, column, value, timestamp = nil, args = {})
       p = org.apache.hadoop.hbase.client.Put.new(row.to_s.to_java_bytes)
@@ -368,17 +369,7 @@ EOF
       org.apache.hadoop.hbase.util.Bytes::toLong(cell.getValue)
     end
 
-    #----------------------------------------------------------------------------------------------
-    # Scans whole table or a range of keys and returns rows matching specific criteria
-    def _scan_internal(args = {})
-      unless args.kind_of?(Hash)
-        raise ArgumentError, "Arguments should be a hash. Failed to parse #{args.inspect}, #{args.class}"
-      end
-
-      limit = args.delete("LIMIT") || -1
-      maxlength = args.delete("MAXLENGTH") || -1
-      @converters.clear()
-
+    def _hash_to_scan(args)
       if args.any?
         filter = args["FILTER"]
         startrow = args["STARTROW"] || ''
@@ -433,10 +424,27 @@ EOF
         scan = org.apache.hadoop.hbase.client.Scan.new
       end
 
-      # Start the scanner
-      scanner = @table.getScanner(scan)
+      scan
+    end
+
+    def _get_scanner(args)
+      @table.getScanner(_hash_to_scan(args))
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Scans whole table or a range of keys and returns rows matching specific criteria
+    def _scan_internal(args = {})
+      raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
+
+      limit = args.delete("LIMIT") || -1
+      maxlength = args.delete("MAXLENGTH") || -1
       count = 0
       res = {}
+
+      @converters.clear()
+
+      # Start the scanner
+      scanner = @table.getScanner(_hash_to_scan(args))
       iter = scanner.iterator
 
       # Iterate results
@@ -472,23 +480,37 @@ EOF
 
      # Apply OperationAttributes to puts/scans/gets
     def set_attributes(oprattr, attributes)
-      raise(ArgumentError, "#{"ATTRIBUTES"} must be a Hash type") unless attributes.kind_of?(Hash)
-        for k,v in attributes
-          v = v.to_s unless v.nil?
-          oprattr.setAttribute(k.to_s, v.to_java_bytes)
-        end
+      raise(ArgumentError, "Attributes must be a Hash type") unless attributes.kind_of?(Hash)
+      for k,v in attributes
+        v = v.to_s unless v.nil?
+        oprattr.setAttribute(k.to_s, v.to_java_bytes)
+      end
     end
-    
+
+    def set_cell_permissions(op, permissions)
+      raise(ArgumentError, "Permissions must be a Hash type") unless permissions.kind_of?(Hash)
+      map = java.util.HashMap.new
+      permissions.each do |user,perms|
+        map.put(user.to_s, org.apache.hadoop.hbase.security.access.Permission.new(
+          perms.to_java_bytes))
+      end
+      op.setACL(map)
+    end
+
     def set_cell_visibility(oprattr, visibility)
-    	oprattr.setCellVisibility(org.apache.hadoop.hbase.security.visibility.CellVisibility.new(visibility.to_s))
+      oprattr.setCellVisibility(
+        org.apache.hadoop.hbase.security.visibility.CellVisibility.new(
+          visibility.to_s))
     end
-    
+
     def set_authorizations(oprattr, authorizations)
-        raise(ArgumentError, "#{"authorizations"} must be a Array type type") unless authorizations.kind_of?(Array)
-        auths = [ authorizations ].flatten.compact
-    	oprattr.setAuthorizations(org.apache.hadoop.hbase.security.visibility.Authorizations.new(auths.to_java(:string)))
+      raise(ArgumentError, "Authorizations must be a Array type") unless authorizations.kind_of?(Array)
+      auths = [ authorizations ].flatten.compact
+      oprattr.setAuthorizations(
+        org.apache.hadoop.hbase.security.visibility.Authorizations.new(
+          auths.to_java(:string)))
     end
-    
+
     #----------------------------
     # Add general administration utilities to the shell
     # each of the names below adds this method name to the table

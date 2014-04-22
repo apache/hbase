@@ -35,10 +35,78 @@ For example:
 EOF
       end
 
-      def command(user, rights, table_name=nil, family=nil, qualifier=nil)
-        format_simple_command do
-          security_admin.grant(user, rights, table_name, family, qualifier)
+      def command(*args)
+
+        # command form is ambiguous at first argument
+        table_name = user = args[0]
+        raise(ArgumentError, "First argument should be a String") unless user.kind_of?(String)
+
+        if args[1].kind_of?(String)
+
+          # Original form of the command
+          #     user in args[0]
+          #     permissions in args[1]
+          #     table_name in args[2]
+          #     family in args[3] or nil
+          #     qualifier in args[4] or nil
+
+          permissions = args[1]
+          raise(ArgumentError, "Permissions are not of String type") unless permissions.kind_of?(
+            String)
+          table_name = args[2]
+          raise(ArgumentError, "Table name is not of String type") unless table_name.kind_of?(
+            String)
+          family = args[3]     # will be nil if unset
+          if not family.nil?
+            raise(ArgumentError, "Family is not of String type") unless family.kind_of?(String)
+            qualifier = args[4]  # will be nil if unset
+            if not qualifier.nil?
+              raise(ArgumentError, "Qualifier is not of String type") unless qualifier.kind_of?(
+                String)
+            end
+          else
+            qualifier = nil
+          end
+          format_simple_command do
+            security_admin.grant(user, permissions, table_name, family, qualifier)
+          end
+
+        elsif args[1].kind_of?(Hash)
+
+          # New form of the command, a cell ACL update
+          #    table_name in args[0], a string
+          #    a Hash mapping users (or groups) to permisisons in args[1]
+          #    a Hash argument suitable for passing to Table#_get_scanner in args[2]
+          # Useful for feature testing and debugging.
+
+          permissions = args[1]
+          raise(ArgumentError, "Permissions are not of Hash type") unless
+            permissions.kind_of?(Hash)
+          scan = args[2]
+          raise(ArgumentError, "Scanner specification is not a Hash") unless
+            scan.kind_of?(Hash)
+
+          t = table(table_name)
+          now = Time.now
+          scanner = t._get_scanner(scan)
+          count = 0
+          iter = scanner.iterator
+          while iter.hasNext
+            row = iter.next
+            row.list.each do |cell|
+              put = org.apache.hadoop.hbase.client.Put.new(row.getRow)
+              put.add(cell)
+              t.set_cell_permissions(put, permissions)
+              t.table.put(put)
+            end
+            count += 1
+          end
+          formatter.footer(now, count)
+
+        else
+          raise(ArgumentError, "Second argument should be a String or Hash")
         end
+
       end
     end
   end
