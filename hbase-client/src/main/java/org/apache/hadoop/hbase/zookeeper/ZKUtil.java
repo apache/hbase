@@ -810,15 +810,16 @@ public class ZKUtil {
       ZooKeeperWatcher zkw, String baseNode) throws KeeperException {
     List<String> nodes =
       ZKUtil.listChildrenAndWatchForNewChildren(zkw, baseNode);
-    List<NodeAndData> newNodes = new ArrayList<NodeAndData>();
     if (nodes != null) {
+      List<NodeAndData> newNodes = new ArrayList<NodeAndData>();
       for (String node : nodes) {
         String nodePath = ZKUtil.joinZNode(baseNode, node);
         byte[] data = ZKUtil.getDataAndWatch(zkw, nodePath);
         newNodes.add(new NodeAndData(nodePath, data));
       }
+      return newNodes;
     }
-    return newNodes;
+    return null;
   }
 
   /**
@@ -1174,7 +1175,7 @@ public class ZKUtil {
     createAndFailSilent(zkw,
         (CreateAndFailSilent)ZKUtilOp.createAndFailSilent(znode, data));
   }
-  
+
   private static void createAndFailSilent(ZooKeeperWatcher zkw, CreateAndFailSilent cafs)
   throws KeeperException {
     CreateRequest create = (CreateRequest)toZooKeeperOp(zkw, cafs).toRequestRecord();
