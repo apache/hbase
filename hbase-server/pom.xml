@@ -408,6 +408,7 @@
     <dependency>
       <groupId>tomcat</groupId>
       <artifactId>jasper-compiler</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>tomcat</groupId>
