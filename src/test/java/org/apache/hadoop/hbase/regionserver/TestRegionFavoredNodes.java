@@ -32,6 +32,8 @@ public class TestRegionFavoredNodes {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    // Disables the permissions checker.
+    TEST_UTIL.getConfiguration().setBoolean("dfs.permissions", false);
     TEST_UTIL.startMiniCluster(REGION_SERVERS);
 
     table = TEST_UTIL.createTable(TABLE_NAME, new byte[][] { COLUMN_FAMILY }, 3,
