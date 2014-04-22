@@ -128,7 +128,9 @@ import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.ScannerResult;
 import org.apache.hadoop.hbase.ipc.thrift.HBaseThriftRPC;
+import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.master.RegionPlacement;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
@@ -174,8 +176,8 @@ import com.google.common.base.Preconditions;
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
-public class HRegionServer implements HRegionInterface, HRegionServerIf,
-    HBaseRPCErrorHandler, Runnable, Watcher, ConfigurationObserver {
+public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
+    Runnable, Watcher, ConfigurationObserver {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_RESTARTING = new HMsg(
@@ -310,7 +312,6 @@ public class HRegionServer implements HRegionInterface, HRegionServerIf,
    * Threadpool for doing scanner prefetches
    */
   public static ThreadPoolExecutor scanPrefetchThreadPool;
-
 
   // An array of HLog and HLog roller.  log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
@@ -614,6 +615,26 @@ public class HRegionServer implements HRegionInterface, HRegionServerIf,
     for(int i = 0; i < nbBlocks; i++)  {
       reservedSpace.add(new byte[HConstants.DEFAULT_SIZE_RESERVATION_BLOCK]);
     }
+  }
+
+  @Override
+  public ScannerResult scanOpen(byte[] regionName, Scan scan, int numberOfRows)
+      throws ThriftHBaseException {
+    // TODO add implementation
+    return null;
+  }
+
+  @Override
+  public ScannerResult scanNext(long id, int numberOfRows)
+      throws ThriftHBaseException {
+    // TODO add implementation
+    return null;
+  }
+
+  @Override
+  public boolean scanClose(long id) throws ThriftHBaseException {
+    // TODO add implementation
+    return false;
   }
 
   public int getHadoopRPCServerPort() {

@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.ScannerResult;
 import org.apache.hadoop.hbase.ipc.ThriftClientInterface;
 import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
@@ -1241,6 +1242,38 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
+    } finally {
+      postProcess();
+    }
+  }
+
+  @Override
+  public ScannerResult scanOpen(byte[] regionName, Scan scan, int numberOfRows)
+      throws ThriftHBaseException {
+    preProcess();
+    try {
+      return connection.scanOpen(regionName, scan, numberOfRows);
+    } finally {
+      postProcess();
+    }
+  }
+
+  @Override
+  public ScannerResult scanNext(long id, int numberOfRows)
+      throws ThriftHBaseException {
+    preProcess();
+    try {
+      return connection.scanNext(id, numberOfRows);
+    } finally {
+      postProcess();
+    }
+  }
+
+  @Override
+  public boolean scanClose(long id) throws ThriftHBaseException {
+    preProcess();
+    try {
+      return connection.scanClose(id);
     } finally {
       postProcess();
     }

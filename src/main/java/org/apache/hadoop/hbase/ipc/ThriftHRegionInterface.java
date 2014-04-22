@@ -58,7 +58,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  */
 @ThriftService
 public interface ThriftHRegionInterface extends ThriftClientInterface,
-    IEndpointServer {
+    IEndpointServer, IRegionScanService {
 
   /**
    * Get metainfo about an HRegion

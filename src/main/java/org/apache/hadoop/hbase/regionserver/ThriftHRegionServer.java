@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.TRowMutations;
 import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointServer;
 import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointServer;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
+import org.apache.hadoop.hbase.ipc.ScannerResult;
 import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
@@ -658,5 +659,22 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
     } catch (IOException e) {
       throw new ThriftHBaseException(e);
     }
+  }
+
+  @Override
+  public ScannerResult scanOpen(byte[] regionName, Scan scan, int numberOfRows)
+      throws ThriftHBaseException {
+    return server.scanOpen(regionName, scan, numberOfRows);
+  }
+
+  @Override
+  public ScannerResult scanNext(long id, int numberOfRows)
+      throws ThriftHBaseException {
+    return server.scanNext(id, numberOfRows);
+  }
+
+  @Override
+  public boolean scanClose(long id) throws ThriftHBaseException {
+    return server.scanClose(id);
   }
 }

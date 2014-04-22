@@ -51,7 +51,7 @@ import org.apache.hadoop.io.MapWritable;
  * number in HBaseRPCProtocolVersion
  */
 public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable,
-    Stoppable, ThriftClientInterface {
+    Stoppable, ThriftClientInterface, IRegionScanService {
 
   /**
    * Calls an endpoint on an region server.
