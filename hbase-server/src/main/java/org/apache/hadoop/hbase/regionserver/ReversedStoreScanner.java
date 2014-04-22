@@ -94,7 +94,7 @@ class ReversedStoreScanner extends StoreScanner implements KeyValueScanner {
    * Do a backwardSeek in a reversed StoreScanner(scan backward)
    */
   @Override
-  protected boolean seekAsDirection(KeyValue kv) throws IOException {
+  protected boolean seekAsDirection(Cell kv) throws IOException {
     return backwardSeek(kv);
   }
 

@@ -82,7 +82,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * KVs skipped via seeking to next row/column. TODO: estimate them?
    */
   private long kvsScanned = 0;
-  private Cell prevKV = null;
+  private Cell prevCell = null;
 
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
@@ -454,19 +454,19 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       matcher.setRow(row, offset, length);
     }
 
-    Cell kv;
+    Cell cell;
 
     // Only do a sanity-check if store and comparator are available.
     KeyValue.KVComparator comparator =
         store != null ? store.getComparator() : null;
 
     int count = 0;
-    LOOP: while((kv = this.heap.peek()) != null) {
-      if (prevKV != kv) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
-      checkScanOrder(prevKV, kv, comparator);
-      prevKV = kv;
+    LOOP: while((cell = this.heap.peek()) != null) {
+      if (prevCell != cell) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
+      checkScanOrder(prevCell, cell, comparator);
+      prevCell = cell;
 
-      ScanQueryMatcher.MatchCode qcode = matcher.match(KeyValueUtil.ensureKeyValue(kv));
+      ScanQueryMatcher.MatchCode qcode = matcher.match(cell);
       switch(qcode) {
         case INCLUDE:
         case INCLUDE_AND_SEEK_NEXT_ROW:
@@ -475,34 +475,34 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           Filter f = matcher.getFilter();
           if (f != null) {
             // TODO convert Scan Query Matcher to be Cell instead of KV based ?
-            kv = KeyValueUtil.ensureKeyValue(f.transformCell(kv));
+            cell = f.transformCell(cell);
           }
 
           this.countPerRow++;
           if (storeLimit > -1 &&
               this.countPerRow > (storeLimit + storeOffset)) {
             // do what SEEK_NEXT_ROW does.
-            if (!matcher.moreRowsMayExistAfter(KeyValueUtil.ensureKeyValue(kv))) {
+            if (!matcher.moreRowsMayExistAfter(cell)) {
               return false;
             }
-            seekToNextRow(kv);
+            seekToNextRow(cell);
             break LOOP;
           }
 
           // add to results only if we have skipped #storeOffset kvs
           // also update metric accordingly
           if (this.countPerRow > storeOffset) {
-            outResult.add(kv);
+            outResult.add(cell);
             count++;
           }
 
           if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
-            if (!matcher.moreRowsMayExistAfter(KeyValueUtil.ensureKeyValue(kv))) {
+            if (!matcher.moreRowsMayExistAfter(cell)) {
               return false;
             }
-            seekToNextRow(kv);
+            seekToNextRow(cell);
           } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
-            seekAsDirection(matcher.getKeyForNextColumn(KeyValueUtil.ensureKeyValue(kv)));
+            seekAsDirection(matcher.getKeyForNextColumn(cell));
           } else {
             this.heap.next();
           }
@@ -522,15 +522,15 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         case SEEK_NEXT_ROW:
           // This is just a relatively simple end of scan fix, to short-cut end
           // us if there is an endKey in the scan.
-          if (!matcher.moreRowsMayExistAfter(KeyValueUtil.ensureKeyValue(kv))) {
+          if (!matcher.moreRowsMayExistAfter(cell)) {
             return false;
           }
 
-          seekToNextRow(kv);
+          seekToNextRow(cell);
           break;
 
         case SEEK_NEXT_COL:
-          seekAsDirection(matcher.getKeyForNextColumn(KeyValueUtil.ensureKeyValue(kv)));
+          seekAsDirection(matcher.getKeyForNextColumn(cell));
           break;
 
         case SKIP:
@@ -539,7 +539,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
         case SEEK_NEXT_USING_HINT:
           // TODO convert resee to Cell?
-          KeyValue nextKV = KeyValueUtil.ensureKeyValue(matcher.getNextKeyHint(kv));
+          Cell nextKV = matcher.getNextKeyHint(cell);
           if (nextKV != null) {
             seekAsDirection(nextKV);
           } else {
@@ -678,7 +678,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @return true if scanner has values left, false if end of scanner
    * @throws IOException
    */
-  protected boolean seekAsDirection(KeyValue kv)
+  protected boolean seekAsDirection(Cell kv)
       throws IOException {
     return reseek(kv);
   }
