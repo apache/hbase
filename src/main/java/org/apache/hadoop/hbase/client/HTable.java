@@ -688,10 +688,9 @@ public class HTable implements HTableInterface, IEndpointClient {
             });
   }
 
-  @SuppressWarnings("resource")
   @Override
   public ResultScanner getScanner(final Scan scan) throws IOException {
-    return new HTableClientScanner(scan, this).initialize();
+    return HTableClientScanner.builder(scan, this).build();
   }
 
   @Override

@@ -88,7 +88,7 @@ public class TestHTableClientScanner {
     s.setStopRow(info.getEndKey());
     try (ResultScanner scanner = t.getScanner(s)) {
       if (scanner instanceof HTableClientScanner) {
-        for (Result r : scanner) {
+        for (@SuppressWarnings("unused") Result r : scanner) {
           // Do nothing.
         }
         assertEquals(1, ((HTableClientScanner) scanner).getNumRegionsScanned());
@@ -121,8 +121,8 @@ public class TestHTableClientScanner {
     scan.setStartRow(Bytes.toBytes("d"));
     scan.setStopRow(Bytes.toBytes("c"));
 
-    try (HTableClientScanner scanner = new HTableClientScanner(scan, table)) {
-      scanner.initialize();
+    try (HTableClientScanner scanner =
+        HTableClientScanner.builder(scan, table).build()) {
       for (Iterator<Result> iterator = scanner.iterator(); iterator.hasNext();
           iterator.next()) {
       }

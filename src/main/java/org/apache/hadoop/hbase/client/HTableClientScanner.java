@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -37,7 +36,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 
 /**
  * Implements the scanner interface for the HBase client.
@@ -49,12 +47,7 @@ public class HTableClientScanner implements ResultScanner {
   // End of Scanning
   private static final Result[] EOS = new Result[0];
 
-  private static final int MAX_THREADS_IN_POOL = Runtime.getRuntime()
-      .availableProcessors();
-
-  private static final ExecutorService executor = Executors.newFixedThreadPool(
-      MAX_THREADS_IN_POOL, new DaemonThreadFactory(
-          "HTableClientScanner.Fetching."));
+  private final ExecutorService executor;
 
   // Temporary results list in main thread, may be null
   private Result[] currentResults;
@@ -77,12 +70,51 @@ public class HTableClientScanner implements ResultScanner {
   private final Fetcher fetcher;
 
   /**
+   * @return a Builder for creating HTableClientScanner.
+   */
+  public static Builder builder(Scan scan, HTable table) {
+    return new Builder(scan, table);
+  }
+
+  /**
+   * A builder for creating HTableClientScanner.
+   */
+  public static final class Builder {
+    private final Scan scan;
+    private final HTable table;
+    private ExecutorService executor = HTable.multiActionThreadPool;
+
+    private Builder(Scan scan, HTable table) {
+      this.scan = scan;
+      this.table = table;
+    }
+
+    /**
+     * Specifies an alternative ExecutorService for the scanner.
+     */
+    public Builder setExecutor(ExecutorService vl) {
+      this.executor = vl;
+      return this;
+    }
+
+    /**
+     * Builds the HTableClientScanner.
+     */
+    @SuppressWarnings("resource")
+    public HTableClientScanner build() throws IOException {
+      return new HTableClientScanner(scan, table, executor).initialize();
+    }
+  }
+
+  /**
    * Constructor.
    *
    * @param scan The scan internal start row can change as we move through
    *          table.
    */
-  public HTableClientScanner(Scan scan, HTable table) throws IOException {
+  private HTableClientScanner(Scan scan, HTable table, ExecutorService executor)
+      throws IOException {
+    this.executor = executor;
     this.queue = new ArrayBlockingQueue<>(table.getConfiguration().getInt(
         HConstants.HBASE_CLIENT_SCANNER_QUEUE_LENGTH,
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_QUEUE_LENGTH));
