@@ -1001,6 +1001,12 @@ possible configurations would overwhelm and obscure the important.
         dfs.socket.timeout. See the end of HBASE-8389 for more.</description>
   </property>
   <property>
+    <name>hbase.column.max.version</name>
+    <value>1</value>
+    <description>New column family descriptors will use this value as the default number of versions
+      to keep.</description>
+  </property>
+  <property>
     <name>hbase.dfs.client.read.shortcircuit.buffer.size</name>
     <value>131072</value>
     <description>If the DFSClient configuration
