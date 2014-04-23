@@ -111,13 +111,18 @@
     <complexType name="Scanner">
         <sequence>
             <element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"></element>
-            <element name="filter" type="string" minOccurs="0" maxOccurs="1"></element>
         </sequence>
         <attribute name="startRow" type="base64Binary"></attribute>
         <attribute name="endRow" type="base64Binary"></attribute>
         <attribute name="batch" type="int"></attribute>
         <attribute name="startTime" type="int"></attribute>
         <attribute name="endTime" type="int"></attribute>
+        <attribute name="filter" type="string"></attribute>
+        <attribute name="caching" type="int"></attribute>
+        <sequence>
+            <element name="labels" type="string" minOccurs="0" maxOccurs="unbounded"></element>
+        </sequence>
+        <attribute name="cacheBlocks" type="boolean"></attribute>
     </complexType>
 
     <element name="StorageClusterVersion" type="tns:StorageClusterVersion" />

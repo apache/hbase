@@ -26,6 +26,7 @@ message Scanner {
   optional int64 endTime = 6;
   optional int32 maxVersions = 7;
   optional string filter = 8;
-  optional int32 caching = 9;
+  optional int32 caching = 9;     // specifies REST scanner caching
   repeated string labels = 10;
+  optional bool cacheBlocks = 11; // server side block caching hint
 }

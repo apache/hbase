@@ -20,22 +20,14 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
-import com.sun.jersey.api.json.JSONJAXBContext;
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.provider.JAXBContextResolver;
 import org.apache.hadoop.hbase.util.Base64;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
-import org.codehaus.jackson.map.AnnotationIntrospector;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
-import org.codehaus.jackson.map.introspect.JacksonAnnotationIntrospector;
 import org.codehaus.jackson.node.ObjectNode;
-import org.codehaus.jackson.xc.JaxbAnnotationIntrospector;
 import org.junit.experimental.categories.Category;
 
 import javax.ws.rs.core.MediaType;
@@ -44,7 +36,6 @@ import javax.xml.bind.JAXBException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.lang.reflect.InvocationTargetException;
 
 @Category(SmallTests.class)
 public abstract class TestModelBase<T> extends TestCase {

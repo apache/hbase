@@ -31,6 +31,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
@@ -90,11 +91,14 @@ public class ScannerResource extends ResourceBase {
       spec = new RowSpec(model.getStartRow(), endRow, model.getColumns(), model.getStartTime(),
           model.getEndTime(), model.getMaxVersions());
     }
+    MultivaluedMap<String, String> params = uriInfo.getQueryParameters();
+    
     try {
       Filter filter = ScannerResultGenerator.buildFilterFromModel(model);
       String tableName = tableResource.getName();
       ScannerResultGenerator gen =
-        new ScannerResultGenerator(tableName, spec, filter, model.getCaching());
+        new ScannerResultGenerator(tableName, spec, filter, model.getCaching(),
+          model.getCacheBlocks());
       String id = gen.getID();
       ScannerInstanceResource instance =
         new ScannerInstanceResource(tableName, id, gen, model.getBatch());

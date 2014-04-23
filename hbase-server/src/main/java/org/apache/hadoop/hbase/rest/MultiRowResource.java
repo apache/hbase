@@ -37,9 +37,8 @@ import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 
 @InterfaceAudience.Private
-public class MultiRowResource extends ResourceBase {
+public class MultiRowResource extends ResourceBase implements Constants {
   private static final Log LOG = LogFactory.getLog(MultiRowResource.class);
-  public static final String ROW_KEYS_PARAM_NAME = "row";
 
   TableResource tableResource;
   Integer versions = null;
@@ -75,9 +74,9 @@ public class MultiRowResource extends ResourceBase {
         if (this.versions != null) {
           rowSpec.setMaxVersions(this.versions);
         }
-
         ResultGenerator generator =
-            ResultGenerator.fromRowSpec(this.tableResource.getName(), rowSpec, null);
+          ResultGenerator.fromRowSpec(this.tableResource.getName(), rowSpec, null,
+            !params.containsKey(NOCACHE_PARAM_NAME));
         Cell value = null;
         RowModel rowModel = new RowModel(rk);
         if (generator.hasNext()) {

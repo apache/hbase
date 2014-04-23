@@ -31,6 +31,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
@@ -88,9 +89,11 @@ public class RowResource extends ResourceBase {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
+    MultivaluedMap<String, String> params = uriInfo.getQueryParameters();
     try {
       ResultGenerator generator =
-        ResultGenerator.fromRowSpec(tableResource.getName(), rowspec, null);
+        ResultGenerator.fromRowSpec(tableResource.getName(), rowspec, null,
+          !params.containsKey(NOCACHE_PARAM_NAME));
       if (!generator.hasNext()) {
         servlet.getMetrics().incrementFailedGetRequests(1);
         return Response.status(Response.Status.NOT_FOUND)
@@ -138,9 +141,11 @@ public class RowResource extends ResourceBase {
       return Response.status(Response.Status.BAD_REQUEST).type(MIMETYPE_TEXT)
           .entity("Bad request: Either 0 or more than 1 columns specified." + CRLF).build();
     }
+    MultivaluedMap<String, String> params = uriInfo.getQueryParameters();
     try {
       ResultGenerator generator =
-        ResultGenerator.fromRowSpec(tableResource.getName(), rowspec, null);
+        ResultGenerator.fromRowSpec(tableResource.getName(), rowspec, null,
+          !params.containsKey(NOCACHE_PARAM_NAME));
       if (!generator.hasNext()) {
         servlet.getMetrics().incrementFailedGetRequests(1);
         return Response.status(Response.Status.NOT_FOUND)

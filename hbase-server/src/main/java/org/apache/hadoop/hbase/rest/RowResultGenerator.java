@@ -43,7 +43,8 @@ public class RowResultGenerator extends ResultGenerator {
   private Cell cache;
 
   public RowResultGenerator(final String tableName, final RowSpec rowspec,
-      final Filter filter) throws IllegalArgumentException, IOException {
+      final Filter filter, final boolean cacheBlocks)
+      throws IllegalArgumentException, IOException {
     HTableInterface table = RESTServlet.getInstance().getTable(tableName);
     try {
       Get get = new Get(rowspec.getRow());
@@ -64,6 +65,7 @@ public class RowResultGenerator extends ResultGenerator {
       if (filter != null) {
         get.setFilter(filter);
       }
+      get.setCacheBlocks(cacheBlocks);
       Result result = table.get(get);
       if (result != null && !result.isEmpty()) {
         valuesI = result.listCells().iterator();
