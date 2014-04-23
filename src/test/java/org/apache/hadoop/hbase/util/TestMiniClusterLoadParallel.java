@@ -16,12 +16,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * A write/read/verify load test on a mini HBase cluster. Tests reading
@@ -36,7 +36,7 @@ public class TestMiniClusterLoadParallel
     super(isMultiPut, encoding);
   }
 
-  @Test(timeout=TIMEOUT_MS)
+  @Test(timeout=200000)
   public void loadTest() throws Exception {
     prepareForLoadTest();
 

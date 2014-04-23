@@ -16,15 +16,15 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Common base class for reader and writer parts of multi-thread HBase load
@@ -181,6 +181,8 @@ public abstract class MultiThreadedAction {
   public void waitForFinish() {
     while (numThreadsWorking.get() != 0) {
       Threads.sleepWithoutInterrupt(1000);
+      LOG.debug("Waiting for " + this.actionLetter + " actions to quit. Now there are " +
+        numThreadsWorking.get() + " left.");
     }
   }
 
