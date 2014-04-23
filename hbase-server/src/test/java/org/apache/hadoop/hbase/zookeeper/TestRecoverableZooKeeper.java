@@ -69,7 +69,7 @@ public class TestRecoverableZooKeeper {
 
   @Test
   public void testSetDataVersionMismatchInLoop() throws Exception {
-    String znode = "/hbase/region-in-transition/9af7cfc9b15910a0b3d714bf40a3248f";
+    String znode = "/hbase/splitWAL/9af7cfc9b15910a0b3d714bf40a3248f";
     Configuration conf = TEST_UTIL.getConfiguration();
     Properties properties = ZKConfig.makeZKProps(conf);
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testSetDataVersionMismatchInLoop",

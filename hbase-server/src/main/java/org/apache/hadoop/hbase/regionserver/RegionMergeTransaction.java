@@ -45,8 +45,10 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction.LoggingProgressable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -98,6 +100,7 @@ public class RegionMergeTransaction {
   private int znodeVersion = -1;
   // We only merge adjacent regions if forcible is false
   private final boolean forcible;
+  private boolean useZKForAssignment;
 
   /**
    * Types to add to the transaction journal. Each enum is a step in the merge
@@ -238,6 +241,8 @@ public class RegionMergeTransaction {
    */
   public HRegion execute(final Server server,
       final RegionServerServices services) throws IOException {
+    useZKForAssignment = server == null ? true :
+      ConfigUtil.useZKForAssignment(server.getConfiguration());
     if (rsCoprocessorHost == null) {
       rsCoprocessorHost = server != null ?
         ((HRegionServer) server).getRegionServerCoprocessorHost() : null;
@@ -315,13 +320,21 @@ public class RegionMergeTransaction {
     // will determine whether the region is merged or not in case of failures.
     // If it is successful, master will roll-forward, if not, master will
     // rollback
-    if (!testing) {
+    if (!testing && useZKForAssignment) {
       if (metaEntries.isEmpty()) {
         MetaEditor.mergeRegions(server.getCatalogTracker(), mergedRegion.getRegionInfo(), region_a
             .getRegionInfo(), region_b.getRegionInfo(), server.getServerName());
       } else {
         mergeRegionsAndPutMetaEntries(server.getCatalogTracker(), mergedRegion.getRegionInfo(),
           region_a.getRegionInfo(), region_b.getRegionInfo(), server.getServerName(), metaEntries);
+      }
+    } else if (services != null && !useZKForAssignment) {
+      if (!services.reportRegionTransition(TransitionCode.MERGE_PONR,
+          mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
+        // Passed PONR, let SSH clean it up
+        throw new IOException("Failed to notify master that merge passed PONR: "
+          + region_a.getRegionInfo().getRegionNameAsString() + " and "
+          + region_b.getRegionInfo().getRegionNameAsString());
       }
     }
     return mergedRegion;
@@ -352,6 +365,7 @@ public class RegionMergeTransaction {
     addLocation(putOfMerged, serverName, 1);
   }
 
+  @SuppressWarnings("deprecation")
   public Put addLocation(final Put p, final ServerName sn, long openSeqNum) {
     p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, Bytes
         .toBytes(sn.getHostAndPort()));
@@ -365,7 +379,7 @@ public class RegionMergeTransaction {
       boolean testing) throws IOException {
     // Set ephemeral MERGING znode up in zk. Mocked servers sometimes don't
     // have zookeeper so don't do zk stuff if server or zookeeper is null
-    if (server != null && server.getZooKeeper() != null) {
+    if (useZKAndZKIsSet(server)) {
       try {
         createNodeMerging(server.getZooKeeper(), this.mergedRegionInfo,
           server.getServerName(), region_a.getRegionInfo(), region_b.getRegionInfo());
@@ -373,9 +387,16 @@ public class RegionMergeTransaction {
         throw new IOException("Failed creating PENDING_MERGE znode on "
             + this.mergedRegionInfo.getRegionNameAsString(), e);
       }
+    } else if (services != null && !useZKForAssignment) {
+      if (!services.reportRegionTransition(TransitionCode.READY_TO_MERGE,
+          mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
+        throw new IOException("Failed to get ok from master to merge "
+          + region_a.getRegionInfo().getRegionNameAsString() + " and "
+          + region_b.getRegionInfo().getRegionNameAsString());
+      }
     }
     this.journal.add(JournalEntry.SET_MERGING_IN_ZK);
-    if (server != null && server.getZooKeeper() != null) {
+    if (useZKAndZKIsSet(server)) {
       // After creating the merge node, wait for master to transition it
       // from PENDING_MERGE to MERGING so that we can move on. We want master
       // knows about it and won't transition any region which is merging.
@@ -399,7 +420,7 @@ public class RegionMergeTransaction {
     // clean this up.
     mergeStoreFiles(hstoreFilesOfRegionA, hstoreFilesOfRegionB);
 
-    if (server != null && server.getZooKeeper() != null) {
+    if (server != null && useZKAndZKIsSet(server)) {
       try {
         // Do one more check on the merging znode (before it is too late) in case
         // any merging region is moved somehow. If so, the znode transition will fail.
@@ -548,7 +569,13 @@ public class RegionMergeTransaction {
 
     if (services != null) {
       try {
-        services.postOpenDeployTasks(merged, server.getCatalogTracker());
+        if (useZKForAssignment) {
+          services.postOpenDeployTasks(merged, server.getCatalogTracker());
+        } else if (!services.reportRegionTransition(TransitionCode.MERGED,
+            mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
+          throw new IOException("Failed to report merged region to master: "
+            + mergedRegionInfo.getShortNameToLog());
+        }
         services.addToOnlineRegions(merged);
       } catch (KeeperException ke) {
         throw new IOException(ke);
@@ -567,43 +594,41 @@ public class RegionMergeTransaction {
    */
   void transitionZKNode(final Server server, final RegionServerServices services,
       HRegion mergedRegion) throws IOException {
-    if (server == null || server.getZooKeeper() == null) {
-      return;
-    }
-
-    // Tell master about merge by updating zk. If we fail, abort.
-    try {
-      this.znodeVersion = transitionMergingNode(server.getZooKeeper(),
-        this.mergedRegionInfo, region_a.getRegionInfo(),
-        region_b.getRegionInfo(), server.getServerName(), this.znodeVersion,
-        RS_ZK_REGION_MERGING, RS_ZK_REGION_MERGED);
-
-      long startTime = EnvironmentEdgeManager.currentTimeMillis();
-      int spins = 0;
-      // Now wait for the master to process the merge. We know it's done
-      // when the znode is deleted. The reason we keep tickling the znode is
-      // that it's possible for the master to miss an event.
-      do {
-        if (spins % 10 == 0) {
-          LOG.debug("Still waiting on the master to process the merge for "
-              + this.mergedRegionInfo.getEncodedName() + ", waited "
-              + (EnvironmentEdgeManager.currentTimeMillis() - startTime) + "ms");
-        }
-        Thread.sleep(100);
-        // When this returns -1 it means the znode doesn't exist
+    if (useZKAndZKIsSet(server)) {
+      // Tell master about merge by updating zk. If we fail, abort.
+      try {
         this.znodeVersion = transitionMergingNode(server.getZooKeeper(),
           this.mergedRegionInfo, region_a.getRegionInfo(),
           region_b.getRegionInfo(), server.getServerName(), this.znodeVersion,
-          RS_ZK_REGION_MERGED, RS_ZK_REGION_MERGED);
-        spins++;
-      } while (this.znodeVersion != -1 && !server.isStopped()
-          && !services.isStopping());
-    } catch (Exception e) {
-      if (e instanceof InterruptedException) {
-        Thread.currentThread().interrupt();
+          RS_ZK_REGION_MERGING, RS_ZK_REGION_MERGED);
+  
+        long startTime = EnvironmentEdgeManager.currentTimeMillis();
+        int spins = 0;
+        // Now wait for the master to process the merge. We know it's done
+        // when the znode is deleted. The reason we keep tickling the znode is
+        // that it's possible for the master to miss an event.
+        do {
+          if (spins % 10 == 0) {
+            LOG.debug("Still waiting on the master to process the merge for "
+                + this.mergedRegionInfo.getEncodedName() + ", waited "
+                + (EnvironmentEdgeManager.currentTimeMillis() - startTime) + "ms");
+          }
+          Thread.sleep(100);
+          // When this returns -1 it means the znode doesn't exist
+          this.znodeVersion = transitionMergingNode(server.getZooKeeper(),
+            this.mergedRegionInfo, region_a.getRegionInfo(),
+            region_b.getRegionInfo(), server.getServerName(), this.znodeVersion,
+            RS_ZK_REGION_MERGED, RS_ZK_REGION_MERGED);
+          spins++;
+        } while (this.znodeVersion != -1 && !server.isStopped()
+            && !services.isStopping());
+      } catch (Exception e) {
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
+        throw new IOException("Failed telling master about merge "
+            + mergedRegionInfo.getEncodedName(), e);
       }
-      throw new IOException("Failed telling master about merge "
-          + mergedRegionInfo.getEncodedName(), e);
     }
 
     if (rsCoprocessorHost != null) {
@@ -745,8 +770,12 @@ public class RegionMergeTransaction {
       switch (je) {
 
         case SET_MERGING_IN_ZK:
-          if (server != null && server.getZooKeeper() != null) {
+          if (useZKAndZKIsSet(server)) {
             cleanZK(server, this.mergedRegionInfo);
+          } else if (services != null && !useZKForAssignment
+              && !services.reportRegionTransition(TransitionCode.MERGE_REVERTED,
+                  mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
+            return false;
           }
           break;
 
@@ -820,6 +849,10 @@ public class RegionMergeTransaction {
   // For unit testing.
   Path getMergesDir() {
     return this.mergesdir;
+  }
+
+  private boolean useZKAndZKIsSet(final Server server) {
+    return server != null && useZKForAssignment && server.getZooKeeper() != null;
   }
 
   private static void cleanZK(final Server server, final HRegionInfo hri) {

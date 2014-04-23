@@ -25,27 +25,23 @@ import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
  * A callable object that invokes the corresponding action that needs to be
- * taken for assignment of a region in transition. 
- * Implementing as future callable we are able to act on the timeout
- * asynchronously.
+ * taken for unassignment of a region in transition. Implementing as future
+ * callable we are able to act on the timeout asynchronously.
  */
 @InterfaceAudience.Private
-public class AssignCallable implements Callable<Object> {
+public class UnAssignCallable implements Callable<Object> {
   private AssignmentManager assignmentManager;
 
   private HRegionInfo hri;
-  private boolean newPlan;
 
-  public AssignCallable(
-      AssignmentManager assignmentManager, HRegionInfo hri, boolean newPlan) {
+  public UnAssignCallable(AssignmentManager assignmentManager, HRegionInfo hri) {
     this.assignmentManager = assignmentManager;
-    this.newPlan = newPlan;
     this.hri = hri;
   }
 
   @Override
   public Object call() throws Exception {
-    assignmentManager.assign(hri, true, newPlan);
+    assignmentManager.unassign(hri, true);
     return null;
   }
 }

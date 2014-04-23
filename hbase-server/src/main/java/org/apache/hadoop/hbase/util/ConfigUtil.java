@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,36 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
-
-import java.util.concurrent.Callable;
+package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.conf.Configuration;
 
 /**
- * A callable object that invokes the corresponding action that needs to be
- * taken for assignment of a region in transition. 
- * Implementing as future callable we are able to act on the timeout
- * asynchronously.
+ * Some configuration related utilities
  */
 @InterfaceAudience.Private
-public class AssignCallable implements Callable<Object> {
-  private AssignmentManager assignmentManager;
+public class ConfigUtil {
 
-  private HRegionInfo hri;
-  private boolean newPlan;
-
-  public AssignCallable(
-      AssignmentManager assignmentManager, HRegionInfo hri, boolean newPlan) {
-    this.assignmentManager = assignmentManager;
-    this.newPlan = newPlan;
-    this.hri = hri;
-  }
-
-  @Override
-  public Object call() throws Exception {
-    assignmentManager.assign(hri, true, newPlan);
-    return null;
+  public static boolean useZKForAssignment(Configuration conf) {
+    // To change the default, please also update ZooKeeperWatcher.java
+    return conf.getBoolean("hbase.assignment.usezk", true);
   }
 }

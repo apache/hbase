@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,34 +17,26 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.util.concurrent.Callable;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MediumTests;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.experimental.categories.Category;
 
 /**
- * A callable object that invokes the corresponding action that needs to be
- * taken for assignment of a region in transition. 
- * Implementing as future callable we are able to act on the timeout
- * asynchronously.
+ * This tests AssignmentManager with a testing cluster.
  */
-@InterfaceAudience.Private
-public class AssignCallable implements Callable<Object> {
-  private AssignmentManager assignmentManager;
+@Category(MediumTests.class)
+public class TestZKLessAMOnCluster extends TestAssignmentManagerOnCluster {
 
-  private HRegionInfo hri;
-  private boolean newPlan;
-
-  public AssignCallable(
-      AssignmentManager assignmentManager, HRegionInfo hri, boolean newPlan) {
-    this.assignmentManager = assignmentManager;
-    this.newPlan = newPlan;
-    this.hri = hri;
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    // Don't use ZK for region assignment
+    conf.setBoolean("hbase.assignment.usezk", false);
+    setupOnce();
   }
 
-  @Override
-  public Object call() throws Exception {
-    assignmentManager.assign(hri, true, newPlan);
-    return null;
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TestAssignmentManagerOnCluster.tearDownAfterClass();
   }
 }

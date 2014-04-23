@@ -108,7 +108,11 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionResponse;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
@@ -121,12 +125,12 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -264,7 +268,7 @@ public class HRegionServer extends HasThread implements
   protected final int numRegionsToReport;
 
   // Stub to do region server status calls against the master.
-  private RegionServerStatusService.BlockingInterface rssStub;
+  private volatile RegionServerStatusService.BlockingInterface rssStub;
   // RPC client. Used to make the stub above that does region server status checking.
   RpcClient rpcClient;
 
@@ -393,6 +397,8 @@ public class HRegionServer extends HasThread implements
 
   protected BaseCoordinatedStateManager csm;
 
+  private final boolean useZKForAssignment;
+
   /**
    * Starts a HRegionServer at the default location.
    * @param conf
@@ -459,6 +465,8 @@ public class HRegionServer extends HasThread implements
         abort("Uncaught exception in service thread " + t.getName(), e);
       }
     };
+
+    useZKForAssignment = ConfigUtil.useZKForAssignment(conf);
 
     // Set 'fs.defaultFS' to match the filesystem on hbase.rootdir else
     // underlying hadoop hdfs accessors will be going against wrong filesystem
@@ -928,8 +936,9 @@ public class HRegionServer extends HasThread implements
   @VisibleForTesting
   protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
   throws IOException {
-    if (this.rssStub == null) {
-      // the current server is stopping.
+    RegionServerStatusService.BlockingInterface rss = rssStub;
+    if (rss == null) {
+      // the current server could be stopping.
       return;
     }
     ClusterStatusProtos.ServerLoad sl = buildServerLoad(reportStartTime, reportEndTime);
@@ -939,18 +948,19 @@ public class HRegionServer extends HasThread implements
         this.serverName.getVersionedBytes());
       request.setServer(ProtobufUtil.toServerName(sn));
       request.setLoad(sl);
-      this.rssStub.regionServerReport(null, request.build());
+      rss.regionServerReport(null, request.build());
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof YouAreDeadException) {
         // This will be caught and handled as a fatal error in run()
         throw ioe;
       }
+      if (rssStub == rss) {
+        rssStub = null;
+      }
       // Couldn't connect to the master, get location from zk and reconnect
       // Method blocks until new master is found or we are stopped
-      Pair<ServerName, RegionServerStatusService.BlockingInterface> p =
-        createRegionServerStatusStub();
-      this.rssStub = p.getSecond();
+      createRegionServerStatusStub();
     }
   }
 
@@ -1670,12 +1680,62 @@ public class HRegionServer extends HasThread implements
     // Update ZK, or META
     if (r.getRegionInfo().isMetaRegion()) {
       MetaRegionTracker.setMetaLocation(getZooKeeper(), serverName);
-    } else {
+    } else if (useZKForAssignment) {
       MetaEditor.updateRegionLocation(ct, r.getRegionInfo(),
         this.serverName, openSeqNum);
     }
-    LOG.debug("Finished post open deploy task for " + r.getRegionNameAsString());
+    if (!useZKForAssignment && !reportRegionTransition(
+        TransitionCode.OPENED, openSeqNum, r.getRegionInfo())) {
+      throw new IOException("Failed to report opened region to master: "
+        + r.getRegionNameAsString());
+    }
 
+    LOG.debug("Finished post open deploy task for " + r.getRegionNameAsString());
+  }
+
+  @Override
+  public boolean reportRegionTransition(TransitionCode code, HRegionInfo... hris) {
+    return reportRegionTransition(code, HConstants.NO_SEQNUM, hris);
+  }
+
+  @Override
+  public boolean reportRegionTransition(
+      TransitionCode code, long openSeqNum, HRegionInfo... hris) {
+    ReportRegionTransitionRequest.Builder builder = ReportRegionTransitionRequest.newBuilder();
+    builder.setServer(ProtobufUtil.toServerName(serverName));
+    RegionTransition.Builder transition = builder.addTransitionBuilder();
+    transition.setTransitionCode(code);
+    if (code == TransitionCode.OPENED && openSeqNum >= 0) {
+      transition.setOpenSeqNum(openSeqNum);
+    }
+    for (HRegionInfo hri: hris) {
+      transition.addRegionInfo(HRegionInfo.convert(hri));
+    }
+    ReportRegionTransitionRequest request = builder.build();
+    while (keepLooping()) {
+      RegionServerStatusService.BlockingInterface rss = rssStub;
+      try {
+        if (rss == null) {
+          createRegionServerStatusStub();
+          continue;
+        }
+        ReportRegionTransitionResponse response =
+          rss.reportRegionTransition(null, request);
+        if (response.hasErrorMessage()) {
+          LOG.info("Failed to transition " + hris[0]
+            + " to " + code + ": " + response.getErrorMessage());
+          return false;
+        }
+        return true;
+      } catch (ServiceException se) {
+        IOException ioe = ProtobufUtil.getRemoteException(se);
+        LOG.info("Failed to report region transition, will retry", ioe);
+        if (rssStub == rss) {
+          rssStub = null;
+        }
+      }
+    }
+    return false;
   }
 
   @Override
@@ -1819,8 +1879,10 @@ public class HRegionServer extends HasThread implements
    *
    * @return master + port, or null if server has been stopped
    */
-  private Pair<ServerName, RegionServerStatusService.BlockingInterface>
-      createRegionServerStatusStub() {
+  private synchronized ServerName createRegionServerStatusStub() {
+    if (rssStub != null) {
+      return masterAddressTracker.getMasterAddress();
+    }
     ServerName sn = null;
     long previousLogTime = 0;
     RegionServerStatusService.BlockingInterface master = null;
@@ -1880,7 +1942,8 @@ public class HRegionServer extends HasThread implements
         Thread.currentThread().interrupt();
       }
     }
-    return new Pair<ServerName, RegionServerStatusService.BlockingInterface>(sn, intf);
+    rssStub = intf;
+    return sn;
   }
 
   /**
@@ -1899,12 +1962,9 @@ public class HRegionServer extends HasThread implements
    * @throws IOException
    */
   private RegionServerStartupResponse reportForDuty() throws IOException {
+    ServerName masterServerName = createRegionServerStatusStub();
+    if (masterServerName == null) return null;
     RegionServerStartupResponse result = null;
-    Pair<ServerName, RegionServerStatusService.BlockingInterface> p =
-      createRegionServerStatusStub();
-    this.rssStub = p.getSecond();
-    ServerName masterServerName = p.getFirst();
-    if (masterServerName == null) return result;
     try {
       rpcServices.requestCount.set(0);
       LOG.info("reportForDuty to master=" + masterServerName + " with port="

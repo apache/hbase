@@ -56,6 +56,7 @@ public class TestOpenRegionHandler {
   private int testIndex = 0;
 
   @BeforeClass public static void before() throws Exception {
+    HTU.getConfiguration().setBoolean("hbase.assignment.usezk", true);
     HTU.startMiniZKCluster();
     TEST_HTD = new HTableDescriptor(TableName.valueOf("TestOpenRegionHandler.java"));
   }

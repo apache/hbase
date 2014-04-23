@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -52,7 +53,6 @@ import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
@@ -128,6 +128,7 @@ public class TestAssignmentManager {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    HTU.getConfiguration().setBoolean("hbase.assignment.usezk", true);
     HTU.startMiniZKCluster();
   }
 
@@ -147,6 +148,7 @@ public class TestAssignmentManager {
     this.server = Mockito.mock(Server.class);
     Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("master,1,1"));
     Mockito.when(server.getConfiguration()).thenReturn(HTU.getConfiguration());
+    Mockito.when(server.getCatalogTracker()).thenReturn(null);
     this.watcher =
       new ZooKeeperWatcher(HTU.getConfiguration(), "mockedServer", this.server, true);
     Mockito.when(server.getZooKeeper()).thenReturn(this.watcher);

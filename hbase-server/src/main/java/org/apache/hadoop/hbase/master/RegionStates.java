@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
@@ -109,6 +110,7 @@ public class RegionStates {
   private final HashMap<ServerName, Long> processedServers;
   private long lastProcessedServerCleanTime;
 
+  private final RegionStateStore regionStateStore;
   private final ServerManager serverManager;
   private final Server server;
 
@@ -116,7 +118,8 @@ public class RegionStates {
   static final String LOG_SPLIT_TIME = "hbase.master.maximum.logsplit.keeptime";
   static final long DEFAULT_LOG_SPLIT_TIME = 7200000L; // 2 hours
 
-  RegionStates(final Server master, final ServerManager serverManager) {
+  RegionStates(final Server master,
+      final ServerManager serverManager, final RegionStateStore regionStateStore) {
     regionStates = new HashMap<String, RegionState>();
     regionsInTransition = new HashMap<String, RegionState>();
     serverHoldings = new HashMap<ServerName, Set<HRegionInfo>>();
@@ -124,6 +127,7 @@ public class RegionStates {
     lastAssignments = new HashMap<String, ServerName>();
     processedServers = new HashMap<ServerName, Long>();
     deadServers = new HashMap<String, Long>();
+    this.regionStateStore = regionStateStore;
     this.serverManager = serverManager;
     this.server = master;
   }
@@ -188,7 +192,7 @@ public class RegionStates {
   /**
    * @return True if specified region is in one of the specified states.
    */
-  public synchronized boolean isRegionInState(
+  public boolean isRegionInState(
       final HRegionInfo hri, final State... states) {
     return isRegionInState(hri.getEncodedName(), states);
   }
@@ -196,14 +200,10 @@ public class RegionStates {
   /**
    * @return True if specified region is in one of the specified states.
    */
-  public synchronized boolean isRegionInState(
+  public boolean isRegionInState(
       final String encodedName, final State... states) {
     RegionState regionState = getRegionState(encodedName);
-    State s = regionState != null ? regionState.getState() : null;
-    for (State state: states) {
-      if (s == state) return true;
-    }
-    return false;
+    return isOneOfStates(regionState, states);
   }
 
   /**
@@ -217,9 +217,8 @@ public class RegionStates {
   /**
    * Get region transition state
    */
-  public synchronized RegionState
-      getRegionTransitionState(final HRegionInfo hri) {
-    return regionsInTransition.get(hri.getEncodedName());
+  public RegionState getRegionTransitionState(final HRegionInfo hri) {
+    return getRegionTransitionState(hri.getEncodedName());
   }
 
   /**
@@ -235,7 +234,7 @@ public class RegionStates {
    * and offline, its state will be SPLIT. Otherwise, its state will
    * be OFFLINE. Region already in RegionStates will be skipped.
    */
-  public synchronized void createRegionStates(
+  public void createRegionStates(
       final List<HRegionInfo> hris) {
     for (HRegionInfo hri: hris) {
       createRegionState(hri);
@@ -248,16 +247,44 @@ public class RegionStates {
    * be OFFLINE. If it is already in RegionStates, this call has
    * no effect, and the original state is returned.
    */
-  public synchronized RegionState createRegionState(final HRegionInfo hri) {
-    State newState = (hri.isOffline() && hri.isSplit()) ? State.SPLIT : State.OFFLINE;
+  public RegionState createRegionState(final HRegionInfo hri) {
+    return createRegionState(hri, null, null);
+  }
+
+  /**
+   * Add a region to RegionStates with the specified state.
+   * If the region is already in RegionStates, this call has
+   * no effect, and the original state is returned.
+   */
+  public synchronized RegionState createRegionState(
+      final HRegionInfo hri, State newState, ServerName serverName) {
+    if (newState == null || (newState == State.OPEN && serverName == null)) {
+      newState =  State.OFFLINE;
+    }
+    if (hri.isOffline() && hri.isSplit()) {
+      newState = State.SPLIT;
+      serverName = null;
+    }
     String encodedName = hri.getEncodedName();
     RegionState regionState = regionStates.get(encodedName);
     if (regionState != null) {
       LOG.warn("Tried to create a state for a region already in RegionStates, "
         + "used existing: " + regionState + ", ignored new: " + newState);
     } else {
-      regionState = new RegionState(hri, newState);
+      regionState = new RegionState(hri, newState, serverName);
       regionStates.put(encodedName, regionState);
+      if (newState == State.OPEN) {
+        regionAssignments.put(hri, serverName);
+        lastAssignments.put(encodedName, serverName);
+        Set<HRegionInfo> regions = serverHoldings.get(serverName);
+        if (regions == null) {
+          regions = new HashSet<HRegionInfo>();
+          serverHoldings.put(serverName, regions);
+        }
+        regions.add(hri);
+      } else if (!regionState.isUnassignable()) {
+        regionsInTransition.put(encodedName, regionState);
+      }
     }
     return regionState;
   }
@@ -265,9 +292,9 @@ public class RegionStates {
   /**
    * Update a region state. It will be put in transition if not already there.
    */
-  public synchronized RegionState updateRegionState(
+  public RegionState updateRegionState(
       final HRegionInfo hri, final State state) {
-    RegionState regionState = regionStates.get(hri.getEncodedName());
+    RegionState regionState = getRegionState(hri.getEncodedName());
     return updateRegionState(hri, state,
       regionState == null ? null : regionState.getServerName());
   }
@@ -278,7 +305,7 @@ public class RegionStates {
    * If we can't find the region info based on the region name in
    * the transition, log a warning and return null.
    */
-  public synchronized RegionState updateRegionState(
+  public RegionState updateRegionState(
       final RegionTransition transition, final State state) {
     byte [] regionName = transition.getRegionName();
     HRegionInfo regionInfo = getRegionInfo(regionName);
@@ -297,54 +324,14 @@ public class RegionStates {
   /**
    * Update a region state. It will be put in transition if not already there.
    */
-  public synchronized RegionState updateRegionState(
+  public RegionState updateRegionState(
       final HRegionInfo hri, final State state, final ServerName serverName) {
-    if (state == State.FAILED_CLOSE || state == State.FAILED_OPEN) {
-      LOG.warn("Failed to open/close " + hri.getShortNameToLog()
-        + " on " + serverName + ", set to " + state);
-    }
+    return updateRegionState(hri, state, serverName, HConstants.NO_SEQNUM);
+  }
 
-    String encodedName = hri.getEncodedName();
-    RegionState regionState = new RegionState(
-      hri, state, System.currentTimeMillis(), serverName);
-    regionsInTransition.put(encodedName, regionState);
-    RegionState oldState = regionStates.put(encodedName, regionState);
-    ServerName oldServerName = oldState == null ? null : oldState.getServerName();
-    if (oldState == null || oldState.getState() != regionState.getState()
-        || (oldServerName == null && serverName != null)
-        || (oldServerName != null && !oldServerName.equals(serverName))) {
-      LOG.info("Transitioned " + oldState + " to " + regionState);
-    }
-
-    // For these states, region should be properly closed.
-    // There should be no log splitting issue.
-    if ((state == State.CLOSED || state == State.MERGED
-        || state == State.SPLIT) && lastAssignments.containsKey(encodedName)) {
-      ServerName last = lastAssignments.get(encodedName);
-      if (last.equals(serverName)) {
-        lastAssignments.remove(encodedName);
-      } else {
-        LOG.warn(encodedName + " moved to " + state + " on "
-          + serverName + ", expected " + last);
-      }
-    }
-
-    // Once a region is opened, record its last assignment right away.
-    if (serverName != null && state == State.OPEN) {
-      ServerName last = lastAssignments.get(encodedName);
-      if (!serverName.equals(last)) {
-        lastAssignments.put(encodedName, serverName);
-        if (last != null && isServerDeadAndNotProcessed(last)) {
-          LOG.warn(encodedName + " moved to " + serverName
-            + ", while it's previous host " + last
-            + " is dead but not processed yet");
-        }
-      }
-    }
-
-    // notify the change
-    this.notifyAll();
-    return regionState;
+  public void regionOnline(
+      final HRegionInfo hri, final ServerName serverName) {
+    regionOnline(hri, serverName, HConstants.NO_SEQNUM);
   }
 
   /**
@@ -352,8 +339,8 @@ public class RegionStates {
    * We can't confirm it is really online on specified region server
    * because it hasn't been put in region server's online region list yet.
    */
-  public synchronized void regionOnline(
-      final HRegionInfo hri, final ServerName serverName) {
+  public void regionOnline(final HRegionInfo hri,
+      final ServerName serverName, long openSeqNum) {
     if (!serverManager.isServerOnline(serverName)) {
       // This is possible if the region server dies before master gets a
       // chance to handle ZK event in time. At this time, if the dead server
@@ -363,30 +350,26 @@ public class RegionStates {
         + " was opened on a dead server: " + serverName);
       return;
     }
+    updateRegionState(hri, State.OPEN, serverName, openSeqNum);
 
-    String encodedName = hri.getEncodedName();
-    RegionState oldState = regionStates.get(encodedName);
-    if (oldState == null) {
-      LOG.warn("Online region not in RegionStates: " + hri.getShortNameToLog());
-    }
-    updateRegionState(hri, State.OPEN, serverName);
-    regionsInTransition.remove(encodedName);
-
-    ServerName oldServerName = regionAssignments.put(hri, serverName);
-    if (!serverName.equals(oldServerName)) {
-      LOG.info("Onlined " + hri.getShortNameToLog() + " on " + serverName);
-      Set<HRegionInfo> regions = serverHoldings.get(serverName);
-      if (regions == null) {
-        regions = new HashSet<HRegionInfo>();
-        serverHoldings.put(serverName, regions);
-      }
-      regions.add(hri);
-      if (oldServerName != null) {
-        LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
-        Set<HRegionInfo> oldRegions = serverHoldings.get(oldServerName);
-        oldRegions.remove(hri);
-        if (oldRegions.isEmpty()) {
-          serverHoldings.remove(oldServerName);
+    synchronized (this) {
+      regionsInTransition.remove(hri.getEncodedName());
+      ServerName oldServerName = regionAssignments.put(hri, serverName);
+      if (!serverName.equals(oldServerName)) {
+        LOG.info("Onlined " + hri.getShortNameToLog() + " on " + serverName);
+        Set<HRegionInfo> regions = serverHoldings.get(serverName);
+        if (regions == null) {
+          regions = new HashSet<HRegionInfo>();
+          serverHoldings.put(serverName, regions);
+        }
+        regions.add(hri);
+        if (oldServerName != null) {
+          LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
+          Set<HRegionInfo> oldRegions = serverHoldings.get(oldServerName);
+          oldRegions.remove(hri);
+          if (oldRegions.isEmpty()) {
+            serverHoldings.remove(oldServerName);
+          }
         }
       }
     }
@@ -405,6 +388,9 @@ public class RegionStates {
       }
     }
     long now = System.currentTimeMillis();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Adding to processed servers " + serverName);
+    }
     processedServers.put(serverName, Long.valueOf(now));
     Configuration conf = server.getConfiguration();
     long obsoleteTime = conf.getLong(LOG_SPLIT_TIME, DEFAULT_LOG_SPLIT_TIME);
@@ -416,6 +402,9 @@ public class RegionStates {
           = processedServers.entrySet().iterator(); it.hasNext();) {
         Map.Entry<ServerName, Long> e = it.next();
         if (e.getValue().longValue() < cutoff) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Removed from processed servers " + e.getKey());
+          }
           it.remove();
         }
       }
@@ -425,7 +414,7 @@ public class RegionStates {
   /**
    * Log split is done for a given region, so it is assignable now.
    */
-  public synchronized void logSplit(final HRegionInfo region) {
+  public void logSplit(final HRegionInfo region) {
     clearLastAssignment(region);
   }
 
@@ -445,24 +434,30 @@ public class RegionStates {
    * should be the specified expected state, which can only be
    * Split/Merged/Offline/null(=Offline)/SplittingNew/MergingNew.
    */
-  public synchronized void regionOffline(
+  public void regionOffline(
       final HRegionInfo hri, final State expectedState) {
     Preconditions.checkArgument(expectedState == null
       || RegionState.isUnassignable(expectedState),
         "Offlined region should not be " + expectedState);
-    String encodedName = hri.getEncodedName();
+    if (isRegionInState(hri, State.SPLITTING_NEW, State.MERGING_NEW)) {
+      // Remove it from all region maps
+      deleteRegion(hri);
+      return;
+    }
     State newState =
       expectedState == null ? State.OFFLINE : expectedState;
     updateRegionState(hri, newState);
-    regionsInTransition.remove(encodedName);
 
-    ServerName oldServerName = regionAssignments.remove(hri);
-    if (oldServerName != null) {
-      LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
-      Set<HRegionInfo> oldRegions = serverHoldings.get(oldServerName);
-      oldRegions.remove(hri);
-      if (oldRegions.isEmpty()) {
-        serverHoldings.remove(oldServerName);
+    synchronized (this) {
+      regionsInTransition.remove(hri.getEncodedName());
+      ServerName oldServerName = regionAssignments.remove(hri);
+      if (oldServerName != null && serverHoldings.containsKey(oldServerName)) {
+        LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
+        Set<HRegionInfo> oldRegions = serverHoldings.get(oldServerName);
+        oldRegions.remove(hri);
+        if (oldRegions.isEmpty()) {
+          serverHoldings.remove(oldServerName);
+        }
       }
     }
   }
@@ -580,12 +575,14 @@ public class RegionStates {
    * A table is deleted. Remove its regions from all internal maps.
    * We loop through all regions assuming we don't delete tables too much.
    */
-  public synchronized void tableDeleted(final TableName tableName) {
+  public void tableDeleted(final TableName tableName) {
     Set<HRegionInfo> regionsToDelete = new HashSet<HRegionInfo>();
-    for (RegionState state: regionStates.values()) {
-      HRegionInfo region = state.getRegion();
-      if (region.getTable().equals(tableName)) {
-        regionsToDelete.add(region);
+    synchronized (this) {
+      for (RegionState state: regionStates.values()) {
+        HRegionInfo region = state.getRegion();
+        if (region.getTable().equals(tableName)) {
+          regionsToDelete.add(region);
+        }
       }
     }
     for (HRegionInfo region: regionsToDelete) {
@@ -652,6 +649,22 @@ public class RegionStates {
   synchronized void setLastRegionServerOfRegion(
       final ServerName serverName, final String encodedName) {
     lastAssignments.put(encodedName, serverName);
+  }
+
+  synchronized void closeAllUserRegions(Set<TableName> excludedTables) {
+    boolean noExcludeTables = excludedTables == null || excludedTables.isEmpty();
+    Set<HRegionInfo> toBeClosed = new HashSet<HRegionInfo>(regionStates.size());
+    for(RegionState state: regionStates.values()) {
+      HRegionInfo hri = state.getRegion();
+      TableName tableName = hri.getTable();
+      if (!TableName.META_TABLE_NAME.equals(tableName) && !hri.isSplit()
+          && (noExcludeTables || !excludedTables.contains(tableName))) {
+        toBeClosed.add(hri);
+      }
+    }
+    for (HRegionInfo hri: toBeClosed) {
+      updateRegionState(hri, State.CLOSED);
+    }
   }
 
   /**
@@ -739,8 +752,8 @@ public class RegionStates {
     return result;
   }
 
-  protected synchronized RegionState getRegionState(final HRegionInfo hri) {
-    return regionStates.get(hri.getEncodedName());
+  protected RegionState getRegionState(final HRegionInfo hri) {
+    return getRegionState(hri.getEncodedName());
   }
 
   protected synchronized RegionState getRegionState(final String encodedName) {
@@ -754,7 +767,7 @@ public class RegionStates {
    */
   protected HRegionInfo getRegionInfo(final byte [] regionName) {
     String encodedName = HRegionInfo.encodeRegionName(regionName);
-    RegionState regionState = regionStates.get(encodedName);
+    RegionState regionState = getRegionState(encodedName);
     if (regionState != null) {
       return regionState.getRegion();
     }
@@ -774,10 +787,74 @@ public class RegionStates {
     }
   }
 
+  static boolean isOneOfStates(RegionState regionState, State... states) {
+    State s = regionState != null ? regionState.getState() : null;
+    for (State state: states) {
+      if (s == state) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Update a region state. It will be put in transition if not already there.
+   */
+  private RegionState updateRegionState(final HRegionInfo hri,
+      final State state, final ServerName serverName, long openSeqNum) {
+    if (state == State.FAILED_CLOSE || state == State.FAILED_OPEN) {
+      LOG.warn("Failed to open/close " + hri.getShortNameToLog()
+        + " on " + serverName + ", set to " + state);
+    }
+
+    String encodedName = hri.getEncodedName();
+    RegionState regionState = new RegionState(
+      hri, state, System.currentTimeMillis(), serverName);
+    RegionState oldState = getRegionState(encodedName);
+    if (!regionState.equals(oldState)) {
+      LOG.info("Transition " + oldState + " to " + regionState);
+      // Persist region state before updating in-memory info, if needed
+      regionStateStore.updateRegionState(openSeqNum, regionState, oldState);
+    }
+
+    synchronized (this) {
+      regionsInTransition.put(encodedName, regionState);
+      regionStates.put(encodedName, regionState);
+
+      // For these states, region should be properly closed.
+      // There should be no log splitting issue.
+      if ((state == State.CLOSED || state == State.MERGED
+          || state == State.SPLIT) && lastAssignments.containsKey(encodedName)) {
+        ServerName last = lastAssignments.get(encodedName);
+        if (last.equals(serverName)) {
+          lastAssignments.remove(encodedName);
+        } else {
+          LOG.warn(encodedName + " moved to " + state + " on "
+            + serverName + ", expected " + last);
+        }
+      }
+
+      // Once a region is opened, record its last assignment right away.
+      if (serverName != null && state == State.OPEN) {
+        ServerName last = lastAssignments.get(encodedName);
+        if (!serverName.equals(last)) {
+          lastAssignments.put(encodedName, serverName);
+          if (last != null && isServerDeadAndNotProcessed(last)) {
+            LOG.warn(encodedName + " moved to " + serverName
+              + ", while it's previous host " + last
+              + " is dead but not processed yet");
+          }
+        }
+      }
+
+      // notify the change
+      this.notifyAll();
+    }
+    return regionState;
+  }
+
   /**
    * Remove a region from all state maps.
    */
-  private void deleteRegion(final HRegionInfo hri) {
+  private synchronized void deleteRegion(final HRegionInfo hri) {
     String encodedName = hri.getEncodedName();
     regionsInTransition.remove(encodedName);
     regionStates.remove(encodedName);

@@ -45,8 +45,10 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitTransactionCoordination;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.PairOfSameType;
@@ -89,6 +91,7 @@ public class SplitTransaction {
   private HRegionInfo hri_b;
   private long fileSplitTimeout = 30000;
   public SplitTransactionCoordination.SplitTransactionDetails std;
+  boolean useZKForAssignment;
 
   /*
    * Row to split around
@@ -272,7 +275,7 @@ public class SplitTransaction {
     // will determine whether the region is split or not in case of failures.
     // If it is successful, master will roll-forward, if not, master will rollback
     // and assign the parent region.
-    if (!testing) {
+    if (!testing && useZKForAssignment) {
       if (metaEntries == null || metaEntries.isEmpty()) {
         MetaEditor.splitRegion(server.getCatalogTracker(),
             parent.getRegionInfo(), daughterRegions.getFirst().getRegionInfo(),
@@ -282,13 +285,21 @@ public class SplitTransaction {
           parent.getRegionInfo(), daughterRegions.getFirst().getRegionInfo(), daughterRegions
               .getSecond().getRegionInfo(), server.getServerName(), metaEntries);
       }
+    } else if (services != null && !useZKForAssignment) {
+      if (!services.reportRegionTransition(TransitionCode.SPLIT_PONR,
+          parent.getRegionInfo(), hri_a, hri_b)) {
+        // Passed PONR, let SSH clean it up
+        throw new IOException("Failed to notify master that split passed PONR: "
+          + parent.getRegionInfo().getRegionNameAsString());
+      }
     }
     return daughterRegions;
   }
+
   public PairOfSameType<HRegion> stepsBeforePONR(final Server server,
       final RegionServerServices services, boolean testing) throws IOException {
 
-    if (server != null && server.getCoordinatedStateManager() != null) {
+    if (useCoordinatedStateManager(server)) {
       if (std == null) {
         std =
             ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
@@ -297,9 +308,15 @@ public class SplitTransaction {
       ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
           .getSplitTransactionCoordination().startSplitTransaction(parent, server.getServerName(),
             hri_a, hri_b);
+    } else if (services != null && !useZKForAssignment) {
+      if (!services.reportRegionTransition(TransitionCode.READY_TO_SPLIT,
+          parent.getRegionInfo(), hri_a, hri_b)) {
+        throw new IOException("Failed to get ok from master to split "
+          + parent.getRegionNameAsString());
+      }
     }
     this.journal.add(JournalEntry.SET_SPLITTING);
-    if (server != null && server.getCoordinatedStateManager() != null) {
+    if (useCoordinatedStateManager(server)) {
       ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
           .getSplitTransactionCoordination().waitForSplitTransaction(services, parent, hri_a,
             hri_b, std);
@@ -399,11 +416,19 @@ public class SplitTransaction {
       }
       if (services != null) {
         try {
-          // add 2nd daughter first (see HBASE-4335)
-          services.postOpenDeployTasks(b, server.getCatalogTracker());
+          if (useZKForAssignment) {
+            // add 2nd daughter first (see HBASE-4335)
+            services.postOpenDeployTasks(b, server.getCatalogTracker());
+          } else if (!services.reportRegionTransition(TransitionCode.SPLIT,
+              parent.getRegionInfo(), hri_a, hri_b)) {
+            throw new IOException("Failed to report split region to master: "
+              + parent.getRegionInfo().getShortNameToLog());
+          }
           // Should add it to OnlineRegions
           services.addToOnlineRegions(b);
-          services.postOpenDeployTasks(a, server.getCatalogTracker());
+          if (useZKForAssignment) {
+            services.postOpenDeployTasks(a, server.getCatalogTracker());
+          }
           services.addToOnlineRegions(a);
         } catch (KeeperException ke) {
           throw new IOException(ke);
@@ -425,7 +450,9 @@ public class SplitTransaction {
   public PairOfSameType<HRegion> execute(final Server server,
       final RegionServerServices services)
   throws IOException {
-    if (server != null && server.getCoordinatedStateManager() != null) {
+    useZKForAssignment = server == null ? true :
+      ConfigUtil.useZKForAssignment(server.getConfiguration());
+    if (useCoordinatedStateManager(server)) {
       std =
           ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
               .getSplitTransactionCoordination().getDefaultDetails();
@@ -441,7 +468,7 @@ public class SplitTransaction {
       final RegionServerServices services, PairOfSameType<HRegion> regions)
       throws IOException {
     openDaughters(server, services, regions.getFirst(), regions.getSecond());
-    if (server != null && server.getCoordinatedStateManager() != null) {
+    if (useCoordinatedStateManager(server)) {
       ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
           .getSplitTransactionCoordination().completeSplitTransaction(services, regions.getFirst(),
             regions.getSecond(), std, parent);
@@ -561,6 +588,10 @@ public class SplitTransaction {
     }
   }
 
+  private boolean useCoordinatedStateManager(final Server server) {
+    return server != null && useZKForAssignment && server.getCoordinatedStateManager() != null;
+  }
+
   private void splitStoreFiles(final Map<byte[], List<StoreFile>> hstoreFilesToSplit)
       throws IOException {
     if (hstoreFilesToSplit == null) {
@@ -676,9 +707,13 @@ public class SplitTransaction {
       switch(je) {
 
       case SET_SPLITTING:
-        if (server != null && server instanceof HRegionServer) {
+        if (useCoordinatedStateManager(server) && server instanceof HRegionServer) {
           ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
               .getSplitTransactionCoordination().clean(this.parent.getRegionInfo());
+        } else if (services != null && !useZKForAssignment
+            && !services.reportRegionTransition(TransitionCode.SPLIT_REVERTED,
+                parent.getRegionInfo(), hri_a, hri_b)) {
+          return false;
         }
         break;
 

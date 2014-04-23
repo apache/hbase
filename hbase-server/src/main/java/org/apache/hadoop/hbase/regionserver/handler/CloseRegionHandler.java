@@ -29,8 +29,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.coordination.CloseRegionCoordination;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.util.ConfigUtil;
 
 /**
  * Handles closing of a region on a region server.
@@ -53,6 +55,7 @@ public class CloseRegionHandler extends EventHandler {
   private ServerName destination;
   private CloseRegionCoordination closeRegionCoordination;
   private CloseRegionCoordination.CloseRegionDetails closeRegionDetails;
+  private final boolean useZKForAssignment;
 
   /**
    * This method used internally by the RegionServer to close out regions.
@@ -102,6 +105,7 @@ public class CloseRegionHandler extends EventHandler {
     this.destination = destination;
     this.closeRegionCoordination = closeRegionCoordination;
     this.closeRegionDetails = crd;
+    useZKForAssignment = ConfigUtil.useZKForAssignment(server.getConfiguration());
   }
 
   public HRegionInfo getRegionInfo() {
@@ -124,7 +128,8 @@ public class CloseRegionHandler extends EventHandler {
 
       // Close the region
       try {
-        if (closeRegionCoordination.checkClosingState(regionInfo, closeRegionDetails)) {
+        if (useZKForAssignment && closeRegionCoordination.checkClosingState(
+            regionInfo, closeRegionDetails)) {
           return;
         }
 
@@ -148,8 +153,12 @@ public class CloseRegionHandler extends EventHandler {
       }
 
       this.rsServices.removeFromOnlineRegions(region, destination);
-      closeRegionCoordination.setClosedState(region, this.server.getServerName(),
-        closeRegionDetails);
+      if (!useZKForAssignment) {
+        rsServices.reportRegionTransition(TransitionCode.CLOSED, regionInfo);
+      } else {
+        closeRegionCoordination.setClosedState(region, this.server.getServerName(),
+          closeRegionDetails);
+      }
 
       // Done!  Region is closed on this RS
       LOG.debug("Closed " + region.getRegionNameAsString());

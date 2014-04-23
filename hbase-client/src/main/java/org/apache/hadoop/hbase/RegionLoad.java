@@ -203,6 +203,8 @@ public class RegionLoad {
     }
     sb = Strings.appendKeyValue(sb, "compactionProgressPct",
         compactionProgressPct);
+    sb = Strings.appendKeyValue(sb, "completeSequenceId",
+        this.getCompleteSequenceId());
     return sb.toString();
   }
 }

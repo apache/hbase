@@ -27,14 +27,15 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
-
+import org.apache.hadoop.hbase.util.ConfigUtil;
 /**
  * Handles opening of a region on a region server.
  * <p>
@@ -51,6 +52,8 @@ public class OpenRegionHandler extends EventHandler {
 
   private OpenRegionCoordination coordination;
   private OpenRegionCoordination.OpenRegionDetails ord;
+
+  private final boolean useZKForAssignment;
 
   public OpenRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
@@ -70,6 +73,7 @@ public class OpenRegionHandler extends EventHandler {
     this.htd = htd;
     this.coordination = coordination;
     this.ord = ord;
+    useZKForAssignment = ConfigUtil.useZKForAssignment(server.getConfiguration());
   }
 
   public HRegionInfo getRegionInfo() {
@@ -110,7 +114,8 @@ public class OpenRegionHandler extends EventHandler {
         return;
       }
 
-      if (!coordination.transitionFromOfflineToOpening(regionInfo, ord)) {
+      if (useZKForAssignment
+          && !coordination.transitionFromOfflineToOpening(regionInfo, ord)) {
         LOG.warn("Region was hijacked? Opening cancelled for encodedName=" + encodedName);
         // This is a desperate attempt: the znode is unlikely to be ours. But we can't do more.
         return;
@@ -124,7 +129,8 @@ public class OpenRegionHandler extends EventHandler {
       }
 
       boolean failed = true;
-      if (coordination.tickleOpening(ord, regionInfo, rsServices, "post_region_open")) {
+      if (!useZKForAssignment ||
+          coordination.tickleOpening(ord, regionInfo, rsServices, "post_region_open")) {
         if (updateMeta(region)) {
           failed = false;
         }
@@ -134,7 +140,8 @@ public class OpenRegionHandler extends EventHandler {
         return;
       }
 
-      if (!isRegionStillOpening() || !coordination.transitionToOpened(region, ord)) {
+      if (!isRegionStillOpening() ||
+          (useZKForAssignment && !coordination.transitionToOpened(region, ord))) {
         // If we fail to transition to opened, it's because of one of two cases:
         //    (a) we lost our ZK lease
         // OR (b) someone else opened the region before us
@@ -200,10 +207,16 @@ public class OpenRegionHandler extends EventHandler {
           cleanupFailedOpen(region);
         }
       } finally {
-        // Even if cleanupFailed open fails we need to do this transition
-        // See HBASE-7698
-        coordination.tryTransitionFromOpeningToFailedOpen(regionInfo, ord);
+        if (!useZKForAssignment) {
+          rsServices.reportRegionTransition(TransitionCode.FAILED_OPEN, regionInfo);
+        } else {
+          // Even if cleanupFailed open fails we need to do this transition
+          // See HBASE-7698
+          coordination.tryTransitionFromOpeningToFailedOpen(regionInfo, ord);
+        }
       }
+    } else if (!useZKForAssignment) {
+      rsServices.reportRegionTransition(TransitionCode.FAILED_OPEN, regionInfo);
     } else {
       // If still transition to OPENING is not done, we need to transition znode
       // to FAILED_OPEN
@@ -242,7 +255,10 @@ public class OpenRegionHandler extends EventHandler {
       if (elapsed > 120000) { // 2 minutes, no need to tickleOpening too often
         // Only tickle OPENING if postOpenDeployTasks is taking some time.
         lastUpdate = now;
-        tickleOpening = coordination.tickleOpening(ord, regionInfo, rsServices, "post_open_deploy");
+        if (useZKForAssignment) {
+          tickleOpening = coordination.tickleOpening(
+            ord, regionInfo, rsServices, "post_open_deploy");
+        }
       }
       synchronized (signaller) {
         try {
@@ -343,8 +359,16 @@ public class OpenRegionHandler extends EventHandler {
         this.rsServices,
         new CancelableProgressable() {
           public boolean progress() {
-            // if tickle failed, we need to cancel opening region.
-            return coordination.tickleOpening(ord, regionInfo, rsServices, "open_region_progress");
+            if (useZKForAssignment) {
+              // if tickle failed, we need to cancel opening region.
+              return coordination.tickleOpening(ord, regionInfo,
+                rsServices, "open_region_progress");
+            }
+            if (!isRegionStillOpening()) {
+              LOG.warn("Open region aborted since it isn't opening any more");
+              return false;
+            }
+            return true;
           }
         });
     } catch (Throwable t) {

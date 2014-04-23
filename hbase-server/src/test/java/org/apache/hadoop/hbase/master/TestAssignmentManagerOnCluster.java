@@ -60,9 +60,11 @@ import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -78,11 +80,10 @@ import org.junit.experimental.categories.Category;
 public class TestAssignmentManagerOnCluster {
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final static Configuration conf = TEST_UTIL.getConfiguration();
+  final static Configuration conf = TEST_UTIL.getConfiguration();
   private static HBaseAdmin admin;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  static void setupOnce() throws Exception {
     // Using the our load balancer to control region plans
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
       MyLoadBalancer.class, LoadBalancer.class);
@@ -93,6 +94,13 @@ public class TestAssignmentManagerOnCluster {
 
     TEST_UTIL.startMiniCluster(1, 4, null, MyMaster.class, null);
     admin = TEST_UTIL.getHBaseAdmin();
+  }
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    // Use ZK for region assignment
+    conf.setBoolean("hbase.assignment.usezk", true);
+    setupOnce();
   }
 
   @AfterClass
@@ -561,16 +569,18 @@ public class TestAssignmentManagerOnCluster {
       }
       am.regionOffline(hri);
       ZooKeeperWatcher zkw = TEST_UTIL.getHBaseCluster().getMaster().getZooKeeper();
-      am.getRegionStates().updateRegionState(hri, State.OFFLINE);
-      ZKAssign.createNodeOffline(zkw, hri, destServerName);
-      ZKAssign.transitionNodeOpening(zkw, hri, destServerName);
-
-      // Wait till the event is processed and the region is in transition
-      long timeoutTime = System.currentTimeMillis() + 20000;
-      while (!am.getRegionStates().isRegionInTransition(hri)) {
-        assertTrue("Failed to process ZK opening event in time",
-          System.currentTimeMillis() < timeoutTime);
-        Thread.sleep(100);
+      am.getRegionStates().updateRegionState(hri, State.PENDING_OPEN, destServerName);
+      if (ConfigUtil.useZKForAssignment(conf)) {
+        ZKAssign.createNodeOffline(zkw, hri, destServerName);
+        ZKAssign.transitionNodeOpening(zkw, hri, destServerName);
+  
+        // Wait till the event is processed and the region is in transition
+        long timeoutTime = System.currentTimeMillis() + 20000;
+        while (!am.getRegionStates().isRegionInTransition(hri)) {
+          assertTrue("Failed to process ZK opening event in time",
+            System.currentTimeMillis() < timeoutTime);
+          Thread.sleep(100);
+        }
       }
 
       am.getTableStateManager().setTableState(table, ZooKeeperProtos.Table.State.DISABLING);
@@ -607,6 +617,10 @@ public class TestAssignmentManagerOnCluster {
       master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
       assertTrue(am.waitForAssignment(hri));
+      while (!HBaseTestingUtility.getAllOnlineRegions(
+          TEST_UTIL.getHBaseCluster()).contains(hri.getRegionNameAsString())) {
+        Threads.sleep(100); // This won't take long
+      }
 
       MyRegionObserver.postCloseEnabled.set(true);
       am.unassign(hri);
@@ -704,8 +718,6 @@ public class TestAssignmentManagerOnCluster {
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 200);
-      assertFalse("Region should be assigned on a new region server",
-        oldServerName.equals(serverName));
     } finally {
       MyRegionObserver.postOpenEnabled.set(false);
       TEST_UTIL.deleteTable(Bytes.toBytes(table));

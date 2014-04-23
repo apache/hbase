@@ -80,6 +80,7 @@ public class TestDrainingServer {
   
   @BeforeClass
   public static void beforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setBoolean("hbase.assignment.usezk", true);
     TEST_UTIL.startMiniZKCluster();
   }
 

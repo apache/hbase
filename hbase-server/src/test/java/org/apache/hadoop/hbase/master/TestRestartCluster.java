@@ -58,6 +58,7 @@ public class TestRestartCluster {
 
   @Test (timeout=300000) public void testRestartClusterAfterKill()
   throws Exception {
+    UTIL.getConfiguration().setBoolean("hbase.assignment.usezk", true);
     UTIL.startMiniZKCluster();
     ZooKeeperWatcher zooKeeper =
       new ZooKeeperWatcher(UTIL.getConfiguration(), "cluster1", null, true);

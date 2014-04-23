@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.zookeeper.KeeperException;
 
@@ -78,6 +79,16 @@ public interface RegionServerServices
    */
   void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
   throws KeeperException, IOException;
+
+  /**
+   * Notify master that a handler requests to change a region state
+   */
+  boolean reportRegionTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris);
+
+  /**
+   * Notify master that a handler requests to change a region state
+   */
+  boolean reportRegionTransition(TransitionCode code, HRegionInfo... hris);
 
   /**
    * Returns a reference to the region server's RPC server

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
@@ -48,6 +49,8 @@ import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableStateManager;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -162,6 +165,7 @@ public class TestMasterFailover {
 
     // Create config to use for this cluster
     Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean("hbase.assignment.usezk", true);
 
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
@@ -512,6 +516,7 @@ public class TestMasterFailover {
     // Create and start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setBoolean("hbase.assignment.usezk", true);
 
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 2);
@@ -971,6 +976,7 @@ public class TestMasterFailover {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.master.info.port", -1);
+    conf.setBoolean("hbase.assignment.usezk", true);
 
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
@@ -1014,6 +1020,7 @@ public class TestMasterFailover {
 
     // Create config to use for this cluster
     Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean("hbase.assignment.usezk", true);
 
     // Start the cluster
     final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
@@ -1180,6 +1187,103 @@ public class TestMasterFailover {
     assertEquals(4, rss);
 
     // Stop the cluster
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  /**
+   * Test region in pending_open/close when master failover
+   */
+  @Test (timeout=180000)
+  public void testPendingOpenOrCloseWhenMasterFailover() throws Exception {
+    final int NUM_MASTERS = 1;
+    final int NUM_RS = 1;
+
+    // Create config to use for this cluster
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean("hbase.assignment.usezk", false);
+
+    // Start the cluster
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    log("Cluster started");
+
+    // get all the master threads
+    List<MasterThread> masterThreads = cluster.getMasterThreads();
+    assertEquals(1, masterThreads.size());
+
+    // only one master thread, let's wait for it to be initialized
+    assertTrue(cluster.waitForActiveAndReadyMaster());
+    HMaster master = masterThreads.get(0).getMaster();
+    assertTrue(master.isActiveMaster());
+    assertTrue(master.isInitialized());
+
+    // Create a table with a region online
+    HTable onlineTable = TEST_UTIL.createTable("onlineTable", "family");
+
+    // Create a table in META, so it has a region offline
+    HTableDescriptor offlineTable = new HTableDescriptor(
+      TableName.valueOf(Bytes.toBytes("offlineTable")));
+    offlineTable.addFamily(new HColumnDescriptor(Bytes.toBytes("family")));
+
+    FileSystem filesystem = FileSystem.get(conf);
+    Path rootdir = FSUtils.getRootDir(conf);
+    FSTableDescriptors fstd = new FSTableDescriptors(filesystem, rootdir);
+    fstd.createTableDescriptor(offlineTable);
+
+    HRegionInfo hriOffline = new HRegionInfo(offlineTable.getTableName(), null, null);
+    createRegion(hriOffline, rootdir, conf, offlineTable);
+    MetaEditor.addRegionToMeta(master.getCatalogTracker(), hriOffline);
+
+    log("Regions in hbase:meta and namespace have been created");
+
+    // at this point we only expect 3 regions to be assigned out
+    // (catalogs and namespace, + 1 online region)
+    assertEquals(3, cluster.countServedRegions());
+    HRegionInfo hriOnline = onlineTable.getRegionLocation("").getRegionInfo();
+
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    RegionStateStore stateStore = master.getAssignmentManager().getRegionStateStore();
+
+    // Put the online region in pending_close. It is actually already opened.
+    // This is to simulate that the region close RPC is not sent out before failover
+    RegionState oldState = regionStates.getRegionState(hriOnline);
+    RegionState newState = new RegionState(
+      hriOnline, State.PENDING_CLOSE, oldState.getServerName());
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
+
+    // Put the offline region in pending_open. It is actually not opened yet.
+    // This is to simulate that the region open RPC is not sent out before failover
+    oldState = new RegionState(hriOffline, State.OFFLINE);
+    newState = new RegionState(hriOffline, State.PENDING_OPEN, newState.getServerName());
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
+
+    // Stop the master
+    log("Aborting master");
+    cluster.abortMaster(0);
+    cluster.waitOnMaster(0);
+    log("Master has aborted");
+
+    // Start up a new master
+    log("Starting up a new master");
+    master = cluster.startMaster().getMaster();
+    log("Waiting for master to be ready");
+    cluster.waitForActiveAndReadyMaster();
+    log("Master is ready");
+
+    // Wait till no region in transition any more
+    master.getAssignmentManager().waitUntilNoRegionsInTransition(60000);
+
+    // Get new region states since master restarted
+    regionStates = master.getAssignmentManager().getRegionStates();
+
+    // Both pending_open (RPC sent/not yet) regions should be online
+    assertTrue(regionStates.isRegionOnline(hriOffline));
+    assertTrue(regionStates.isRegionOnline(hriOnline));
+
+    log("Done with verification, shutting down cluster");
+
+    // Done, shutdown the cluster
     TEST_UTIL.shutdownMiniCluster();
   }
 }
