@@ -61,7 +61,6 @@ public class CompactionConfiguration {
   double compactionRatio;
   double offPeekCompactionRatio;
   long throttlePoint;
-  boolean shouldDeleteExpired;
   long majorCompactionPeriod;
   float majorCompactionJitter;
 
@@ -80,7 +79,6 @@ public class CompactionConfiguration {
 
     throttlePoint =  conf.getLong("hbase.regionserver.thread.compaction.throttle",
           2 * maxFilesToCompact * storeConfigInfo.getMemstoreFlushSize());
-    shouldDeleteExpired = conf.getBoolean("hbase.store.delete.expired.storefile", true);
     majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24*7);
     // Make it 0.5 so jitter has us fall evenly either side of when the compaction should run
     majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.50F);
@@ -92,7 +90,7 @@ public class CompactionConfiguration {
   public String toString() {
     return String.format(
       "size [%d, %d); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
-      + "%s delete expired; major period %d, major jitter %f",
+      + " major period %d, major jitter %f",
       minCompactSize,
       maxCompactSize,
       minFilesToCompact,
@@ -100,7 +98,6 @@ public class CompactionConfiguration {
       compactionRatio,
       offPeekCompactionRatio,
       throttlePoint,
-      shouldDeleteExpired ? "" : " don't",
       majorCompactionPeriod,
       majorCompactionJitter);
   }
@@ -168,12 +165,5 @@ public class CompactionConfiguration {
    */
   float getMajorCompactionJitter() {
     return majorCompactionJitter;
-  }
-
-  /**
-   * @return Whether expired files should be deleted ASAP using compactions
-   */
-  boolean shouldDeleteExpired() {
-    return shouldDeleteExpired;
   }
 }

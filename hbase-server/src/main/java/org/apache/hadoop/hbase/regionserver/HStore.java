@@ -155,6 +155,7 @@ public class HStore implements Store {
 
   private ScanInfo scanInfo;
 
+  // TODO: ideally, this should be part of storeFileManager, as we keep passing this to it.
   final List<StoreFile> filesCompacting = Lists.newArrayList();
 
   // All access must be synchronized.
@@ -1343,6 +1344,9 @@ public class HStore implements Store {
       return null;
     }
 
+    // Before we do compaction, try to get rid of unneeded files to simplify things.
+    removeUnneededFiles();
+
     CompactionContext compaction = storeEngine.createCompaction();
     CompactionRequest request = null;
     this.lock.readLock().lock();
@@ -1398,13 +1402,7 @@ public class HStore implements Store {
           return null;
         }
 
-        // Update filesCompacting (check that we do not try to compact the same StoreFile twice).
-        if (!Collections.disjoint(filesCompacting, selectedFiles)) {
-          Preconditions.checkArgument(false, "%s overlaps with %s",
-              selectedFiles, filesCompacting);
-        }
-        filesCompacting.addAll(selectedFiles);
-        Collections.sort(filesCompacting, StoreFile.Comparators.SEQ_ID);
+        addToCompactingFiles(selectedFiles);
 
         // If we're enqueuing a major, clear the force flag.
         this.forceMajor = this.forceMajor && !request.isMajor();
@@ -1423,6 +1421,44 @@ public class HStore implements Store {
         + (request.isAllFiles() ? " (all files)" : ""));
     this.region.reportCompactionRequestStart(request.isMajor());
     return compaction;
+  }
+
+  /** Adds the files to compacting files. filesCompacting must be locked. */
+  private void addToCompactingFiles(final Collection<StoreFile> filesToAdd) {
+    if (filesToAdd == null) return;
+    // Check that we do not try to compact the same StoreFile twice.
+    if (!Collections.disjoint(filesCompacting, filesToAdd)) {
+      Preconditions.checkArgument(false, "%s overlaps with %s", filesToAdd, filesCompacting);
+    }
+    filesCompacting.addAll(filesToAdd);
+    Collections.sort(filesCompacting, StoreFile.Comparators.SEQ_ID);
+  }
+
+  private void removeUnneededFiles() throws IOException {
+    if (!conf.getBoolean("hbase.store.delete.expired.storefile", true)) return;
+    this.lock.readLock().lock();
+    Collection<StoreFile> delSfs = null;
+    try {
+      synchronized (filesCompacting) {
+        long cfTtl = getStoreFileTtl();
+        if (cfTtl != Long.MAX_VALUE) {
+          delSfs = storeEngine.getStoreFileManager().getUnneededFiles(
+              EnvironmentEdgeManager.currentTimeMillis() - cfTtl, filesCompacting);
+          addToCompactingFiles(delSfs);
+        }
+      }
+    } finally {
+      this.lock.readLock().unlock();
+    }
+    if (delSfs == null || delSfs.isEmpty()) return;
+
+    Collection<StoreFile> newFiles = new ArrayList<StoreFile>(); // No new files.
+    writeCompactionWalRecord(delSfs, newFiles);
+    replaceStoreFiles(delSfs, newFiles);
+    completeCompaction(delSfs);
+    LOG.info("Completed removal of " + delSfs.size() + " unnecessary (expired) file(s) in "
+        + this + " of " + this.getRegionInfo().getRegionNameAsString()
+        + "; total size for store is " + StringUtils.humanReadableInt(storeSize));
   }
 
   @Override
