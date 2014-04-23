@@ -121,7 +121,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * Default number of versions of a record to keep.
    */
-  public static final int DEFAULT_VERSIONS = 1;
+  public static final int DEFAULT_VERSIONS = HBaseConfiguration.create().getInt(
+    "hbase.column.max.version", 1);
 
   /**
    * Default is not to keep a minimum of versions.
