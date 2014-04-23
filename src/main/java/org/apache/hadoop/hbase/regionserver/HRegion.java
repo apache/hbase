@@ -3307,9 +3307,9 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
       // add seqid to hlog
       // to be strict, next sequence id is getSequenceNumber() + 1
       // because of incrementAndGet in Hlog.java obtainSeqNum method
-      // after calling writeToHLog method nex line.
+      // after calling log.writeSeqidTransition next line.
       HRegionSeqidTransition seqidTransition =
-          new HRegionSeqidTransition(seqid-1, log.getSequenceNumber() + 1);
+          new HRegionSeqidTransition(Math.max(seqid-1, 0), log.getSequenceNumber() + 1);
       // no serverInfo b/c outside an HRS context
       log.writeSeqidTransition(seqidTransition, null, r.getRegionInfo());
     }

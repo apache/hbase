@@ -35,12 +35,12 @@ public final class HRegionSeqidTransition {
   private final long nextSeqid;
 
   public HRegionSeqidTransition(final long lastSeqid, final long nextSeqid) {
-    if ((lastSeqid >= 0) && (nextSeqid >= 0)) {
-      this.lastSeqid = lastSeqid;
-      this.nextSeqid = nextSeqid;
-    } else {
+    if (lastSeqid < 0 || nextSeqid < 0) {
       throw new IllegalArgumentException("Seqids cannot be negative!");
     }
+
+    this.lastSeqid = lastSeqid;
+    this.nextSeqid = nextSeqid;
   }
 
   public long getLastSeqid() {
@@ -60,18 +60,19 @@ public final class HRegionSeqidTransition {
     if (fromByte == null) {
       return null;
     }
-    if (fromByte.length >= 3 * Bytes.SIZEOF_LONG) {
-      if (Bytes.toLong(fromByte, 0) == VERSION) {
-        return new HRegionSeqidTransition(
-            Bytes.toLong(fromByte, Bytes.SIZEOF_LONG),
-            Bytes.toLong(fromByte, 2 * Bytes.SIZEOF_LONG));
-      } else {
-        // can be changed to deal versions later
-        throw new IllegalArgumentException("Only version 1 exists!!");
-      }
-    } else {
+
+    if (fromByte.length < 3 * Bytes.SIZEOF_LONG) {
       throw new IllegalArgumentException("Bytes array too short!");
     }
+
+    if (Bytes.toLong(fromByte, 0) != VERSION) {
+      // can be changed to deal versions later
+      throw new IllegalArgumentException("Only version 1 exists!!");
+    }
+
+    return new HRegionSeqidTransition(
+        Bytes.toLong(fromByte, Bytes.SIZEOF_LONG),
+        Bytes.toLong(fromByte, 2 * Bytes.SIZEOF_LONG));
   }
 
   /**

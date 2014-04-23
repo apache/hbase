@@ -2545,8 +2545,11 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
       // If hlog.seqid = 100, seqid = 200, after hlog.setSequenceNumber(200),
       // hlog.getSequenceNumber may return 210 if there're 10 edits inbound.
       // The transition seqid is still valid
+      // to be strict, next sequence id is getSequenceNumber() + 1
+      // because of incrementAndGet in Hlog.java obtainSeqNum method
+      // after calling hlog.writeSeqidTransition method next line.
       HRegionSeqidTransition seqidTransition =
-        new HRegionSeqidTransition(seqid - 1, hlog.getSequenceNumber());
+        new HRegionSeqidTransition(Math.max(seqid-1, 0), hlog.getSequenceNumber() + 1);
       LOG.info("Sequence id of region " + regionInfo.getRegionNameAsString() +
           " has a transition from " + seqidTransition.getLastSeqid() +
           " to " + seqidTransition.getNextSeqid() +

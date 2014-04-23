@@ -31,9 +31,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -101,6 +104,23 @@ public class TestHRegionSeqidTransition {
       LOG.info("Started new server=" +
                  TEST_UTIL.getHBaseCluster().startRegionServer());
     }
+  }
+
+  @Test
+  public void testNegSeqid() throws IOException {
+    HTableDescriptor htd = new HTableDescriptor(TABLENAME + "NegSeqid");
+    HRegionInfo hri = new HRegionInfo(htd, null, null);
+    HRegion.createHRegion(hri, TEST_UTIL.getTestDir(), c);
+    HLog log = new HLog(TEST_UTIL.getTestFileSystem(),
+                        new Path(TEST_UTIL.getTestDir(), HConstants.HREGION_LOGDIR_NAME),
+                        new Path(TEST_UTIL.getTestDir(), HConstants.HREGION_OLDLOGDIR_NAME),
+                        c, null);
+    try {
+      HRegion.openHRegion(hri, TEST_UTIL.getTestDir(), log, c);
+    } catch (IllegalArgumentException e) {
+      assertTrue("Got negative seqid exception when opening region with no families!.", false);
+    }
+    HRegion.deleteRegion(TEST_UTIL.getTestFileSystem(), TEST_UTIL.getTestDir(), hri);
   }
 
   @Test(timeout=300000)
