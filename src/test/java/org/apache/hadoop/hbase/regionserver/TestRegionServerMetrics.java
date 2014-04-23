@@ -123,7 +123,10 @@ public class TestRegionServerMetrics {
     }
 
     assertStoreMetricEquals(NUM_FLUSHES * NUM_REGIONS * FAMILIES.length
-        + META_AND_ROOT, ALL_METRICS, StoreMetricType.STORE_FILE_COUNT);
+        + 1 /*colfamily historian in META*/
+        + 1 /*colfamily info in META*/
+        + 1 /*ROOT */,
+        ALL_METRICS, StoreMetricType.STORE_FILE_COUNT);
 
     for (String cf : FAMILIES) {
       SchemaMetrics schemaMetrics = SchemaMetrics.getInstance(TABLE_NAME, cf);
