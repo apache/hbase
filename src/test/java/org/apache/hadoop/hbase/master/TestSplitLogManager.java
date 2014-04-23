@@ -239,7 +239,7 @@ public class TestSplitLogManager {
 
     slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
     slm.finishInitialization();
-    waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, 100);
+    waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, 1000);
     Task task = slm.findOrCreateOrphanTask(tasknode);
     assertTrue(task.isOrphan());
     waitForCounter(tot_mgr_heartbeat, 0, 1, 100);
@@ -248,9 +248,9 @@ public class TestSplitLogManager {
     assertTrue((task.last_update <= curt) &&
         (task.last_update > (curt - 1000)));
     LOG.info("waiting for manager to resubmit the orphan task");
-    waitForCounter(tot_mgr_resubmit, 0, 1, to + 300);
+    waitForCounter(tot_mgr_resubmit, 0, 1, to + 3000);
     assertTrue(task.isUnassigned());
-    waitForCounter(tot_mgr_rescan, 0, 1, to + 100);
+    waitForCounter(tot_mgr_rescan, 0, 1, to + 1000);
   }
 
   @Test
@@ -266,7 +266,7 @@ public class TestSplitLogManager {
 
     slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
     slm.finishInitialization();
-    waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, 100);
+    waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, 1000);
     Task task = slm.findOrCreateOrphanTask(tasknode);
     assertTrue(task.isOrphan());
     assertTrue(task.isUnassigned());
@@ -429,7 +429,7 @@ public class TestSplitLogManager {
 
     slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
     slm.finishInitialization();
-    waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, 100);
+    waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, 1000);
 
 
     // submit another task which will stay in unassigned mode
