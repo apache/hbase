@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import com.google.protobuf.HBaseZeroCopyByteString;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TagType;
@@ -46,6 +50,7 @@ public class VisibilityUtils {
       "hbase.regionserver.scan.visibility.label.generator.class";
   public static final byte VISIBILITY_TAG_TYPE = TagType.VISIBILITY_TAG_TYPE;
   public static final String SYSTEM_LABEL = "system";
+  private static final String COMMA = ",";
 
   /**
    * Creates the labels data to be written to zookeeper.
@@ -125,10 +130,30 @@ public class VisibilityUtils {
     return null;
   }
 
-  public static ScanLabelGenerator getScanLabelGenerator(Configuration conf) {
-    Class<? extends ScanLabelGenerator> scanLabelGeneratorKlass = conf
-        .getClass(VISIBILITY_LABEL_GENERATOR_CLASS, DefaultScanLabelGenerator.class,
-            ScanLabelGenerator.class);
-    return ReflectionUtils.newInstance(scanLabelGeneratorKlass, conf);
+  public static List<ScanLabelGenerator> getScanLabelGenerators(Configuration conf)
+      throws IOException {
+    // There can be n SLG specified as comma separated in conf
+    String slgClassesCommaSeparated = conf.get(VISIBILITY_LABEL_GENERATOR_CLASS);
+    // We have only System level SLGs now. The order of execution will be same as the order in the
+    // comma separated config value
+    List<ScanLabelGenerator> slgs = new ArrayList<ScanLabelGenerator>();
+    if (StringUtils.isNotEmpty(slgClassesCommaSeparated)) {
+      String[] slgClasses = slgClassesCommaSeparated.split(COMMA);
+      for (String slgClass : slgClasses) {
+        Class<? extends ScanLabelGenerator> slgKlass;
+        try {
+          slgKlass = (Class<? extends ScanLabelGenerator>) conf.getClassByName(slgClass.trim());
+          slgs.add(ReflectionUtils.newInstance(slgKlass, conf));
+        } catch (ClassNotFoundException e) {
+          throw new IOException(e);
+        }
+      }
+    }
+    // If the conf is not configured by default we need to have one SLG to be used
+    // ie. DefaultScanLabelGenerator
+    if (slgs.isEmpty()) {
+      slgs.add(ReflectionUtils.newInstance(DefaultScanLabelGenerator.class, conf));
+    }
+    return slgs;
   }
 }

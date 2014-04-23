@@ -140,7 +140,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   private VisibilityLabelsManager visibilityManager;
   // defined only for Endpoint implementation, so it can have way to access region services.
   private RegionCoprocessorEnvironment regionEnv;
-  private ScanLabelGenerator scanLabelGenerator;
+  private List<ScanLabelGenerator> scanLabelGenerators;
   
   private volatile int ordinalCounter = -1;
   // flags if we are running on a region of the 'labels' table
@@ -200,7 +200,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     }
     if (env instanceof RegionCoprocessorEnvironment) {
       // ScanLabelGenerator to be instantiated only with Region Observer.
-      scanLabelGenerator = VisibilityUtils.getScanLabelGenerator(this.conf);
+      scanLabelGenerators = VisibilityUtils.getScanLabelGenerators(this.conf);
     }
   }
 
@@ -988,28 +988,33 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     }
     if (authorizations == null) {
       // No Authorizations present for this scan/Get!
-      // In case of "labels" table and user tables, create an empty auth set. In other system tables
-      // just scan with out visibility check and filtering. Checking visibility labels for META and
-      // NAMESPACE table is not needed.
+      // In case of system tables other than "labels" just scan with out visibility check and
+      // filtering. Checking visibility labels for META and NAMESPACE table is not needed.
       TableName table = region.getRegionInfo().getTable();
       if (table.isSystemTable() && !table.equals(LABELS_TABLE_NAME)) {
         return null;
       }
-      return new VisibilityLabelFilter(new BitSet(0), cfVsMaxVersions);
-    }
-    for (String label : authorizations.getLabels()) {
-      if (!VisibilityLabelsValidator.isValidLabel(label)) {
-        throw new IllegalArgumentException("Invalid authorization label : " + label
-            + ". Authorizations cannot contain '(', ')' ,'&' ,'|', '!'" + " and cannot be empty");
+    } else {
+      for (String label : authorizations.getLabels()) {
+        if (!VisibilityLabelsValidator.isValidLabel(label)) {
+          throw new IllegalArgumentException("Invalid authorization label : " + label
+              + ". Authorizations cannot contain '(', ')' ,'&' ,'|', '!'" + " and cannot be empty");
+        }
       }
     }
     Filter visibilityLabelFilter = null;
-    if (this.scanLabelGenerator != null) {
+    if (this.scanLabelGenerators != null) {
       List<String> labels = null;
-      try {
-        labels = this.scanLabelGenerator.getLabels(getActiveUser(), authorizations);
-      } catch (Throwable t) {
-        LOG.error(t);
+      for (ScanLabelGenerator scanLabelGenerator : this.scanLabelGenerators) {
+        try {
+          // null authorizations to be handled inside SLG impl.
+          labels = scanLabelGenerator.getLabels(getActiveUser(), authorizations);
+          labels = (labels == null) ? new ArrayList<String>() : labels;
+          authorizations = new Authorizations(labels);
+        } catch (Throwable t) {
+          LOG.error(t);
+          throw new IOException(t);
+        }
       }
       int labelsCount = this.visibilityManager.getLabelsCount();
       BitSet bs = new BitSet(labelsCount + 1); // ordinal is index 1 based
