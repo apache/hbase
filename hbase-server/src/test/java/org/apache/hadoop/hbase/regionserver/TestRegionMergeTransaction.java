@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
+import org.apache.hadoop.hbase.consensus.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -218,7 +220,9 @@ public class TestRegionMergeTransaction {
 
     // Run the execute. Look at what it returns.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, 0);
-    Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration());
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(
+      TEST_UTIL.getConfiguration());
+    Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration(), cp);
     HRegion mergedRegion = mt.execute(mockServer, null);
     // Do some assertions about execution.
     assertTrue(this.fs.exists(mt.getMergesDir()));
@@ -265,7 +269,9 @@ public class TestRegionMergeTransaction {
     // Run the execute. Look at what it returns.
     boolean expectedException = false;
     TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, 0);
-    Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration());
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(
+      TEST_UTIL.getConfiguration());
+    Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration(), cp);
     try {
       mt.execute(mockServer, null);
     } catch (MockedFailedMergedRegionCreation e) {
@@ -324,7 +330,9 @@ public class TestRegionMergeTransaction {
     // Run the execute. Look at what it returns.
     boolean expectedException = false;
     TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, 0);
-    Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration());
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(
+      TEST_UTIL.getConfiguration());
+    Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration(), cp);
     try {
       mt.execute(mockServer, null);
     } catch (MockedFailedMergedRegionOpen e) {

@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
@@ -41,8 +42,9 @@ import com.google.protobuf.ServiceException;
 public class OOMERegionServer extends HRegionServer {
   private List<Put> retainer = new ArrayList<Put>();
 
-  public OOMERegionServer(HBaseConfiguration conf) throws IOException, InterruptedException {
-    super(conf);
+  public OOMERegionServer(HBaseConfiguration conf, ConsensusProvider cp)
+      throws IOException, InterruptedException {
+    super(conf, cp);
   }
 
   public void put(byte [] regionName, Put put)

@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -73,20 +74,23 @@ public class JVMClusterUtil {
    * Creates a {@link RegionServerThread}.
    * Call 'start' on the returned thread to make it run.
    * @param c Configuration to use.
+   * @param cp consensus provider to use
    * @param hrsc Class to create.
    * @param index Used distinguishing the object returned.
    * @throws IOException
    * @return Region server added.
    */
   public static JVMClusterUtil.RegionServerThread createRegionServerThread(
-      final Configuration c, final Class<? extends HRegionServer> hrsc,
+      final Configuration c, ConsensusProvider cp, final Class<? extends HRegionServer> hrsc,
       final int index)
   throws IOException {
     HRegionServer server;
     try {
-      Constructor<? extends HRegionServer> ctor = hrsc.getConstructor(Configuration.class);
+      
+      Constructor<? extends HRegionServer> ctor = hrsc.getConstructor(Configuration.class,
+      ConsensusProvider.class);
       ctor.setAccessible(true);
-      server = ctor.newInstance(c);
+      server = ctor.newInstance(c, cp);
     } catch (InvocationTargetException ite) {
       Throwable target = ite.getTargetException();
       throw new RuntimeException("Failed construction of RegionServer: " +
@@ -122,18 +126,20 @@ public class JVMClusterUtil {
    * Creates a {@link MasterThread}.
    * Call 'start' on the returned thread to make it run.
    * @param c Configuration to use.
+   * @param cp consensus provider to use
    * @param hmc Class to create.
    * @param index Used distinguishing the object returned.
    * @throws IOException
    * @return Master added.
    */
   public static JVMClusterUtil.MasterThread createMasterThread(
-      final Configuration c, final Class<? extends HMaster> hmc,
+      final Configuration c, ConsensusProvider cp, final Class<? extends HMaster> hmc,
       final int index)
   throws IOException {
     HMaster server;
     try {
-      server = hmc.getConstructor(Configuration.class).newInstance(c);
+      server = hmc.getConstructor(Configuration.class, ConsensusProvider.class).
+        newInstance(c, cp);
     } catch (InvocationTargetException ite) {
       Throwable target = ite.getTargetException();
       throw new RuntimeException("Failed construction of Master: " +

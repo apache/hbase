@@ -22,6 +22,7 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.zookeeper.KeeperException;
 
@@ -64,9 +65,10 @@ public class TestLocalHBaseCluster {
    * running in local mode.
    */
   public static class MyHMaster extends HMaster {
-    public MyHMaster(Configuration conf) throws IOException, KeeperException,
+    public MyHMaster(Configuration conf, ConsensusProvider cp)
+      throws IOException, KeeperException,
         InterruptedException {
-      super(conf);
+      super(conf, cp);
     }
 
     public int echo(int val) {
@@ -79,9 +81,9 @@ public class TestLocalHBaseCluster {
    */
   public static class MyHRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
 
-    public MyHRegionServer(Configuration conf) throws IOException,
+    public MyHRegionServer(Configuration conf, ConsensusProvider cp) throws IOException,
         InterruptedException {
-      super(conf);
+      super(conf, cp);
     }
 
     public int echo(int val) {

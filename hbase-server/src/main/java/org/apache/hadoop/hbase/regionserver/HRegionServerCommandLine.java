@@ -25,6 +25,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
+import org.apache.hadoop.hbase.consensus.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
 
 /**
@@ -50,6 +52,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
 
   private int start() throws Exception {
     Configuration conf = getConf();
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(conf);
     try {
       // If 'local', don't start a region server here. Defer to
       // LocalHBaseCluster. It manages 'local' clusters.
@@ -58,7 +61,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
             + HConstants.CLUSTER_DISTRIBUTED + " is false");
       } else {
         logProcessInfo(getConf());
-        HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf);
+        HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf, cp);
         hrs.start();
         hrs.join();
         if (hrs.isAborted()) {

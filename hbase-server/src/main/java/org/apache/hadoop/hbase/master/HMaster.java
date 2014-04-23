@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -254,9 +255,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @throws KeeperException
    * @throws IOException
    */
-  public HMaster(final Configuration conf)
+  public HMaster(final Configuration conf, ConsensusProvider consensusProvider)
       throws IOException, KeeperException, InterruptedException {
-    super(conf);
+    super(conf, consensusProvider);
     this.rsFatals = new MemoryBoundedLogMessageBuffer(
       conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 

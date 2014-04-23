@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
+import org.apache.hadoop.hbase.consensus.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Get;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
@@ -56,7 +58,8 @@ public class TestPriorityRpc {
   public void setup() {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean("hbase.testing.nocluster", true); // No need to do ZK
-    regionServer = HRegionServer.constructRegionServer(HRegionServer.class, conf);
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(conf);
+    regionServer = HRegionServer.constructRegionServer(HRegionServer.class, conf, cp);
     priority = regionServer.rpcServices.getPriority();
   }
 

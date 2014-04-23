@@ -1166,4 +1166,9 @@ possible configurations would overwhelm and obscure the important.
     procedure. After implementing your own MasterProcedureManager, just put it in HBase's classpath
     and add the fully qualified class name here.</description>
   </property>
+  <property>
+    <name>hbase.consensus.provider.class</name>
+    <value>org.apache.hadoop.hbase.consensus.ZkConsensusProvider</value>
+    <description>Fully qualified name of class implementing consensus.</description>
+  </property>
 </configuration>

@@ -971,6 +971,9 @@ public final class HConstants {
   /** Configuration key for setting replication codec class name */
   public static final String REPLICATION_CODEC_CONF_KEY = "hbase.replication.rpc.codec";
 
+  /** Config for pluggable consensus provider */
+  public static final String HBASE_CONSENSUS_PROVIDER_CLASS = "hbase.consensus.provider.class";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

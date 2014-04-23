@@ -75,6 +75,8 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
+import org.apache.hadoop.hbase.consensus.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -390,14 +392,26 @@ public class HRegionServer extends HasThread implements
 
   protected final RSRpcServices rpcServices;
 
+  protected ConsensusProvider consensusProvider;
+
   /**
-   * Starts a HRegionServer at the default location
-   *
+   * Starts a HRegionServer at the default location.
    * @param conf
    * @throws IOException
    * @throws InterruptedException
    */
-  public HRegionServer(Configuration conf)
+  public HRegionServer(Configuration conf) throws IOException, InterruptedException {
+    this(conf, ConsensusProviderFactory.getConsensusProvider(conf));
+  }
+
+  /**
+   * Starts a HRegionServer at the default location
+   * @param conf
+   * @param consensusProvider implementation of ConsensusProvider to be used
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public HRegionServer(Configuration conf, ConsensusProvider consensusProvider)
       throws IOException, InterruptedException {
     this.fsOk = true;
     this.conf = conf;
@@ -468,6 +482,10 @@ public class HRegionServer extends HasThread implements
       // Open connection to zookeeper and set primary watcher
       zooKeeper = new ZooKeeperWatcher(conf, getProcessName() + ":" +
         rpcServices.isa.getPort(), this, canCreateBaseZNode());
+
+      this.consensusProvider = consensusProvider;
+      this.consensusProvider.initialize(this);
+      this.consensusProvider.start();
 
       tableLockManager = TableLockManager.createTableLockManager(
         conf, zooKeeper, serverName);
@@ -2128,6 +2146,10 @@ public class HRegionServer extends HasThread implements
     return zooKeeper;
   }
 
+  public ConsensusProvider getConsensusProvider() {
+    return consensusProvider;
+  }
+
   @Override
   public ServerName getServerName() {
     return serverName;
@@ -2222,11 +2244,11 @@ public class HRegionServer extends HasThread implements
    */
   public static HRegionServer constructRegionServer(
       Class<? extends HRegionServer> regionServerClass,
-      final Configuration conf2) {
+      final Configuration conf2, ConsensusProvider cp) {
     try {
       Constructor<? extends HRegionServer> c = regionServerClass
-          .getConstructor(Configuration.class);
-      return c.newInstance(conf2);
+          .getConstructor(Configuration.class, ConsensusProvider.class);
+      return c.newInstance(conf2, cp);
     } catch (Exception e) {
       throw new RuntimeException("Failed construction of " + "Regionserver: "
           + regionServerClass.toString(), e);

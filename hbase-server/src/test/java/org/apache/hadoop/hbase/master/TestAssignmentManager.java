@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
+import org.apache.hadoop.hbase.consensus.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -886,7 +888,9 @@ public class TestAssignmentManager {
     Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
     // To avoid cast exception in DisableTableHandler process.
     HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
-    Server server = new HMaster(HTU.getConfiguration());
+
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(HTU.getConfiguration());
+    Server server = new HMaster(HTU.getConfiguration(), cp);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
     AtomicBoolean gate = new AtomicBoolean(false);
@@ -928,7 +932,8 @@ public class TestAssignmentManager {
     Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
     HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
-    Server server = new HMaster(HTU.getConfiguration());
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(HTU.getConfiguration());
+    Server server = new HMaster(HTU.getConfiguration(), cp);
     Whitebox.setInternalState(server, "serverManager", this.serverManager);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
@@ -965,7 +970,8 @@ public class TestAssignmentManager {
     Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
     HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
-    Server server = new HMaster(HTU.getConfiguration());
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(HTU.getConfiguration());
+    Server server = new HMaster(HTU.getConfiguration(), cp);
     Whitebox.setInternalState(server, "serverManager", this.serverManager);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);

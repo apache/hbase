@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -110,9 +111,9 @@ public class MiniHBaseCluster extends HBaseCluster {
     private User user = null;
     public static boolean TEST_SKIP_CLOSE = false;
 
-    public MiniHBaseClusterRegionServer(Configuration conf)
+    public MiniHBaseClusterRegionServer(Configuration conf, ConsensusProvider cp)
         throws IOException, InterruptedException {
-      super(conf);
+      super(conf, cp);
       this.user = User.getCurrent();
     }
 

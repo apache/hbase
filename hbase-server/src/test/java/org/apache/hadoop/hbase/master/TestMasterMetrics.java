@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
@@ -49,9 +50,9 @@ public class TestMasterMetrics {
   private static HBaseTestingUtility TEST_UTIL;
 
   public static class MyMaster extends HMaster {
-    public MyMaster(Configuration conf) throws IOException,
+    public MyMaster(Configuration conf, ConsensusProvider cp) throws IOException,
         KeeperException, InterruptedException {
-      super(conf);
+      super(conf, cp);
     }
 
     @Override

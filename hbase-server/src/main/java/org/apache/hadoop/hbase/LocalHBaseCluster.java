@@ -30,6 +30,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
+import org.apache.hadoop.hbase.consensus.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -73,6 +75,7 @@ public class LocalHBaseCluster {
   private final Class<? extends HMaster> masterClass;
   private final Class<? extends HRegionServer> regionServerClass;
 
+  ConsensusProvider consensusProvider;
   /**
    * Constructor.
    * @param conf
@@ -139,6 +142,8 @@ public class LocalHBaseCluster {
     final Class<? extends HRegionServer> regionServerClass)
   throws IOException {
     this.conf = conf;
+    consensusProvider = ConsensusProviderFactory.getConsensusProvider(conf);
+
     // Always have masters and regionservers come up on port '0' so we don't
     // clash over default ports.
     conf.set(HConstants.MASTER_PORT, "0");
@@ -173,7 +178,7 @@ public class LocalHBaseCluster {
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
     // the guts of HConnectionManager.
     JVMClusterUtil.RegionServerThread rst =
-      JVMClusterUtil.createRegionServerThread(config,
+      JVMClusterUtil.createRegionServerThread(config, consensusProvider,
           this.regionServerClass, index);
     this.regionThreads.add(rst);
     return rst;
@@ -199,7 +204,7 @@ public class LocalHBaseCluster {
     // Create each master with its own Configuration instance so each has
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
     // the guts of HConnectionManager.
-    JVMClusterUtil.MasterThread mt = JVMClusterUtil.createMasterThread(c,
+    JVMClusterUtil.MasterThread mt = JVMClusterUtil.createMasterThread(c, consensusProvider,
         (Class<? extends HMaster>) conf.getClass(HConstants.MASTER_IMPL, this.masterClass), index);
     this.masterThreads.add(mt);
     return mt;

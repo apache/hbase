@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
+import org.apache.hadoop.hbase.consensus.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
@@ -123,7 +125,9 @@ public class TestMasterNoCluster {
   @Test (timeout=30000)
   public void testStopDuringStart()
   throws IOException, KeeperException, InterruptedException {
-    HMaster master = new HMaster(TESTUTIL.getConfiguration());
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(
+      TESTUTIL.getConfiguration());
+    HMaster master = new HMaster(TESTUTIL.getConfiguration(), cp);
     master.start();
     // Immediately have it stop.  We used hang in assigning meta.
     master.stopMaster();
@@ -173,7 +177,9 @@ public class TestMasterNoCluster {
     // and get notification on transitions.  We need to fake out any rpcs the
     // master does opening/closing regions.  Also need to fake out the address
     // of the 'remote' mocked up regionservers.
-    HMaster master = new HMaster(conf) {
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(
+      TESTUTIL.getConfiguration());
+    HMaster master = new HMaster(conf, cp) {
       InetAddress getRemoteInetAddress(final int port, final long serverStartCode)
       throws UnknownHostException {
         // Return different address dependent on port passed.
@@ -254,7 +260,9 @@ public class TestMasterNoCluster {
     final ServerName deadServer = ServerName.valueOf("test.sample", 1, 100);
     final MockRegionServer rs0 = new MockRegionServer(conf, newServer);
 
-    HMaster master = new HMaster(conf) {
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(
+      TESTUTIL.getConfiguration());
+    HMaster master = new HMaster(conf, cp) {
       @Override
       void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMeatRSs) {
       }

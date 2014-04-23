@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
@@ -103,8 +104,9 @@ public class TestRSKilledWhenInitializing {
 
   public static class MockedRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
 
-    public MockedRegionServer(Configuration conf) throws IOException, InterruptedException {
-      super(conf);
+    public MockedRegionServer(Configuration conf, ConsensusProvider cp)
+      throws IOException, InterruptedException {
+      super(conf, cp);
     }
 
     @Override

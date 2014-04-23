@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -837,9 +838,10 @@ public class TestAssignmentManagerOnCluster {
   public static class MyMaster extends HMaster {
     AtomicBoolean enabled = new AtomicBoolean(true);
 
-    public MyMaster(Configuration conf) throws IOException, KeeperException,
+    public MyMaster(Configuration conf, ConsensusProvider cp)
+      throws IOException, KeeperException,
         InterruptedException {
-      super(conf);
+      super(conf, cp);
     }
 
     @Override

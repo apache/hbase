@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.consensus.ConsensusProvider;
+import org.apache.hadoop.hbase.consensus.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -70,9 +72,10 @@ public class TestClusterId {
     TEST_UTIL.startMiniDFSCluster(1);
 
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(conf);
     //start region server, needs to be separate
     //so we get an unset clusterId
-    rst = JVMClusterUtil.createRegionServerThread(conf,
+    rst = JVMClusterUtil.createRegionServerThread(conf,cp,
         HRegionServer.class, 0);
     rst.start();
     //Make sure RS is in blocking state
