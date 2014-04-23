@@ -53,19 +53,20 @@ EOF
           permissions = args[1]
           raise(ArgumentError, "Permissions are not of String type") unless permissions.kind_of?(
             String)
-          table_name = args[2]
-          raise(ArgumentError, "Table name is not of String type") unless table_name.kind_of?(
-            String)
-          family = args[3]     # will be nil if unset
-          if not family.nil?
-            raise(ArgumentError, "Family is not of String type") unless family.kind_of?(String)
-            qualifier = args[4]  # will be nil if unset
-            if not qualifier.nil?
-              raise(ArgumentError, "Qualifier is not of String type") unless qualifier.kind_of?(
-                String)
+          table_name = family = qualifier = nil
+          table_name = args[2] # will be nil if unset
+          if not table_name.nil?
+            raise(ArgumentError, "Table name is not of String type") unless table_name.kind_of?(
+              String)
+            family = args[3]     # will be nil if unset
+            if not family.nil?
+              raise(ArgumentError, "Family is not of String type") unless family.kind_of?(String)
+              qualifier = args[4]  # will be nil if unset
+              if not qualifier.nil?
+                raise(ArgumentError, "Qualifier is not of String type") unless qualifier.kind_of?(
+                  String)
+              end
             end
-          else
-            qualifier = nil
           end
           format_simple_command do
             security_admin.grant(user, permissions, table_name, family, qualifier)
@@ -80,11 +81,9 @@ EOF
           # Useful for feature testing and debugging.
 
           permissions = args[1]
-          raise(ArgumentError, "Permissions are not of Hash type") unless
-            permissions.kind_of?(Hash)
+          raise(ArgumentError, "Permissions are not of Hash type") unless permissions.kind_of?(Hash)
           scan = args[2]
-          raise(ArgumentError, "Scanner specification is not a Hash") unless
-            scan.kind_of?(Hash)
+          raise(ArgumentError, "Scanner specification is not a Hash") unless scan.kind_of?(Hash)
 
           t = table(table_name)
           now = Time.now
