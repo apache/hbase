@@ -111,7 +111,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
@@ -3159,9 +3158,7 @@ public class HRegion implements HeapSize { // , Writable{
         int interval = this.conf.getInt("hbase.hstore.report.interval.edits",
             2000);
         // How often to send a progress report (default 1/2 master timeout)
-        int period = this.conf.getInt("hbase.hstore.report.period",
-          this.conf.getInt(AssignmentManager.ASSIGNMENT_TIMEOUT,
-            AssignmentManager.DEFAULT_ASSIGNMENT_TIMEOUT_DEFAULT) / 2);
+        int period = this.conf.getInt("hbase.hstore.report.period", 300000);
         long lastReport = EnvironmentEdgeManager.currentTimeMillis();
 
         while ((entry = reader.next()) != null) {

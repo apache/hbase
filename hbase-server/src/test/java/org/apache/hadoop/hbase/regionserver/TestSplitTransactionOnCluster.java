@@ -122,10 +122,6 @@ public class TestSplitTransactionOnCluster {
 
   @BeforeClass public static void before() throws Exception {
     TESTING_UTIL.getConfiguration().setInt("hbase.balancer.period", 60000);
-    // Needed because some tests have splits happening on RS that are killed
-    // We don't want to wait 3min for the master to figure it out
-    TESTING_UTIL.getConfiguration().setInt(
-        "hbase.master.assignment.timeoutmonitor.timeout", 4000);
     TESTING_UTIL.startMiniCluster(NB_SERVERS);
   }
 

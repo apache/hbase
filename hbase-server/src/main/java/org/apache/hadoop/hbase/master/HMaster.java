@@ -503,8 +503,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
 
-    this.assignmentManager.startTimeOutMonitor();
-
     // get a list for previously failed RS which need log splitting work
     // we recover hbase:meta region servers inside master initialization and
     // handle other failed servers in SSH in order to start up master node ASAP

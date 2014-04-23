@@ -61,8 +61,6 @@ public class TestGlobalMemStoreSize {
     // Start the cluster
     LOG.info("Starting cluster");
     Configuration conf = HBaseConfiguration.create();
-    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
-    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 5000);
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(1, regionServerNum);
     cluster = TEST_UTIL.getHBaseCluster();

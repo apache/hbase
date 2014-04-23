@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -50,9 +49,6 @@ public class OpenRegionHandler extends EventHandler {
 
   private final HRegionInfo regionInfo;
   private final HTableDescriptor htd;
-
-  private boolean tomActivated;
-  private int assignmentTimeout;
 
   // We get version of our znode at start of open process and monitor it across
   // the total open. We'll fail the open if someone hijacks our znode; we can
@@ -82,12 +78,6 @@ public class OpenRegionHandler extends EventHandler {
     this.regionInfo = regionInfo;
     this.htd = htd;
     this.versionOfOfflineNode = versionOfOfflineNode;
-    tomActivated = this.server.getConfiguration().
-      getBoolean(AssignmentManager.ASSIGNMENT_TIMEOUT_MANAGEMENT,
-        AssignmentManager.DEFAULT_ASSIGNMENT_TIMEOUT_MANAGEMENT);
-    assignmentTimeout = this.server.getConfiguration().
-      getInt(AssignmentManager.ASSIGNMENT_TIMEOUT,
-        AssignmentManager.DEFAULT_ASSIGNMENT_TIMEOUT_DEFAULT);
   }
 
   public HRegionInfo getRegionInfo() {
@@ -246,27 +236,27 @@ public class OpenRegionHandler extends EventHandler {
     PostOpenDeployTasksThread t = new PostOpenDeployTasksThread(r,
       this.server, this.rsServices, signaller);
     t.start();
-    // Total timeout for meta edit.  If we fail adding the edit then close out
-    // the region and let it be assigned elsewhere.
-    long timeout = assignmentTimeout * 10;
+    // Post open deploy task:
+    //   meta => update meta location in ZK
+    //   other region => update meta
+    // It could fail if ZK/meta is not available and
+    // the update runs out of retries.
     long now = System.currentTimeMillis();
-    long endTime = now + timeout;
-    // Let our period at which we update OPENING state to be be 1/3rd of the
-    // regions-in-transition timeout period.
-    long period = Math.max(1, assignmentTimeout/ 3);
     long lastUpdate = now;
     boolean tickleOpening = true;
     while (!signaller.get() && t.isAlive() && !this.server.isStopped() &&
-        !this.rsServices.isStopping() && (endTime > now)) {
+        !this.rsServices.isStopping() && isRegionStillOpening()) {
       long elapsed = now - lastUpdate;
-      if (elapsed > period) {
+      if (elapsed > 120000) { // 2 minutes, no need to tickleOpening too often
         // Only tickle OPENING if postOpenDeployTasks is taking some time.
         lastUpdate = now;
         tickleOpening = tickleOpening("post_open_deploy");
       }
       synchronized (signaller) {
         try {
-          signaller.wait(period);
+          // Wait for 10 seconds, so that server shutdown
+          // won't take too long if this thread happens to run.
+          signaller.wait(10000);
         } catch (InterruptedException e) {
           // Go to the loop check.
         }
@@ -304,7 +294,7 @@ public class OpenRegionHandler extends EventHandler {
    * .
    */
   static class PostOpenDeployTasksThread extends Thread {
-    private Exception exception = null;
+    private Throwable exception = null;
     private final Server server;
     private final RegionServerServices services;
     private final HRegion region;
@@ -327,7 +317,7 @@ public class OpenRegionHandler extends EventHandler {
       } catch (KeeperException e) {
         server.abort("Exception running postOpenDeployTasks; region=" +
             this.region.getRegionInfo().getEncodedName(), e);
-      } catch (Exception e) {
+      } catch (Throwable e) {
         LOG.warn("Exception running postOpenDeployTasks; region=" +
           this.region.getRegionInfo().getEncodedName(), e);
         this.exception = e;
@@ -342,7 +332,7 @@ public class OpenRegionHandler extends EventHandler {
     /**
      * @return Null or the run exception; call this method after thread is done.
      */
-    Exception getException() {
+    Throwable getException() {
       return this.exception;
     }
   }
@@ -552,8 +542,8 @@ public class OpenRegionHandler extends EventHandler {
     String encodedName = this.regionInfo.getEncodedName();
     try {
       this.version =
-        ZKAssign.retransitionNodeOpening(server.getZooKeeper(),
-          this.regionInfo, this.server.getServerName(), this.version, tomActivated);
+        ZKAssign.confirmNodeOpening(server.getZooKeeper(),
+          this.regionInfo, this.server.getServerName(), this.version);
     } catch (KeeperException e) {
       server.abort("Exception refreshing OPENING; region=" + encodedName +
         ", context=" + context, e);

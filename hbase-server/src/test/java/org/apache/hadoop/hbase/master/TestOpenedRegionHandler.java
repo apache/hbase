@@ -81,8 +81,6 @@ public class TestOpenedRegionHandler {
     log("Starting cluster");
     conf = HBaseConfiguration.create();
     resetConf = conf;
-    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
-    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 5000);
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
     String tableName = "testOpenedRegionHandlerOnMasterRestart";
