@@ -31,11 +31,12 @@ import org.apache.hadoop.hbase.rest.model.ScannerModel;
 public abstract class ResultGenerator implements Iterator<Cell> {
 
   public static ResultGenerator fromRowSpec(final String table, 
-      final RowSpec rowspec, final Filter filter) throws IOException {
+      final RowSpec rowspec, final Filter filter, final boolean cacheBlocks)
+      throws IOException {
     if (rowspec.isSingleRow()) {
-      return new RowResultGenerator(table, rowspec, filter);
+      return new RowResultGenerator(table, rowspec, filter, cacheBlocks);
     } else {
-      return new ScannerResultGenerator(table, rowspec, filter);
+      return new ScannerResultGenerator(table, rowspec, filter, cacheBlocks);
     }
   }
 

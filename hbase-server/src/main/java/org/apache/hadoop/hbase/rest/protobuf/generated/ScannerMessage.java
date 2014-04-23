@@ -103,10 +103,18 @@ public final class ScannerMessage {
     // optional int32 caching = 9;
     /**
      * <code>optional int32 caching = 9;</code>
+     *
+     * <pre>
+     * specifies REST scanner caching
+     * </pre>
      */
     boolean hasCaching();
     /**
      * <code>optional int32 caching = 9;</code>
+     *
+     * <pre>
+     * specifies REST scanner caching
+     * </pre>
      */
     int getCaching();
 
@@ -129,6 +137,24 @@ public final class ScannerMessage {
      */
     com.google.protobuf.ByteString
         getLabelsBytes(int index);
+
+    // optional bool cacheBlocks = 11;
+    /**
+     * <code>optional bool cacheBlocks = 11;</code>
+     *
+     * <pre>
+     * server side block caching hint
+     * </pre>
+     */
+    boolean hasCacheBlocks();
+    /**
+     * <code>optional bool cacheBlocks = 11;</code>
+     *
+     * <pre>
+     * server side block caching hint
+     * </pre>
+     */
+    boolean getCacheBlocks();
   }
   /**
    * Protobuf type {@code org.apache.hadoop.hbase.rest.protobuf.generated.Scanner}
@@ -235,6 +261,11 @@ public final class ScannerMessage {
                 mutable_bitField0_ |= 0x00000200;
               }
               labels_.add(input.readBytes());
+              break;
+            }
+            case 88: {
+              bitField0_ |= 0x00000100;
+              cacheBlocks_ = input.readBool();
               break;
             }
           }
@@ -450,12 +481,20 @@ public final class ScannerMessage {
     private int caching_;
     /**
      * <code>optional int32 caching = 9;</code>
+     *
+     * <pre>
+     * specifies REST scanner caching
+     * </pre>
      */
     public boolean hasCaching() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
     /**
      * <code>optional int32 caching = 9;</code>
+     *
+     * <pre>
+     * specifies REST scanner caching
+     * </pre>
      */
     public int getCaching() {
       return caching_;
@@ -491,6 +530,30 @@ public final class ScannerMessage {
       return labels_.getByteString(index);
     }
 
+    // optional bool cacheBlocks = 11;
+    public static final int CACHEBLOCKS_FIELD_NUMBER = 11;
+    private boolean cacheBlocks_;
+    /**
+     * <code>optional bool cacheBlocks = 11;</code>
+     *
+     * <pre>
+     * server side block caching hint
+     * </pre>
+     */
+    public boolean hasCacheBlocks() {
+      return ((bitField0_ & 0x00000100) == 0x00000100);
+    }
+    /**
+     * <code>optional bool cacheBlocks = 11;</code>
+     *
+     * <pre>
+     * server side block caching hint
+     * </pre>
+     */
+    public boolean getCacheBlocks() {
+      return cacheBlocks_;
+    }
+
     private void initFields() {
       startRow_ = com.google.protobuf.ByteString.EMPTY;
       endRow_ = com.google.protobuf.ByteString.EMPTY;
@@ -502,6 +565,7 @@ public final class ScannerMessage {
       filter_ = "";
       caching_ = 0;
       labels_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      cacheBlocks_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -544,6 +608,9 @@ public final class ScannerMessage {
       }
       for (int i = 0; i < labels_.size(); i++) {
         output.writeBytes(10, labels_.getByteString(i));
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        output.writeBool(11, cacheBlocks_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -603,6 +670,10 @@ public final class ScannerMessage {
         }
         size += dataSize;
         size += 1 * getLabelsList().size();
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(11, cacheBlocks_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -740,6 +811,8 @@ public final class ScannerMessage {
         bitField0_ = (bitField0_ & ~0x00000100);
         labels_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000200);
+        cacheBlocks_ = false;
+        bitField0_ = (bitField0_ & ~0x00000400);
         return this;
       }
 
@@ -811,6 +884,10 @@ public final class ScannerMessage {
           bitField0_ = (bitField0_ & ~0x00000200);
         }
         result.labels_ = labels_;
+        if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
+          to_bitField0_ |= 0x00000100;
+        }
+        result.cacheBlocks_ = cacheBlocks_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -872,6 +949,9 @@ public final class ScannerMessage {
             labels_.addAll(other.labels_);
           }
           onChanged();
+        }
+        if (other.hasCacheBlocks()) {
+          setCacheBlocks(other.getCacheBlocks());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1254,18 +1334,30 @@ public final class ScannerMessage {
       private int caching_ ;
       /**
        * <code>optional int32 caching = 9;</code>
+       *
+       * <pre>
+       * specifies REST scanner caching
+       * </pre>
        */
       public boolean hasCaching() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
       /**
        * <code>optional int32 caching = 9;</code>
+       *
+       * <pre>
+       * specifies REST scanner caching
+       * </pre>
        */
       public int getCaching() {
         return caching_;
       }
       /**
        * <code>optional int32 caching = 9;</code>
+       *
+       * <pre>
+       * specifies REST scanner caching
+       * </pre>
        */
       public Builder setCaching(int value) {
         bitField0_ |= 0x00000100;
@@ -1275,6 +1367,10 @@ public final class ScannerMessage {
       }
       /**
        * <code>optional int32 caching = 9;</code>
+       *
+       * <pre>
+       * specifies REST scanner caching
+       * </pre>
        */
       public Builder clearCaching() {
         bitField0_ = (bitField0_ & ~0x00000100);
@@ -1376,6 +1472,55 @@ public final class ScannerMessage {
         return this;
       }
 
+      // optional bool cacheBlocks = 11;
+      private boolean cacheBlocks_ ;
+      /**
+       * <code>optional bool cacheBlocks = 11;</code>
+       *
+       * <pre>
+       * server side block caching hint
+       * </pre>
+       */
+      public boolean hasCacheBlocks() {
+        return ((bitField0_ & 0x00000400) == 0x00000400);
+      }
+      /**
+       * <code>optional bool cacheBlocks = 11;</code>
+       *
+       * <pre>
+       * server side block caching hint
+       * </pre>
+       */
+      public boolean getCacheBlocks() {
+        return cacheBlocks_;
+      }
+      /**
+       * <code>optional bool cacheBlocks = 11;</code>
+       *
+       * <pre>
+       * server side block caching hint
+       * </pre>
+       */
+      public Builder setCacheBlocks(boolean value) {
+        bitField0_ |= 0x00000400;
+        cacheBlocks_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool cacheBlocks = 11;</code>
+       *
+       * <pre>
+       * server side block caching hint
+       * </pre>
+       */
+      public Builder clearCacheBlocks() {
+        bitField0_ = (bitField0_ & ~0x00000400);
+        cacheBlocks_ = false;
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:org.apache.hadoop.hbase.rest.protobuf.generated.Scanner)
     }
 
@@ -1402,12 +1547,12 @@ public final class ScannerMessage {
   static {
     java.lang.String[] descriptorData = {
       "\n\024ScannerMessage.proto\022/org.apache.hadoo" +
-      "p.hbase.rest.protobuf.generated\"\265\001\n\007Scan" +
+      "p.hbase.rest.protobuf.generated\"\312\001\n\007Scan" +
       "ner\022\020\n\010startRow\030\001 \001(\014\022\016\n\006endRow\030\002 \001(\014\022\017\n" +
       "\007columns\030\003 \003(\014\022\r\n\005batch\030\004 \001(\005\022\021\n\tstartTi" +
       "me\030\005 \001(\003\022\017\n\007endTime\030\006 \001(\003\022\023\n\013maxVersions" +
       "\030\007 \001(\005\022\016\n\006filter\030\010 \001(\t\022\017\n\007caching\030\t \001(\005\022" +
-      "\016\n\006labels\030\n \003(\t"
+      "\016\n\006labels\030\n \003(\t\022\023\n\013cacheBlocks\030\013 \001(\010"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1419,7 +1564,7 @@ public final class ScannerMessage {
           internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Scanner_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Scanner_descriptor,
-              new java.lang.String[] { "StartRow", "EndRow", "Columns", "Batch", "StartTime", "EndTime", "MaxVersions", "Filter", "Caching", "Labels", });
+              new java.lang.String[] { "StartRow", "EndRow", "Columns", "Batch", "StartTime", "EndTime", "MaxVersions", "Filter", "Caching", "Labels", "CacheBlocks", });
           return null;
         }
       };

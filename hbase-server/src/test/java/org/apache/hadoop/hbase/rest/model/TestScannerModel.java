@@ -35,23 +35,26 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
   private static final long END_TIME = 1245393318192L;
   private static final int CACHING = 1000;
   private static final int BATCH = 100;
+  private static final boolean CACHE_BLOCKS = false;
 
   public TestScannerModel() throws Exception {
     super(ScannerModel.class);
     AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-        + "<Scanner batch=\"100\" caching=\"1000\" endRow=\"enp5eng=\" endTime=\"1245393318192\" "
-        + "maxVersions=\"2147483647\" startRow=\"YWJyYWNhZGFicmE=\" startTime=\"1245219839331\">"
+        + "<Scanner batch=\"100\" cacheBlocks=\"false\" caching=\"1000\" endRow=\"enp5eng=\" "
+        + "endTime=\"1245393318192\" maxVersions=\"2147483647\" startRow=\"YWJyYWNhZGFicmE=\" "
+        + "startTime=\"1245219839331\">"
         + "<column>Y29sdW1uMQ==</column><column>Y29sdW1uMjpmb28=</column>"
-        + "<label>private</label><label>public</label></Scanner>";
+        + "<label>private</label><label>public</label>"
+        + "</Scanner>";
 
-    AS_JSON = "{\"batch\":100,\"caching\":1000,\"endRow\":\"enp5eng=\",\"endTime\":1245393318192,"
-        + "\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\",\"startTime\":1245219839331,"
-        + "\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
-        +"\"labels\":[\"private\",\"public\"]}";
+    AS_JSON = "{\"batch\":100,\"caching\":1000,\"cacheBlocks\":false,\"endRow\":\"enp5eng=\","
+        + "\"endTime\":1245393318192,\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\","
+        + "\"startTime\":1245219839331,\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
+        +"\"labels\":[\"private\",\"public\"]"
+        +"}";
 
-    // TODO
     AS_PB = "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9vIGQo47qL554kMLDi57mf"
-        + "JDj/////B0joBw==";
+        + "JDj/////B0joB1IHcHJpdmF0ZVIGcHVibGljWAA=";
   }
 
   protected ScannerModel buildTestModel() {
@@ -66,6 +69,7 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     model.setCaching(CACHING);
     model.addLabel(PRIVATE);
     model.addLabel(PUBLIC);
+    model.setCacheBlocks(CACHE_BLOCKS);
     return model;
   }
 
@@ -86,6 +90,7 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     assertEquals(model.getEndTime(), END_TIME);
     assertEquals(model.getBatch(), BATCH);
     assertEquals(model.getCaching(), CACHING);
+    assertEquals(model.getCacheBlocks(), CACHE_BLOCKS);
     boolean foundLabel1 = false;
     boolean foundLabel2 = false;
     if (model.getLabels() != null && model.getLabels().size() > 0) {

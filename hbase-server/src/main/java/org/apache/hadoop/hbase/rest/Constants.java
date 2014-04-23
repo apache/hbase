@@ -27,7 +27,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public interface Constants {
-  String VERSION_STRING = "0.0.2";
+  // All constants in a public interface are 'public static final'
+
+  String VERSION_STRING = "0.0.3";
 
   int DEFAULT_MAX_AGE = 60 * 60 * 4;  // 4 hours
 
@@ -43,30 +45,32 @@ public interface Constants {
 
   String CRLF = "\r\n";
 
-  static final String REST_KEYTAB_FILE = "hbase.rest.keytab.file";
-  static final String REST_KERBEROS_PRINCIPAL = "hbase.rest.kerberos.principal";
-  static final String REST_AUTHENTICATION_TYPE = "hbase.rest.authentication.type";
-  static final String REST_AUTHENTICATION_PRINCIPAL =
-    "hbase.rest.authentication.kerberos.principal";
+  String REST_KEYTAB_FILE = "hbase.rest.keytab.file";
+  String REST_KERBEROS_PRINCIPAL = "hbase.rest.kerberos.principal";
+  String REST_AUTHENTICATION_TYPE = "hbase.rest.authentication.type";
+  String REST_AUTHENTICATION_PRINCIPAL = "hbase.rest.authentication.kerberos.principal";
 
-  static final String REST_SSL_ENABLED = "hbase.rest.ssl.enabled";
-  static final String REST_SSL_KEYSTORE_STORE = "hbase.rest.ssl.keystore.store";
-  static final String REST_SSL_KEYSTORE_PASSWORD = "hbase.rest.ssl.keystore.password";
-  static final String REST_SSL_KEYSTORE_KEYPASSWORD =
-    "hbase.rest.ssl.keystore.keypassword";
+  String REST_SSL_ENABLED = "hbase.rest.ssl.enabled";
+  String REST_SSL_KEYSTORE_STORE = "hbase.rest.ssl.keystore.store";
+  String REST_SSL_KEYSTORE_PASSWORD = "hbase.rest.ssl.keystore.password";
+  String REST_SSL_KEYSTORE_KEYPASSWORD = "hbase.rest.ssl.keystore.keypassword";
 
-  static final String REST_DNS_NAMESERVER = "hbase.rest.dns.nameserver";
-  static final String REST_DNS_INTERFACE = "hbase.rest.dns.interface";
+  String REST_DNS_NAMESERVER = "hbase.rest.dns.nameserver";
+  String REST_DNS_INTERFACE = "hbase.rest.dns.interface";
 
-  public static final String FILTER_CLASSES = "hbase.rest.filter.classes";
-  public static final String SCAN_START_ROW = "startrow";
-  public static final String SCAN_END_ROW = "endrow";
-  public static final String SCAN_COLUMN = "column";
-  public static final String SCAN_START_TIME = "starttime";
-  public static final String SCAN_END_TIME = "endtime";
-  public static final String SCAN_MAX_VERSIONS = "maxversions";
-  public static final String SCAN_BATCH_SIZE = "batchsize";
-  public static final String SCAN_LIMIT = "limit";
-  public static final String SCAN_FETCH_SIZE = "hbase.rest.scan.fetchsize";
+  String FILTER_CLASSES = "hbase.rest.filter.classes";
+  String SCAN_START_ROW = "startrow";
+  String SCAN_END_ROW = "endrow";
+  String SCAN_COLUMN = "column";
+  String SCAN_START_TIME = "starttime";
+  String SCAN_END_TIME = "endtime";
+  String SCAN_MAX_VERSIONS = "maxversions";
+  String SCAN_BATCH_SIZE = "batchsize";
+  String SCAN_LIMIT = "limit";
+  String SCAN_FETCH_SIZE = "hbase.rest.scan.fetchsize";
 
+  String ROW_KEYS_PARAM_NAME = "row";
+  /** If this query parameter is present when processing row or scanner resources,
+      it disables server side block caching */
+  String NOCACHE_PARAM_NAME = "nocache";
 }

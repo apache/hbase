@@ -116,6 +116,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private int maxVersions = Integer.MAX_VALUE;
   private int caching = -1;
   private List<String> labels = new ArrayList<String>();
+  private boolean cacheBlocks = true;
   
   @XmlRootElement
   static class FilterModel {
@@ -667,6 +668,14 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   }
 
   /**
+   * @return true if HFile blocks should be cached on the servers for this scan, false otherwise
+   */
+  @XmlAttribute
+  public boolean getCacheBlocks() {
+    return cacheBlocks;
+  }
+
+  /**
    * @return the lower bound on timestamps of items of interest
    */
   @XmlAttribute
@@ -734,6 +743,13 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   }
 
   /**
+   * @param value true if HFile blocks should be cached on the servers for this scan, false otherwise
+   */
+  public void setCacheBlocks(boolean value) {
+    this.cacheBlocks = value;
+  }
+
+  /**
    * @param maxVersions maximum number of versions to return
    */
   public void setMaxVersions(int maxVersions) {
@@ -791,6 +807,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
       for (String label : labels)
         builder.addLabels(label);
     }
+    builder.setCacheBlocks(cacheBlocks);
     return builder.build().toByteArray();
   }
 
@@ -826,11 +843,14 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     if (builder.hasFilter()) {
       filter = builder.getFilter();
     }
-    if(builder.getLabelsList() != null) {
+    if (builder.getLabelsList() != null) {
       List<String> labels = builder.getLabelsList();
       for(String label :  labels) {
         addLabel(label);
       }
+    }
+    if (builder.hasCacheBlocks()) {
+      this.cacheBlocks = builder.getCacheBlocks();
     }
     return this;
   }
