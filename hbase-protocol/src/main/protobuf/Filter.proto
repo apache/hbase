@@ -154,3 +154,5 @@ message ValueFilter {
 message WhileMatchFilter {
   required Filter filter = 1;
 }
+message FilterAllFilter {
+}
