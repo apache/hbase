@@ -933,7 +933,7 @@ The HBase shell has been extended to provide simple commands for editing and upd
 		  </property>
 		]]></programlisting>
 		<para>
-		As said above, finding out labels authenticated for a given get/scan request is a pluggable algorithm. A custom implementation can be plugged in using the property <code>hbase.regionserver.scan.visibility.label.generator.class</code>. The default implementation class is <code>org.apache.hadoop.hbase.security.visibility.DefaultScanLabelGenerator</code>
+		As said above, finding out labels authenticated for a given get/scan request is a pluggable algorithm. A custom implementation can be plugged in using the property <code>hbase.regionserver.scan.visibility.label.generator.class</code>. The default implementation class is <code>org.apache.hadoop.hbase.security.visibility.DefaultScanLabelGenerator</code>. One can configure a set of ScanLabelGenerators to be used by the system. For this, a comma separated set of implementation class names to be configured.
 		</para>
 	</section>
 </section>
