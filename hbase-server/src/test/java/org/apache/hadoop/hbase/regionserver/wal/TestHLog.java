@@ -685,7 +685,7 @@ public class TestHLog  {
     }
   }
 
-  @Test
+  @Test(expected=IOException.class)
   public void testFailedToCreateHLogIfParentRenamed() throws IOException {
     FSHLog log = (FSHLog)HLogFactory.createHLog(
       fs, hbaseDir, "testFailedToCreateHLogIfParentRenamed", conf);
@@ -696,12 +696,8 @@ public class TestHLog  {
     path = log.computeFilename(filenum + 1);
     Path newPath = new Path(parent.getParent(), parent.getName() + "-splitting");
     fs.rename(parent, newPath);
-    try {
-      HLogFactory.createWALWriter(fs, path, conf);
-      fail("It should fail to create the new WAL");
-    } catch (IOException ioe) {
-      // expected, good.
-    }
+    HLogFactory.createWALWriter(fs, path, conf);
+    fail("It should fail to create the new WAL");
   }
 
   @Test
