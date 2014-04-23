@@ -55,7 +55,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class RegionPlacementTestBase {
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static RegionMovementTestHelper TEST_UTIL = new RegionMovementTestHelper();
   protected final static int META_REGION_OVERHEAD = 1;
   protected final static int ROOT_REGION_OVERHEAD = 1;
   final static Log LOG = LogFactory.getLog(RegionPlacementTestBase.class);
@@ -66,50 +66,7 @@ public class RegionPlacementTestBase {
 
   protected int lastRegionOnPrimaryRSCount = 0;
   protected int REGION_NUM = 10;
-  private int lastRegionOpenedCount = 0;
 
-  /**
-   * Create a table with specified table name and region number.
-   *
-   * @param table     name of the table
-   * @param regionNum number of regions to create.
-   * @throws java.io.IOException
-   */
-  protected void createTable(String table, int regionNum)
-      throws IOException, InterruptedException {
-    byte[] tableName = Bytes.toBytes(table);
-    byte[][] splitKeys = new byte[regionNum - 1][];
-    byte[][] putKeys = new byte[regionNum - 1][];
-    for (int i = 1; i < regionNum; i++) {
-      byte splitKey = (byte) i;
-      splitKeys[i - 1] = new byte[] { splitKey, splitKey, splitKey };
-      putKeys[i - 1] = new byte[] { splitKey, splitKey, (byte) (i - 1) };
-    }
-
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, splitKeys);
-
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    Map<HRegionInfo, HServerAddress> regions = ht.getRegionsInfo();
-    assertEquals("Tried to create " + regionNum + " regions "
-        + "but only found " + regions.size(), regionNum, regions.size());
-
-    // Try and make sure that everything is up and assigned
-    TEST_UTIL.waitForTableConsistent();
-    // Try and make sure that everything is assigned to their final destination.
-    waitOnStableRegionMovement();
-
-    try {
-      for (byte[] rk : putKeys) {
-        Put p = new Put(rk);
-        p.add(HConstants.CATALOG_FAMILY, Bytes.toBytes(0L), Bytes.toBytes("testValue"));
-        ht.put(p);
-      }
-    } finally {
-      ht.close();
-    }
-  }
 
   protected static void setUpCluster(int numSlaves) throws IOException, InterruptedException {
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -125,39 +82,8 @@ public class RegionPlacementTestBase {
     TEST_UTIL.startMiniCluster(numSlaves);
     sleepTime = 3 * TEST_UTIL.getConfiguration().
         getInt("hbase.regionserver.msginterval", 1000);
-    admin = new HBaseAdmin(conf);
+    admin = TEST_UTIL.getHBaseAdmin();
     rp = new RegionPlacement(conf);
-  }
-
-  protected void waitOnTable(String tableName) throws IOException {
-
-    TEST_UTIL.waitForTableConsistent();
-
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    Scan s = new Scan();
-    ResultScanner rs = null;
-    try {
-      rs = ht.getScanner(s);
-      Result r = null;
-      do {
-        r = rs.next();
-      } while (r != null);
-    } finally {
-      if (rs != null) rs.close();
-      if (ht != null) ht.close();
-    }
-  }
-
-  protected void waitOnStableRegionMovement() throws IOException, InterruptedException {
-    int first = -1;
-    int second = 0;
-
-    int attempt = 0;
-    while (first != second && attempt < 10) {
-      first = second;
-      second = TEST_UTIL.getHBaseCluster().getMaster().getMetrics().getRegionsOpened();
-      Thread.sleep((++attempt) * sleepTime);
-    }
   }
 
   /**
@@ -180,7 +106,7 @@ public class RegionPlacementTestBase {
     verifyMETAUpdated(plan);
 
     // Verify the number of region movement is expected
-    verifyRegionMovementNum(regionMovementNum);
+    TEST_UTIL.verifyRegionMovementNum(regionMovementNum);
 
     // Verify the number of regions is assigned to the primary region server
     // based on the plan is expected
@@ -218,7 +144,7 @@ public class RegionPlacementTestBase {
     server.kill();
 
     // Verify the user regions previously on the killed rs are reassigned.
-    verifyRegionMovementNum(expectedRegionMovement);
+    TEST_UTIL.verifyRegionMovementNum(expectedRegionMovement);
 
     // Verify only expectedRegionOnPrimary of the user regions are assigned
     // to the primary region server based on the plan.
@@ -262,64 +188,12 @@ public class RegionPlacementTestBase {
     return null;
   }
 
-  /**
-   * Verify the number of region movement is expected
-   *
-   * @param expected
-   * @throws InterruptedException
-   */
-  protected void verifyRegionMovementNum(int expected)
-      throws InterruptedException {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    HMaster m = cluster.getMaster();
-
-    int retry = 10;
-    int attempt = 0;
-    int currentRegionOpened, regionMovement;
-    do {
-      currentRegionOpened = m.getMetrics().getRegionsOpened();
-      regionMovement = currentRegionOpened - lastRegionOpenedCount;
-      LOG.debug("There are " + regionMovement + "/" + expected +
-          " regions moved after " + attempt + " attempts");
-      Thread.sleep((++attempt) * sleepTime);
-    } while (regionMovement < expected && attempt <= retry);
-
-    // update the lastRegionOpenedCount
-    resetLastOpenedRegionCount(currentRegionOpened);
-
-    assertTrue("There are only " + regionMovement + " instead of "
-            + expected + " region movement for " + attempt + " attempts",
-        expected <= regionMovement
-    );
-
-    int maxExpected = (int) (expected * 1.5f);
-
-    // Because of how over-loaded some jvm's are during tests, region open can take quite a while
-    // this will cause extra assignments as the region will get assigned to an intermediate
-    // region server before being moved to the preferred server. This check allows for some of that
-    // but not too much.  1.5x expected is pretty generous, but makes sure that some of the regions
-    // made it to their preferred destination in one move.
-    //
-    // On a real cluster this is less likely to happen as there will be more region servers and they
-    // will be less resource constrained.
-    assertTrue("There are  " + regionMovement + " expecting max of "
-            + maxExpected + " after " + attempt + " attempts",
-        maxExpected >= regionMovement
-    );
-  }
-
   protected void resetLastRegionOnPrimary() throws IOException {
     this.lastRegionOnPrimaryRSCount = getNumRegionisOnPrimaryRS();
   }
 
-  protected void resetLastOpenedRegionCount() {
-    resetLastOpenedRegionCount(
-        TEST_UTIL.getHBaseCluster().getMaster().getMetrics().getRegionsOpened());
-  }
 
-  private void resetLastOpenedRegionCount(int newCount) {
-    this.lastRegionOpenedCount = newCount;
-  }
+
 
   /**
    * Shuffle the assignment plan by switching two favored node positions.
@@ -572,9 +446,9 @@ public class RegionPlacementTestBase {
       }
     }
 
-    waitOnStableRegionMovement();
-    resetLastOpenedRegionCount();
+    TEST_UTIL.waitOnStableRegionMovement();
+    TEST_UTIL.resetLastOpenedRegionCount();
     resetLastRegionOnPrimary();
-    waitOnStableRegionMovement();
+    TEST_UTIL.waitOnStableRegionMovement();
   }
 }

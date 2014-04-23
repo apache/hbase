@@ -42,16 +42,16 @@ public class TestRegionPlacementDestructive extends RegionPlacementTestBase {
   public void testRegionPlacementKillMeta() throws Exception {
     // Create a table with REGION_NUM regions.
     final String tableName = "testRegionPlacementKillMeta";
-    createTable(tableName, REGION_NUM);
+    TEST_UTIL.createTable(tableName, REGION_NUM);
 
     AssignmentPlan currentPlan = rp.getExistingAssignmentPlan();
 
-    waitOnStableRegionMovement();
+    TEST_UTIL.waitOnStableRegionMovement();
 
     // Check to make sure the new table is on it's primaries.
     verifyRegionOnPrimaryRS(REGION_NUM);
 
-    resetLastOpenedRegionCount();
+    TEST_UTIL.resetLastOpenedRegionCount();
     resetLastRegionOnPrimary();
 
     HRegionServer meta = this.getRegionServerWithMETA();
@@ -65,8 +65,8 @@ public class TestRegionPlacementDestructive extends RegionPlacementTestBase {
     verifyKillRegionServerWithMetaOrRoot(meta, expectedRegionOnPrimaryRS);
     RegionPlacement.printAssignmentPlan(currentPlan);
 
-    waitOnTable(tableName);
-    waitOnStableRegionMovement();
+    TEST_UTIL.waitOnTable(tableName);
+    TEST_UTIL.waitOnStableRegionMovement();
 
     // Start Root RS Kill Test
     HRegionServer root = this.getRegionServerWithROOT();

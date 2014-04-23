@@ -86,10 +86,10 @@ public class TestRegionPlacement extends RegionPlacementTestBase {
     final String tableNameTwo = "testPrimaryPlacement2";
 
     // Create a table with REGION_NUM regions.
-    createTable(tableName, REGION_NUM);
+    TEST_UTIL.createTable(tableName, REGION_NUM);
 
-    waitOnTable(tableName);
-    waitOnStableRegionMovement();
+    TEST_UTIL.waitOnTable(tableName);
+    TEST_UTIL.waitOnStableRegionMovement();
 
     AssignmentPlan plan = rp.getExistingAssignmentPlan();
 
@@ -100,21 +100,21 @@ public class TestRegionPlacement extends RegionPlacementTestBase {
     expected.put(3, 2);
     expected.put(2, 2);
 
-    waitOnTable(tableName);
-    waitOnStableRegionMovement();
+    TEST_UTIL.waitOnTable(tableName);
+    TEST_UTIL.waitOnStableRegionMovement();
 
 
     assertTrue(verifyNumPrimaries(expected, plan));
 
     //create additional table with 5 regions
-    createTable(tableNameTwo, 6);
+    TEST_UTIL.createTable(tableNameTwo, 6);
     expected.clear();
     // after this we expect 4 regionservers with 4 regions
     expected.put(4, 4);
 
-    waitOnTable(tableName);
-    waitOnTable(tableNameTwo);
-    waitOnStableRegionMovement();
+    TEST_UTIL.waitOnTable(tableName);
+    TEST_UTIL.waitOnTable(tableNameTwo);
+    TEST_UTIL.waitOnStableRegionMovement();
 
     plan = rp.getExistingAssignmentPlan();
     assertTrue(verifyNumPrimaries(expected, plan));
@@ -129,17 +129,17 @@ public class TestRegionPlacement extends RegionPlacementTestBase {
     AssignmentPlan currentPlan;
 
     // Reset all of the counters.
-    resetLastOpenedRegionCount();
+    TEST_UTIL.resetLastOpenedRegionCount();
     resetLastRegionOnPrimary();
 
     // Create a table with REGION_NUM regions.
     final String tableName = "testRegionAssignment";
-    createTable(tableName, REGION_NUM);
+    TEST_UTIL.createTable(tableName, REGION_NUM);
 
-    waitOnTable(tableName);
-    waitOnStableRegionMovement();
+    TEST_UTIL.waitOnTable(tableName);
+    TEST_UTIL.waitOnStableRegionMovement();
 
-    verifyRegionMovementNum(REGION_NUM);
+    TEST_UTIL.verifyRegionMovementNum(REGION_NUM);
 
     // Get the assignment plan from scanning the META table
     currentPlan = rp.getExistingAssignmentPlan();
@@ -168,16 +168,16 @@ public class TestRegionPlacement extends RegionPlacementTestBase {
   public void testRegionPlacementShuffle() throws Exception {
     // Create a table with REGION_NUM regions.
     final String tableName = "testRegionPlacementShuffle";
-    createTable(tableName, REGION_NUM);
+    TEST_UTIL.createTable(tableName, REGION_NUM);
 
     AssignmentPlan currentPlan = rp.getExistingAssignmentPlan();
 
     // Wait on everything to settle down
-    waitOnTable(tableName);
-    waitOnStableRegionMovement();
+    TEST_UTIL.waitOnTable(tableName);
+    TEST_UTIL.waitOnStableRegionMovement();
 
     // Reset the counts so that previous tests don't impact this.
-    resetLastOpenedRegionCount();
+    TEST_UTIL.resetLastOpenedRegionCount();
     resetLastRegionOnPrimary();
 
     // Shuffle the secondary with tertiary favored nodes
@@ -200,8 +200,8 @@ public class TestRegionPlacement extends RegionPlacementTestBase {
     rp.updateAssignmentPlan(shuffledPlan);
 
     // Really really wait for the table.
-    waitOnTable(tableName);
-    waitOnStableRegionMovement();
+    TEST_UTIL.waitOnTable(tableName);
+    TEST_UTIL.waitOnStableRegionMovement();
 
     verifyRegionAssignment(shuffledPlan, REGION_NUM, REGION_NUM);
   }
@@ -216,7 +216,7 @@ public class TestRegionPlacement extends RegionPlacementTestBase {
   public void testPinnedTable() throws Exception {
     String tableName = "testPinnedTable";
 
-    resetLastOpenedRegionCount();
+    TEST_UTIL.resetLastOpenedRegionCount();
     resetLastRegionOnPrimary();
 
     try {
@@ -237,12 +237,12 @@ public class TestRegionPlacement extends RegionPlacementTestBase {
       admin.createTable(htd, Bytes.toBytes("aaaa"), Bytes.toBytes("zzzz"), REGION_NUM);
 
       // Wait for things to stabilize
-      waitOnTable(tableName);
-      waitOnStableRegionMovement();
+      TEST_UTIL.waitOnTable(tableName);
+      TEST_UTIL.waitOnStableRegionMovement();
 
       // Reset all of the counters.
       resetLastRegionOnPrimary();
-      resetLastOpenedRegionCount();
+      TEST_UTIL.resetLastOpenedRegionCount();
 
       verifyRegionAssignment(rp.getExistingAssignmentPlan(), 0, REGION_NUM);
       assertPinned(tableName, cluster, servers, unusedServer);
@@ -251,8 +251,8 @@ public class TestRegionPlacement extends RegionPlacementTestBase {
       rp.updateAssignmentPlan(rp.getNewAssignmentPlan());
 
       // Wait for things to stabilize
-      waitOnTable(tableName);
-      waitOnStableRegionMovement();
+      TEST_UTIL.waitOnTable(tableName);
+      TEST_UTIL.waitOnStableRegionMovement();
 
       // Verify current plan
       verifyRegionAssignment(rp.getExistingAssignmentPlan(), 0, REGION_NUM);
@@ -323,7 +323,7 @@ public class TestRegionPlacement extends RegionPlacementTestBase {
    */
   @Test
   public void testJsonToAP() throws Exception {
-    createTable("testJsonAssignmentPlan", 3);
+    TEST_UTIL.createTable("testJsonAssignmentPlan", 3);
 
     AssignmentPlan currentPlan = rp.getExistingAssignmentPlan();
     RegionPlacement.printAssignmentPlan(currentPlan);
