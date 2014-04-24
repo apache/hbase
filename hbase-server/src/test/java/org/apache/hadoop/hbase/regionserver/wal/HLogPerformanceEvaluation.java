@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
+import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Tool;
@@ -58,6 +59,10 @@ import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.reporting.ConsoleReporter;
+import org.htrace.Sampler;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
+import org.htrace.impl.ProbabilitySampler;
 
 /**
  * This class runs performance benchmarks for {@link HLog}.
@@ -110,15 +115,34 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     private final HRegion region;
     private final int syncInterval;
     private final HTableDescriptor htd;
+    private final Sampler loopSampler;
 
     HLogPutBenchmark(final HRegion region, final HTableDescriptor htd,
-        final long numIterations, final boolean noSync, final int syncInterval) {
+        final long numIterations, final boolean noSync, final int syncInterval,
+        final double traceFreq) {
       this.numIterations = numIterations;
       this.noSync = noSync;
       this.syncInterval = syncInterval;
       this.numFamilies = htd.getColumnFamilies().length;
       this.region = region;
       this.htd = htd;
+      String spanReceivers = getConf().get("hbase.trace.spanreceiver.classes");
+      if (spanReceivers == null || spanReceivers.isEmpty()) {
+        loopSampler = Sampler.NEVER;
+      } else {
+        if (traceFreq <= 0.0) {
+          LOG.warn("Tracing enabled but traceFreq=0.");
+          loopSampler = Sampler.NEVER;
+        } else if (traceFreq >= 1.0) {
+          loopSampler = Sampler.ALWAYS;
+          if (numIterations > 1000) {
+            LOG.warn("Full tracing of all iterations will produce a lot of data. Be sure your"
+              + " SpanReciever can keep up.");
+          }
+        } else {
+          loopSampler = new ProbabilitySampler(traceFreq);
+        }
+      }
     }
 
     @Override
@@ -130,29 +154,39 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       ArrayList<UUID> clusters = new ArrayList<UUID>();
       long nonce = HConstants.NO_NONCE;
 
+      TraceScope threadScope =
+        Trace.startSpan("HLogPerfEval." + Thread.currentThread().getName());
       try {
         long startTime = System.currentTimeMillis();
         int lastSync = 0;
         for (int i = 0; i < numIterations; ++i) {
-          long now = System.nanoTime();
-          Put put = setupPut(rand, key, value, numFamilies);
-          WALEdit walEdit = new WALEdit();
-          addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
-          HRegionInfo hri = region.getRegionInfo();
-          hlog.appendNoSync(hri, hri.getTable(), walEdit, clusters, now, htd,
-            region.getSequenceId(), true, nonce, nonce);
-          if (!this.noSync) {
-            if (++lastSync >= this.syncInterval) {
-              hlog.sync();
-              lastSync = 0;
+          assert Trace.currentSpan() == threadScope.getSpan() : "Span leak detected.";
+          TraceScope loopScope = Trace.startSpan("runLoopIter" + i, loopSampler);
+          try {
+            long now = System.nanoTime();
+            Put put = setupPut(rand, key, value, numFamilies);
+            WALEdit walEdit = new WALEdit();
+            addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
+            HRegionInfo hri = region.getRegionInfo();
+            hlog.appendNoSync(hri, hri.getTable(), walEdit, clusters, now, htd,
+              region.getSequenceId(), true, nonce, nonce);
+            if (!this.noSync) {
+              if (++lastSync >= this.syncInterval) {
+                hlog.sync();
+                lastSync = 0;
+              }
             }
+            latencyHistogram.update(System.nanoTime() - now);
+          } finally {
+            loopScope.close();
           }
-          latencyHistogram.update(System.nanoTime() - now);
         }
         long totalTime = (System.currentTimeMillis() - startTime);
         logBenchmarkResult(Thread.currentThread().getName(), numIterations, totalTime);
       } catch (Exception e) {
         LOG.error(getClass().getSimpleName() + " Thread failed", e);
+      } finally {
+        threadScope.close();
       }
     }
   }
@@ -172,6 +206,9 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     long roll = Long.MAX_VALUE;
     boolean compress = false;
     String cipher = null;
+    String spanReceivers = getConf().get("hbase.trace.spanreceiver.classes");
+    boolean trace = spanReceivers != null && !spanReceivers.isEmpty();
+    double traceFreq = 1.0;
     // Process command line args
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
@@ -208,6 +245,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           compress = true;
         } else if (cmd.equals("-encryption")) {
           cipher = args[++i];
+        } else if (cmd.equals("-traceFreq")) {
+          traceFreq = Double.parseDouble(args[++i]);
         } else if (cmd.equals("-h")) {
           printUsageAndExit();
         } else if (cmd.equals("--help")) {
@@ -248,6 +287,10 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     FSUtils.setFsDefault(getConf(), FSUtils.getRootDir(getConf()));
     FileSystem fs = FileSystem.get(getConf());
     LOG.info("FileSystem: " + fs);
+
+    SpanReceiverHost receiverHost = trace ? SpanReceiverHost.getInstance(getConf()) : null;
+    TraceScope scope = Trace.startSpan("HLogPerfEval", trace ? Sampler.ALWAYS : Sampler.NEVER);
+
     try {
       if (rootRegionDir == null) {
         rootRegionDir = TEST_UTIL.getDataTestDirOnTestFS("HLogPerformanceEvaluation");
@@ -320,11 +363,13 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       });
       hlog.rollWriter();
       HRegion region = null;
+
       try {
         region = openRegion(fs, rootRegionDir, htd, hlog);
         ConsoleReporter.enable(this.metrics, 30, TimeUnit.SECONDS);
         long putTime =
-          runBenchmark(new HLogPutBenchmark(region, htd, numIterations, noSync, syncInterval),
+          runBenchmark(Trace.wrap(
+              new HLogPutBenchmark(region, htd, numIterations, noSync, syncInterval, traceFreq)),
             numThreads);
         logBenchmarkResult("Summary: threads=" + numThreads + ", iterations=" + numIterations +
           ", syncInterval=" + syncInterval, numIterations * numThreads, putTime);
@@ -356,6 +401,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     } finally {
       // We may be called inside a test that wants to keep on using the fs.
       if (!noclosefs) fs.close();
+      scope.close();
+      if (receiverHost != null) receiverHost.closeReceivers();
     }
 
     return(0);
@@ -435,6 +482,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       "e.g. all edit seq ids when verifying");
     System.err.println("  -roll <N>        Roll the way every N appends");
     System.err.println("  -encryption <A>  Encrypt the WAL with algorithm A, e.g. AES");
+    System.err.println("  -traceFreq <N>   Rate of trace sampling. Default: 1.0, " +
+      "only respected when tracing is enabled, ie -Dhbase.trace.spanreceiver.classes=...");
     System.err.println("");
     System.err.println("Examples:");
     System.err.println("");

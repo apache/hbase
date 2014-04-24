@@ -70,6 +70,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
+import org.htrace.NullScope;
+import org.htrace.Span;
 import org.htrace.Trace;
 import org.htrace.TraceScope;
 
@@ -665,6 +667,7 @@ class FSHLog implements HLog, Syncable {
         LOG.debug("HLog closing. Skipping rolling of writer");
         return regionsToFlush;
       }
+      TraceScope scope = Trace.startSpan("FSHLog.rollWriter");
       try {
         Path oldPath = getOldPath();
         Path newPath = getNewPath();
@@ -688,6 +691,8 @@ class FSHLog implements HLog, Syncable {
         }
       } finally {
         closeBarrier.endOp();
+        assert scope == NullScope.INSTANCE || !scope.isDetached();
+        scope.close();
       }
       return regionsToFlush;
     } finally {
@@ -856,6 +861,7 @@ class FSHLog implements HLog, Syncable {
     SyncFuture syncFuture = null;
     SafePointZigZagLatch zigzagLatch = (this.ringBufferEventHandler == null)?
       null: this.ringBufferEventHandler.attainSafePoint();
+    TraceScope scope = Trace.startSpan("FSHFile.replaceWriter");
     try {
       // Wait on the safe point to be achieved.  Send in a sync in case nothing has hit the
       // ring buffer between the above notification of writer that we want it to go to
@@ -863,7 +869,10 @@ class FSHLog implements HLog, Syncable {
       // 'sendSync' instead of 'sync' because we do not want this thread to block waiting on it
       // to come back.  Cleanup this syncFuture down below after we are ready to run again.
       try {
-        if (zigzagLatch != null) syncFuture = zigzagLatch.waitSafePoint(publishSyncOnRingBuffer());
+        if (zigzagLatch != null) {
+          Trace.addTimelineAnnotation("awaiting safepoint");
+          syncFuture = zigzagLatch.waitSafePoint(publishSyncOnRingBuffer());
+        }
       } catch (FailedSyncBeforeLogCloseException e) {
         if (isUnflushedEntries()) throw e;
         // Else, let is pass through to the close.
@@ -874,7 +883,11 @@ class FSHLog implements HLog, Syncable {
       // It is at the safe point.  Swap out writer from under the blocked writer thread.
       // TODO: This is close is inline with critical section.  Should happen in background?
       try {
-        if (this.writer != null) this.writer.close();
+        if (this.writer != null) {
+          Trace.addTimelineAnnotation("closing writer");
+          this.writer.close();
+          Trace.addTimelineAnnotation("writer closed");
+        }
         this.closeErrorCount.set(0);
       } catch (IOException ioe) {
         int errors = closeErrorCount.incrementAndGet();
@@ -915,6 +928,7 @@ class FSHLog implements HLog, Syncable {
         // It will be null if we failed our wait on safe point above.
         if (syncFuture != null) blockOnSync(syncFuture);
       }
+      scope.close();
     }
     return newPath;
   }
@@ -1139,8 +1153,7 @@ class FSHLog implements HLog, Syncable {
   throws IOException {
     if (!this.enabled || edits.isEmpty()) return this.highestUnsyncedSequence;
     if (this.closed) throw new IOException("Cannot append; log is closed");
-    // TODO: trace model here does not work any more.  It does not match how we append.
-    TraceScope traceScope = Trace.startSpan("FSHlog.append");
+    TraceScope scope = Trace.startSpan("FSHLog.append");
     // Make a key but do not set the WALEdit by region sequence id now -- set it to -1 for now --
     // and then later just before we write it out to the DFS stream, then set the sequence id;
     // late-binding.
@@ -1154,7 +1167,7 @@ class FSHLog implements HLog, Syncable {
       RingBufferTruck truck = this.disruptor.getRingBuffer().get(sequence);
       FSWALEntry entry =
         new FSWALEntry(sequence, logKey, edits, sequenceId, inMemstore, htd, info);
-      truck.loadPayload(entry, traceScope.detach());
+      truck.loadPayload(entry, scope.detach());
     } finally {
       this.disruptor.getRingBuffer().publish(sequence);
     }
@@ -1164,7 +1177,7 @@ class FSHLog implements HLog, Syncable {
     // When we sync, we will sync to the current point, the txid of the last edit added.
     // Since we are single writer, the next txid should be the just next one in sequence;
     // do not explicitly specify it. Sequence id/txid is an implementation internal detail.
-    if (doSync) publishSyncThenBlockOnCompletion();
+    if (doSync) sync();
     return sequence;
   }
 
@@ -1289,10 +1302,13 @@ class FSHLog implements HLog, Syncable {
           }
           // I got something.  Lets run.  Save off current sequence number in case it changes
           // while we run.
+          TraceScope scope = Trace.continueSpan(takeSyncFuture.getSpan());
           long start = System.nanoTime();
           Throwable t = null;
           try {
+            Trace.addTimelineAnnotation("syncing writer");
             writer.sync();
+            Trace.addTimelineAnnotation("writer synced");
             currentSequence = updateHighestSyncedSequence(currentSequence);
           } catch (IOException e) {
             LOG.error("Error syncing, request close of hlog ", e);
@@ -1301,6 +1317,8 @@ class FSHLog implements HLog, Syncable {
             LOG.warn("UNEXPECTED", e);
             t = e;
           } finally {
+            // reattach the span to the future before releasing.
+            takeSyncFuture.setSpan(scope.detach());
             // First release what we 'took' from the queue.
             syncCount += releaseSyncFuture(takeSyncFuture, currentSequence, t);
             // Can we release other syncs?
@@ -1389,8 +1407,12 @@ class FSHLog implements HLog, Syncable {
   }
 
   private SyncFuture publishSyncOnRingBuffer() {
+    return publishSyncOnRingBuffer(null);
+  }
+
+  private SyncFuture publishSyncOnRingBuffer(Span span) {
     long sequence = this.disruptor.getRingBuffer().next();
-    SyncFuture syncFuture = getSyncFuture(sequence);
+    SyncFuture syncFuture = getSyncFuture(sequence, span);
     try {
       RingBufferTruck truck = this.disruptor.getRingBuffer().get(sequence);
       truck.loadPayload(syncFuture);
@@ -1401,14 +1423,15 @@ class FSHLog implements HLog, Syncable {
   }
 
   // Sync all known transactions
-  private void publishSyncThenBlockOnCompletion() throws IOException {
-    blockOnSync(publishSyncOnRingBuffer());
+  private Span publishSyncThenBlockOnCompletion(Span span) throws IOException {
+    return blockOnSync(publishSyncOnRingBuffer(span));
   }
 
-  private void blockOnSync(final SyncFuture syncFuture) throws IOException {
+  private Span blockOnSync(final SyncFuture syncFuture) throws IOException {
     // Now we have published the ringbuffer, halt the current thread until we get an answer back.
     try {
       syncFuture.get();
+      return syncFuture.getSpan();
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
       IOException ioe = new InterruptedIOException();
@@ -1419,13 +1442,13 @@ class FSHLog implements HLog, Syncable {
     }
   }
 
-  private SyncFuture getSyncFuture(final long sequence) {
+  private SyncFuture getSyncFuture(final long sequence, Span span) {
     SyncFuture syncFuture = this.syncFuturesByHandler.get(Thread.currentThread());
     if (syncFuture == null) {
       syncFuture = new SyncFuture();
       this.syncFuturesByHandler.put(Thread.currentThread(), syncFuture);
     }
-    return syncFuture.reset(sequence);
+    return syncFuture.reset(sequence, span);
   }
 
   @Override
@@ -1472,17 +1495,35 @@ class FSHLog implements HLog, Syncable {
 
   @Override
   public void hsync() throws IOException {
-    publishSyncThenBlockOnCompletion();
+    TraceScope scope = Trace.startSpan("FSHLog.hsync");
+    try {
+      scope = Trace.continueSpan(publishSyncThenBlockOnCompletion(scope.detach()));
+    } finally {
+      assert scope == NullScope.INSTANCE || !scope.isDetached();
+      scope.close();
+    }
   }
 
   @Override
   public void hflush() throws IOException {
-    publishSyncThenBlockOnCompletion();
+    TraceScope scope = Trace.startSpan("FSHLog.hflush");
+    try {
+      scope = Trace.continueSpan(publishSyncThenBlockOnCompletion(scope.detach()));
+    } finally {
+      assert scope == NullScope.INSTANCE || !scope.isDetached();
+      scope.close();
+    }
   }
 
   @Override
   public void sync() throws IOException {
-    publishSyncThenBlockOnCompletion();
+    TraceScope scope = Trace.startSpan("FSHLog.sync");
+    try {
+      scope = Trace.continueSpan(publishSyncThenBlockOnCompletion(scope.detach()));
+    } finally {
+      assert scope == NullScope.INSTANCE || !scope.isDetached();
+      scope.close();
+    }
   }
 
   @Override
@@ -1491,7 +1532,13 @@ class FSHLog implements HLog, Syncable {
       // Already sync'd.
       return;
     }
-    publishSyncThenBlockOnCompletion();
+    TraceScope scope = Trace.startSpan("FSHLog.sync");
+    try {
+      scope = Trace.continueSpan(publishSyncThenBlockOnCompletion(scope.detach()));
+    } finally {
+      assert scope == NullScope.INSTANCE || !scope.isDetached();
+      scope.close();
+    }
   }
 
   void requestLogRoll() {
@@ -1731,8 +1778,9 @@ class FSHLog implements HLog, Syncable {
    * YMMV).
    * <p>Herein, we have an array into which we store the sync futures as they come in.  When we
    * have a 'batch', we'll then pass what we have collected to a SyncRunner thread to do the
-   * filesystem sync.  When it completes, it will then call {@link SyncFuture#done(long)} on each
-   * of SyncFutures in the batch to release blocked Handler threads.
+   * filesystem sync.  When it completes, it will then call
+   * {@link SyncFuture#done(long, Throwable)} on each of SyncFutures in the batch to release
+   * blocked Handler threads.
    * <p>I've tried various effects to try and make latencies low while keeping throughput high.
    * I've tried keeping a single Queue of SyncFutures in this class appending to its tail as the
    * syncs coming and having sync runner threads poll off the head to 'finish' completed
@@ -1782,15 +1830,13 @@ class FSHLog implements HLog, Syncable {
       // add appends to dfsclient as they come in.  Batching appends doesn't give any significant
       // benefit on measurement.  Handler sync calls we will batch up.
 
-      // TODO: Trace only working for appends, not for syncs.
-      TraceScope scope =
-        truck.hasSpanPayload() ? Trace.continueSpan(truck.unloadSpanPayload()) : null;
       try {
         if (truck.hasSyncFuturePayload()) {
           this.syncFutures[this.syncFuturesCount++] = truck.unloadSyncFuturePayload();
           // Force flush of syncs if we are carrying a full complement of syncFutures.
           if (this.syncFuturesCount == this.syncFutures.length) endOfBatch = true;
         } else if (truck.hasFSWALEntryPayload()) {
+          TraceScope scope = Trace.continueSpan(truck.unloadSpanPayload());
           try {
             append(truck.unloadFSWALEntryPayload());
           } catch (Exception e) {
@@ -1799,6 +1845,9 @@ class FSHLog implements HLog, Syncable {
             cleanupOutstandingSyncsOnException(sequence, e);
             // Return to keep processing.
             return;
+          } finally {
+            assert scope == NullScope.INSTANCE || !scope.isDetached();
+            scope.close(); // append scope is complete
           }
         } else {
           // They can't both be null.  Fail all up to this!!!
@@ -1828,10 +1877,6 @@ class FSHLog implements HLog, Syncable {
         this.syncFuturesCount = 0;
       } catch (Throwable t) {
         LOG.error("UNEXPECTED!!!", t);
-      } finally {
-        // This scope only makes sense for the append. Syncs will be pulled-up short so tracing
-        // will not give a good representation. TODO: Fix.
-        if (scope != null) scope.close();
       }
     }
 

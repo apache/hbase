@@ -24,7 +24,6 @@ import java.util.HashSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.htrace.SpanReceiver;
 import org.htrace.Trace;
 
@@ -40,25 +39,25 @@ public class SpanReceiverHost {
   private Configuration conf;
   private boolean closed = false;
 
-  private static enum SingleTonholder {
+  private static enum SingletonHolder {
     INSTANCE;
     Object lock = new Object();
     SpanReceiverHost host = null;
   }
 
   public static SpanReceiverHost getInstance(Configuration conf) {
-    if (SingleTonholder.INSTANCE.host != null) {
-      return SingleTonholder.INSTANCE.host;
+    if (SingletonHolder.INSTANCE.host != null) {
+      return SingletonHolder.INSTANCE.host;
     }
-    synchronized (SingleTonholder.INSTANCE.lock) {
-      if (SingleTonholder.INSTANCE.host != null) {
-        return SingleTonholder.INSTANCE.host;
+    synchronized (SingletonHolder.INSTANCE.lock) {
+      if (SingletonHolder.INSTANCE.host != null) {
+        return SingletonHolder.INSTANCE.host;
       }
 
       SpanReceiverHost host = new SpanReceiverHost(conf);
       host.loadSpanReceivers();
-      SingleTonholder.INSTANCE.host = host;
-      return SingleTonholder.INSTANCE.host;
+      SingletonHolder.INSTANCE.host = host;
+      return SingletonHolder.INSTANCE.host;
     }
 
   }
