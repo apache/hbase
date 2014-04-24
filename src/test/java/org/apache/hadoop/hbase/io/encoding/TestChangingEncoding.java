@@ -248,7 +248,7 @@ public class TestChangingEncoding {
     LOG.debug("Compaction queue size reached 0, continuing");
   }
 
-  @Test(timeout=TIMEOUT_MS)
+  @Test(timeout=360000)
   public void testCrazyRandomChanges() throws Exception {
     prepareTest("RandomChanges");
     Random rand = new Random(2934298742974297L);
@@ -291,7 +291,9 @@ public class TestChangingEncoding {
 
     assertTrue("Compaction scanners should not match encoded data blocks",
             newCountCompaction - oldCountCompaction > 0);
-    assertEquals("Get scanners should match encoded data", 0,
+    assertEquals("Get scanners should match encoded data. " +
+        "oldCountNonCompaction : " + oldCountNonCompaction +
+        ", newCountNonCompaction : " + newCountNonCompaction, 0,
             newCountNonCompaction - oldCountNonCompaction);
   }
 }
