@@ -278,10 +278,13 @@ public class ScanQueryMatcher {
       return MatchCode.SEEK_NEXT_ROW;
     }
 
+    int qualifierOffset = cell.getQualifierOffset();
+    int qualifierLength = cell.getQualifierLength();
+    long timestamp = cell.getTimestamp();
     // check for early out based on timestamp alone
-    if (columns.isDone(cell.getTimestamp())) {
-      return columns.getNextRowOrNextColumn(cell.getQualifierArray(), cell.getQualifierOffset(),
-          cell.getQualifierLength());
+    if (columns.isDone(timestamp)) {
+      return columns.getNextRowOrNextColumn(cell.getQualifierArray(), qualifierOffset,
+          qualifierLength);
     }
 
     /*
@@ -297,6 +300,8 @@ public class ScanQueryMatcher {
      * 7. Delete marker need to be version counted together with puts
      *    they affect
      */
+    byte typeByte = cell.getTypeByte();
+    long mvccVersion = cell.getMvccVersion();
     if (CellUtil.isDelete(cell)) {
       if (!keepDeletedCells) {
         // first ignore delete markers if the scanner can do so, and the
@@ -306,22 +311,22 @@ public class ScanQueryMatcher {
         // than the readpoint of any open scanner, this prevents deleted
         // rows that could still be seen by a scanner from being collected
         boolean includeDeleteMarker = seePastDeleteMarkers ?
-            tr.withinTimeRange(cell.getTimestamp()) :
-            tr.withinOrAfterTimeRange(cell.getTimestamp());
+            tr.withinTimeRange(timestamp) :
+            tr.withinOrAfterTimeRange(timestamp);
         if (includeDeleteMarker
-            && cell.getMvccVersion() <= maxReadPointToTrackVersions) {
-          this.deletes.add(cell.getQualifierArray(), cell.getQualifierOffset(),
-              cell.getQualifierLength(), cell.getTimestamp(), cell.getTypeByte());
+            && mvccVersion <= maxReadPointToTrackVersions) {
+          this.deletes.add(cell.getQualifierArray(), qualifierOffset,
+              qualifierLength, timestamp, typeByte);
         }
         // Can't early out now, because DelFam come before any other keys
       }
      
       if ((!isUserScan)
           && timeToPurgeDeletes > 0
-          && (EnvironmentEdgeManager.currentTimeMillis() - cell.getTimestamp()) 
+          && (EnvironmentEdgeManager.currentTimeMillis() - timestamp) 
             <= timeToPurgeDeletes) {
         return MatchCode.INCLUDE;
-      } else if (retainDeletesInOutput || cell.getMvccVersion() > maxReadPointToTrackVersions) {
+      } else if (retainDeletesInOutput || mvccVersion > maxReadPointToTrackVersions) {
         // always include or it is not time yet to check whether it is OK
         // to purge deltes or not
         if (!isUserScan) {
@@ -330,11 +335,11 @@ public class ScanQueryMatcher {
           return MatchCode.INCLUDE;
         }
       } else if (keepDeletedCells) {
-        if (cell.getTimestamp() < earliestPutTs) {
+        if (timestamp < earliestPutTs) {
           // keeping delete rows, but there are no puts older than
           // this delete in the store files.
           return columns.getNextRowOrNextColumn(cell.getQualifierArray(),
-              cell.getQualifierOffset(), cell.getQualifierLength());
+              qualifierOffset, qualifierLength);
         }
         // else: fall through and do version counting on the
         // delete markers
@@ -345,12 +350,12 @@ public class ScanQueryMatcher {
       // delete marker are not subject to other delete markers
     } else if (!this.deletes.isEmpty()) {
       DeleteResult deleteResult = deletes.isDeleted(cell.getQualifierArray(),
-          cell.getQualifierOffset(), cell.getQualifierLength(), cell.getTimestamp());
+          qualifierOffset, qualifierLength, timestamp);
       switch (deleteResult) {
         case FAMILY_DELETED:
         case COLUMN_DELETED:
           return columns.getNextRowOrNextColumn(cell.getQualifierArray(),
-              cell.getQualifierOffset(), cell.getQualifierLength());
+              qualifierOffset, qualifierLength);
         case VERSION_DELETED:
         case FAMILY_VERSION_DELETED:
           return MatchCode.SKIP;
@@ -361,17 +366,17 @@ public class ScanQueryMatcher {
         }
     }
 
-    int timestampComparison = tr.compare(cell.getTimestamp());
+    int timestampComparison = tr.compare(timestamp);
     if (timestampComparison >= 1) {
       return MatchCode.SKIP;
     } else if (timestampComparison <= -1) {
-      return columns.getNextRowOrNextColumn(cell.getQualifierArray(), cell.getQualifierOffset(),
-          cell.getQualifierLength());
+      return columns.getNextRowOrNextColumn(cell.getQualifierArray(), qualifierOffset,
+          qualifierLength);
     }
 
     // STEP 1: Check if the column is part of the requested columns
     MatchCode colChecker = columns.checkColumn(cell.getQualifierArray(), 
-        cell.getQualifierOffset(), cell.getQualifierLength(), cell.getTypeByte());
+        qualifierOffset, qualifierLength, typeByte);
     if (colChecker == MatchCode.INCLUDE) {
       ReturnCode filterResponse = ReturnCode.SKIP;
       // STEP 2: Yes, the column is part of the requested columns. Check if filter is present
@@ -383,7 +388,7 @@ public class ScanQueryMatcher {
           return MatchCode.SKIP;
         case NEXT_COL:
           return columns.getNextRowOrNextColumn(cell.getQualifierArray(), 
-              cell.getQualifierOffset(), cell.getQualifierLength());
+              qualifierOffset, qualifierLength);
         case NEXT_ROW:
           stickyNextRow = true;
           return MatchCode.SEEK_NEXT_ROW;
@@ -414,9 +419,9 @@ public class ScanQueryMatcher {
        * FilterResponse (INCLUDE_AND_SEEK_NEXT_COL) and ColumnChecker(INCLUDE)
        */
       colChecker =
-          columns.checkVersions(cell.getQualifierArray(), cell.getQualifierOffset(),
-              cell.getQualifierLength(), cell.getTimestamp(), cell.getTypeByte(),
-            cell.getMvccVersion() > maxReadPointToTrackVersions);
+          columns.checkVersions(cell.getQualifierArray(), qualifierOffset,
+              qualifierLength, timestamp, typeByte,
+            mvccVersion > maxReadPointToTrackVersions);
       //Optimize with stickyNextRow
       stickyNextRow = colChecker == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW ? true : stickyNextRow;
       return (filterResponse == ReturnCode.INCLUDE_AND_NEXT_COL &&
