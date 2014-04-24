@@ -19,19 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -57,6 +44,19 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -818,6 +818,43 @@ public class TestHLogSplit {
     final Path corruptDir = new Path(conf.get(HConstants.HBASE_DIR), conf.get(
         "hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt"));
     assertEquals(1, fs.listStatus(corruptDir).length);
+  }
+
+  @Test
+  public void testUnableToCloseSplitFile() throws IOException {
+    regions.clear();
+    String region = "testUnableToCloseSplitFile";
+    regions.add(region);
+    generateHLogs(-1);
+
+    fs.initialize(fs.getUri(), conf);
+    FileStatus logfile = fs.listStatus(hlogDir)[0];
+    InstrumentedSequenceFileLogWriter.activateCloseIOE = true;
+    // Log split should fail because writer cannot be closed
+    boolean hasIOE = false;
+    try {
+      HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
+          reporter, logCloseThreadPool, null);
+    } catch (IOException ioe) {
+      LOG.debug("Expected IOE because the log cannot be closed");
+      hasIOE = true;
+    }
+    assertTrue(hasIOE);
+
+    InstrumentedSequenceFileLogWriter.activateCloseIOE = false;
+    // Log split succeeds this time
+    assertTrue(HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
+        reporter, logCloseThreadPool, null));
+
+    HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
+        logfile.getPath().toString(), conf);
+
+    Path originalLog = (fs.listStatus(oldLogDir))[0].getPath();
+    originalLog = (fs.listStatus(originalLog))[0].getPath();
+    Path splitLog = getLogForRegion(hbaseDir, TABLE_NAME, region);
+
+    LOG.debug("Original log path " + originalLog + " , split log path " + splitLog);
+    assertTrue(logsAreEqual(originalLog, splitLog));
   }
 
   private void flushToConsole(String s) {

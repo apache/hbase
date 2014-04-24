@@ -19,13 +19,30 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.apache.hadoop.hbase.util.FSUtils.recoverFileLease;
+import com.google.common.base.Preconditions;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
+import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
+import org.apache.hadoop.hbase.regionserver.wal.HLog.Writer;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.ConnectException;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -40,28 +57,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Writer;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
-
-import com.google.common.base.Preconditions;
+import static org.apache.hadoop.hbase.util.FSUtils.recoverFileLease;
 
 /**
  * This class is responsible for splitting up a bunch of regionserver commit log
@@ -96,48 +92,6 @@ public class HLogSplitter {
   Object dataAvailable = new Object();
 
   private MonitoredTask status;
-
-  
-  /**
-   * Create a new HLogSplitter using the given {@link Configuration} and the
-   * <code>hbase.hlog.splitter.impl</code> property to derived the instance
-   * class to use.
-   *
-   * @param rootDir hbase directory
-   * @param srcDir logs directory
-   * @param oldLogDir directory where processed logs are archived to
-   * @param logfiles the list of log files to split
-   */
-  public static HLogSplitter createLogSplitter(Configuration conf,
-      final Path rootDir, final Path srcDir,
-      Path oldLogDir, final FileSystem fs)  {
-
-    @SuppressWarnings("unchecked")
-    Class<? extends HLogSplitter> splitterClass = (Class<? extends HLogSplitter>) conf
-        .getClass(LOG_SPLITTER_IMPL, HLogSplitter.class);
-    try {
-       Constructor<? extends HLogSplitter> constructor =
-         splitterClass.getConstructor(
-          Configuration.class, // conf
-          Path.class, // rootDir
-          Path.class, // srcDir
-          Path.class, // oldLogDir
-          FileSystem.class); // fs
-      return constructor.newInstance(conf, rootDir, srcDir, oldLogDir, fs);
-    } catch (IllegalArgumentException e) {
-      throw new RuntimeException(e);
-    } catch (InstantiationException e) {
-      throw new RuntimeException(e);
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException(e);
-    } catch (InvocationTargetException e) {
-      throw new RuntimeException(e);
-    } catch (SecurityException e) {
-      throw new RuntimeException(e);
-    } catch (NoSuchMethodException e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   public HLogSplitter(Configuration conf, Path rootDir, Path srcDir,
       Path oldLogDir, FileSystem fs, ExecutorService logCloseThreadPool,
@@ -320,7 +274,7 @@ public class HLogSplitter {
       t0  = System.currentTimeMillis();
 
       int n = 0;
-      List<Future<Void>> closeResults = new ArrayList<Future<Void>>();
+      List<Future<Void>> closeResults = new ArrayList<>();
       for (Object o : logWriters.values()) {
         long t2 = EnvironmentEdgeManager.currentTimeMillis();
         if ((t2 - last_report_at) > period) {
@@ -340,12 +294,13 @@ public class HLogSplitter {
           Future<Void> closeResult =
               logCloseThreadPool.submit(new Callable<Void>() {
                 @Override
-                public Void call() {
+                public Void call() throws IOException {
                   try {
                     wap.w.close();
                   } catch (IOException ioe) {
                     LOG.warn("Failed to close recovered edits writer " + wap.p, 
                         ioe);
+                    throw ioe;
                   }
                   LOG.debug("Closed " + wap.p);
                   return null;
@@ -394,10 +349,7 @@ public class HLogSplitter {
       LOG.debug(timingInfo);
       status.markComplete(msg);
     }
-    if (progress_failed) {
-      return false;
-    }
-    return true;
+    return !progress_failed;
   }
 
   /**
@@ -488,7 +440,7 @@ public class HLogSplitter {
    * @param conf
    * @return A new Reader instance
    * @throws IOException
-   * @throws CorruptedLogFile
+   * @throws CorruptedLogFileException
    */
   protected Reader getReader(FileSystem fs, FileStatus file, Configuration conf,
       boolean skipErrors)

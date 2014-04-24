@@ -26,12 +26,23 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class InstrumentedSequenceFileLogWriter extends SequenceFileLogWriter {
 
   public static boolean activateFailure = false;
+  public static boolean activateCloseIOE = false;
+
   @Override
-    public void append(HLog.Entry entry) throws IOException {
-      super.append(entry);
-      if (activateFailure && Bytes.equals(entry.getKey().getRegionName(), "break".getBytes())) {
-        System.out.println(getClass().getName() + ": I will throw an exception now...");
-        throw(new IOException("This exception is instrumented and should only be thrown for testing"));
-      }
+  public void append(HLog.Entry entry) throws IOException {
+    super.append(entry);
+    if (activateFailure && Bytes.equals(entry.getKey().getRegionName(), "break".getBytes())) {
+      System.out.println(getClass().getName() + ": I will throw an exception now...");
+      throw(new IOException("This exception is instrumented and should only be thrown for testing"));
     }
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (activateCloseIOE) {
+      throw new IOException("Instrumented IOException when closing the writer");
+    } else {
+      super.close();
+    }
+  }
 }

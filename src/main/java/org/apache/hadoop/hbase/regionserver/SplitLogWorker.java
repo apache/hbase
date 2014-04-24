@@ -83,12 +83,12 @@ public class SplitLogWorker implements Runnable, Watcher {
   private final TaskExecutor executor;
   private long zkretries;
 
-  private Object taskReadyLock = new Object();
+  private final Object taskReadyLock = new Object();
   volatile int taskReadySeq = 0;
   private volatile String currentTask = null;
   private int currentVersion;
   private volatile boolean exitWorker;
-  private Object grabTaskLock = new Object();
+  private final Object grabTaskLock = new Object();
   private boolean workerInGrabTask = false;
   protected ZooKeeperWrapper watcher;
   private static int numWorkers = 0;
@@ -156,12 +156,11 @@ public class SplitLogWorker implements Runnable, Watcher {
           }
           String tmpname = ZKSplitLog.getSplitLogDirTmpComponent(
               workerName, filename);
-          if (HLogSplitter.splitLogFileToTemp(rootdir, tmpname,
-              st, fs, conf, p, logCloseThreadPool, masterRef.get()) == false) {
+          if (!HLogSplitter.splitLogFileToTemp(rootdir, tmpname,
+              st, fs, conf, p, logCloseThreadPool, masterRef.get())) {
 
             t1  = System.currentTimeMillis();
             timingInfo.append("splitLogFileToTemp took " + (t1-t0) + " ms. ");
-            t0 = t1;
 
             return Status.PREEMPTED;
           }
@@ -365,7 +364,6 @@ public class SplitLogWorker implements Runnable, Watcher {
         Thread.interrupted();
       }
     }
-    return;
   }
 
   /**
@@ -437,7 +435,6 @@ public class SplitLogWorker implements Runnable, Watcher {
       LOG.warn("failed to end task, " + path + " " + ts, e);
     }
     tot_wkr_final_transistion_failed.incrementAndGet();
-    return;
   }
 
   void getDataSetWatchAsync() {
@@ -570,7 +567,6 @@ public class SplitLogWorker implements Runnable, Watcher {
     worker = new Thread(null, this, "SplitLogWorker-" + workerName);
     exitWorker = false;
     worker.start();
-    return;
   }
 
   /**
@@ -598,7 +594,6 @@ public class SplitLogWorker implements Runnable, Watcher {
         return;
       }
       getDataSetWatchSuccess(path, newData);
-      return;
     }
   }
 
