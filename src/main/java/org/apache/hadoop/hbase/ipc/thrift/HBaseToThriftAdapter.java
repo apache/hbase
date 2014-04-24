@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.ipc.ScannerResult;
 import org.apache.hadoop.hbase.ipc.ThriftClientInterface;
 import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -87,6 +89,8 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   private Class<? extends ThriftClientInterface> clazz;
   private HBaseRPCOptions options;
   private boolean useHeaderProtocol;
+  // start time of the call on the client side
+  private long startCallTimestamp;
 
   public HBaseToThriftAdapter(ThriftClientInterface connection,
       ThriftClientManager clientManager,
@@ -101,6 +105,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     this.options = options;
     this.useHeaderProtocol = conf.getBoolean(HConstants.USE_HEADER_PROTOCOL,
       HConstants.DEFAULT_USE_HEADER_PROTOCOL);
+    this.startCallTimestamp = -1;
   }
 
   /**
@@ -182,6 +187,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   }
 
   private void preProcess() {
+    this.startCallTimestamp = EnvironmentEdgeManager.currentTimeMillis();
     if (this.connection == null || clientManager == null) {
       if (connection != null) {
         try {
@@ -225,7 +231,11 @@ public class HBaseToThriftAdapter implements HRegionInterface {
         byte[] dataBytes = Bytes.string64ToBytes(dataString);
         try {
           Call call = Bytes.readThriftBytes(dataBytes, Call.class);
-          this.options.profilingResult = call.getProfilingData();
+          ProfilingData pd = call.getProfilingData();
+          pd.addLong(ProfilingData.CLIENT_NETWORK_LATENCY_MS,
+              EnvironmentEdgeManager.currentTimeMillis()
+                  - this.startCallTimestamp);
+          this.options.profilingResult = pd;
         } catch (Exception e) {
           LOG.error("data deserialization didn't succeed", e);
         }

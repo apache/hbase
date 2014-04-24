@@ -265,6 +265,8 @@ public class ThriftCallStatsReporter extends ThriftEventHandler {
         Call call = HRegionServer.callContext.get();
         HRegionServer.callContext.remove();
         if (call != null && call.isShouldProfile()) {
+          call.getProfilingData().addLong(ProfilingData.TOTAL_SERVER_TIME_MS,
+              ctx.getProcessingTimeMs());
           sendCallInfoToClient(call, ctx.requestContext);
         }
       } catch (Exception e) {

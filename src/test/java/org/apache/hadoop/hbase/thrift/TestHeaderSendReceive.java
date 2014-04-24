@@ -23,28 +23,32 @@ import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableAsync;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- * Check whether we correctly receive profiling data with the header protocol enabled
+ * Check whether we correctly receive profiling data with the header protocol
+ * enabled
  *
  */
-
 public class TestHeaderSendReceive {
-  private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final int SLAVES = 1;
-  static final byte[] TABLE = Bytes.toBytes("testTable");
+  private static HBaseTestingUtility TEST_UTIL;
+  private static final int SLAVES = 1;
+  static final byte[] TABLE1 = Bytes.toBytes("testTable");
   static final byte[] FAMILY = Bytes.toBytes("family");
   static final byte[][] FAMILIES = new byte[][] { FAMILY };
   byte[] r1 = Bytes.toBytes("r1");
@@ -53,6 +57,19 @@ public class TestHeaderSendReceive {
 
   @Before
   public void setUp() throws Exception {
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    if (admin.tableExists(TABLE1)) {
+      if (admin.isTableEnabled(TABLE1)) {
+        admin.disableTable(TABLE1);
+      }
+      admin.deleteTable(TABLE1);
+    }
+    TEST_UTIL.createTable(TABLE1, FAMILIES);
+  }
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL = new HBaseTestingUtility();
     TEST_UTIL.getConfiguration().setBoolean(
         HConstants.REGION_SERVER_WRITE_THRIFT_INFO_TO_META, true);
     TEST_UTIL.getConfiguration().setBoolean(HConstants.CLIENT_TO_RS_USE_THRIFT,
@@ -62,8 +79,8 @@ public class TestHeaderSendReceive {
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
-  @After
-  public void tearDown() throws Exception {
+  @AfterClass
+  public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -72,7 +89,7 @@ public class TestHeaderSendReceive {
    */
   @Test
   public void testProfilingData() throws Exception {
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    HTable ht = new HTable(TEST_UTIL.getConfiguration(), TABLE1);
     Put put = new Put(r1);
     put.add(FAMILY, null, value);
     ht.setProfiling(true);
@@ -80,6 +97,9 @@ public class TestHeaderSendReceive {
     ProfilingData pd = ht.getProfilingData();
     assertNotNull(pd);
     System.out.println("profiling data after first put: " + pd);
+    // check if we are gettng all necessary profiling params
+    checkProfiling(false, true, pd);
+
 
     // disable profiling and check that we get no profiling data back
     ht.setProfiling(false);
@@ -94,6 +114,7 @@ public class TestHeaderSendReceive {
     pd = ht.getProfilingData();
     assertNotNull(pd);
     System.out.println("profiling data after second put: " + pd);
+    checkProfiling(false, true, pd);
 
     // make a get
     Get get = new Get.Builder(r1).addFamily(FAMILY).create();
@@ -102,13 +123,45 @@ public class TestHeaderSendReceive {
     pd = ht.getProfilingData();
     System.out.println("profiling data after get: " + pd);
     assertNotNull(pd);
+    checkProfiling(true, false, pd);
 
     // test async get
     ht.setProfiling(true);
-    ((HTableAsync)ht).getAsync(get).get();
-    pd = ht.getProfilingData();
+    HTableAsync async = new HTableAsync(ht);
+    async.getAsync(get).get();
+    pd = async.getProfilingData();
     System.out.println("profiling data after get: " + pd);
     assertNotNull(pd);
+    checkProfiling(true, false, pd);
+    ht.close();
+  }
+
+  /**
+   * Check that all the necessary profiling info is in profiling data and is not
+   * equal to zero
+   *
+   * @param isGet
+   *          - if the last htable operation was get
+   * @param isPut
+   *          - !isGet (if the last htable operation was put
+   * @param pd
+   *          - profiling data object
+   */
+  public void checkProfiling(boolean isGet, boolean isPut, ProfilingData pd) {
+    assertNotNull(ProfilingData.CLIENT_NETWORK_LATENCY_MS + " is null",
+        pd.getLong(ProfilingData.CLIENT_NETWORK_LATENCY_MS));
+    Assert.assertTrue(ProfilingData.CLIENT_NETWORK_LATENCY_MS
+        + " should be greater than zero",
+        pd.getLong(ProfilingData.CLIENT_NETWORK_LATENCY_MS) > 0);
+    assertNotNull(ProfilingData.TOTAL_SERVER_TIME_MS + " is null",
+        pd.getLong(ProfilingData.TOTAL_SERVER_TIME_MS));
+    Assert.assertTrue(ProfilingData.TOTAL_SERVER_TIME_MS
+        + " should be greater than zero",
+        pd.getLong(ProfilingData.TOTAL_SERVER_TIME_MS) > 0);
+    if (isPut) {
+      assertNotNull(ProfilingData.HLOG_SYNC_TIME_MS + " is null",
+          pd.getLong(ProfilingData.HLOG_SYNC_TIME_MS));
+    }
   }
 
   /**
@@ -120,13 +173,14 @@ public class TestHeaderSendReceive {
   @Test
   public void testServerSideEnabledProfiling() throws IOException {
     HRegionServer.enableServerSideProfilingForAllCalls.set(true);
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    HTable ht = new HTable(TEST_UTIL.getConfiguration(), TABLE1);
     Put p = new Put(r1);
     p.add(FAMILY, null, value);
     ht.put(p);
     ProfilingData pd = ht.getProfilingData();
     assertNotNull(pd);
     System.out.println("profiling data: " + pd);
+    ht.close();
   }
 
 }
