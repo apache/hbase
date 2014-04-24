@@ -1163,51 +1163,26 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
       // attempts
       if (this.useThrift) {
         Class<? extends ThriftClientInterface> serverInterface =
-          ThriftHRegionInterface.class;
+            ThriftHRegionInterface.class;
         if (thriftPortWrittenToMeta) {
-          try {
-            server = (HRegionInterface) HBaseThriftRPC.getClient(
+          server = (HRegionInterface) HBaseThriftRPC.getClient(
               regionServer.getInetSocketAddress(), this.conf,
               serverInterface, options);
-          } catch (Exception e) {
-            LOG.warn("Exception connecting to the region server on" +
-              "the thrift channel. Retrying on the HadoopRPC port", e);
-            InetSocketAddress addr = new InetSocketAddress(regionServer
-              .getInetSocketAddress().getHostName(), conf.getInt(
-              HConstants.REGIONSERVER_PORT,
-              HConstants.DEFAULT_REGIONSERVER_PORT));
-            server = (HRegionInterface) HBaseRPC.getProxy(serverInterfaceClass,
-              HBaseRPCProtocolVersion.versionID, addr, this.conf,
-              params.getRpcTimeout(), options);
-          }
         } else {
-          try {
-            InetSocketAddress addr = new InetSocketAddress(regionServer
+          InetSocketAddress addr = new InetSocketAddress(regionServer
               .getInetSocketAddress().getHostName(), conf.getInt(
-              HConstants.REGIONSERVER_SWIFT_PORT,
-              HConstants.DEFAULT_REGIONSERVER_SWIFT_PORT));
-            server = (HRegionInterface) HBaseThriftRPC.getClient(addr,
+                  HConstants.REGIONSERVER_SWIFT_PORT,
+                  HConstants.DEFAULT_REGIONSERVER_SWIFT_PORT));
+          server = (HRegionInterface) HBaseThriftRPC.getClient(addr,
               this.conf, serverInterface, options);
-          } catch (Exception e) {
-            LOG.warn("Exception connecting to the region server on" +
-              "the thrift channel. Retrying on the HadoopRPC port", e);
-            server = (HRegionInterface) HBaseRPC.getProxy(serverInterfaceClass,
-              HBaseRPCProtocolVersion.versionID,
-              regionServer.getInetSocketAddress(), this.conf,
-              params.getRpcTimeout(), options);
-          }
         }
       } else {
         if (hadoopPortWrittenToMeta) {
           server = (HRegionInterface) HBaseRPC.getProxy(serverInterfaceClass,
-            HBaseRPCProtocolVersion.versionID,
-            regionServer.getInetSocketAddress(), this.conf,
+              HBaseRPCProtocolVersion.versionID,
+              regionServer.getInetSocketAddress(), this.conf,
             params.getRpcTimeout(), options);
         } else {
-          // The hadoop port is no longer written to Meta (this will happen
-          // when we are reasonably confident about the thrift service, and
-          // will soon deprecate RPC). So, try to connect to the default port.
-          // TODO gauravm: Verify that this works (t2830553)
           InetSocketAddress addr = new InetSocketAddress(regionServer
             .getInetSocketAddress().getHostName(), conf.getInt(
             HConstants.REGIONSERVER_PORT,
