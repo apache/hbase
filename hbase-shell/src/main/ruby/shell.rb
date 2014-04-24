@@ -362,5 +362,6 @@ Shell.load_command_group(
     set_auths
     get_auths
     clear_auths
+    set_visibility
   ]
 )
