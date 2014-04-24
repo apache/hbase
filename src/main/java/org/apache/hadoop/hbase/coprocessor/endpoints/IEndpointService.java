@@ -19,19 +19,16 @@
  */
 package org.apache.hadoop.hbase.coprocessor.endpoints;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 
-import com.facebook.swift.codec.ThriftField;
-import com.facebook.swift.service.ThriftException;
-import com.facebook.swift.service.ThriftMethod;
-import com.facebook.swift.service.ThriftService;
-
 /**
  * The interface of a server executing endpoints.
+ *
+ * Methods defined here are redefined in ThriftHRegionInterface and annotated.
+ * The reason is Thrift doesn't support multi inheritance even for interface.
  */
-@ThriftService
 public interface IEndpointService {
   /**
    * Calls an endpoint on an region server.
@@ -45,13 +42,7 @@ public interface IEndpointService {
    * @param stopRow the stop row, exclusive
    * @return the computed value.
    */
-  @ThriftMethod(value = "callEndpoint", exception = {
-      @ThriftException(type = ThriftHBaseException.class, id = 1) })
-  public byte[] callEndpoint(@ThriftField(name = "epName") String epName,
-      @ThriftField(name = "methodName") String methodName,
-      @ThriftField(name = "params") ArrayList<byte[]> params,
-      @ThriftField(name = "regionName") byte[] regionName,
-      @ThriftField(name = "startRow") byte[] startRow,
-      @ThriftField(name = "stopRow") byte[] stopRow)
-      throws ThriftHBaseException;
+  public byte[] callEndpoint(String epName, String methodName,
+      List<byte[]> params, byte[] regionName, byte[] startRow,
+      byte[] stopRow) throws ThriftHBaseException;
 }

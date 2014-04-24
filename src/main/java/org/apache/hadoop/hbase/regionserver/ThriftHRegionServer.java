@@ -635,7 +635,7 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
 
   @Override
   public byte[] callEndpoint(String epName, String methodName,
-      ArrayList<byte[]> params, final byte[] regionName, final byte[] startRow,
+      List<byte[]> params, final byte[] regionName, final byte[] startRow,
       final byte[] stopRow) throws ThriftHBaseException {
     return server.callEndpoint(epName, methodName, params, regionName,
         startRow, stopRow);

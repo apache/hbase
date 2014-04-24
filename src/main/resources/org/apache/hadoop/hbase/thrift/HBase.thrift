@@ -1,5 +1,6 @@
 namespace java.swift org.apache.hadoop.hbase
 namespace cpp facebook.hbase.hbcpp
+namespace php hbase
 
 
 enum Type {
@@ -189,10 +190,23 @@ struct Bucket {
   4: map<HFileStat, double> hfileStats;
 }
 
+struct HRegionLocation {
+  1: HRegionInfo regionInfo;
+  2: HServerAddress serverAddress;
+  3: i64 serverStartCode;
+}
+
+struct ScannerResult {
+  1: bool EOS;
+  2: bool EOR;
+  3: list<Result> result;
+  4: i64 ID;
+}
+
 service ThriftHRegionInterface {
   void bulkLoadHFile(1: string hfilePath, 2: binary regionName, 3: binary familyName) throws (1: ThriftHBaseException ex1);
   void bulkLoadHFileSeqNum(1: string hfilePath, 2: binary regionName, 3: binary familyName, 4: bool assignSeqNum) throws (1: ThriftHBaseException ex1);
-  binary callEndpoint(1: string epName, 2: string methodName, 3: binary regionName, 4: binary startRow, 5: binary stopRow) throws (1: ThriftHBaseException ex1);
+  binary callEndpoint(1: string epName, 2: string methodName, 3: list<binary> params, 4: binary regionName, 5: binary startRow, 6: binary stopRow) throws (1: ThriftHBaseException ex1);
   bool checkAndDelete(1: binary regionName, 2: binary row, 3: binary family, 4: binary qualifier, 5: binary value, 6: Delete deleteArg) throws (1: ThriftHBaseException ex1);
   bool checkAndPut(1: binary regionName, 2: binary row, 3: binary family, 4: binary qualifier, 5: binary value, 6: Put put) throws (1: ThriftHBaseException ex1);
   void close(1: i64 scannerId) throws (1: ThriftHBaseException ex1);
@@ -210,8 +224,10 @@ service ThriftHRegionInterface {
   HServerInfo getHServerInfo() throws (1: ThriftHBaseException ex1);
   list<Bucket> getHistogram(1: binary arg0) throws (1: ThriftHBaseException ex1);
   list<Bucket> getHistogramForStore(1: binary arg0, 2: binary arg1) throws (1: ThriftHBaseException ex1);
+  list<list<Bucket>> getHistograms(1: list<binary> arg0) throws (1: ThriftHBaseException ex1);
   i64 getLastFlushTime(1: binary regionName);
   map<binary, i64> getLastFlushTimes();
+  HRegionLocation getLocation(1: binary tableName, 2: binary row, 3: bool reload) throws (1: ThriftHBaseException ex1);
   HRegionInfo getRegionInfo(1: binary regionName) throws (1: ThriftHBaseException ex1);
   list<HRegionInfo> getRegionsAssignment() throws (1: ThriftHBaseException ex1);
   list<Result> getRows(1: binary regionName, 2: list<Get> gets) throws (1: ThriftHBaseException ex1);
@@ -237,6 +253,9 @@ service ThriftHRegionInterface {
   i32 processListOfDeletes(1: binary regionName, 2: list<Delete> deletes) throws (1: ThriftHBaseException ex1);
   void processPut(1: binary regionName, 2: Put put) throws (1: ThriftHBaseException ex1);
   i32 putRows(1: binary regionName, 2: list<Put> puts) throws (1: ThriftHBaseException ex1);
+  bool scanClose(1: i64 id) throws (1: ThriftHBaseException ex1);
+  ScannerResult scanNext(1: i64 id, 2: i32 numberOfRows) throws (1: ThriftHBaseException ex1);
+  ScannerResult scanOpen(1: binary regionName, 2: Scan scan, 3: i32 numberOfRows) throws (1: ThriftHBaseException ex1);
   void setHDFSQuorumReadTimeoutMillis(1: i64 timeoutMillis);
   void setNumHDFSQuorumReadThreads(1: i32 maxThreads);
   void stop(1: string why);

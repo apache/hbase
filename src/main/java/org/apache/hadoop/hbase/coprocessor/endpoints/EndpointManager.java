@@ -22,9 +22,9 @@ package org.apache.hadoop.hbase.coprocessor.endpoints;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -44,7 +44,7 @@ public class EndpointManager implements IEndpointRegistry {
     private Map<String, Method> methods = new HashMap<>();
     private Map<String, IBytesDecoder[]> mthToDecs = new ConcurrentHashMap<>();
 
-    private Object[] encodeParams(String methodKey, ArrayList<byte[]> params) {
+    private Object[] encodeParams(String methodKey, List<byte[]> params) {
       IBytesDecoder[] decoders = mthToDecs.get(methodKey);
       Object[] res = new Object[params.size()];
       for (int i = 0; i < res.length; i++) {
@@ -112,7 +112,7 @@ public class EndpointManager implements IEndpointRegistry {
      * @param params the encoded parameters.
      * @return the encoded return results.
      */
-    public byte[] invoke(IEndpoint ep, String methodName, ArrayList<byte[]> params)
+    public byte[] invoke(IEndpoint ep, String methodName, List<byte[]> params)
         throws IllegalAccessException, IllegalArgumentException,
         InvocationTargetException, IOException {
       String methodKey = EndpointInfo.makeMethodKey(methodName, params.size());

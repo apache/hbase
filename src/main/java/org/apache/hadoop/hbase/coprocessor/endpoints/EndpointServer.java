@@ -19,7 +19,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor.endpoints;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -48,7 +48,7 @@ public class EndpointServer implements IEndpointServer {
 
   @Override
   public byte[] callEndpoint(String epName, String methodName,
-      ArrayList<byte[]> params, final byte[] regionName, final byte[] startRow,
+      List<byte[]> params, final byte[] regionName, final byte[] startRow,
       final byte[] stopRow) throws ThriftHBaseException {
     try {
       EndpointInfo ent = manager.getEndpointEntry(epName);

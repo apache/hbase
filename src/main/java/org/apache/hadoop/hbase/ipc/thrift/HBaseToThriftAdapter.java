@@ -1200,7 +1200,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   @Override
   public byte[] callEndpoint(String epName, String methodName,
-      ArrayList<byte[]> params, byte[] regionName, byte[] startRow,
+      List<byte[]> params, byte[] regionName, byte[] startRow,
       byte[] stopRow) throws ThriftHBaseException {
     preProcess();
     try {

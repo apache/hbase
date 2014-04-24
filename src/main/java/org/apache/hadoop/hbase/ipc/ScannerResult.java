@@ -94,13 +94,13 @@ public class ScannerResult {
     private List<Result> results = EMPTY_RESULTS;
     private long id = -1L;
 
-    @ThriftField(1)
+    @ThriftField(value = 1, name = "EOS")
     public Builder setEOS(boolean vl) {
       this.eos = vl;
       return this;
     }
 
-    @ThriftField(2)
+    @ThriftField(value = 2, name = "EOR")
     public Builder setEOR(boolean vl) {
       this.eor = vl;
       return this;
@@ -121,7 +121,7 @@ public class ScannerResult {
       return this;
     }
 
-    @ThriftField(4)
+    @ThriftField(value = 4, name = "ID")
     public Builder setID(long vl) {
       this.id = vl;
       return this;

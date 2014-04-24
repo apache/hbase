@@ -22,15 +22,12 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 
-import com.facebook.swift.codec.ThriftField;
-import com.facebook.swift.service.ThriftException;
-import com.facebook.swift.service.ThriftMethod;
-import com.facebook.swift.service.ThriftService;
-
 /**
  * Interface of scanner service in a region.
+ *
+ * Methods defined here are redefined in ThriftHRegionInterface and annotated.
+ * The reason is Thrift doesn't support multi inheritance even for interface.
  */
-@ThriftService
 public interface IRegionScanService {
   /**
    * Opens a scanner, optionally returns some data if numberOfRows > 0.
@@ -43,12 +40,7 @@ public interface IRegionScanService {
    *         The length of the Result list of the return value could be empty
    *         and EOR is set to true for sure in this case.
    */
-  @ThriftMethod(value = "scanOpen", exception = {
-      @ThriftException(type = ThriftHBaseException.class, id = 1) })
-  ScannerResult scanOpen(
-      @ThriftField(name="regionName") byte[] regionName,
-      @ThriftField(name = "scan") Scan scan,
-      @ThriftField(name = "numberOfRows") int numberOfRows)
+  ScannerResult scanOpen(byte[] regionName, Scan scan, int numberOfRows)
       throws ThriftHBaseException;
 
   /**
@@ -60,12 +52,7 @@ public interface IRegionScanService {
    *         The length of the Result list of the return value could be empty
    *         and EOR is set to true for sure in this case.
    */
-  @ThriftMethod(value = "scanNext", exception = {
-      @ThriftException(type = ThriftHBaseException.class, id = 1) })
-  ScannerResult scanNext(
-      @ThriftField(name="id") long id,
-      @ThriftField(name = "numberOfRows") int numberOfRows)
-      throws ThriftHBaseException;
+  ScannerResult scanNext(long id, int numberOfRows) throws ThriftHBaseException;
 
   /**
    * Closes the scanner on the server side.
@@ -73,8 +60,5 @@ public interface IRegionScanService {
    * @param id  the ID of the scanner to close
    * @return true  if a scanner is closed. false if the scanner doesn't exist.
    */
-  @ThriftMethod(value = "scanClose", exception = {
-      @ThriftException(type = ThriftHBaseException.class, id = 1) })
-  boolean scanClose(@ThriftField(name = "id") long id)
-      throws ThriftHBaseException;
+  boolean scanClose(long id) throws ThriftHBaseException;
 }
