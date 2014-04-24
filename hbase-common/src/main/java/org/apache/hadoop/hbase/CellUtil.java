@@ -333,6 +333,11 @@ public final class CellUtil {
         buf, 0, buf.length);
   }
 
+  public static boolean matchingColumn(final Cell left, final Cell right) {
+    if (!matchingFamily(left, right))
+      return false;
+    return matchingQualifier(left, right);
+  }
 
   public static boolean matchingValue(final Cell left, final Cell right) {
     return Bytes.equals(left.getValueArray(), left.getValueOffset(), left.getValueLength(),
