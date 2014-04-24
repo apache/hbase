@@ -169,7 +169,7 @@ public class SecureTestUtil {
         if (results != null && results.isEmpty()) {
           fail("Empty non null results from action for user '" + user.getShortName() + "'");
         }
-        assertEquals(results.size(), count);
+        assertEquals(count, results.size());
       }
     } catch (AccessDeniedException ade) {
       fail("Expected action to pass for user '" + user.getShortName() + "' but was denied");

@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -476,9 +477,31 @@ public class AccessController extends BaseRegionObserver
     }
   }
 
-  private void requireCoveringPermission(String request, RegionCoprocessorEnvironment e,
-      byte[] row, Map<byte[], ? extends Collection<?>> familyMap, long opTs,
-      boolean allVersions, Action...actions) throws IOException {
+  private enum OpType {
+    GET_CLOSEST_ROW_BEFORE("getClosestRowBefore"),
+    PUT("put"),
+    DELETE("delete"),
+    CHECK_AND_PUT("checkAndPut"),
+    CHECK_AND_DELETE("checkAndDelete"),
+    INCREMENT_COLUMN_VALUE("incrementColumnValue"),
+    APPEND("append"),
+    INCREMENT("increment");
+
+    private String type;
+
+    private OpType(String type) {
+      this.type = type;
+    }
+
+    @Override
+    public String toString() {
+      return type;
+    }
+  }
+
+  private void requireCoveringPermission(OpType request, RegionCoprocessorEnvironment e,
+      byte[] row, Map<byte[], ? extends Collection<?>> familyMap, long opTs, Action... actions)
+      throws IOException {
     User user = getActiveUser();
 
     // First check table or CF level permissions, if they grant access we can
@@ -490,7 +513,7 @@ public class AccessController extends BaseRegionObserver
     // HBASE-7123.
     AuthResult results[] = new AuthResult[actions.length];
     for (int i = 0; i < actions.length; i++) {
-      results[i] = permissionGranted(request, user, actions[i], e, familyMap);
+      results[i] = permissionGranted(request.type, user, actions[i], e, familyMap);
       if (!results[i].isAllowed()) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Got " + results[i] + ", added to cellCheckActions");
@@ -512,15 +535,23 @@ public class AccessController extends BaseRegionObserver
     // Table or CF permissions do not allow, enumerate the covered KVs. We
     // can stop at the first which does not grant access.
     int cellsChecked = 0;
-    opTs = opTs != HConstants.LATEST_TIMESTAMP ? opTs : 0;
     long latestCellTs = 0;
     if (canPersistCellACLs) {
       Get get = new Get(row);
-      if (allVersions) {
+      // Only in case of Put/Delete op, consider TS within cell (if set for individual cells).
+      // When every cell, within a Mutation, can be linked with diff TS we can not rely on only one
+      // version. We have to get every cell version and check its TS against the TS asked for in
+      // Mutation and skip those Cells which is outside this Mutation TS.In case of Put, we have to
+      // consider only one such passing cell. In case of Delete we have to consider all the cell
+      // versions under this passing version. When Delete Mutation contains columns which are a
+      // version delete just consider only one version for those column cells.
+      boolean considerCellTs  = (request == OpType.PUT || request == OpType.DELETE);
+      if (considerCellTs) {
         get.setMaxVersions();
       } else {
         get.setMaxVersions(1);
       }
+      boolean diffCellTsFromOpTs = false;
       for (Map.Entry<byte[], ? extends Collection<?>> entry: familyMap.entrySet()) {
         byte[] col = entry.getKey();
         // TODO: HBASE-7114 could possibly unify the collection type in family
@@ -548,8 +579,10 @@ public class AccessController extends BaseRegionObserver
               } else {
                 get.addColumn(col, CellUtil.cloneQualifier(cell));
               }
-              if (cell.getTimestamp() != HConstants.LATEST_TIMESTAMP) {
-                latestCellTs = Math.max(latestCellTs, cell.getTimestamp());
+              if (considerCellTs) {
+                long cellTs = cell.getTimestamp();
+                latestCellTs = Math.max(latestCellTs, cellTs);
+                diffCellTsFromOpTs = diffCellTsFromOpTs || (opTs != cellTs);
               }
             }
           }
@@ -565,15 +598,35 @@ public class AccessController extends BaseRegionObserver
       // the upper bound of a timerange is exclusive yet we need to examine
       // any cells found there inclusively.
       long latestTs = Math.max(opTs, latestCellTs);
-      if (latestTs == 0) {
+      if (latestTs == 0 || latestTs == HConstants.LATEST_TIMESTAMP) {
         latestTs = EnvironmentEdgeManager.currentTimeMillis();
       }
       get.setTimeRange(0, latestTs + 1);
+      // In case of Put operation we set to read all versions. This was done to consider the case
+      // where columns are added with TS other than the Mutation TS. But normally this wont be the
+      // case with Put. There no need to get all versions but get latest version only.
+      if (!diffCellTsFromOpTs && request == OpType.PUT) {
+        get.setMaxVersions(1);
+      }
       if (LOG.isTraceEnabled()) {
         LOG.trace("Scanning for cells with " + get);
       }
+      // This Map is identical to familyMap. The key is a BR rather than byte[].
+      // It will be easy to do gets over this new Map as we can create get keys over the Cell cf by
+      // new SimpleByteRange(cell.familyArray, cell.familyOffset, cell.familyLen)
+      Map<ByteRange, List<Cell>> familyMap1 = new HashMap<ByteRange, List<Cell>>();
+      for (Entry<byte[], ? extends Collection<?>> entry : familyMap.entrySet()) {
+        if (entry.getValue() instanceof List) {
+          familyMap1.put(new SimpleByteRange(entry.getKey()), (List<Cell>) entry.getValue());
+        }
+      }
       RegionScanner scanner = getRegion(e).getScanner(new Scan(get));
       List<Cell> cells = Lists.newArrayList();
+      Cell prevCell = null;
+      ByteRange curFam = new SimpleByteRange();
+      boolean curColAllVersions = (request == OpType.DELETE);
+      long curColCheckTs = opTs;
+      boolean foundColumn = false;
       try {
         boolean more = false;
         do {
@@ -584,10 +637,43 @@ public class AccessController extends BaseRegionObserver
             if (LOG.isTraceEnabled()) {
               LOG.trace("Found cell " + cell);
             }
+            boolean colChange = prevCell == null || !CellUtil.matchingColumn(prevCell, cell);
+            if (colChange) foundColumn = false;
+            prevCell = cell;
+            if (!curColAllVersions && foundColumn) {
+              continue;
+            }
+            if (colChange && considerCellTs) {
+              curFam.set(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
+              List<Cell> cols = familyMap1.get(curFam);
+              for (Cell col : cols) {
+                // null/empty qualifier is used to denote a Family delete. The TS and delete type
+                // associated with this is applicable for all columns within the family. That is
+                // why the below (col.getQualifierLength() == 0) check.
+                if ((col.getQualifierLength() == 0 && request == OpType.DELETE)
+                    || CellUtil.matchingQualifier(cell, col)) {
+                  byte type = col.getTypeByte();
+                  if (considerCellTs)
+                    curColCheckTs = col.getTimestamp();
+                  // For a Delete op we pass allVersions as true. When a Delete Mutation contains
+                  // a version delete for a column no need to check all the covering cells within
+                  // that column. Check all versions when Type is DeleteColumn or DeleteFamily
+                  // One version delete types are Delete/DeleteFamilyVersion
+                  curColAllVersions = (KeyValue.Type.DeleteColumn.getCode() == type)
+                      || (KeyValue.Type.DeleteFamily.getCode() == type);
+                  break;
+                }
+              }
+            }
+            if (cell.getTimestamp() > curColCheckTs) {
+              // Just ignore this cell. This is not a covering cell.
+              continue;
+            }
+            foundColumn = true;
             for (Action action: cellCheckActions) {
               // Are there permissions for this user for the cell?
               if (!authManager.authorize(user, getTableName(e), cell, false, action)) {
-                AuthResult authResult = AuthResult.deny(request, "Insufficient permissions",
+                AuthResult authResult = AuthResult.deny(request.type, "Insufficient permissions",
                   user, action, getTableName(e), CellUtil.cloneFamily(cell),
                   CellUtil.cloneQualifier(cell));
                 logResult(authResult);
@@ -612,7 +698,7 @@ public class AccessController extends BaseRegionObserver
       if (LOG.isTraceEnabled()) {
         LOG.trace("No cells found with scan");
       }
-      AuthResult authResult = AuthResult.deny(request, "Insufficient permissions",
+      AuthResult authResult = AuthResult.deny(request.type, "Insufficient permissions",
         user, cellCheckActions.get(0), getTableName(e), familyMap);
       logResult(authResult);
       throw new AccessDeniedException("Insufficient permissions " +
@@ -623,7 +709,7 @@ public class AccessController extends BaseRegionObserver
     // thousands of fine grained decisions with providing detail.
     for (byte[] family: familyMap.keySet()) {
       for (Action action: actions) {
-        logResult(AuthResult.allow(request, "Permission granted", user, action,
+        logResult(AuthResult.allow(request.type, "Permission granted", user, action,
           getTableName(e), family, null));
       }
     }
@@ -1167,8 +1253,8 @@ public class AccessController extends BaseRegionObserver
       final byte [] row, final byte [] family, final Result result)
       throws IOException {
     assert family != null;
-    requireCoveringPermission("getClosestRowBefore", c.getEnvironment(), row,
-      makeFamilyMap(family, null), HConstants.LATEST_TIMESTAMP, false, Permission.Action.READ);
+    requireCoveringPermission(OpType.GET_CLOSEST_ROW_BEFORE, c.getEnvironment(), row,
+        makeFamilyMap(family, null), HConstants.LATEST_TIMESTAMP, Permission.Action.READ);
   }
 
   @Override
@@ -1194,8 +1280,8 @@ public class AccessController extends BaseRegionObserver
     // HBase value. A new ACL in a new Put applies to that Put. It doesn't
     // change the ACL of any previous Put. This allows simple evolution of
     // security policy over time without requiring expensive updates.
-    requireCoveringPermission("put", c.getEnvironment(), put.getRow(),
-      put.getFamilyCellMap(), put.getTimeStamp(), false, Permission.Action.WRITE);
+    requireCoveringPermission(OpType.PUT, c.getEnvironment(), put.getRow(),
+      put.getFamilyCellMap(), put.getTimeStamp(), Permission.Action.WRITE);
     byte[] bytes = put.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
     if (bytes != null) {
       if (canPersistCellACLs) {
@@ -1227,8 +1313,8 @@ public class AccessController extends BaseRegionObserver
     // compaction could remove them. If the user doesn't have permission to
     // overwrite any of the visible versions ('visible' defined as not covered
     // by a tombstone already) then we have to disallow this operation.
-    requireCoveringPermission("delete", c.getEnvironment(), delete.getRow(),
-      delete.getFamilyCellMap(), delete.getTimeStamp(), true, Action.WRITE);
+    requireCoveringPermission(OpType.DELETE, c.getEnvironment(), delete.getRow(),
+      delete.getFamilyCellMap(), delete.getTimeStamp(), Action.WRITE);
   }
 
   @Override
@@ -1247,9 +1333,8 @@ public class AccessController extends BaseRegionObserver
       final ByteArrayComparable comparator, final Put put,
       final boolean result) throws IOException {
     // Require READ and WRITE permissions on the table, CF, and KV to update
-    requireCoveringPermission("checkAndPut", c.getEnvironment(), row,
-      makeFamilyMap(family, qualifier), HConstants.LATEST_TIMESTAMP, false,
-      Action.READ, Action.WRITE);
+    requireCoveringPermission(OpType.CHECK_AND_PUT, c.getEnvironment(), row,
+        makeFamilyMap(family, qualifier), HConstants.LATEST_TIMESTAMP, Action.READ, Action.WRITE);
     byte[] bytes = put.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
     if (bytes != null) {
       if (canPersistCellACLs) {
@@ -1274,9 +1359,8 @@ public class AccessController extends BaseRegionObserver
     }
     // Require READ and WRITE permissions on the table, CF, and the KV covered
     // by the delete
-    requireCoveringPermission("checkAndDelete", c.getEnvironment(), row,
-      makeFamilyMap(family, qualifier), HConstants.LATEST_TIMESTAMP, false,
-      Action.READ, Action.WRITE);
+    requireCoveringPermission(OpType.CHECK_AND_DELETE, c.getEnvironment(), row,
+        makeFamilyMap(family, qualifier), HConstants.LATEST_TIMESTAMP, Action.READ, Action.WRITE);
     return result;
   }
 
@@ -1287,9 +1371,8 @@ public class AccessController extends BaseRegionObserver
       throws IOException {
     // Require WRITE permission to the table, CF, and the KV to be replaced by the
     // incremented value
-    requireCoveringPermission("incrementColumnValue", c.getEnvironment(), row,
-      makeFamilyMap(family, qualifier), HConstants.LATEST_TIMESTAMP, false,
-      Action.WRITE);
+    requireCoveringPermission(OpType.INCREMENT_COLUMN_VALUE, c.getEnvironment(), row,
+        makeFamilyMap(family, qualifier), HConstants.LATEST_TIMESTAMP, Action.WRITE);
     return -1;
   }
 
@@ -1297,9 +1380,8 @@ public class AccessController extends BaseRegionObserver
   public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append)
       throws IOException {
     // Require WRITE permission to the table, CF, and the KV to be appended
-    requireCoveringPermission("append", c.getEnvironment(), append.getRow(),
-      append.getFamilyCellMap(), append.getTimeStamp(), false,
-      Action.WRITE);
+    requireCoveringPermission(OpType.APPEND, c.getEnvironment(), append.getRow(),
+        append.getFamilyCellMap(), HConstants.LATEST_TIMESTAMP, Action.WRITE);
     byte[] bytes = append.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
     if (bytes != null) {
       if (canPersistCellACLs) {
@@ -1317,9 +1399,8 @@ public class AccessController extends BaseRegionObserver
       throws IOException {
     // Require WRITE permission to the table, CF, and the KV to be replaced by
     // the incremented value
-    requireCoveringPermission("increment", c.getEnvironment(), increment.getRow(),
-      increment.getFamilyCellMap(), increment.getTimeRange().getMax(), false,
-      Action.WRITE);
+    requireCoveringPermission(OpType.INCREMENT, c.getEnvironment(), increment.getRow(),
+        increment.getFamilyCellMap(), increment.getTimeRange().getMax(), Action.WRITE);
     byte[] bytes = increment.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
     if (bytes != null) {
       if (canPersistCellACLs) {
