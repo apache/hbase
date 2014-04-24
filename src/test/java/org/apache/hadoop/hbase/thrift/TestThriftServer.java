@@ -97,33 +97,13 @@ public class TestThriftServer {
   }
 
   /**
-   * Runs all of the tests under a single JUnit test method.  We
-   * consolidate all testing to one method because HBaseClusterTestCase
-   * is prone to OutOfMemoryExceptions when there are three or more
-   * JUnit test methods.
-   *
-   * @throws Exception
-   */
-  public void testAll() throws Exception {
-    // Run all tests
-    doTestTableCreateDrop();
-    doTestThriftMetrics();
-    doTestTableMutations();
-    doTestTableTimestampsAndColumns();
-    doTestTableScanners();
-    doTestGetTableRegions();
-    doTestFilterRegistration();
-    doTestGetRegionInfo();
-  }
-
-  /**
    * Tests for creating, enabling, disabling, and deleting tables.  Also
    * tests that creating a table with an invalid column name yields an
    * IllegalArgument exception.
    *
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 180000)
   public void doTestTableCreateDrop() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
@@ -153,7 +133,7 @@ public class TestThriftServer {
   /**
    * Tests if the metrics for thrift handler work correctly
    */
-  @Test
+  @Test(timeout = 180000)
   public void doTestThriftMetrics() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     ThriftMetrics metrics = getMetrics(conf);
@@ -249,7 +229,7 @@ public class TestThriftServer {
    *
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 180000)
   public void doTestTableMutations() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
@@ -368,7 +348,7 @@ public class TestThriftServer {
    * @throws Exception
    */
   @SuppressWarnings("deprecation")
-  @Test
+  @Test(timeout = 180000)
   public void doTestTableTimestampsAndColumns() throws Exception {
     // Setup
     ThriftServerRunner.HBaseHandler handler =
@@ -452,7 +432,7 @@ public class TestThriftServer {
    *
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 180000)
   public void doTestTableScanners() throws Exception {
     // Setup
     ThriftServerRunner.HBaseHandler handler =
@@ -536,7 +516,7 @@ public class TestThriftServer {
    *
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 180000)
   public void doTestGetTableRegions() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
@@ -564,7 +544,7 @@ public class TestThriftServer {
             "but found " + regionCount, regionCount, 0);
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void doTestFilterRegistration() throws Exception {
     Configuration conf = UTIL.getConfiguration();
 
@@ -577,7 +557,7 @@ public class TestThriftServer {
     assertEquals("filterclass", registeredFilters.get("MyFilter"));
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void doTestGetRegionInfo() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());

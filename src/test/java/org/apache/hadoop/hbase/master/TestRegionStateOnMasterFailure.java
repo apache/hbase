@@ -82,7 +82,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
   private static final int NUM_MASTERS = 2;
   private static final int NUM_RS = 3;
 
-  private static final int TEST_TIMEOUT_MS = 90 * 1000 * 1234567;
+  private static final long TEST_TIMEOUT_MS = 360 * 1000;
 
   private static final Pattern META_AND_ROOT_RE = Pattern.compile(
       (Bytes.toStringBinary(HConstants.META_TABLE_NAME) + "|" +

@@ -35,44 +35,60 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.data.Stat;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestHRegionClose {
   private static final Log LOG = LogFactory.getLog(TestHRegionClose.class);
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  protected static byte[][] FAMILIES = { Bytes.toBytes("f1"),
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final byte[][] FAMILIES = { Bytes.toBytes("f1"),
       Bytes.toBytes("f2"), Bytes.toBytes("f3"), Bytes.toBytes("f4") };
-  protected HRegionServer server;
-  protected ZooKeeperWrapper zkWrapper;
-  protected HRegionInfo regionInfo;
-  protected String regionZNode;
+  private static final String TABLE_NAME = TestHRegionClose.class.getName();
+  private static int nextRegionIdx = 0;
 
-  @Before
-  public void setUp() throws Exception {
-    TEST_UTIL.startMiniCluster(3);
+  private HRegionServer server;
+  private ZooKeeperWrapper zkWrapper;
+  private HRegionInfo regionInfo;
+  private String regionZNode;
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(1);
 
     // Build some data.
-    byte[] tableName = Bytes.toBytes(getClass().getSimpleName());
+    byte[] tableName = Bytes.toBytes(TABLE_NAME);
     TEST_UTIL.createTable(tableName, FAMILIES, 1, Bytes.toBytes("bbb"),
         Bytes.toBytes("yyy"), 25);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    for (int i = 0; i < FAMILIES.length; i++) {
-      byte[] columnFamily = FAMILIES[i];
+    for (byte[] columnFamily : FAMILIES) {
       TEST_UTIL.loadTable(table, columnFamily);
     }
+  }
 
+  @Before
+  public void setUp() throws Exception {
     // Pick a regionserver.
     server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
 
     HRegion[] region = server.getOnlineRegionsAsArray();
-    regionInfo = region[0].getRegionInfo();
+    regionInfo = null;
+
+    // We need to make sure that we don't get meta or root
+    while (regionInfo == null || !regionInfo.getTableDesc().getNameAsString().equals(TABLE_NAME)) {
+      regionInfo = region[nextRegionIdx++].getRegionInfo();
+    }
 
     // Some initialization relevant to zk.
     zkWrapper = server.getZooKeeperWrapper();
     regionZNode = zkWrapper.getZNode(
         zkWrapper.getRegionInTransitionZNode(), regionInfo.getEncodedName());
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   @After
@@ -81,7 +97,6 @@ public class TestHRegionClose {
     zkWrapper = null;
     regionInfo = null;
     regionZNode = null;
-    TEST_UTIL.shutdownMiniCluster();
   }
 
   protected void tryCloseRegion() throws Exception {
@@ -96,12 +111,12 @@ public class TestHRegionClose {
     assertEquals(HBaseEventType.RS2ZK_REGION_CLOSED, rsData.getHbEvent());
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void singleClose() throws Exception {
     tryCloseRegion();
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void doubleClose() throws Exception {
     tryCloseRegion();
     LOG.info("Trying to close the region again, to check that the RegionServer "
@@ -109,7 +124,7 @@ public class TestHRegionClose {
     tryCloseRegion();
   }
 
-  @Test
+  @Test(timeout = 180000)
   public void testMemstoreCleanup() throws Exception {
     HRegion region = server.getOnlineRegionsAsArray()[0];
 
