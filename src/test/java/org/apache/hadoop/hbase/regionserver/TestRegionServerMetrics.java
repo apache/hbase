@@ -45,8 +45,10 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -57,45 +59,47 @@ public class TestRegionServerMetrics {
   private static final Log LOG =
       LogFactory.getLog(TestRegionServerMetrics.class.getName());
 
-  private final static String TABLE_NAME =
-      TestRegionServerMetrics.class.getSimpleName() + "Table";
-  private String[] FAMILIES = new String[] { "cf1", "cf2", "anotherCF" };
-  private static final int MAX_VERSIONS = 1;
-  private static final int NUM_COLS_PER_ROW = 15;
-  private static final int NUM_FLUSHES = 3;
-  private static final int NUM_REGIONS = 4;
-
   private static final SchemaMetrics ALL_METRICS =
       SchemaMetrics.ALL_SCHEMA_METRICS;
 
-  private final HBaseTestingUtility testUtil =
-      new HBaseTestingUtility();
-  private final Configuration conf = testUtil.getConfiguration();
+  private static HBaseTestingUtility TEST_UTIL;
 
-  private Map<String, Long> startingMetrics;
+  private final Configuration conf = TEST_UTIL.getConfiguration();
 
-  private final int META_AND_ROOT = 2;
+  private static Map<String, Long> STARTING_METRICS;
 
   private final int NUM_ROWS = 10000;
+
+  @BeforeClass
+  public static void setUpCluster() throws Exception {
+    TEST_UTIL = new HBaseTestingUtility();
+    SchemaMetrics.setUseTableNameInTest(true);
+    STARTING_METRICS = SchemaMetrics.getMetricsSnapshot();
+    TEST_UTIL.startMiniCluster();
+  }
+
+  @AfterClass
+  public static void tearDownCluster() throws IOException {
+    TEST_UTIL.shutdownMiniCluster();
+    SchemaMetrics.validateMetricChanges(STARTING_METRICS);
+  }
 
   @Before
   public void setUp() throws Exception {
     SchemaMetrics.setUseTableNameInTest(true);
-    startingMetrics = SchemaMetrics.getMetricsSnapshot();
-    testUtil.startMiniCluster();
+    STARTING_METRICS = SchemaMetrics.getMetricsSnapshot();
   }
 
   @After
-  public void tearDown() throws IOException {
-    testUtil.shutdownMiniCluster();
-    SchemaMetrics.validateMetricChanges(startingMetrics);
+  public void after() throws Exception {
+    SchemaMetrics.validateMetricChanges(STARTING_METRICS);
   }
 
   private void assertStoreMetricEquals(long expected,
       SchemaMetrics schemaMetrics, StoreMetricType storeMetricType) {
     final String storeMetricName =
         schemaMetrics.getStoreMetricName(storeMetricType);
-    Long startValue = startingMetrics.get(storeMetricName);
+    Long startValue = STARTING_METRICS.get(storeMetricName);
     assertEquals("Invalid value for store metric " + storeMetricName
         + " (type " + storeMetricType + ")", expected,
         HRegion.getNumericMetric(storeMetricName)
@@ -104,12 +108,20 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testMultipleRegions() throws IOException, InterruptedException {
+    final String TABLE_NAME =
+        TestRegionServerMetrics.class.getSimpleName() + "Table";
+    String[] FAMILIES = new String[] { "cf1", "cf2", "anotherCF" };
+    final int MAX_VERSIONS = 1;
+    final int NUM_COLS_PER_ROW = 15;
+    final int NUM_FLUSHES = 3;
+    final int NUM_REGIONS = 4;
+    final int META_AND_ROOT = 2;
 
-    testUtil.createRandomTable(TABLE_NAME, Arrays.asList(FAMILIES), MAX_VERSIONS, NUM_COLS_PER_ROW,
+    TEST_UTIL.createRandomTable(TABLE_NAME, Arrays.asList(FAMILIES), MAX_VERSIONS, NUM_COLS_PER_ROW,
         NUM_FLUSHES, NUM_REGIONS, 1000);
 
     final HRegionServer rs =
-        testUtil.getMiniHBaseCluster().getRegionServer(0);
+        TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
 
     assertEquals(NUM_REGIONS + META_AND_ROOT, rs.getOnlineRegions().size());
 
@@ -176,7 +188,7 @@ public class TestRegionServerMetrics {
     byte[] CF2 = Bytes.toBytes(cf2Name);
 
     long ts = 1234;
-    HTable hTable = testUtil.createTable(TABLE, new byte[][]{CF1, CF2});
+    HTable hTable = TEST_UTIL.createTable(TABLE, new byte[][]{CF1, CF2});
 
     Put p = new Put(ROW);
     p.add(CF1, CF1, ts, CF1);
@@ -189,11 +201,11 @@ public class TestRegionServerMetrics {
     assertEquals(kvLength, kv2.getLength());
 
     // only cf1.getsize is set on Get
-    hTable.get(new Get(ROW).addFamily(CF1));
+    hTable.get(new Get.Builder(ROW).addFamily(CF1).create());
     assertSizeMetric(tableName, cfs, new int[] {kvLength, 0, 0, 0});
 
     // only cf2.getsize is set on Get
-    hTable.get(new Get(ROW).addFamily(CF2));
+    hTable.get(new Get.Builder(ROW).addFamily(CF2).create());
     assertSizeMetric(tableName, cfs, new int[] {kvLength, kvLength, 0, 0});
 
     // only cf2.nextsize is set
@@ -211,7 +223,7 @@ public class TestRegionServerMetrics {
         new int[] {kvLength, kvLength, kvLength, kvLength});
 
     // getsize/nextsize should not be set on flush or compaction
-    for (HRegion hr : testUtil.getMiniHBaseCluster().getRegions(TABLE)) {
+    for (HRegion hr : TEST_UTIL.getMiniHBaseCluster().getRegions(TABLE)) {
       hr.flushcache();
       hr.compactStores();
     }
@@ -221,12 +233,14 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testEncodingInCache() throws Exception {
+    byte[] tableName = Bytes.toBytes("TestEncodingInCache");
+    final int NUM_COLS_PER_ROW = 15;
     HTable t = null;
     try {
       HColumnDescriptor hcd = new HColumnDescriptor(HTestConst.DEFAULT_CF_BYTES)
           .setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
-      testUtil.createTable(HTestConst.DEFAULT_TABLE_BYTES, new HColumnDescriptor[]{hcd});
-      t = new HTable(conf, HTestConst.DEFAULT_TABLE_BYTES);
+      TEST_UTIL.createTable(tableName, new HColumnDescriptor[]{hcd});
+      t = new HTable(conf, tableName);
 
       // Write some test data
       for (int iRow = 0; iRow < NUM_ROWS; ++iRow) {
@@ -243,21 +257,21 @@ public class TestRegionServerMetrics {
         t.put(p);
       }
       HBaseAdmin adm = new HBaseAdmin(conf);
-      adm.flush(HTestConst.DEFAULT_TABLE_STR);
+      adm.flush(tableName);
       adm.close();
 
       LOG.info("Clearing cache and reading");
-      testUtil.getBlockCache().clearCache();
-      startingMetrics = SchemaMetrics.getMetricsSnapshot();
+      TEST_UTIL.getBlockCache().clearCache();
+      STARTING_METRICS = SchemaMetrics.getMetricsSnapshot();
       // Read all data to bring it into cache.
       for (int iRow = 0; iRow < NUM_ROWS; ++iRow) {
-        Get g = new Get(Bytes.toBytes("row" + iRow));
+        Get.Builder g = new Get.Builder(Bytes.toBytes("row" + iRow));
         g.addFamily(HTestConst.DEFAULT_CF_BYTES);
-        t.get(g);
+        t.get(g.create());
       }
 
       // Check metrics
-      Map<String, Long> m = SchemaMetrics.diffMetrics(this.startingMetrics,
+      Map<String, Long> m = SchemaMetrics.diffMetrics(TestRegionServerMetrics.STARTING_METRICS,
           SchemaMetrics.getMetricsSnapshot());
       LOG.info("Metrics after reading:\n" + SchemaMetrics.formatMetrics(m));
       long dataBlockEncodedSize = SchemaMetrics.getLong(m,
@@ -273,7 +287,7 @@ public class TestRegionServerMetrics {
       if (t != null) {
         t.close();
       }
-      testUtil.dropDefaultTable();
+      TEST_UTIL.dropDefaultTable();
     }
   }
   
@@ -284,7 +298,7 @@ public class TestRegionServerMetrics {
     byte[] CF = Bytes.toBytes(cfName);
     String tableName = "CompactionWriteSize";
     byte[] TABLE = Bytes.toBytes(tableName);
-    HTable hTable = testUtil.createTable(TABLE, CF);
+    HTable hTable = TEST_UTIL.createTable(TABLE, CF);
 
     final String storeMetricName = ALL_METRICS.getStoreMetricName(
         StoreMetricType.COMPACTION_WRITE_SIZE);
@@ -301,12 +315,12 @@ public class TestRegionServerMetrics {
       Put p = new Put(ROW);
       p.add(CF, CF, ts, ROW);
       hTable.put(p);
-      for (HRegion hr : testUtil.getMiniHBaseCluster().getRegions(TABLE)) {
+      for (HRegion hr : TEST_UTIL.getMiniHBaseCluster().getRegions(TABLE)) {
         hr.flushcache();
       }
     }
 
-    for (HRegion hr : testUtil.getMiniHBaseCluster().getRegions(TABLE)) {
+    for (HRegion hr : TEST_UTIL.getMiniHBaseCluster().getRegions(TABLE)) {
       hr.flushcache();
       hr.compactStores();
     }
@@ -320,12 +334,12 @@ public class TestRegionServerMetrics {
       byte[] ROW = Bytes.toBytes(rowName);
       Delete del = new Delete(ROW);
       hTable.delete(del);
-      for (HRegion hr : testUtil.getMiniHBaseCluster().getRegions(TABLE)) {
+      for (HRegion hr : TEST_UTIL.getMiniHBaseCluster().getRegions(TABLE)) {
         hr.flushcache();
       }
     }
     
-    for (HRegion hr : testUtil.getMiniHBaseCluster().getRegions(TABLE)) {
+    for (HRegion hr : TEST_UTIL.getMiniHBaseCluster().getRegions(TABLE)) {
         hr.flushcache();
         hr.compactStores();
       }
