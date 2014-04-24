@@ -66,8 +66,9 @@ public class HTableClientScanner implements ResultScanner {
   private final AtomicReference<Throwable> exception = new AtomicReference<>();
   // The variable informing fetching thread to stop
   private final AtomicBoolean closing = new AtomicBoolean(false);
+  private final AtomicInteger numRegionsScanned = new AtomicInteger(0);
 
-  private final Fetcher fetcher;
+  private final Runnable fetcher;
 
   /**
    * @return a Builder for creating HTableClientScanner.
@@ -127,7 +128,7 @@ public class HTableClientScanner implements ResultScanner {
     }
 
     fetcher = new Fetcher(table, scan, caching, queue, justFetched, exception,
-        closing);
+            closing, numRegionsScanned);
   }
 
   HTableClientScanner initialize() {
@@ -285,7 +286,7 @@ public class HTableClientScanner implements ResultScanner {
    * @return
    */
   int getNumRegionsScanned() {
-    return this.fetcher.numRegionsScanned.get();
+    return this.numRegionsScanned.get();
   }
 
   private static class Fetcher implements Runnable {
@@ -308,12 +309,13 @@ public class HTableClientScanner implements ResultScanner {
     private final AtomicReference<Result[]> justFetched;
     private final AtomicReference<Throwable> exception;
     private final AtomicBoolean closing;
-    private final AtomicInteger numRegionsScanned = new AtomicInteger(0);
+    private final AtomicInteger numRegionsScanned;
 
     public Fetcher(HTable table, Scan scan, int caching,
         ArrayBlockingQueue<Result[]> queue,
         AtomicReference<Result[]> justFetched,
-        AtomicReference<Throwable> exception, AtomicBoolean closing) {
+        AtomicReference<Throwable> exception, AtomicBoolean closing,
+        AtomicInteger numRegionsScanned) {
       this.table = table;
       this.scan = scan;
       this.caching = caching;
@@ -322,6 +324,7 @@ public class HTableClientScanner implements ResultScanner {
       this.justFetched = justFetched;
       this.exception = exception;
       this.closing = closing;
+      this.numRegionsScanned = numRegionsScanned;
 
       // Initialize startKey
       startKey = scan.getStartRow();
@@ -489,6 +492,7 @@ public class HTableClientScanner implements ResultScanner {
 
           if (results != null) {
             if (!putResults(results)) {
+              // queue is full, let the Fetcher have a rest.
               return;
             }
           }
@@ -498,6 +502,12 @@ public class HTableClientScanner implements ResultScanner {
       }
       // We only get here scanning is over or aborted with exception
       putResults(EOS);
+
+      // Close the scanner if scanning is stopped by user.
+      if (callable != null) {
+        closeScanner(callable);
+        callable = null;
+      }
     }
   }
 }
