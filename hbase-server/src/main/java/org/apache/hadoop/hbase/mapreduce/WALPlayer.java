@@ -254,6 +254,7 @@ public class WALPlayer extends Configured implements Tool {
       job.setMapperClass(HLogMapper.class);
       job.setOutputFormatClass(MultiTableOutputFormat.class);
       TableMapReduceUtil.addDependencyJars(job);
+      TableMapReduceUtil.initCredentials(job);
       // No reducers.
       job.setNumReduceTasks(0);
     }
