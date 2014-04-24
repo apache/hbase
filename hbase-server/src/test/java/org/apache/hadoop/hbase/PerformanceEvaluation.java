@@ -84,6 +84,8 @@ import org.codehaus.jackson.map.ObjectMapper;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.MetricsRegistry;
+import com.yammer.metrics.stats.UniformSample;
+import com.yammer.metrics.stats.Snapshot;
 
 /**
  * Script used evaluating HBase performance and scalability.  Runs a HBase
@@ -581,8 +583,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.table.setAutoFlush(opts.autoFlush, true);
       String metricName =
           testName + "-Client-" + Thread.currentThread().getName() + "-testRowTime";
-      latency =
-          metricsRegistry.newHistogram(PerformanceEvaluation.class, metricName);
+
+      try {
+        Constructor ctor = Histogram.class.getDeclaredConstructor(com.yammer.metrics.stats.Sample.class);
+        ctor.setAccessible(true);
+        latency = (Histogram) ctor.newInstance(new UniformSample(1024 * 500));
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+
     }
 
     void testTakedown() throws IOException {
@@ -634,15 +643,16 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private void reportLatency() throws IOException {
       status.setStatus(testName + " latency log (microseconds), on " +
           latency.count() + " measures");
+      Snapshot sn = latency.getSnapshot();
       status.setStatus(testName + " Min      = " + latency.min());
       status.setStatus(testName + " Avg      = " + latency.mean());
       status.setStatus(testName + " StdDev   = " + latency.stdDev());
-      status.setStatus(testName + " 50th     = " + latency.getSnapshot().getMedian());
-      status.setStatus(testName + " 95th     = " + latency.getSnapshot().get95thPercentile());
-      status.setStatus(testName + " 99th     = " + latency.getSnapshot().get99thPercentile());
-      status.setStatus(testName + " 99.9th   = " + latency.getSnapshot().get999thPercentile());
-      status.setStatus(testName + " 99.99th  = " + latency.getSnapshot().getValue(0.9999));
-      status.setStatus(testName + " 99.9999th= " + latency.getSnapshot().getValue(0.99999));
+      status.setStatus(testName + " 50th     = " + sn.getMedian());
+      status.setStatus(testName + " 95th     = " + sn.get95thPercentile());
+      status.setStatus(testName + " 99th     = " + sn.get99thPercentile());
+      status.setStatus(testName + " 99.9th   = " + sn.get999thPercentile());
+      status.setStatus(testName + " 99.99th  = " + sn.getValue(0.9999));
+      status.setStatus(testName + " 99.999th = " + sn.getValue(0.99999));
       status.setStatus(testName + " Max      = " + latency.max());
     }
 
