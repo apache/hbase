@@ -61,6 +61,14 @@ public class Authorizations {
   
   @Override
   public String toString() {
-    return this.labels.toString();
+    StringBuilder sb = new StringBuilder();
+    sb.append("[ ");
+    for (String label: labels) {
+      sb.append(label);
+      sb.append(' ');
+    }
+    sb.append(']');
+    return sb.toString();
   }
+
 }

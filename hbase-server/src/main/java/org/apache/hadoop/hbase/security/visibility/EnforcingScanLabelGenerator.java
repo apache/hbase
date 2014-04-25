@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -27,20 +26,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
 
 /**
- * This is the default implementation for ScanLabelGenerator. It will extract labels passed via
- * Scan#authorizations and cross check against the global auths set for the user. The labels for which
- * user is not authenticated will be dropped even if it is passed via Scan Authorizations.
+ * This ScanLabelGenerator enforces a set of predefined authorizations for a
+ * given user, the set defined by the admin using the VisibilityClient admin
+ * interface or the set_auths shell command. Any authorizations requested with
+ * Scan#authorizations will be ignored.
  */
 @InterfaceAudience.Private
-public class DefaultScanLabelGenerator implements ScanLabelGenerator {
+public class EnforcingScanLabelGenerator implements ScanLabelGenerator {
 
-  private static final Log LOG = LogFactory.getLog(DefaultScanLabelGenerator.class);
-  
+  private static final Log LOG = LogFactory.getLog(EnforcingScanLabelGenerator.class);
+
   private Configuration conf;
-  
   private VisibilityLabelsManager labelsManager;
-  
-  public DefaultScanLabelGenerator() {
+
+  public EnforcingScanLabelGenerator() {
     this.labelsManager = VisibilityLabelsManager.get();
   }
 
@@ -56,38 +55,11 @@ public class DefaultScanLabelGenerator implements ScanLabelGenerator {
 
   @Override
   public List<String> getLabels(User user, Authorizations authorizations) {
+    String userName = user.getShortName();
     if (authorizations != null) {
-      List<String> labels = authorizations.getLabels();
-      String userName = user.getShortName();
-      List<String> auths = this.labelsManager.getAuths(userName);
-      return dropLabelsNotInUserAuths(labels, auths, userName);
+      LOG.warn("Dropping authorizations requested by user " + userName + ": " + authorizations);
     }
-    return null;
+    return this.labelsManager.getAuths(userName);
   }
 
-  private List<String> dropLabelsNotInUserAuths(List<String> labels, List<String> auths,
-      String userName) {
-    List<String> droppedLabels = new ArrayList<String>();
-    List<String> passedLabels = new ArrayList<String>(labels.size());
-    for (String label : labels) {
-      if (auths.contains(label)) {
-        passedLabels.add(label);
-      } else {
-        droppedLabels.add(label);
-      }
-    }
-    if (!droppedLabels.isEmpty()) {
-      StringBuilder sb = new StringBuilder();
-      sb.append("Dropping invalid authorizations requested by user ");
-      sb.append(userName);
-      sb.append(": [ ");
-      for (String label: droppedLabels) {
-        sb.append(label);
-        sb.append(' ');
-      }
-      sb.append(']');
-      LOG.warn(sb.toString());
-    }
-    return passedLabels;
-  }
 }
