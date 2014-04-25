@@ -315,8 +315,7 @@ public class ScanQueryMatcher {
             tr.withinOrAfterTimeRange(timestamp);
         if (includeDeleteMarker
             && mvccVersion <= maxReadPointToTrackVersions) {
-          this.deletes.add(cell.getQualifierArray(), qualifierOffset,
-              qualifierLength, timestamp, typeByte);
+          this.deletes.add(cell);
         }
         // Can't early out now, because DelFam come before any other keys
       }
@@ -349,8 +348,7 @@ public class ScanQueryMatcher {
       // note the following next else if...
       // delete marker are not subject to other delete markers
     } else if (!this.deletes.isEmpty()) {
-      DeleteResult deleteResult = deletes.isDeleted(cell.getQualifierArray(),
-          qualifierOffset, qualifierLength, timestamp);
+      DeleteResult deleteResult = deletes.isDeleted(cell);
       switch (deleteResult) {
         case FAMILY_DELETED:
         case COLUMN_DELETED:
