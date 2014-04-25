@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -95,6 +96,13 @@ public class TestRegionServerMetrics {
     SchemaMetrics.validateMetricChanges(STARTING_METRICS);
   }
 
+  public static void disableAndDropTable(String tablename)
+      throws IOException {
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    admin.disableTable(tablename);
+    admin.deleteTable(tablename);
+  }
+
   private void assertStoreMetricEquals(long expected,
       SchemaMetrics schemaMetrics, StoreMetricType storeMetricType) {
     final String storeMetricName =
@@ -151,6 +159,8 @@ public class TestRegionServerMetrics {
         .getStoreMetricNameMax(StoreMetricType.STORE_FILE_COUNT);
     assertEquals("Invalid value for store metric " + storeMetricName,
         NUM_FLUSHES, HRegion.getNumericMetric(storeMetricName));
+
+    disableAndDropTable(TABLE_NAME);
   }
 
 
@@ -229,6 +239,8 @@ public class TestRegionServerMetrics {
     }
     assertSizeMetric(tableName, cfs,
         new int[] {kvLength, kvLength, kvLength, kvLength});
+
+    disableAndDropTable(tableName);
   }
 
   @Test
@@ -289,6 +301,8 @@ public class TestRegionServerMetrics {
       }
       TEST_UTIL.dropDefaultTable();
     }
+
+    disableAndDropTable(Bytes.toString(tableName));
   }
   
   @Test
@@ -348,5 +362,7 @@ public class TestRegionServerMetrics {
       HRegion.getNumericPersistentMetric(storeMetricFullName);
     Assert.assertTrue(compactionWriteSizeAfterCompactionAfterDelete 
                     == compactionWriteSizeAfterCompaction);
+
+    disableAndDropTable(tableName);
   }
 }
