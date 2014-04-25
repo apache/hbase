@@ -185,7 +185,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   public void testSkewCost() {
     Configuration conf = HBaseConfiguration.create();
     StochasticLoadBalancer.CostFunction
-        costFunction = new StochasticLoadBalancer.RegionCountSkewCostFunction(conf);
+        costFunction = new StochasticLoadBalancer.RegionCountSkewCostFunction(conf, 1, 1);
     for (int[] mockCluster : clusterStateMocks) {
       double cost = costFunction.cost(mockCluster(mockCluster));
       assertTrue(cost >= 0);

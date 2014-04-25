@@ -199,9 +199,13 @@ public class ServerManager {
     this.connection = connect ? HConnectionManager.getConnection(c) : null;
 
     // Put this in constructor so we don't cast it every time
+    //
+    // We need to check if a newly added server is a backup master
+    // only if we are configured not to assign any region to it.
     checkingBackupMaster = (master instanceof HMaster)
-      && !c.getBoolean("hbase.balancer.use-backupmaster", true)
-      && ((HMaster)master).balancer instanceof BaseLoadBalancer;
+      && ((HMaster)master).balancer instanceof BaseLoadBalancer
+      && (c.getInt(BaseLoadBalancer.BACKUP_MASTER_WEIGHT_KEY,
+        BaseLoadBalancer.DEFAULT_BACKUP_MASTER_WEIGHT) < 1);
     if (checkingBackupMaster) {
       balancer = (BaseLoadBalancer)((HMaster)master).balancer;
     }

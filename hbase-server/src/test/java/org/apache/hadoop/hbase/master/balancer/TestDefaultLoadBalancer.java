@@ -17,8 +17,14 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,11 +33,13 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 /**
  * Test the load balancer that is created by default.
@@ -124,7 +132,44 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
         returnServer(entry.getKey());
       }
     }
-
   }
 
+  @Test
+  public void testBalancerClusterWithBackupMaster() throws Exception {
+    SimpleLoadBalancer balancer = Mockito.spy(new SimpleLoadBalancer());
+    balancer.setConf(HBaseConfiguration.create());
+    List<ServerName> backupMasters = new ArrayList<ServerName>();
+    ServerName backupMaster = ServerName.parseServerName("backup:1:1");
+    ServerName rs = ServerName.parseServerName("rs:1:1");
+    backupMasters.add(backupMaster);
+    Mockito.doReturn(backupMasters).when(balancer).getBackupMasters();
+    Map<ServerName, List<HRegionInfo>> servers = new TreeMap<ServerName, List<HRegionInfo>>();
+    List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+    TableName table = TableName.valueOf("test");
+    regions.add(new HRegionInfo(table));
+    servers.put(backupMaster, regions);
+    regions = new ArrayList<HRegionInfo>();
+    balancer.backupMasterWeight = 4;
+    for (int i=0; i<4; i++) {
+      regions.add(new HRegionInfo(table));
+    }
+    servers.put(rs, regions);
+    List<RegionPlan> plans = balancer.balanceCluster(servers);
+    assertNull(plans);
+
+    // Reset the cluster map
+    regions = new ArrayList<HRegionInfo>();
+    for (int i=0; i<2; i++) {
+      regions.add(new HRegionInfo(table));
+    }
+    servers.put(backupMaster, regions);
+    regions = new ArrayList<HRegionInfo>();
+    for (int i=0; i<3; i++) {
+      regions.add(new HRegionInfo(table));
+    }
+    servers.put(rs, regions);
+    plans = balancer.balanceCluster(servers);
+    assertNotNull(plans);
+    assertEquals(1, plans.size());
+  }
 }

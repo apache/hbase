@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -34,9 +35,12 @@ public class ClusterLoadState {
   private boolean emptyRegionServerPresent = false;
   private int numRegions = 0;
   private int numServers = 0;
+  private int numBackupMasters = 0;
+  private int backupMasterWeight;
 
-  public ClusterLoadState(ServerName master,
-      Map<ServerName, List<HRegionInfo>> clusterState) {
+  public ClusterLoadState(ServerName master, Collection<ServerName> backupMasters,
+      int backupMasterWeight, Map<ServerName, List<HRegionInfo>> clusterState) {
+    this.backupMasterWeight = backupMasterWeight;
     this.numRegions = 0;
     this.numServers = clusterState.size();
     this.clusterState = clusterState;
@@ -44,19 +48,19 @@ public class ClusterLoadState {
     // Iterate so we can count regions as we build the map
     for (Map.Entry<ServerName, List<HRegionInfo>> server : clusterState.entrySet()) {
       if (master != null && numServers > 1 && master.equals(server.getKey())) {
-        // Don't count the master regionserver since its
-        // load is meant to be low.
+        // Don't count the master since its load is meant to be low.
+        numServers--;
         continue;
       }
       List<HRegionInfo> regions = server.getValue();
       int sz = regions.size();
       if (sz == 0) emptyRegionServerPresent = true;
       numRegions += sz;
+      if (backupMasters != null && backupMasters.contains(server.getKey())) {
+        sz *= backupMasterWeight;
+        numBackupMasters++;
+      }
       serversByLoad.put(new ServerAndLoad(server.getKey(), sz), regions);
-    }
-    if (master != null && numServers > 1
-        && clusterState.containsKey(master)) {
-      numServers--;
     }
   }
 
@@ -80,8 +84,12 @@ public class ClusterLoadState {
     return numServers;
   }
 
+  int getNumBackupMasters() {
+    return numBackupMasters;
+  }
+
   float getLoadAverage() {
-    return (float) numRegions / numServers;
+    return numRegions / (numServers - numBackupMasters * (1 - 1.0f/backupMasterWeight));
   }
 
   int getMaxLoad() {

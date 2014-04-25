@@ -102,7 +102,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private static final Log LOG = LogFactory.getLog(StochasticLoadBalancer.class);
 
   private final RegionLocationFinder regionFinder = new RegionLocationFinder();
-  private ClusterStatus clusterStatus = null;
   Map<String, Deque<RegionLoad>> loads = new HashMap<String, Deque<RegionLoad>>();
 
   // values are defaults
@@ -149,8 +148,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     };
 
     costFunctions = new CostFunction[]{
-      new RegionCountSkewCostFunction(conf),
-      new RegionOnMasterCostFunction(conf),
+      new RegionCountSkewCostFunction(conf, activeMasterWeight, backupMasterWeight),
       new MoveCostFunction(conf),
       localityCost,
       new TableSkewCostFunction(conf),
@@ -170,7 +168,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   public void setClusterStatus(ClusterStatus st) {
     super.setClusterStatus(st);
     regionFinder.setClusterStatus(st);
-    this.clusterStatus = st;
     updateRegionLoad();
     for(CostFromRegionLoadFunction cost : regionLoadFunctions) {
       cost.setClusterStatus(st);
@@ -197,14 +194,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return plans;
     }
     filterExcludedServers(clusterState);
-    if (!needsBalance(new ClusterLoadState(masterServerName, clusterState))) {
+    if (!needsBalance(new ClusterLoadState(masterServerName,
+        getBackupMasters(), backupMasterWeight, clusterState))) {
       return null;
     }
 
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
     // Keep track of servers to iterate through them.
-    Cluster cluster = new Cluster(masterServerName, clusterState, loads, regionFinder);
+    Cluster cluster = new Cluster(masterServerName,
+      clusterState, loads, regionFinder, getBackupMasters());
     double currentCost = computeCost(cluster, Double.MAX_VALUE);
 
     double initCost = currentCost;
@@ -631,11 +630,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
      * @return The scaled value.
      */
     protected double scale(double min, double max, double value) {
-      if (max == 0 || value == 0) {
+      if (max <= min || value <= min) {
         return 0;
       }
 
-      return Math.max(0d, Math.min(1d, (value - min) / max));
+      return Math.max(0d, Math.min(1d, (value - min) / (max - min)));
     }
   }
 
@@ -650,7 +649,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     private static final float DEFAULT_MOVE_COST = 100;
     private static final int DEFAULT_MAX_MOVES = 600;
     private static final float DEFAULT_MAX_MOVE_PERCENT = 0.25f;
-    private static final int META_MOVE_COST_MULT = 10;
 
     private final float maxMovesPercent;
 
@@ -672,19 +670,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       double moveCost = cluster.numMovedRegions;
 
-      // Don't let this single balance move more than the max moves.
+      // Don't let this single balance move more than the max moves,
+      // or move a region that should be on master away from the master.
+      // It is ok to move any master hosted region back to the master.
       // This allows better scaling to accurately represent the actual cost of a move.
-      if (moveCost > maxMoves) {
+      if (moveCost > maxMoves || cluster.numMovedMasterHostedRegions > 0) {
         return 1000000;   // return a number much greater than any of the other cost
       }
 
-      // hbase:meta region is special
-      if (cluster.numMovedMetaRegions > 0) {
-        // assume each hbase:meta region move costs 10 times
-        moveCost += META_MOVE_COST_MULT * cluster.numMovedMetaRegions;
-      }
-
-      return scale(0, cluster.numRegions + META_MOVE_COST_MULT, moveCost);
+      return scale(0, cluster.numRegions, moveCost);
     }
   }
 
@@ -697,12 +691,17 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         "hbase.master.balancer.stochastic.regionCountCost";
     private static final float DEFAULT_REGION_COUNT_SKEW_COST = 500;
 
+    private double activeMasterWeight;
+    private double backupMasterWeight;
     private double[] stats = null;
 
-    RegionCountSkewCostFunction(Configuration conf) {
+    RegionCountSkewCostFunction(Configuration conf,
+        double activeMasterWeight, double backupMasterWeight) {
       super(conf);
       // Load multiplier should be the greatest as it is the most general way to balance data.
       this.setMultiplier(conf.getFloat(REGION_COUNT_SKEW_COST_KEY, DEFAULT_REGION_COUNT_SKEW_COST));
+      this.activeMasterWeight = activeMasterWeight;
+      this.backupMasterWeight = backupMasterWeight;
     }
 
     @Override
@@ -713,6 +712,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       for (int i =0; i < cluster.numServers; i++) {
         stats[i] = cluster.regionsPerServer[i].length;
+        // Use some weight on regions assigned to active/backup masters,
+        // so that they won't carry as many regions as normal regionservers.
+        if (cluster.isActiveMaster(i)) {
+          stats[i] += cluster.numUserRegionsOnMaster * (activeMasterWeight - 1);
+        } else if (cluster.isBackupMaster(i)) {
+          stats[i] *= backupMasterWeight;
+        }
       }
       return costFromArray(stats);
     }
@@ -744,30 +750,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
 
       return scale(min, max, value);
-    }
-  }
-
-  /**
-   * Compute the cost of a potential cluster configuration based upon if putting
-   * user regions on the master regionserver.
-   */
-  public static class RegionOnMasterCostFunction extends CostFunction {
-
-    private static final String REGION_ON_MASTER_COST_KEY =
-        "hbase.master.balancer.stochastic.regionOnMasterCost";
-    private static final float DEFAULT_REGION_ON_MASTER__COST = 1000;
-
-    RegionOnMasterCostFunction(Configuration conf) {
-      super(conf);
-      this.setMultiplier(conf.getFloat(
-        REGION_ON_MASTER_COST_KEY, DEFAULT_REGION_ON_MASTER__COST));
-    }
-
-    @Override
-    double cost(Cluster cluster) {
-      double max = cluster.numRegions;
-      double value = cluster.numUserRegionsOnMaster;
-      return scale(0, max, value);
     }
   }
 

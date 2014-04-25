@@ -59,13 +59,12 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
 
   private FavoredNodesPlan globalFavoredNodesAssignmentPlan;
   private RackManager rackManager;
-  Configuration conf;
 
   @Override
   public void setConf(Configuration conf) {
     globalFavoredNodesAssignmentPlan = new FavoredNodesPlan();
     this.rackManager = new RackManager(conf);
-    this.conf = conf;
+    super.setConf(conf);
   }
 
   @Override

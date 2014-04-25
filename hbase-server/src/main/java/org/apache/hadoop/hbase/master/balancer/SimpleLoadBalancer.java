@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -188,20 +189,25 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     boolean emptyRegionServerPresent = false;
     long startTime = System.currentTimeMillis();
 
-    ClusterLoadState cs = new ClusterLoadState(masterServerName, clusterMap);
+    Collection<ServerName> backupMasters = getBackupMasters();
+    ClusterLoadState cs = new ClusterLoadState(masterServerName,
+      backupMasters, backupMasterWeight, clusterMap);
 
     if (!this.needsBalance(cs)) return null;
     
     int numServers = cs.getNumServers();
     NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad = cs.getServersByLoad();
     int numRegions = cs.getNumRegions();
-    int min = numRegions / numServers;
-    int max = numRegions % numServers == 0 ? min : min + 1;
+    float average = cs.getLoadAverage();
+    int max = (int)Math.ceil(average);
+    int min = (int)average;
 
     // Using to check balance result.
     StringBuilder strBalanceParam = new StringBuilder();
     strBalanceParam.append("Balance parameter: numRegions=").append(numRegions)
-        .append(", numServers=").append(numServers).append(", max=").append(max)
+        .append(", numServers=").append(numServers).append(", numBackupMasters=")
+        .append(cs.getNumBackupMasters()).append(", backupMasterWeight=")
+        .append(backupMasterWeight).append(", max=").append(max)
         .append(", min=").append(min);
     LOG.debug(strBalanceParam.toString());
 
@@ -220,14 +226,18 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server:
         serversByLoad.descendingMap().entrySet()) {
       ServerAndLoad sal = server.getKey();
-      int regionCount = sal.getLoad();
-      if (regionCount <= max) {
+      int load = sal.getLoad();
+      if (load <= max) {
         serverBalanceInfo.put(sal.getServerName(), new BalanceInfo(0, 0));
         break;
       }
       serversOverloaded++;
       List<HRegionInfo> regions = server.getValue();
-      int numToOffload = Math.min(regionCount - max, regions.size());
+      int w = 1; // Normal region server has weight 1
+      if (backupMasters != null && backupMasters.contains(sal.getServerName())) {
+        w = backupMasterWeight; // Backup master has heavier weight
+      }
+      int numToOffload = Math.min((load - max) / w, regions.size());
       // account for the out-of-band regions which were assigned to this server
       // after some other region server crashed 
       Collections.sort(regions, riComparator);
@@ -259,16 +269,20 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     fetchFromTail = false;
 
     Map<ServerName, Integer> underloadedServers = new HashMap<ServerName, Integer>();
-    float average = (float)numRegions / numServers; // for logging
-    int maxToTake = numRegions - (int)average;
+    int maxToTake = numRegions - min;
     for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server:
         serversByLoad.entrySet()) {
       if (maxToTake == 0) break; // no more to take
-      int regionCount = server.getKey().getLoad();
-      if (regionCount >= min && regionCount > 0) {
+      int load = server.getKey().getLoad();
+      if (load >= min && load > 0) {
         continue; // look for other servers which haven't reached min
       }
-      int regionsToPut = min - regionCount;
+      int w = 1; // Normal region server has weight 1
+      if (backupMasters != null
+          && backupMasters.contains(server.getKey().getServerName())) {
+        w = backupMasterWeight; // Backup master has heavier weight
+      }
+      int regionsToPut = (min - load) / w;
       if (regionsToPut == 0)
       {
         regionsToPut = 1;
