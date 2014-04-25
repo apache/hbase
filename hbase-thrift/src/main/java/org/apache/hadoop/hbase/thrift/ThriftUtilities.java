@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import static org.apache.hadoop.hbase.util.Bytes.getBytes;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,12 +30,14 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
+import org.apache.hadoop.hbase.thrift.generated.TAppend;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TColumn;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
@@ -201,5 +205,29 @@ public class ThriftUtilities {
     if (famAndQf.length != 2) return null;
     inc.addColumn(famAndQf[0], famAndQf[1], tincrement.getAmmount());
     return inc;
+  }
+
+  /**
+   * From a {@link TAppend} create an {@link Append}.
+   * @param tappend the Thrift version of an append.
+   * @return an increment that the {@link TAppend} represented.
+   */
+  public static Append appendFromThrift(TAppend tappend) {
+    Append append = new Append(tappend.getRow());
+    List<ByteBuffer> columns = tappend.getColumns();
+    List<ByteBuffer> values = tappend.getValues();
+
+    if (columns.size() != values.size()) {
+      throw new IllegalArgumentException(
+          "Sizes of columns and values in tappend object are not matching");
+    }
+
+    int length = columns.size();
+
+    for (int i = 0; i < length; i++) {
+      byte[][] famAndQf = KeyValue.parseColumn(getBytes(columns.get(i)));
+      append.add(famAndQf[0], famAndQf[1], getBytes(values.get(i)));
+    }
+    return append;
   }
 }

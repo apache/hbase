@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -77,6 +78,7 @@ import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
+import org.apache.hadoop.hbase.thrift.generated.TAppend;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
@@ -1484,6 +1486,58 @@ public class ThriftServerRunner implements Runnable {
       }
       for (TIncrement tinc : tincrements) {
         increment(tinc);
+      }
+    }
+
+    @Override
+    public List<TCell> append(TAppend tappend) throws IOError, TException {
+      if (tappend.getRow().length == 0 || tappend.getTable().length == 0) {
+        throw new TException("Must supply a table and a row key; can't append");
+      }
+
+      try {
+        HTable table = getTable(tappend.getTable());
+        Append append = ThriftUtilities.appendFromThrift(tappend);
+        Result result = table.append(append);
+        return ThriftUtilities.cellFromHBase(result.rawCells());
+      } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
+        throw new IOError(e.getMessage());
+      }
+    }
+
+    @Override
+    public boolean checkAndPut(ByteBuffer tableName, ByteBuffer row, ByteBuffer column,
+        ByteBuffer value, Mutation mput, Map<ByteBuffer, ByteBuffer> attributes) throws IOError,
+        IllegalArgument, TException {
+      Put put;
+      try {
+        put = new Put(getBytes(row), HConstants.LATEST_TIMESTAMP);
+        addAttributes(put, attributes);
+
+        byte[][] famAndQf = KeyValue.parseColumn(getBytes(mput.column));
+
+        put.addImmutable(famAndQf[0], famAndQf[1], mput.value != null ? getBytes(mput.value)
+            : HConstants.EMPTY_BYTE_ARRAY);
+
+        put.setDurability(mput.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
+      } catch (IllegalArgumentException e) {
+        LOG.warn(e.getMessage(), e);
+        throw new IllegalArgument(e.getMessage());
+      }
+
+      HTable table = null;
+      try {
+        table = getTable(tableName);
+        byte[][] famAndQf = KeyValue.parseColumn(getBytes(column));
+        return table.checkAndPut(getBytes(row), famAndQf[0], famAndQf[1],
+          value != null ? getBytes(value) : HConstants.EMPTY_BYTE_ARRAY, put);
+      } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
+        throw new IOError(e.getMessage());
+      } catch (IllegalArgumentException e) {
+        LOG.warn(e.getMessage(), e);
+        throw new IllegalArgument(e.getMessage());
       }
     }
   }

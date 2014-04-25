@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
+import org.apache.hadoop.hbase.thrift.generated.TAppend;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
@@ -122,6 +124,8 @@ public class TestThriftServer {
     doTestFilterRegistration();
     doTestGetRegionInfo();
     doTestIncrements();
+    doTestAppend();
+    doTestCheckAndPut();
   }
 
   /**
@@ -625,6 +629,68 @@ public class TestThriftServer {
       TRegionInfo regionInfo = handler.getRegionInfo(ByteBuffer.wrap(searchRow));
       assertTrue(Bytes.toStringBinary(regionInfo.getName()).startsWith(
             Bytes.toStringBinary(tableAname)));
+    } finally {
+      handler.disableTable(tableAname);
+      handler.deleteTable(tableAname);
+    }
+  }
+
+  /**
+   * Appends the value to a cell and checks that the cell value is updated properly.
+   *
+   * @throws Exception
+   */
+  public static void doTestAppend() throws Exception {
+    ThriftServerRunner.HBaseHandler handler =
+        new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
+    handler.createTable(tableAname, getColumnDescriptors());
+    try {
+      List<Mutation> mutations = new ArrayList<Mutation>(1);
+      mutations.add(new Mutation(false, columnAname, valueAname, true));
+      handler.mutateRow(tableAname, rowAname, mutations, null);
+
+      List<ByteBuffer> columnList = new ArrayList<ByteBuffer>();
+      columnList.add(columnAname);
+      List<ByteBuffer> valueList = new ArrayList<ByteBuffer>();
+      valueList.add(valueBname);
+
+      TAppend append = new TAppend(tableAname, rowAname, columnList, valueList);
+      handler.append(append);
+
+      TRowResult rowResult = handler.getRow(tableAname, rowAname, null).get(0);
+      assertEquals(rowAname, rowResult.row);
+      assertArrayEquals(Bytes.add(valueAname.array(), valueBname.array()),
+        rowResult.columns.get(columnAname).value.array());
+    } finally {
+      handler.disableTable(tableAname);
+      handler.deleteTable(tableAname);
+    }
+  }
+
+  /**
+   * Check that checkAndPut fails if the cell does not exist, then put in the cell, then check that
+   * the checkAndPut succeeds.
+   *
+   * @throws Exception
+   */
+  public static void doTestCheckAndPut() throws Exception {
+    ThriftServerRunner.HBaseHandler handler =
+        new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
+    handler.createTable(tableAname, getColumnDescriptors());
+    try {
+      List<Mutation> mutations = new ArrayList<Mutation>(1);
+      mutations.add(new Mutation(false, columnAname, valueAname, true));
+      Mutation putB = (new Mutation(false, columnBname, valueBname, true));
+
+      assertFalse(handler.checkAndPut(tableAname, rowAname, columnAname, valueAname, putB, null));
+
+      handler.mutateRow(tableAname, rowAname, mutations, null);
+
+      assertTrue(handler.checkAndPut(tableAname, rowAname, columnAname, valueAname, putB, null));
+
+      TRowResult rowResult = handler.getRow(tableAname, rowAname, null).get(0);
+      assertEquals(rowAname, rowResult.row);
+      assertEquals(valueBname, rowResult.columns.get(columnBname).value);
     } finally {
       handler.disableTable(tableAname);
       handler.deleteTable(tableAname);
