@@ -58,9 +58,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
@@ -77,6 +74,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -319,7 +317,7 @@ public class TestWALReplay {
   throws IOException, SecurityException, IllegalArgumentException,
       NoSuchFieldException, IllegalAccessException, InterruptedException {
     final TableName tableName =
-        TableName.valueOf("testReplayEditsWrittenViaHRegion");
+        TableName.valueOf("testRegionMadeOfBulkLoadedFilesOnly");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = new Path(this.hbaseRootDir, tableName.getNameAsString());
     deleteDir(basedir);
@@ -329,21 +327,22 @@ public class TestWALReplay {
     HRegion.closeHRegion(region2);
     HLog wal = createWAL(this.conf);
     HRegion region = HRegion.openHRegion(hri, htd, wal, this.conf);
-    Path f =  new Path(basedir, "hfile");
-    HFileContext context = new HFileContextBuilder().build();
-    HFile.Writer writer =
-    HFile.getWriterFactoryNoCache(conf).withPath(fs, f)
-        .withFileContext(context).create();
+
     byte [] family = htd.getFamilies().iterator().next().getName();
-    byte [] row = tableName.getName();
-    writer.append(new KeyValue(row, family, family, row));
-    writer.close();
+    Path f =  new Path(basedir, "hfile");
+    HFileTestUtil.createHFile(this.conf, fs, f, family, family, Bytes.toBytes(""),
+        Bytes.toBytes("z"), 10);
     List <Pair<byte[],String>>  hfs= new ArrayList<Pair<byte[],String>>(1);
     hfs.add(Pair.newPair(family, f.toString()));
     region.bulkLoadHFiles(hfs, true);
+
     // Add an edit so something in the WAL
+    byte [] row = tableName.getName();
     region.put((new Put(row)).add(family, family, family));
     wal.sync();
+    final int rowsInsertedCount = 11;
+
+    assertEquals(rowsInsertedCount, getScannedCount(region.getScanner(new Scan())));
 
     // Now 'crash' the region by stealing its wal
     final Configuration newConf = HBaseConfiguration.create(this.conf);
@@ -358,6 +357,7 @@ public class TestWALReplay {
           hbaseRootDir, hri, htd, wal2);
         long seqid2 = region2.getOpenSeqNum();
         assertTrue(seqid2 > -1);
+        assertEquals(rowsInsertedCount, getScannedCount(region2.getScanner(new Scan())));
 
         // I can't close wal1.  Its been appropriated when we split.
         region2.close();
@@ -366,6 +366,78 @@ public class TestWALReplay {
       }
     });
   }
+
+  /**
+   * HRegion test case that is made of a major compacted HFile (created with three bulk loaded
+   * files) and an edit in the memstore.
+   * This is for HBASE-10958 "[dataloss] Bulk loading with seqids can prevent some log entries
+   * from being replayed"
+   * @throws IOException
+   * @throws IllegalAccessException
+   * @throws NoSuchFieldException
+   * @throws IllegalArgumentException
+   * @throws SecurityException
+   */
+  @Test
+  public void testCompactedBulkLoadedFiles()
+      throws IOException, SecurityException, IllegalArgumentException,
+      NoSuchFieldException, IllegalAccessException, InterruptedException {
+    final TableName tableName =
+        TableName.valueOf("testCompactedBulkLoadedFiles");
+    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
+    final Path basedir = new Path(this.hbaseRootDir, tableName.getNameAsString());
+    deleteDir(basedir);
+    final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
+    HRegion region2 = HRegion.createHRegion(hri,
+        hbaseRootDir, this.conf, htd);
+    HRegion.closeHRegion(region2);
+    HLog wal = createWAL(this.conf);
+    HRegion region = HRegion.openHRegion(hri, htd, wal, this.conf);
+
+    // Add an edit so something in the WAL
+    byte [] row = tableName.getName();
+    byte [] family = htd.getFamilies().iterator().next().getName();
+    region.put((new Put(row)).add(family, family, family));
+    wal.sync();
+
+    List <Pair<byte[],String>>  hfs= new ArrayList<Pair<byte[],String>>(1);
+    for (int i = 0; i < 3; i++) {
+      Path f = new Path(basedir, "hfile"+i);
+      HFileTestUtil.createHFile(this.conf, fs, f, family, family, Bytes.toBytes(i + "00"),
+          Bytes.toBytes(i + "50"), 10);
+      hfs.add(Pair.newPair(family, f.toString()));
+    }
+    region.bulkLoadHFiles(hfs, true);
+    final int rowsInsertedCount = 31;
+    assertEquals(rowsInsertedCount, getScannedCount(region.getScanner(new Scan())));
+
+    // major compact to turn all the bulk loaded files into one normal file
+    region.compactStores(true);
+    assertEquals(rowsInsertedCount, getScannedCount(region.getScanner(new Scan())));
+
+    // Now 'crash' the region by stealing its wal
+    final Configuration newConf = HBaseConfiguration.create(this.conf);
+    User user = HBaseTestingUtility.getDifferentUser(newConf,
+        tableName.getNameAsString());
+    user.runAs(new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        runWALSplit(newConf);
+        HLog wal2 = createWAL(newConf);
+
+        HRegion region2 = HRegion.openHRegion(newConf, FileSystem.get(newConf),
+            hbaseRootDir, hri, htd, wal2);
+        long seqid2 = region2.getOpenSeqNum();
+        assertTrue(seqid2 > -1);
+        assertEquals(rowsInsertedCount, getScannedCount(region2.getScanner(new Scan())));
+
+        // I can't close wal1.  Its been appropriated when we split.
+        region2.close();
+        wal2.closeAndDelete();
+        return null;
+      }
+    });
+  }
+
 
   /**
    * Test writing edits into an HRegion, closing it, splitting logs, opening
@@ -738,14 +810,14 @@ public class TestWALReplay {
         try {
           final HRegion region =
               new HRegion(basedir, newWal, newFS, newConf, hri, htd, null) {
-            protected boolean internalFlushcache(
+            protected FlushResult internalFlushcache(
                 final HLog wal, final long myseqid, MonitoredTask status)
             throws IOException {
               LOG.info("InternalFlushCache Invoked");
-              boolean b = super.internalFlushcache(wal, myseqid,
+              FlushResult fs = super.internalFlushcache(wal, myseqid,
                   Mockito.mock(MonitoredTask.class));
               flushcount.incrementAndGet();
-              return b;
+              return fs;
             };
           };
           long seqid = region.initialize();

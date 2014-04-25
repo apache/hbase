@@ -428,8 +428,8 @@ public class HStore implements Store {
   /**
    * @return The maximum sequence id in all store files. Used for log replay.
    */
-  long getMaxSequenceId(boolean includeBulkFiles) {
-    return StoreFile.getMaxSequenceIdInList(this.getStorefiles(), includeBulkFiles);
+  long getMaxSequenceId() {
+    return StoreFile.getMaxSequenceIdInList(this.getStorefiles());
   }
 
   @Override
