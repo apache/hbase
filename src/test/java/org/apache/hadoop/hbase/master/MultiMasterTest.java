@@ -19,7 +19,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -35,14 +38,14 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.junit.After;
 
 /**
  * A base class for unit tests that require multiple masters, e.g. master
- * failover tests. 
+ * failover tests.
  */
 public class MultiMasterTest {
   private static final Log LOG = LogFactory.getLog(MultiMasterTest.class);
@@ -84,7 +87,7 @@ public class MultiMasterTest {
         activeIndex = i;
       }
     }
-    assertEquals("Expected to find exactly one active master " + numActive,
+    assertEquals("Expected to find exactly one active master",
        1, numActive);
     assertTrue(activeIndex != -1);
     return activeIndex;

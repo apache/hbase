@@ -1965,4 +1965,12 @@ REGION_LOOP:
       return count;
     }
   }
+
+  /**
+   * Sets the configuration to use AssignmentLoadBalancer.
+   */
+  public void useAssignmentLoadBalancer() {
+    this.conf.set(HConstants.LOAD_BALANCER_IMPL,
+        "org.apache.hadoop.hbase.master.RegionManager$AssignmentLoadBalancer");
+  }
 }

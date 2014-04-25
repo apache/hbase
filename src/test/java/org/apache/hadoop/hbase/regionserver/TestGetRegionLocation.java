@@ -32,7 +32,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -58,8 +57,7 @@ public class TestGetRegionLocation {
   @Before
   public void setUp() throws IOException, InterruptedException {
     // Use assignment plan so that regions are not moved unexpectedly.
-    TEST_UTIL.getConfiguration().set(HConstants.LOAD_BALANCER_IMPL,
-        "org.apache.hadoop.hbase.master.RegionManager$AssignmentLoadBalancer");
+    TEST_UTIL.useAssignmentLoadBalancer();
     TEST_UTIL.startMiniCluster(NUM_SLAVES);
     TEST_UTIL.createTable(TABLE, FAMILIES, 1, START_KEY, END_KEY, NUM_REGIONS);
   }

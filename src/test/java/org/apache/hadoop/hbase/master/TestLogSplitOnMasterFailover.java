@@ -239,7 +239,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     }
   }
 
-  @Test(timeout=180000)
+  @Test(timeout = 300000)
   public void testWithRegularLogSplitting() throws Exception {
     ZooKeeperWrapper.setNamespaceForTesting();
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, false);
@@ -249,7 +249,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
 
   // Marked as unstable and recored in 3376780
   @TestTag({ "unstable" })
-  @Test(timeout=180000)
+  @Test(timeout = 300000)
   public void testWithDistributedLogSplitting() throws Exception {
     ZooKeeperWrapper.setNamespaceForTesting();
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
@@ -258,7 +258,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
 
   // Marked as unstable and recored in 3376780
   @TestTag({ "unstable" })
-  @Test(timeout=280000)
+  @Test(timeout = 300000)
   public void testWithDistributedLogSplittingAndErrors() throws Exception {
     // add a split log worker to handle InjectionEvent.SPLITLOGWORKER_SPLIT_LOG_START.
     ZooKeeperWrapper.setNamespaceForTesting();
@@ -286,6 +286,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
 
 
   private void runTest() throws Exception {
+    testUtil.useAssignmentLoadBalancer();
     startMiniCluster(NUM_MASTERS, NUM_RS);
     Thread.currentThread().setName(getClass().getSimpleName());
     ensureMastersAreUp(NUM_MASTERS);

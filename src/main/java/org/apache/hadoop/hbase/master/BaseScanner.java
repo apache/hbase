@@ -55,7 +55,7 @@ import org.apache.hadoop.ipc.RemoteException;
 
 
 /**
- * Base HRegion scanner class. Holds utilty common to <code>ROOT</code> and
+ * Base HRegion scanner class. Holds utility common to <code>ROOT</code> and
  * <code>META</code> HRegion scanners.
  *
  * <p>How do we know if all regions are assigned? After the initial scan of

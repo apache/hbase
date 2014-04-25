@@ -33,12 +33,10 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
-import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -1141,9 +1139,7 @@ public class HMaster extends HasThread implements HMasterInterface,
   public void splitDeadServerLog(final String serverName) throws IOException {
     // Maintain the number of dead server split log requests for testing.
     numDeadServerLogSplitRequests.incrementAndGet();
-    List<String> serverNames = new ArrayList<String>();
-    serverNames.add(serverName);
-    splitLog(serverNames);
+    splitLog(Collections.singletonList(serverName));
   }
 
   public void splitLog(final List<String> serverNames) throws IOException {
@@ -1551,9 +1547,9 @@ public class HMaster extends HasThread implements HMasterInterface,
         throw new TableExistsException(tableName);
       }
       if (assignmentPlan == null) {
-        LOG.info("Generated the assignment plan for new table " + tableName);
-      } else {
         LOG.info("NO assignment plan for new table " + tableName);
+      } else {
+        LOG.info("Generated the assignment plan for new table " + tableName);
       }
 
       for(HRegionInfo newRegion : newRegions) {

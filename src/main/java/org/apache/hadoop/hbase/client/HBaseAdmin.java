@@ -301,24 +301,24 @@ public class HBaseAdmin {
         }
       };
       MetaScanner.metaScan(conf, visitor, new StringBytes(desc.getName()));
-      if (actualRegCount.get() != numRegs) {
-        if (tries == numRetries - 1) {
-          throw new RegionOfflineException("Only " + actualRegCount.get() +
-              " of " + numRegs + " regions are online; retries exhausted.");
-        }
-        try { // Sleep
-          Thread.sleep(getPauseTime(tries));
-        } catch (InterruptedException e) {
-          throw new InterruptedIOException("Interrupted when opening" +
-              " regions; " + actualRegCount.get() + " of " + numRegs +
-              " regions processed so far");
-        }
-        if (actualRegCount.get() > prevRegCount) { // Making progress
-          prevRegCount = actualRegCount.get();
-          tries = -1;
-        }
-      } else {
+      if (actualRegCount.get() == numRegs) {
         return;
+      }
+
+      if (tries == numRetries - 1) {
+        throw new RegionOfflineException("Only " + actualRegCount.get()
+            + " of " + numRegs + " regions are online; retries exhausted.");
+      }
+      try { // Sleep
+        Thread.sleep(getPauseTime(tries));
+      } catch (InterruptedException e) {
+        throw new InterruptedIOException("Interrupted when opening"
+            + " regions; " + actualRegCount.get() + " of " + numRegs
+            + " regions processed so far");
+      }
+      if (actualRegCount.get() > prevRegCount) { // Making progress
+        prevRegCount = actualRegCount.get();
+        tries = -1;
       }
     }
   }
