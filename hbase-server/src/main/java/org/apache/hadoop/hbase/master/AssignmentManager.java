@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -2653,7 +2654,13 @@ public class AssignmentManager extends ZooKeeperListener {
     // Iterate regions in META
     for (Result result : results) {
       HRegionInfo regionInfo;
-      HRegionLocation[] locations = MetaReader.getRegionLocations(result).getRegionLocations();
+      if (result == null && LOG.isDebugEnabled()){
+        LOG.debug("null result from meta - ignoring but this is strange.");
+        continue;
+      }
+      RegionLocations rl =  MetaReader.getRegionLocations(result);
+      if (rl == null) continue;
+      HRegionLocation[] locations = rl.getRegionLocations();
       if (locations == null) continue;
       // Do the operations for all the replicas
       for (HRegionLocation hrl : locations) {
