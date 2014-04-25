@@ -32,21 +32,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -68,10 +63,6 @@ public class TestLoadIncrementalHFiles {
     Bytes.toBytes("ddd"),
     Bytes.toBytes("ppp")
   };
-
-  public static int BLOCKSIZE = 64*1024;
-  public static Algorithm COMPRESSION =
-    Compression.Algorithm.NONE;
 
   static HBaseTestingUtility util = new HBaseTestingUtility();
 
@@ -149,7 +140,7 @@ public class TestLoadIncrementalHFiles {
     for (byte[][] range : hfileRanges) {
       byte[] from = range[0];
       byte[] to = range[1];
-      createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_"
+      HFileTestUtil.createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_"
           + hfileIdx++), FAMILY, QUALIFIER, from, to, 1000);
     }
     int expectedRows = hfileIdx * 1000;
@@ -189,7 +180,7 @@ public class TestLoadIncrementalHFiles {
     for (byte[][] range : hFileRanges) {
       byte[] from = range[0];
       byte[] to = range[1];
-      createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_"
+      HFileTestUtil.createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_"
           + hFileIdx++), FAMILY, QUALIFIER, from, to, 1000);
     }
 
@@ -228,7 +219,7 @@ public class TestLoadIncrementalHFiles {
     FileSystem fs = util.getTestFileSystem();
     Path testIn = new Path(dir, "testhfile");
     HColumnDescriptor familyDesc = new HColumnDescriptor(FAMILY);
-    createHFile(util.getConfiguration(), fs, testIn, FAMILY, QUALIFIER,
+    HFileTestUtil.createHFile(util.getConfiguration(), fs, testIn, FAMILY, QUALIFIER,
         Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
 
     Path bottomOut = new Path(dir, "bottom.out");
@@ -259,40 +250,6 @@ public class TestLoadIncrementalHFiles {
     assertTrue(count > 0);
     reader.close();
     return count;
-  }
-
-
-  /**
-   * Create an HFile with the given number of rows between a given
-   * start key and end key.
-   * TODO put me in an HFileTestUtil or something?
-   */
-  static void createHFile(
-      Configuration configuration,
-      FileSystem fs, Path path,
-      byte[] family, byte[] qualifier,
-      byte[] startKey, byte[] endKey, int numRows) throws IOException
-  {
-    HFileContext meta = new HFileContextBuilder()
-                        .withBlockSize(BLOCKSIZE)
-                        .withCompression(COMPRESSION)
-                        .build();
-    HFile.Writer writer = HFile.getWriterFactory(configuration, new CacheConfig(configuration))
-        .withPath(fs, path)
-        .withFileContext(meta)
-        .create();
-    long now = System.currentTimeMillis();
-    try {
-      // subtract 2 since iterateOnSplits doesn't include boundary keys
-      for (byte[] key : Bytes.iterateOnSplits(startKey, endKey, numRows-2)) {
-        KeyValue kv = new KeyValue(key, family, qualifier, now, key);
-        writer.append(kv);
-      }
-    } finally {
-      writer.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY,
-          Bytes.toBytes(System.currentTimeMillis()));
-      writer.close();
-    }
   }
 
   private void addStartEndKeysForTest(TreeMap<byte[], Integer> map, byte[] first, byte[] last) {
@@ -370,7 +327,7 @@ public class TestLoadIncrementalHFiles {
     byte[] from = Bytes.toBytes("begin");
     byte[] to = Bytes.toBytes("end");
     for (int i = 0; i <= MAX_FILES_PER_REGION_PER_FAMILY; i++) {
-      createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_"
+      HFileTestUtil.createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_"
           + i), FAMILY, QUALIFIER, from, to, 1000);
     }
 

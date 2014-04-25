@@ -978,7 +978,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       FlushRegionResponse.Builder builder = FlushRegionResponse.newBuilder();
       if (shouldFlush) {
-        boolean result = region.flushcache();
+        boolean result = region.flushcache().isCompactionNeeded();
         if (result) {
           regionServer.compactSplitThread.requestSystemCompaction(region,
             "Compaction through user triggered flush");

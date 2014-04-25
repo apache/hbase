@@ -475,7 +475,7 @@ class MemStoreFlusher implements FlushRequester {
     lock.readLock().lock();
     try {
       notifyFlushRequest(region, emergencyFlush);
-      boolean shouldCompact = region.flushcache();
+      boolean shouldCompact = region.flushcache().isCompactionNeeded();
       // We just want to check the size
       boolean shouldSplit = region.checkSplit() != null;
       if (shouldSplit) {
