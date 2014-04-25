@@ -9,13 +9,11 @@ import java.util.NavigableMap;
 
 
 import com.google.common.util.concurrent.ListenableFuture;
-import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -31,7 +29,6 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -44,7 +41,8 @@ public class TestSimpleOperations {
   private static final int SLAVES = 1;
 
   static final String ROW_PREFIX = "row";
-  static final byte[] TABLE = Bytes.toBytes("testTable");
+  static int testCount = 0;
+  static byte[] TABLE = Bytes.toBytes("testTable" + testCount);
   static final byte[] FAMILY = Bytes.toBytes("family");
   static final byte[][] FAMILIES = new byte[][] { FAMILY };
   static final byte[] QUALIFIER = Bytes.toBytes("qualifier");
@@ -73,11 +71,7 @@ public class TestSimpleOperations {
 
   @After
   public void cleanUp() throws IOException {
-    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    if (admin.tableExists(TABLE)) {
-      admin.disableTable(TABLE);
-      admin.deleteTable(TABLE);
-    }
+    TABLE = Bytes.toBytes("testTable" + ++testCount);
   }
 
   /**
@@ -600,8 +594,7 @@ public class TestSimpleOperations {
     ht.flushCommitsAsync().get();
 
     RowLock lock = ht.lockRowAsync(row).get();
-    assertTrue(lock.getLockId() > 0);
-    Assert.assertTrue(Bytes.equals(lock.getRow(), row));
+    assertTrue(Bytes.equals(lock.getRow(), row));
 
     ht.unlockRowAsync(lock).get();
   }
