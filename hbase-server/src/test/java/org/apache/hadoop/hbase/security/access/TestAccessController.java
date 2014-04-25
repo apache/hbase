@@ -622,7 +622,7 @@ public class TestAccessController extends SecureTestUtil {
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyDenied(action, USER_RW, USER_RO, USER_NONE);
   }
 
   @Test
@@ -652,8 +652,8 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
+    verifyDenied(action, USER_RW, USER_RO, USER_NONE);
   }
 
   @Test
@@ -667,8 +667,8 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
+    verifyDenied(action, USER_RW, USER_RO, USER_NONE);
   }
 
   @Test
