@@ -3396,7 +3396,7 @@ public class TestHRegion {
 
         @Override
         public void doAnAction() throws Exception {
-          if (region.flushcache()) {
+          if (region.flushcache().isCompactionNeeded()) {
             ++flushesSinceCompact;
           }
           // Compact regularly to avoid creating too many files and exceeding
@@ -4238,6 +4238,42 @@ public class TestHRegion {
       }
     } finally {
       s.close();
+    }
+  }
+
+  /**
+   * Test that we get the expected flush results back
+   * @throws IOException
+   */
+  @Test
+  public void testFlushResult() throws IOException {
+    String method = name.getMethodName();
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family = Bytes.toBytes("family");
+
+    this.region = initHRegion(tableName, method, CONF, family);
+
+    // empty memstore, flush doesn't run
+    HRegion.FlushResult fr = region.flushcache();
+    assertFalse(fr.isFlushSucceeded());
+    assertFalse(fr.isCompactionNeeded());
+
+    // Flush enough files to get up to the threshold, doesn't need compactions
+    for (int i = 0; i < 2; i++) {
+      Put put = new Put(tableName).add(family, family, tableName);
+      region.put(put);
+      fr = region.flushcache();
+      assertTrue(fr.isFlushSucceeded());
+      assertFalse(fr.isCompactionNeeded());
+    }
+
+    // Two flushes after the threshold, compactions are needed
+    for (int i = 0; i < 2; i++) {
+      Put put = new Put(tableName).add(family, family, tableName);
+      region.put(put);
+      fr = region.flushcache();
+      assertTrue(fr.isFlushSucceeded());
+      assertTrue(fr.isCompactionNeeded());
     }
   }
 
