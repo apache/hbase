@@ -83,7 +83,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.stats.UniformSample;
 import com.yammer.metrics.stats.Snapshot;
 
@@ -199,7 +198,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public static final String PE_KEY = "EvaluationMapTask.performanceEvalImpl";
 
     private Class<? extends Test> cmd;
-    private PerformanceEvaluation pe;
 
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
@@ -210,8 +208,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       Class<? extends PerformanceEvaluation> peClass =
           forName(context.getConfiguration().get(PE_KEY), PerformanceEvaluation.class);
       try {
-        this.pe = peClass.getConstructor(Configuration.class)
-            .newInstance(context.getConfiguration());
+        peClass.getConstructor(Configuration.class).newInstance(context.getConfiguration());
       } catch (Exception e) {
         throw new IllegalStateException("Could not instantiate PE instance", e);
       }
@@ -285,7 +282,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * Create an HTableDescriptor from provided TestOptions.
    */
   protected static HTableDescriptor getTableDescriptor(TestOptions opts) {
-    HTableDescriptor desc = new HTableDescriptor(opts.tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(opts.tableName));
     HColumnDescriptor family = new HColumnDescriptor(FAMILY_NAME);
     family.setDataBlockEncoding(opts.blockEncoding);
     family.setCompressionType(opts.compression);
@@ -537,7 +534,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // Below is make it so when Tests are all running in the one
     // jvm, that they each have a differently seeded Random.
     private static final Random randomSeed = new Random(System.currentTimeMillis());
-    private static final MetricsRegistry metricsRegistry = new MetricsRegistry();
 
     private static long nextRandomSeed() {
       return randomSeed.nextLong();
@@ -569,7 +565,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     private String generateStatus(final int sr, final int i, final int lr) {
-      return sr + "/" + i + "/" + lr;
+      return sr + "/" + i + "/" + lr + " " + getShortLatencyReport();
     }
 
     protected int getReportingPeriod() {
@@ -581,11 +577,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.connection = HConnectionManager.createConnection(conf);
       this.table = connection.getTable(opts.tableName);
       this.table.setAutoFlush(opts.autoFlush, true);
-      String metricName =
-          testName + "-Client-" + Thread.currentThread().getName() + "-testRowTime";
 
       try {
-        Constructor ctor = Histogram.class.getDeclaredConstructor(com.yammer.metrics.stats.Sample.class);
+        Constructor<?> ctor =
+            Histogram.class.getDeclaredConstructor(com.yammer.metrics.stats.Sample.class);
         ctor.setAccessible(true);
         latency = (Histogram) ctor.newInstance(new UniformSample(1024 * 500));
       } catch (Exception e) {
@@ -656,6 +651,22 @@ public class PerformanceEvaluation extends Configured implements Tool {
       status.setStatus(testName + " Max      = " + latency.max());
     }
 
+    /**
+     * Used formating doubles so only two places after decimal point.
+     */
+    private static DecimalFormat DOUBLE_FORMAT = new DecimalFormat("#0.00");
+
+    /**
+     * @return Subset of the histograms' calculation.
+     */
+    private String getShortLatencyReport() {
+      Snapshot sn = latency.getSnapshot();
+      return "Mean=" + DOUBLE_FORMAT.format(latency.mean()) +
+        ", StdDev=" + DOUBLE_FORMAT.format(latency.stdDev()) +
+        ", 95th=" + DOUBLE_FORMAT.format(sn.get95thPercentile()) +
+        ", 99th=" + DOUBLE_FORMAT.format(sn.get99thPercentile());
+    }
+
     /*
     * Test for individual row.
     * @param i Row index.
@@ -693,7 +704,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   }
 
-  @SuppressWarnings("unused")
   static abstract class RandomScanWithRangeTest extends Test {
     RandomScanWithRangeTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
