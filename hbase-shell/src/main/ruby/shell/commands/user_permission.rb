@@ -28,6 +28,8 @@ For example:
     hbase> user_permission
     hbase> user_permission 'table1'
     hbase> user_permission 'namespace1:table1'
+    hbase> user_permission '*'
+    hbase> user_permission '^[A-C].*'
 EOF
       end
 

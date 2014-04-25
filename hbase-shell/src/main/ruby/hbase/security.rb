@@ -58,7 +58,8 @@ module Hbase
           if (isNamespace?(table_name))
             # Namespace should exist first.
             namespace_name = table_name[1...table_name.length]
-            raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless namespace_exists?(namespace_name)
+            raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless
+              namespace_exists?(namespace_name)
 
             # invoke cp endpoint to perform access controlse
             org.apache.hadoop.hbase.protobuf.ProtobufUtil.grant(
@@ -148,7 +149,7 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    def user_permission(table_name=nil)
+    def user_permission(table_regex=nil)
       security_available?
 
       begin
@@ -160,44 +161,69 @@ module Hbase
         protocol = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos::
           AccessControlService.newBlockingStub(service)
 
-        if (table_name != nil)
-          #check if namespace is passed.
-          if (isNamespace?(table_name))
-            # Namespace should exist first.
-            namespace_name = table_name[1...table_name.length]
-            raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless namespace_exists?(namespace_name)
-            # invoke cp endpoint to perform access controls
-            perms = org.apache.hadoop.hbase.protobuf.ProtobufUtil.getUserPermissions(
-              protocol, namespace_name.to_java_bytes)
-          else
-             raise(ArgumentError, "Can't find table: #{table_name}") unless exists?(table_name)
-             perms = org.apache.hadoop.hbase.protobuf.ProtobufUtil.getUserPermissions(
-               protocol, org.apache.hadoop.hbase.TableName.valueOf(table_name))
-          end
+        if (table_regex == '')
+          table_regex = nil
+        end
+
+        # handle simple glob '*' but if '.' is passed before '*' then assume regex
+        if /\*/.match(table_regex) && !/\.\*/.match(table_regex)
+          table_regex = table_regex.gsub(/\*/, '.*')
+        end
+
+        all_perms = []
+        tables = []
+
+        if table_regex != nil
+
+          htds = @admin.listTables(table_regex)
+          htds.each { |t|
+            tables << t.getTableName().toString()
+          }
+
+          tables.each { |t|
+            if (isNamespace?(t))
+              # Namespace should exist first.
+              namespace_name = t[1...t.length]
+              raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless namespace_exists?(namespace_name)
+              perms = org.apache.hadoop.hbase.protobuf.ProtobufUtil.getUserPermissions(
+                protocol, org.apache.hadoop.hbase.TableName.valueOf(t))
+            else
+              raise(ArgumentError, "Can't find table: #{t}") unless exists?(t)
+              perms = org.apache.hadoop.hbase.protobuf.ProtobufUtil.getUserPermissions(
+                protocol, org.apache.hadoop.hbase.TableName.valueOf(t))
+            end
+            all_perms << perms
+          }
         else
           perms = org.apache.hadoop.hbase.protobuf.ProtobufUtil.getUserPermissions(protocol)
+          all_perms << perms
         end
       ensure
         meta_table.close()
       end
-
       res = {}
       count  = 0
-      perms.each do |value|
-        user_name = String.from_java_bytes(value.getUser)
-        table = (value.getTableName != nil) ? value.getTableName.getNameAsString() : ''
-        family = (value.getFamily != nil) ? org.apache.hadoop.hbase.util.Bytes::toStringBinary(value.getFamily) : ''
-        qualifier = (value.getQualifier != nil) ? org.apache.hadoop.hbase.util.Bytes::toStringBinary(value.getQualifier) : ''
+      all_perms.each do |this_perms|
+        this_perms.each do |value|
+          user_name = String.from_java_bytes(value.getUser)
+          table = (value.getTableName != nil) ? value.getTableName.getNameAsString() : ''
+          family = (value.getFamily != nil) ?
+            org.apache.hadoop.hbase.util.Bytes::toStringBinary(value.getFamily) :
+            ''
+          qualifier = (value.getQualifier != nil) ?
+            org.apache.hadoop.hbase.util.Bytes::toStringBinary(value.getQualifier) :
+            ''
 
-        action = org.apache.hadoop.hbase.security.access.Permission.new value.getActions
+          action = org.apache.hadoop.hbase.security.access.Permission.new value.getActions
 
-        if block_given?
-          yield(user_name, "#{table},#{family},#{qualifier}: #{action.to_s}")
-        else
-          res[user_name] ||= {}
-          res[user_name][family + ":" +qualifier] = action
+          if block_given?
+            yield(user_name, "#{table},#{family},#{qualifier}: #{action.to_s}")
+          else
+            res[user_name] ||= {}
+            res[user_name][family + ":" +qualifier] = action
+          end
+          count += 1
         end
-        count += 1
       end
 
       return ((block_given?) ? count : res)
