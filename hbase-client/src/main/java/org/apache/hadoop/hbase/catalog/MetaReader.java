@@ -718,7 +718,8 @@ public class MetaReader {
 
   /**
    * Returns an HRegionLocationList extracted from the result.
-   * @return an HRegionLocationList containing all locations for the region range
+   * @return an HRegionLocationList containing all locations for the region range or null if
+   *  we can't deserialize the result.
    */
   public static RegionLocations getRegionLocations(final Result r) {
     if (r == null) return null;
