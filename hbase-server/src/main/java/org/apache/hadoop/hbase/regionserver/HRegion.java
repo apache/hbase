@@ -3597,7 +3597,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
       resetFilters();
       if (isFilterDoneInternal()) {
-        return false;
+        returnResult = false;
       }
       if (region != null && region.metricsRegion != null) {
         long totalSize = 0;
