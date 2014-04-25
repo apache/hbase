@@ -41,8 +41,7 @@ public class TestSimpleOperations {
   private static final int SLAVES = 1;
 
   static final String ROW_PREFIX = "row";
-  static int testCount = 0;
-  static byte[] TABLE = Bytes.toBytes("testTable" + testCount);
+  static byte[] TABLE = Bytes.toBytes("testTable");
   static final byte[] FAMILY = Bytes.toBytes("family");
   static final byte[][] FAMILIES = new byte[][] { FAMILY };
   static final byte[] QUALIFIER = Bytes.toBytes("qualifier");
@@ -71,7 +70,11 @@ public class TestSimpleOperations {
 
   @After
   public void cleanUp() throws IOException {
-    TABLE = Bytes.toBytes("testTable" + ++testCount);
+    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    if (admin.tableExists(TABLE)) {
+      admin.disableTable(TABLE);
+      admin.deleteTable(TABLE);
+    }
   }
 
   /**
