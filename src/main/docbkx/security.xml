@@ -602,14 +602,6 @@ Access control mechanisms are mature and fairly standardized in the relational d
           <entry></entry>
           <entry>CheckAndDelete/Put</entry>
         </row>
-        <row>
-          <entry></entry>
-          <entry>Flush</entry>
-        </row>
-        <row>
-          <entry></entry>
-          <entry>Compact</entry>
-        </row>
         <!-- CREATE -->
         <row>
           <entry>Create</entry>
@@ -623,6 +615,10 @@ Access control mechanisms are mature and fairly standardized in the relational d
           <entry></entry>
           <entry>Drop</entry>
         </row>
+        <row>
+          <entry></entry>
+          <entry>Bulk Load</entry>
+        </row>
         <!-- ADMIN -->
         <row>
           <entry>Admin</entry>
@@ -635,6 +631,14 @@ Access control mechanisms are mature and fairly standardized in the relational d
         <row>
           <entry></entry>
           <entry>Split</entry>
+        </row>
+        <row>
+          <entry></entry>
+          <entry>Flush</entry>
+        </row>
+        <row>
+          <entry></entry>
+          <entry>Compact</entry>
         </row>
         <row>
           <entry></entry>

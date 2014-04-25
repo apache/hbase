@@ -1219,7 +1219,8 @@ public class AccessController extends BaseRegionObserver
 
   @Override
   public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
-    requirePermission("flush", getTableName(e.getEnvironment()), null, null, Action.ADMIN);
+    requirePermission("flush", getTableName(e.getEnvironment()), null, null, Action.ADMIN,
+        Action.CREATE);
   }
 
   @Override
@@ -1237,7 +1238,8 @@ public class AccessController extends BaseRegionObserver
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
       final Store store, final InternalScanner scanner, final ScanType scanType)
           throws IOException {
-    requirePermission("compact", getTableName(e.getEnvironment()), null, null, Action.ADMIN);
+    requirePermission("compact", getTableName(e.getEnvironment()), null, null, Action.ADMIN,
+        Action.CREATE);
     return scanner;
   }
 
@@ -1549,7 +1551,7 @@ public class AccessController extends BaseRegionObserver
           ctx.getEnvironment().getRegion().getTableDesc().getTableName(),
           el.getFirst(),
           null,
-          Permission.Action.WRITE);
+          Action.CREATE);
     }
   }
 
