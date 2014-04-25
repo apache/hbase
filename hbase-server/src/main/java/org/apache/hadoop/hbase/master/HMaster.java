@@ -1752,11 +1752,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @return HMaster instance.
    */
   public static HMaster constructMaster(Class<? extends HMaster> masterClass,
-      final Configuration conf)  {
+      final Configuration conf, final ConsensusProvider cp)  {
     try {
       Constructor<? extends HMaster> c =
-        masterClass.getConstructor(Configuration.class);
-      return c.newInstance(conf);
+        masterClass.getConstructor(Configuration.class, ConsensusProvider.class);
+      return c.newInstance(conf, cp);
     } catch (InvocationTargetException ite) {
       Throwable target = ite.getTargetException() != null?
         ite.getTargetException(): ite;
