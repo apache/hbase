@@ -19,12 +19,13 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode.INCLUDE;
+import static org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode.SKIP;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
-
-import static org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode.*;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
@@ -341,7 +342,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     NavigableSet<byte[]> cols = get.getFamilyMap().get(fam2);
 
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, scanInfo, cols, Long.MAX_VALUE,
-        HConstants.OLDEST_TIMESTAMP, HConstants.OLDEST_TIMESTAMP, from, to);
+        HConstants.OLDEST_TIMESTAMP, HConstants.OLDEST_TIMESTAMP, from, to, null);
     List<ScanQueryMatcher.MatchCode> actual =
         new ArrayList<ScanQueryMatcher.MatchCode>(rows.length);
     byte[] prevRow = null;

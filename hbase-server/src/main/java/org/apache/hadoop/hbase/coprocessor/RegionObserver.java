@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.regionserver.DeleteTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -1109,4 +1110,18 @@ public interface RegionObserver extends Coprocessor {
    */
   Cell postMutationBeforeWAL(ObserverContext<RegionCoprocessorEnvironment> ctx,
       MutationType opType, Mutation mutation, Cell oldCell, Cell newCell) throws IOException;
+
+  /**
+   * Called after the ScanQueryMatcher creates ScanDeleteTracker. Implementing
+   * this hook would help in creating customised DeleteTracker and returning
+   * the newly created DeleteTracker
+   *
+   * @param ctx the environment provided by the region server
+   * @param delTracker the deleteTracker that is created by the QueryMatcher
+   * @return the Delete Tracker
+   * @throws IOException
+   */
+  DeleteTracker postInstantiateDeleteTracker(
+      final ObserverContext<RegionCoprocessorEnvironment> ctx, DeleteTracker delTracker)
+      throws IOException;
 }

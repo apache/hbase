@@ -112,6 +112,8 @@ public class ScanQueryMatcher {
    * first column.
    * */
   private boolean hasNullColumn = true;
+  
+  private RegionCoprocessorHost regionCoprocessorHost= null;
 
   // By default, when hbase.hstore.time.to.purge.deletes is 0ms, a delete
   // marker is always removed during a major compaction. If set to non-zero
@@ -145,13 +147,16 @@ public class ScanQueryMatcher {
    * @param earliestPutTs Earliest put seen in any of the store files.
    * @param oldestUnexpiredTS the oldest timestamp we are interested in,
    *  based on TTL
+   * @param regionCoprocessorHost 
+   * @throws IOException 
    */
-  public ScanQueryMatcher(Scan scan, ScanInfo scanInfo,
-      NavigableSet<byte[]> columns, ScanType scanType,
-      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS) {
+  public ScanQueryMatcher(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
+      ScanType scanType, long readPointToUse, long earliestPutTs, long oldestUnexpiredTS,
+      RegionCoprocessorHost regionCoprocessorHost) throws IOException {
     this.tr = scan.getTimeRange();
     this.rowComparator = scanInfo.getComparator();
-    this.deletes =  new ScanDeleteTracker();
+    this.regionCoprocessorHost = regionCoprocessorHost;
+    this.deletes =  instantiateDeleteTracker();
     this.stopRow = scan.getStopRow();
     this.startKey = KeyValueUtil.createFirstDeleteFamilyOnRow(scan.getStartRow(),
         scanInfo.getFamily());
@@ -194,6 +199,14 @@ public class ScanQueryMatcher {
     this.isReversed = scan.isReversed();
   }
 
+  private DeleteTracker instantiateDeleteTracker() throws IOException {
+    DeleteTracker tracker = new ScanDeleteTracker();
+    if (regionCoprocessorHost != null) {
+      tracker = regionCoprocessorHost.postInstantiateDeleteTracker(tracker);
+    }
+    return tracker;
+  }
+
   /**
    * Construct a QueryMatcher for a scan that drop deletes from a limited range of rows.
    * @param scan
@@ -204,12 +217,14 @@ public class ScanQueryMatcher {
    *  based on TTL
    * @param dropDeletesFromRow The inclusive left bound of the range; can be EMPTY_START_ROW.
    * @param dropDeletesToRow The exclusive right bound of the range; can be EMPTY_END_ROW.
+   * @param regionCoprocessorHost 
+   * @throws IOException 
    */
   public ScanQueryMatcher(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
-      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS,
-      byte[] dropDeletesFromRow, byte[] dropDeletesToRow) {
+      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS, byte[] dropDeletesFromRow,
+      byte[] dropDeletesToRow, RegionCoprocessorHost regionCoprocessorHost) throws IOException {
     this(scan, scanInfo, columns, ScanType.COMPACT_RETAIN_DELETES, readPointToUse, earliestPutTs,
-        oldestUnexpiredTS);
+        oldestUnexpiredTS, regionCoprocessorHost);
     Preconditions.checkArgument((dropDeletesFromRow != null) && (dropDeletesToRow != null));
     this.dropDeletesFromRow = dropDeletesFromRow;
     this.dropDeletesToRow = dropDeletesToRow;
@@ -219,10 +234,10 @@ public class ScanQueryMatcher {
    * Constructor for tests
    */
   ScanQueryMatcher(Scan scan, ScanInfo scanInfo,
-      NavigableSet<byte[]> columns, long oldestUnexpiredTS) {
+      NavigableSet<byte[]> columns, long oldestUnexpiredTS) throws IOException {
     this(scan, scanInfo, columns, ScanType.USER_SCAN,
           Long.MAX_VALUE, /* max Readpoint to track versions */
-        HConstants.LATEST_TIMESTAMP, oldestUnexpiredTS);
+        HConstants.LATEST_TIMESTAMP, oldestUnexpiredTS, null);
   }
 
   /**

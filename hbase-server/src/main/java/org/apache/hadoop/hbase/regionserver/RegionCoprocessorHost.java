@@ -2152,4 +2152,27 @@ public class RegionCoprocessorHost
     }
   }
 
+  public DeleteTracker postInstantiateDeleteTracker(DeleteTracker tracker) throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          tracker = ((RegionObserver) env.getInstance()).postInstantiateDeleteTracker(ctx, 
+              tracker);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return tracker;
+  }
 }
