@@ -119,6 +119,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private static final MathContext CXT = MathContext.DECIMAL64;
   private static final BigDecimal MS_PER_SEC = BigDecimal.valueOf(1000);
   private static final BigDecimal BYTES_PER_MB = BigDecimal.valueOf(1024 * 1024);
+  private static final TestOptions DEFAULT_OPTS = new TestOptions();
 
   protected Map<String, CmdDescriptor> commands = new TreeMap<String, CmdDescriptor>();
 
@@ -484,6 +485,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public TestOptions(TestOptions that) {
       this.nomapred = that.nomapred;
       this.startRow = that.startRow;
+      this.size = that.size;
       this.perClientRunRows = that.perClientRunRows;
       this.numClientThreads = that.numClientThreads;
       this.totalRows = that.totalRows;
@@ -507,6 +509,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public boolean nomapred = false;
     public boolean filterAll = false;
     public int startRow = 0;
+    public float size = 1.0f;
     public int perClientRunRows = ROWS_PER_GB;
     public int numClientThreads = 1;
     public int totalRows = ROWS_PER_GB;
@@ -1106,6 +1109,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" nomapred        Run multiple clients using threads " +
       "(rather than use mapreduce)");
     System.err.println(" rows            Rows each client runs. Default: One million");
+    System.err.println(" size            Total size in GiB. Mutually exclusive with --rows. " +
+      "Default: 1.0.");
     System.err.println(" modulo          Modulo we use dividing random. Default: Clients x rows");
     System.err.println(" sampleRate      Execute test on a sample of total " +
       "rows. Only supported by randomRead. Default: 1.0");
@@ -1288,12 +1293,29 @@ public class PerformanceEvaluation extends Configured implements Tool {
           continue;
         }
 
+        final String size = "--size=";
+        if (cmd.startsWith(size)) {
+          opts.size = Float.parseFloat(cmd.substring(size.length()));
+          continue;
+        }
+
         Class<? extends Test> cmdClass = determineCommandClass(cmd);
         if (cmdClass != null) {
           opts.numClientThreads = getNumClients(i + 1, args);
-          // number of rows specified
-          opts.totalRows = opts.perClientRunRows * opts.numClientThreads;
-          if (opts.modulo == -1) opts.modulo = opts.totalRows;
+          if (opts.size != DEFAULT_OPTS.size &&
+            opts.perClientRunRows != DEFAULT_OPTS.perClientRunRows) {
+            throw new IllegalArgumentException(rows + " and " + size + " are mutually exclusive arguments.");
+          }
+          if (opts.size != DEFAULT_OPTS.size) {
+            // total size in GB specified
+            opts.totalRows = (int) opts.size * ROWS_PER_GB;
+            opts.perClientRunRows = opts.totalRows / opts.numClientThreads;
+          } else if (opts.perClientRunRows != DEFAULT_OPTS.perClientRunRows) {
+            // number of rows specified
+            opts.totalRows = opts.perClientRunRows * opts.numClientThreads;
+            opts.size = opts.totalRows / ROWS_PER_GB;
+          }
+          if (opts.modulo == DEFAULT_OPTS.modulo) opts.modulo = opts.totalRows;
           runTest(cmdClass, opts);
           errCode = 0;
           break;
