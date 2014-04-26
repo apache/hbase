@@ -644,7 +644,11 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
   @Override
   public List<List<Bucket>> getHistograms(List<byte[]> regionNames)
     throws ThriftHBaseException {
-    return this.getHistograms(regionNames);
+    try {
+      return server.getHistograms(regionNames);
+    } catch (IOException e) {
+      throw new ThriftHBaseException(e);
+    }
   }
 
   @Override
