@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.regionserver.DeleteTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -500,5 +501,12 @@ public abstract class BaseRegionObserver implements RegionObserver {
   @Override
   public void postCloseRegionOperation(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       Operation op) throws IOException {
+  }
+
+  @Override
+  public DeleteTracker postInstantiateDeleteTracker(
+      final ObserverContext<RegionCoprocessorEnvironment> ctx, DeleteTracker delTracker)
+      throws IOException {
+    return delTracker;
   }
 }

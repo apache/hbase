@@ -162,7 +162,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
     matcher = new ScanQueryMatcher(scan, scanInfo, columns,
         ScanType.USER_SCAN, Long.MAX_VALUE, HConstants.LATEST_TIMESTAMP,
-        oldestUnexpiredTS);
+        oldestUnexpiredTS, store.getCoprocessorHost());
 
     this.store.addChangedReaderObserver(this);
 
@@ -226,11 +226,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this(store, false, scan, null, scanInfo.getTtl(), scanInfo.getMinVersions(),
         ((HStore)store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED));
     if (dropDeletesFromRow == null) {
-      matcher = new ScanQueryMatcher(scan, scanInfo, null, scanType,
-          smallestReadPoint, earliestPutTs, oldestUnexpiredTS);
+      matcher = new ScanQueryMatcher(scan, scanInfo, null, scanType, smallestReadPoint,
+          earliestPutTs, oldestUnexpiredTS, store.getCoprocessorHost());
     } else {
-      matcher = new ScanQueryMatcher(scan, scanInfo, null, smallestReadPoint,
-          earliestPutTs, oldestUnexpiredTS, dropDeletesFromRow, dropDeletesToRow);
+      matcher = new ScanQueryMatcher(scan, scanInfo, null, smallestReadPoint, earliestPutTs,
+          oldestUnexpiredTS, dropDeletesFromRow, dropDeletesToRow, store.getCoprocessorHost());
     }
 
     // Filter the list of scanners using Bloom filters, time range, TTL, etc.
@@ -270,7 +270,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this(null, scan.getCacheBlocks(), scan, columns, scanInfo.getTtl(),
         scanInfo.getMinVersions(), readPt);
     this.matcher = new ScanQueryMatcher(scan, scanInfo, columns, scanType,
-        Long.MAX_VALUE, earliestPutTs, oldestUnexpiredTS);
+        Long.MAX_VALUE, earliestPutTs, oldestUnexpiredTS, null);
 
     // In unit tests, the store could be null
     if (this.store != null) {
