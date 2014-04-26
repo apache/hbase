@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 
 /**
  * This interface is used for the tracking and enforcement of Deletes
@@ -33,32 +34,21 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public interface DeleteTracker {
 
   /**
-   * Add the specified KeyValue to the list of deletes to check against for
+   * Add the specified cell to the list of deletes to check against for
    * this row operation.
    * <p>
    * This is called when a Delete is encountered in a StoreFile.
-   * @param buffer KeyValue buffer
-   * @param qualifierOffset column qualifier offset
-   * @param qualifierLength column qualifier length
-   * @param timestamp timestamp
-   * @param type delete type as byte
+   * @param Cell cell
    */
-  void add(
-    byte[] buffer, int qualifierOffset, int qualifierLength, long timestamp, byte type
-  );
+  void add(Cell cell);
 
   /**
-   * Check if the specified KeyValue buffer has been deleted by a previously
+   * Check if the specified cell buffer has been deleted by a previously
    * seen delete.
-   * @param buffer KeyValue buffer
-   * @param qualifierOffset column qualifier offset
-   * @param qualifierLength column qualifier length
-   * @param timestamp timestamp
+   * @param Cell cell to check if deleted
    * @return deleteResult The result tells whether the KeyValue is deleted and why
    */
-  DeleteResult isDeleted(
-    byte[] buffer, int qualifierOffset, int qualifierLength, long timestamp
-  );
+  DeleteResult isDeleted(Cell cell);
 
   /**
    * @return true if there are no current delete, false otherwise
