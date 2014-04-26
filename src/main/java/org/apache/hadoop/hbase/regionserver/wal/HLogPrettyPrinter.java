@@ -414,8 +414,9 @@ public class HLogPrettyPrinter {
               out.println("    row: " + op.get("row"));
               out.println("    column: " + op.get("family") + ":"
                   + op.get("qualifier"));
+              Long ts = (Long)op.get("timestamp");
               out.println("    at time: "
-                  + (new Date((Long) op.get("timestamp"))));
+                  + (new Date(ts)) + " (" + ts + ")");
               if (outputValues)
                 out.println("    value: " + op.get("value"));
             }
