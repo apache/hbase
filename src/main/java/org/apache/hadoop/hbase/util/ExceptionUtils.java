@@ -20,25 +20,70 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.UndeclaredThrowableException;
 
 /**
  * Some utility methods for handling exception.
  */
 public class ExceptionUtils {
   /**
-   * Throws an arbitrary exception to an IOException. Wrap the exception with
-   * an IOException if the exception cannot be thrown directly.
+   * If t is an RuntimeException throw it directly, or
+   * If t is an InvocationTargetException, recursively call toIOException
+   * with target exception, or
+   * If t is an UndeclaredThrowableException, recursively call toIOException
+   * with undeclared throwable, or
+   * Otherwise convert it into an IOException. Wrap the exception with an
+   * IOException if necessary.
+   *
+   * DO NOT use it if you want to wrap all exception including RuntimeException
+   * into an IOException.
    */
-  public static void throwIOExcetion(Throwable t)
-      throws IOException {
+  public static IOException toIOException(Throwable t) {
+    if (t instanceof InvocationTargetException) {
+      return toIOException(((InvocationTargetException) t)
+          .getTargetException());
+    }
+
+    if (t instanceof UndeclaredThrowableException) {
+      return toIOException(((UndeclaredThrowableException) t)
+          .getUndeclaredThrowable());
+    }
+
     if (t instanceof IOException) {
-      throw (IOException) t;
+      return (IOException) t;
     }
 
     if (t instanceof RuntimeException) {
       throw (RuntimeException) t;
     }
 
-    throw new IOException(t);
+    return new IOException(t);
+  }
+
+  /**
+   * If t is an RuntimeException return it directly, or
+   * If t is an InvocationTargetException, recursively call toRuntimeException
+   * with target exception, or
+   * If t is an UndeclaredThrowableException, recursively call
+   * toRuntimeException with undeclared throwable, or
+   * Otherwise wrap it into an toRuntimeException.
+   */
+  public static RuntimeException toRuntimeException(Throwable t) {
+    if (t instanceof InvocationTargetException) {
+      return toRuntimeException(((InvocationTargetException) t)
+          .getTargetException());
+    }
+
+    if (t instanceof UndeclaredThrowableException) {
+      return toRuntimeException(((UndeclaredThrowableException) t)
+          .getUndeclaredThrowable());
+    }
+
+    if (t instanceof RuntimeException) {
+      return (RuntimeException) t;
+    }
+
+    return new RuntimeException(t);
   }
 }

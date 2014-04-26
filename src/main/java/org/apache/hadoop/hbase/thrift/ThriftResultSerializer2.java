@@ -22,11 +22,19 @@ package org.apache.hadoop.hbase.thrift;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.URL;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.ExceptionUtils;
 import org.apache.hadoop.io.serializer.Serializer;
+
 
 /**
  * A wrapper class which loads <code>ThriftResultSerializer</code> class with a
@@ -37,16 +45,25 @@ import org.apache.hadoop.io.serializer.Serializer;
  */
 public class ThriftResultSerializer2 implements Serializer<Object>,
     Configurable {
-  ThriftResultSerializer instance;
+  private static Log LOG = LogFactory.getLog(ThriftResultSerializer2.class);
+  // ThriftResultSerializer instance;
+  Object instance;
   /**
    * Key to the configuration of classpath to cut
    */
   public static final String CUTTING_CLASSPATH_KEY =
       "hbase.thrift.result.serializer.cutting.classpath";
 
+  private Method getConfMethod;
+  private Method openMethod;
+  private Method serializeMethod;
+  private Method closeMethod;
+
+  @SuppressWarnings("resource")
   @Override
   public void setConf(Configuration conf) {
     String classPath = conf.get(CUTTING_CLASSPATH_KEY, "");
+    LOG.info(CUTTING_CLASSPATH_KEY + " is set to " + classPath);
     try {
       // make the URL array of cutting paths
       String[] parts = classPath.split(File.pathSeparator);
@@ -56,37 +73,69 @@ public class ThriftResultSerializer2 implements Serializer<Object>,
       }
 
       // Create the ClassLoader
+      // Skip all classes in the interface so that both side can use it.
       ClassLoader classLoader = new CuttingClassLoader(urls,
- this.getClass().getClassLoader());
+              ThriftResultSerializer.class.getClassLoader(),
+              Result.class.getName(), ImmutableBytesWritable.class.getName(),
+              KeyValue.class.getName(), Configuration.class.getName());
       // and load the class.
-      Class<?> cls = Class.forName(ThriftResultSerializer.class.getName(),
-          true, classLoader);
+      Class<?> cls =
+          classLoader.loadClass(ThriftResultSerializer.class.getName());
       // Then create the new instance.
-      instance = (ThriftResultSerializer) cls.newInstance();
+      instance = cls.newInstance();
     } catch (Exception e) {
-      throw new RuntimeException(e);
+      throw ExceptionUtils.toRuntimeException(e);
     }
 
-    instance.setConf(conf);
+    try {
+      getConfMethod = instance.getClass().getMethod("getConf");
+      openMethod = instance.getClass().getMethod("open", OutputStream.class);
+      serializeMethod =
+          instance.getClass().getMethod("serialize", Object.class);
+      closeMethod = instance.getClass().getMethod("close");
+
+      Method setConfMethod =
+          instance.getClass().getMethod("setConf", Configuration.class);
+      setConfMethod.invoke(instance, conf);
+    } catch (Exception e) {
+      throw ExceptionUtils.toRuntimeException(e);
+    }
   }
 
   @Override
   public Configuration getConf() {
-    return instance.getConf();
+    try {
+      return (Configuration) getConfMethod.invoke(instance);
+    } catch (Exception e) {
+      throw ExceptionUtils.toRuntimeException(e);
+    }
   }
 
   @Override
   public void open(OutputStream out) throws IOException {
-    instance.open(out);
+    try {
+      openMethod.invoke(instance, out);
+    } catch (Exception e) {
+      throw ExceptionUtils.toRuntimeException(e);
+    }
   }
 
   @Override
   public void serialize(Object t) throws IOException {
-    instance.serialize(t);
+    try {
+      serializeMethod.invoke(instance, t);
+    } catch (Exception e) {
+      throw ExceptionUtils.toRuntimeException(e);
+    }
   }
 
   @Override
   public void close() throws IOException {
-    instance.close();
+    try {
+      closeMethod.invoke(instance);
+    } catch (Exception e) {
+      throw ExceptionUtils.toRuntimeException(e);
+    }
   }
+
 }

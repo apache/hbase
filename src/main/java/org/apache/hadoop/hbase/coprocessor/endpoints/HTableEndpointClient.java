@@ -104,7 +104,7 @@ public class HTableEndpointClient implements IEndpointClient {
         results.put(region, caller.call(ep));
       }
     } catch (UndeclaredThrowableException e) {
-      ExceptionUtils.throwIOExcetion(e.getUndeclaredThrowable());
+      throw ExceptionUtils.toIOException(e.getUndeclaredThrowable());
     }
 
     return results;

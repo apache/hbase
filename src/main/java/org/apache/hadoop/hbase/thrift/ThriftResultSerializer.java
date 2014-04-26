@@ -28,8 +28,8 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapred.TableInputFormat;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
+import org.apache.hadoop.hbase.util.ExceptionUtils;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TCompactProtocol;
@@ -38,18 +38,18 @@ import org.apache.thrift.transport.TIOStreamTransport;
 import org.apache.thrift.transport.TTransport;
 
 /**
- * A serializer for use with {@link TableInputFormat}. Serializes results as TResult.
+ * A serializer for use with TableInputFormat. Serializes results as TResult.
  */
 public class ThriftResultSerializer implements Serializer<Object>, Configurable {
 
   private static final Log LOG = LogFactory.getLog(ThriftResultSerializer.class);
 
-  public static final String PROTOCOL_CONF_KEY = "hbase.thrift.result.serializer.protocol.class";
-  
+  public static final String PROTOCOL_CONF_KEY =
+      "hbase.thrift.result.serializer.protocol.class";
+
   private OutputStream out;
-  
-  @SuppressWarnings("rawtypes")
-  private Class protocolClass = TCompactProtocol.class;
+
+  private Class<? extends TProtocol> protocolClass = TCompactProtocol.class;
 
   private TProtocol prot;
   private DataOutput dataOut;
@@ -63,15 +63,15 @@ public class ThriftResultSerializer implements Serializer<Object>, Configurable 
     transport = new TIOStreamTransport(out);
 
     LOG.info("Using Thrift protocol: " + protocolClass.getName());
-    
+
     try {
-      Constructor<TProtocol> constructor =
-          protocolClass.getConstructor(new Class[] { TTransport.class });
+      Constructor<? extends TProtocol> constructor =
+          protocolClass.getConstructor(TTransport.class);
       prot = constructor.newInstance(transport);
     } catch (Exception ex) {
-      throw new RuntimeException(ex);
+      throw ExceptionUtils.toIOException(ex);
     }
-    
+
     if (out instanceof DataOutput) {
       dataOut = (DataOutput) out;
     } else {
@@ -79,10 +79,9 @@ public class ThriftResultSerializer implements Serializer<Object>, Configurable 
     }
   }
 
-  @SuppressWarnings("rawtypes")
   @Override
   public void serialize(Object t) throws IOException {
-    Class klass = t.getClass();
+    Class<?> klass = t.getClass();
     if (klass == Result.class) {
       Result result = (Result) t;
       TRowResult tResult = ThriftUtilities.oneRowResult(result);
@@ -105,10 +104,21 @@ public class ThriftResultSerializer implements Serializer<Object>, Configurable 
     out.close();
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
-    protocolClass = conf.getClass(PROTOCOL_CONF_KEY, protocolClass);
+    String protoclCLassName =
+        conf.get(PROTOCOL_CONF_KEY, protocolClass.getName());
+    try {
+      protocolClass =
+          (Class<? extends TProtocol>) Class.forName(protoclCLassName);
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+
+    LOG.info("Classloader of " + protocolClass.getName() + " is "
+        + protocolClass.getClassLoader());
   }
 
   @Override

@@ -20,9 +20,6 @@
 package org.apache.hadoop.hbase.thrift;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -38,15 +35,15 @@ import org.junit.Test;
  */
 public class TestThriftResultSerializer {
 
-  private KeyValue[] constuctKvList(int n) {
-    List<KeyValue> list = new ArrayList<KeyValue>();
+  private static KeyValue[] constuctKvList(int n) {
+    KeyValue[] kvs = new KeyValue[n];
     for (int i = 0; i < n; i++) {
       KeyValue kv = new KeyValue(Bytes.toBytes("myRow" + i),
           Bytes.toBytes("myCF"), Bytes.toBytes("myQualifier"), 12345L,
           Bytes.toBytes("myValue"));
-      list.add(kv);
+      kvs[i] = kv;
     }
-    return list.toArray(new KeyValue[list.size()]);
+    return kvs;
   }
 
   @Test
@@ -69,28 +66,19 @@ public class TestThriftResultSerializer {
     Assert.assertTrue("output is empty", out.size() > 0);
   }
 
-  private static String findThriftPath() {
-    String[] paths = System.getProperty("java.class.path").split(
-        File.pathSeparator);
-    for (String path : paths) {
-      if (path.contains("/libthrift-")) {
-        return path;
-      }
-    }
-    return "";
-  }
-
   @Test
   public void testWithClassPath() throws Exception {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
 
     ThriftResultSerializer2 trs = new ThriftResultSerializer2();
 
-    String cp = findThriftPath();
+    String cp = System.getProperty("java.class.path");
     System.out.println("Cutting classpath: " + cp);
 
     Configuration conf = HBaseConfiguration.create();
     conf.set(ThriftResultSerializer2.CUTTING_CLASSPATH_KEY, cp);
+    conf.set(ThriftResultSerializer.PROTOCOL_CONF_KEY,
+        "org.apache.thrift.protocol.TCompactProtocol");
     trs.setConf(conf);
 
     trs.open(out);
@@ -102,5 +90,34 @@ public class TestThriftResultSerializer {
     }
 
     Assert.assertTrue("output is empty", out.size() > 0);
+  }
+
+  public static void main(String[] args) throws Exception {
+    System.out.println("java.class.path: "
+        + System.getProperty("java.class.path"));
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ThriftResultSerializer2 trs = new ThriftResultSerializer2();
+
+    Configuration conf = HBaseConfiguration.create();
+    if (args.length >= 1) {
+      System.out.println("Setting "
+          + ThriftResultSerializer2.CUTTING_CLASSPATH_KEY + " to " + args[0]);
+      conf.set(ThriftResultSerializer2.CUTTING_CLASSPATH_KEY, args[0]);
+    }
+    if (args.length >= 2) {
+      System.out.println("Setting " + ThriftResultSerializer.PROTOCOL_CONF_KEY
+          + " to " + args[1]);
+      conf.set(ThriftResultSerializer.PROTOCOL_CONF_KEY, args[1]);
+    }
+    trs.setConf(conf);
+
+    trs.open(out);
+    try {
+      trs.serialize(new ImmutableBytesWritable(Bytes.toBytes("row")));
+      trs.serialize(new Result(constuctKvList(10)));
+    } finally {
+      trs.close();
+    }
   }
 }
