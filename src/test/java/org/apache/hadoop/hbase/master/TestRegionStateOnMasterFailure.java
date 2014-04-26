@@ -80,7 +80,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
       "REGION EVENT LISTENER: ";
 
   private static final int NUM_MASTERS = 2;
-  private static final int NUM_RS = 3;
+  private static final int NUM_RS = 4;
 
   private static final long TEST_TIMEOUT_MS = 360 * 1000;
 
@@ -129,8 +129,8 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
     public void closeRegion(HRegion ignored) throws IOException {
       // Copy the list of region server threads because it will be modified as we kill
       // -ROOT-/.META. regionservers.
-      for (RegionServerThread rst :
-           new ArrayList<RegionServerThread>(miniCluster().getRegionServerThreads())) {
+      for (RegionServerThread rst : new ArrayList<>(
+          miniCluster().getRegionServerThreads())) {
         HRegionServer rs = rst.getRegionServer();
         for (HRegionInfo hri : rs.getRegionsAssignment()) {
           if (hri.isRootRegion() || hri.isMetaRegion()) {
@@ -209,6 +209,8 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
         HBaseEventType.RS2ZK_REGION_OPENED);
   }
 
+  // Marked as unstable and recorded in #4212779
+  @TestTag({ "unstable" })
   @Test(timeout=TEST_TIMEOUT_MS)
   public void testKillRootMetaRS() throws Exception {
     closeRegionAndKillMaster(HConstants.META_TABLE_NAME, new KillRootAndMetaRS(),
