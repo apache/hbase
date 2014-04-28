@@ -38,14 +38,14 @@ public interface DeleteTracker {
    * this row operation.
    * <p>
    * This is called when a Delete is encountered in a StoreFile.
-   * @param Cell cell
+   * @param cell - the delete cell
    */
   void add(Cell cell);
 
   /**
    * Check if the specified cell buffer has been deleted by a previously
    * seen delete.
-   * @param Cell cell to check if deleted
+   * @param cell - current cell to check if deleted by a previously deleted cell
    * @return deleteResult The result tells whether the KeyValue is deleted and why
    */
   DeleteResult isDeleted(Cell cell);
