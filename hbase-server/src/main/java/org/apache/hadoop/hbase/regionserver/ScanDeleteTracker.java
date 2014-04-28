@@ -66,11 +66,7 @@ public class ScanDeleteTracker implements DeleteTracker {
    * this row operation.
    * <p>
    * This is called when a Delete is encountered in a StoreFile.
-   * @param buffer KeyValue buffer
-   * @param qualifierOffset column qualifier offset
-   * @param qualifierLength column qualifier length
-   * @param timestamp timestamp
-   * @param type delete type as byte
+   * @param cell - the delete cell
    */
   @Override
   public void add(Cell cell) {
@@ -109,7 +105,7 @@ public class ScanDeleteTracker implements DeleteTracker {
    * Check if the specified KeyValue buffer has been deleted by a previously
    * seen delete.
    *
-   * @param Cell cell
+   * @param cell - current cell to check if deleted by a previously seen delete
    * @return deleteResult
    */
   @Override
