@@ -90,7 +90,7 @@ public abstract class FSUtils {
   private static final Log LOG = LogFactory.getLog(FSUtils.class);
 
   /** Full access permissions (starting point for a umask) */
-  private static final String FULL_RWX_PERMISSIONS = "777";
+  public static final String FULL_RWX_PERMISSIONS = "777";
   private static final String THREAD_POOLSIZE = "hbase.client.localityCheck.threadPoolSize";
   private static final int DEFAULT_THREAD_POOLSIZE = 2;
 
@@ -293,7 +293,7 @@ public abstract class FSUtils {
               .getDeclaredMethod("create", Path.class, FsPermission.class,
                   boolean.class, int.class, short.class, long.class,
                   Progressable.class, InetSocketAddress[].class)
-                  .invoke(backingFs, path, FsPermission.getDefault(), true,
+                  .invoke(backingFs, path, perm, true,
                       getDefaultBufferSize(backingFs),
                       getDefaultReplication(backingFs, path),
                       getDefaultBlockSize(backingFs, path),
@@ -366,7 +366,7 @@ public abstract class FSUtils {
         // make sure that we have a mask, if not, go default.
         String mask = conf.get(permssionConfKey);
         if (mask == null)
-          return FsPermission.getDefault();
+          return getFileDefault();
         // appy the umask
         FsPermission umask = new FsPermission(mask);
         return perm.applyUMask(umask);
@@ -375,10 +375,23 @@ public abstract class FSUtils {
             "Incorrect umask attempted to be created: "
                 + conf.get(permssionConfKey)
                 + ", using default file permissions.", e);
-        return FsPermission.getDefault();
+        return getFileDefault();
       }
     }
-    return FsPermission.getDefault();
+    return getFileDefault();
+  }
+
+  /**
+   * Get the default permission for file.
+   * This is the same method as FsPermission.getFileDefault() in Hadoop 2.
+   * We provide the method here to support compatibility with Hadoop 1.
+   * See HBASE-11061.  Would be better to do this as Interface in hadoop-compat
+   * w/ hadoop1 and hadoop2 implementations but punting on this since small
+   * risk this will change in 0.96/0.98 timeframe (only committed to these
+   * branches).
+   */
+  public static FsPermission getFileDefault() {
+    return new FsPermission((short)00666);
   }
 
   /**
