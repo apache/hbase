@@ -622,8 +622,6 @@ public class HBaseTestingUtility {
   /**
    * Creates a table.
    *
-   * @param startKey the startKey of the second region.
-   * @param endKey the endKey of the last second region.
    * @param numRegions if numRegions equals 1, startKey and endKey are not used,
    *          if numRegions equals 2, endKey is not used.
    */

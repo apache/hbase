@@ -20,32 +20,38 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.DuplicateZKNotificationInjectionHandler;
 import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.StringBytes;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.apache.hadoop.hbase.util.TestTag;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * Test whether region rebalancing works. (HBASE-71)
  * Test HBASE-3663 whether region rebalancing works after a new server booted
  * especially when no server has more regions than the ceils of avg load
  */
-public class TestRegionRebalancing extends HBaseClusterTestCase {
+@RunWith(TagRunner.class)
+public class TestRegionRebalancing {
+  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   final Log LOG = LogFactory.getLog(this.getClass().getName());
+
+  private static final StringBytes TABLE_NAME = new StringBytes("test");
 
   HTable table;
 
@@ -59,7 +65,6 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
 
   /** constructor */
   public TestRegionRebalancing() {
-    super(1);
     FIVE_HUNDRED_KBYTES = new byte[500 * 1024];
     for (int i = 0; i < 500 * 1024; i++) {
       FIVE_HUNDRED_KBYTES[i] = 'x';
@@ -69,33 +74,22 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     desc.addFamily(new HColumnDescriptor(FAMILY_NAME));
   }
 
-  /**
-   * Before the hbase cluster starts up, create some dummy regions.
-   */
-  @Override
-  public void preHBaseClusterSetup() throws IOException {
-    // create a 20-region table by writing directly to disk
-    List<byte []> startKeys = new ArrayList<byte []>();
-    startKeys.add(null);
+  @Before
+  public void setUp() throws Exception {
+    TEST_UTIL.startMiniCluster(3);
+
+    byte[][] splitKeys = new byte[70 - 10][];
     for (int i = 10; i < 70; i++) {
-      startKeys.add(Bytes.toBytes("row_" + i));
-    }
-    startKeys.add(null);
-    LOG.debug(startKeys.size() + " start keys generated");
-    
-    List<HRegion> regions = new ArrayList<HRegion>();
-    for (int i = 0; i < 60; i++) {
-      regions.add(createAregion(startKeys.get(i), startKeys.get(i+1)));
+      splitKeys[i - 10] = Bytes.toBytes("row_" + i);
     }
 
-    // Now create the root and meta regions and insert the data regions
-    // created above into the meta
+    TEST_UTIL.createTable(TABLE_NAME, new byte[][] { FAMILY_NAME }, 3,
+        splitKeys);
+  }
 
-    createRootAndMetaRegions();
-    for (HRegion region : regions) {
-      HRegion.addRegionToMETA(meta, region);
-    }
-    closeRootAndMeta();
+  @After
+  public void tearDown() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   /**
@@ -103,31 +97,34 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
    * When one of the server shuts down, the avg load is 3.875.
    * When this server comes back, the avg load will be 3.64
    * Set the slot number near 0, so no server's load will large than 4.
-   * The load balance algorithm should handle this case properly. 
+   * The load balance algorithm should handle this case properly.
    */
+  // Marked as unstable and recorded in #4219255
+  @TestTag({ "unstable" })
+  @Test(timeout = 300000)
   public void testRebalancing() throws IOException {
-
-    for (int i = 1; i <= 16; i++){
-      LOG.debug("Adding region server #"+i);
-      cluster.startRegionServer();
+    for (int i = 3; i < 16; i++) {
+      LOG.info("Starting region server " + i);
+      TEST_UTIL.getHBaseCluster().startRegionServer();
       checkingServerStatus();
     }
-   
+
     setInjectionHandler();
 
     LOG.debug("Restart: killing 1 region server.");
-    cluster.stopRegionServer(2, false);
-    cluster.waitOnRegionServer(2);
+    TEST_UTIL.getHBaseCluster().stopRegionServer(2, false);
+    TEST_UTIL.getHBaseCluster().waitOnRegionServer(2);
     assertRegionsAreBalanced();
-    
+
     LOG.debug("Restart: adding that region server back");
-    cluster.startRegionServer();
+    TEST_UTIL.getHBaseCluster().startRegionServer();
     assertRegionsAreBalanced();
   }
 
   private void setInjectionHandler() {
     InjectionHandler.set(
         new InjectionHandler() {
+        @Override
         protected boolean _falseCondition(InjectionEvent event, Object... args) {
           if (event.equals(InjectionEvent.HREGIONSERVER_REPORT_RESPONSE)) {
             double num = rand.nextDouble();
@@ -151,9 +148,9 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
 
   private void checkingServerStatus() {
     List<HRegionServer> servers = getOnlineRegionServers();
-    double avg = cluster.getMaster().getAverageLoad();
+    double avg = TEST_UTIL.getHBaseCluster().getMaster().getAverageLoad();
     for (HRegionServer server : servers) {
-      int serverLoad = server.getOnlineRegions().size();      
+      int serverLoad = server.getOnlineRegions().size();
       LOG.debug(server.hashCode() + " Avg: " + avg + " actual: " + serverLoad);
     }
   }
@@ -174,16 +171,18 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
    */
   private void assertRegionsAreBalanced() {
     boolean success = false;
-    float slop = conf.getFloat("hbase.regions.slop", (float)0.1);
+    float slop =
+        TEST_UTIL.getConfiguration()
+            .getFloat("hbase.regions.slop", (float) 0.1);
     if (slop <= 0) slop = 1;
-    
+
     // waiting for load balancer running
     try {
       Thread.sleep(MiniHBaseCluster.WAIT_FOR_LOADBALANCER);
     } catch (InterruptedException e1) {
       LOG.error("Got InterruptedException when waiting for load balance " + e1);
     }
-    
+
     for (int i = 0; i < 5; i++) {
       success = true;
       // make sure all the regions are reassigned before we test balance
@@ -191,21 +190,21 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
 
       int regionCount = getRegionCount();
       List<HRegionServer> servers = getOnlineRegionServers();
-      double avg = cluster.getMaster().getAverageLoad();
+      double avg = TEST_UTIL.getHBaseCluster().getMaster().getAverageLoad();
       int avgLoadPlusSlop = (int)Math.ceil(avg * (1 + slop));
       int avgLoadMinusSlop = (int)Math.floor(avg * (1 - slop)) - 1;
-     
+
       LOG.debug("There are " + servers.size() + " servers and " + regionCount
         + " regions. Load Average: " + avg + " low border: " + avgLoadMinusSlop
         + ", up border: " + avgLoadPlusSlop + "; attempt: " + i);
-     
+
       for (HRegionServer server : servers) {
-        int serverLoad = server.getOnlineRegions().size(); 
-        LOG.debug(server.hashCode() + " Avg: " + avg + " actual: " + serverLoad);      
+        int serverLoad = server.getOnlineRegions().size();
+        LOG.debug(server.hashCode() + " Avg: " + avg + " actual: " + serverLoad);
         if (!(avg > 2.0 && serverLoad <= avgLoadPlusSlop
-            && serverLoad >= avgLoadMinusSlop)) { 
+            && serverLoad >= avgLoadMinusSlop)) {
           LOG.debug(server.hashCode() + " Isn't balanced!!! Avg: " + avg +
-              " actual: " + serverLoad + " slop: " + slop);   
+              " actual: " + serverLoad + " slop: " + slop);
           success = false;
         }
       }
@@ -225,12 +224,13 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     }
     // if we get here, we tried 5 times and never got to short circuit out of
     // the retry loop, so this is a failure.
-    fail("After 5 attempts, region assignments were not balanced.");
+    Assert.fail("After 5 attempts, region assignments were not balanced.");
   }
 
   private List<HRegionServer> getOnlineRegionServers() {
     List<HRegionServer> list = new ArrayList<HRegionServer>();
-    for (JVMClusterUtil.RegionServerThread rst : cluster.getRegionServerThreads()) {
+    for (JVMClusterUtil.RegionServerThread rst : TEST_UTIL.getHBaseCluster()
+        .getRegionServerThreads()) {
       if (rst.getRegionServer().isOnline()) {
         list.add(rst.getRegionServer());
       }
@@ -248,22 +248,6 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
         Thread.sleep(1000);
       } catch (InterruptedException e) {}
     }
-  }
-
-  /**
-   * create a region with the specified start and end key and exactly one row
-   * inside.
-   */
-  private HRegion createAregion(byte [] startKey, byte [] endKey)
-  throws IOException {
-    HRegion region = createNewHRegion(desc, startKey, endKey);
-    byte [] keyToWrite = startKey == null ? Bytes.toBytes("row_0000") : startKey;
-    Put put = new Put(keyToWrite);
-    put.add(FAMILY_NAME, null, Bytes.toBytes("test"));
-    region.put(put);
-    region.close();
-    region.getLog().closeAndDelete();
-    return region;
   }
 }
 

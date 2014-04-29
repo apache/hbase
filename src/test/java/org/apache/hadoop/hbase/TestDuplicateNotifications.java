@@ -20,26 +20,18 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DuplicateZKNotificationInjectionHandler;
 import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.TagRunner;
+import org.junit.Assert;
+import org.junit.runner.RunWith;
 
 /**
- * Test whether region opening works inspite of duplicate opened notifications.
+ * Test whether region opening works in spite of duplicate opened notifications.
  */
+@RunWith(TagRunner.class)
 public class TestDuplicateNotifications extends TestRegionRebalancing {
   DuplicateZKNotificationInjectionHandler duplicator =
       new DuplicateZKNotificationInjectionHandler();
@@ -54,7 +46,7 @@ public class TestDuplicateNotifications extends TestRegionRebalancing {
    * @throws IOException
    */
   @Override
-  protected void setUp() throws Exception {
+  public void setUp() throws Exception {
     super.setUp();
     duplicator.setProbability(0.05);
     duplicator.duplicateEvent(InjectionEvent.ZKUNASSIGNEDWATCHER_REGION_OPENED);
@@ -62,9 +54,9 @@ public class TestDuplicateNotifications extends TestRegionRebalancing {
   }
 
   @Override
-  protected void tearDown() {
+  public void tearDown() {
     // make sure that some events did get duplicated.
-    assertTrue(duplicator.getDuplicatedEventCnt() > 0);
+    Assert.assertTrue(duplicator.getDuplicatedEventCnt() > 0);
   }
 }
 

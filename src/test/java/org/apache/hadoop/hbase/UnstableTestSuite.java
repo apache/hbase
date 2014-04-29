@@ -41,6 +41,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
+/**
+ * This test suite collects all the unstable testcases.
+ */
 @RunWith(Suite.class)
 @SuiteClasses({ TestHRegionCloseRetry.class, TestReplicationSink.class,
     TestLogRolling.class, TestHFileOutputFormat.class,
@@ -50,6 +53,7 @@ import org.junit.runners.Suite.SuiteClasses;
     TestLogSplitOnMasterFailover.class,
     TestHRegionServerFileSystemFailure.class, TestFullLogReconstruction.class,
     TestSplitLogManager.class, TestHLog.class, TestQOS.class,
-    TestDistributedLogSplitting.class, TestClientLocalScanner.class})
+    TestDistributedLogSplitting.class, TestClientLocalScanner.class,
+    TestRegionRebalancing.class, TestDuplicateNotifications.class })
 public class UnstableTestSuite {
 }
