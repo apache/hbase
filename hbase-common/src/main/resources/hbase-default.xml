@@ -1027,16 +1027,16 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.regionserver.checksum.verify</name>
     <value>true</value>
     <description>
-        If set to true, HBase will verify checksums for hfile blocks. HBase
-        writes checksums inline with the data when it writes out hfiles. HDFS
-        writes checksums to a separate file from data necessitating extra seeks.
-        Setting this flag should save some on i/o.  Checksum verification by
-        HDFS will be internally disabled on hfile streams when this flag is set.
-        If the hbase-checksum verification fails, we will switch back to using
-        HDFS checksums (so do not disable HDFS checksums!  And besides this
-        feature applies to hfiles only, not to WALs).  If this parameter is set
-        to false, then hbase will not verify any checksums, instead it will
-        depend on checksum verification being done in the HDFS client.  
+        If set to true (the default), HBase verifies the checksums for hfile
+        blocks. HBase writes checksums inline with the data when it writes out
+        hfiles. HDFS (as of this writing) writes checksums to a separate file
+        than the data file necessitating extra seeks.  Setting this flag saves
+        some on i/o.  Checksum verification by HDFS will be internally disabled
+        on hfile streams when this flag is set.  If the hbase-checksum verification
+        fails, we will switch back to using HDFS checksums (so do not disable HDFS
+        checksums!  And besides this feature applies to hfiles only, not to WALs).
+        If this parameter is set to false, then hbase will not verify any checksums,
+        instead it will depend on checksum verification being done in the HDFS client.  
     </description>
   </property>
   <property>
