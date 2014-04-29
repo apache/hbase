@@ -687,6 +687,27 @@ more discussion around short circuit reads.
     on the difference between the old and new implementations.  See
     <link xlink:href="http://archive.cloudera.com/cdh4/cdh/4/hadoop/hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html">Hadoop shortcircuit reads configuration page</link>
     for how to enable the latter, better version of shortcircuit.
+For example, here is a minimal config. enabling short-circuit reads added to
+<filename>hbase-site.xml</filename>:
+<programlisting><![CDATA[<property>
+  <name>dfs.client.read.shortcircuit</name>
+  <value>true</value>
+  <description>
+    This configuration parameter turns on short-circuit local reads.
+  </description>
+</property>
+<property>
+  <name>dfs.domain.socket.path</name>
+  <value>/home/stack/sockets/short_circuit_read_socket_PORT</value>
+  <description>
+    Optional.  This is a path to a UNIX domain socket that will be used for
+    communication between the DataNode and local HDFS clients.
+    If the string "_PORT" is present in this path, it will be replaced by the
+    TCP port of the DataNode.
+  </description>
+</property>]]></programlisting>
+Be careful about permissions for the directory that hosts the shared domain
+socket; dfsclient will complain if open to other than the hbase user.
 <footnote><para>If you are running on an old Hadoop, one that is without
     <link xlink:href="https://issues.apache.org/jira/browse/HDFS-347">HDFS-347</link> but that
     has
@@ -698,14 +719,6 @@ to be the <emphasis>only</emphasis> user that can use the shortcut.
 This has to be the user that started HBase.  Then in hbase-site.xml,
 set <varname>dfs.client.read.shortcircuit</varname> to be <varname>true</varname>
 </para></footnote>
-</para>
-<para>
-    With short-circuit enabled, for more speed-up, it is recommended that you have HBase do the checksum validation. HBase writes
-    checksums inline with the data whereas HDFS keeps checksums in a separate file that it must seek independent of
-    the data file. Set <xref linkend="hbase.regionserver.checksum.verify" /> to have HBase do checksum validation.
-    While you might think it safe to set the HDFS configuration parameter "dfs.client.read.shortcircuit.skip.checksum",
-    you should NOT; HBase checksum validation covers hfiles only, not WAL files and if the HBase checksum validation fails,
-    we will fall back on HDFS's.
 </para>
 <para>
 Services -- at least the HBase RegionServers -- will need to be restarted in order to pick up the new
