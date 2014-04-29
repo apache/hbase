@@ -922,13 +922,16 @@ class FSHLog implements HLog, Syncable {
       LOG.error("Failed close of HLog writer " + oldPath + ", unflushedEntries=" + count, e);
       throw new FailedLogCloseException(oldPath + ", unflushedEntries=" + count, e);
     } finally {
-      // Let the writer thread go regardless, whether error or not.
-      if (zigzagLatch != null) {
-        zigzagLatch.releaseSafePoint();
-        // It will be null if we failed our wait on safe point above.
-        if (syncFuture != null) blockOnSync(syncFuture);
+      try {
+        // Let the writer thread go regardless, whether error or not.
+        if (zigzagLatch != null) {
+          zigzagLatch.releaseSafePoint();
+          // It will be null if we failed our wait on safe point above.
+          if (syncFuture != null) blockOnSync(syncFuture);
+        }
+      } finally {
+        scope.close();
       }
-      scope.close();
     }
     return newPath;
   }
