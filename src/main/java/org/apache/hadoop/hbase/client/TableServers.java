@@ -1999,7 +1999,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
       if (resp == null) {
         // Entire server failed
-        LOG.debug("Failed all for server: " + address
+        LOG.info("Failed all for server: " + address
             + ", removing from cache");
       }
 
@@ -2082,7 +2082,12 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
         }
       } catch (Exception ex) {
         // If response is null, we will catch a NPE here.
-        translateException(ex);
+        try {
+          translateException(ex);
+        } catch (NullPointerException nullPtrex) {
+          // This case we don't need to panic and throw an exception. Instead,
+          // we should populate the failed requests and return to the caller.
+        }
 
         if (newWorkingList == null)
           newWorkingList = new ArrayList<Get>(orig_list.size());
