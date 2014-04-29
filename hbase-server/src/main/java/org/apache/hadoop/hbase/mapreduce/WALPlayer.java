@@ -286,8 +286,8 @@ public class WALPlayer extends Configured implements Tool {
     System.err.println("  -D" + HLogInputFormat.START_TIME_KEY + "=[date|ms]");
     System.err.println("  -D" + HLogInputFormat.END_TIME_KEY + "=[date|ms]");
     System.err.println("For performance also consider the following options:\n"
-        + "  -Dmapred.map.tasks.speculative.execution=false\n"
-        + "  -Dmapred.reduce.tasks.speculative.execution=false");
+        + "  -Dmapreduce.map.speculative=false\n"
+        + "  -Dmapreduce.reduce.speculative=false");
   }
 
   /**

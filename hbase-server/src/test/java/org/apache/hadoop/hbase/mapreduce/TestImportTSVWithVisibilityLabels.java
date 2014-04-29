@@ -242,7 +242,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
     if (conf.getBoolean(FORCE_COMBINER_CONF, true)) {
       LOG.debug("Forcing combiner.");
-      conf.setInt("min.num.spills.for.combine", 1);
+      conf.setInt("mapreduce.map.combine.minspills", 1);
     }
 
     // run the import

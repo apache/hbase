@@ -255,7 +255,7 @@ public final class Compression {
 
     Algorithm(String name) {
       this.conf = new Configuration();
-      this.conf.setBoolean("hadoop.native.lib", true);
+      this.conf.setBoolean("io.native.lib.available", true);
       this.compressName = name;
     }
 

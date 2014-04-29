@@ -145,7 +145,7 @@ public class TestHLogRecordReader {
  
     HLogInputFormat input = new HLogInputFormat();
     Configuration jobConf = new Configuration(conf);
-    jobConf.set("mapred.input.dir", logDir.toString());
+    jobConf.set("mapreduce.input.fileinputformat.inputdir", logDir.toString());
     jobConf.setLong(HLogInputFormat.END_TIME_KEY, ts);
 
     // only 1st file is considered, and only its 1st entry is used
@@ -195,7 +195,7 @@ public class TestHLogRecordReader {
     // should have 2 log files now
     HLogInputFormat input = new HLogInputFormat();
     Configuration jobConf = new Configuration(conf);
-    jobConf.set("mapred.input.dir", logDir.toString());
+    jobConf.set("mapreduce.input.fileinputformat.inputdir", logDir.toString());
 
     // make sure both logs are found
     List<InputSplit> splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));

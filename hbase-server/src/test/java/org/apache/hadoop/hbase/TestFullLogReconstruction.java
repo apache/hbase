@@ -48,9 +48,9 @@ public class TestFullLogReconstruction {
     Configuration c = TEST_UTIL.getConfiguration();
     c.setBoolean("dfs.support.append", true);
     // quicker heartbeat interval for faster DN death notification
-    c.setInt("heartbeat.recheck.interval", 5000);
+    c.setInt("dfs.namenode.heartbeat.recheck-interval", 5000);
     c.setInt("dfs.heartbeat.interval", 1);
-    c.setInt("dfs.socket.timeout", 5000);
+    c.setInt("dfs.client.socket-timeout", 5000);
     // faster failover with cluster.shutdown();fs.close() idiom
     c.setInt("ipc.client.connect.max.retries", 1);
     c.setInt("dfs.client.block.recovery.retries", 1);

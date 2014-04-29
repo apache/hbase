@@ -217,7 +217,7 @@ public class TestRowCounter {
             "Usage: RowCounter [options] <tablename> [--range=[startKey],[endKey]] " +
             "[<column1> <column2>...]"));
         assertTrue(data.toString().contains("-Dhbase.client.scanner.caching=100"));
-        assertTrue(data.toString().contains("-Dmapred.map.tasks.speculative.execution=false"));
+        assertTrue(data.toString().contains("-Dmapreduce.map.speculative=false"));
       }
       data.reset();
       try {

@@ -888,7 +888,6 @@ public abstract class FSUtils {
 
   public static void setFsDefault(final Configuration c, final Path root) throws IOException {
     c.set("fs.defaultFS", root.toString());    // for hadoop 0.21+
-    c.set("fs.default.name", root.toString()); // for hadoop 0.20
   }
 
   /**

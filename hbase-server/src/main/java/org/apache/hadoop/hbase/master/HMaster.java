@@ -268,8 +268,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Hack! Maps DFSClient => Master for logs.  HDFS made this
     // config param for task trackers, but we can piggyback off of it.
-    if (this.conf.get("mapred.task.id") == null) {
-      this.conf.set("mapred.task.id", "hb_m_" + this.serverName.toString());
+    if (this.conf.get("mapreduce.task.attempt.id") == null) {
+      this.conf.set("mapreduce.task.attempt.id", "hb_m_" + this.serverName.toString());
     }
 
     //should we check the compression codec type at master side, default true, HBASE-6370

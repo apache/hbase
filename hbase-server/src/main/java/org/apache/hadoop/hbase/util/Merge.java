@@ -269,9 +269,6 @@ public class Merge extends Configured implements Tool {
 
   private void usage() {
     System.err
-        .println("For hadoop 0.20,  Usage: bin/hbase org.apache.hadoop.hbase.util.Merge "
-            + "[-Dfs.default.name=hdfs://nn:port] <table-name> <region-1> <region-2>\n");
-    System.err
         .println("For hadoop 0.21+, Usage: bin/hbase org.apache.hadoop.hbase.util.Merge "
             + "[-Dfs.defaultFS=hdfs://nn:port] <table-name> <region-1> <region-2>\n");
   }

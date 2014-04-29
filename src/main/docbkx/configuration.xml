@@ -352,8 +352,8 @@ Index: pom.xml
           Secure HBase, see <xref linkend="hbase.secure.configuration" />.</para>
        </section>
 
-       <section xml:id="dfs.datanode.max.xcievers">
-        <title><varname>dfs.datanode.max.xcievers</varname><indexterm>
+       <section xml:id="dfs.datanode.max.transfer.threads">
+        <title><varname>dfs.datanode.max.transfer.threads</varname><indexterm>
             <primary>xcievers</primary>
           </indexterm></title>
 
@@ -365,7 +365,7 @@ Index: pom.xml
         <varname>xceivers</varname> value to at least the following:
         <programlisting>
       &lt;property&gt;
-        &lt;name&gt;dfs.datanode.max.xcievers&lt;/name&gt;
+        &lt;name&gt;dfs.datanode.max.transfer.threads&lt;/name&gt;
         &lt;value&gt;4096&lt;/value&gt;
       &lt;/property&gt;
       </programlisting></para>
@@ -1170,8 +1170,8 @@ of all regions.
       <section xml:id="spec.ex"><title>Speculative Execution</title>
         <para>Speculative Execution of MapReduce tasks is on by default, and for HBase clusters it is generally advised to turn off
         Speculative Execution at a system-level unless you need it for a specific case, where it can be configured per-job.
-        Set the properties <varname>mapred.map.tasks.speculative.execution</varname> and
-        <varname>mapred.reduce.tasks.speculative.execution</varname> to false.
+        Set the properties <varname>mapreduce.map.speculative</varname> and
+        <varname>mapreduce.reduce.speculative</varname> to false.
         </para>
       </section>
       </section>

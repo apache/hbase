@@ -127,7 +127,7 @@ public class TestFSUtils {
   @Test public void testcomputeHDFSBlocksDistribution() throws Exception {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     final int DEFAULT_BLOCK_SIZE = 1024;
-    htu.getConfiguration().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    htu.getConfiguration().setLong("dfs.blocksize", DEFAULT_BLOCK_SIZE);
     MiniDFSCluster cluster = null;
     Path testFile = null;
 

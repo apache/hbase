@@ -869,7 +869,7 @@ Disk-related IOException in BlockReceiver constructor. Cause is java.io.IOExcept
            This typically shows up in the DataNode logs.
            </para>
            <para>
-           See the Getting Started section on <link linkend="dfs.datanode.max.xcievers">xceivers configuration</link>.
+           See the Getting Started section on <link linkend="dfs.datanode.max.transfer.threads">xceivers configuration</link>.
            </para>
         </section>
         <section xml:id="trouble.rs.runtime.oom-nt">

@@ -379,7 +379,7 @@ row10	c1	c2
        </para>
        <para>
            WALPlayer, by default, runs as a mapreduce job.  To NOT run WALPlayer as a mapreduce job on your cluster,
-           force it to run all in the local process by adding the flags <code>-Dmapred.job.tracker=local</code> on the command line.
+           force it to run all in the local process by adding the flags <code>-Dmapreduce.jobtracker.address=local</code> on the command line.
        </para>
     </section>
     <section xml:id="rowcounter">

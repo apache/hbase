@@ -1119,8 +1119,8 @@ public class HRegionServer extends HasThread implements
 
       // hack! Maps DFSClient => RegionServer for logs.  HDFS made this
       // config param for task trackers, but we can piggyback off of it.
-      if (this.conf.get("mapred.task.id") == null) {
-        this.conf.set("mapred.task.id", "hb_rs_" +
+      if (this.conf.get("mapreduce.task.attempt.id") == null) {
+        this.conf.set("mapreduce.task.attempt.id", "hb_rs_" +
           this.serverName.toString());
       }
 

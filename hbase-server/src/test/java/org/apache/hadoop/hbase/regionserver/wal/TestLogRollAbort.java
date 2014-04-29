@@ -69,7 +69,7 @@ public class TestLogRollAbort {
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     // lower the namenode & datanode heartbeat so the namenode
     // quickly detects datanode failures
-    TEST_UTIL.getConfiguration().setInt("heartbeat.recheck.interval", 5000);
+    TEST_UTIL.getConfiguration().setInt("dfs.namenode.heartbeat.recheck-interval", 5000);
     TEST_UTIL.getConfiguration().setInt("dfs.heartbeat.interval", 1);
     // the namenode might still try to choose the recently-dead datanode
     // for a pipeline, so try to a new pipeline multiple times

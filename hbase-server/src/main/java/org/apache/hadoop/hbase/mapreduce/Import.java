@@ -450,8 +450,8 @@ public class Import {
         + " Filter.ReturnCode#INCLUDE and #INCLUDE_AND_NEXT_COL will be considered as including"
         + " the KeyValue.");
     System.err.println("For performance consider the following options:\n"
-        + "  -Dmapred.map.tasks.speculative.execution=false\n"
-        + "  -Dmapred.reduce.tasks.speculative.execution=false\n"
+        + "  -Dmapreduce.map.speculative=false\n"
+        + "  -Dmapreduce.reduce.speculative=false\n"
         + "  -D" + WAL_DURABILITY + "=<Used while writing data to hbase."
             +" Allowed values are the supported durability values"
             +" like SKIP_WAL/ASYNC_WAL/SYNC_WAL/...>");

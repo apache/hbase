@@ -1001,7 +1001,7 @@ possible configurations would overwhelm and obscure the important.
         the time it takes for the namenode to issue a block recovery command as part of
         datanode; dfs.heartbeat.interval and the time it takes for the primary
         datanode, performing block recovery to timeout on a dead datanode; usually
-        dfs.socket.timeout. See the end of HBASE-8389 for more.</description>
+        dfs.client.socket-timeout. See the end of HBASE-8389 for more.</description>
   </property>
   <property>
     <name>hbase.column.max.version</name>

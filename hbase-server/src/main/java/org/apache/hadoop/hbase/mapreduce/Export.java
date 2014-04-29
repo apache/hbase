@@ -148,17 +148,17 @@ public class Export {
       "[<starttime> [<endtime>]] [^[regex pattern] or [Prefix] to filter]]\n");
     System.err.println("  Note: -D properties will be applied to the conf used. ");
     System.err.println("  For example: ");
-    System.err.println("   -D mapred.output.compress=true");
-    System.err.println("   -D mapred.output.compression.codec=org.apache.hadoop.io.compress.GzipCodec");
-    System.err.println("   -D mapred.output.compression.type=BLOCK");
+    System.err.println("   -D mapreduce.output.fileoutputformat.compress=true");
+    System.err.println("   -D mapreduce.output.fileoutputformat.compress.codec=org.apache.hadoop.io.compress.GzipCodec");
+    System.err.println("   -D mapreduce.output.fileoutputformat.compress.type=BLOCK");
     System.err.println("  Additionally, the following SCAN properties can be specified");
     System.err.println("  to control/limit what is exported..");
     System.err.println("   -D " + TableInputFormat.SCAN_COLUMN_FAMILY + "=<familyName>");
     System.err.println("   -D " + RAW_SCAN + "=true");
     System.err.println("For performance consider the following properties:\n"
         + "   -Dhbase.client.scanner.caching=100\n"
-        + "   -Dmapred.map.tasks.speculative.execution=false\n"
-        + "   -Dmapred.reduce.tasks.speculative.execution=false");
+        + "   -Dmapreduce.map.speculative=false\n"
+        + "   -Dmapreduce.reduce.speculative=false");
     System.err.println("For tables with very wide rows consider setting the batch size as below:\n"
         + "   -D" + EXPORT_BATCHING + "=10");
   }

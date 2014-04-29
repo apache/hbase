@@ -161,7 +161,7 @@ public class CopyTable extends Configured implements Tool {
         "--peer.adr=server1,server2,server3:2181:/hbase --families=myOldCf:myNewCf,cf2,cf3 TestTable ");
     System.err.println("For performance consider the following general options:\n"
         + "-Dhbase.client.scanner.caching=100\n"
-        + "-Dmapred.map.tasks.speculative.execution=false");
+        + "-Dmapreduce.map.speculative=false");
   }
 
   private static boolean doCommandLine(final String[] args) {

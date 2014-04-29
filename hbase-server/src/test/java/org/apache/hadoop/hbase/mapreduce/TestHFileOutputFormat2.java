@@ -297,7 +297,7 @@ public class TestHFileOutputFormat2  {
     FileSystem fs = testDir.getFileSystem(conf);
 
     // Set down this value or we OOME in eclipse.
-    conf.setInt("io.sort.mb", 20);
+    conf.setInt("mapreduce.task.io.sort.mb", 20);
     // Write a few files.
     conf.setLong(HConstants.HREGION_MAX_FILESIZE, 64 * 1024);
 

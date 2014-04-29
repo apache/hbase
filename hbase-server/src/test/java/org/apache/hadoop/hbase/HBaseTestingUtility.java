@@ -295,7 +295,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * single instance only is how the minidfscluster works.
    *
    * We also create the underlying directory for
-   *  hadoop.log.dir, mapred.local.dir and hadoop.tmp.dir, and set the values
+   *  hadoop.log.dir, mapreduce.cluster.local.dir and hadoop.tmp.dir, and set the values
    *  in the conf, and as a system property for hadoop.tmp.dir
    *
    * @return The calculated data test build directory, if newly-created.
@@ -319,7 +319,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     // Read and modified in org.apache.hadoop.mapred.MiniMRCluster
     createSubDir(
-      "mapred.local.dir",
+      "mapreduce.cluster.local.dir",
       testPath, "mapred-local-dir");
 
     return testPath;
@@ -568,17 +568,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     createDirAndSetProperty("cache_data", "test.cache.data");
     createDirAndSetProperty("hadoop_tmp", "hadoop.tmp.dir");
     hadoopLogDir = createDirAndSetProperty("hadoop_logs", "hadoop.log.dir");
-    createDirAndSetProperty("mapred_local", "mapred.local.dir");
-    createDirAndSetProperty("mapred_temp", "mapred.temp.dir");
+    createDirAndSetProperty("mapred_local", "mapreduce.cluster.local.dir");
+    createDirAndSetProperty("mapred_temp", "mapreduce.cluster.temp.dir");
     enableShortCircuit();
 
     Path root = getDataTestDirOnTestFS("hadoop");
     conf.set(MapreduceTestingShim.getMROutputDirProp(),
       new Path(root, "mapred-output-dir").toString());
-    conf.set("mapred.system.dir", new Path(root, "mapred-system-dir").toString());
+    conf.set("mapreduce.jobtracker.system.dir", new Path(root, "mapred-system-dir").toString());
     conf.set("mapreduce.jobtracker.staging.root.dir",
       new Path(root, "mapreduce-jobtracker-staging-root-dir").toString());
-    conf.set("mapred.working.dir", new Path(root, "mapred-working-dir").toString());
+    conf.set("mapreduce.job.working.dir", new Path(root, "mapred-working-dir").toString());
   }
 
 
@@ -2192,14 +2192,14 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       jobConf = mrCluster.createJobConf();
     }
 
-    jobConf.set("mapred.local.dir",
-      conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
+    jobConf.set("mapreduce.cluster.local.dir",
+      conf.get("mapreduce.cluster.local.dir")); //Hadoop MiniMR overwrites this while it should not
     LOG.info("Mini mapreduce cluster started");
 
     // In hadoop2, YARN/MR2 starts a mini cluster with its own conf instance and updates settings.
     // Our HBase MR jobs need several of these settings in order to properly run.  So we copy the
     // necessary config properties here.  YARN-129 required adding a few properties.
-    conf.set("mapred.job.tracker", jobConf.get("mapred.job.tracker"));
+    conf.set("mapreduce.jobtracker.address", jobConf.get("mapreduce.jobtracker.address"));
     // this for mrv2 support; mr1 ignores this
     conf.set("mapreduce.framework.name", "yarn");
     conf.setBoolean("yarn.is.minicluster", true);
@@ -2228,7 +2228,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       mrCluster = null;
     }
     // Restore configuration to point to local jobtracker
-    conf.set("mapred.job.tracker", "local");
+    conf.set("mapreduce.jobtracker.address", "local");
     LOG.info("Mini mapreduce cluster stopped");
   }
 

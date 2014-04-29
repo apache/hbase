@@ -403,7 +403,6 @@ public class ProcessBasedLocalHBaseCluster {
 
     if (dfsCluster != null) {
       String fsURL = "hdfs://" + HConstants.LOCALHOST + ":" + dfsCluster.getNameNodePort();
-      confMap.put("fs.default.name", fsURL);
       confMap.put("fs.defaultFS", fsURL);
       confMap.put("hbase.rootdir", fsURL + "/hbase_test");
     }

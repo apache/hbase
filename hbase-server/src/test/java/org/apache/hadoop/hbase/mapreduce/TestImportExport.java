@@ -444,7 +444,7 @@ public class TestImportExport {
       assertTrue(data.toString().contains("-Dimport.bulk.output=/path/for/output"));
       assertTrue(data.toString().contains("-Dimport.filter.class=<name of filter class>"));
       assertTrue(data.toString().contains("-Dimport.bulk.output=/path/for/output"));
-      assertTrue(data.toString().contains("-Dmapred.reduce.tasks.speculative.execution=false"));
+      assertTrue(data.toString().contains("-Dmapreduce.reduce.speculative=false"));
     } finally {
       System.setErr(oldPrintStream);
       System.setSecurityManager(SECURITY_MANAGER);
@@ -476,8 +476,8 @@ public class TestImportExport {
       assertTrue(data.toString().contains("-D hbase.mapreduce.scan.column.family=<familyName>"));
       assertTrue(data.toString().contains("-D hbase.mapreduce.include.deleted.rows=true"));
       assertTrue(data.toString().contains("-Dhbase.client.scanner.caching=100"));
-      assertTrue(data.toString().contains("-Dmapred.map.tasks.speculative.execution=false"));
-      assertTrue(data.toString().contains("-Dmapred.reduce.tasks.speculative.execution=false"));
+      assertTrue(data.toString().contains("-Dmapreduce.map.speculative=false"));
+      assertTrue(data.toString().contains("-Dmapreduce.reduce.speculative=false"));
       assertTrue(data.toString().contains("-Dhbase.export.scanner.batch=10"));
     } finally {
       System.setErr(oldPrintStream);

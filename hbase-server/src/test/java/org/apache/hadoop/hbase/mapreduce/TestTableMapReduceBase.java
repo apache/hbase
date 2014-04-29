@@ -100,7 +100,7 @@ public abstract class TestTableMapReduceBase {
   public void testCombiner() throws IOException {
     Configuration conf = new Configuration(UTIL.getConfiguration());
     // force use of combiner for testing purposes
-    conf.setInt("min.num.spills.for.combine", 1);
+    conf.setInt("mapreduce.map.combine.minspills", 1);
     runTestOnTable(new HTable(conf, MULTI_REGION_TABLE_NAME));
   }
 

@@ -243,8 +243,8 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
 
       // inherit jar dependencies added to distributed cache loaded by parent job
       Configuration conf = HBaseConfiguration.create(context.getConfiguration());
-      conf.set("mapred.job.classpath.archives",
-        context.getConfiguration().get("mapred.job.classpath.archives", ""));
+      conf.set("mapreduce.job.classpath.archives",
+        context.getConfiguration().get("mapreduce.job.classpath.archives", ""));
       conf.set("mapreduce.job.cache.archives.visibilities",
         context.getConfiguration().get("mapreduce.job.cache.archives.visibilities", ""));
 

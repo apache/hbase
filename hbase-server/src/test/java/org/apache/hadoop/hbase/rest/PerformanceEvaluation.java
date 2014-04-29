@@ -1360,7 +1360,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println();
     System.err.println(" Note: -D properties will be applied to the conf used. ");
     System.err.println("  For example: ");
-    System.err.println("   -Dmapred.output.compress=true");
+    System.err.println("   -Dmapreduce.output.fileoutputformat.compress=true");
     System.err.println("   -Dmapreduce.task.timeout=60000");
     System.err.println();
     System.err.println("Command:");

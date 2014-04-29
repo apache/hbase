@@ -76,7 +76,7 @@ public class ImportTsv extends Configured implements Tool {
   public final static String MAPPER_CONF_KEY = "importtsv.mapper.class";
   public final static String BULK_OUTPUT_CONF_KEY = "importtsv.bulk.output";
   public final static String TIMESTAMP_CONF_KEY = "importtsv.timestamp";
-  public final static String JOB_NAME_CONF_KEY = "mapred.job.name";
+  public final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
   // TODO: the rest of these configs are used exclusively by TsvImporterMapper.
   // Move them out of the tool and let the mapper handle its own validation.
   public final static String SKIP_LINES_CONF_KEY = "importtsv.skip.bad.lines";
@@ -523,8 +523,8 @@ public class ImportTsv extends Configured implements Tool {
       DEFAULT_MAPPER.getName() + "\n" +
       "  -D" + JOB_NAME_CONF_KEY + "=jobName - use the specified mapreduce job name for the import\n" +
       "For performance consider the following options:\n" +
-      "  -Dmapred.map.tasks.speculative.execution=false\n" +
-      "  -Dmapred.reduce.tasks.speculative.execution=false";
+      "  -Dmapreduce.map.speculative=false\n" +
+      "  -Dmapreduce.reduce.speculative=false";
 
     System.err.println(usage);
   }

@@ -498,7 +498,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       job.setOutputFormatClass(NullOutputFormat.class);
 
-      job.getConfiguration().setBoolean("mapred.map.tasks.speculative.execution", false);
+      job.getConfiguration().setBoolean("mapreduce.map.speculative", false);
       TableMapReduceUtil.addDependencyJars(job);
       TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
       TableMapReduceUtil.initCredentials(job);
@@ -659,7 +659,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           VerifyMapper.class, BytesWritable.class, BytesWritable.class, job);
       TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
 
-      job.getConfiguration().setBoolean("mapred.map.tasks.speculative.execution", false);
+      job.getConfiguration().setBoolean("mapreduce.map.speculative", false);
 
       job.setReducerClass(VerifyReducer.class);
       job.setOutputFormatClass(TextOutputFormat.class);

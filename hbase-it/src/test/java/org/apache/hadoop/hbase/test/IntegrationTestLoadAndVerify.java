@@ -181,7 +181,7 @@ public void cleanUpCluster() throws Exception {
       table.setWriteBufferSize(4*1024*1024);
       table.setAutoFlush(false, true);
 
-      String taskId = conf.get("mapred.task.id");
+      String taskId = conf.get("mapreduce.task.attempt.id");
       Matcher matcher = Pattern.compile(".+_m_(\\d+_\\d+)").matcher(taskId);
       if (!matcher.matches()) {
         throw new RuntimeException("Strange task ID: " + taskId);

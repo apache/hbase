@@ -167,7 +167,7 @@ public class RowCounter {
         "[--range=[startKey],[endKey]] [<column1> <column2>...]");
     System.err.println("For performance consider the following options:\n"
         + "-Dhbase.client.scanner.caching=100\n"
-        + "-Dmapred.map.tasks.speculative.execution=false");
+        + "-Dmapreduce.map.speculative=false");
   }
 
   /**

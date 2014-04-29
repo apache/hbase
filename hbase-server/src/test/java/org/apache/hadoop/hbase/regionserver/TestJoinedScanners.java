@@ -83,7 +83,7 @@ public class TestJoinedScanners {
     HBaseTestingUtility htu = new HBaseTestingUtility();
 
     final int DEFAULT_BLOCK_SIZE = 1024*1024;
-    htu.getConfiguration().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    htu.getConfiguration().setLong("dfs.blocksize", DEFAULT_BLOCK_SIZE);
     htu.getConfiguration().setInt("dfs.replication", 1);
     htu.getConfiguration().setLong("hbase.hregion.max.filesize", 322122547200L);
     MiniHBaseCluster cluster = null;

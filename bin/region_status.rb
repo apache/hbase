@@ -64,7 +64,7 @@ org.apache.log4j.Logger.getLogger("org.apache.zookeeper").setLevel(log_level)
 org.apache.log4j.Logger.getLogger("org.apache.hadoop.hbase").setLevel(log_level)
 
 config = HBaseConfiguration.create
-config.set 'fs.default.name', config.get(HConstants::HBASE_DIR)
+config.set 'fs.defaultFS', config.get(HConstants::HBASE_DIR)
 
 # wait until the master is running
 admin = nil

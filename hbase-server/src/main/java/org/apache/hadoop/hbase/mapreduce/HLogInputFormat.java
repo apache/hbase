@@ -214,7 +214,7 @@ public class HLogInputFormat extends InputFormat<HLogKey, WALEdit> {
   public List<InputSplit> getSplits(JobContext context) throws IOException,
       InterruptedException {
     Configuration conf = context.getConfiguration();
-    Path inputDir = new Path(conf.get("mapred.input.dir"));
+    Path inputDir = new Path(conf.get("mapreduce.input.fileinputformat.inputdir"));
 
     long startTime = conf.getLong(START_TIME_KEY, Long.MIN_VALUE);
     long endTime = conf.getLong(END_TIME_KEY, Long.MAX_VALUE);

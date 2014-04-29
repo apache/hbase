@@ -81,8 +81,7 @@ public class TestExportSnapshot {
     conf.setInt("hbase.client.pause", 250);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf.setBoolean("hbase.master.enabletable.roundrobin", true);
-    conf.setInt("mapreduce.map.max.attempts", 10);
-    conf.setInt("mapred.map.max.attempts", 10);
+    conf.setInt("mapreduce.map.maxattempts", 10);
   }
 
   @BeforeClass

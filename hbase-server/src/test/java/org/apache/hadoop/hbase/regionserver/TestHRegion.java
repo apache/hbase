@@ -3722,7 +3722,7 @@ public class TestHRegion {
     // a copy of all replicas -- if small block size, then blocks are spread evenly across the
     // the three nodes.  hfilev3 with tags seems to put us over the block size.  St.Ack.
     // final int DEFAULT_BLOCK_SIZE = 1024;
-    // htu.getConfiguration().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    // htu.getConfiguration().setLong("dfs.blocksize", DEFAULT_BLOCK_SIZE);
     htu.getConfiguration().setInt("dfs.replication", 2);
 
     // set up a cluster with 3 nodes
