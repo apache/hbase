@@ -489,7 +489,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.perClientRunRows = that.perClientRunRows;
       this.numClientThreads = that.numClientThreads;
       this.totalRows = that.totalRows;
-      this.modulo = that.modulo;
       this.sampleRate = that.sampleRate;
       this.tableName = that.tableName;
       this.flushCommits = that.flushCommits;
@@ -513,7 +512,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public int perClientRunRows = ROWS_PER_GB;
     public int numClientThreads = 1;
     public int totalRows = ROWS_PER_GB;
-    public int modulo = -1;
     public float sampleRate = 1.0f;
     public String tableName = TABLE_NAME;
     public boolean flushCommits = true;
@@ -686,7 +684,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(final int i) throws IOException {
-      Scan scan = new Scan(getRandomRow(this.rand, opts.modulo));
+      Scan scan = new Scan(getRandomRow(this.rand, opts.totalRows));
       FilterList list = new FilterList();
       scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
       if (opts.filterAll) {
@@ -807,7 +805,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(final int i) throws IOException {
-      Get get = new Get(getRandomRow(this.rand, opts.modulo));
+      Get get = new Get(getRandomRow(this.rand, opts.totalRows));
       get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
       if (opts.filterAll) {
         get.setFilter(new FilterAllFilter());
@@ -847,7 +845,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(final int i) throws IOException {
-      byte[] row = getRandomRow(this.rand, opts.modulo);
+      byte[] row = getRandomRow(this.rand, opts.totalRows);
       Put put = new Put(row);
       byte[] value = generateData(this.rand, VALUE_LENGTH);
       if (opts.useTags) {
@@ -1044,8 +1042,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     return b;
   }
 
-  static byte [] getRandomRow(final Random random, final int modulo) {
-    return format(random.nextInt(Integer.MAX_VALUE) % modulo);
+  static byte [] getRandomRow(final Random random, final int totalRows) {
+    return format(random.nextInt(Integer.MAX_VALUE) % totalRows);
   }
 
   static long runOneClient(final Class<? extends Test> cmd, Configuration conf, TestOptions opts,
@@ -1111,7 +1109,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" rows            Rows each client runs. Default: One million");
     System.err.println(" size            Total size in GiB. Mutually exclusive with --rows. " +
       "Default: 1.0.");
-    System.err.println(" modulo          Modulo we use dividing random. Default: Clients x rows");
     System.err.println(" sampleRate      Execute test on a sample of total " +
       "rows. Only supported by randomRead. Default: 1.0");
     System.err.println(" table           Alternate table name. Default: 'TestTable'");
@@ -1287,12 +1284,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
           continue;
         }
 
-        final String modulo = "--modulo=";
-        if (cmd.startsWith(modulo)) {
-          opts.modulo = Integer.parseInt(cmd.substring(modulo.length()));
-          continue;
-        }
-
         final String size = "--size=";
         if (cmd.startsWith(size)) {
           opts.size = Float.parseFloat(cmd.substring(size.length()));
@@ -1315,7 +1306,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
             opts.totalRows = opts.perClientRunRows * opts.numClientThreads;
             opts.size = opts.totalRows / ROWS_PER_GB;
           }
-          if (opts.modulo == DEFAULT_OPTS.modulo) opts.modulo = opts.totalRows;
           runTest(cmdClass, opts);
           errCode = 0;
           break;
