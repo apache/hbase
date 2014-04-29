@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
+import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.MurmurHash;
@@ -85,6 +86,10 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.stats.UniformSample;
 import com.yammer.metrics.stats.Snapshot;
+import org.htrace.Sampler;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
+import org.htrace.impl.ProbabilitySampler;
 
 /**
  * Script used evaluating HBase performance and scalability.  Runs a HBase
@@ -490,6 +495,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.numClientThreads = that.numClientThreads;
       this.totalRows = that.totalRows;
       this.sampleRate = that.sampleRate;
+      this.traceRate = that.traceRate;
       this.tableName = that.tableName;
       this.flushCommits = that.flushCommits;
       this.writeToWAL = that.writeToWAL;
@@ -513,6 +519,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public int numClientThreads = 1;
     public int totalRows = ROWS_PER_GB;
     public float sampleRate = 1.0f;
+    public double traceRate = 0.0;
     public String tableName = TABLE_NAME;
     public boolean flushCommits = true;
     public boolean writeToWAL = true;
@@ -521,8 +528,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public int noOfTags = 1;
     public boolean reportLatency = false;
     public int multiGet = 0;
-    boolean inMemoryCF = false;
-    int presplitRegions = 0;
+    public boolean inMemoryCF = false;
+    public int presplitRegions = 0;
     public Compression.Algorithm compression = Compression.Algorithm.NONE;
     public DataBlockEncoding blockEncoding = DataBlockEncoding.NONE;
   }
@@ -546,6 +553,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected final TestOptions opts;
 
     private final Status status;
+    private final Sampler<?> traceSampler;
+    private final SpanReceiverHost receiverHost;
     protected HConnection connection;
     protected HTableInterface table;
 
@@ -561,6 +570,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.opts = options;
       this.status = status;
       this.testName = this.getClass().getSimpleName();
+      receiverHost = SpanReceiverHost.getInstance(conf);
+      if (options.traceRate >= 1.0) {
+        this.traceSampler = Sampler.ALWAYS;
+      } else if (options.traceRate > 0.0) {
+        this.traceSampler = new ProbabilitySampler(options.traceRate);
+      } else {
+        this.traceSampler = Sampler.NEVER;
+      }
       everyN = (int) (opts.totalRows / (opts.totalRows * opts.sampleRate));
       LOG.info("Sampling 1 every " + everyN + " out of " + opts.perClientRunRows + " total rows.");
     }
@@ -597,6 +614,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
       table.close();
       connection.close();
+      receiverHost.closeReceivers();
     }
 
     /*
@@ -625,7 +643,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       for (int i = opts.startRow; i < lastRow; i++) {
         if (i % everyN != 0) continue;
         long startTime = System.nanoTime();
-        testRow(i);
+        TraceScope scope = Trace.startSpan("test row", traceSampler);
+        try {
+          testRow(i);
+        } finally {
+          scope.close();
+        }
         latency.update((System.nanoTime() - startTime) / 1000);
         if (status != null && i > 0 && (i % getReportingPeriod()) == 0) {
           status.setStatus(generateStatus(opts.startRow, i, lastRow));
@@ -1111,6 +1134,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       "Default: 1.0.");
     System.err.println(" sampleRate      Execute test on a sample of total " +
       "rows. Only supported by randomRead. Default: 1.0");
+    System.err.println(" traceRate       Enable HTrace spans. Initiate tracing every N rows. " +
+      "Default: 0");
     System.err.println(" table           Alternate table name. Default: 'TestTable'");
     System.err.println(" compress        Compression type to use (GZ, LZO, ...). Default: 'NONE'");
     System.err.println(" flushCommits    Used to determine if the test should flush the table. " +
@@ -1203,6 +1228,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         final String sampleRate = "--sampleRate=";
         if (cmd.startsWith(sampleRate)) {
           opts.sampleRate = Float.parseFloat(cmd.substring(sampleRate.length()));
+          continue;
+        }
+
+        final String traceRate = "--traceRate=";
+        if (cmd.startsWith(traceRate)) {
+          opts.traceRate = Double.parseDouble(cmd.substring(traceRate.length()));
           continue;
         }
 
