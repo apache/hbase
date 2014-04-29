@@ -672,7 +672,7 @@ htable.close();</programlisting></para>
 <para>Since Hadoop 1.0.0 (also 0.22.1, 0.23.1, CDH3u3 and HDP 1.0) via
 <link xlink:href="https://issues.apache.org/jira/browse/HDFS-2246">HDFS-2246</link>,
 it is possible for the DFSClient to take a "short circuit" and
-read directly from disk instead of going through the DataNode when the
+read directly from the disk instead of going through the DataNode when the
 data is local. What this means for HBase is that the RegionServers can
 read directly off their machine's disks instead of having to open a
 socket to talk to the DataNode, the former being generally much
@@ -686,9 +686,8 @@ more discussion around short circuit reads.
     See <link xlink:href="http://blog.cloudera.com/blog/2013/08/how-improved-short-circuit-local-reads-bring-better-performance-and-security-to-hadoop/"></link> for details
     on the difference between the old and new implementations.  See
     <link xlink:href="http://archive.cloudera.com/cdh4/cdh/4/hadoop/hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html">Hadoop shortcircuit reads configuration page</link>
-    for how to enable the later version of shortcircuit.
-</para>
-<para>If you are running on an old Hadoop, one that is without
+    for how to enable the latter, better version of shortcircuit.
+<footnote><para>If you are running on an old Hadoop, one that is without
     <link xlink:href="https://issues.apache.org/jira/browse/HDFS-347">HDFS-347</link> but that
     has
 <link xlink:href="https://issues.apache.org/jira/browse/HDFS-2246">HDFS-2246</link>,
@@ -698,21 +697,19 @@ the property  <varname>dfs.block.local-path-access.user</varname>
 to be the <emphasis>only</emphasis> user that can use the shortcut.
 This has to be the user that started HBase.  Then in hbase-site.xml,
 set <varname>dfs.client.read.shortcircuit</varname> to be <varname>true</varname>
+</para></footnote>
 </para>
 <para>
-    For optimal performance when short-circuit reads are enabled, it is recommended that HDFS checksums are disabled.
-    To maintain data integrity with HDFS checksums disabled, HBase can be configured to write its own checksums into
-    its datablocks and verify against these. See <xref linkend="hbase.regionserver.checksum.verify" />. When both
-    local short-circuit reads and hbase level checksums are enabled, you SHOULD NOT disable configuration parameter
-    "dfs.client.read.shortcircuit.skip.checksum", which will cause skipping checksum on non-hfile reads. HBase already
-    manages that setting under the covers.
+    With short-circuit enabled, for more speed-up, it is recommended that you have HBase do the checksum validation. HBase writes
+    checksums inline with the data whereas HDFS keeps checksums in a separate file that it must seek independent of
+    the data file. Set <xref linkend="hbase.regionserver.checksum.verify" /> to have HBase do checksum validation.
+    While you might think it safe to set the HDFS configuration parameter "dfs.client.read.shortcircuit.skip.checksum",
+    you should NOT; HBase checksum validation covers hfiles only, not WAL files and if the HBase checksum validation fails,
+    we will fall back on HDFS's.
 </para>
 <para>
-The DataNodes need to be restarted in order to pick up the new
-configuration. Be aware that if a process started under another
-username than the one configured here also has the shortcircuit
-enabled, it will get an Exception regarding an unauthorized access but
-the data will still be read.
+Services -- at least the HBase RegionServers -- will need to be restarted in order to pick up the new
+configurations.
 </para>
 <note xml:id="dfs.client.read.shortcircuit.buffer.size">
     <title>dfs.client.read.shortcircuit.buffer.size</title>
