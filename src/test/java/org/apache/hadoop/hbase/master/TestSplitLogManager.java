@@ -94,7 +94,7 @@ public class TestSplitLogManager {
    * Additional amount of time we wait for events to happen. Added where unit
    * test failures have been observed.
    */
-  private static final int EXTRA_TOLERANCE_MS = 200;
+  private static final int EXTRA_TOLERANCE_MS = 2000;
 
   private Stoppable stopper = new Stoppable() {
     @Override
