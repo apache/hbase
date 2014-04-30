@@ -22,13 +22,22 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import com.google.common.net.HostAndPort;
+import com.google.common.net.InetAddresses;
+import com.google.common.net.InternetDomainName;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
@@ -65,9 +74,8 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
    */
   static final String SERVERNAME_SEPARATOR = ",";
 
-  private static final Pattern SERVER_NAME_RE = Pattern.compile(
-      "^[0-9a-zA-Z.-]+" + SERVERNAME_SEPARATOR +
-      "[0-9]{1," + String.valueOf(0xffff).length() + "}" + SERVERNAME_SEPARATOR +
+  // RE to match startcode, hostname and port will be parsed by HostAndPort and InternetDomainName
+  private static final Pattern SERVER_START_CODE_RE = Pattern.compile(
       "-?[0-9]{1," + String.valueOf(Long.MAX_VALUE).length() + "}");
 
   private HServerAddress serverAddress;
@@ -231,7 +239,8 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
   public static synchronized String getServerName(final String hostAndPort,
       final long startcode) {
-    int index = hostAndPort.indexOf(":");
+    // use lastIndexOf to comply with IPv6 addresses
+    int index = hostAndPort.lastIndexOf(":");
     if (index <= 0) throw new IllegalArgumentException("Expected <hostname> ':' <port>");
     return getServerName(hostAndPort.substring(0, index),
       Integer.parseInt(hostAndPort.substring(index + 1)), startcode);
@@ -376,11 +385,95 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   }
 
   public static boolean isValidServerName(String serverName) {
-    return SERVER_NAME_RE.matcher(serverName).matches();
+    String[] parts = serverName.split(SERVERNAME_SEPARATOR);
+    if (parts.length == 3 && isValidHostAndPort(parts[0] + ":" + parts[1])) {
+      // check the other parts
+      return SERVER_START_CODE_RE.matcher(parts[2]).matches();
+    }
+    return false;
+  }
+
+  public static boolean isValidHostAndPort(String hostPort) {
+    try {
+      int portIndex = hostPort.lastIndexOf(":");
+      // HostAndPort.fromString will treat multiple ":" as host-only string
+      // need to separate port number and use HostAndPort.fromParts
+      HostAndPort hostAndPort = HostAndPort.fromParts(hostPort.substring(0, portIndex),
+          Integer.valueOf(hostPort.substring(portIndex+1)));
+      // HostAndPort will guarantee port validity
+      // check hostname sanity
+      try {
+        String hostname = hostAndPort.getHostText();
+        // chop off zone index part b/c InetAddresses does not parse that
+        if (hostname.contains("%")) {
+          hostname = hostname.substring(0, hostname.indexOf("%"));
+        }
+        InetAddresses.forString(hostname);
+      } catch (IllegalArgumentException e) {
+        // not an ip string
+        try {
+          // not using HostSpecifier because it requires a public suffix
+          InternetDomainName.from(hostAndPort.getHostText());
+        } catch (IllegalArgumentException e1) {
+          return false;
+        }
+      } catch (Exception e) {
+        return false;
+      }
+    } catch (Exception e) {
+      return false;
+    }
+    return true;
   }
 
   public static HServerAddress getAddress(HServerInfo hsi) {
     return hsi != null ? hsi.getServerAddress() : null;
   }
 
+  /**
+   * If the serverName represents the local machine and
+   *    there is an global ipv6 address for the host
+   * return the global ipv6 address
+   * otherwise return the serverName itself
+   * @param serverName
+   * @return
+   * @throws SocketException
+   */
+  public static String getIPv6AddrIfLocalMachine(String serverName) throws SocketException {
+    // if it is null or already an IPv6 address, return it
+    if (serverName == null || serverName.contains(":")) {
+      return serverName;
+    }
+    // For all nics get all hostnames and IPs
+    List<String> ips = new ArrayList<String>();
+    List<String> ip6s = new ArrayList<String>();
+    Enumeration<?> nics = NetworkInterface.getNetworkInterfaces();
+    while(nics.hasMoreElements()) {
+      Enumeration<?> rawAdrs =
+        ((NetworkInterface)nics.nextElement()).getInetAddresses();
+      while(rawAdrs.hasMoreElements()) {
+        InetAddress inet = (InetAddress) rawAdrs.nextElement();
+        ips.add(inet.getHostName());
+        String hostAddr = inet.getHostAddress();
+        ips.add(hostAddr);
+        // Record global IPv6 address
+        if (hostAddr.contains(":") && !inet.isLinkLocalAddress()) {
+          if (hostAddr.contains("%")) {
+            ips.add(hostAddr.substring(0, hostAddr.indexOf("%")));
+            ip6s.add(hostAddr.substring(0, hostAddr.indexOf("%")));
+          } else {
+            ip6s.add(hostAddr);
+          }
+        }
+      }
+    }
+    // if on local machine and has global ipv6 address,
+    // use IPv6 address
+    if (!ip6s.isEmpty() &&
+      (serverName.equals("localhost") || ips.contains(serverName))) {
+      return ip6s.get(0);
+    }
+    // return the original serverName
+    return serverName;
+  }
 }

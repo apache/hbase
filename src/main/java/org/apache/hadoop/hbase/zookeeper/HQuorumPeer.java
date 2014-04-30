@@ -37,6 +37,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -71,7 +72,7 @@ public class HQuorumPeer {
     try {
       Properties zkProperties = makeZKProps(conf);
       writeMyID(zkProperties);
-      QuorumPeerConfig zkConfig = new QuorumPeerConfig();
+      HQuorumPeerConfig zkConfig = new HQuorumPeerConfig();
       zkConfig.parseProperties(zkProperties);
       runZKServer(zkConfig);
     } catch (Exception e) {
@@ -93,7 +94,9 @@ public class HQuorumPeer {
   }
 
   private static boolean addressIsLocalHost(String address) {
-    return address.equals("localhost") || address.equals("127.0.0.1");
+    // localhost address for IPv4 and IPv6 addresses
+    return address.equals("localhost") || address.equals("127.0.0.1") ||
+        address.equals("localhost6") || address.equals("::1");
   }
 
   static void writeMyID(Properties properties) throws IOException {
@@ -119,7 +122,12 @@ public class HQuorumPeer {
       while(rawAdrs.hasMoreElements()) {
         InetAddress inet = (InetAddress) rawAdrs.nextElement();
         ips.add(StringUtils.simpleHostname(inet.getHostName()));
-        ips.add(inet.getHostAddress());
+        String hostAddr = inet.getHostAddress();
+        ips.add(hostAddr);
+        // Add the global IPv6 address without the scope id part
+        if (hostAddr.contains(":") && hostAddr.contains("%")) {
+          ips.add(hostAddr.substring(0, hostAddr.indexOf("%")));
+        }
       }
     }
 
@@ -129,8 +137,24 @@ public class HQuorumPeer {
       if (key.startsWith("server.")) {
         int dot = key.indexOf('.');
         long id = Long.parseLong(key.substring(dot + 1));
-        String[] parts = value.split(":");
+        /* According to trunk version of QuorumPeerConfig$parseProperties
+         * Treat an address contained with [ ] as an IPv6 address if it
+         * contains only hex digits and colons. IPv6 addresses will
+         * recognized only if specified in this format.
+         */
+        boolean ipv6 = value.matches("\\[[0-9a-fA-F:]*\\].*");
+        String parts[];
+        if (ipv6) {
+          String blocks[] = value.split("]");
+          String ipv6Address = blocks[0].substring(1);
+          parts = blocks[1].split(":");
+          // The first element in "parts" should be the IP address.
+          parts[0] = ipv6Address;
+        } else {
+          parts = value.split(":");
+        }
         String address = parts[0];
+
         if (addressIsLocalHost(address) || ips.contains(address)) {
           myId = id;
           break;
@@ -165,7 +189,7 @@ public class HQuorumPeer {
    * @param conf Configuration to read from.
    * @return Properties holding mappings representing ZooKeeper zoo.cfg file.
    */
-  public static Properties makeZKProps(Configuration conf) {
+  public static Properties makeZKProps(Configuration conf) throws SocketException {
     // First check if there is a zoo.cfg in the CLASSPATH. If so, simply read
     // it and grab its configuration properties.
     ClassLoader cl = HQuorumPeer.class.getClassLoader();
@@ -240,7 +264,25 @@ public class HQuorumPeer {
         clientPort = value;
       }
       else if (key.startsWith("server.")) {
-        String host = value.substring(0, value.indexOf(':'));
+        /* According to trunk version of QuorumPeerConfig$parseProperties
+         * Treat an address contained with [ ] as an IPv6 address if it
+         * contains only hex digits and colons. IPv6 addresses will
+         * recognized only if specified in this format.
+         */
+        boolean ipv6 = value.matches("\\[[0-9a-fA-F:]*\\].*");
+        String parts[];
+        if (ipv6) {
+          String blocks[] = value.split("]");
+          String ipv6Address = blocks[0].substring(1);
+          parts = blocks[1].split(":");
+          // The first element in "parts" should be the IP address.
+          // enclose with brackets
+          parts[0] = "[" + ipv6Address + "]";
+        } else {
+          parts = value.split(":");
+        }
+
+        String host = parts[0];
         servers.add(host);
         try {
           //noinspection ResultOfMethodCallIgnored

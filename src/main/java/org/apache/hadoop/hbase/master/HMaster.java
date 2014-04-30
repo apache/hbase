@@ -29,6 +29,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -263,6 +264,9 @@ public class HMaster extends HasThread implements HMasterInterface,
 
   private long schemaChangeTryLockTimeoutMs;
 
+  /** Configuration variable to prefer IPv6 address for HMaster */
+  public static final String HMASTER_PREFER_IPV6_Address = "hmaster.prefer.ipv6.address";
+
   /**
    * Constructor
    * @param conf configuration
@@ -273,7 +277,7 @@ public class HMaster extends HasThread implements HMasterInterface,
 
     // Get my address. So what's the difference between the temp a and address?
     // address.toString() will always produce an IP address as the hostname.
-    // a.toStrng() can have the canonical-name of the host as the hostname.
+    // a.toString() can have the canonical-name of the host as the hostname.
     // If the configured master port is 0, then a will bind it to an
     // ephemeral port first by starting the rpc server.
     HServerAddress a = new HServerAddress(getMyAddress(this.conf));
@@ -459,7 +463,7 @@ public class HMaster extends HasThread implements HMasterInterface,
   /**
    * @return true if successfully became primary master
    */
-  private boolean waitToBecomePrimary() {
+  private boolean waitToBecomePrimary() throws SocketException {
     if (!this.zkMasterAddressWatcher.writeAddressToZooKeeper(this.address,
         true)) {
       LOG.info("Failed to write master address to ZooKeeper, not starting (" +
@@ -661,10 +665,14 @@ public class HMaster extends HasThread implements HMasterInterface,
    * @throws UnknownHostException
    */
   private static String getMyAddress(final Configuration c)
-  throws UnknownHostException {
+    throws UnknownHostException, SocketException {
     // Find out our address up in DNS.
     String s = DNS.getDefaultHost(c.get("hbase.master.dns.interface","default"),
       c.get("hbase.master.dns.nameserver","default"));
+    if (preferIpv6AddressForMaster(c)) {
+      // Use IPv6 address if possible.
+      s = HServerInfo.getIPv6AddrIfLocalMachine(s);
+    }
     s += ":" + c.get(HConstants.MASTER_PORT,
         Integer.toString(HConstants.DEFAULT_MASTER_PORT));
     return s;
@@ -796,8 +804,13 @@ public class HMaster extends HasThread implements HMasterInterface,
   /** Main processing loop */
   @Override
   public void run() {
-    if (!waitToBecomePrimary()) {
-      LOG.info("Failed to become primary -- not starting");
+    try {
+      if (!waitToBecomePrimary()) {
+        LOG.error("Failed to become primary -- not starting");
+        return;
+      }
+    } catch (SocketException e) {
+      LOG.error(e);
       return;
     }
 
@@ -2433,6 +2446,14 @@ public class HMaster extends HasThread implements HMasterInterface,
 
   @Override
   public void close() throws Exception {
+  }
+
+  /**
+   * @param conf
+   * @return true if the hmaster.prefer.ipv6.address is set
+   */
+  public static boolean preferIpv6AddressForMaster(Configuration conf) {
+    return conf != null ? conf.getBoolean(HMASTER_PREFER_IPV6_Address, false) : false;
   }
 }
 

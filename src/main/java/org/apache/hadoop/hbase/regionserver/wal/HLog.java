@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.util.RuntimeExceptionAbortStrategy;
 import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -1852,7 +1853,8 @@ public class HLog implements Syncable {
   public static String getHLogDirectoryName(String serverName) {
     StringBuilder dirName = new StringBuilder(HConstants.HREGION_LOGDIR_NAME);
     dirName.append("/");
-    dirName.append(serverName);
+    // replace ":" with "%3A"
+    dirName.append(serverName.replace(":", "%3A"));
     return dirName.toString();
   }
 

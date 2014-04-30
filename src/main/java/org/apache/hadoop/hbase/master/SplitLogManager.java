@@ -133,7 +133,7 @@ public class SplitLogManager implements Watcher {
       @Override
       public Status finish(String workerName, String logfile) {
         String tmpname =
-          ZKSplitLog.getSplitLogDirTmpComponent(workerName, logfile);
+          ZKSplitLog.getSplitLogDirTmpComponent(ZKSplitLog.encode(workerName), logfile);
         try {
           HLogSplitter.moveRecoveredEditsFromTemp(tmpname, logfile, conf);
         } catch (IOException e) {

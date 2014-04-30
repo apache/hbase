@@ -70,6 +70,7 @@ import org.apache.zookeeper.Watcher;
  *    ...
  * </pre>
  */
+@Deprecated
 public class ReplicationZookeeperWrapper {
 
   private static final Log LOG =

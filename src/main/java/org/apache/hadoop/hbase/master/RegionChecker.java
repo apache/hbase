@@ -12,6 +12,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -65,7 +66,7 @@ public class RegionChecker {
     return regionCheckerEnabled;
   }
 
-  public RegionChecker(final HMaster master) {
+  public RegionChecker(final HMaster master) throws SocketException {
     Configuration conf = master.getConfiguration();
     this.regionCheckerEnabled = conf.getBoolean(HConstants.REGION_CHECKER_ENABLED, HConstants.DEFAULT_REGION_CHECKER_ENABLED);
     this.master = master;

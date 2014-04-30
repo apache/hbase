@@ -37,6 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -68,7 +69,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
 
   private static void assertHostPort(String rsName) {
     assertTrue(rsName + " is not a valid host:port pair",
-        ServerManager.HOST_PORT_RE.matcher(rsName).matches());
+        HServerInfo.isValidHostAndPort(rsName));
   }
 
   private static final byte[] TABLE_NAME = Bytes.toBytes("TestRegionState");

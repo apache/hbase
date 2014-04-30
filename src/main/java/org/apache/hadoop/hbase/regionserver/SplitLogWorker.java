@@ -155,7 +155,7 @@ public class SplitLogWorker implements Runnable, Watcher {
             return Status.ERR;
           }
           String tmpname = ZKSplitLog.getSplitLogDirTmpComponent(
-              workerName, filename);
+              ZKSplitLog.encode(workerName), filename);
           if (!HLogSplitter.splitLogFileToTemp(rootdir, tmpname,
               st, fs, conf, p, logCloseThreadPool, masterRef.get())) {
 

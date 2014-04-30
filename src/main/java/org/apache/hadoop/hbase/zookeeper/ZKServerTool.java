@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 
+import java.net.SocketException;
 import java.util.Map.Entry;
 import java.util.Properties;
 
@@ -36,7 +37,7 @@ public class ZKServerTool {
    * Run the tool.
    * @param args Command line arguments. First arg is path to zookeepers file.
    */
-  public static void main(String args[]) {
+  public static void main(String args[]) throws SocketException {
     Configuration conf = HBaseConfiguration.create();
     // Note that we do not simply grab the property
     // HConstants.ZOOKEEPER_QUORUM from the HBaseConfiguration because the
@@ -46,7 +47,23 @@ public class ZKServerTool {
       String key = entry.getKey().toString().trim();
       String value = entry.getValue().toString().trim();
       if (key.startsWith("server.")) {
-        String[] parts = value.split(":");
+        /* According to QuorumPeerConfig$parseProperties
+         * Treat an address contained with [ ] as an IPv6 address if it
+         * contains only hex digits and colons. IPv6 addresses will
+         * recognized only if specified in this format.
+         */
+        boolean ipv6 = value.matches("\\[[0-9a-fA-F:]*\\].*");
+        String parts[];
+        if (ipv6) {
+          String blocks[] = value.split("]");
+          String ipv6Address = blocks[0].substring(1);
+          parts = blocks[1].split(":");
+          // The first element in "parts" should be the IP address.
+          parts[0] = ipv6Address;
+        } else {
+          parts = value.split(":");
+        }
+
         String host = parts[0];
         System.out.println(host);
       }

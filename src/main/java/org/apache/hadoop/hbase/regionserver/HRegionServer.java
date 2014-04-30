@@ -424,6 +424,10 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
   // It should always be 0 in production environment!
   public static volatile long openRegionDelay = 0;
 
+  /** Configuration variable to prefer IPv6 address for HRegionServer */
+  public static final String HREGIONSERVER_PREFER_IPV6_Address =
+    "hregionserver.prefer.ipv6.address";
+
   /**
    * Starts a HRegionServer at the default location. This should be followed
    * by a call to the initialize() method on the HRegionServer object, to start
@@ -435,9 +439,15 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
   public HRegionServer(Configuration conf) throws IOException {
     LOG.debug("Region server configured with ZK client port "
         + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT));
-    machineName = DNS.getDefaultHost(
+    String defaultHost = DNS.getDefaultHost(
         conf.get("hbase.regionserver.dns.interface","default"),
         conf.get("hbase.regionserver.dns.nameserver","default"));
+    if (preferIpv6AddressForRegionServer(conf)) {
+      // Use IPv6 address for HRegionServer.
+      machineName = HServerInfo.getIPv6AddrIfLocalMachine(defaultHost);
+    } else {
+      machineName = defaultHost;
+    }
     String addressStr = machineName + ":" +
       conf.get(HConstants.REGIONSERVER_PORT,
           Integer.toString(HConstants.DEFAULT_REGIONSERVER_PORT));
@@ -4197,5 +4207,13 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
   @Override
   public void requestCompaction(HRegionIf r, String why) {
     this.compactSplitThread.requestCompaction((HRegion) r, why);
+  }
+
+  /**
+   * @param conf
+   * @return true if the hregionserver.prefer.ipv6.address is set
+   */
+  public static boolean preferIpv6AddressForRegionServer(Configuration conf) {
+    return conf != null ? conf.getBoolean(HREGIONSERVER_PREFER_IPV6_Address, false) : false;
   }
 }

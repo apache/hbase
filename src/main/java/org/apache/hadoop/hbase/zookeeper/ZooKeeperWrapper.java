@@ -28,14 +28,18 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
+import java.net.SocketException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -187,7 +191,8 @@ public class ZooKeeperWrapper implements Watcher {
   }
 
   // return the singleton given the name of the instance
-  public static ZooKeeperWrapper getInstance(Configuration conf, String name) {
+  public static ZooKeeperWrapper getInstance(Configuration conf, String name)
+    throws SocketException {
     name = getZookeeperClusterKey(conf, name);
     return INSTANCES.get(currentNamespaceForTesting + name);
   }
@@ -1206,7 +1211,7 @@ public class ZooKeeperWrapper implements Watcher {
    * @param conf Configuration to use to build the key
    * @return ensemble key without a name
    */
-  public static String getZookeeperClusterKey(Configuration conf) {
+  public static String getZookeeperClusterKey(Configuration conf) throws SocketException {
     return getZookeeperClusterKey(conf, null);
   }
 
@@ -1217,7 +1222,8 @@ public class ZooKeeperWrapper implements Watcher {
    * @param name Name that should be appended at the end if not empty or null
    * @return ensemble key with a name (if any)
    */
-  public static String getZookeeperClusterKey(Configuration conf, String name) {
+  public static String getZookeeperClusterKey(Configuration conf, String name)
+    throws SocketException {
     String quorum = conf.get(HConstants.ZOOKEEPER_QUORUM.replaceAll(
         "[\\t\\n\\x0B\\f\\r]", ""));
     StringBuilder builder = new StringBuilder(quorum);

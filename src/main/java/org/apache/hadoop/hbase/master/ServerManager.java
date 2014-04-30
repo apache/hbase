@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,7 +33,6 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -68,9 +68,6 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 public class ServerManager implements ConfigurationObserver {
   private static final Log LOG =
     LogFactory.getLog(ServerManager.class.getName());
-
-  public static final Pattern HOST_PORT_RE =
-      Pattern.compile("^[0-9a-zA-Z-_.]+:[0-9]{1,5}$");
 
   private final AtomicInteger quiescedServers = new AtomicInteger(0);
 
@@ -209,7 +206,7 @@ public class ServerManager implements ConfigurationObserver {
    * Constructor.
    * @param master
    */
-  public ServerManager(HMaster master) {
+  public ServerManager(HMaster master) throws SocketException {
     this.master = master;
     Configuration c = master.getConfiguration();
     this.nobalancingCount = c.getInt("hbase.regions.nobalancing.count", 4);
@@ -1193,7 +1190,7 @@ public class ServerManager implements ConfigurationObserver {
   }
 
   public static void blacklistRSHostPort(String hostPort) {
-    if (!HOST_PORT_RE.matcher(hostPort).matches()) {
+    if (!HServerInfo.isValidHostAndPort(hostPort)) {
       throw new IllegalArgumentException("host:port pair expected but got " +
           hostPort);
     }

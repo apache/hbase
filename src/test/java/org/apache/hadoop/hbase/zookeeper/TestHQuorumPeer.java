@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.net.SocketException;
 import java.util.Map;
 import java.util.Properties;
 
@@ -29,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
 
 /**
@@ -63,7 +63,7 @@ public class TestHQuorumPeer extends HBaseTestCase {
   }
 
   /** */
-  public void testMakeZKProps() {
+  public void testMakeZKProps() throws SocketException {
     Properties properties = HQuorumPeer.makeZKProps(conf);
     assertEquals(dataDir.toString(), properties.get("dataDir"));
     assertEquals(Integer.valueOf(21810), Integer.valueOf(properties.getProperty("clientPort")));
@@ -71,14 +71,16 @@ public class TestHQuorumPeer extends HBaseTestCase {
     assertEquals(null, properties.get("server.1"));
 
     String oldValue = conf.get(HConstants.ZOOKEEPER_QUORUM);
-    conf.set(HConstants.ZOOKEEPER_QUORUM, "a.foo.bar,b.foo.bar,c.foo.bar");
+    conf.set(HConstants.ZOOKEEPER_QUORUM, "a.foo.bar,b.foo.bar,c.foo.bar," +
+               "[2620::1cfe:b:7ec3:a1ff:fe86:5c5e]");
     properties = HQuorumPeer.makeZKProps(conf);
     assertEquals(dataDir.toString(), properties.get("dataDir"));
     assertEquals(Integer.valueOf(21810), Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("a.foo.bar:2888:3888", properties.get("server.0"));
     assertEquals("b.foo.bar:2888:3888", properties.get("server.1"));
     assertEquals("c.foo.bar:2888:3888", properties.get("server.2"));
-    assertEquals(null, properties.get("server.3"));
+    assertEquals("[2620::1cfe:b:7ec3:a1ff:fe86:5c5e]:2888:3888", properties.get("server.3"));
+    assertEquals(null, properties.get("server.4"));
     conf.set(HConstants.ZOOKEEPER_QUORUM, oldValue);
   }
 
@@ -91,7 +93,8 @@ public class TestHQuorumPeer extends HBaseTestCase {
       "syncLimit=2\n" +
       "server.0=${hbase.master.hostname}:2888:3888\n" +
       "server.1=server1:2888:3888\n" +
-      "server.2=server2:2888:3888\n";
+      "server.2=server2:2888:3888\n" +
+      "server.3=[2620::1cfe:b:7ec3:a1ff:fe86:5c5e]:2888:3888\n";
 
     System.setProperty("hbase.master.hostname", "localhost");
     InputStream is = new ByteArrayInputStream(s.getBytes());
@@ -104,13 +107,13 @@ public class TestHQuorumPeer extends HBaseTestCase {
     assertEquals("localhost:2888:3888", properties.get("server.0"));
     
     HQuorumPeer.writeMyID(properties);
-    QuorumPeerConfig config = new QuorumPeerConfig();
+    HQuorumPeerConfig config = new HQuorumPeerConfig();
     config.parseProperties(properties);
 
     assertEquals(dataDir.toString(), config.getDataDir());
     assertEquals(2181, config.getClientPortAddress().getPort());
     Map<Long,QuorumServer> servers = config.getServers();
-    assertEquals(3, servers.size());
+    assertEquals(4, servers.size());
     assertTrue(servers.containsKey(Long.valueOf(0)));
     QuorumServer server = servers.get(Long.valueOf(0));
     assertEquals("localhost", server.addr.getHostName());
@@ -131,7 +134,7 @@ public class TestHQuorumPeer extends HBaseTestCase {
   /**
    * Test Case for HBASE-2305
    */
-  public void testShouldAssignDefaultZookeeperClientPort() {
+  public void testShouldAssignDefaultZookeeperClientPort() throws SocketException {
     Configuration config = HBaseConfiguration.create();
     config.clear();
     Properties p = HQuorumPeer.makeZKProps(config);

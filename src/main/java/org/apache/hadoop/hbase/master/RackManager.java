@@ -10,27 +10,28 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.apache.hadoop.net.IPv4AddressTruncationMapping;
+import org.apache.hadoop.net.IPv6AddressTruncationMapping;
 
 public class RackManager {
   static final Log LOG = LogFactory.getLog(RackManager.class);
   private DNSToSwitchMapping switchMapping;
   
   public RackManager(Configuration conf) {
+    // using IPv6AddressTruncationMapping instead to handle both IPv4 and IPv6 addresses
     Class<DNSToSwitchMapping> clz = (Class<DNSToSwitchMapping>)
         conf.getClass("hbase.util.ip.to.rack.determiner",
-        IPv4AddressTruncationMapping.class);
+        IPv6AddressTruncationMapping.class);
     try {
       switchMapping = clz.newInstance();
     } catch (InstantiationException e) {
-      LOG.warn("using IPv4AddressTruncationMapping, failed to instantiate " +
+      LOG.warn("using IPv6AddressTruncationMapping, failed to instantiate " +
           clz.getName(), e);
     } catch (IllegalAccessException e) {
-      LOG.warn("using IPv4AddressTruncationMapping, failed to instantiate " +
+      LOG.warn("using IPv6AddressTruncationMapping, failed to instantiate " +
           clz.getName(), e);
     }
     if (switchMapping == null) {
-      switchMapping = new IPv4AddressTruncationMapping();
+      switchMapping = new IPv6AddressTruncationMapping();
     }
   }
 

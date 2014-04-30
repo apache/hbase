@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Implementation of a log cleaner that checks if a log is still scheduled for
  * replication before deleting it when its TTL is over.
  */
+@Deprecated
 public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
 
   private static final Log LOG =

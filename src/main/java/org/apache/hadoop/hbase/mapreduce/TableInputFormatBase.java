@@ -333,7 +333,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   }
 
   private static String reverseDNS(InetAddress ipAddress)
-    throws UnknownHostException {
+      throws UnknownHostException {
     String hostName = reverseDNSCacheMap.get(ipAddress);
     if (hostName == null) {
       // DNS.reverseDns(ipAddress, nameServer) is abandoned
