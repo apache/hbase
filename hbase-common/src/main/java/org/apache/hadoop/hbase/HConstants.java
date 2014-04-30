@@ -312,6 +312,16 @@ public final class HConstants {
   public static final long DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024L;
 
   /**
+   * Max size of single row for Get's or Scan's without in-row scanning flag set.
+   */
+  public static final String TABLE_MAX_ROWSIZE_KEY = "hbase.table.max.rowsize";
+
+  /**
+   * Default max row size (1 Gb).
+   */
+  public static final long TABLE_MAX_ROWSIZE_DEFAULT = 1024 * 1024 * 1024L;
+
+  /**
    * The max number of threads used for opening and closing stores or store
    * files in parallel
    */

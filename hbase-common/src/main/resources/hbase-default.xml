@@ -897,6 +897,15 @@ possible configurations would overwhelm and obscure the important.
     state.</description>
   </property>
   <property>
+    <name>hbase.table.max.rowsize</name>
+    <value>1073741824</value>
+    <description>
+      Maximum size of single row in bytes (default is 1 Gb) for Get'ting
+      or Scan'ning without in-row scan flag set. If row size exceeds this limit
+      RowTooBigException is thrown to client.
+    </description>
+  </property>
+  <property>
     <name>hbase.thrift.minWorkerThreads</name>
     <value>16</value>
     <description>The "core size" of the thread pool. New threads are created on every

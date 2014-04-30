@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -76,6 +77,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected final NavigableSet<byte[]> columns;
   protected final long oldestUnexpiredTS;
   protected final int minVersions;
+  protected final long maxRowSize;
 
   /**
    * The number of KVs seen by the scanner. Includes explicitly skipped KVs, but not
@@ -122,6 +124,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this.columns = columns;
     oldestUnexpiredTS = EnvironmentEdgeManager.currentTimeMillis() - ttl;
     this.minVersions = minVersions;
+
+    if (store != null && ((HStore)store).getHRegion() != null
+        && ((HStore)store).getHRegion().getBaseConf() != null) {
+      this.maxRowSize = ((HStore) store).getHRegion().getBaseConf().getLong(
+        HConstants.TABLE_MAX_ROWSIZE_KEY, HConstants.TABLE_MAX_ROWSIZE_DEFAULT);
+    } else {
+      this.maxRowSize = HConstants.TABLE_MAX_ROWSIZE_DEFAULT;
+    }
 
     // We look up row-column Bloom filters for multi-column queries as part of
     // the seek operation. However, we also look the row-column Bloom filter
@@ -313,8 +323,17 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       }
     } else {
       if (!isParallelSeek) {
+        long totalScannersSoughtBytes = 0;
         for (KeyValueScanner scanner : scanners) {
+          if (totalScannersSoughtBytes >= maxRowSize) {
+            throw new RowTooBigException("Max row size allowed: " + maxRowSize
+              + ", but row is bigger than that");
+          }
           scanner.seek(seekKey);
+          Cell c = scanner.peek();
+          if (c != null ) {
+            totalScannersSoughtBytes += CellUtil.estimatedSizeOf(c);
+          }
         }
       } else {
         parallelSeek(scanners, seekKey);
@@ -461,6 +480,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         store != null ? store.getComparator() : null;
 
     int count = 0;
+    long totalBytesRead = 0;
+
     LOOP: while((cell = this.heap.peek()) != null) {
       if (prevCell != cell) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
       checkScanOrder(prevCell, cell, comparator);
@@ -494,6 +515,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           if (this.countPerRow > storeOffset) {
             outResult.add(cell);
             count++;
+            totalBytesRead += CellUtil.estimatedSizeOf(cell);
+            if (totalBytesRead > maxRowSize) {
+              throw new RowTooBigException("Max row size allowed: " + maxRowSize
+              + ", but the row is bigger than that.");
+            }
           }
 
           if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
