@@ -341,8 +341,8 @@ public class Store extends SchemaConfigured implements HeapSize {
   /**
    * @return The maximum sequence id in all store files.
    */
-  long getMaxSequenceId(boolean includeBulkFiles) {
-    return StoreFile.getMaxSequenceIdInList(this.getStorefiles(), includeBulkFiles);
+  long getMaxSequenceId() {
+    return StoreFile.getMaxSequenceIdInList(this.getStorefiles());
   }
 
   /**
@@ -1145,7 +1145,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
 
     // Max-sequenceID is the last key in the files we're compacting
-    long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact, true);
+    long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact);
 
     // Ready to go. Have list of files to compact.
     LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
@@ -1213,7 +1213,7 @@ public class Store extends SchemaConfigured implements HeapSize {
         }
 
         filesToCompact = filesToCompact.subList(count - N, count);
-        maxId = StoreFile.getMaxSequenceIdInList(filesToCompact, true);
+        maxId = StoreFile.getMaxSequenceIdInList(filesToCompact);
         isMajor = (filesToCompact.size() == storefiles.size());
         filesCompacting.addAll(filesToCompact);
         Collections.sort(filesCompacting, StoreFile.Comparators.SEQ_ID);

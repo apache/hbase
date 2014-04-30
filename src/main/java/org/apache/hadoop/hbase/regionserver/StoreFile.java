@@ -439,13 +439,10 @@ public class StoreFile extends SchemaConfigured {
    * @return 0 if no non-bulk-load files are provided or, this is Store that
    * does not yet have any store files.
    */
-  public static long getMaxSequenceIdInList(Collection<StoreFile> sfs, 
-      boolean includeBulkLoadedFiles) {
+  public static long getMaxSequenceIdInList(Collection<StoreFile> sfs) {
     long max = 0;
     for (StoreFile sf : sfs) {
-      if (includeBulkLoadedFiles || !sf.isBulkLoadResult()) {
-        max = Math.max(max, sf.getMaxSequenceId());
-      }
+      max = Math.max(max, sf.getMaxSequenceId());
     }
     return max;
   }

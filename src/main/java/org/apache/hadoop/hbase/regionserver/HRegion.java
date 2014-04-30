@@ -341,6 +341,81 @@ public class HRegion implements HeapSize { // , Writable{
         ClassSize.OBJECT + 5 * Bytes.SIZEOF_BOOLEAN);
   }
 
+  /**
+   * Objects from this class are created when flushing to describe all the different states that
+   * that method ends up in. The Result enum describes those states. The sequence id should only
+   * be specified if the flush was successful, and the failure message should only be speficied
+   * if it didn't flush.
+   */
+  public static class FlushResult {
+    enum Result {
+      FLUSHED_NO_COMPACTION_NEEDED,
+      FLUSHED_COMPACTION_NEEDED,
+      // Special case where a flush didn't run because there's nothing in the memstores. Used when
+      // bulk loading to know when we can still load even if a flush didn't happen.
+      CANNOT_FLUSH_MEMSTORE_EMPTY,
+      CANNOT_FLUSH
+      // Be careful adding more to this enum, look at the below methods to make sure
+    }
+
+    final Result result;
+    final String failureReason;
+    final long flushSequenceId;
+
+    /**
+     * Convenience constructor to use when the flush is successful, the failure message is set to
+     * null.
+     * @param result Expecting FLUSHED_NO_COMPACTION_NEEDED or FLUSHED_COMPACTION_NEEDED.
+     * @param flushSequenceId Generated sequence id that comes right after the edits in the
+     *                        memstores.
+     */
+    FlushResult(Result result, long flushSequenceId) {
+      this(result, flushSequenceId, null);
+      assert result == Result.FLUSHED_NO_COMPACTION_NEEDED || result == Result
+          .FLUSHED_COMPACTION_NEEDED;
+    }
+
+    /**
+     * Convenience constructor to use when we cannot flush.
+     * @param result Expecting CANNOT_FLUSH_MEMSTORE_EMPTY or CANNOT_FLUSH.
+     * @param failureReason Reason why we couldn't flush.
+     */
+    FlushResult(Result result, String failureReason) {
+      this(result, -1, failureReason);
+      assert result == Result.CANNOT_FLUSH_MEMSTORE_EMPTY || result == Result.CANNOT_FLUSH;
+    }
+
+    /**
+     * Constructor with all the parameters.
+     * @param result Any of the Result.
+     * @param flushSequenceId Generated sequence id if the memstores were flushed else -1.
+     * @param failureReason Reason why we couldn't flush, or null.
+     */
+    FlushResult(Result result, long flushSequenceId, String failureReason) {
+      this.result = result;
+      this.flushSequenceId = flushSequenceId;
+      this.failureReason = failureReason;
+    }
+
+    /**
+     * Convenience method, the equivalent of checking if result is
+     * FLUSHED_NO_COMPACTION_NEEDED or FLUSHED_NO_COMPACTION_NEEDED.
+     * @return true if the memstores were flushed, else false.
+     */
+    public boolean isFlushSucceeded() {
+      return result == Result.FLUSHED_NO_COMPACTION_NEEDED || result == Result
+          .FLUSHED_COMPACTION_NEEDED;
+    }
+
+    /**
+     * Convenience method, the equivalent of checking if result is FLUSHED_COMPACTION_NEEDED.
+     * @return True if the flush requested a compaction, else false (doesn't even mean it flushed).
+     */
+    public boolean isCompactionNeeded() {
+      return result == Result.FLUSHED_COMPACTION_NEEDED;
+    }
+  }
+
   final WriteState writestate = new WriteState();
 
   long memstoreFlushSize;
@@ -610,15 +685,12 @@ public class HRegion implements HeapSize { // , Writable{
         for (int i = 0; i < htableDescriptor.getFamilies().size(); i++) {
           Future<Store> future = completionService.take();
           Store store = future.get();
-
           this.stores.put(store.getColumnFamilyName().getBytes(), store);
-          // Do not include bulk loaded files when determining seqIdForReplay
-          long storeSeqIdForReplay = store.getMaxSequenceId(false);
+
+          long storeSeqIdForReplay = store.getMaxSequenceId();
           maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), storeSeqIdForReplay);
-          // Include bulk loaded files when determining seqIdForAssignment
-          long storeSeqIdForAssignment = store.getMaxSequenceId(true);
-          if (maxSeqId == -1 || storeSeqIdForAssignment > maxSeqId) {
-            maxSeqId = storeSeqIdForAssignment;
+          if (maxSeqId == -1 || storeSeqIdForReplay > maxSeqId) {
+            maxSeqId = storeSeqIdForReplay;
           }
           long maxStoreMemstoreTS = store.getMaxMemstoreTS();
           if (maxStoreMemstoreTS > maxMemstoreTS) {
@@ -1483,11 +1555,12 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws DroppedSnapshotException Thrown when replay of hlog is required
    * because a Snapshot was not properly persisted.
    */
-  public boolean flushcache() throws IOException {
+  public FlushResult flushcache() throws IOException {
     // fail-fast instead of waiting on the lock
     if (this.closing.get()) {
-      LOG.debug("Skipping flush on " + this + " because closing");
-      return false;
+      String msg = "Skipping flush on " + this + " because closing";
+      LOG.debug(msg);
+      return new FlushResult(FlushResult.Result.CANNOT_FLUSH, msg);
     }
     MonitoredTask status = TaskMonitor.get().createStatus("Flushing " + this);
     status.setStatus("Acquiring readlock on region");
@@ -1495,9 +1568,10 @@ public class HRegion implements HeapSize { // , Writable{
     lock.readLock().lock();
     try {
       if (this.closed.get()) {
-        LOG.debug("Skipping flush on " + this + " because closed");
-        status.abort("Skipped: closed");
-        return false;
+        String msg = "Skipping flush on " + this + " because closed";
+        LOG.debug(msg);
+        status.abort(msg);
+        return new FlushResult(FlushResult.Result.CANNOT_FLUSH, msg);
       }
       if (coprocessorHost != null) {
         status.setStatus("Running coprocessor pre-flush hooks");
@@ -1516,14 +1590,15 @@ public class HRegion implements HeapSize { // , Writable{
                 + ", flushing=" + writestate.flushing + ", writesEnabled="
                 + writestate.writesEnabled);
           }
-          status.abort("Not flushing since "
+          String msg = "Not flushing since "
               + (writestate.flushing ? "already flushing"
-                  : "writes not enabled"));
-          return false;
+              : "writes not enabled");
+          status.abort(msg);
+          return new FlushResult(FlushResult.Result.CANNOT_FLUSH, msg);
         }
       }
       try {
-        boolean result = internalFlushcache(status);
+        FlushResult fs = internalFlushcache(status);
 
         if (coprocessorHost != null) {
           status.setStatus("Running post-flush coprocessor hooks");
@@ -1531,7 +1606,7 @@ public class HRegion implements HeapSize { // , Writable{
         }
 
         status.markComplete("Flush successful");
-        return result;
+        return fs;
       } finally {
         synchronized (writestate) {
           writestate.flushing = false;
@@ -1603,7 +1678,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws DroppedSnapshotException Thrown when replay of hlog is required
    * because a Snapshot was not properly persisted.
    */
-  protected boolean internalFlushcache(MonitoredTask status)
+  protected FlushResult internalFlushcache(MonitoredTask status)
       throws IOException {
     return internalFlushcache(this.log, -1, status);
   }
@@ -1617,7 +1692,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    * @see #internalFlushcache(MonitoredTask)
    */
-  protected boolean internalFlushcache(
+  protected FlushResult internalFlushcache(
       final HLog wal, final long myseqid, MonitoredTask status)
   throws IOException {
     if (this.rsServices != null && this.rsServices.isAborted()) {
@@ -1630,7 +1705,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.lastFlushTime = startTime;
     // If nothing to flush, return and avoid logging start/stop flush.
     if (this.memstoreSize.get() <= 0) {
-      return false;
+      return new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, "Nothing to flush");
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Started memstore flush for " + this +
@@ -1777,7 +1852,8 @@ public class HRegion implements HeapSize { // , Writable{
     status.setStatus(msg);
     this.recentFlushes.add(new Pair<Long,Long>(time/1000, totalFlushableSize));
 
-    return compactionRequested;
+    return new FlushResult(compactionRequested ? FlushResult.Result.FLUSHED_COMPACTION_NEEDED :
+        FlushResult.Result.FLUSHED_NO_COMPACTION_NEEDED, sequenceId);
   }
 
    /**
@@ -3788,6 +3864,22 @@ public class HRegion implements HeapSize { // , Writable{
         return false;
       }
 
+      long seqId = -1;
+      // We need to assign a sequential ID that's in between two memstores in order to preserve
+      // the guarantee that all the edits lower than the highest sequential ID from all the
+      // HFiles are flushed on disk. See HBASE-10958.
+      if (assignSeqId) {
+        FlushResult fs = this.flushcache();
+        if (fs.isFlushSucceeded()) {
+          seqId = fs.flushSequenceId;
+        } else if (fs.result == FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY) {
+          seqId = this.log.obtainSeqNum();
+        } else {
+          throw new IOException("Could not bulk load with an assigned sequential ID because the " +
+              "flush didn't run. Reason for not flushing: " + fs.failureReason);
+        }
+      }
+
       for (Pair<byte[], String> p : familyPaths) {
         byte[] familyName = p.getFirst();
         String path = p.getSecond();
@@ -3797,7 +3889,7 @@ public class HRegion implements HeapSize { // , Writable{
           if(bulkLoadListener != null) {
             finalPath = bulkLoadListener.prepareBulkLoad(familyName, path);
           }
-          store.bulkLoadHFile(finalPath, assignSeqId ? this.log.obtainSeqNum() : -1);
+          store.bulkLoadHFile(finalPath, seqId);
           if(bulkLoadListener != null) {
             bulkLoadListener.doneBulkLoad(familyName, path);
           }
