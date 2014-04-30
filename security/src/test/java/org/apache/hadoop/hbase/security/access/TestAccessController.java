@@ -546,8 +546,8 @@ public class TestAccessController {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
+    verifyDenied(action, USER_RW, USER_RO, USER_NONE);
   }
 
   @Test
@@ -559,8 +559,8 @@ public class TestAccessController {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
+    verifyDenied(action, USER_RW, USER_RO, USER_NONE);
   }
 
   @Test
@@ -742,7 +742,8 @@ public class TestAccessController {
         return null;
       }
     };
-    verifyWrite(bulkLoadAction);
+    verifyAllowed(bulkLoadAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
+    verifyDenied(bulkLoadAction, USER_RW, USER_RO, USER_NONE);
 
     // Reinit after the bulk upload
     TEST_UTIL.getHBaseAdmin().disableTable(TEST_TABLE);
@@ -805,6 +806,7 @@ public class TestAccessController {
       HTable table = new HTable(conf, tableName);
       try {
         TEST_UTIL.waitTableAvailable(tableName, 30000);
+        conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
         LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
         loader.doBulkLoad(loadPath, table);
       } finally {
