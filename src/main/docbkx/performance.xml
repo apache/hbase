@@ -726,8 +726,9 @@ configurations.
 </para>
 <note xml:id="dfs.client.read.shortcircuit.buffer.size">
     <title>dfs.client.read.shortcircuit.buffer.size</title>
-    <para>The default for this value is too high when running on a highly trafficed HBase.  Set it down from its
-        1M default down to 128k or so.  Put this configuration in the HBase configs (its a HDFS client-side configuration).
+    <para>The default for this value is too high when running on a highly trafficed HBase.
+        In HBase, if this value has not been set, we set it down from the default of 1M to 128k
+        (Since HBase 0.98.0 and 0.96.1).  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-8143">HBASE-8143 HBase on Hadoop 2 with local short circuit reads (ssr) causes OOM</link>).
         The Hadoop DFSClient in HBase will allocate a direct byte buffer of this size for <emphasis>each</emphasis>
     block it has open; given HBase keeps its HDFS files open all the time, this can add up quickly.</para>
 </note>
