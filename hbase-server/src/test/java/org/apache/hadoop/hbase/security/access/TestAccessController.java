@@ -170,7 +170,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyConfiguration(conf);
 
     // Enable EXEC permission checking
-    conf.setBoolean(AccessController.EXEC_PERMISSION_CHECKS_KEY, true);
+    conf.setBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY, true);
 
     TEST_UTIL.startMiniCluster();
     MasterCoprocessorHost cpHost = TEST_UTIL.getMiniHBaseCluster().getMaster().getCoprocessorHost();

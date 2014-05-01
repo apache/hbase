@@ -47,7 +47,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 @Category(LargeTests.class)
-public class TestAccessControlFilter {
+public class TestAccessControlFilter extends SecureTestUtil {
   @Rule public TestName name = new TestName();
   private static HBaseTestingUtility TEST_UTIL;
 
@@ -69,12 +69,14 @@ public class TestAccessControlFilter {
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     Configuration conf = TEST_UTIL.getConfiguration();
-    SecureTestUtil.enableSecurity(conf);
-    String baseuser = User.getCurrent().getShortName();
-    conf.set("hbase.superuser", conf.get("hbase.superuser", "") +
-        String.format(",%s.hfs.0,%s.hfs.1,%s.hfs.2", baseuser, baseuser, baseuser));
+    enableSecurity(conf);
+    verifyConfiguration(conf);
+
+    // We expect 0.98 scanning semantics
+    conf.setBoolean(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, false);
+
     TEST_UTIL.startMiniCluster();
-    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName(), 50000);
 
     READER = User.createUserForTesting(conf, "reader", new String[0]);
     LIMITED = User.createUserForTesting(conf, "limited", new String[0]);

@@ -33,12 +33,12 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class AuthResult {
-  private final boolean allowed;
+  private boolean allowed;
   private final String namespace;
   private final TableName table;
   private final Permission.Action action;
   private final String request;
-  private final String reason;
+  private String reason;
   private final User user;
 
   // "family" and "qualifier" should only be used if "families" is null.
@@ -119,6 +119,14 @@ public class AuthResult {
 
   public String getRequest() {
     return request;
+  }
+
+  public void setAllowed(boolean allowed) {
+    this.allowed = allowed;
+  }
+
+  public void setReason(String reason) {
+    this.reason = reason;
   }
 
   String toFamilyString() {

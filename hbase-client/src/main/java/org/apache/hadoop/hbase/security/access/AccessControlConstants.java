@@ -25,6 +25,22 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public interface AccessControlConstants {
 
+  /**
+   * Configuration option that toggles whether EXEC permission checking is
+   * performed during coprocessor endpoint invocations.
+   */
+  public static final String EXEC_PERMISSION_CHECKS_KEY = "hbase.security.exec.permission.checks";
+  /** Default setting for hbase.security.exec.permission.checks; false */
+  public static final boolean DEFAULT_EXEC_PERMISSION_CHECKS = false;
+
+  /**
+   * Configuration or CF schema option for early termination of access checks
+   * if table or CF permissions grant access. Pre-0.98 compatible behavior
+   */
+  public static final String CF_ATTRIBUTE_EARLY_OUT = "hbase.security.access.early_out";
+  /** Default setting for hbase.security.access.early_out; false in 0.98 */
+  public static final boolean DEFAULT_ATTRIBUTE_EARLY_OUT = false;
+
   // Operation attributes for cell level security
 
   /** Cell level ACL */

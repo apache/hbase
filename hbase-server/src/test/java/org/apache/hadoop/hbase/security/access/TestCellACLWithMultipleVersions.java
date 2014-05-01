@@ -45,10 +45,8 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.TestTableName;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -89,18 +87,13 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.set("hbase.master.hfilecleaner.plugins",
-        "org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner,"
-            + "org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner");
-    conf.set("hbase.master.logcleaner.plugins",
-        "org.apache.hadoop.hbase.master.snapshot.SnapshotLogCleaner");
     // Enable security
     enableSecurity(conf);
     // Verify enableSecurity sets up what we require
     verifyConfiguration(conf);
 
-    // Enable EXEC permission checking
-    conf.setBoolean(AccessController.EXEC_PERMISSION_CHECKS_KEY, true);
+    // We expect 0.98 cell ACL semantics
+    conf.setBoolean(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, false);
 
     TEST_UTIL.startMiniCluster();
     MasterCoprocessorHost cpHost = TEST_UTIL.getMiniHBaseCluster()
