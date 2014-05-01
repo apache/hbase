@@ -30,6 +30,10 @@
     <para>You cannot skip major verisons upgrading.  If you are upgrading from
     version 0.90.x to 0.94.x, you must first go from 0.90.x to 0.92.x and then go
     from 0.92.x to 0.94.x.</para>
+    <note><para>It may be possible to skip across versions -- for example go from
+    0.92.2 straight to 0.98.0 just following the 0.96.x upgrade instructions --
+    but we have not tried it so cannot say whether it works or not.</para>
+    </note>
     <para>
         Review <xref linkend="configuration" />, in particular the section on Hadoop version.
     </para>
@@ -81,6 +85,11 @@
         </section>
 </section>
 
+    <section xml:id="upgrade0.98">
+      <title>Upgrading from 0.96.x to 0.98.x</title>
+      <para>A rolling upgrade from 0.96.x to 0.98.x works.  The two versions are not binary compatible.
+      TODO: List of changes.</para> 
+    </section>
     <section xml:id="upgrade0.96">
       <title>Upgrading from 0.94.x to 0.96.x</title>
       <subtitle>The Singularity</subtitle>
@@ -200,7 +209,9 @@
          </programlisting>
          </para>
          <para>
-             If the output from the execute step looks good, start hbase-0.96.0.
+             If the output from the execute step looks good, stop the zookeeper instance you started
+             to do the upgrade: <programlisting>$ ./hbase/bin/hbase-daemon.sh stop zookeeper</programlisting>
+             Now start up hbase-0.96.0.
          </para>
      </section>
      <section xml:id="096.migration.troubleshooting"><title>Troubleshooting</title>
@@ -333,13 +344,14 @@ The block size default size has been changed in 0.92.0 from 0.2 (20 percent of h
 </para>
 </section>
 
-<section><title>Experimental off-heap cache
-</title>
+<section xml:id="slabcache"><title>Experimental off-heap cache: SlabCache</title>
 <para>
 A new cache was contributed to 0.92.0 to act as a solution between using the “on-heap” cache which is the current LRU cache the region servers have and the operating system cache which is out of our control.
-To enable, set “-XX:MaxDirectMemorySize” in hbase-env.sh to the value for maximum direct memory size and specify hbase.offheapcache.percentage in hbase-site.xml with the percentage that you want to dedicate to off-heap cache. This should only be set for servers and not for clients. Use at your own risk.
-See this blog post for additional information on this new experimental feature: http://www.cloudera.com/blog/2012/01/caching-in-hbase-slabcache/
+To enable <emphasis>SlabCache</emphasis>, as this feature is being called, set “-XX:MaxDirectMemorySize” in hbase-env.sh to the value for maximum direct memory size and specify
+<property>hbase.offheapcache.percentage</property> in <filename>hbase-site.xml</filename> with the percentage that you want to dedicate to off-heap cache. This should only be set for servers and not for clients. Use at your own risk.
+See this blog post, <link xlink:href="http://www.cloudera.com/blog/2012/01/caching-in-hbase-slabcache/">Caching in Apache HBase: SlabCache</link>, for additional information on this new experimental feature.
 </para>
+<para>This feature has mostly been eclipsed in later HBases.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-7404 ">HBASE-7404 Bucket Cache:A solution about CMS,Heap Fragment and Big Cache on HBASE</link>, etc.</para>
 </section>
 
 <section><title>Changes in HBase replication

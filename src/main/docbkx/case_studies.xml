@@ -182,7 +182,7 @@ Link detected: yes
       <para>Case study of configuring <code>xceivers</code>, and diagnosing errors from mis-configurations.
       <link xlink:href="http://www.larsgeorge.com/2012/03/hadoop-hbase-and-xceivers.html">http://www.larsgeorge.com/2012/03/hadoop-hbase-and-xceivers.html</link>
       </para>
-      <para>See also <xref linkend="dfs.datanode.max.xcievers"/>.
+      <para>See also <xref linkend="dfs.datanode.max.transfer.threads"/>.
       </para>
     </section>
 
