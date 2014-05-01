@@ -43,12 +43,11 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TestTableName;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -79,6 +78,7 @@ public class TestCellACLs extends SecureTestUtil {
   private static final byte[] TEST_Q3 = Bytes.toBytes("q3");
   private static final byte[] TEST_Q4 = Bytes.toBytes("q4");
   private static final byte[] ZERO = Bytes.toBytes(0L);
+  private static final byte[] ONE = Bytes.toBytes(1L);
 
   private static Configuration conf;
 
@@ -89,18 +89,13 @@ public class TestCellACLs extends SecureTestUtil {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.set("hbase.master.hfilecleaner.plugins",
-        "org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner,"
-            + "org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner");
-    conf.set("hbase.master.logcleaner.plugins",
-        "org.apache.hadoop.hbase.master.snapshot.SnapshotLogCleaner");
     // Enable security
     enableSecurity(conf);
     // Verify enableSecurity sets up what we require
     verifyConfiguration(conf);
 
-    // Enable EXEC permission checking
-    conf.setBoolean(AccessController.EXEC_PERMISSION_CHECKS_KEY, true);
+    // We expect 0.98 cell ACL semantics
+    conf.setBoolean(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, false);
 
     TEST_UTIL.startMiniCluster();
     MasterCoprocessorHost cpHost = TEST_UTIL.getMiniHBaseCluster().getMaster()
@@ -150,12 +145,11 @@ public class TestCellACLs extends SecureTestUtil {
           Put p;
           // with ro ACL
           p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
-          p.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.READ));
+          p.setACL(USER_OTHER.getShortName(), new Permission(Action.READ));
           t.put(p);
           // with rw ACL
           p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q2, ZERO);
-          p.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
-            Permission.Action.WRITE));
+          p.setACL(USER_OTHER.getShortName(), new Permission(Action.READ, Action.WRITE));
           t.put(p);
           // no ACL
           p = new Put(TEST_ROW)
@@ -308,7 +302,7 @@ public class TestCellACLs extends SecureTestUtil {
       public Object run() throws Exception {
         Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2, 1L);
         // Tag this increment with an ACL that denies write permissions to USER_OTHER
-        i.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.READ));
+        i.setACL(USER_OTHER.getShortName(), new Permission(Action.READ));
         HTable t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           t.increment(i);
@@ -377,6 +371,164 @@ public class TestCellACLs extends SecureTestUtil {
     verifyDenied(deleteFamily, USER_OTHER);
     verifyDenied(deleteQ1, USER_OTHER);
     verifyAllowed(deleteQ1, USER_OWNER);
+  }
+
+  /**
+   * Insure we are not granting access in the absence of any cells found
+   * when scanning for covered cells.
+   */
+  @Test
+  public void testCoveringCheck() throws Exception {
+    // Grant read access to USER_OTHER
+    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), TEST_TABLE.getTableName(),
+      TEST_FAMILY, null, Action.READ);
+
+    // A write by USER_OTHER should be denied.
+    // This is where we could have a big problem if there is an error in the
+    // covering check logic.
+    verifyDenied(new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Put p;
+          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
+          t.put(p);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    }, USER_OTHER);
+
+    // Add the cell
+    verifyAllowed(new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Put p;
+          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
+          t.put(p);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    }, USER_OWNER);
+
+    // A write by USER_OTHER should still be denied, just to make sure
+    verifyDenied(new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Put p;
+          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ONE);
+          t.put(p);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    }, USER_OTHER);
+
+    // A read by USER_OTHER should be allowed, just to make sure
+    verifyAllowed(new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          return t.get(new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1));
+        } finally {
+          t.close();
+        }
+      }
+    }, USER_OTHER);
+  }
+
+  @Test
+  public void testCellStrategy() throws Exception {
+    // Set up our test actions
+    AccessTestAction readQ1Default = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          return t.get(new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1));
+        } finally {
+          t.close();
+        }
+      }
+    };
+    AccessTestAction readQ2Default = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          return t.get(new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2));
+        } finally {
+          t.close();
+        }
+      }
+    };
+    AccessTestAction readQ1CellFirst = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1);
+          get.setACLStrategy(true);
+          return t.get(get);
+        } finally {
+          t.close();
+        }
+      }
+    };
+
+    // Add test data
+    verifyAllowed(new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Put p;
+          // The empty permission set on Q1
+          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
+          p.setACL(USER_OTHER.getShortName(), new Permission());
+          t.put(p);
+          // Read permissions on Q2
+          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q2, ZERO);
+          p.setACL(USER_OTHER.getShortName(), new Permission(Action.READ));
+          t.put(p);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    }, USER_OWNER);
+
+    // A read by USER_OTHER will be denied with the default cell strategy as
+    // there is no visibility without a grant and a cell ACL giving
+    // explicit permission
+    verifyDenied(readQ1Default, USER_OTHER);
+
+    // A read will be allowed by the default cell strategy if there is a cell
+    // ACL giving explicit permission.
+    verifyAllowed(readQ2Default, USER_OTHER);
+
+    // Grant read access to USER_OTHER
+    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), TEST_TABLE.getTableName(),
+      TEST_FAMILY, null, Action.READ);
+
+    // A read by USER_OTHER will now be allowed with the default cell strategy
+    // because we have a CF level grant and we take the union of permissions.
+    verifyAllowed(readQ1Default, USER_OTHER);
+
+    // A read by USER_OTHER will be denied with the cell first strategy
+    // because the empty perm set for USER_OTHER in the cell ACL there
+    // revokes access.
+    verifyDenied(readQ1CellFirst, USER_OTHER);
   }
 
   @After

@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
@@ -84,7 +85,7 @@ public class SecureTestUtil {
     }
     conf.set("hbase.superuser", sb.toString());
     // Need HFile V3 for tags for security features
-    conf.setInt("hfile.format.version", 3);
+    conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
   }
 
   public static void verifyConfiguration(Configuration conf) {
@@ -96,9 +97,12 @@ public class SecureTestUtil {
         AccessController.class.getName()))) {
       throw new RuntimeException("AccessController is missing from a system coprocessor list");
     }
+    if (conf.getInt(HFile.FORMAT_VERSION_KEY, 2) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
+      throw new RuntimeException("Post 0.96 security features require HFile version >= 3");
+    }
   }
 
-  public void checkTablePerms(Configuration conf, byte[] table, byte[] family, byte[] column,
+  public static void checkTablePerms(Configuration conf, byte[] table, byte[] family, byte[] column,
       Permission.Action... actions) throws IOException {
     Permission[] perms = new Permission[actions.length];
     for (int i = 0; i < actions.length; i++) {
@@ -108,7 +112,7 @@ public class SecureTestUtil {
     checkTablePerms(conf, table, perms);
   }
 
-  public void checkTablePerms(Configuration conf, byte[] table, Permission... perms) throws IOException {
+  public static void checkTablePerms(Configuration conf, byte[] table, Permission... perms) throws IOException {
     CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
     for (Permission p : perms) {
       request.addPermission(ProtobufUtil.toPermission(p));
@@ -139,7 +143,7 @@ public class SecureTestUtil {
    */
   static interface AccessTestAction extends PrivilegedExceptionAction<Object> { }
 
-  public void verifyAllowed(User user, AccessTestAction... actions) throws Exception {
+  public static void verifyAllowed(User user, AccessTestAction... actions) throws Exception {
     for (AccessTestAction action : actions) {
       try {
         Object obj = user.runAs(action);
@@ -155,13 +159,13 @@ public class SecureTestUtil {
     }
   }
 
-  public void verifyAllowed(AccessTestAction action, User... users) throws Exception {
+  public static void verifyAllowed(AccessTestAction action, User... users) throws Exception {
     for (User user : users) {
       verifyAllowed(user, action);
     }
   }
 
-  public void verifyAllowed(User user, AccessTestAction action, int count) throws Exception {
+  public static void verifyAllowed(User user, AccessTestAction action, int count) throws Exception {
     try {
       Object obj = user.runAs(action);
       if (obj != null && obj instanceof List<?>) {
@@ -176,14 +180,34 @@ public class SecureTestUtil {
     }
   }
 
-  public void verifyDenied(User user, AccessTestAction... actions) throws Exception {
+  public static void verifyDeniedWithException(User user, AccessTestAction... actions)
+      throws Exception {
+    verifyDenied(user, true, actions);
+  }
+
+  public static void verifyDeniedWithException(AccessTestAction action, User... users)
+      throws Exception {
+    for (User user : users) {
+      verifyDenied(user, true, action);
+    }
+  }
+
+  public static void verifyDenied(User user, AccessTestAction... actions) throws Exception {
+    verifyDenied(user, false, actions);
+  }
+
+  public static void verifyDenied(User user, boolean requireException,
+      AccessTestAction... actions) throws Exception {
     for (AccessTestAction action : actions) {
       try {
         Object obj = user.runAs(action);
+        if (requireException) {
+          fail("Expected exception was not thrown for user '" + user.getShortName() + "'");
+        }
         if (obj != null && obj instanceof List<?>) {
           List<?> results = (List<?>) obj;
           if (results != null && !results.isEmpty()) {
-            fail("Expected no results for user '" + user.getShortName() + "'");
+            fail("Unexpected results for user '" + user.getShortName() + "'");
           }
         }
       } catch (IOException e) {
@@ -211,7 +235,7 @@ public class SecureTestUtil {
           } while((ex = ex.getCause()) != null);
         }
         if (!isAccessDeniedException) {
-          fail("Not receiving AccessDeniedException for user '" + user.getShortName() + "'");
+          fail("Expected exception was not thrown for user '" + user.getShortName() + "'");
         }
       } catch (UndeclaredThrowableException ute) {
         // TODO why we get a PrivilegedActionException, which is unexpected?
@@ -226,12 +250,12 @@ public class SecureTestUtil {
             return;
           }
         }
-        fail("Not receiving AccessDeniedException for user '" + user.getShortName() + "'");
+        fail("Expected exception was not thrown for user '" + user.getShortName() + "'");
       }
     }
   }
 
-  public void verifyDenied(AccessTestAction action, User... users) throws Exception {
+  public static void verifyDenied(AccessTestAction action, User... users) throws Exception {
     for (User user : users) {
       verifyDenied(user, action);
     }

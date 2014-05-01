@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.User;
@@ -348,12 +347,14 @@ public class TableAuthManager {
     return false;
   }
 
-  private boolean checkCellPermissions(User user, Cell cell, Permission.Action action) {
+  /**
+   * Authorize a user for a given KV. This is called from AccessControlFilter.
+   */
+  public boolean authorize(User user, TableName table, Cell cell, Permission.Action action) {
     try {
       List<Permission> perms = AccessControlLists.getCellPermissionsForUser(user, cell);
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Perms for user " + user.getShortName() + " in cell " +
-          cell + ": " + perms);
+        LOG.trace("Perms for user " + user.getShortName() + " in cell " + cell + ": " + perms);
       }
       for (Permission p: perms) {
         if (p.implies(action)) {
@@ -367,46 +368,6 @@ public class TableAuthManager {
       // to collect regardless
     }
     return false;
-  }
-
-  private boolean checkTableColumnPermissions(User user, TableName table, Cell cell,
-      Permission.Action action) {
-    // TODO: Do not clone here
-    byte[] family = CellUtil.cloneFamily(cell);
-    byte[] qualifier = CellUtil.cloneQualifier(cell);
-    // User is authorized at table or CF level
-    if (authorizeUser(user, table, family, qualifier, action)) {
-      return true;
-    }
-    String groupNames[] = user.getGroupNames();
-    if (groupNames != null) {
-      for (String group: groupNames) {
-        // TODO: authorizeGroup should check qualifier too?
-        // Group is authorized at table or CF level
-        if (authorizeGroup(group, table, family, action)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Authorize a user for a given KV. This is called from AccessControlFilter.
-   */
-  public boolean authorize(User user, TableName table, Cell cell, boolean cellFirstStrategy,
-      Permission.Action action) {
-    if (cellFirstStrategy) {
-      if (checkCellPermissions(user, cell, action)) {
-        return true;
-      }
-      return checkTableColumnPermissions(user, table, cell, action);
-    } else {
-      if (checkTableColumnPermissions(user, table, cell, action)) {
-        return true;
-      }
-      return checkCellPermissions(user, cell, action);
-    }
   }
 
   public boolean authorize(User user, String namespace, Permission.Action action) {

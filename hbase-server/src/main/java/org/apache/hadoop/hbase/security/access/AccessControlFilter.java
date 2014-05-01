@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.FilterBase;
-import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,11 +48,20 @@ import org.apache.hadoop.hbase.util.SimpleByteRange;
  */
 class AccessControlFilter extends FilterBase {
 
+  public static enum Strategy {
+    /** Filter only by checking the table or CF permissions */
+    CHECK_TABLE_AND_CF_ONLY,
+    /** Cell permissions can override table or CF permissions */
+    CHECK_CELL_DEFAULT,
+    /** Cell permissions must authorize */
+    CHECK_CELL_FIRST,
+  };
+
   private TableAuthManager authManager;
   private TableName table;
   private User user;
   private boolean isSystemTable;
-  private boolean cellFirstStrategy;
+  private Strategy strategy;
   private Map<ByteRange, Integer> cfVsMaxVersions;
   private int familyMaxVersions;
   private int currentVersions;
@@ -66,12 +75,12 @@ class AccessControlFilter extends FilterBase {
   }
 
   AccessControlFilter(TableAuthManager mgr, User ugi, TableName tableName,
-      boolean cellFirstStrategy, Map<ByteRange, Integer> cfVsMaxVersions) {
+      Strategy strategy, Map<ByteRange, Integer> cfVsMaxVersions) {
     authManager = mgr;
     table = tableName;
     user = ugi;
     isSystemTable = tableName.isSystemTable();
-    this.cellFirstStrategy = cellFirstStrategy;
+    this.strategy = strategy;
     this.cfVsMaxVersions = cfVsMaxVersions;
     this.prevFam = new SimpleByteRange();
     this.prevQual = new SimpleByteRange();
@@ -103,12 +112,37 @@ class AccessControlFilter extends FilterBase {
     if (currentVersions > familyMaxVersions) {
       return ReturnCode.SKIP;
     }
-    if (authManager.authorize(user, table, cell, cellFirstStrategy, Permission.Action.READ)) {
-      return ReturnCode.INCLUDE;
+    // XXX: Compare in place, don't clone
+    byte[] family = CellUtil.cloneFamily(cell);
+    byte[] qualifier = CellUtil.cloneQualifier(cell);
+    switch (strategy) {
+      // Filter only by checking the table or CF permissions
+      case CHECK_TABLE_AND_CF_ONLY: {
+        if (authManager.authorize(user, table, family, qualifier, Permission.Action.READ)) {
+          return ReturnCode.INCLUDE;
+        }
+      }
+      break;
+      // Cell permissions can override table or CF permissions
+      case CHECK_CELL_DEFAULT: {
+        if (authManager.authorize(user, table, family, qualifier, Permission.Action.READ) ||
+            authManager.authorize(user, table, cell, Permission.Action.READ)) {
+          return ReturnCode.INCLUDE;
+        }
+      }
+      break;
+      // Cell permissions must authorize
+      case CHECK_CELL_FIRST: {
+        if (authManager.authorize(user, table, cell, Permission.Action.READ) &&
+            authManager.authorize(user, table, family, qualifier, Permission.Action.READ)) {
+          return ReturnCode.INCLUDE;
+        }
+      }
+      break;
+      default:
+        throw new RuntimeException("Unhandled strategy " + strategy);
     }
-    // Before per cell ACLs we used to return the NEXT_COL hint, but we can
-    // no longer do that since, given the possibility of per cell ACLs
-    // anywhere, we now need to examine all KVs with this filter.
+
     return ReturnCode.SKIP;
   }
 
