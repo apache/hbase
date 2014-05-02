@@ -29,11 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * Utility methods for interacting with the hbase.root file system.
@@ -41,6 +37,10 @@ import org.apache.hadoop.hbase.util.FSUtils;
 @InterfaceAudience.Private
 public final class FSVisitor {
   private static final Log LOG = LogFactory.getLog(FSVisitor.class);
+
+  public interface RegionVisitor {
+    void region(final String region) throws IOException;
+  }
 
   public interface StoreFileVisitor {
     void storeFile(final String region, final String family, final String hfileName)
@@ -59,6 +59,27 @@ public final class FSVisitor {
 
   private FSVisitor() {
     // private constructor for utility class
+  }
+
+  /**
+   * Iterate over the table store files
+   *
+   * @param fs {@link FileSystem}
+   * @param tableDir {@link Path} to the table directory
+   * @param visitor callback object to get the store files
+   * @throws IOException if an error occurred while scanning the directory
+   */
+  public static void visitRegions(final FileSystem fs, final Path tableDir,
+      final RegionVisitor visitor) throws IOException {
+    FileStatus[] regions = FSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
+    if (regions == null) {
+      LOG.info("No regions under directory:" + tableDir);
+      return;
+    }
+
+    for (FileStatus region: regions) {
+      visitor.region(region.getPath().getName());
+    }
   }
 
   /**
