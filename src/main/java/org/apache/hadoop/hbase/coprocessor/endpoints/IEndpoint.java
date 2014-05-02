@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.coprocessor.endpoints;
 
+import java.io.IOException;
+
 /**
  * The common parent of all endpoint interfaces.
  */
@@ -31,5 +33,5 @@ public interface IEndpoint {
    * @param a
    *          non-null IEndpointContext
    */
-  void setContext(IEndpointContext context);
+  void setContext(IEndpointContext context) throws IOException;
 }

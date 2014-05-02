@@ -24,7 +24,7 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionIf;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 
 /**
@@ -44,7 +44,7 @@ public class EndpointLib {
   /**
    * Aggregates all KeyValue's in a region defined by a Scan.
    */
-  public static void aggregateScan(HRegion region, Scan scan, IAggregator aggr)
+  public static void aggregateScan(HRegionIf region, Scan scan, IAggregator aggr)
       throws IOException {
     try (InternalScanner scanner = region.getScanner(scan)) {
       ArrayList<KeyValue> kvs = new ArrayList<>();

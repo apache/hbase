@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -34,7 +35,7 @@ public interface HRegionIf {
   /**
    * @return the HRegionInfo of this region
    */
-  public HRegionInfo getRegionInfo();
+  HRegionInfo getRegionInfo();
 
   /**
    * Flushes the cache.
@@ -57,21 +58,33 @@ public interface HRegionIf {
    *
    * @return true if cache was flushed
    */
-  public boolean flushMemstoreShapshot(boolean selectiveFlushRequest)
+  boolean flushMemstoreShapshot(boolean selectiveFlushRequest)
       throws IOException;
 
   /**
    * @return how info about the last flushes <time, size>
    */
-  public List<Pair<Long, Long>> getRecentFlushInfo();
+  List<Pair<Long, Long>> getRecentFlushInfo();
 
   /**
    * @return True if this region has references.
    */
-  public boolean hasReferences();
+  boolean hasReferences();
 
   /**
    * @return the maximum number of files among all stores.
    */
-  public int maxStoreFilesCount();
+  int maxStoreFilesCount();
+
+  /**
+   * Return an iterator that scans over the HRegion, returning the indicated
+   * columns and rows specified by the {@link Scan}.
+   * <p>
+   * This Iterator must be closed by the caller.
+   *
+   * @param scan configured {@link Scan}
+   * @return InternalScanner
+   * @throws IOException read exceptions
+   */
+  InternalScanner getScanner(Scan scan) throws IOException;
 }

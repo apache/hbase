@@ -60,17 +60,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 public interface ThriftHRegionInterface extends ThriftClientInterface,
     IEndpointService, IRegionScanService {
 
-  /**
-   * Opens a scanner, optionally returns some data if numberOfRows > 0.
-   *
-   * @param regionName the name of the region to scan
-   * @param scan the Scan instance defining scan query.
-   * @param numberOfRows maximum number of rows to return after successfully
-   *          open the scanner.
-   * @return the result as a ScannerResult.
-   *         The length of the Result list of the return value could be empty
-   *         and EOR is set to true for sure in this case.
-   */
   @Override
   @ThriftMethod(value = "scanOpen", exception = {
       @ThriftException(type = ThriftHBaseException.class, id = 1) })
@@ -79,15 +68,6 @@ public interface ThriftHRegionInterface extends ThriftClientInterface,
       @ThriftField(name = "numberOfRows") int numberOfRows)
       throws ThriftHBaseException;
 
-  /**
-   * Returns next scanning results.
-   *
-   * @param ID the ID of the scanner
-   * @param numberOfRows maximum number of rows to return,
-   * @return the result as a ScannerResult.
-   *         The length of the Result list of the return value could be empty
-   *         and EOR is set to true for sure in this case.
-   */
   @Override
   @ThriftMethod(value = "scanNext", exception = {
       @ThriftException(type = ThriftHBaseException.class, id = 1) })
@@ -95,12 +75,6 @@ public interface ThriftHRegionInterface extends ThriftClientInterface,
       @ThriftField(name = "numberOfRows") int numberOfRows)
       throws ThriftHBaseException;
 
-  /**
-   * Closes the scanner on the server side.
-   *
-   * @param id the ID of the scanner to close
-   * @return true if a scanner is closed. false if the scanner doesn't exist.
-   */
   @Override
   @ThriftMethod(value = "scanClose", exception = {
       @ThriftException(type = ThriftHBaseException.class, id = 1) })

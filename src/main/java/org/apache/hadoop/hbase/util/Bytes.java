@@ -569,6 +569,13 @@ public class Bytes {
   }
 
   /**
+   * Converts a Long value to a byte array using big-endian.
+   */
+  public static byte[] toBytes(Long val) {
+    return toBytes(val.longValue());
+  }
+
+  /**
    * Converts a byte array to a long value. Reverses
    * {@link #toBytes(long)}
    * @param bytes array
@@ -807,7 +814,36 @@ public class Bytes {
   }
 
   /**
+   * Converts a char value to a byte array of {@link #SIZEOF_CHAR} bytes long.
+   *
+   * @param val value
+   * @return the byte array
+   */
+  public static byte[] toBytes(char val) {
+    return toBytes((short) val);
+  }
+
+  /**
+   * Converts a Character value to a byte array of {@link #SIZEOF_CHAR} bytes
+   * long.
+   *
+   * @param val value
+   * @return the byte array
+   */
+  public static byte[] toBytes(Character val) {
+    return toBytes(val.charValue());
+  }
+
+  /**
+   * Converts a byte array to a char value
+   */
+  public static char toChar(byte[] bytes) {
+    return (char) Bytes.toShort(bytes);
+  }
+
+  /**
    * Convert a short value to a byte array of {@link #SIZEOF_SHORT} bytes long.
+   *
    * @param val value
    * @return the byte array
    */

@@ -1789,16 +1789,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
     }
   }
 
-  /**
-   * Return an iterator that scans over the HRegion, returning the indicated
-   * columns and rows specified by the {@link Scan}.
-   * <p>
-   * This Iterator must be closed by the caller.
-   *
-   * @param scan configured {@link Scan}
-   * @return InternalScanner
-   * @throws IOException read exceptions
-   */
+  @Override
   public InternalScanner getScanner(Scan scan) throws IOException {
     return getScanner(scan, null);
   }

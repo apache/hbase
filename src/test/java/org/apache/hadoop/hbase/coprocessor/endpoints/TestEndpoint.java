@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointLib.IAggregator;
 import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointClient.Caller;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionIf;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.After;
@@ -101,7 +101,7 @@ public class TestEndpoint {
 
     @Override
     public long sum(int offset) throws IOException {
-      HRegion region = context.getRegion();
+      HRegionIf region = context.getRegion();
       Scan scan = new Scan();
       scan.addFamily(FAMILY_NAME);
       scan.addColumn(FAMILY_NAME, QUALITY_NAME);

@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointManager.EndpointInfo;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionIf;
 import org.apache.hadoop.hbase.regionserver.HRegionServerIf;
 
 /**
@@ -62,7 +62,7 @@ public class EndpointServer implements IEndpointServer {
       // Set the context.
       ep.setContext(new IEndpointContext() {
         @Override
-        public HRegion getRegion() throws NotServingRegionException {
+        public HRegionIf getRegion() throws NotServingRegionException {
           return EndpointServer.this.server.getRegion(regionName);
         }
 

@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase.coprocessor.endpoints;
 
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionIf;
 
 /**
  * The context of an endpoint calling.
@@ -34,7 +34,7 @@ public interface IEndpointContext {
    * @throws NotServingRegionException
    *           if the region is not served on this server.
    */
-  HRegion getRegion() throws NotServingRegionException;
+  HRegionIf getRegion() throws NotServingRegionException;
 
   /**
    * The start row, inclusive, within this region of this call.
