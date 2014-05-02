@@ -20,6 +20,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.StringBytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,6 +41,7 @@ public class TestHTable {
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().set(HBaseTestingUtility.FS_TYPE_KEY,
         HBaseTestingUtility.FS_TYPE_LFS);
+    TEST_UTIL.useAssignmentLoadBalancer();
 
     TEST_UTIL.startMiniCluster(SLAVES);
   }
@@ -137,11 +139,17 @@ public class TestHTable {
 
   @Test
   public void testHTableMultiPutThreadPool() throws Exception {
+    final int MS_SLEEP = 500;
+
     byte [] TABLE = Bytes.toBytes("testHTableMultiputThreadPool");
     final int NUM_REGIONS = 10;
     HTable ht = TEST_UTIL.createTable(TABLE, new byte[][]{FAMILY},
         3, Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
     byte [][] ROWS = ht.getStartKeys();
+
+    // Sleep for a while to make getCompletedTaskCount more accurate
+    Threads.sleepRetainInterrupt(MS_SLEEP);
+
     ThreadPoolExecutor pool = (ThreadPoolExecutor)HTable.multiActionThreadPool;
     int previousPoolSize = pool.getPoolSize();
     int previousLargestPoolSize = pool.getLargestPoolSize();
@@ -153,6 +161,9 @@ public class TestHTable {
       ht.put(put);
       ht.flushCommits();
     }
+
+    // Sleep for a while to make getCompletedTaskCount more accurate
+    Threads.sleepRetainInterrupt(MS_SLEEP);
 
     // verify that HTable does NOT use thread pool for single put requests
     assertEquals(1, pool.getCorePoolSize());
@@ -169,11 +180,15 @@ public class TestHTable {
     ht.put(multiput);
     ht.flushCommits();
 
+    // Sleep for a while to make getCompletedTaskCount more accurate
+    Threads.sleepRetainInterrupt(MS_SLEEP);
+
     // verify that HTable does use thread pool for multi put requests.
     assertTrue((SLAVES >= pool.getLargestPoolSize())
       && (pool.getLargestPoolSize() >= previousLargestPoolSize));
-    assertEquals(SLAVES,
-        (pool.getCompletedTaskCount() - previousCompletedTaskCount));
+    assertTrue(String.format("Tasks completed(%d -> %d)",
+        previousCompletedTaskCount, pool.getCompletedTaskCount()),
+        (pool.getCompletedTaskCount() - previousCompletedTaskCount) >= SLAVES);
   }
 
   /**
