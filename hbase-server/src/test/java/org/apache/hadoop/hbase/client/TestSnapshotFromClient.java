@@ -49,6 +49,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.google.common.collect.Lists;
+
 /**
  * Test create/using/deleting snapshots from the client
  * <p>
@@ -251,5 +253,57 @@ public class TestSnapshotFromClient {
     } catch (SnapshotCreationException e) {
       LOG.info("Correctly failed to snapshot a non-existant table:" + e.getMessage());
     }
+  }
+
+  @Test (timeout=300000)
+  public void testOfflineTableSnapshotWithEmptyRegions() throws Exception {
+    // test with an empty table with one region
+
+    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    // make sure we don't fail on listing snapshots
+    SnapshotTestingUtils.assertNoSnapshots(admin);
+
+    // get the name of all the regionservers hosting the snapshotted table
+    Set<String> snapshotServers = new HashSet<String>();
+    List<RegionServerThread> servers = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
+    for (RegionServerThread server : servers) {
+      if (server.getRegionServer().getOnlineRegions(TABLE_NAME).size() > 0) {
+        snapshotServers.add(server.getRegionServer().getServerName().toString());
+      }
+    }
+
+    LOG.debug("FS state before disable:");
+    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    admin.disableTable(TABLE_NAME);
+
+    LOG.debug("FS state before snapshot:");
+    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+
+    // take a snapshot of the disabled table
+    byte[] snapshot = Bytes.toBytes("testOfflineTableSnapshotWithEmptyRegions");
+    admin.snapshot(snapshot, TABLE_NAME);
+    LOG.debug("Snapshot completed.");
+
+    // make sure we have the snapshot
+    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(admin,
+      snapshot, TABLE_NAME);
+
+    // make sure its a valid snapshot
+    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
+    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    LOG.debug("FS state after snapshot:");
+    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+
+    List<byte[]> emptyCfs = Lists.newArrayList(TEST_FAM); // no file in the region
+    List<byte[]> nonEmptyCfs = Lists.newArrayList();
+    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, nonEmptyCfs, emptyCfs, rootDir,
+      admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), snapshotServers);
+
+    admin.deleteSnapshot(snapshot);
+    snapshots = admin.listSnapshots();
+    SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 }

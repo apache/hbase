@@ -210,10 +210,16 @@ public class SnapshotTestingUtils {
     // Extract regions and families with store files
     final Set<String> snapshotRegions = new HashSet<String>();
     final Set<byte[]> snapshotFamilies = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    FSVisitor.visitRegions(fs, snapshotDir, new FSVisitor.RegionVisitor() {
+      @Override
+      public void region(String region) throws IOException {
+        snapshotRegions.add(region);
+      }
+    });
     FSVisitor.visitTableStoreFiles(fs, snapshotDir, new FSVisitor.StoreFileVisitor() {
+      @Override
       public void storeFile(final String region, final String family, final String hfileName)
           throws IOException {
-        snapshotRegions.add(region);
         snapshotFamilies.add(Bytes.toBytes(family));
       }
     });
@@ -230,13 +236,6 @@ public class SnapshotTestingUtils {
       for (final byte[] familyName: emptyTestFamilies) {
         assertFalse(snapshotFamilies.contains(familyName));
       }
-    }
-
-    // Avoid checking regions if the request is for an empty snapshot
-    if ((nonEmptyTestFamilies == null || nonEmptyTestFamilies.size() == 0) &&
-        (emptyTestFamilies != null && emptyTestFamilies.size() > 0)) {
-      assertEquals(0, snapshotRegions.size());
-      return;
     }
 
     // check the region snapshot for all the regions
@@ -349,6 +348,7 @@ public class SnapshotTestingUtils {
       throws IOException {
     final ArrayList<Path> hfiles = new ArrayList<Path>();
     FSVisitor.visitTableStoreFiles(fs, tableDir, new FSVisitor.StoreFileVisitor() {
+      @Override
       public void storeFile(final String region, final String family, final String hfileName)
           throws IOException {
         hfiles.add(new Path(tableDir, new Path(region, new Path(family, hfileName))));
@@ -421,6 +421,7 @@ public class SnapshotTestingUtils {
 
     final ArrayList corruptedFiles = new ArrayList();
     SnapshotReferenceUtil.visitTableStoreFiles(fs, snapshotDir, new FSVisitor.StoreFileVisitor() {
+      @Override
       public void storeFile (final String region, final String family, final String hfile)
           throws IOException {
         HFileLink link = HFileLink.create(util.getConfiguration(), table, region, family, hfile);
