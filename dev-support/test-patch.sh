@@ -43,6 +43,9 @@ FINDBUGS_HOME=${FINDBUGS_HOME}
 FORREST_HOME=${FORREST_HOME}
 ECLIPSE_HOME=${ECLIPSE_HOME}
 
+RED=$(tput setaf 1)
+RESET_COLOR=$(tput sgr0)
+
 ###############################################################################
 printUsage() {
   echo "Usage: $0 [options] patch-file | defect-number"
@@ -327,6 +330,30 @@ checkTests () {
 }
 
 ###############################################################################
+### Check there are no compilation errors, passing a file to be parsed.
+checkCompilationErrors() {
+  local file=$1
+  COMPILATION_ERROR=false
+  eval $(awk '/ERROR/ {print "COMPILATION_ERROR=true"}' $file)
+  if $COMPILATION_ERROR ; then
+    ERRORS=$($AWK '/ERROR/ { print $0 }' $file)
+    echo -e "${RED}======================================================================"
+    echo -e "${RED} There are compilation errors."
+    echo -e "${RED}======================================================================"
+    echo -e "${RED}$ERRORS"
+    echo -e "${RESET_COLOR}"
+    JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:red}-1 javac{color}.  The patch appears to cause mvn compile goal to fail.
+
+    Compilation errors resume:
+    $ERRORS
+    "
+    cleanupAndExit 1
+  fi
+}
+
+###############################################################################
 ### Attempt to apply the patch
 applyPatch () {
   echo ""
@@ -422,12 +449,7 @@ checkJavacWarnings () {
   echo "$MVN clean package -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
   $MVN clean package -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchJavacWarnings.txt 2>&1
-  if [[ $? != 0 ]] ; then
-    JIRA_COMMENT="$JIRA_COMMENT
-
-    {color:red}-1 javac{color}.  The patch appears to cause mvn compile goal to fail."
-    return 1
-  fi
+  checkCompilationErrors $PATCH_DIR/patchJavacWarnings.txt
   ### Compare trunk and patch javac warning numbers
   if [[ -f $PATCH_DIR/patchJavacWarnings.txt ]] ; then
     trunkJavacWarnings=`$GREP '\[WARNING\]' $PATCH_DIR/trunkJavacWarnings.txt | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
@@ -839,9 +861,9 @@ fi
 
 checkAntiPatterns
 (( RESULT = RESULT + $? ))
-checkJavadocWarnings
-(( RESULT = RESULT + $? ))
 checkJavacWarnings
+(( RESULT = RESULT + $? ))
+checkJavadocWarnings
 (( RESULT = RESULT + $? ))
 ### Checkstyle not implemented yet
 #checkStyle
