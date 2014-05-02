@@ -47,7 +47,7 @@ public class RegionMovementTestHelper extends HBaseTestingUtility {
 
   private static final Log LOG = LogFactory.getLog(RegionMovementTestHelper.class);
 
-  private static int sleepTime = 10;
+  private static int sleepTime = 100;
   private int lastRegionOpenedCount = 0;
 
   public RegionMovementTestHelper() {

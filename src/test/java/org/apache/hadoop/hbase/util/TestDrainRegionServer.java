@@ -19,10 +19,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.master.RegionMovementTestHelper;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
@@ -45,7 +44,7 @@ import static org.junit.Assert.fail;
  */
 public class TestDrainRegionServer {
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static RegionMovementTestHelper TEST_UTIL = new RegionMovementTestHelper();
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
 
   private static final int REGION_SERVERS = 5;
@@ -62,8 +61,9 @@ public class TestDrainRegionServer {
 
     byte[] tableName = Bytes.toBytes("testBlacklistRegionServerWithoutTimeout");
 
-    HTable table = TEST_UTIL.createTable(tableName, FAM_NAM);
-    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+    HTable table = TEST_UTIL.createTable(
+        new StringBytes(tableName), new byte[][] { FAM_NAM } , 1, TEST_UTIL.getTmpKeys());
+    table.close();
 
     List<JVMClusterUtil.RegionServerThread> servers =
         TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads();
@@ -73,13 +73,13 @@ public class TestDrainRegionServer {
     TEST_UTIL.getHBaseCluster().getMaster().regionPlacement.updateAssignmentPlan(ap);
 
     // Wait for rebalance to to complete
-    Thread.sleep(60000);
+    TEST_UTIL.waitOnStableRegionMovement();
 
     HRegionServer server = null;
 
     // Lets select a server which does not have META/ROOT
-    for (int i = 0; i < servers.size(); i++) {
-      server = servers.get(i).getRegionServer();
+    for (JVMClusterUtil.RegionServerThread serverThread : servers) {
+      server = serverThread.getRegionServer();
       for (HRegion region : server.getOnlineRegions()) {
         if (region.getRegionInfo().isMetaRegion() ||
             region.getRegionInfo().isRootRegion() ||
@@ -107,9 +107,13 @@ public class TestDrainRegionServer {
 
     rollingRestart.drainServer(drainFile);
 
+    TEST_UTIL.waitOnStableRegionMovement();
+
     assertEquals("Drained server expected to have 0 online regions", 0, server.getOnlineRegions().size());
 
     rollingRestart.undrainServer(drainFile);
+
+    TEST_UTIL.waitOnStableRegionMovement();
 
     assertEquals("Undrained server expected to have same number of online regions as before",
       regionsCount, server.getOnlineRegions().size());
