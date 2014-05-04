@@ -1167,6 +1167,17 @@ public class AccessController extends BaseRegionObserver
                                   NamespaceDescriptor ns) throws IOException {
   }
 
+  @Override
+  public void preTableFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {
+    requirePermission("flushTable", tableName, null, null, Action.ADMIN, Action.CREATE);
+  }
+
+  @Override
+  public void postTableFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {
+  }
+
   /* ---- RegionObserver implementation ---- */
 
   @Override

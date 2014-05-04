@@ -556,6 +556,16 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   }
 
   @Override
+  public void preTableFlush(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+  }
+
+  @Override
+  public void postTableFlush(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+  }
+
+  @Override
   public void preMasterInitialization(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
 

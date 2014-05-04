@@ -160,6 +160,7 @@ abstract public class Subprocedure implements Callable<Void> {
       LOG.debug("Subprocedure '" + barrierName + "' starting 'acquire' stage");
       acquireBarrier();
       LOG.debug("Subprocedure '" + barrierName + "' locally acquired");
+      rethrowException();
 
       // vote yes to coordinator about being prepared
       rpcs.sendMemberAcquired(this);
@@ -180,6 +181,7 @@ abstract public class Subprocedure implements Callable<Void> {
       LOG.debug("Subprocedure '" + barrierName + "' received 'reached' from coordinator.");
       insideBarrier();
       LOG.debug("Subprocedure '" + barrierName + "' locally completed");
+      rethrowException();
 
       // Ack that the member has executed and released local barrier
       rpcs.sendMemberCompleted(this);

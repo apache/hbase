@@ -24,6 +24,7 @@ import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -1467,21 +1468,12 @@ public class HBaseAdmin implements Admin {
       } else {
         final TableName tableName = checkTableExists(
             TableName.valueOf(tableNameOrRegionName), ct);
-        List<Pair<HRegionInfo, ServerName>> pairs =
-          MetaReader.getTableRegionsAndLocations(ct,
-              tableName);
-        for (Pair<HRegionInfo, ServerName> pair: pairs) {
-          if (pair.getFirst().isOffline()) continue;
-          if (pair.getSecond() == null) continue;
-          try {
-            flush(pair.getSecond(), pair.getFirst());
-          } catch (NotServingRegionException e) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Trying to flush " + pair.getFirst() + ": " +
-                StringUtils.stringifyException(e));
-            }
-          }
+        if (isTableDisabled(tableName)) {
+          LOG.info("Table is disabled: " + tableName.getNameAsString());
+          return;
         }
+        execProcedure("flush-table-proc", tableName.getNameAsString(),
+          new HashMap<String, String>());
       }
     } finally {
       cleanupCatalogTracker(ct);

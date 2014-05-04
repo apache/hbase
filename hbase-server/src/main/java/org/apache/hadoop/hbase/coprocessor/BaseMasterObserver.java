@@ -387,4 +387,14 @@ public class BaseMasterObserver implements MasterObserver {
       List<HTableDescriptor> descriptors) throws IOException {
   }
 
+  @Override
+  public void preTableFlush(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+  }
+
+  @Override
+  public void postTableFlush(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+  }
+
 }

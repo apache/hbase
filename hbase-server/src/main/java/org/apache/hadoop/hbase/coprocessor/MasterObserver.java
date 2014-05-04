@@ -694,4 +694,22 @@ public interface MasterObserver extends Coprocessor {
    */
   void postModifyNamespace(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       NamespaceDescriptor ns) throws IOException;
+
+  /**
+   * Called before the table memstore is flushed to disk.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @throws IOException
+   */
+  void preTableFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException;
+
+  /**
+   * Called after the table memstore is flushed to disk.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @throws IOException
+   */
+  void postTableFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException;
 }

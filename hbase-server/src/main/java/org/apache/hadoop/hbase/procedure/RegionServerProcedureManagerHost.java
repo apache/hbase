@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.procedure.flush.RegionServerFlushTableProcedureManager;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
@@ -70,6 +71,8 @@ public class RegionServerProcedureManagerHost extends
     loadUserProcedures(conf, REGIONSERVER_PROCEDURE_CONF_KEY);
     // load the default snapshot manager
     procedures.add(new RegionServerSnapshotManager());
+    // load the default flush region procedure manager
+    procedures.add(new RegionServerFlushTableProcedureManager());
   }
 
 }

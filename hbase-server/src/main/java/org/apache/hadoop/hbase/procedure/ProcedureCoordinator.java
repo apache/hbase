@@ -149,12 +149,21 @@ public class ProcedureCoordinator {
       Procedure oldProc = procedures.get(procName);
       if (oldProc != null) {
         // procedures are always eventually completed on both successful and failed execution
-        if (oldProc.completedLatch.getCount() != 0) {
-          LOG.warn("Procedure " + procName + " currently running.  Rejecting new request");
-          return false;
+        try {
+          if (!oldProc.isCompleted()) {
+            LOG.warn("Procedure " + procName + " currently running.  Rejecting new request");
+            return false;
+          }
+          else {
+            LOG.debug("Procedure " + procName
+              + " was in running list but was completed.  Accepting new attempt.");
+            procedures.remove(procName);
+          }
+        } catch (ForeignException e) {
+          LOG.debug("Procedure " + procName
+            + " was in running list but has exception.  Accepting new attempt.");
+          procedures.remove(procName);
         }
-        LOG.debug("Procedure " + procName + " was in running list but was completed.  Accepting new attempt.");
-        procedures.remove(procName);
       }
     }
 
@@ -233,14 +242,19 @@ public class ProcedureCoordinator {
 
   /**
    * Kick off the named procedure
+   * Currently only one procedure with the same type and name is allowed to run at a time.
    * @param procName name of the procedure to start
    * @param procArgs arguments for the procedure
    * @param expectedMembers expected members to start
-   * @return handle to the running procedure, if it was started correctly, <tt>null</tt> otherwise
-   * @throws RejectedExecutionException if there are no more available threads to run the procedure
+   * @return handle to the running procedure, if it was started correctly,
+   *         <tt>null</tt> otherwise.
+   *         Null could be due to submitting a procedure multiple times
+   *         (or one with the same name), or runtime exception.
+   *         Check the procedure's monitor that holds a reference to the exception
+   *         that caused the failure.
    */
   public Procedure startProcedure(ForeignExceptionDispatcher fed, String procName, byte[] procArgs,
-      List<String> expectedMembers) throws RejectedExecutionException {
+      List<String> expectedMembers) {
     Procedure proc = createProcedure(fed, procName, procArgs, expectedMembers);
     if (!this.submitProcedure(proc)) {
       LOG.error("Failed to submit procedure '" + procName + "'");

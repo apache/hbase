@@ -941,6 +941,16 @@ public class TestMasterObserver {
     public boolean wasGetTableDescriptorsCalled() {
       return preGetTableDescriptorsCalled && postGetTableDescriptorsCalled;
     }
+
+    @Override
+    public void preTableFlush(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        TableName tableName) throws IOException {
+    }
+
+    @Override
+    public void postTableFlush(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        TableName tableName) throws IOException {
+    }
   }
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();

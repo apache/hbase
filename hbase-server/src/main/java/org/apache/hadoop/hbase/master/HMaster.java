@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
+import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
@@ -428,6 +429,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.snapshotManager = new SnapshotManager();
     this.mpmHost = new MasterProcedureManagerHost();
     this.mpmHost.register(this.snapshotManager);
+    this.mpmHost.register(new MasterFlushTableProcedureManager());
     this.mpmHost.loadProcedures(conf);
     this.mpmHost.initialize(this, this.metricsMaster);
   }

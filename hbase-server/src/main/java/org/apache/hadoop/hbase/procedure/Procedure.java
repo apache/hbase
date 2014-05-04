@@ -342,6 +342,16 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   }
 
   /**
+   * Check if the entire procedure has globally completed, or has been aborted.
+   * @throws ForeignException
+   */
+  public boolean isCompleted() throws ForeignException {
+    // Rethrow exception if any
+    monitor.rethrowException();
+    return (completedLatch.getCount() == 0);
+  }
+
+  /**
    * A callback that handles incoming ForeignExceptions.
    */
   @Override
