@@ -289,7 +289,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assignRegions(regions, oldServers, clusterState);
 
     // should not throw exception:
-    BaseLoadBalancer.Cluster cluster = new Cluster(null, clusterState, null, null, null);
+    BaseLoadBalancer.Cluster cluster = new Cluster(null, clusterState, null, null, null, null);
     assertEquals(101 + 9, cluster.numRegions);
     assertEquals(10, cluster.numServers); // only 10 servers because they share the same host + port
   }
@@ -331,7 +331,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     when(locationFinder.getTopBlockLocations(regions.get(43))).thenReturn(
       Lists.newArrayList(ServerName.valueOf("foo", 0, 0))); // this server does not exists in clusterStatus
 
-    BaseLoadBalancer.Cluster cluster = new Cluster(null, clusterState, null, locationFinder, null);
+    BaseLoadBalancer.Cluster cluster = new Cluster(null, clusterState, null, locationFinder, null, null);
 
     int r0 = ArrayUtils.indexOf(cluster.regions, regions.get(0)); // this is ok, it is just a test
     int r1 = ArrayUtils.indexOf(cluster.regions, regions.get(1));

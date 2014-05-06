@@ -63,25 +63,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   private static final int MIN_SERVER_BALANCE = 2;
   private volatile boolean stopped = false;
 
-  protected static final Set<String> TABLES_ON_MASTER = new HashSet<String>();
-
-  /**
-   * Regions of these tables will be put on the master regionserver by default.
-   */
-  static {
-    TABLES_ON_MASTER.add(AccessControlLists.ACL_TABLE_NAME.getNameAsString());
-    TABLES_ON_MASTER.add(TableName.NAMESPACE_TABLE_NAME.getNameAsString());
-    TABLES_ON_MASTER.add(TableName.META_TABLE_NAME.getNameAsString());
-  }
-
-  /**
-   * Check if a region belongs to some small system table.
-   * If so, it may be expected to be put on the master regionserver.
-   */
-  protected static boolean shouldBeOnMaster(HRegionInfo region) {
-    return TABLES_ON_MASTER.contains(region.getTable().getNameAsString());
-  }
-
   /**
    * An efficient array based implementation similar to ClusterState for keeping
    * the status of the cluster in terms of region assignment and distribution.
@@ -89,6 +70,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    */
   protected static class Cluster {
     ServerName masterServerName;
+    Set<String> tablesOnMaster;
     ServerName[] servers;
     ArrayList<String> tables;
     HRegionInfo[] regions;
@@ -123,8 +105,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         Map<ServerName, List<HRegionInfo>> clusterState,
         Map<String, Deque<RegionLoad>> loads,
         RegionLocationFinder regionFinder,
-        Collection<ServerName> backupMasters) {
+        Collection<ServerName> backupMasters,
+        Set<String> tablesOnMaster) {
 
+      this.tablesOnMaster = tablesOnMaster;
       this.masterServerName = masterServerName;
       serversToIndex = new HashMap<String, Integer>();
       tablesToIndex = new HashMap<String, Integer>();
@@ -132,7 +116,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
       //TODO: We should get the list of tables from master
       tables = new ArrayList<String>();
-
 
       numRegions = 0;
 
@@ -380,6 +363,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return activeMasterIndex == server;
     }
 
+    boolean shouldBeOnMaster(HRegionInfo region) {
+      return tablesOnMaster != null && tablesOnMaster.contains(
+        region.getTable().getNameAsString());
+    }
+
     private Comparator<Integer> numRegionsComparator = new Comparator<Integer>() {
       @Override
       public int compare(Integer integer, Integer integer2) {
@@ -448,6 +436,12 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     "hbase.balancer.activeMasterWeight";
   private static final int DEFAULT_ACTIVE_MASTER_WEIGHT = 200;
 
+  // Regions of these tables are put on the master by default.
+  private static final String[] DEFAULT_TABLES_ON_MASTER =
+    new String[] {AccessControlLists.ACL_TABLE_NAME.getNameAsString(),
+      TableName.NAMESPACE_TABLE_NAME.getNameAsString(),
+      TableName.META_TABLE_NAME.getNameAsString()};
+
   protected int activeMasterWeight;
   protected int backupMasterWeight;
 
@@ -456,6 +450,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected final Set<ServerName> excludedServers =
     Collections.synchronizedSet(new HashSet<ServerName>());
 
+  protected final Set<String> tablesOnMaster = new HashSet<String>();
   protected final MetricsBalancer metricsBalancer = new MetricsBalancer();
   protected ClusterStatus clusterStatus = null;
   protected ServerName masterServerName;
@@ -477,6 +472,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       LOG.info("Backup master won't host any region since "
         + BACKUP_MASTER_WEIGHT_KEY + " is " + backupMasterWeight
         + "(<1)");
+    }
+    String[] tables = conf.getStrings(
+      "hbase.balancer.tablesOnMaster", DEFAULT_TABLES_ON_MASTER);
+    if (tables != null) {
+      for (String table: tables) {
+        tablesOnMaster.add(table);
+      }
     }
   }
 
@@ -500,6 +502,15 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
     }
   }
+
+  /**
+   * Check if a region belongs to some small system table.
+   * If so, it may be expected to be put on the master regionserver.
+   */
+  protected boolean shouldBeOnMaster(HRegionInfo region) {
+    return tablesOnMaster.contains(region.getTable().getNameAsString());
+  }
+
   /**
    * Balance the regions that should be on master regionserver.
    */

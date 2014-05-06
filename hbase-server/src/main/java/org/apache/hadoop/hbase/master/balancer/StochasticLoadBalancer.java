@@ -202,8 +202,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
     // Keep track of servers to iterate through them.
-    Cluster cluster = new Cluster(masterServerName,
-      clusterState, loads, regionFinder, getBackupMasters());
+    Cluster cluster = new Cluster(masterServerName, clusterState,
+      loads, regionFinder, getBackupMasters(), tablesOnMaster);
     double currentCost = computeCost(cluster, Double.MAX_VALUE);
 
     double initCost = currentCost;
