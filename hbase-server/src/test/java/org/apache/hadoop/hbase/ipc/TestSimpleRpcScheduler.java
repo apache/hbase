@@ -21,6 +21,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import com.google.protobuf.Message;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -28,6 +30,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ipc.RpcServer.Call;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -36,12 +40,15 @@ import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyObject;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
@@ -50,6 +57,7 @@ import static org.mockito.Mockito.when;
 
 @Category(SmallTests.class)
 public class TestSimpleRpcScheduler {
+  public static final Log LOG = LogFactory.getLog(TestSimpleRpcScheduler.class);
 
   private final RpcScheduler.Context CONTEXT = new RpcScheduler.Context() {
     @Override
@@ -133,5 +141,116 @@ public class TestSimpleRpcScheduler {
     CallRunner task = mock(CallRunner.class);
     when(task.getCall()).thenReturn(call);
     return task;
+  }
+
+  @Test
+  public void testRpcScheduler() throws Exception {
+    testRpcScheduler(SimpleRpcScheduler.CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
+    testRpcScheduler(SimpleRpcScheduler.CALL_QUEUE_TYPE_FIFO_CONF_VALUE);
+  }
+
+  private void testRpcScheduler(final String queueType) throws Exception {
+    Configuration schedConf = HBaseConfiguration.create();
+    schedConf.set(SimpleRpcScheduler.CALL_QUEUE_TYPE_CONF_KEY, queueType);
+
+    PriorityFunction priority = mock(PriorityFunction.class);
+    when(priority.getPriority(any(RequestHeader.class), any(Message.class)))
+      .thenReturn(HConstants.NORMAL_QOS);
+
+    RpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 1, 1, 1, priority,
+                                                    HConstants.QOS_THRESHOLD);
+    try {
+      scheduler.start();
+
+      CallRunner smallCallTask = mock(CallRunner.class);
+      RpcServer.Call smallCall = mock(RpcServer.Call.class);
+      RequestHeader smallHead = RequestHeader.newBuilder().setCallId(1).build();
+      when(smallCallTask.getCall()).thenReturn(smallCall);
+      when(smallCall.getHeader()).thenReturn(smallHead);
+
+      CallRunner largeCallTask = mock(CallRunner.class);
+      RpcServer.Call largeCall = mock(RpcServer.Call.class);
+      RequestHeader largeHead = RequestHeader.newBuilder().setCallId(50).build();
+      when(largeCallTask.getCall()).thenReturn(largeCall);
+      when(largeCall.getHeader()).thenReturn(largeHead);
+
+      CallRunner hugeCallTask = mock(CallRunner.class);
+      RpcServer.Call hugeCall = mock(RpcServer.Call.class);
+      RequestHeader hugeHead = RequestHeader.newBuilder().setCallId(100).build();
+      when(hugeCallTask.getCall()).thenReturn(hugeCall);
+      when(hugeCall.getHeader()).thenReturn(hugeHead);
+
+      when(priority.getDeadline(eq(smallHead), any(Message.class))).thenReturn(0L);
+      when(priority.getDeadline(eq(largeHead), any(Message.class))).thenReturn(50L);
+      when(priority.getDeadline(eq(hugeHead), any(Message.class))).thenReturn(100L);
+
+      final ArrayList<Integer> work = new ArrayList<Integer>();
+
+      doAnswer(new Answer<Object>() {
+        @Override
+        public Object answer(InvocationOnMock invocation) {
+          synchronized (work) {
+            work.add(10);
+          }
+          Threads.sleepWithoutInterrupt(100);
+          return null;
+        }
+      }).when(smallCallTask).run();
+
+      doAnswer(new Answer<Object>() {
+        @Override
+        public Object answer(InvocationOnMock invocation) {
+          synchronized (work) {
+            work.add(50);
+          }
+          Threads.sleepWithoutInterrupt(100);
+          return null;
+        }
+      }).when(largeCallTask).run();
+
+      doAnswer(new Answer<Object>() {
+        @Override
+        public Object answer(InvocationOnMock invocation) {
+          synchronized (work) {
+            work.add(100);
+          }
+          Threads.sleepWithoutInterrupt(100);
+          return null;
+        }
+      }).when(hugeCallTask).run();
+
+      scheduler.dispatch(smallCallTask);
+      scheduler.dispatch(smallCallTask);
+      scheduler.dispatch(smallCallTask);
+      scheduler.dispatch(hugeCallTask);
+      scheduler.dispatch(smallCallTask);
+      scheduler.dispatch(largeCallTask);
+      scheduler.dispatch(smallCallTask);
+      scheduler.dispatch(smallCallTask);
+
+      while (work.size() < 8) {
+        Threads.sleepWithoutInterrupt(100);
+      }
+
+      int seqSum = 0;
+      int totalTime = 0;
+      for (int i = 0; i < work.size(); ++i) {
+        LOG.debug("Request i=" + i + " value=" + work.get(i));
+        seqSum += work.get(i);
+        totalTime += seqSum;
+      }
+      LOG.debug("Total Time: " + totalTime);
+
+      // -> [small small small huge small large small small]
+      // -> NO REORDER   [10 10 10 100 10 50 10 10] -> 930 (FIFO Queue)
+      // -> WITH REORDER [10 10 10 10 10 10 50 100] -> 530 (Deadline Queue)
+      if (queueType.equals(SimpleRpcScheduler.CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
+        assertEquals(530, totalTime);
+      } else /* if (queueType.equals(SimpleRpcScheduler.CALL_QUEUE_TYPE_FIFO_CONF_VALUE)) */ {
+        assertEquals(930, totalTime);
+      }
+    } finally {
+      scheduler.stop();
+    }
   }
 }

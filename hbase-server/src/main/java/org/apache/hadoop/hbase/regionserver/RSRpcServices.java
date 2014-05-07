@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
@@ -680,6 +681,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   public RSRpcServices(HRegionServer rs) throws IOException {
+    regionServer = rs;
+
     RpcSchedulerFactory rpcSchedulerFactory;
     try {
       Class<?> rpcSchedulerFactoryClass = rs.conf.getClass(
@@ -722,7 +725,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     // Set our address.
     isa = rpcServer.getListenerAddress();
     rpcServer.setErrorHandler(this);
-    regionServer = rs;
     rs.setName(name);
   }
 
@@ -733,6 +735,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       return scannerHolder.s;
     }
     return null;
+  }
+
+  /**
+   * Get the vtime associated with the scanner.
+   * Currently the vtime is the number of "next" calls.
+   */
+  long getScannerVirtualTime(long scannerId) {
+    String scannerIdString = Long.toString(scannerId);
+    RegionScannerHolder scannerHolder = scanners.get(scannerIdString);
+    if (scannerHolder != null) {
+      return scannerHolder.nextCallSeq;
+    }
+    return 0L;
   }
 
   long addScanner(RegionScanner s, HRegion r) throws LeaseStillHeldException {
@@ -764,6 +779,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   PriorityFunction getPriority() {
     return priority;
+  }
+
+  Configuration getConfiguration() {
+    return regionServer.getConfiguration();
   }
 
   void start() {
@@ -819,6 +838,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public int getPriority(RequestHeader header, Message param) {
     return priority.getPriority(header, param);
+  }
+
+  @Override
+  public long getDeadline(RequestHeader header, Message param) {
+    return priority.getDeadline(header, param);
   }
 
   /*

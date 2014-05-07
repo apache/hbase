@@ -17,14 +17,18 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -36,6 +40,45 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class SimpleRpcScheduler implements RpcScheduler {
+  public static final Log LOG = LogFactory.getLog(SimpleRpcScheduler.class);
+
+  /** If set to true, uses a priority queue and deprioritize long-running scans */
+  public static final String CALL_QUEUE_TYPE_CONF_KEY = "ipc.server.callqueue.type";
+  public static final String CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE = "deadline";
+  public static final String CALL_QUEUE_TYPE_FIFO_CONF_VALUE = "fifo";
+
+  /** max delay in msec used to bound the deprioritized requests */
+  public static final String QUEUE_MAX_CALL_DELAY_CONF_KEY = "ipc.server.queue.max.call.delay";
+
+  /**
+   * Comparator used by the "normal callQueue" if DEADLINE_CALL_QUEUE_CONF_KEY is set to true.
+   * It uses the calculated "deadline" e.g. to deprioritize long-running job
+   *
+   * If multiple requests have the same deadline BoundedPriorityBlockingQueue will order them in
+   * FIFO (first-in-first-out) manner.
+   */
+  private static class CallPriorityComparator implements Comparator<CallRunner> {
+    private final static int DEFAULT_MAX_CALL_DELAY = 5000;
+
+    private final PriorityFunction priority;
+    private final int maxDelay;
+
+    public CallPriorityComparator(final Configuration conf, final PriorityFunction priority) {
+      this.priority = priority;
+      this.maxDelay = conf.getInt(QUEUE_MAX_CALL_DELAY_CONF_KEY, DEFAULT_MAX_CALL_DELAY);
+    }
+
+    @Override
+    public int compare(CallRunner a, CallRunner b) {
+      RpcServer.Call callA = a.getCall();
+      RpcServer.Call callB = b.getCall();
+      long deadlineA = priority.getDeadline(callA.getHeader(), callA.param);
+      long deadlineB = priority.getDeadline(callB.getHeader(), callB.param);
+      deadlineA = callA.timestamp + Math.min(deadlineA, maxDelay);
+      deadlineB = callB.timestamp + Math.min(deadlineB, maxDelay);
+      return (int)(deadlineA - deadlineB);
+    }
+  }
 
   private int port;
   private final int handlerCount;
@@ -73,7 +116,15 @@ public class SimpleRpcScheduler implements RpcScheduler {
     this.replicationHandlerCount = replicationHandlerCount;
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
-    this.callQueue = new LinkedBlockingQueue<CallRunner>(maxQueueLength);
+
+    String callQueueType = conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
+    LOG.debug("Using " + callQueueType + " as user call queue");
+    if (callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
+      this.callQueue = new BoundedPriorityBlockingQueue<CallRunner>(maxQueueLength,
+          new CallPriorityComparator(conf, this.priority));
+    } else {
+      this.callQueue = new LinkedBlockingQueue<CallRunner>(maxQueueLength);
+    }
     this.priorityCallQueue = priorityHandlerCount > 0
         ? new LinkedBlockingQueue<CallRunner>(maxQueueLength)
         : null;
@@ -128,7 +179,7 @@ public class SimpleRpcScheduler implements RpcScheduler {
   @Override
   public void dispatch(CallRunner callTask) throws InterruptedException {
     RpcServer.Call call = callTask.getCall();
-    int level = priority.getPriority(call.header, call.param);
+    int level = priority.getPriority(call.getHeader(), call.param);
     if (priorityCallQueue != null && level > highPriorityLevel) {
       priorityCallQueue.put(callTask);
     } else if (replicationQueue != null && level == HConstants.REPLICATION_QOS) {

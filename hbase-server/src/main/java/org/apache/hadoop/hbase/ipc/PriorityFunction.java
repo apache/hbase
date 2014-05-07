@@ -25,9 +25,20 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
  */
 public interface PriorityFunction {
   /**
+   * Returns the 'priority type' of the specified request.
+   * The returned value is mainly used to select the dispatch queue.
    * @param header
    * @param param
    * @return Priority of this request.
    */
   int getPriority(RequestHeader header, Message param);
+
+  /**
+   * Returns the deadline of the specified request.
+   * The returned value is used to sort the dispatch queue.
+   * @param header
+   * @param param
+   * @return Deadline of this request. 0 now, otherwise msec of 'delay'
+   */
+  long getDeadline(RequestHeader header, Message param);
 }
