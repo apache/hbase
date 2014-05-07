@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 
 /**
  * Handler to Restore a snapshot.
@@ -120,9 +121,11 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       // 2. Execute the on-disk Restore
       LOG.debug("Starting restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot));
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
+      SnapshotManifest manifest = SnapshotManifest.open(masterServices.getConfiguration(), fs,
+                                                        snapshotDir, snapshot);
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(
-          masterServices.getConfiguration(), fs,
-          snapshot, snapshotDir, hTableDescriptor, rootDir, monitor, status);
+          masterServices.getConfiguration(), fs, manifest,
+          this.hTableDescriptor, rootDir, monitor, status);
       RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreHdfsRegions();
 
       // 3. Forces all the RegionStates to be offline

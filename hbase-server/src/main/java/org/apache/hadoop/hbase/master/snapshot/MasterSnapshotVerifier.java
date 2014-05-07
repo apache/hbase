@@ -19,35 +19,28 @@ package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
-import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.FSVisitor;
-import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 
 /**
  * General snapshot verification on the master.
@@ -110,14 +103,16 @@ public final class MasterSnapshotVerifier {
    */
   public void verifySnapshot(Path snapshotDir, Set<String> snapshotServers)
       throws CorruptedSnapshotException, IOException {
+    SnapshotManifest manifest = SnapshotManifest.open(services.getConfiguration(), fs,
+                                                      snapshotDir, snapshot);
     // verify snapshot info matches
     verifySnapshotDescription(snapshotDir);
 
     // check that tableinfo is a valid table description
-    verifyTableInfo(snapshotDir);
+    verifyTableInfo(manifest);
 
     // check that each region is valid
-    verifyRegions(snapshotDir);
+    verifyRegions(manifest);
   }
 
   /**
@@ -136,8 +131,16 @@ public final class MasterSnapshotVerifier {
    * Check that the table descriptor for the snapshot is a valid table descriptor
    * @param snapshotDir snapshot directory to check
    */
-  private void verifyTableInfo(Path snapshotDir) throws IOException {
-    FSTableDescriptors.getTableDescriptorFromFs(fs, snapshotDir);
+  private void verifyTableInfo(final SnapshotManifest manifest) throws IOException {
+    HTableDescriptor htd = manifest.getTableDescriptor();
+    if (htd == null) {
+      throw new CorruptedSnapshotException("Missing Table Descriptor", snapshot);
+    }
+
+    if (!htd.getNameAsString().equals(snapshot.getTable())) {
+      throw new CorruptedSnapshotException("Invalid Table Descriptor. Expected "
+        + snapshot.getTable() + " name, got " + htd.getNameAsString(), snapshot);
+    }
   }
 
   /**
@@ -145,34 +148,36 @@ public final class MasterSnapshotVerifier {
    * @param snapshotDir snapshot directory to check
    * @throws IOException if we can't reach hbase:meta or read the files from the FS
    */
-  private void verifyRegions(Path snapshotDir) throws IOException {
+  private void verifyRegions(final SnapshotManifest manifest) throws IOException {
     List<HRegionInfo> regions = MetaReader.getTableRegions(this.services.getCatalogTracker(),
         tableName);
 
-    Set<String> snapshotRegions = SnapshotReferenceUtil.getSnapshotRegionNames(fs, snapshotDir);
-    if (snapshotRegions == null) {
+    Map<String, SnapshotRegionManifest> regionManifests = manifest.getRegionManifestsMap();
+    if (regionManifests == null) {
       String msg = "Snapshot " + ClientSnapshotDescriptionUtils.toString(snapshot) + " looks empty";
       LOG.error(msg);
       throw new CorruptedSnapshotException(msg);
     }
 
     String errorMsg = "";
-    if (snapshotRegions.size() != regions.size()) {
-      errorMsg = "Regions moved during the snapshot '" + 
+    if (regionManifests.size() != regions.size()) {
+      errorMsg = "Regions moved during the snapshot '" +
                    ClientSnapshotDescriptionUtils.toString(snapshot) + "'. expected=" +
-                   regions.size() + " snapshotted=" + snapshotRegions.size() + ".";
+                   regions.size() + " snapshotted=" + regionManifests.size() + ".";
       LOG.error(errorMsg);
     }
 
     for (HRegionInfo region : regions) {
-      if (!snapshotRegions.contains(region.getEncodedName())) {
+      SnapshotRegionManifest regionManifest = regionManifests.get(region.getEncodedName());
+      if (regionManifest == null) {
         // could happen due to a move or split race.
         String mesg = " No snapshot region directory found for region:" + region;
         if (errorMsg.isEmpty()) errorMsg = mesg;
         LOG.error(mesg);
+        continue;
       }
 
-      verifyRegion(fs, snapshotDir, region);
+      verifyRegion(fs, manifest.getSnapshotDir(), region, regionManifest);
     }
     if (!errorMsg.isEmpty()) {
       throw new CorruptedSnapshotException(errorMsg);
@@ -185,65 +190,24 @@ public final class MasterSnapshotVerifier {
    * @param snapshotDir snapshot directory to check
    * @param region the region to check
    */
-  private void verifyRegion(final FileSystem fs, final Path snapshotDir, final HRegionInfo region)
-      throws IOException {
-    // make sure we have region in the snapshot
-    Path regionDir = new Path(snapshotDir, region.getEncodedName());
-
-    // make sure we have the region info in the snapshot
-    Path regionInfo = new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE);
-    // make sure the file exists
-    if (!fs.exists(regionInfo)) {
-      throw new CorruptedSnapshotException("No region info found for region:" + region, snapshot);
+  private void verifyRegion(final FileSystem fs, final Path snapshotDir, final HRegionInfo region,
+      final SnapshotRegionManifest manifest) throws IOException {
+    HRegionInfo manifestRegionInfo = HRegionInfo.convert(manifest.getRegionInfo());
+    if (!region.equals(manifestRegionInfo)) {
+      String msg = "Manifest region info " + manifestRegionInfo +
+                   "doesn't match expected region:" + region;
+      throw new CorruptedSnapshotException(msg, snapshot);
     }
 
-    HRegionInfo found = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
-    if (!region.equals(found)) {
-      throw new CorruptedSnapshotException("Found region info (" + found
-        + ") doesn't match expected region:" + region, snapshot);
-    }
-
-    // make sure we have the expected recovered edits files
-    TakeSnapshotUtils.verifyRecoveredEdits(fs, snapshotDir, found, snapshot);
-
-     // make sure we have all the expected store files
-    SnapshotReferenceUtil.visitRegionStoreFiles(fs, regionDir, new FSVisitor.StoreFileVisitor() {
-      public void storeFile(final String regionNameSuffix, final String family,
-          final String hfileName) throws IOException {
-        verifyStoreFile(snapshotDir, region, family, hfileName);
+    // make sure we have all the expected store files
+    SnapshotReferenceUtil.visitRegionStoreFiles(manifest,
+        new SnapshotReferenceUtil.StoreFileVisitor() {
+      @Override
+      public void storeFile(final HRegionInfo regionInfo, final String family,
+          final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+        SnapshotReferenceUtil.verifyStoreFile(services.getConfiguration(), fs, snapshotDir,
+          snapshot, region, family, storeFile);
       }
     });
-  }
-
-  private void verifyStoreFile(final Path snapshotDir, final HRegionInfo regionInfo,
-      final String family, final String fileName) throws IOException {
-    Path refPath = null;
-    if (StoreFileInfo.isReference(fileName)) {
-      // If is a reference file check if the parent file is present in the snapshot
-      Path snapshotHFilePath = new Path(new Path(
-          new Path(snapshotDir, regionInfo.getEncodedName()), family), fileName);
-      refPath = StoreFileInfo.getReferredToFile(snapshotHFilePath);
-      if (!fs.exists(refPath)) {
-        throw new CorruptedSnapshotException("Missing parent hfile for: " + fileName, snapshot);
-      }
-    }
-
-    Path linkPath;
-    if (refPath != null && HFileLink.isHFileLink(refPath)) {
-      linkPath = new Path(family, refPath.getName());
-    } else if (HFileLink.isHFileLink(fileName)) {
-      linkPath = new Path(family, fileName);
-    } else {
-      linkPath = new Path(family, HFileLink.createHFileLinkName(tableName,
-        regionInfo.getEncodedName(), fileName));
-    }
-
-    // check if the linked file exists (in the archive, or in the table dir)
-    HFileLink link = new HFileLink(services.getConfiguration(), linkPath);
-    if (!link.exists(fs)) {
-      throw new CorruptedSnapshotException("Can't find hfile: " + fileName
-          + " in the real (" + link.getOriginPath() + ") or archive (" + link.getArchivePath()
-          + ") directory for the primary table.", snapshot);
-    }
   }
 }

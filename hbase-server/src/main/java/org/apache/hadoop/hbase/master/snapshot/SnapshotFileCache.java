@@ -174,19 +174,24 @@ public class SnapshotFileCache implements Stoppable {
   // is an illegal access to the cache. Really we could do a mutex-guarded pointer swap on the
   // cache, but that seems overkill at the moment and isn't necessarily a bottleneck.
   public synchronized boolean contains(String fileName) throws IOException {
-    if (this.cache.contains(fileName)) return true;
-
-    refreshCache();
-
-    // then check again
-    return this.cache.contains(fileName);
+    boolean hasFile = this.cache.contains(fileName);
+    if (!hasFile) {
+      refreshCache();
+      // then check again
+      hasFile = this.cache.contains(fileName);
+    }
+    return hasFile;
   }
 
   private synchronized void refreshCache() throws IOException {
-    // get the status of the snapshots directory and <snapshot dir>/.tmp
-    FileStatus dirStatus, tempStatus;
+    long lastTimestamp = Long.MAX_VALUE;
+    boolean hasChanges = false;
+
+    // get the status of the snapshots directory and check if it is has changes
     try {
-      dirStatus = fs.getFileStatus(snapshotDir);
+      FileStatus dirStatus = fs.getFileStatus(snapshotDir);
+      lastTimestamp = dirStatus.getModificationTime();
+      hasChanges |= (lastTimestamp >= lastModifiedTime);
     } catch (FileNotFoundException e) {
       if (this.cache.size() > 0) {
         LOG.error("Snapshot directory: " + snapshotDir + " doesn't exist");
@@ -194,16 +199,28 @@ public class SnapshotFileCache implements Stoppable {
       return;
     }
 
+    // get the status of the snapshots temporary directory and check if it has changes
+    // The top-level directory timestamp is not updated, so we have to check the inner-level.
     try {
       Path snapshotTmpDir = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME);
-      tempStatus = fs.getFileStatus(snapshotTmpDir);
+      FileStatus tempDirStatus = fs.getFileStatus(snapshotTmpDir);
+      lastTimestamp = Math.min(lastTimestamp, tempDirStatus.getModificationTime());
+      hasChanges |= (lastTimestamp >= lastModifiedTime);
+      if (!hasChanges) {
+        FileStatus[] tmpSnapshots = FSUtils.listStatus(fs, snapshotDir);
+        if (tmpSnapshots != null) {
+          for (FileStatus dirStatus: tmpSnapshots) {
+            lastTimestamp = Math.min(lastTimestamp, dirStatus.getModificationTime());
+          }
+          hasChanges |= (lastTimestamp >= lastModifiedTime);
+        }
+      }
     } catch (FileNotFoundException e) {
-      tempStatus = dirStatus;
+      // Nothing todo, if the tmp dir is empty
     }
 
     // if the snapshot directory wasn't modified since we last check, we are done
-    if (dirStatus.getModificationTime() <= lastModifiedTime &&
-        tempStatus.getModificationTime() <= lastModifiedTime) {
+    if (!hasChanges) {
       return;
     }
 
@@ -213,8 +230,7 @@ public class SnapshotFileCache implements Stoppable {
     // However, snapshot directories are only created once, so this isn't an issue.
 
     // 1. update the modified time
-    this.lastModifiedTime = Math.min(dirStatus.getModificationTime(),
-                                     tempStatus.getModificationTime());
+    this.lastModifiedTime = lastTimestamp;
 
     // 2.clear the cache
     this.cache.clear();

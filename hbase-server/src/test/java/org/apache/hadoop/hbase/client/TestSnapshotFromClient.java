@@ -20,9 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,9 +37,9 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifestV1;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -182,15 +180,6 @@ public class TestSnapshotFromClient {
     HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
     UTIL.loadTable(table, TEST_FAM, false);
 
-    // get the name of all the regionservers hosting the snapshotted table
-    Set<String> snapshotServers = new HashSet<String>();
-    List<RegionServerThread> servers = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
-    for (RegionServerThread server : servers) {
-      if (server.getRegionServer().getOnlineRegions(TABLE_NAME).size() > 0) {
-        snapshotServers.add(server.getRegionServer().getServerName().toString());
-      }
-    }
-
     LOG.debug("FS state before disable:");
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
       FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
@@ -203,8 +192,16 @@ public class TestSnapshotFromClient {
       FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     // take a snapshot of the disabled table
-    byte[] snapshot = Bytes.toBytes("offlineTableSnapshot");
-    admin.snapshot(snapshot, TABLE_NAME);
+    final String SNAPSHOT_NAME = "offlineTableSnapshot";
+    byte[] snapshot = Bytes.toBytes(SNAPSHOT_NAME);
+
+    SnapshotDescription desc = SnapshotDescription.newBuilder()
+      .setType(SnapshotDescription.Type.DISABLED)
+      .setTable(STRING_TABLE_NAME)
+      .setName(SNAPSHOT_NAME)
+      .setVersion(SnapshotManifestV1.DESCRIPTOR_VERSION)
+      .build();
+    admin.snapshot(desc);
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
@@ -219,7 +216,7 @@ public class TestSnapshotFromClient {
       FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
-      admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), snapshotServers);
+      admin, fs);
 
     admin.deleteSnapshot(snapshot);
     snapshots = admin.listSnapshots();
@@ -263,15 +260,6 @@ public class TestSnapshotFromClient {
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
-    // get the name of all the regionservers hosting the snapshotted table
-    Set<String> snapshotServers = new HashSet<String>();
-    List<RegionServerThread> servers = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
-    for (RegionServerThread server : servers) {
-      if (server.getRegionServer().getOnlineRegions(TABLE_NAME).size() > 0) {
-        snapshotServers.add(server.getRegionServer().getServerName().toString());
-      }
-    }
-
     LOG.debug("FS state before disable:");
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
       FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
@@ -299,8 +287,8 @@ public class TestSnapshotFromClient {
 
     List<byte[]> emptyCfs = Lists.newArrayList(TEST_FAM); // no file in the region
     List<byte[]> nonEmptyCfs = Lists.newArrayList();
-    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, nonEmptyCfs, emptyCfs, rootDir,
-      admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), snapshotServers);
+    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, nonEmptyCfs, emptyCfs,
+      rootDir, admin, fs);
 
     admin.deleteSnapshot(snapshot);
     snapshots = admin.listSnapshots();

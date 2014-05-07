@@ -47,18 +47,21 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.io.FileLink;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HLogLink;
 import org.apache.hadoop.hbase.mapreduce.JobUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
@@ -99,7 +102,8 @@ public final class ExportSnapshot extends Configured implements Tool {
   // Export Map-Reduce Counters, to keep track of the progress
   public enum Counter { MISSING_FILES, COPY_FAILED, BYTES_EXPECTED, BYTES_COPIED, FILES_COPIED };
 
-  private static class ExportMapper extends Mapper<Text, NullWritable, NullWritable, NullWritable> {
+  private static class ExportMapper extends Mapper<BytesWritable, NullWritable,
+                                                   NullWritable, NullWritable> {
     final static int REPORT_SIZE = 1 * 1024 * 1024;
     final static int BUFFER_SIZE = 64 * 1024;
 
@@ -155,35 +159,35 @@ public final class ExportSnapshot extends Configured implements Tool {
     }
 
     @Override
-    public void map(Text key, NullWritable value, Context context)
+    public void map(BytesWritable key, NullWritable value, Context context)
         throws InterruptedException, IOException {
-      Path inputPath = new Path(key.toString());
-      Path outputPath = getOutputPath(inputPath);
+      SnapshotFileInfo inputInfo = SnapshotFileInfo.parseFrom(key.copyBytes());
+      Path outputPath = getOutputPath(inputInfo);
 
-      LOG.info("copy file input=" + inputPath + " output=" + outputPath);
-      copyFile(context, inputPath, outputPath);
+      copyFile(context, inputInfo, outputPath);
     }
 
     /**
      * Returns the location where the inputPath will be copied.
-     *  - hfiles are encoded as hfile links hfile-region-table
-     *  - logs are encoded as serverName/logName
      */
-    private Path getOutputPath(final Path inputPath) throws IOException {
-      Path path;
-      if (HFileLink.isHFileLink(inputPath) || StoreFileInfo.isReference(inputPath)) {
-        String family = inputPath.getParent().getName();
-        TableName table =
-            HFileLink.getReferencedTableName(inputPath.getName());
-        String region = HFileLink.getReferencedRegionName(inputPath.getName());
-        String hfile = HFileLink.getReferencedHFileName(inputPath.getName());
-        path = new Path(FSUtils.getTableDir(new Path("./"), table),
-            new Path(region, new Path(family, hfile)));
-      } else if (isHLogLinkPath(inputPath)) {
-        String logName = inputPath.getName();
-        path = new Path(new Path(outputRoot, HConstants.HREGION_OLDLOGDIR_NAME), logName);
-      } else {
-        path = inputPath;
+    private Path getOutputPath(final SnapshotFileInfo inputInfo) throws IOException {
+      Path path = null;
+      switch (inputInfo.getType()) {
+        case HFILE:
+          Path inputPath = new Path(inputInfo.getHfile());
+          String family = inputPath.getParent().getName();
+          TableName table =HFileLink.getReferencedTableName(inputPath.getName());
+          String region = HFileLink.getReferencedRegionName(inputPath.getName());
+          String hfile = HFileLink.getReferencedHFileName(inputPath.getName());
+          path = new Path(FSUtils.getTableDir(new Path("./"), table),
+              new Path(region, new Path(family, hfile)));
+          break;
+        case WAL:
+          Path oldLogsDir = new Path(outputRoot, HConstants.HREGION_OLDLOGDIR_NAME);
+          path = new Path(oldLogsDir, inputInfo.getWalName());
+          break;
+        default:
+          throw new IOException("Invalid File Type: " + inputInfo.getType().toString());
       }
       return new Path(outputArchive, path);
     }
@@ -191,7 +195,7 @@ public final class ExportSnapshot extends Configured implements Tool {
     /*
      * Used by TestExportSnapshot to simulate a failure
      */
-    private void injectTestFailure(final Context context, final Path inputPath)
+    private void injectTestFailure(final Context context, final SnapshotFileInfo inputInfo)
         throws IOException {
       if (testFailures) {
         if (context.getConfiguration().getBoolean(CONF_TEST_RETRY, false)) {
@@ -203,37 +207,38 @@ public final class ExportSnapshot extends Configured implements Tool {
           // retry, but at least we reduce the number of test failures due to
           // this test exception from the same map task.
           if (random.nextFloat() < 0.03) {
-            throw new IOException("TEST RETRY FAILURE: Unable to copy input=" + inputPath
+            throw new IOException("TEST RETRY FAILURE: Unable to copy input=" + inputInfo
                                   + " time=" + System.currentTimeMillis());
           }
         } else {
           context.getCounter(Counter.COPY_FAILED).increment(1);
-          throw new IOException("TEST FAILURE: Unable to copy input=" + inputPath);
+          throw new IOException("TEST FAILURE: Unable to copy input=" + inputInfo);
         }
       }
     }
 
-    private void copyFile(final Context context, final Path inputPath, final Path outputPath)
-        throws IOException {
-      injectTestFailure(context, inputPath);
+    private void copyFile(final Context context, final SnapshotFileInfo inputInfo,
+        final Path outputPath) throws IOException {
+      injectTestFailure(context, inputInfo);
 
       // Get the file information
-      FileStatus inputStat = getSourceFileStatus(context, inputPath);
+      FileStatus inputStat = getSourceFileStatus(context, inputInfo);
 
       // Verify if the output file exists and is the same that we want to copy
       if (outputFs.exists(outputPath)) {
         FileStatus outputStat = outputFs.getFileStatus(outputPath);
         if (outputStat != null && sameFile(inputStat, outputStat)) {
-          LOG.info("Skip copy " + inputPath + " to " + outputPath + ", same file.");
+          LOG.info("Skip copy " + inputStat.getPath() + " to " + outputPath + ", same file.");
           return;
         }
       }
 
-      InputStream in = openSourceFile(context, inputPath);
+      InputStream in = openSourceFile(context, inputInfo);
       int bandwidthMB = context.getConfiguration().getInt(CONF_BANDWIDTH_MB, 100);
       if (Integer.MAX_VALUE != bandwidthMB) {
         in = new ThrottledInputStream(new BufferedInputStream(in), bandwidthMB * 1024 * 1024);
       }
+
       try {
         context.getCounter(Counter.BYTES_EXPECTED).increment(inputStat.getLen());
 
@@ -241,7 +246,7 @@ public final class ExportSnapshot extends Configured implements Tool {
         outputFs.mkdirs(outputPath.getParent());
         FSDataOutputStream out = outputFs.create(outputPath, true);
         try {
-          copyData(context, inputPath, in, outputPath, out, inputStat.getLen());
+          copyData(context, inputStat.getPath(), in, outputPath, out, inputStat.getLen());
         } finally {
           out.close();
         }
@@ -275,7 +280,7 @@ public final class ExportSnapshot extends Configured implements Tool {
       try {
         if (filesMode > 0 && stat.getPermission().toShort() != filesMode) {
           outputFs.setPermission(path, new FsPermission(filesMode));
-        } else if (!stat.getPermission().equals(refStat.getPermission())) {
+        } else if (refStat != null && !stat.getPermission().equals(refStat.getPermission())) {
           outputFs.setPermission(path, refStat.getPermission());
         }
       } catch (IOException e) {
@@ -283,8 +288,9 @@ public final class ExportSnapshot extends Configured implements Tool {
         return false;
       }
 
-      String user = stringIsNotEmpty(filesUser) ? filesUser : refStat.getOwner();
-      String group = stringIsNotEmpty(filesGroup) ? filesGroup : refStat.getGroup();
+      boolean hasRefStat = (refStat != null);
+      String user = stringIsNotEmpty(filesUser) || !hasRefStat ? filesUser : refStat.getOwner();
+      String group = stringIsNotEmpty(filesGroup) || !hasRefStat ? filesGroup : refStat.getGroup();
       if (stringIsNotEmpty(user) || stringIsNotEmpty(group)) {
         try {
           if (!(user.equals(stat.getOwner()) && group.equals(stat.getGroup()))) {
@@ -367,40 +373,53 @@ public final class ExportSnapshot extends Configured implements Tool {
      * Throws an IOException if the communication with the inputFs fail or
      * if the file is not found.
      */
-    private FSDataInputStream openSourceFile(Context context, final Path path) throws IOException {
+    private FSDataInputStream openSourceFile(Context context, final SnapshotFileInfo fileInfo)
+        throws IOException {
       try {
-        if (HFileLink.isHFileLink(path) || StoreFileInfo.isReference(path)) {
-          return new HFileLink(inputRoot, inputArchive, path).open(inputFs);
-        } else if (isHLogLinkPath(path)) {
-          String serverName = path.getParent().getName();
-          String logName = path.getName();
-          return new HLogLink(inputRoot, serverName, logName).open(inputFs);
+        FileLink link = null;
+        switch (fileInfo.getType()) {
+          case HFILE:
+            Path inputPath = new Path(fileInfo.getHfile());
+            link = new HFileLink(inputRoot, inputArchive, inputPath);
+            break;
+          case WAL:
+            String serverName = fileInfo.getWalServer();
+            String logName = fileInfo.getWalName();
+            link = new HLogLink(inputRoot, serverName, logName);
+            break;
+          default:
+            throw new IOException("Invalid File Type: " + fileInfo.getType().toString());
         }
-        return inputFs.open(path);
+        return link.open(inputFs);
       } catch (IOException e) {
         context.getCounter(Counter.MISSING_FILES).increment(1);
-        LOG.error("Unable to open source file=" + path, e);
+        LOG.error("Unable to open source file=" + fileInfo.toString(), e);
         throw e;
       }
     }
 
-    private FileStatus getSourceFileStatus(Context context, final Path path) throws IOException {
+    private FileStatus getSourceFileStatus(Context context, final SnapshotFileInfo fileInfo)
+        throws IOException {
       try {
-        if (HFileLink.isHFileLink(path) || StoreFileInfo.isReference(path)) {
-          HFileLink link = new HFileLink(inputRoot, inputArchive, path);
-          return link.getFileStatus(inputFs);
-        } else if (isHLogLinkPath(path)) {
-          String serverName = path.getParent().getName();
-          String logName = path.getName();
-          return new HLogLink(inputRoot, serverName, logName).getFileStatus(inputFs);
+        FileLink link = null;
+        switch (fileInfo.getType()) {
+          case HFILE:
+            Path inputPath = new Path(fileInfo.getHfile());
+            link = new HFileLink(inputRoot, inputArchive, inputPath);
+            break;
+          case WAL:
+            link = new HLogLink(inputRoot, fileInfo.getWalServer(), fileInfo.getWalName());
+            break;
+          default:
+            throw new IOException("Invalid File Type: " + fileInfo.getType().toString());
         }
-        return inputFs.getFileStatus(path);
+        return link.getFileStatus(inputFs);
       } catch (FileNotFoundException e) {
         context.getCounter(Counter.MISSING_FILES).increment(1);
-        LOG.error("Unable to get the status for source file=" + path, e);
+        LOG.error("Unable to get the status for source file=" + fileInfo.toString(), e);
         throw e;
       } catch (IOException e) {
-        LOG.error("Unable to get the status for source file=" + path, e);
+        LOG.error("Unable to get the status for source file=" + fileInfo.toString(), e);
         throw e;
       }
     }
@@ -434,49 +453,54 @@ public final class ExportSnapshot extends Configured implements Tool {
 
       return inChecksum.equals(outChecksum);
     }
-
-    /**
-     * HLog files are encoded as serverName/logName
-     * and since all the other files should be in /hbase/table/..path..
-     * we can rely on the depth, for now.
-     */
-    private static boolean isHLogLinkPath(final Path path) {
-      return path.depth() == 2;
-    }
   }
 
   /**
    * Extract the list of files (HFiles/HLogs) to copy using Map-Reduce.
    * @return list of files referenced by the snapshot (pair of path and size)
    */
-  private List<Pair<Path, Long>> getSnapshotFiles(final FileSystem fs, final Path snapshotDir)
-      throws IOException {
+  private List<Pair<SnapshotFileInfo, Long>> getSnapshotFiles(final FileSystem fs,
+      final Path snapshotDir) throws IOException {
     SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
 
-    final List<Pair<Path, Long>> files = new ArrayList<Pair<Path, Long>>();
-    final TableName table =
-        TableName.valueOf(snapshotDesc.getTable());
+    final List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<Pair<SnapshotFileInfo, Long>>();
+    final TableName table = TableName.valueOf(snapshotDesc.getTable());
     final Configuration conf = getConf();
 
     // Get snapshot files
-    SnapshotReferenceUtil.visitReferencedFiles(fs, snapshotDir,
-      new SnapshotReferenceUtil.FileVisitor() {
-        public void storeFile (final String region, final String family, final String hfile)
-            throws IOException {
-          Path path = HFileLink.createPath(table, region, family, hfile);
-          long size = new HFileLink(conf, path).getFileStatus(fs).getLen();
-          files.add(new Pair<Path, Long>(path, size));
+    SnapshotReferenceUtil.visitReferencedFiles(conf, fs, snapshotDir, snapshotDesc,
+      new SnapshotReferenceUtil.SnapshotVisitor() {
+        @Override
+        public void storeFile(final HRegionInfo regionInfo, final String family,
+            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+          if (storeFile.hasReference()) {
+            // copied as part of the manifest
+          } else {
+            String region = regionInfo.getEncodedName();
+            String hfile = storeFile.getName();
+            Path path = HFileLink.createPath(table, region, family, hfile);
+
+            SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder()
+              .setType(SnapshotFileInfo.Type.HFILE)
+              .setHfile(path.toString())
+              .build();
+
+            long size = new HFileLink(conf, path).getFileStatus(fs).getLen();
+            files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, size));
+          }
         }
 
-        public void recoveredEdits (final String region, final String logfile)
-            throws IOException {
-          // copied with the snapshot referenecs
-        }
-
+        @Override
         public void logFile (final String server, final String logfile)
             throws IOException {
+          SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder()
+            .setType(SnapshotFileInfo.Type.WAL)
+            .setWalServer(server)
+            .setWalName(logfile)
+            .build();
+
           long size = new HLogLink(conf, server, logfile).getFileStatus(fs).getLen();
-          files.add(new Pair<Path, Long>(new Path(server, logfile), size));
+          files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, size));
         }
     });
 
@@ -491,34 +515,35 @@ public final class ExportSnapshot extends Configured implements Tool {
    * and then each group fetch the bigger file available, iterating through groups
    * alternating the direction.
    */
-  static List<List<Path>> getBalancedSplits(final List<Pair<Path, Long>> files, int ngroups) {
+  static List<List<SnapshotFileInfo>> getBalancedSplits(
+      final List<Pair<SnapshotFileInfo, Long>> files, final int ngroups) {
     // Sort files by size, from small to big
-    Collections.sort(files, new Comparator<Pair<Path, Long>>() {
-      public int compare(Pair<Path, Long> a, Pair<Path, Long> b) {
+    Collections.sort(files, new Comparator<Pair<SnapshotFileInfo, Long>>() {
+      public int compare(Pair<SnapshotFileInfo, Long> a, Pair<SnapshotFileInfo, Long> b) {
         long r = a.getSecond() - b.getSecond();
         return (r < 0) ? -1 : ((r > 0) ? 1 : 0);
       }
     });
 
     // create balanced groups
-    List<List<Path>> fileGroups = new LinkedList<List<Path>>();
+    List<List<SnapshotFileInfo>> fileGroups = new LinkedList<List<SnapshotFileInfo>>();
     long[] sizeGroups = new long[ngroups];
     int hi = files.size() - 1;
     int lo = 0;
 
-    List<Path> group;
+    List<SnapshotFileInfo> group;
     int dir = 1;
     int g = 0;
 
     while (hi >= lo) {
       if (g == fileGroups.size()) {
-        group = new LinkedList<Path>();
+        group = new LinkedList<SnapshotFileInfo>();
         fileGroups.add(group);
       } else {
         group = fileGroups.get(g);
       }
 
-      Pair<Path, Long> fileInfo = files.get(hi--);
+      Pair<SnapshotFileInfo, Long> fileInfo = files.get(hi--);
 
       // add the hi one
       sizeGroups[g] += fileInfo.getSecond();
@@ -558,25 +583,25 @@ public final class ExportSnapshot extends Configured implements Tool {
    * and the number of the files to copy.
    */
   private static Path[] createInputFiles(final Configuration conf, final Path inputFolderPath,
-      final List<Pair<Path, Long>> snapshotFiles, int mappers)
+      final List<Pair<SnapshotFileInfo, Long>> snapshotFiles, int mappers)
       throws IOException, InterruptedException {
     FileSystem fs = inputFolderPath.getFileSystem(conf);
     LOG.debug("Input folder location: " + inputFolderPath);
 
-    List<List<Path>> splits = getBalancedSplits(snapshotFiles, mappers);
+    List<List<SnapshotFileInfo>> splits = getBalancedSplits(snapshotFiles, mappers);
     Path[] inputFiles = new Path[splits.size()];
 
-    Text key = new Text();
+    BytesWritable key = new BytesWritable();
     for (int i = 0; i < inputFiles.length; i++) {
-      List<Path> files = splits.get(i);
+      List<SnapshotFileInfo> files = splits.get(i);
       inputFiles[i] = new Path(inputFolderPath, String.format("export-%d.seq", i));
       SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, inputFiles[i],
-        Text.class, NullWritable.class);
+        BytesWritable.class, NullWritable.class);
       LOG.debug("Input split: " + i);
       try {
-        for (Path file: files) {
-          LOG.debug(file.toString());
-          key.set(file.toString());
+        for (SnapshotFileInfo file: files) {
+          byte[] pbFileInfo = file.toByteArray();
+          key.set(pbFileInfo, 0, pbFileInfo.length);
           writer.append(key, NullWritable.get());
         }
       } finally {
@@ -591,7 +616,7 @@ public final class ExportSnapshot extends Configured implements Tool {
    * Run Map-Reduce Job to perform the files copy.
    */
   private void runCopyJob(final Path inputRoot, final Path outputRoot,
-      final List<Pair<Path, Long>> snapshotFiles, final boolean verifyChecksum,
+      final List<Pair<SnapshotFileInfo, Long>> snapshotFiles, final boolean verifyChecksum,
       final String filesUser, final String filesGroup, final int filesMode,
       final int mappers, final int bandwidthMB)
           throws IOException, InterruptedException, ClassNotFoundException {
@@ -704,7 +729,7 @@ public final class ExportSnapshot extends Configured implements Tool {
           System.err.println("UNEXPECTED: " + cmd);
           printUsageAndExit();
         }
-      } catch (Exception e) {
+      } catch (IOException e) {
         printUsageAndExit();
       }
     }
@@ -761,7 +786,7 @@ public final class ExportSnapshot extends Configured implements Tool {
 
     // Step 0 - Extract snapshot files to copy
     LOG.info("Loading Snapshot hfile list");
-    final List<Pair<Path, Long>> files = getSnapshotFiles(inputFs, snapshotDir);
+    final List<Pair<SnapshotFileInfo, Long>> files = getSnapshotFiles(inputFs, snapshotDir);
     if (mappers == 0 && files.size() > 0) {
       mappers = 1 + (files.size() / conf.getInt(CONF_MAP_GROUP, 10));
       mappers = Math.min(mappers, files.size());

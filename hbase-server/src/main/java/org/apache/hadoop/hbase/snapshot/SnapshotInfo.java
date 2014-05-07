@@ -31,8 +31,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -43,8 +43,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HLogLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
 
 /**
  * Tool for dumping snapshot information.
@@ -184,10 +184,10 @@ public final class SnapshotInfo extends Configured implements Tool {
      * @param hfile store file name
      * @return the store file information
      */
-    FileInfo addStoreFile(final String region, final String family, final String hfile)
-          throws IOException {
-      TableName table = snapshotTable;
-      HFileLink link = HFileLink.create(conf, table, region, family, hfile);
+    FileInfo addStoreFile(final HRegionInfo region, final String family,
+        final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+      HFileLink link = HFileLink.create(conf, snapshotTable, region.getEncodedName(),
+                                        family, storeFile.getName());
       boolean inArchive = false;
       long size = -1;
       try {
@@ -204,22 +204,6 @@ public final class SnapshotInfo extends Configured implements Tool {
         hfilesMissing++;
       }
       return new FileInfo(inArchive, size);
-    }
-
-    /**
-     * Add the specified recovered.edits file to the stats
-     * @param region region encoded name
-     * @param logfile log file name
-     * @return the recovered.edits information
-     */
-    FileInfo addRecoveredEdits(final String region, final String logfile) throws IOException {
-      Path rootDir = FSUtils.getRootDir(conf);
-      Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
-      Path path = SnapshotReferenceUtil.getRecoveredEdits(snapshotDir, region, logfile);
-      long size = fs.getFileStatus(path).getLen();
-      logSize += size;
-      logsCount++;
-      return new FileInfo(true, size);
     }
 
     /**
@@ -245,9 +229,7 @@ public final class SnapshotInfo extends Configured implements Tool {
   private FileSystem fs;
   private Path rootDir;
 
-  private HTableDescriptor snapshotTableDesc;
-  private SnapshotDescription snapshotDesc;
-  private Path snapshotDir;
+  private SnapshotManifest snapshotManifest;
 
   @Override
   public int run(String[] args) throws IOException, InterruptedException {
@@ -309,14 +291,14 @@ public final class SnapshotInfo extends Configured implements Tool {
    * @return false if snapshot is not found
    */
   private boolean loadSnapshotInfo(final String snapshotName) throws IOException {
-    snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     if (!fs.exists(snapshotDir)) {
       LOG.warn("Snapshot '" + snapshotName + "' not found in: " + snapshotDir);
       return false;
     }
 
-    snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-    snapshotTableDesc = FSTableDescriptors.getTableDescriptorFromFs(fs, snapshotDir);
+    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    snapshotManifest = SnapshotManifest.open(getConf(), fs, snapshotDir, snapshotDesc);
     return true;
   }
 
@@ -324,12 +306,13 @@ public final class SnapshotInfo extends Configured implements Tool {
    * Dump the {@link SnapshotDescription}
    */
   private void printInfo() {
+    SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
     SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     System.out.println("Snapshot Info");
     System.out.println("----------------------------------------");
     System.out.println("   Name: " + snapshotDesc.getName());
     System.out.println("   Type: " + snapshotDesc.getType());
-    System.out.println("  Table: " + snapshotTableDesc.getTableName().getNameAsString());
+    System.out.println("  Table: " + snapshotDesc.getTable());
     System.out.println(" Format: " + snapshotDesc.getVersion());
     System.out.println("Created: " + df.format(new Date(snapshotDesc.getCreationTime())));
     System.out.println();
@@ -341,7 +324,7 @@ public final class SnapshotInfo extends Configured implements Tool {
   private void printSchema() {
     System.out.println("Table Descriptor");
     System.out.println("----------------------------------------");
-    System.out.println(snapshotTableDesc.toString());
+    System.out.println(snapshotManifest.getTableDescriptor().toString());
     System.out.println();
   }
 
@@ -356,32 +339,26 @@ public final class SnapshotInfo extends Configured implements Tool {
     }
 
     // Collect information about hfiles and logs in the snapshot
-    final String table = snapshotTableDesc.getTableName().getNameAsString();
-    final SnapshotStats stats = new SnapshotStats(this.getConf(), this.fs, this.snapshotDesc);
-    SnapshotReferenceUtil.visitReferencedFiles(fs, snapshotDir,
-      new SnapshotReferenceUtil.FileVisitor() {
-        public void storeFile (final String region, final String family, final String hfile)
-            throws IOException {
-          SnapshotStats.FileInfo info = stats.addStoreFile(region, family, hfile);
+    final SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
+    final String table = snapshotDesc.getTable();
+    final SnapshotStats stats = new SnapshotStats(this.getConf(), this.fs, snapshotDesc);
+    SnapshotReferenceUtil.visitReferencedFiles(getConf(), fs,
+      snapshotManifest.getSnapshotDir(), snapshotDesc, new SnapshotReferenceUtil.SnapshotVisitor() {
+        @Override
+        public void storeFile(final HRegionInfo regionInfo, final String family,
+            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+          if (storeFile.hasReference()) return;
 
+          SnapshotStats.FileInfo info = stats.addStoreFile(regionInfo, family, storeFile);
           if (showFiles) {
             System.out.printf("%8s %s/%s/%s/%s %s%n",
               (info.isMissing() ? "-" : StringUtils.humanReadableInt(info.getSize())),
-              table, region, family, hfile,
+              table, regionInfo.getEncodedName(), family, storeFile.getName(),
               (info.inArchive() ? "(archive)" : info.isMissing() ? "(NOT FOUND)" : ""));
           }
         }
 
-        public void recoveredEdits (final String region, final String logfile)
-            throws IOException {
-          SnapshotStats.FileInfo info = stats.addRecoveredEdits(region, logfile);
-
-          if (showFiles) {
-            System.out.printf("%8s recovered.edits %s on region %s%n",
-              StringUtils.humanReadableInt(info.getSize()), logfile, region);
-          }
-        }
-
+        @Override
         public void logFile (final String server, final String logfile)
             throws IOException {
           SnapshotStats.FileInfo info = stats.addLogFile(server, logfile);
@@ -444,17 +421,17 @@ public final class SnapshotInfo extends Configured implements Tool {
     FileSystem fs = FileSystem.get(conf);
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
     final SnapshotStats stats = new SnapshotStats(conf, fs, snapshot);
-    SnapshotReferenceUtil.visitReferencedFiles(fs, snapshotDir,
-      new SnapshotReferenceUtil.FileVisitor() {
-        public void storeFile (final String region, final String family, final String hfile)
-            throws IOException {
-          stats.addStoreFile(region, family, hfile);
+    SnapshotReferenceUtil.visitReferencedFiles(conf, fs, snapshotDir, snapshot,
+      new SnapshotReferenceUtil.SnapshotVisitor() {
+        @Override
+        public void storeFile(final HRegionInfo regionInfo, final String family,
+            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+          if (!storeFile.hasReference()) {
+            stats.addStoreFile(regionInfo, family, storeFile);
+          }
         }
 
-        public void recoveredEdits (final String region, final String logfile) throws IOException {
-          stats.addRecoveredEdits(region, logfile);
-        }
-
+        @Override
         public void logFile (final String server, final String logfile) throws IOException {
           stats.addLogFile(server, logfile);
         }

@@ -77,7 +77,7 @@ public class HRegionFileSystem {
   private final Configuration conf;
   private final Path tableDir;
   private final FileSystem fs;
-  
+
   /**
    * In order to handle NN connectivity hiccups, one need to retry non-idempotent operation at the
    * client level.
@@ -149,7 +149,7 @@ public class HRegionFileSystem {
    * @param familyName Column Family Name
    * @return {@link Path} to the directory of the specified family
    */
-  Path getStoreDir(final String familyName) {
+  public Path getStoreDir(final String familyName) {
     return new Path(this.getRegionDir(), familyName);
   }
 
@@ -176,20 +176,31 @@ public class HRegionFileSystem {
     return getStoreFiles(Bytes.toString(familyName));
   }
 
+  public Collection<StoreFileInfo> getStoreFiles(final String familyName) throws IOException {
+    return getStoreFiles(familyName, true);
+  }
+
   /**
    * Returns the store files available for the family.
    * This methods performs the filtering based on the valid store files.
    * @param familyName Column Family Name
    * @return a set of {@link StoreFileInfo} for the specified family.
    */
-  public Collection<StoreFileInfo> getStoreFiles(final String familyName) throws IOException {
+  public Collection<StoreFileInfo> getStoreFiles(final String familyName, final boolean validate)
+      throws IOException {
     Path familyDir = getStoreDir(familyName);
     FileStatus[] files = FSUtils.listStatus(this.fs, familyDir);
-    if (files == null) return null;
+    if (files == null) {
+      LOG.debug("No StoreFiles for: " + familyDir);
+      return null;
+    }
 
     ArrayList<StoreFileInfo> storeFiles = new ArrayList<StoreFileInfo>(files.length);
     for (FileStatus status: files) {
-      if (!StoreFileInfo.isValid(status)) continue;
+      if (validate && !StoreFileInfo.isValid(status)) {
+        LOG.warn("Invalid StoreFile: " + status.getPath());
+        continue;
+      }
 
       storeFiles.add(new StoreFileInfo(this.conf, this.fs, status));
     }
@@ -354,7 +365,7 @@ public class HRegionFileSystem {
     Path storeDir = getStoreDir(familyName);
     if(!fs.exists(storeDir) && !createDir(storeDir))
       throw new IOException("Failed creating " + storeDir);
-    
+
     String name = buildPath.getName();
     if (generateNewName) {
       name = generateUniqueName((seqNum < 0) ? null : "_SeqId_" + seqNum + "_");
@@ -556,16 +567,16 @@ public class HRegionFileSystem {
    */
   Path splitStoreFile(final HRegionInfo hri, final String familyName,
       final StoreFile f, final byte[] splitRow, final boolean top) throws IOException {
-    
+
     // Check whether the split row lies in the range of the store file
     // If it is outside the range, return directly.
     if (top) {
       //check if larger than last key.
       KeyValue splitKey = KeyValueUtil.createFirstOnRow(splitRow);
-      byte[] lastKey = f.createReader().getLastKey();      
+      byte[] lastKey = f.createReader().getLastKey();
       // If lastKey is null means storefile is empty.
       if (lastKey == null) return null;
-      if (f.getReader().getComparator().compareFlatKey(splitKey.getBuffer(), 
+      if (f.getReader().getComparator().compareFlatKey(splitKey.getBuffer(),
           splitKey.getKeyOffset(), splitKey.getKeyLength(), lastKey, 0, lastKey.length) > 0) {
         return null;
       }
@@ -575,14 +586,14 @@ public class HRegionFileSystem {
       byte[] firstKey = f.createReader().getFirstKey();
       // If firstKey is null means storefile is empty.
       if (firstKey == null) return null;
-      if (f.getReader().getComparator().compareFlatKey(splitKey.getBuffer(), 
+      if (f.getReader().getComparator().compareFlatKey(splitKey.getBuffer(),
           splitKey.getKeyOffset(), splitKey.getKeyLength(), firstKey, 0, firstKey.length) < 0) {
         return null;
-      }      
+      }
     }
- 
+
     f.getReader().close(true);
-    
+
     Path splitDir = new Path(getSplitsDir(hri), familyName);
     // A reference to the bottom half of the hsf store file.
     Reference r =
@@ -681,7 +692,7 @@ public class HRegionFileSystem {
    * Commit a merged region, moving it from the merges temporary directory to
    * the proper location in the filesystem.
    * @param mergedRegionInfo merged region {@link HRegionInfo}
-   * @throws IOException 
+   * @throws IOException
    */
   void commitMergedRegion(final HRegionInfo mergedRegionInfo) throws IOException {
     Path regionDir = new Path(this.tableDir, mergedRegionInfo.getEncodedName());

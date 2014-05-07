@@ -29,13 +29,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.mapreduce.TestTableSnapshotInputFormat;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -94,7 +94,7 @@ public class TestTableSnapshotScanner {
     HTable table = new HTable(util.getConfiguration(), tableName);
     util.loadTable(table, FAMILIES);
 
-    Path rootDir = new Path(util.getConfiguration().get(HConstants.HBASE_DIR));
+    Path rootDir = FSUtils.getRootDir(util.getConfiguration());
     FileSystem fs = rootDir.getFileSystem(util.getConfiguration());
 
     SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName,
@@ -124,7 +124,7 @@ public class TestTableSnapshotScanner {
     testScanner(UTIL, "testWithMultiRegion", 20, true);
   }
 
-  private void testScanner(HBaseTestingUtility util, String snapshotName, int numRegions, 
+  private void testScanner(HBaseTestingUtility util, String snapshotName, int numRegions,
       boolean shutdownCluster) throws Exception {
     setupCluster();
     TableName tableName = TableName.valueOf("testScanner");
@@ -138,7 +138,7 @@ public class TestTableSnapshotScanner {
       Path restoreDir = util.getDataTestDirOnTestFS(snapshotName);
       Scan scan = new Scan(bbb, yyy); // limit the scan
 
-      TableSnapshotScanner scanner = new TableSnapshotScanner(UTIL.getConfiguration(), restoreDir, 
+      TableSnapshotScanner scanner = new TableSnapshotScanner(UTIL.getConfiguration(), restoreDir,
         snapshotName, scan);
 
       verifyScanner(scanner, bbb, yyy);
@@ -155,7 +155,7 @@ public class TestTableSnapshotScanner {
   private void verifyScanner(ResultScanner scanner, byte[] startRow, byte[] stopRow)
       throws IOException, InterruptedException {
 
-    HBaseTestingUtility.SeenRowTracker rowTracker = 
+    HBaseTestingUtility.SeenRowTracker rowTracker =
         new HBaseTestingUtility.SeenRowTracker(startRow, stopRow);
 
     while (true) {

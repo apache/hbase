@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
 import org.apache.commons.logging.Log;
@@ -32,16 +32,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * A Scanner which performs a scan over snapshot files. Using this class requires copying the
@@ -99,8 +99,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
    */
   public TableSnapshotScanner(Configuration conf, Path restoreDir,
       String snapshotName, Scan scan) throws IOException {
-    this(conf, new Path(conf.get(HConstants.HBASE_DIR)),
-      restoreDir, snapshotName, scan);
+    this(conf, FSUtils.getRootDir(conf), restoreDir, snapshotName, scan);
   }
 
   /**
@@ -128,22 +127,21 @@ public class TableSnapshotScanner extends AbstractClientScanner {
 
   private void init() throws IOException {
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
+    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
 
-    //load table descriptor
-    htd = FSTableDescriptors.getTableDescriptorFromFs(fs, snapshotDir);
+    // load table descriptor
+    htd = manifest.getTableDescriptor();
 
-    Set<String> snapshotRegionNames
-      = SnapshotReferenceUtil.getSnapshotRegionNames(fs, snapshotDir);
-    if (snapshotRegionNames == null) {
+    List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
+    if (regionManifests == null) {
       throw new IllegalArgumentException("Snapshot seems empty");
     }
 
-    regions = new ArrayList<HRegionInfo>(snapshotRegionNames.size());
-    for (String regionName : snapshotRegionNames) {
+    regions = new ArrayList<HRegionInfo>(regionManifests.size());
+    for (SnapshotRegionManifest regionManifest : regionManifests) {
       // load region descriptor
-      Path regionDir = new Path(snapshotDir, regionName);
-      HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs,
-          regionDir);
+      HRegionInfo hri = HRegionInfo.convert(regionManifest.getRegionInfo());
 
       if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(),
           hri.getStartKey(), hri.getEndKey())) {

@@ -66,7 +66,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
   }
 
   @Override
-  public void setConf(Configuration conf) {
+  public void setConf(final Configuration conf) {
     super.setConf(conf);
     try {
       long cacheRefreshPeriod = conf.getLong(HFILE_CACHE_REFRESH_PERIOD_CONF_KEY,
@@ -77,7 +77,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
           "snapshot-hfile-cleaner-cache-refresher", new SnapshotFileCache.SnapshotFileInspector() {
             public Collection<String> filesUnderSnapshot(final Path snapshotDir)
                 throws IOException {
-              return SnapshotReferenceUtil.getHFileNames(fs, snapshotDir);
+              return SnapshotReferenceUtil.getHFileNames(conf, fs, snapshotDir);
             }
           });
     } catch (IOException e) {

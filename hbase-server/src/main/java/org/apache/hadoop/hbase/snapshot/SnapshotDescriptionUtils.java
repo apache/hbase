@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.snapshot;
 import java.io.IOException;
 import java.util.Collections;
 
-import com.google.protobuf.ByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -32,6 +31,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifestV2;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -91,7 +91,7 @@ public class SnapshotDescriptionUtils {
    * Version of the fs layout for a snapshot. Future snapshots may have different file layouts,
    * which we may need to read in differently.
    */
-  public static final int SNAPSHOT_LAYOUT_VERSION = 0;
+  public static final int SNAPSHOT_LAYOUT_VERSION = SnapshotManifestV2.DESCRIPTOR_VERSION;
 
   // snapshot directory constants
   /**

@@ -127,6 +127,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.MutationReplay;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -193,7 +194,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
       "hbase.hregion.scan.loadColumnFamiliesOnDemand";
-      
+
   /**
    * This is the global default value for durability. All tables/mutations not
    * defining a durability or using USE_DEFAULT will default to this value.
@@ -472,7 +473,7 @@ public class HRegion implements HeapSize { // , Writable{
   private RegionServerAccounting rsAccounting;
   private List<Pair<Long, Long>> recentFlushes = new ArrayList<Pair<Long,Long>>();
   private long flushCheckInterval;
-  // flushPerChanges is to prevent too many changes in memstore    
+  // flushPerChanges is to prevent too many changes in memstore
   private long flushPerChanges;
   private long blockingMemStoreSize;
   final long threadWakeFrequency;
@@ -572,7 +573,7 @@ public class HRegion implements HeapSize { // , Writable{
       throw new IllegalArgumentException(MEMSTORE_FLUSH_PER_CHANGES + " can not exceed "
           + MAX_FLUSH_PER_CHANGES);
     }
-    
+
     this.rowLockWaitDuration = conf.getInt("hbase.rowlock.wait.duration",
                     DEFAULT_ROWLOCK_WAIT_DURATION);
 
@@ -807,7 +808,7 @@ public class HRegion implements HeapSize { // , Writable{
           for (Store store : this.stores.values()) {
             try {
               store.close();
-            } catch (IOException e) { 
+            } catch (IOException e) {
               LOG.warn(e.getMessage());
             }
           }
@@ -1144,7 +1145,7 @@ public class HRegion implements HeapSize { // , Writable{
                 // so we do not lose data
                 throw new DroppedSnapshotException("Failed clearing memory after " +
                   actualFlushes + " attempts on region: " + Bytes.toStringBinary(getRegionName()));
-              } 
+              }
               LOG.info("Running extra flush, " + actualFlushes +
                 " (carrying snapshot?) " + this);
             }
@@ -2786,59 +2787,12 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public void addRegionToSnapshot(SnapshotDescription desc,
       ForeignExceptionSnare exnSnare) throws IOException {
-    // This should be "fast" since we don't rewrite store files but instead
-    // back up the store files by creating a reference
-    Path rootDir = FSUtils.getRootDir(this.rsServices.getConfiguration());
+    Path rootDir = FSUtils.getRootDir(conf);
     Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
 
-    // 1. dump region meta info into the snapshot directory
-    LOG.debug("Storing region-info for snapshot.");
-    HRegionFileSystem snapshotRegionFs = HRegionFileSystem.createRegionOnFileSystem(conf,
-        this.fs.getFileSystem(), snapshotDir, getRegionInfo());
-
-    // 2. iterate through all the stores in the region
-    LOG.debug("Creating references for hfiles");
-
-    // This ensures that we have an atomic view of the directory as long as we have < ls limit
-    // (batch size of the files in a directory) on the namenode. Otherwise, we get back the files in
-    // batches and may miss files being added/deleted. This could be more robust (iteratively
-    // checking to see if we have all the files until we are sure), but the limit is currently 1000
-    // files/batch, far more than the number of store files under a single column family.
-    for (Store store : stores.values()) {
-      // 2.1. build the snapshot reference directory for the store
-      Path dstStoreDir = snapshotRegionFs.getStoreDir(store.getFamily().getNameAsString());
-      List<StoreFile> storeFiles = new ArrayList<StoreFile>(store.getStorefiles());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");
-      }
-
-      // 2.2. iterate through all the store's files and create "references".
-      int sz = storeFiles.size();
-      for (int i = 0; i < sz; i++) {
-        if (exnSnare != null) {
-          exnSnare.rethrowException();
-        }
-        StoreFile storeFile = storeFiles.get(i);
-        Path file = storeFile.getPath();
-
-        LOG.debug("Creating reference for file (" + (i+1) + "/" + sz + ") : " + file);
-        Path referenceFile = new Path(dstStoreDir, file.getName());
-        boolean success = true;
-        if (storeFile.isReference()) {
-          // write the Reference object to the snapshot
-          storeFile.getFileInfo().getReference().write(fs.getFileSystem(), referenceFile);
-        } else {
-          // create "reference" to this store file.  It is intentionally an empty file -- all
-          // necessary information is captured by its fs location and filename.  This allows us to
-          // only figure out what needs to be done via a single nn operation (instead of having to
-          // open and read the files as well).
-          success = fs.getFileSystem().createNewFile(referenceFile);
-        }
-        if (!success) {
-          throw new IOException("Failed to create reference file:" + referenceFile);
-        }
-      }
-    }
+    SnapshotManifest manifest = SnapshotManifest.create(conf, getFilesystem(),
+                                                        snapshotDir, desc, exnSnare);
+    manifest.addRegion(this);
   }
 
   /**
@@ -4005,14 +3959,14 @@ public class HRegion implements HeapSize { // , Writable{
               isStopRow(nextKv.getRowArray(), nextKv.getRowOffset(), nextKv.getRowLength());
           // save that the row was empty before filters applied to it.
           final boolean isEmptyRow = results.isEmpty();
-          
+
           // We have the part of the row necessary for filtering (all of it, usually).
           // First filter with the filterRow(List).
           FilterWrapper.FilterRowRetCode ret = FilterWrapper.FilterRowRetCode.NOT_CALLED;
           if (filter != null && filter.hasFilterRow()) {
             ret = filter.filterRowCellsWithRet(results);
           }
-          
+
           if ((isEmptyRow || ret == FilterWrapper.FilterRowRetCode.EXCLUDE) || filterRow()) {
             results.clear();
             boolean moreRows = nextRow(currentRow, offset, length);
@@ -4080,7 +4034,7 @@ public class HRegion implements HeapSize { // , Writable{
       return filter != null && (!filter.hasFilterRow())
           && filter.filterRow();
     }
-    
+
     private boolean filterRowKey(byte[] row, int offset, short length) throws IOException {
       return filter != null
           && filter.filterRowKey(row, offset, length);
@@ -5743,7 +5697,7 @@ public class HRegion implements HeapSize { // , Writable{
    * modifies data. It has to be called just before a try.
    * #closeRegionOperation needs to be called in the try's finally block
    * Acquires a read lock and checks if the region is closing or closed.
-   * @throws IOException 
+   * @throws IOException
    */
   public void startRegionOperation() throws IOException {
     startRegionOperation(Operation.ANY);
@@ -5751,7 +5705,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * @param op The operation is about to be taken on the region
-   * @throws IOException 
+   * @throws IOException
    */
   protected void startRegionOperation(Operation op) throws IOException {
     switch (op) {
@@ -5801,7 +5755,7 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Closes the lock. This needs to be called in the finally block corresponding
    * to the try block of #startRegionOperation
-   * @throws IOException 
+   * @throws IOException
    */
   public void closeRegionOperation() throws IOException {
     closeRegionOperation(Operation.ANY);

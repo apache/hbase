@@ -24,23 +24,18 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionListener;
 import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.MetricsMaster;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.TableInfoCopyTask;
-import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 
@@ -64,7 +59,7 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
     super(snapshot, masterServices);
 
     // setup the timer
-    timeoutInjector = TakeSnapshotUtils.getMasterTimerAndBindToMonitor(snapshot, conf, monitor);
+    timeoutInjector = getMasterTimerAndBindToMonitor(snapshot, conf, monitor);
   }
 
   @Override
@@ -80,8 +75,6 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
     try {
       timeoutInjector.start();
 
-      Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
-
       // 1. get all the regions hosting this table.
 
       // extract each pair to separate lists
@@ -95,34 +88,38 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
           + ClientSnapshotDescriptionUtils.toString(snapshot);
       LOG.info(msg);
       status.setStatus(msg);
-      for (HRegionInfo regionInfo : regions) {
+      for (HRegionInfo regionInfo: regions) {
         snapshotDisabledRegion(regionInfo);
       }
-
-      // 3. write the table info to disk
-      LOG.info("Starting to copy tableinfo for offline snapshot: " +
-      ClientSnapshotDescriptionUtils.toString(snapshot));
-      TableInfoCopyTask tableInfoCopyTask = new TableInfoCopyTask(this.monitor, snapshot, fs,
-          FSUtils.getRootDir(conf));
-      tableInfoCopyTask.call();
-      monitor.rethrowException();
-      status.setStatus("Finished copying tableinfo for snapshot of table: " +
-          snapshotTable);
     } catch (Exception e) {
       // make sure we capture the exception to propagate back to the client later
       String reason = "Failed snapshot " + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " due to exception:" + e.getMessage();
       ForeignException ee = new ForeignException(reason, e);
       monitor.receive(ee);
-      status.abort("Snapshot of table: "+ snapshotTable +
-          " failed because " + e.getMessage());
+      status.abort("Snapshot of table: "+ snapshotTable + " failed because " + e.getMessage());
     } finally {
       LOG.debug("Marking snapshot" + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " as finished.");
 
-      // 6. mark the timer as finished - even if we got an exception, we don't need to time the
+      // 3. mark the timer as finished - even if we got an exception, we don't need to time the
       // operation any further
       timeoutInjector.complete();
     }
+  }
+
+
+  /**
+   * Create a snapshot timer for the master which notifies the monitor when an error occurs
+   * @param snapshot snapshot to monitor
+   * @param conf configuration to use when getting the max snapshot life
+   * @param monitor monitor to notify when the snapshot life expires
+   * @return the timer to use update to signal the start and end of the snapshot
+   */
+  private TimeoutExceptionInjector getMasterTimerAndBindToMonitor(SnapshotDescription snapshot,
+      Configuration conf, ForeignExceptionListener monitor) {
+    long maxTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType(),
+      SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
+    return new TimeoutExceptionInjector(monitor, maxTime);
   }
 }

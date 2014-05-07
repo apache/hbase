@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -53,10 +52,8 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.log4j.Level;
@@ -153,15 +150,6 @@ public class TestFlushSnapshotFromClient {
     HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
     SnapshotTestingUtils.loadData(UTIL, table, DEFAULT_NUM_ROWS, TEST_FAM);
 
-    // get the name of all the regionservers hosting the snapshotted table
-    Set<String> snapshotServers = new HashSet<String>();
-    List<RegionServerThread> servers = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
-    for (RegionServerThread server : servers) {
-      if (server.getRegionServer().getOnlineRegions(TABLE_NAME).size() > 0) {
-        snapshotServers.add(server.getRegionServer().getServerName().toString());
-      }
-    }
-
     LOG.debug("FS state before snapshot:");
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
         FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
@@ -184,7 +172,7 @@ public class TestFlushSnapshotFromClient {
         FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
-        admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), snapshotServers);
+        admin, fs);
   }
 
 
@@ -201,15 +189,6 @@ public class TestFlushSnapshotFromClient {
     // put some stuff in the table
     HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
     SnapshotTestingUtils.loadData(UTIL, table, DEFAULT_NUM_ROWS, TEST_FAM);
-
-    // get the name of all the regionservers hosting the snapshotted table
-    Set<String> snapshotServers = new HashSet<String>();
-    List<RegionServerThread> servers = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
-    for (RegionServerThread server : servers) {
-      if (server.getRegionServer().getOnlineRegions(TABLE_NAME).size() > 0) {
-        snapshotServers.add(server.getRegionServer().getServerName().toString());
-      }
-    }
 
     LOG.debug("FS state before snapshot:");
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
@@ -238,7 +217,7 @@ public class TestFlushSnapshotFromClient {
         FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
-        admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), snapshotServers);
+        admin, fs);
   }
 
   @Test (timeout=300000)
@@ -399,46 +378,11 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     String snapshotName = "flushSnapshotCreateListDestroy";
-    // test creating the snapshot
-    admin.snapshot(snapshotName, STRING_TABLE_NAME, SnapshotDescription.Type.FLUSH);
-    logFSTree(FSUtils.getRootDir(UTIL.getConfiguration()));
-
-    // make sure we only have 1 matching snapshot
-    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(admin,
-      snapshotName, TABLE_NAME);
-
-    // check the directory structure
     FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshots.get(0), rootDir);
-    assertTrue(fs.exists(snapshotDir));
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(), snapshotDir, LOG);
-    Path snapshotinfo = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
-    assertTrue(fs.exists(snapshotinfo));
-
-    // check the table info
-    HTableDescriptor desc = FSTableDescriptors.getTableDescriptorFromFs(fs,
-        rootDir, TABLE_NAME);
-    HTableDescriptor snapshotDesc = FSTableDescriptors.getTableDescriptorFromFs(fs,
-        new Path(SnapshotDescriptionUtils.getSnapshotsDir(rootDir), snapshotName));
-    assertEquals(desc, snapshotDesc);
-
-    // check the region snapshot for all the regions
-    List<HRegionInfo> regions = admin.getTableRegions(TABLE_NAME);
-    assertTrue(regions.size() > 1);
-    for (HRegionInfo info : regions) {
-      String regionName = info.getEncodedName();
-      Path regionDir = new Path(snapshotDir, regionName);
-      HRegionInfo snapshotRegionInfo = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
-      assertEquals(info, snapshotRegionInfo);
-      // check to make sure we have the family
-      Path familyDir = new Path(regionDir, Bytes.toString(TEST_FAM));
-      assertTrue("Missing region " + Bytes.toString(snapshotRegionInfo.getStartKey()),
-                 fs.exists(familyDir));
-
-      // make sure we have some file references
-      assertTrue(fs.listStatus(familyDir).length > 0);
-    }
+    SnapshotTestingUtils.createSnapshotAndValidate(admin,
+      TableName.valueOf(STRING_TABLE_NAME), Bytes.toString(TEST_FAM),
+      snapshotName, rootDir, fs, true);
   }
 
   /**

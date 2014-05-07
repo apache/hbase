@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -44,12 +43,12 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.TableSnapshotRegionSplit;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -59,7 +58,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -125,17 +123,17 @@ public class TestTableSnapshotInputFormat {
     Assert.assertEquals(Lists.newArrayList("h1"), tsif.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h2"}, 2);
-    Assert.assertEquals(Lists.newArrayList("h1", "h2"), 
+    Assert.assertEquals(Lists.newArrayList("h1", "h2"),
       tsif.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h2"}, 3);
-    Assert.assertEquals(Lists.newArrayList("h2", "h1"), 
+    Assert.assertEquals(Lists.newArrayList("h2", "h1"),
       tsif.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h3"}, 6);
     blockDistribution.addHostsAndBlockWeight(new String[] {"h4"}, 9);
 
-    Assert.assertEquals(Lists.newArrayList("h2", "h3", "h4", "h1"), 
+    Assert.assertEquals(Lists.newArrayList("h2", "h3", "h4", "h1"),
       tsif.getBestLocations(conf, blockDistribution));
   }
 
@@ -156,7 +154,7 @@ public class TestTableSnapshotInputFormat {
 
   public static class TestTableSnapshotReducer
     extends Reducer<ImmutableBytesWritable, NullWritable, NullWritable, NullWritable> {
-    HBaseTestingUtility.SeenRowTracker rowTracker = 
+    HBaseTestingUtility.SeenRowTracker rowTracker =
         new HBaseTestingUtility.SeenRowTracker(bbb, yyy);
     @Override
     protected void reduce(ImmutableBytesWritable key, Iterable<NullWritable> values,
@@ -191,7 +189,7 @@ public class TestTableSnapshotInputFormat {
     HTable table = new HTable(util.getConfiguration(), tableName);
     util.loadTable(table, FAMILIES);
 
-    Path rootDir = new Path(util.getConfiguration().get(HConstants.HBASE_DIR));
+    Path rootDir = FSUtils.getRootDir(util.getConfiguration());
     FileSystem fs = rootDir.getFileSystem(util.getConfiguration());
 
     SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName,
@@ -250,7 +248,7 @@ public class TestTableSnapshotInputFormat {
     testWithMockedMapReduce(UTIL, "testWithMockedMapReduceMultiRegion", 10, 8);
   }
 
-  public void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName, 
+  public void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
       int numRegions, int expectedNumSplits) throws Exception {
     setupCluster();
     TableName tableName = TableName.valueOf("testWithMockedMapReduce");
@@ -282,7 +280,7 @@ public class TestTableSnapshotInputFormat {
 
     Assert.assertEquals(expectedNumSplits, splits.size());
 
-    HBaseTestingUtility.SeenRowTracker rowTracker = 
+    HBaseTestingUtility.SeenRowTracker rowTracker =
         new HBaseTestingUtility.SeenRowTracker(startRow, stopRow);
 
     for (int i = 0; i < splits.size(); i++) {
@@ -293,7 +291,7 @@ public class TestTableSnapshotInputFormat {
       // validate record reader
       TaskAttemptContext taskAttemptContext = mock(TaskAttemptContext.class);
       when(taskAttemptContext.getConfiguration()).thenReturn(job.getConfiguration());
-      RecordReader<ImmutableBytesWritable, Result> rr = 
+      RecordReader<ImmutableBytesWritable, Result> rr =
           tsif.createRecordReader(split, taskAttemptContext);
       rr.initialize(split, taskAttemptContext);
 
@@ -311,7 +309,7 @@ public class TestTableSnapshotInputFormat {
     rowTracker.validate();
   }
 
-  public static void verifyRowFromMap(ImmutableBytesWritable key, Result result) 
+  public static void verifyRowFromMap(ImmutableBytesWritable key, Result result)
       throws IOException {
     byte[] row = key.get();
     CellScanner scanner = result.cellScanner();
@@ -363,7 +361,7 @@ public class TestTableSnapshotInputFormat {
 
   // this is also called by the IntegrationTestTableSnapshotInputFormat
   public static void doTestWithMapReduce(HBaseTestingUtility util, TableName tableName,
-      String snapshotName, Path tableDir, int numRegions, int expectedNumSplits, 
+      String snapshotName, Path tableDir, int numRegions, int expectedNumSplits,
       boolean shutdownCluster) throws Exception {
 
     //create the table and snapshot
@@ -379,7 +377,7 @@ public class TestTableSnapshotInputFormat {
       Scan scan = new Scan(bbb, yyy); // limit the scan
 
       job.setJarByClass(util.getClass());
-      TableMapReduceUtil.addDependencyJars(job.getConfiguration(), 
+      TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
         TestTableSnapshotInputFormat.class);
 
       TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName,
