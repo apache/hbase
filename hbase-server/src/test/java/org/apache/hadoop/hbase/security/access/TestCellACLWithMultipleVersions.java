@@ -805,6 +805,118 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     });
   }
 
+  @Test
+  public void testCellPermissionsForCheckAndDelete() throws Exception {
+    final byte[] TEST_ROW1 = Bytes.toBytes("r1");
+    final byte[] ZERO = Bytes.toBytes(0L);
+
+    final User user1 = User.createUserForTesting(conf, "user1", new String[0]);
+    final User user2 = User.createUserForTesting(conf, "user2", new String[0]);
+    
+    verifyAllowed(new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
+          permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
+              Permission.Action.WRITE));
+          permsU1andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
+              Permission.Action.WRITE));
+          Map<String, Permission> permsU1andU2andOwner = new HashMap<String, Permission>();
+          permsU1andU2andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
+              Permission.Action.WRITE));
+          permsU1andU2andOwner.put(user2.getShortName(), new Permission(Permission.Action.READ,
+              Permission.Action.WRITE));
+          permsU1andU2andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
+              Permission.Action.WRITE));
+          Map<String, Permission> permsU1andU2 = new HashMap<String, Permission>();
+          permsU1andU2.put(user1.getShortName(), new Permission(Permission.Action.READ,
+              Permission.Action.WRITE));
+          permsU1andU2.put(user2.getShortName(), new Permission(Permission.Action.READ,
+              Permission.Action.WRITE));
+
+          Put p = new Put(TEST_ROW1);
+          p.add(TEST_FAMILY1, TEST_Q1, 120, ZERO);
+          p.add(TEST_FAMILY1, TEST_Q2, 120, ZERO);
+          p.setACL(permsU1andU2andOwner);
+          t.put(p);
+
+          p = new Put(TEST_ROW1);
+          p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
+          p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
+          p.setACL(permsU1andOwner);
+          t.put(p);
+
+          p = new Put(TEST_ROW1);
+          p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
+          p.setACL(permsU1andU2);
+          t.put(p);
+
+          p = new Put(TEST_ROW1);
+          p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
+          p.setACL(user2.getShortName(), new Permission(Permission.Action.READ));
+          t.put(p);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    }, USER_OWNER);
+
+    // user1 should be allowed to do the checkAndDelete. user1 having read permission on the latest
+    // version cell and write permission on all versions
+    user1.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Delete d = new Delete(TEST_ROW1);
+          d.deleteColumns(TEST_FAMILY1, TEST_Q1);
+          t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q1, ZERO, d);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    });
+    // user2 shouldn't be allowed to do the checkAndDelete. user2 having RW permission on the latest
+    // version cell but not on cell version TS=123
+    user2.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Delete d = new Delete(TEST_ROW1);
+          d.deleteColumns(TEST_FAMILY1, TEST_Q1);
+          t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q1, ZERO, d);
+          fail("user2 should not be allowed to do checkAndDelete");
+        } catch (Exception e) {
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    });
+    // user2 should be allowed to do the checkAndDelete when delete tries to delete the old version
+    // TS=120. user2 having R permission on the latest version(no W permission) cell
+    // and W permission on cell version TS=120.
+    user2.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          Delete d = new Delete(TEST_ROW1);
+          d.deleteColumn(TEST_FAMILY1, TEST_Q2, 120);
+          t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q2, ZERO, d);
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    });
+  }
+
   @After
   public void tearDown() throws Exception {
     // Clean the _acl_ table
