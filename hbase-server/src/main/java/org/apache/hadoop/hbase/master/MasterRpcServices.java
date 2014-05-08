@@ -132,6 +132,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -454,6 +456,18 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  public TruncateTableResponse truncateTable(RpcController controller, TruncateTableRequest request)
+      throws ServiceException {
+    try {
+      master.truncateTable(ProtobufUtil.toTableName(request.getTableName()),
+        request.getPreserveSplits());
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+    return TruncateTableResponse.newBuilder().build();
+  }
+
+  @Override
   public DisableTableResponse disableTable(RpcController controller,
       DisableTableRequest request) throws ServiceException {
     try {
@@ -616,7 +630,7 @@ public class MasterRpcServices extends RSRpcServices
         throw new ServiceException("The procedure is not registered: "
           + desc.getSignature());
       }
-  
+
       LOG.info(master.getClientIdAuditPrefix() + " procedure request for: "
         + desc.getSignature());
 

@@ -116,6 +116,14 @@ message DeleteTableRequest {
 message DeleteTableResponse {
 }
 
+message TruncateTableRequest {
+  required TableName tableName = 1;
+  optional bool preserveSplits = 2 [default = false];
+}
+
+message TruncateTableResponse {
+}
+
 message EnableTableRequest {
   required TableName table_name = 1;
 }
@@ -414,6 +422,10 @@ service MasterService {
   /** Deletes a table */
   rpc DeleteTable(DeleteTableRequest)
     returns(DeleteTableResponse);
+
+  /** Truncate a table */
+  rpc truncateTable(TruncateTableRequest)
+    returns(TruncateTableResponse);
 
   /** Puts the table on-line (only needed if table has been previously taken offline) */
   rpc EnableTable(EnableTableRequest)

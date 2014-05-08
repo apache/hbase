@@ -98,6 +98,14 @@ public interface MasterServices extends Server {
   void deleteTable(final TableName tableName) throws IOException;
 
   /**
+   * Truncate a table
+   * @param tableName The table name
+   * @param preserveSplits True if the splits should be preserved
+   * @throws IOException
+   */
+  public void truncateTable(final TableName tableName, boolean preserveSplits) throws IOException;
+
+  /**
    * Modify the descriptor of an existing table
    * @param tableName The table name
    * @param descriptor The updated table descriptor

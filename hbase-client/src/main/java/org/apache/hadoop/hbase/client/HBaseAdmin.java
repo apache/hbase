@@ -126,6 +126,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
@@ -762,6 +764,26 @@ public class HBaseAdmin implements Admin {
     return failed.toArray(new HTableDescriptor[failed.size()]);
   }
 
+  /**
+   * Truncate a table.
+   * Synchronous operation.
+   *
+   * @param tableName name of table to truncate
+   * @param preserveSplits True if the splits should be preserved
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void truncateTable(final TableName tableName, final boolean preserveSplits)
+      throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
+      @Override
+      public Void call(int callTimeout) throws ServiceException {
+        TruncateTableRequest req = RequestConverter.buildTruncateTableRequest(
+          tableName, preserveSplits);
+        master.truncateTable(null, req);
+        return null;
+      }
+    });
+  }
 
   /**
    * Enable a table.  May timeout.  Use {@link #enableTableAsync(byte[])}

@@ -230,6 +230,17 @@ public interface Admin extends Abortable, Closeable {
   HTableDescriptor[] deleteTables(Pattern pattern) throws IOException;
 
   /**
+   * Truncate a table.
+   * Synchronous operation.
+   *
+   * @param tableName name of table to truncate
+   * @param preserveSplits True if the splits should be preserved
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void truncateTable(final TableName tableName, final boolean preserveSplits)
+      throws IOException;
+
+  /**
    * Enable a table.  May timeout.  Use {@link #enableTableAsync(org.apache.hadoop.hbase.TableName)}
    * and {@link #isTableEnabled(org.apache.hadoop.hbase.TableName)} instead. The table has to be in
    * disabled state for it to be enabled.

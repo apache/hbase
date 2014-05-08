@@ -872,6 +872,22 @@ public class AccessController extends BaseRegionObserver
   public void postDeleteTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
       TableName tableName) throws IOException {}
 
+   @Override
+  public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName)
+      throws IOException {
+    requirePermission("truncateTable", tableName, null, null, Action.ADMIN, Action.CREATE);
+  }
+  @Override
+  public void postTruncateTable(ObserverContext<MasterCoprocessorEnvironment> c,
+      TableName tableName) throws IOException {
+  }
+  @Override
+  public void preTruncateTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
+      TableName tableName) throws IOException {}
+  @Override
+  public void postTruncateTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
+      TableName tableName) throws IOException {}
+
   @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       HTableDescriptor htd) throws IOException {

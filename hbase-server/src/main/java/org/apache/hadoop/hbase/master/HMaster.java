@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
+import org.apache.hadoop.hbase.master.handler.TruncateTableHandler;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -1321,6 +1322,21 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.service.submit(new DeleteTableHandler(tableName, this, this).prepare());
     if (cpHost != null) {
       cpHost.postDeleteTable(tableName);
+    }
+  }
+
+  @Override
+  public void truncateTable(TableName tableName, boolean preserveSplits) throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      cpHost.preTruncateTable(tableName);
+    }
+    LOG.info(getClientIdAuditPrefix() + " truncate " + tableName);
+    TruncateTableHandler handler = new TruncateTableHandler(tableName, this, this, preserveSplits);
+    handler.prepare();
+    handler.process();
+    if (cpHost != null) {
+      cpHost.postTruncateTable(tableName);
     }
   }
 

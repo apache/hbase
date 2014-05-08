@@ -29,10 +29,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -46,6 +48,8 @@ import org.apache.zookeeper.KeeperException;
 public class DeleteTableHandler extends TableEventHandler {
   private static final Log LOG = LogFactory.getLog(DeleteTableHandler.class);
 
+  protected HTableDescriptor hTableDescriptor = null;
+
   public DeleteTableHandler(TableName tableName, Server server,
       final MasterServices masterServices) {
     super(EventType.C_M_DELETE_TABLE, tableName, server, masterServices);
@@ -54,19 +58,11 @@ public class DeleteTableHandler extends TableEventHandler {
   @Override
   protected void prepareWithTableLock() throws IOException {
     // The next call fails if no such table.
-    getTableDescriptor();
+    hTableDescriptor = getTableDescriptor();
   }
 
-  @Override
-  protected void handleTableOperation(List<HRegionInfo> regions)
-  throws IOException, KeeperException {
-    MasterCoprocessorHost cpHost = ((HMaster) this.server)
-        .getMasterCoprocessorHost();
-    if (cpHost != null) {
-      cpHost.preDeleteTableHandler(this.tableName);
-    }
-
-    // 1. Wait because of region in transition
+  protected void waitRegionInTransition(final List<HRegionInfo> regions)
+      throws IOException, KeeperException {
     AssignmentManager am = this.masterServices.getAssignmentManager();
     RegionStates states = am.getRegionStates();
     long waitTime = server.getConfiguration().
@@ -93,40 +89,34 @@ public class DeleteTableHandler extends TableEventHandler {
           region.getRegionNameAsString() + " in transitions");
       }
     }
+  }
 
-    // 2. Remove regions from META
-    LOG.debug("Deleting regions from META");
-    MetaEditor.deleteRegions(this.server.getCatalogTracker(), regions);
+  @Override
+  protected void handleTableOperation(List<HRegionInfo> regions)
+      throws IOException, KeeperException {
+    MasterCoprocessorHost cpHost = ((HMaster) this.server).getMasterCoprocessorHost();
+    if (cpHost != null) {
+      cpHost.preDeleteTableHandler(this.tableName);
+    }
 
-    // 3. Move the table in /hbase/.tmp
-    MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
-    Path tempTableDir = mfs.moveTableToTemp(tableName);
+    // 1. Wait because of region in transition
+    waitRegionInTransition(regions);
 
     try {
-      // 4. Delete regions from FS (temp directory)
-      FileSystem fs = mfs.getFileSystem();
-      for (HRegionInfo hri: regions) {
-        LOG.debug("Archiving region " + hri.getRegionNameAsString() + " from FS");
-        HFileArchiver.archiveRegion(fs, mfs.getRootDir(),
-            tempTableDir, new Path(tempTableDir, hri.getEncodedName()));
-      }
-
-      // 5. Delete table from FS (temp directory)
-      if (!fs.delete(tempTableDir, true)) {
-        LOG.error("Couldn't delete " + tempTableDir);
-      }
-
-      LOG.debug("Table '" + tableName + "' archived!");
+      // 2. Remove table from .META. and HDFS
+      removeTableData(regions);
     } finally {
-      // 6. Update table descriptor cache
+      // 3. Update table descriptor cache
       LOG.debug("Removing '" + tableName + "' descriptor.");
       this.masterServices.getTableDescriptors().remove(tableName);
 
-      // 7. Clean up regions of the table in RegionStates.
-      LOG.debug("Removing '" + tableName + "' from region states.");
-      states.tableDeleted(tableName);
+      AssignmentManager am = this.masterServices.getAssignmentManager();
 
-      // 8. If entry for this table in zk, and up in AssignmentManager, remove it.
+      // 4. Clean up regions of the table in RegionStates.
+      LOG.debug("Removing '" + tableName + "' from region states.");
+      am.getRegionStates().tableDeleted(tableName);
+
+      // 5. If entry for this table in zk, and up in AssignmentManager, remove it.
       LOG.debug("Marking '" + tableName + "' as deleted.");
       am.getZKTable().setDeletedTable(tableName);
     }
@@ -134,6 +124,40 @@ public class DeleteTableHandler extends TableEventHandler {
     if (cpHost != null) {
       cpHost.postDeleteTableHandler(this.tableName);
     }
+  }
+
+  /**
+   * Removes the table from .META. and archives the HDFS files.
+   */
+  protected void removeTableData(final List<HRegionInfo> regions)
+      throws IOException, KeeperException {
+    // 1. Remove regions from META
+    LOG.debug("Deleting regions from META");
+    MetaEditor.deleteRegions(this.server.getCatalogTracker(), regions);
+
+    // -----------------------------------------------------------------------
+    // NOTE: At this point we still have data on disk, but nothing in .META.
+    //       if the rename below fails, hbck will report an inconsistency.
+    // -----------------------------------------------------------------------
+
+    // 2. Move the table in /hbase/.tmp
+    MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
+    Path tempTableDir = mfs.moveTableToTemp(tableName);
+
+    // 3. Archive regions from FS (temp directory)
+    FileSystem fs = mfs.getFileSystem();
+    for (HRegionInfo hri: regions) {
+      LOG.debug("Archiving region " + hri.getRegionNameAsString() + " from FS");
+      HFileArchiver.archiveRegion(fs, mfs.getRootDir(),
+          tempTableDir, HRegion.getRegionDir(tempTableDir, hri.getEncodedName()));
+    }
+
+    // 4. Delete table directory from FS (temp directory)
+    if (!fs.delete(tempTableDir, true)) {
+      LOG.error("Couldn't delete " + tempTableDir);
+    }
+
+    LOG.debug("Table '" + tableName + "' archived!");
   }
 
   @Override

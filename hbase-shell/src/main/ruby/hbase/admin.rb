@@ -334,11 +334,24 @@ module Hbase
       yield 'Disabling table...' if block_given?
       @admin.disableTable(table_name)
 
-      yield 'Dropping table...' if block_given?
-      @admin.deleteTable(table_name)
+      begin
+        yield 'Truncating table...' if block_given?
+        @admin.truncateTable(org.apache.hadoop.hbase.TableName.valueOf(table_name), false)
+      rescue => e
+        # Handle the compatibility case, where the truncate method doesn't exists on the Master
+        raise e unless e.respond_to?(:cause) && e.cause != nil
+        rootCause = e.cause
+        if rootCause.kind_of?(org.apache.hadoop.hbase.DoNotRetryIOException) then
+          # Handle the compatibility case, where the truncate method doesn't exists on the Master
+          yield 'Dropping table...' if block_given?
+          @admin.deleteTable(table_name)
 
-      yield 'Creating table...' if block_given?
-      @admin.createTable(table_description)
+          yield 'Creating table...' if block_given?
+          @admin.createTable(table_description)
+        else
+          raise e
+        end
+      end
     end
 
     #----------------------------------------------------------------------------------------------
@@ -351,11 +364,24 @@ module Hbase
       yield 'Disabling table...' if block_given?
       disable(table_name)
 
-      yield 'Dropping table...' if block_given?
-      drop(table_name)
+      begin
+        yield 'Truncating table...' if block_given?
+        @admin.truncateTable(org.apache.hadoop.hbase.TableName.valueOf(table_name), true)
+      rescue => e
+        # Handle the compatibility case, where the truncate method doesn't exists on the Master
+        raise e unless e.respond_to?(:cause) && e.cause != nil
+        rootCause = e.cause
+        if rootCause.kind_of?(org.apache.hadoop.hbase.DoNotRetryIOException) then
+          # Handle the compatibility case, where the truncate method doesn't exists on the Master
+          yield 'Dropping table...' if block_given?
+          @admin.deleteTable(table_name)
 
-      yield 'Creating table with region boundaries...' if block_given?
-      @admin.createTable(table_description, splits)
+          yield 'Creating table with region boundaries...' if block_given?
+          @admin.createTable(table_description, splits)
+        else
+          raise e
+        end
+      end
     end
 
     #----------------------------------------------------------------------------------------------

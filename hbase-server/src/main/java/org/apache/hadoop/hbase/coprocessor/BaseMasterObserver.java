@@ -83,6 +83,28 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
+  public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+  }
+
+  @Override
+  public void postTruncateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+  }
+
+  @Override
+  public void preTruncateTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+      throws IOException {
+  }
+
+  @Override
+  public void postTruncateTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+      throws IOException {
+  }
+
+  @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableName tableName, HTableDescriptor htd) throws IOException {
   }

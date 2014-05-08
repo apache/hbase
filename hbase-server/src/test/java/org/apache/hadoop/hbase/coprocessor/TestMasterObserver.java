@@ -80,6 +80,8 @@ public class TestMasterObserver {
     private boolean postCreateTableCalled;
     private boolean preDeleteTableCalled;
     private boolean postDeleteTableCalled;
+    private boolean preTruncateTableCalled;
+    private boolean postTruncateTableCalled;
     private boolean preModifyTableCalled;
     private boolean postModifyTableCalled;
     private boolean preCreateNamespaceCalled;
@@ -128,6 +130,8 @@ public class TestMasterObserver {
     private boolean postCreateTableHandlerCalled;
     private boolean preDeleteTableHandlerCalled;
     private boolean postDeleteTableHandlerCalled;
+    private boolean preTruncateTableHandlerCalled;
+    private boolean postTruncateTableHandlerCalled;
     private boolean preAddColumnHandlerCalled;
     private boolean postAddColumnHandlerCalled;
     private boolean preModifyColumnHandlerCalled;
@@ -152,6 +156,8 @@ public class TestMasterObserver {
       postCreateTableCalled = false;
       preDeleteTableCalled = false;
       postDeleteTableCalled = false;
+      preTruncateTableCalled = false;
+      postTruncateTableCalled = false;
       preModifyTableCalled = false;
       postModifyTableCalled = false;
       preCreateNamespaceCalled = false;
@@ -194,6 +200,8 @@ public class TestMasterObserver {
       postCreateTableHandlerCalled = false;
       preDeleteTableHandlerCalled = false;
       postDeleteTableHandlerCalled = false;
+      preTruncateTableHandlerCalled = false;
+      postTruncateTableHandlerCalled = false;
       preModifyTableHandlerCalled = false;
       postModifyTableHandlerCalled = false;
       preAddColumnHandlerCalled = false;
@@ -256,6 +264,29 @@ public class TestMasterObserver {
 
     public boolean preDeleteTableCalledOnly() {
       return preDeleteTableCalled && !postDeleteTableCalled;
+    }
+
+    @Override
+    public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> env,
+        TableName tableName) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
+      preTruncateTableCalled = true;
+    }
+
+    @Override
+    public void postTruncateTable(ObserverContext<MasterCoprocessorEnvironment> env,
+        TableName tableName) throws IOException {
+      postTruncateTableCalled = true;
+    }
+
+    public boolean wasTruncateTableCalled() {
+      return preTruncateTableCalled && postTruncateTableCalled;
+    }
+
+    public boolean preTruncateTableCalledOnly() {
+      return preTruncateTableCalled && !postTruncateTableCalled;
     }
 
     @Override
@@ -777,6 +808,32 @@ public class TestMasterObserver {
     public boolean wasDeleteTableHandlerCalledOnly() {
       return preDeleteTableHandlerCalled && !postDeleteTableHandlerCalled;
     }
+
+    @Override
+    public void preTruncateTableHandler(
+        ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName)
+        throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
+      preTruncateTableHandlerCalled = true;
+    }
+
+    @Override
+    public void postTruncateTableHandler(
+        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+        throws IOException {
+      postTruncateTableHandlerCalled = true;
+    }
+
+    public boolean wasTruncateTableHandlerCalled() {
+      return preTruncateTableHandlerCalled && postTruncateTableHandlerCalled;
+    }
+
+    public boolean wasTruncateTableHandlerCalledOnly() {
+      return preTruncateTableHandlerCalled && !postTruncateTableHandlerCalled;
+    }
+
     @Override
     public void preModifyTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName,
@@ -1069,7 +1126,12 @@ public class TestMasterObserver {
     assertTrue("Second column family should be modified",
       cp.preModifyColumnCalledOnly());
 
+    // truncate table
+    admin.truncateTable(TEST_TABLE, false);
+
     // delete table
+    admin.disableTable(TEST_TABLE);
+    assertTrue(admin.isTableDisabled(TEST_TABLE));
     admin.deleteTable(TEST_TABLE);
     assertFalse("Test table should have been deleted",
         admin.tableExists(TEST_TABLE));
@@ -1299,7 +1361,7 @@ public class TestMasterObserver {
     try {
       UTIL.createMultiRegions(table, TEST_FAMILY);
       UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
-  
+
       NavigableMap<HRegionInfo, ServerName> regions = table.getRegionLocations();
       Map.Entry<HRegionInfo, ServerName> firstGoodPair = null;
       for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
@@ -1331,15 +1393,15 @@ public class TestMasterObserver {
           firstGoodPair.getKey().getEncodedNameAsBytes(),Bytes.toBytes(destName)));
       assertTrue("Coprocessor should have been called on region move",
         cp.wasMoveCalled());
-  
+
       // make sure balancer is on
       master.balanceSwitch(true);
       assertTrue("Coprocessor should have been called on balance switch",
           cp.wasBalanceSwitchCalled());
-  
+
       // turn balancer off
       master.balanceSwitch(false);
-  
+
       // wait for assignments to finish, if any
       AssignmentManager mgr = master.getAssignmentManager();
       Collection<RegionState> transRegions =
@@ -1347,7 +1409,7 @@ public class TestMasterObserver {
       for (RegionState state : transRegions) {
         mgr.getRegionStates().waitOnRegionToClearRegionsInTransition(state.getRegion());
       }
-  
+
       // move half the open regions from RS 0 to RS 1
       HRegionServer rs = cluster.getRegionServer(0);
       byte[] destRS = Bytes.toBytes(cluster.getRegionServer(1).getServerName().toString());

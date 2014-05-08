@@ -107,24 +107,7 @@ public class CreateTableHandler extends EventHandler {
         throw new TableExistsException(tableName);
       }
 
-      // If we have multiple client threads trying to create the table at the
-      // same time, given the async nature of the operation, the table
-      // could be in a state where hbase:meta table hasn't been updated yet in
-      // the process() function.
-      // Use enabling state to tell if there is already a request for the same
-      // table in progress. This will introduce a new zookeeper call. Given
-      // createTable isn't a frequent operation, that should be ok.
-      // TODO: now that we have table locks, re-evaluate above -- table locks are not enough.
-      // We could have cleared the hbase.rootdir and not zk.  How can we detect this case?
-      // Having to clean zk AND hdfs is awkward.
-      try {
-        if (!this.assignmentManager.getZKTable().checkAndSetEnablingTable(tableName)) {
-          throw new TableExistsException(tableName);
-        }
-      } catch (KeeperException e) {
-        throw new IOException("Unable to ensure that the table will be" +
-          " enabling because of a ZooKeeper issue", e);
-      }
+      checkAndSetEnablingTable(assignmentManager, tableName);
       success = true;
     } finally {
       if (!success) {
@@ -132,6 +115,43 @@ public class CreateTableHandler extends EventHandler {
       }
     }
     return this;
+  }
+
+  static void checkAndSetEnablingTable(final AssignmentManager assignmentManager,
+      final TableName tableName) throws IOException {
+    // If we have multiple client threads trying to create the table at the
+    // same time, given the async nature of the operation, the table
+    // could be in a state where hbase:meta table hasn't been updated yet in
+    // the process() function.
+    // Use enabling state to tell if there is already a request for the same
+    // table in progress. This will introduce a new zookeeper call. Given
+    // createTable isn't a frequent operation, that should be ok.
+    // TODO: now that we have table locks, re-evaluate above -- table locks are not enough.
+    // We could have cleared the hbase.rootdir and not zk.  How can we detect this case?
+    // Having to clean zk AND hdfs is awkward.
+    try {
+      if (!assignmentManager.getZKTable().checkAndSetEnablingTable(tableName)) {
+        throw new TableExistsException(tableName);
+      }
+    } catch (KeeperException e) {
+      throw new IOException("Unable to ensure that the table will be" +
+        " enabling because of a ZooKeeper issue", e);
+    }
+  }
+
+  static void removeEnablingTable(final AssignmentManager assignmentManager,
+      final TableName tableName) {
+    // Try deleting the enabling node in case of error
+    // If this does not happen then if the client tries to create the table
+    // again with the same Active master
+    // It will block the creation saying TableAlreadyExists.
+    try {
+      assignmentManager.getZKTable().removeEnablingTable(tableName, false);
+    } catch (KeeperException e) {
+      // Keeper exception should not happen here
+      LOG.error("Got a keeper exception while removing the ENABLING table znode "
+          + tableName, e);
+    }
   }
 
   @Override
@@ -172,18 +192,7 @@ public class CreateTableHandler extends EventHandler {
   protected void completed(final Throwable exception) {
     releaseTableLock();
     if (exception != null) {
-      // Try deleting the enabling node in case of error
-      // If this does not happen then if the client tries to create the table
-      // again with the same Active master
-      // It will block the creation saying TableAlreadyExists.
-      try {
-        this.assignmentManager.getZKTable().removeEnablingTable(
-            this.hTableDescriptor.getTableName(), false);
-      } catch (KeeperException e) {
-        // Keeper exception should not happen here
-        LOG.error("Got a keeper exception while removing the ENABLING table znode "
-            + this.hTableDescriptor.getTableName(), e);
-      }
+      removeEnablingTable(this.assignmentManager, this.hTableDescriptor.getTableName());
     }
   }
 
@@ -225,15 +234,7 @@ public class CreateTableHandler extends EventHandler {
       addRegionsToMeta(this.catalogTracker, regionInfos);
 
       // 5. Trigger immediate assignment of the regions in round-robin fashion
-      try {
-        assignmentManager.getRegionStates().createRegionStates(regionInfos);
-        assignmentManager.assign(regionInfos);
-      } catch (InterruptedException e) {
-        LOG.error("Caught " + e + " during round-robin assignment");
-        InterruptedIOException ie = new InterruptedIOException(e.getMessage());
-        ie.initCause(e);
-        throw ie;
-      }
+      ModifyRegionUtils.assignRegions(assignmentManager, regionInfos);
     }
 
     // 6. Set table enabled flag up in zk.

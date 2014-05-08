@@ -311,6 +311,22 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
+  public void testTableTruncate() throws Exception {
+    AccessTestAction truncateTable = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER
+            .preTruncateTable(ObserverContext.createAndPrepare(CP_ENV, null),
+              TEST_TABLE.getTableName());
+        return null;
+      }
+    };
+
+    verifyAllowed(truncateTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
+    verifyDenied(truncateTable, USER_RW, USER_RO, USER_NONE);
+  }
+
+  @Test
   public void testAddColumn() throws Exception {
     final HColumnDescriptor hcd = new HColumnDescriptor("fam_new");
     AccessTestAction action = new AccessTestAction() {
@@ -589,9 +605,9 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testMergeRegions() throws Exception {
-    
+
     final List<HRegion> regions = TEST_UTIL.getHBaseCluster().findRegionsForTable(TEST_TABLE.getTableName());
-    
+
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
@@ -1481,7 +1497,7 @@ public class TestAccessController extends SecureTestUtil {
     // revoke
     revokeFromTable(TEST_UTIL, user.getShortName(), tableName, family1, qualifier,
       Permission.Action.WRITE, Permission.Action.READ);
-    
+
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
       BlockingRpcChannel service = acl.coprocessorService(tableName.getName());

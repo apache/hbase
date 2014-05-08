@@ -365,6 +365,28 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   }
 
   @Override
+  public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+  }
+
+  @Override
+  public void postTruncateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+  }
+
+  @Override
+  public void preTruncateTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+      throws IOException{
+  }
+
+  @Override
+  public void postTruncateTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+      throws IOException {
+  }
+
+  @Override
   public void preEnableTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
       throws IOException {
   }

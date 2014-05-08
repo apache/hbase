@@ -1760,6 +1760,12 @@ class ConnectionManager {
         }
 
         @Override
+        public TruncateTableResponse truncateTable(RpcController controller,
+            TruncateTableRequest request) throws ServiceException {
+          return stub.truncateTable(controller, request);
+        }
+
+        @Override
         public EnableTableResponse enableTable(RpcController controller,
             EnableTableRequest request) throws ServiceException {
           return stub.enableTable(controller, request);
