@@ -86,6 +86,7 @@ public final class ExportSnapshot extends Configured implements Tool {
   private static final String CONF_INPUT_ROOT = "snapshot.export.input.root";
   private static final String CONF_BUFFER_SIZE = "snapshot.export.buffer.size";
   private static final String CONF_MAP_GROUP = "snapshot.export.default.map.group";
+  protected static final String CONF_SKIP_TMP = "snapshot.export.skip.tmp";
 
   static final String CONF_TEST_FAILURE = "test.snapshot.export.failure";
   static final String CONF_TEST_RETRY = "test.snapshot.export.failure.retry";
@@ -713,9 +714,12 @@ public final class ExportSnapshot extends Configured implements Tool {
     FileSystem outputFs = FileSystem.get(outputRoot.toUri(), conf);
     LOG.debug("outputFs=" + outputFs.getUri().toString() + " outputRoot=" + outputRoot.toString());
 
+    boolean skipTmp = conf.getBoolean(CONF_SKIP_TMP, false);
+
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, inputRoot);
     Path snapshotTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshotName, outputRoot);
     Path outputSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, outputRoot);
+    Path initialOutputSnapshotDir = skipTmp ? outputSnapshotDir : snapshotTmpDir;
 
     // Check if the snapshot already exists
     if (outputFs.exists(outputSnapshotDir)) {
@@ -731,18 +735,20 @@ public final class ExportSnapshot extends Configured implements Tool {
       }
     }
 
-    // Check if the snapshot already in-progress
-    if (outputFs.exists(snapshotTmpDir)) {
-      if (overwrite) {
-        if (!outputFs.delete(snapshotTmpDir, true)) {
-          System.err.println("Unable to remove existing snapshot tmp directory: " + snapshotTmpDir);
+    if (!skipTmp) {
+      // Check if the snapshot already in-progress
+      if (outputFs.exists(snapshotTmpDir)) {
+        if (overwrite) {
+          if (!outputFs.delete(snapshotTmpDir, true)) {
+            System.err.println("Unable to remove existing snapshot tmp directory: "+snapshotTmpDir);
+            return 1;
+          }
+        } else {
+          System.err.println("A snapshot with the same name '"+snapshotName+"' may be in-progress");
+          System.err.println("Please check "+snapshotTmpDir+". If the snapshot has completed, ");
+          System.err.println("consider removing "+snapshotTmpDir+" by using the -overwrite option");
           return 1;
         }
-      } else {
-        System.err.println("A snapshot with the same name '"+ snapshotName +"' may be in-progress");
-        System.err.println("Please check " + snapshotTmpDir + ". If the snapshot has completed, ");
-        System.err.println("consider removing "+ snapshotTmpDir +" by using the -overwrite option");
-        return 1;
       }
     }
 
@@ -759,10 +765,10 @@ public final class ExportSnapshot extends Configured implements Tool {
     // will remove them because they are unreferenced.
     try {
       LOG.info("Copy Snapshot Manifest");
-      FileUtil.copy(inputFs, snapshotDir, outputFs, snapshotTmpDir, false, false, conf);
+      FileUtil.copy(inputFs, snapshotDir, outputFs, initialOutputSnapshotDir, false, false, conf);
     } catch (IOException e) {
       throw new ExportSnapshotException("Failed to copy the snapshot directory: from=" +
-        snapshotDir + " to=" + snapshotTmpDir, e);
+        snapshotDir + " to=" + initialOutputSnapshotDir, e);
     }
 
     // Step 2 - Start MR Job to copy files
@@ -776,11 +782,14 @@ public final class ExportSnapshot extends Configured implements Tool {
                    filesUser, filesGroup, filesMode, mappers);
       }
 
-      // Step 3 - Rename fs2:/.snapshot/.tmp/<snapshot> fs2:/.snapshot/<snapshot>
+
       LOG.info("Finalize the Snapshot Export");
-      if (!outputFs.rename(snapshotTmpDir, outputSnapshotDir)) {
-        throw new ExportSnapshotException("Unable to rename snapshot directory from=" +
-          snapshotTmpDir + " to=" + outputSnapshotDir);
+      if (!skipTmp) {
+        // Step 3 - Rename fs2:/.snapshot/.tmp/<snapshot> fs2:/.snapshot/<snapshot>
+        if (!outputFs.rename(snapshotTmpDir, outputSnapshotDir)) {
+          throw new ExportSnapshotException("Unable to rename snapshot directory from=" +
+            snapshotTmpDir + " to=" + outputSnapshotDir);
+        }
       }
 
       // Step 4 - Verify snapshot validity
@@ -791,7 +800,9 @@ public final class ExportSnapshot extends Configured implements Tool {
       return 0;
     } catch (Exception e) {
       LOG.error("Snapshot export failed", e);
-      outputFs.delete(snapshotTmpDir, true);
+      if (!skipTmp) {
+        outputFs.delete(snapshotTmpDir, true);
+      }
       outputFs.delete(outputSnapshotDir, true);
       return 1;
     }
