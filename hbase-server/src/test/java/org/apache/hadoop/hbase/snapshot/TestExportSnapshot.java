@@ -178,6 +178,12 @@ public class TestExportSnapshot {
   }
 
   @Test
+  public void testExportFileSystemStateWithSkipTmp() throws Exception {
+    TEST_UTIL.getConfiguration().setBoolean(ExportSnapshot.CONF_SKIP_TMP, true);
+    testExportFileSystemState(tableName, snapshotName, 2);
+  }
+
+  @Test
   public void testEmptyExportFileSystemState() throws Exception {
     testExportFileSystemState(tableName, emptySnapshotName, 1);
   }
