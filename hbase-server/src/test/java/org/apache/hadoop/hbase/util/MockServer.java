@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
@@ -92,6 +93,11 @@ public class MockServer implements Server {
   @Override
   public ZooKeeperWatcher getZooKeeper() {
     return this.zk;
+  }
+
+  @Override
+  public ConsensusProvider getConsensusProvider() {
+    return null;
   }
 
   @Override

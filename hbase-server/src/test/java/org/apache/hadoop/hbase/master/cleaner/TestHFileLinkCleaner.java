@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -141,6 +142,11 @@ public class TestHFileLinkCleaner {
       } catch (IOException e) {
         e.printStackTrace();
       }
+      return null;
+    }
+
+    @Override
+    public ConsensusProvider getConsensusProvider() {
       return null;
     }
 

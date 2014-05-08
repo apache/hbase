@@ -18,26 +18,32 @@
 package org.apache.hadoop.hbase.consensus;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.Server;
 
 /**
- * Creates instance of {@link org.apache.hadoop.hbase.consensus.ConsensusProvider}
- * based on configuration.
+ * Base class for {@link org.apache.hadoop.hbase.ConsensusProvider} implementations.
+ * Defines methods to retrieve consensus objects for relevant areas. ConsensusProvider
+ * reference returned from Server interface has to be casted to this type to
+ * access those methods.
  */
 @InterfaceAudience.Private
-public class ConsensusProviderFactory {
+public abstract class BaseConsensusProvider implements ConsensusProvider {
 
-  /**
-   * Creates consensus provider from the given configuration.
-   * @param conf Configuration
-   * @return A {@link org.apache.hadoop.hbase.consensus.ConsensusProvider}
-   */
-  public static ConsensusProvider getConsensusProvider(Configuration conf) {
-    Class<? extends ConsensusProvider> consensusKlass =
-      conf.getClass(HConstants.HBASE_CONSENSUS_PROVIDER_CLASS, ZkConsensusProvider.class,
-        ConsensusProvider.class);
-    return ReflectionUtils.newInstance(consensusKlass, conf);
+  @Override
+  public void initialize(Server server) {
+  }
+
+  @Override
+  public void start() {
+  }
+
+  @Override
+  public void stop() {
+  }
+
+  @Override
+  public Server getServer() {
+    return null;
   }
 }

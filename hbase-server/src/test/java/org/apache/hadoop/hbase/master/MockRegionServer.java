@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
@@ -265,6 +266,11 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public ZooKeeperWatcher getZooKeeper() {
     return this.zkw;
+  }
+
+  @Override
+  public ConsensusProvider getConsensusProvider() {
+    return null;
   }
 
   @Override

@@ -135,6 +135,11 @@ class MockRegionServerServices implements RegionServerServices {
     return zkw;
   }
 
+  @Override
+  public ConsensusProvider getConsensusProvider() {
+    return null;
+  }
+
   public RegionServerAccounting getRegionServerAccounting() {
     return null;
   }

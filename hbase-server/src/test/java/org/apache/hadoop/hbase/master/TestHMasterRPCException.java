@@ -26,8 +26,8 @@ import java.net.SocketTimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.consensus.ConsensusProvider;
-import org.apache.hadoop.hbase.consensus.ConsensusProviderFactory;
+import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;

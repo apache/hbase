@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -142,6 +143,11 @@ public class ReplicationSyncUp extends Configured implements Tool {
     @Override
     public ZooKeeperWatcher getZooKeeper() {
       return zkw;
+    }
+
+    @Override
+    public ConsensusProvider getConsensusProvider() {
+      return null;
     }
 
     @Override

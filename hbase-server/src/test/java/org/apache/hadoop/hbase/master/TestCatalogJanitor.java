@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
@@ -164,6 +165,11 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public ConsensusProvider getConsensusProvider() {
+      return null;
+    }
+
+    @Override
     public void abort(String why, Throwable e) {
       //no-op
     }
@@ -239,6 +245,11 @@ public class TestCatalogJanitor {
 
     @Override
     public ZooKeeperWatcher getZooKeeper() {
+      return null;
+    }
+
+    @Override
+    public ConsensusProvider getConsensusProvider() {
       return null;
     }
 

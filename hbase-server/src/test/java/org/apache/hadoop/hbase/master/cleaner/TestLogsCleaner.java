@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
@@ -147,6 +148,11 @@ public class TestLogsCleaner {
       } catch (IOException e) {
         e.printStackTrace();
       }
+      return null;
+    }
+
+    @Override
+    public ConsensusProvider getConsensusProvider() {
       return null;
     }
 

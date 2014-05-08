@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
@@ -150,6 +151,11 @@ public class TestTokenAuthentication {
     @Override
     public ZooKeeperWatcher getZooKeeper() {
       return zookeeper;
+    }
+
+    @Override
+    public ConsensusProvider getConsensusProvider() {
+      return null;
     }
 
     @Override

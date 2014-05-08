@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -57,6 +58,11 @@ public class TestClockSkewDetection {
 
       @Override
       public ZooKeeperWatcher getZooKeeper() {
+        return null;
+      }
+
+      @Override
+      public ConsensusProvider getConsensusProvider() {
         return null;
       }
 

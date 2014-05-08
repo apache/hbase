@@ -22,7 +22,6 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.consensus.ConsensusProvider;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.zookeeper.KeeperException;
 

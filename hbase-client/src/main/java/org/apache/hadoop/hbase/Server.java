@@ -48,4 +48,9 @@ public interface Server extends Abortable, Stoppable {
    * @return The unique server name for this server.
    */
   ServerName getServerName();
+
+  /**
+   * Get ConsensusProvider instance for this server.
+   */
+  ConsensusProvider getConsensusProvider();
 }

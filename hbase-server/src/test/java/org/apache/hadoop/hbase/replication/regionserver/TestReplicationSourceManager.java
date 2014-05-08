@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -388,6 +389,11 @@ public class TestReplicationSourceManager {
     @Override
     public ZooKeeperWatcher getZooKeeper() {
       return zkw;
+    }
+
+    @Override
+    public ConsensusProvider getConsensusProvider() {
+      return null;
     }
 
     @Override

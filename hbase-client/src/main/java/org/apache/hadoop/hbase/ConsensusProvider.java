@@ -15,15 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.consensus;
+package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.Server;
 
 /**
  * Implementations of this interface will keep and return to clients 
  * implementations of classes providing API to execute
- * coordinated operations.
+ * coordinated operations. This interface is client-sise, so it does NOT
+ * include method to retrieve the particular consensus providers.
  *
  * For each coarse-grained area of operations there will be a separate
  * interface with implementation, providing API for relevant operations

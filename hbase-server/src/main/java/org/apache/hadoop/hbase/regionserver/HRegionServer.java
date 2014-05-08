@@ -75,8 +75,8 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.consensus.ConsensusProvider;
-import org.apache.hadoop.hbase.consensus.ConsensusProviderFactory;
+import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -2146,6 +2146,7 @@ public class HRegionServer extends HasThread implements
     return zooKeeper;
   }
 
+  @Override
   public ConsensusProvider getConsensusProvider() {
     return consensusProvider;
   }

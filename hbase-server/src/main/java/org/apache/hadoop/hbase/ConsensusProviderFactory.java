@@ -15,28 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.consensus;
+package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.consensus.ZkConsensusProvider;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
- * ZooKeeper-based implementation of {@link org.apache.hadoop.hbase.ConsensusProvider}.
+ * Creates instance of {@link ConsensusProvider}
+ * based on configuration.
  */
 @InterfaceAudience.Private
-public class ZkConsensusProvider extends BaseConsensusProvider {
-  private Server server;
-  private ZooKeeperWatcher watcher;
+public class ConsensusProviderFactory {
 
-  @Override
-  public void initialize(Server server) {
-    this.server = server;
-    this.watcher = server.getZooKeeper();
-  }
-
-  @Override
-  public Server getServer() {
-    return server;
+  /**
+   * Creates consensus provider from the given configuration.
+   * @param conf Configuration
+   * @return A {@link ConsensusProvider}
+   */
+  public static ConsensusProvider getConsensusProvider(Configuration conf) {
+    Class<? extends ConsensusProvider> consensusKlass =
+      conf.getClass(HConstants.HBASE_CONSENSUS_PROVIDER_CLASS, ZkConsensusProvider.class,
+        ConsensusProvider.class);
+    return ReflectionUtils.newInstance(consensusKlass, conf);
   }
 }

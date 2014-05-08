@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
@@ -277,6 +278,11 @@ public class TestActiveMasterManager {
 
     @Override
     public ZooKeeperWatcher getZooKeeper() {
+      return null;
+    }
+
+    @Override
+    public ConsensusProvider getConsensusProvider() {
       return null;
     }
 

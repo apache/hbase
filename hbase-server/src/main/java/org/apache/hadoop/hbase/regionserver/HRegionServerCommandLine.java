@@ -25,8 +25,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.consensus.ConsensusProvider;
-import org.apache.hadoop.hbase.consensus.ConsensusProviderFactory;
+import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
 
 /**

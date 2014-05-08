@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -205,6 +206,11 @@ public class TestHFileCleaner {
       } catch (IOException e) {
         e.printStackTrace();
       }
+      return null;
+    }
+
+    @Override
+    public ConsensusProvider getConsensusProvider() {
       return null;
     }
 
