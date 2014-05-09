@@ -49,8 +49,6 @@ import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.apache.hadoop.net.NetworkTopology;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -67,8 +65,6 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   public static void beforeAllTests() throws Exception {
     conf = HBaseConfiguration.create();
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
-    conf.setClass("hbase.util.ip.to.rack.determiner",
-        MyRackResolver.class, DNSToSwitchMapping.class);
     loadBalancer = new StochasticLoadBalancer();
     loadBalancer.setConf(conf);
   }
@@ -492,7 +488,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 800000)
   public void testRegionReplicasOnSmallCluster() {
     int numNodes = 10;
     int numRegions = 1000;
@@ -502,9 +498,11 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 800000)
   public void testRegionReplicasOnMidCluster() {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
+    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
     loadBalancer.setConf(conf);
     int numNodes = 200;
     int numRegions = 40 * 200;
@@ -514,34 +512,38 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 800000)
   public void testRegionReplicasOnLargeCluster() {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
+    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
     loadBalancer.setConf(conf);
     int numNodes = 1000;
-    int numRegions = 40 * numNodes; //40 regions per RS
-    int numRegionsPerServer = 30; //all servers except one
+    int numRegions = 20 * numNodes; // 20 * replication regions per RS
+    int numRegionsPerServer = 19; // all servers except one
     int numTables = 100;
     int replication = 3;
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 800000)
   public void testRegionReplicasOnMidClusterHighReplication() {
-    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
+    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 4000000L);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     loadBalancer.setConf(conf);
-    int numNodes = 100;
-    int numRegions = 6 * 100;
-    int replication = 100; // 100 replicas per region, one for each server
+    int numNodes = 80;
+    int numRegions = 6 * numNodes;
+    int replication = 80; // 80 replicas per region, one for each server
     int numRegionsPerServer = 5;
     int numTables = 10;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, false, true);
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 800000)
   public void testRegionReplicationOnMidClusterSameHosts() {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     loadBalancer.setConf(conf);
     int numHosts = 100;
@@ -584,34 +586,35 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     }
   }
 
-  @Test (timeout = 120000)
+  @Test (timeout = 800000)
   public void testRegionReplicationOnMidClusterWithRacks() {
-    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 4000000L);
+    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 10000000L);
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 60 * 1000); // 60 sec
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
     loadBalancer.setConf(conf);
-    int numNodes = 50;
+    int numNodes = 30;
     int numRegions = numNodes * 30;
     int replication = 3; // 3 replicas per region
-    int numRegionsPerServer = 25;
+    int numRegionsPerServer = 28;
     int numTables = 10;
     int numRacks = 4; // all replicas should be on a different rack
     Map<ServerName, List<HRegionInfo>> serverMap =
         createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
     RackManager rm = new ForTestRackManager(numRacks);
 
-    testWithCluster(serverMap, rm, true, true);
+    testWithCluster(serverMap, rm, false, true);
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 800000)
   public void testRegionReplicationOnMidClusterReplicationGreaterThanNumNodes() {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     loadBalancer.setConf(conf);
-    int numNodes = 80;
-    int numRegions = 6 * 100;
-    int replication = 100; // 100 replicas per region, more than numNodes
-    int numRegionsPerServer = 5;
+    int numNodes = 40;
+    int numRegions = 6 * 50;
+    int replication = 50; // 50 replicas per region, more than numNodes
+    int numRegionsPerServer = 6;
     int numTables = 10;
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, false);
   }
@@ -639,15 +642,19 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertNotNull(plans);
 
     // Check to see that this actually got to a stable place.
-    if (assertFullyBalanced) {
+    if (assertFullyBalanced || assertFullyBalancedForReplicas) {
       // Apply the plan to the mock cluster.
       List<ServerAndLoad> balancedCluster = reconcile(list, plans, serverMap);
 
       // Print out the cluster loads to make debugging easier.
       LOG.info("Mock Balance : " + printMock(balancedCluster));
-      assertClusterAsBalanced(balancedCluster);
-      List<RegionPlan> secondPlans =  loadBalancer.balanceCluster(serverMap);
-      assertNull(secondPlans);
+
+      if (assertFullyBalanced) {
+        assertClusterAsBalanced(balancedCluster);
+        List<RegionPlan> secondPlans =  loadBalancer.balanceCluster(serverMap);
+        assertNull(secondPlans);
+      }
+
       if (assertFullyBalancedForReplicas) {
         assertRegionReplicaPlacement(serverMap, rackManager);
       }
@@ -681,23 +688,5 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     }
 
     return clusterState;
-  }
-
-  public static class MyRackResolver implements DNSToSwitchMapping {
-
-    public MyRackResolver(Configuration conf) {}
-
-    public List<String> resolve(List<String> names) {
-      List<String> racks = new ArrayList<String>(names.size());
-      for (int i = 0; i < names.size(); i++) {
-        racks.add(i, NetworkTopology.DEFAULT_RACK);
-      }
-      return racks;
-    }
-
-    public void reloadCachedMappings() {}
-
-    public void reloadCachedMappings(List<String> names) {
-    }
   }
 }
