@@ -245,7 +245,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     E result = null;
     try {
       while (queue.size() == 0 && nanos > 0) {
-        notEmpty.awaitNanos(nanos);
+        nanos = notEmpty.awaitNanos(nanos);
       }
       if (queue.size() > 0) {
         result = queue.poll();
