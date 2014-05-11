@@ -43,9 +43,6 @@ FINDBUGS_HOME=${FINDBUGS_HOME}
 FORREST_HOME=${FORREST_HOME}
 ECLIPSE_HOME=${ECLIPSE_HOME}
 
-RED=$(tput setaf 1)
-RESET_COLOR=$(tput sgr0)
-
 ###############################################################################
 printUsage() {
   echo "Usage: $0 [options] patch-file | defect-number"
@@ -337,11 +334,10 @@ checkCompilationErrors() {
   eval $(awk '/ERROR/ {print "COMPILATION_ERROR=true"}' $file)
   if $COMPILATION_ERROR ; then
     ERRORS=$($AWK '/ERROR/ { print $0 }' $file)
-    echo -e "${RED}======================================================================"
-    echo -e "${RED} There are compilation errors."
-    echo -e "${RED}======================================================================"
-    echo -e "${RED}$ERRORS"
-    echo -e "${RESET_COLOR}"
+    echo "======================================================================"
+    echo "There are compilation errors."
+    echo "======================================================================"
+    echo "$ERRORS"
     JIRA_COMMENT="$JIRA_COMMENT
 
     {color:red}-1 javac{color}.  The patch appears to cause mvn compile goal to fail.
