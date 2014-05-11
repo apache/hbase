@@ -650,6 +650,7 @@ public final class ExportSnapshot extends Configured implements Tool {
    */
   @Override
   public int run(String[] args) throws IOException {
+    boolean verifyTarget = true;
     boolean verifyChecksum = true;
     String snapshotName = null;
     boolean overwrite = false;
@@ -676,6 +677,8 @@ public final class ExportSnapshot extends Configured implements Tool {
           FSUtils.setRootDir(conf, sourceDir);
         } else if (cmd.equals("-no-checksum-verify")) {
           verifyChecksum = false;
+        } else if (cmd.equals("-no-target-verify")) {
+          verifyTarget = false;
         } else if (cmd.equals("-mappers")) {
           mappers = Integer.parseInt(args[++i]);
         } else if (cmd.equals("-chuser")) {
@@ -792,9 +795,11 @@ public final class ExportSnapshot extends Configured implements Tool {
         }
       }
 
-      // Step 4 - Verify snapshot validity
-      LOG.info("Verify snapshot validity");
-      verifySnapshot(conf, outputFs, outputRoot, outputSnapshotDir);
+      // Step 4 - Verify snapshot integrity
+      if (verifyTarget) {
+        LOG.info("Verify snapshot integrity");
+        verifySnapshot(conf, outputFs, outputRoot, outputSnapshotDir);
+      }
 
       LOG.info("Export Completed: " + snapshotName);
       return 0;
@@ -816,7 +821,9 @@ public final class ExportSnapshot extends Configured implements Tool {
     System.err.println("  -snapshot NAME          Snapshot to restore.");
     System.err.println("  -copy-to NAME           Remote destination hdfs://");
     System.err.println("  -copy-from NAME         Input folder hdfs:// (default hbase.rootdir)");
-    System.err.println("  -no-checksum-verify     Do not verify checksum.");
+    System.err.println("  -no-checksum-verify     Do not verify checksum, use name+length only.");
+    System.err.println("  -no-target-verify       Do not verify the integrity of the \\" +
+        "exported snapshot.");
     System.err.println("  -overwrite              Rewrite the snapshot manifest if already exists");
     System.err.println("  -chuser USERNAME        Change the owner of the files to the specified one.");
     System.err.println("  -chgroup GROUP          Change the group of the files to the specified one.");
