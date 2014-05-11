@@ -118,7 +118,7 @@ public class TestExportSnapshot {
 
     // Add some rows
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 1000, FAMILY);
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
 
     // take a snapshot
     admin.snapshot(snapshotName, tableName);
@@ -174,26 +174,32 @@ public class TestExportSnapshot {
    */
   @Test
   public void testExportFileSystemState() throws Exception {
-    testExportFileSystemState(tableName, snapshotName, 2);
+    testExportFileSystemState(tableName, snapshotName, snapshotName, 2);
   }
 
   @Test
   public void testExportFileSystemStateWithSkipTmp() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(ExportSnapshot.CONF_SKIP_TMP, true);
-    testExportFileSystemState(tableName, snapshotName, 2);
+    testExportFileSystemState(tableName, snapshotName, snapshotName, 2);
   }
 
   @Test
   public void testEmptyExportFileSystemState() throws Exception {
-    testExportFileSystemState(tableName, emptySnapshotName, 1);
+    testExportFileSystemState(tableName, emptySnapshotName, emptySnapshotName, 1);
   }
 
   @Test
   public void testConsecutiveExports() throws Exception {
     Path copyDir = getLocalDestinationDir();
-    testExportFileSystemState(tableName, snapshotName, 2, copyDir, false);
-    testExportFileSystemState(tableName, snapshotName, 2, copyDir, true);
+    testExportFileSystemState(tableName, snapshotName, snapshotName, 2, copyDir, false);
+    testExportFileSystemState(tableName, snapshotName, snapshotName, 2, copyDir, true);
     removeExportDir(copyDir);
+  }
+
+  @Test
+  public void testExportWithTargetName() throws Exception {
+    final byte[] targetName = Bytes.toBytes("testExportWithTargetName");
+    testExportFileSystemState(tableName, snapshotName, targetName, 2);
   }
 
   /**
@@ -244,13 +250,14 @@ public class TestExportSnapshot {
     FileUtil.copy(fs, tableDir, fs, snapshotDir, false, conf);
     SnapshotDescriptionUtils.writeSnapshotInfo(sd, snapshotDir, fs);
 
-    testExportFileSystemState(tableWithRefsName, Bytes.toBytes(snapshotName), 2);
+    byte[] name = Bytes.toBytes(snapshotName);
+    testExportFileSystemState(tableWithRefsName, name, name, 2);
   }
 
   private void testExportFileSystemState(final TableName tableName, final byte[] snapshotName,
-      int filesExpected) throws Exception {
+      final byte[] targetName, int filesExpected) throws Exception {
     Path copyDir = getHdfsDestinationDir();
-    testExportFileSystemState(tableName, snapshotName, filesExpected, copyDir, false);
+    testExportFileSystemState(tableName, snapshotName, targetName, filesExpected, copyDir, false);
     removeExportDir(copyDir);
   }
 
@@ -258,7 +265,8 @@ public class TestExportSnapshot {
    * Test ExportSnapshot
    */
   private void testExportFileSystemState(final TableName tableName, final byte[] snapshotName,
-      int filesExpected, Path copyDir, boolean overwrite) throws Exception {
+      final byte[] targetName, int filesExpected, Path copyDir, boolean overwrite)
+      throws Exception {
     URI hdfsUri = FileSystem.get(TEST_UTIL.getConfiguration()).getUri();
     FileSystem fs = FileSystem.get(copyDir.toUri(), new Configuration());
     copyDir = copyDir.makeQualified(fs);
@@ -268,6 +276,10 @@ public class TestExportSnapshot {
     opts.add(Bytes.toString(snapshotName));
     opts.add("-copy-to");
     opts.add(copyDir.toString());
+    if (targetName != snapshotName) {
+      opts.add("-target");
+      opts.add(Bytes.toString(targetName));
+    }
     if (overwrite) opts.add("-overwrite");
 
     // Export Snapshot
@@ -288,9 +300,10 @@ public class TestExportSnapshot {
     // compare the snapshot metadata and verify the hfiles
     final FileSystem hdfs = FileSystem.get(hdfsUri, TEST_UTIL.getConfiguration());
     final Path snapshotDir = new Path(HConstants.SNAPSHOT_DIR_NAME, Bytes.toString(snapshotName));
+    final Path targetDir = new Path(HConstants.SNAPSHOT_DIR_NAME, Bytes.toString(targetName));
     verifySnapshot(hdfs, new Path(TEST_UTIL.getDefaultRootDirPath(), snapshotDir),
-        fs, new Path(copyDir, snapshotDir));
-    verifyArchive(fs, copyDir, tableName, Bytes.toString(snapshotName));
+        fs, new Path(copyDir, targetDir));
+    verifyArchive(fs, copyDir, tableName, Bytes.toString(targetName));
     FSUtils.logFileSystemState(hdfs, snapshotDir, LOG);
   }
 
@@ -377,6 +390,11 @@ public class TestExportSnapshot {
           assertTrue(path + " should not be empty", fs.getFileStatus(path).getLen() > 0);
         }
     });
+
+    // Verify Snapshot description
+    SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, exportedSnapshot);
+    assertTrue(desc.getName().equals(snapshotName));
+    assertTrue(desc.getTable().equals(tableName.getNameAsString()));
   }
 
   private Set<String> listFiles(final FileSystem fs, final Path root, final Path dir)
