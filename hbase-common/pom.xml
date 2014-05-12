@@ -206,6 +206,11 @@
       <artifactId>commons-io</artifactId>
       <scope>compile</scope>
     </dependency>
+    <!-- tracing Dependencies -->
+    <dependency>
+      <groupId>org.htrace</groupId>
+      <artifactId>htrace-core</artifactId>
+    </dependency>
   </dependencies>
 
   <profiles>

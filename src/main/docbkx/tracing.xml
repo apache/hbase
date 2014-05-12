@@ -141,8 +141,6 @@
       In order to turn on tracing in your client code,
       you must initialize the module sending spans to receiver
       once per client process.
-      (Because <classname>SpanReceiverHost</classname> is included in hbase-server jar,
-      you need it on the client classpath in order to run this example.)
 <programlisting><![CDATA[
   private SpanReceiverHost spanReceiverHost;
   
