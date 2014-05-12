@@ -73,7 +73,6 @@ public class LocalHBaseCluster {
   private final Class<? extends HMaster> masterClass;
   private final Class<? extends HRegionServer> regionServerClass;
 
-  ConsensusProvider consensusProvider;
   /**
    * Constructor.
    * @param conf
@@ -140,7 +139,6 @@ public class LocalHBaseCluster {
     final Class<? extends HRegionServer> regionServerClass)
   throws IOException {
     this.conf = conf;
-    consensusProvider = ConsensusProviderFactory.getConsensusProvider(conf);
 
     // Always have masters and regionservers come up on port '0' so we don't
     // clash over default ports.
@@ -175,8 +173,14 @@ public class LocalHBaseCluster {
     // Create each regionserver with its own Configuration instance so each has
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
     // the guts of HConnectionManager.
+
+    // Also, create separate ConsensusProvider instance per Server.
+    // This is special case when we have to have more than 1 ConsensusProvider
+    // within 1 process.
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(conf);
+
     JVMClusterUtil.RegionServerThread rst =
-      JVMClusterUtil.createRegionServerThread(config, consensusProvider,
+      JVMClusterUtil.createRegionServerThread(config, cp,
           this.regionServerClass, index);
     this.regionThreads.add(rst);
     return rst;
@@ -202,7 +206,13 @@ public class LocalHBaseCluster {
     // Create each master with its own Configuration instance so each has
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
     // the guts of HConnectionManager.
-    JVMClusterUtil.MasterThread mt = JVMClusterUtil.createMasterThread(c, consensusProvider,
+
+    // Also, create separate ConsensusProvider instance per Server.
+    // This is special case when we have to have more than 1 ConsensusProvider
+    // within 1 process.
+    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(conf);
+
+    JVMClusterUtil.MasterThread mt = JVMClusterUtil.createMasterThread(c, cp,
         (Class<? extends HMaster>) conf.getClass(HConstants.MASTER_IMPL, this.masterClass), index);
     this.masterThreads.add(mt);
     return mt;
