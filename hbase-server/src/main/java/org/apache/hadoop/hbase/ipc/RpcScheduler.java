@@ -67,4 +67,7 @@ public interface RpcScheduler {
 
   /** Retrieves length of the replication queue for metrics. */
   int getReplicationQueueLength();
+
+  /** Retrieves the number of active handler. */
+  int getActiveRpcHandlerCount();
 }

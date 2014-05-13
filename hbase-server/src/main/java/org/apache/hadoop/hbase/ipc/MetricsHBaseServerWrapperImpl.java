@@ -37,8 +37,7 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
 
   @Override
   public int getGeneralQueueLength() {
-    if (this.server == null
-        || this.server.getScheduler() == null) {
+    if (this.server == null || this.server.getScheduler() == null) {
       return 0;
     }
     return server.getScheduler().getGeneralQueueLength();
@@ -46,8 +45,7 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
 
   @Override
   public int getReplicationQueueLength() {
-    if (this.server == null
-        || this.server.getScheduler() == null) {
+    if (this.server == null || this.server.getScheduler() == null) {
       return 0;
     }
     return server.getScheduler().getReplicationQueueLength();
@@ -55,8 +53,7 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
 
   @Override
   public int getPriorityQueueLength() {
-    if (this.server == null
-        || this.server.getScheduler() == null) {
+    if (this.server == null || this.server.getScheduler() == null) {
       return 0;
     }
     return server.getScheduler().getPriorityQueueLength();
@@ -68,5 +65,13 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
       return 0;
     }
     return server.connectionList.size();
+  }
+
+  @Override
+  public int getActiveRpcHandlerCount() {
+    if (this.server == null || this.server.getScheduler() == null) {
+      return 0;
+    }
+    return server.getScheduler().getActiveRpcHandlerCount();
   }
 }

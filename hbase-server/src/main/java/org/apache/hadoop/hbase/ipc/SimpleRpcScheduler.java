@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -47,7 +48,7 @@ public class SimpleRpcScheduler implements RpcScheduler {
   final BlockingQueue<CallRunner> replicationQueue;
   private volatile boolean running = false;
   private final List<Thread> handlers = Lists.newArrayList();
-
+  private AtomicInteger activeHandlerCount = new AtomicInteger(0);
   /** What level a high priority call is at. */
   private final int highPriorityLevel;
 
@@ -153,11 +154,21 @@ public class SimpleRpcScheduler implements RpcScheduler {
     return replicationQueue == null ? 0 : replicationQueue.size();
   }
 
+  @Override
+  public int getActiveRpcHandlerCount() {
+    return 0;
+  }
+
   private void consumerLoop(BlockingQueue<CallRunner> myQueue) {
     while (running) {
       try {
         CallRunner task = myQueue.take();
-        task.run();
+        try {
+          activeHandlerCount.incrementAndGet();
+          task.run();
+        } finally {
+          activeHandlerCount.decrementAndGet();
+        }
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
