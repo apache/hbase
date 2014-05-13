@@ -53,6 +53,8 @@ public interface MetricsHBaseServerSource extends BaseSource {
   String PRIORITY_QUEUE_DESC = "Number of calls in the priority call queue.";
   String NUM_OPEN_CONNECTIONS_NAME = "numOpenConnections";
   String NUM_OPEN_CONNECTIONS_DESC = "Number of open connections.";
+  String NUM_ACTIVE_HANDLER_NAME = "numActiveHandler";
+  String NUM_ACTIVE_HANDLER_DESC = "Number of active rpc handlers.";
 
   void authorizationSuccess();
 
