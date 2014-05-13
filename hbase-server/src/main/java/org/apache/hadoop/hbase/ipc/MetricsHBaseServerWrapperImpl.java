@@ -66,4 +66,12 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
     }
     return server.connectionList.size();
   }
+
+  @Override
+  public long getActiveRpcHandlerCount() {
+    if (this.server == null || this.server.handlers == null) {
+      return 0;
+    }
+    return server.activeRpcCount.get();
+  }
 }

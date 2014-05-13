@@ -43,4 +43,9 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper{
   public int getNumOpenConnections() {
     return 105;
   }
+
+  @Override
+  public long getActiveRpcHandlerCount() {
+    return 106;
+  }
 }

@@ -215,6 +215,7 @@ public class RpcServer implements RpcServerInterface {
   protected BlockingQueue<Call> callQueue; // queued calls
   protected final Counter callQueueSize = new Counter();
   protected BlockingQueue<Call> priorityCallQueue;
+  protected final Counter activeRpcCount = new Counter();
 
   protected int highPriorityLevel;  // what level a high priority call is at
 
@@ -225,7 +226,7 @@ public class RpcServer implements RpcServerInterface {
   private Listener listener = null;
   protected Responder responder = null;
   protected int numConnections = 0;
-  private Handler[] handlers = null;
+  protected Handler[] handlers = null;
   private Handler[] priorityHandlers = null;
   /** replication related queue; */
   protected BlockingQueue<Call> replicationQueue;
@@ -1875,6 +1876,7 @@ public class RpcServer implements RpcServerInterface {
           CurCall.set(call);
           TraceScope traceScope = null;
           try {
+            activeRpcCount.increment();
             if (!started) {
               throw new ServerNotRunningYetException("Server is not running yet");
             }
@@ -1899,6 +1901,7 @@ public class RpcServer implements RpcServerInterface {
             // Must always clear the request context to avoid leaking
             // credentials between requests.
             RequestContext.clear();
+            activeRpcCount.decrement();
           }
           CurCall.set(null);
           callQueueSize.add(call.getSize() * -1);
