@@ -89,4 +89,9 @@ public class FifoRpcScheduler implements RpcScheduler {
   public int getReplicationQueueLength() {
     return 0;
   }
+
+  @Override
+  public int getActiveRpcHandlerCount() {
+    return executor.getActiveCount();
+  }
 }
