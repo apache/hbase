@@ -30,8 +30,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  * region sequence id (we want to use this later, just before we write the WAL to ensure region
  * edits maintain order).  The extra info added here is not 'serialized' as part of the WALEdit
  * hence marked 'transient' to underline this fact.  It also adds mechanism so we can wait on
- * the assign of the region sequence id.  See {@link #setRegionSequenceId(long)} and
- * {@link #getRegionSequenceId()}.
+ * the assign of the region sequence id.  See {@link #stampRegionSequenceId()}.
  */
 @InterfaceAudience.Private
 class FSWALEntry extends HLog.Entry {
@@ -85,7 +84,7 @@ class FSWALEntry extends HLog.Entry {
    * Call when safe to do so: i.e. the context is such that the increment on the passed in
    * {@link #regionSequenceIdReference} is guaranteed aligned w/ how appends are going into the
    * WAL.  This method works with {@link #getRegionSequenceId()}.  It will block waiting on this
-   * method if on initialization our edit/sequence id is {@link HLogKey#NO_SEQ_NO}.
+   * method to be called.
    * @return The region edit/sequence id we set for this edit.
    * @see #getRegionSequenceId()
    */
