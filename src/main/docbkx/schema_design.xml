@@ -199,6 +199,13 @@ COLUMN                                        CELL
 
     </section>
     <section xml:id="reverse.timestamp"><title>Reverse Timestamps</title>
+    <note>
+      <title>Reverse Scan API</title>
+      <para>
+        <link xlink:href="https://issues.apache.org/jira/browse/HBASE-4811">HBASE-4811</link> implements an API to scan a table or a range within a table in reverse, reducing the need to optimize your schema for forward or reverse scanning. This feature is available in HBase 0.98 and later. See <link xlink:href="https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed%28boolean" /> for more information.
+      </para>
+    </note>
+
     <para>A common problem in database processing is quickly finding the most recent version of a value.  A technique using reverse timestamps
     as a part of the key can help greatly with a special case of this problem.  Also found in the HBase chapter of Tom White's book Hadoop:  The Definitive Guide (O'Reilly),
     the technique involves appending (<code>Long.MAX_VALUE - timestamp</code>) to the end of any key, e.g., [key][reverse_timestamp].
@@ -224,7 +231,7 @@ COLUMN                                        CELL
     <section xml:id="rowkey.regionsplits"><title>Relationship Between RowKeys and Region Splits</title>
     <para>If you pre-split your table, it is <emphasis>critical</emphasis> to understand how your rowkey will be distributed across
     the region boundaries.  As an example of why this is important, consider the example of using displayable hex characters as the
-    lead position of the key (e.g., ""0000000000000000" to "ffffffffffffffff").  Running those key ranges through <code>Bytes.split</code>
+    lead position of the key (e.g., &quot;0000000000000000&quot; to &quot;ffffffffffffffff&quot;).  Running those key ranges through <code>Bytes.split</code>
     (which is the split strategy used when creating regions in <code>HBaseAdmin.createTable(byte[] startKey, byte[] endKey, numRegions)</code>
     for 10 regions will generate the following splits...
     </para>
@@ -504,6 +511,12 @@ long bucket = timestamp % numBuckets;
         </para>
         <para>Neither approach is wrong, it just depends on what is most appropriate for the situation.
         </para>
+            <note>
+      <title>Reverse Scan API</title>
+      <para>
+        <link xlink:href="https://issues.apache.org/jira/browse/HBASE-4811">HBASE-4811</link> implements an API to scan a table or a range within a table in reverse, reducing the need to optimize your schema for forward or reverse scanning. This feature is available in HBase 0.98 and later. See <link xlink:href="https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed%28boolean" /> for more information.
+      </para>
+    </note>
       </section>  <!--  revts -->
       <section xml:id="schema.casestudies.log-timeseries.varkeys">
         <title>Variangle Length or Fixed Length Rowkeys?</title>
