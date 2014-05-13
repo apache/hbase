@@ -121,6 +121,26 @@ public class TestDataBlockEncoders {
   }
 
   /**
+   * Test KeyValues with negative timestamp.
+   * @throws IOException On test failure.
+   */
+  @Test
+  public void testZeroByte() throws IOException {
+    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    byte[] row = Bytes.toBytes("abcd");
+    byte[] family = new byte[] { 'f' };
+    byte[] qualifier0 = new byte[] { 'b' };
+    byte[] qualifier1 = new byte[] { 'c' };
+    byte[] value0 = new byte[] { 'd' };
+    byte[] value1 = new byte[] { 0x00 };
+    kvList.add(new KeyValue(row, family, qualifier0, 0, Type.Put, value0));
+    kvList.add(new KeyValue(row, family, qualifier1, 0, Type.Put, value1));
+    testEncodersOnDataset(
+        RedundantKVGenerator.convertKvToByteBuffer(kvList,
+            includesMemstoreTS));
+  }
+
+  /**
    * Test whether compression -> decompression gives the consistent results on
    * pseudorandom sample.
    * @throws IOException On test failure.
