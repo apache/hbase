@@ -122,7 +122,9 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
           .addGauge(Interns.info(PRIORITY_QUEUE_NAME, PRIORITY_QUEUE_DESC),
               wrapper.getPriorityQueueLength())
           .addGauge(Interns.info(NUM_OPEN_CONNECTIONS_NAME,
-              NUM_OPEN_CONNECTIONS_DESC), wrapper.getNumOpenConnections());
+              NUM_OPEN_CONNECTIONS_DESC), wrapper.getNumOpenConnections())
+          .addGauge(Interns.info(NUM_ACTIVE_HANDLER_NAME,
+              NUM_ACTIVE_HANDLER_DESC), wrapper.getActiveRpcHandlerCount());
     }
 
     metricsRegistry.snapshot(mrb, all);

@@ -207,7 +207,7 @@ public class SimpleRpcScheduler implements RpcScheduler {
 
   @Override
   public int getActiveRpcHandlerCount() {
-    return 0;
+    return activeHandlerCount.get();
   }
 
   private void consumerLoop(BlockingQueue<CallRunner> myQueue) {

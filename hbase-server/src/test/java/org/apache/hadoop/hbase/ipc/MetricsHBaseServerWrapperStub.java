@@ -46,6 +46,6 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper{
 
   @Override
   public int getActiveRpcHandlerCount() {
-    return 100;
+    return 106;
   }
 }
