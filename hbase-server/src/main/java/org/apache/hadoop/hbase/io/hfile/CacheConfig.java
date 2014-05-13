@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.slab.SlabCache;
 import org.apache.hadoop.hbase.util.DirectMemoryUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -76,14 +77,49 @@ public class CacheConfig {
   /**
    * Configuration keys for Bucket cache
    */
+
+  /**
+   * Current ioengine options in include: heap, offheap and file:PATH (where PATH is the path
+   * to the file that will host the file-based cache.  See BucketCache#getIOEngineFromName() for
+   * list of supported ioengine options.
+   * 
+   * <p>Set this option and a non-zero {@link BUCKET_CACHE_SIZE_KEY} to enable bucket cache.
+   */
   public static final String BUCKET_CACHE_IOENGINE_KEY = "hbase.bucketcache.ioengine";
+
+  /**
+   * When using bucket cache, this is a float that EITHER represents a percentage of total heap
+   * memory size to give to the cache (if < 1.0) OR, it is the capacity in megabytes of the cache.
+   * 
+   * <p>The resultant size is further divided if {@link BUCKET_CACHE_COMBINED_KEY} is set (It is
+   * set by default. When false, bucket cache serves as an "L2" cache to the "L1"
+   * {@link LruBlockCache}).  The percentage is set in
+   * with {@link BUCKET_CACHE_COMBINED_PERCENTAGE_KEY} float.
+   */
   public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
+
+  /**
+   * If the chosen ioengine can persist its state across restarts, the path to the file to
+   * persist to.
+   */
   public static final String BUCKET_CACHE_PERSISTENT_PATH_KEY = 
       "hbase.bucketcache.persistent.path";
+
+  /**
+   * If the bucket cache is used in league with the lru on-heap block cache (meta blocks such
+   * as indices and blooms are kept in the lru blockcache and the data blocks in the
+   * bucket cache).
+   */
   public static final String BUCKET_CACHE_COMBINED_KEY = 
       "hbase.bucketcache.combinedcache.enabled";
+
+  /**
+   * A float which designates how much of the overall cache to give to bucket cache
+   * and how much to on-heap lru cache when {@link BUCKET_CACHE_COMBINED_KEY} is set.
+   */
   public static final String BUCKET_CACHE_COMBINED_PERCENTAGE_KEY = 
       "hbase.bucketcache.percentage.in.combinedcache";
+
   public static final String BUCKET_CACHE_WRITER_THREADS_KEY = "hbase.bucketcache.writer.threads";
   public static final String BUCKET_CACHE_WRITER_QUEUE_KEY = 
       "hbase.bucketcache.writer.queuelength";
@@ -94,6 +130,19 @@ public class CacheConfig {
   public static final int DEFAULT_BUCKET_CACHE_WRITER_THREADS = 3;
   public static final int DEFAULT_BUCKET_CACHE_WRITER_QUEUE = 64;
   public static final float DEFAULT_BUCKET_CACHE_COMBINED_PERCENTAGE = 0.9f;
+
+  /**
+   * Setting this float to a non-null value turns on {@link DoubleBlockCache}
+   * which makes use of the {@link LruBlockCache} and {@link SlabCache}.
+   * 
+   * The float value of between 0 and 1 will be multiplied against the setting for
+   * <code>-XX:MaxDirectMemorySize</code> to figure what size of the offheap allocation to give
+   * over to slab cache.
+   * 
+   * Slab cache has been little used and is likely to be deprecated in the near future.
+   */
+  public static final String SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY =
+    "hbase.offheapcache.percentage";
 
   // Defaults
 
@@ -404,7 +453,7 @@ public class CacheConfig {
         }
       }
       LOG.info("Allocating LruBlockCache with maximum size " +
-        StringUtils.humanReadableInt(lruCacheSize));
+        StringUtils.humanReadableInt(lruCacheSize) + ", blockSize=" + blockSize);
       LruBlockCache lruCache = new LruBlockCache(lruCacheSize, blockSize);
       lruCache.setVictimCache(bucketCache);
       if (bucketCache != null && combinedWithLru) {

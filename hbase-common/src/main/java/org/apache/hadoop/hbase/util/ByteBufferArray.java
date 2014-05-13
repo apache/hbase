@@ -56,7 +56,7 @@ public final class ByteBufferArray {
     this.bufferCount = (int) (roundUp(capacity, bufferSize) / bufferSize);
     LOG.info("Allocating buffers total=" + StringUtils.byteDesc(capacity)
         + " , sizePerBuffer=" + StringUtils.byteDesc(bufferSize) + ", count="
-        + bufferCount);
+        + bufferCount + ", direct=" + directByteBuffer);
     buffers = new ByteBuffer[bufferCount + 1];
     locks = new Lock[bufferCount + 1];
     for (int i = 0; i <= bufferCount; i++) {

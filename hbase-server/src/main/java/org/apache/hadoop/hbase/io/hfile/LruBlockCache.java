@@ -132,7 +132,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   static final int statThreadPeriod = 60 * 5;
 
   /** Concurrent map (the cache) */
-  private final ConcurrentHashMap<BlockCacheKey,CachedBlock> map;
+  private final Map<BlockCacheKey,CachedBlock> map;
 
   /** Eviction lock (locked when eviction in process) */
   private final ReentrantLock evictionLock = new ReentrantLock(true);
@@ -190,7 +190,8 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   /** Whether in-memory hfile's data block has higher priority when evicting */
   private boolean forceInMemory;
 
-  /** Where to send victims (blocks evicted from the cache) */
+  /** Where to send victims (blocks evicted/missing from the cache) */
+  // TODO: Fix it so this is not explicit reference to a particular BlockCache implementation.
   private BucketCache victimHandler = null;
 
   /**
@@ -382,7 +383,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat) {
     CachedBlock cb = map.get(cacheKey);
-    if(cb == null) {
+    if (cb == null) {
       if (!repeat) stats.miss(caching);
       if (victimHandler != null)
         return victimHandler.getBlock(cacheKey, caching, repeat);
@@ -926,5 +927,4 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     assert victimHandler == null;
     victimHandler = handler;
   }
-
 }

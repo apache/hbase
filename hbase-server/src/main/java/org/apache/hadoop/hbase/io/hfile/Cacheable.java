@@ -37,15 +37,15 @@ import org.apache.hadoop.hbase.io.HeapSize;
 public interface Cacheable extends HeapSize {
   /**
    * Returns the length of the ByteBuffer required to serialized the object. If the
-   * object cannot be serialized, it should also return 0.
+   * object cannot be serialized, it should return 0.
    *
-   * @return int length in bytes of the serialized form.
+   * @return int length in bytes of the serialized form or 0 if the object cannot be cached.
    */
-
   int getSerializedLength();
 
   /**
    * Serializes its data into destination.
+   * @param destination Where to serialize to
    */
   void serialize(ByteBuffer destination);
 
@@ -60,5 +60,4 @@ public interface Cacheable extends HeapSize {
    * @return the block type of this cached HFile block
    */
   BlockType getBlockType();
-
 }

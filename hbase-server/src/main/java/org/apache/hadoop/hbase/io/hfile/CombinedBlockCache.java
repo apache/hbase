@@ -30,15 +30,14 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 /**
  * CombinedBlockCache is an abstraction layer that combines
  * {@link LruBlockCache} and {@link BucketCache}. The smaller lruCache is used
- * to cache bloom blocks and index blocks , the larger bucketCache is used to
- * cache data blocks. getBlock reads first from the smaller lruCache before
- * looking for the block in the bucketCache. Metrics are the combined size and
- * hits and misses of both caches.
+ * to cache bloom blocks and index blocks.  The larger bucketCache is used to
+ * cache data blocks. {@link #getBlock(BlockCacheKey, boolean, boolean) reads
+ * first from the smaller lruCache before looking for the block in the bucketCache.
+ * Metrics are the combined size and hits and misses of both caches.
  * 
- **/
+ */
 @InterfaceAudience.Private
 public class CombinedBlockCache implements BlockCache, HeapSize {
-
   private final LruBlockCache lruCache;
   private final BucketCache bucketCache;
   private final CombinedCacheStats combinedCacheStats;
@@ -73,6 +72,8 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching,
       boolean repeat) {
+    // TODO: is there a hole here, or just awkwardness since in the lruCache getBlock
+    // we end up calling bucketCache.getBlock.
     if (lruCache.containsBlock(cacheKey)) {
       return lruCache.getBlock(cacheKey, caching, repeat);
     }

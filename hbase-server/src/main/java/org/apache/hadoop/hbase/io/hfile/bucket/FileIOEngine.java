@@ -53,6 +53,8 @@ public class FileIOEngine implements IOEngine {
           + StringUtils.byteDesc(fileSize), ioex);
       if (raf != null) raf.close();
       throw ioex;
+    } finally {
+      if (raf != null) raf.close();
     }
   }
 

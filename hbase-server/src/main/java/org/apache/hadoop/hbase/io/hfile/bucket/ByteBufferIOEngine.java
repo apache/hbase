@@ -25,12 +25,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferArray;
 
 /**
- * IO engine that stores data on the memory using an array of ByteBuffers
+ * IO engine that stores data in memory using an array of ByteBuffers
  * {@link ByteBufferArray}
  */
 @InterfaceAudience.Private
 public class ByteBufferIOEngine implements IOEngine {
-
   private ByteBufferArray bufferArray;
 
   /**
@@ -88,7 +87,7 @@ public class ByteBufferIOEngine implements IOEngine {
    */
   @Override
   public void sync() {
-
+    // Nothing to do.
   }
 
   /**
@@ -96,6 +95,6 @@ public class ByteBufferIOEngine implements IOEngine {
    */
   @Override
   public void shutdown() {
-
+    // Nothing to do.
   }
 }

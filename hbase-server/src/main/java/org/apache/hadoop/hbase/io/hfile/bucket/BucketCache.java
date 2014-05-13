@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.ConcurrentIndex;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -70,21 +69,21 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * BucketCache uses {@link BucketAllocator} to allocate/free block, and use
+ * BucketCache uses {@link BucketAllocator} to allocate/free blocks, and uses
  * {@link BucketCache#ramCache} and {@link BucketCache#backingMap} in order to
- * determine whether a given element hit. It could uses memory
- * {@link ByteBufferIOEngine} or file {@link FileIOEngine}to store/read the
- * block data.
+ * determine if a given element is in the cache. The bucket cache can use on-heap or
+ * off-heap memory {@link ByteBufferIOEngine} or in a file {@link FileIOEngine} to
+ * store/read the block data.
  * 
- * Eviction is using similar algorithm as
+ * <p>Eviction is via a similar algorithm as used in
  * {@link org.apache.hadoop.hbase.io.hfile.LruBlockCache}
  * 
- * BucketCache could be used as mainly a block cache(see
- * {@link CombinedBlockCache}), combined with LruBlockCache to decrease CMS and
- * fragment by GC.
+ * <p>BucketCache can be used as mainly a block cache (see
+ * {@link CombinedBlockCache}), combined with LruBlockCache to decrease CMS GC and
+ * heap fragmentation.
  * 
- * Also could be used as a secondary cache(e.g. using Fusionio to store block)
- * to enlarge cache space by
+ * <p>It also can be used as a secondary cache (e.g. using a file on ssd/fusionio to store
+ * blocks) to enlarge cache space via
  * {@link org.apache.hadoop.hbase.io.hfile.LruBlockCache#setVictimCache}
  */
 @InterfaceAudience.Private
@@ -110,9 +109,9 @@ public class BucketCache implements BlockCache, HeapSize {
   IOEngine ioEngine;
 
   // Store the block in this map before writing it to cache
-  private ConcurrentHashMap<BlockCacheKey, RAMQueueEntry> ramCache;
+  private Map<BlockCacheKey, RAMQueueEntry> ramCache;
   // In this map, store the block's meta data like offset, length
-  private ConcurrentHashMap<BlockCacheKey, BucketEntry> backingMap;
+  private Map<BlockCacheKey, BucketEntry> backingMap;
 
   /**
    * Flag if the cache is enabled or not... We shut it off if there are IO
@@ -124,8 +123,6 @@ public class BucketCache implements BlockCache, HeapSize {
   private ArrayList<BlockingQueue<RAMQueueEntry>> writerQueues = 
       new ArrayList<BlockingQueue<RAMQueueEntry>>();
   WriterThread writerThreads[];
-
-
 
   /** Volatile boolean to track if free space is in process or not */
   private volatile boolean freeInProgress = false;
@@ -196,7 +193,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
   // Allocate or free space for the block
   private BucketAllocator bucketAllocator;
-  
+
   public BucketCache(String ioEngineName, long capacity, int blockSize, int writerThreadNum,
       int writerQLen, String persistencePath) throws FileNotFoundException,
       IOException {
@@ -252,7 +249,11 @@ public class BucketCache implements BlockCache, HeapSize {
     // Run the statistics thread periodically to print the cache statistics log
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
         statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
-    LOG.info("Started bucket cache");
+    LOG.info("Started bucket cache; ioengine=" + ioEngineName +
+        ", capacity=" + StringUtils.byteDesc(capacity) +
+      ", blockSize=" + StringUtils.byteDesc(blockSize) + ", writerThreadNum=" +
+        writerThreadNum + ", writerQLen=" + writerQLen + ", persistencePath=" +
+      persistencePath);
   }
 
   /**
@@ -359,7 +360,7 @@ public class BucketCache implements BlockCache, HeapSize {
       return re.getData();
     }
     BucketEntry bucketEntry = backingMap.get(key);
-    if(bucketEntry!=null) {
+    if (bucketEntry != null) {
       long start = System.nanoTime();
       IdLock.Entry lockEntry = null;
       try {
@@ -391,7 +392,7 @@ public class BucketCache implements BlockCache, HeapSize {
         }
       }
     }
-    if(!repeat)cacheStats.miss(caching);
+    if(!repeat) cacheStats.miss(caching);
     return null;
   }
 
@@ -430,10 +431,12 @@ public class BucketCache implements BlockCache, HeapSize {
     cacheStats.evicted();
     return true;
   }
-  
+
   /*
-   * Statistics thread.  Periodically prints the cache statistics to the log.
+   * Statistics thread.  Periodically output cache statistics to the log.
    */
+  // TODO: Fix.  We run a thread to log at DEBUG.  If no DEBUG level, we still run the thread!
+  // A thread just to log is OTT.  FIX.
   private static class StatisticsThread extends Thread {
     BucketCache bucketCache;
 
@@ -447,7 +450,7 @@ public class BucketCache implements BlockCache, HeapSize {
       bucketCache.logStats();
     }
   }
-  
+
   public void logStats() {
     if (!LOG.isDebugEnabled()) return;
     // Log size
@@ -479,10 +482,6 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private long acceptableSize() {
     return (long) Math.floor(bucketAllocator.getTotalSize() * DEFAULT_ACCEPT_FACTOR);
-  }
-
-  private long minSize() {
-    return (long) Math.floor(bucketAllocator.getTotalSize() * DEFAULT_MIN_FACTOR);
   }
 
   private long singleSize() {
@@ -1193,5 +1192,4 @@ public class BucketCache implements BlockCache, HeapSize {
       writerThread.join();
     }
   }
-
 }
