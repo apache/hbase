@@ -87,8 +87,20 @@
 
     <section xml:id="upgrade0.98">
       <title>Upgrading from 0.96.x to 0.98.x</title>
-      <para>A rolling upgrade from 0.96.x to 0.98.x works.  The two versions are not binary compatible.
-      TODO: List of changes.</para> 
+      <para>A rolling upgrade from 0.96.x to 0.98.x works. The two versions are not binary compatible.</para>
+          <para>Additional steps are required to take advantage of some of the new features of 0.98.x, including cell visibility
+          labels, cell ACLs, and transparent server side encryption. See the
+          <xref linkend="security" /> chapter of this guide for more information. Significant performance improvements include a change to the write
+          ahead log threading model that provides higher transaction throughput under
+          high load, reverse scanners, MapReduce over snapshot files, and striped
+          compaction.</para> 
+        <para>Clients and servers can run with 0.98.x and 0.96.x versions. However, applications may need to be recompiled due to changes in the Java API.</para>
+    </section>
+    <section>
+        <title>Upgrading from 0.94.x to 0.98.x</title>
+        <para>
+            A rolling upgrade from 0.94.x directly to 0.98.x does not work. The upgrade path follows the same procedures as <xref linkend="upgrade0.96" />. Additional steps are required to use some of the new features of 0.98.x. See <xref linkend="upgrade0.98" /> for an abbreviated list of these features.
+        </para>
     </section>
     <section xml:id="upgrade0.96">
       <title>Upgrading from 0.94.x to 0.96.x</title>
